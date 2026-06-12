@@ -1529,16 +1529,18 @@ impl DataBrokerRuntime {
             .begin()
             .await
             .map_err(|err| tonic::Status::internal(format!("DLQ replay begin failed: {err}")))?;
-        sqlx::query(&format!(
-            "INSERT INTO {outbox_rel}
-                 (event_id, topic, partition_key, payload, created_at)
-             VALUES ($1, $2, $3, $4::JSONB, NOW())"
-        ))
-        .bind(replay_event_id)
-        .bind(&topic)
-        .bind(&partition_key)
-        .bind(payload.to_string())
-        .execute(&mut *tx)
+        // ONE shared insert path (`cdc::insert_outbox_row`): the DLQ replay re-enqueues
+        // with the SAME SQL + bind types as every other writer. `replay_event_id` is
+        // already a `Uuid` (Copy), and the canonical insert binds `$1::UUID` — folding
+        // the prior bare-`$1` insert into the shared shape so it can't drift (§4).
+        crate::runtime::cdc::insert_outbox_row(
+            &mut *tx,
+            &outbox_rel,
+            replay_event_id,
+            &topic,
+            &partition_key,
+            &payload,
+        )
         .await
         .map_err(|err| tonic::Status::internal(format!("DLQ replay enqueue failed: {err}")))?;
         sqlx::query(&format!(

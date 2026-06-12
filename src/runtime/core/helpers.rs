@@ -14,11 +14,14 @@ pub(crate) fn runtime_backend_instances(
     report: &RuntimeInitReport,
     runtime: &DataBrokerRuntime,
 ) -> Vec<RuntimeBackendInstance> {
-    config
+    let mut instances: Vec<RuntimeBackendInstance> = config
         .instances
         .iter()
         .map(|instance| runtime_backend_instance(instance, report, runtime))
-        .collect()
+        .collect();
+
+    append_connected_runtime_instances(&mut instances, runtime);
+    instances
 }
 
 pub(crate) fn runtime_backend_instance(
@@ -65,6 +68,56 @@ pub(crate) fn runtime_backend_instance(
             runtime.clickhouse_instances.contains_key(&instance.name)
                 || (instance.name == "default" && report.clickhouse_configured)
         }
+        #[cfg(feature = "mysql")]
+        "mysql" => {
+            runtime.mysql_instances.contains_key(&instance.name)
+                || (instance.name == "primary" && report.mysql_configured)
+        }
+        #[cfg(feature = "sqlite")]
+        "sqlite" => {
+            runtime.sqlite_instances.contains_key(&instance.name)
+                || (instance.name == "primary" && report.sqlite_configured)
+        }
+        #[cfg(feature = "mssql")]
+        "sqlserver" => {
+            runtime.mssql_instances.contains_key(&instance.name)
+                || (instance.name == "primary" && report.mssql_configured)
+        }
+        #[cfg(feature = "memcached")]
+        "memcached" => {
+            runtime.memcached_instances.contains_key(&instance.name)
+                || (instance.name == "primary" && report.memcached_configured)
+        }
+        #[cfg(feature = "elasticsearch")]
+        "elasticsearch" => {
+            runtime.elasticsearch_instances.contains_key(&instance.name)
+                || (instance.name == "primary" && report.elasticsearch_configured)
+        }
+        #[cfg(feature = "weaviate")]
+        "weaviate" => {
+            runtime.weaviate_instances.contains_key(&instance.name)
+                || (instance.name == "primary" && report.weaviate_configured)
+        }
+        #[cfg(feature = "pinecone")]
+        "pinecone" => {
+            runtime.pinecone_instances.contains_key(&instance.name)
+                || (instance.name == "primary" && report.pinecone_configured)
+        }
+        #[cfg(feature = "cassandra")]
+        "cassandra" => {
+            runtime.cassandra_instances.contains_key(&instance.name)
+                || (instance.name == "primary" && report.cassandra_configured)
+        }
+        #[cfg(feature = "azureblob")]
+        "azureblob" => {
+            runtime.azureblob_instances.contains_key(&instance.name)
+                || (instance.name == "primary" && report.azureblob_configured)
+        }
+        #[cfg(feature = "gcs")]
+        "gcs" => {
+            runtime.gcs_instances.contains_key(&instance.name)
+                || (instance.name == "primary" && report.gcs_configured)
+        }
         _ => backend_connected(report, &backend),
     };
     let circuit_open = !runtime.circuit_breaker_allows(&backend, Some(&instance.name));
@@ -89,6 +142,190 @@ pub(crate) fn runtime_backend_instance(
     }
 }
 
+fn append_connected_runtime_instances(
+    instances: &mut Vec<RuntimeBackendInstance>,
+    runtime: &DataBrokerRuntime,
+) {
+    for name in runtime.pg_instances.keys() {
+        append_connected_runtime_instance(instances, runtime, "postgres", name, "read_write");
+    }
+
+    #[cfg(feature = "redis")]
+    for name in runtime.redis_instances.keys() {
+        append_connected_runtime_instance(instances, runtime, "redis", name, "read_write");
+    }
+
+    #[cfg(feature = "qdrant")]
+    for name in runtime.qdrant_instances.keys() {
+        append_connected_runtime_instance(instances, runtime, "qdrant", name, "read_write");
+    }
+
+    #[cfg(feature = "s3")]
+    for name in runtime.s3_instances.keys() {
+        if !instances.iter().any(|instance| {
+            matches!(instance.backend.as_str(), "minio" | "s3") && instance.name == *name
+        }) {
+            append_connected_runtime_instance(instances, runtime, "minio", name, "read_write");
+        }
+    }
+
+    #[cfg(feature = "mongodb")]
+    for name in runtime.mongodb_instances.keys() {
+        append_connected_runtime_instance(instances, runtime, "mongodb", name, "read_write");
+    }
+
+    #[cfg(feature = "neo4j")]
+    for name in runtime.neo4j_instances.keys() {
+        append_connected_runtime_instance(instances, runtime, "neo4j", name, "read_write");
+    }
+
+    #[cfg(feature = "clickhouse")]
+    for name in runtime.clickhouse_instances.keys() {
+        append_connected_runtime_instance(instances, runtime, "clickhouse", name, "read");
+    }
+
+    #[cfg(feature = "mysql")]
+    for name in runtime.mysql_instances.keys() {
+        append_connected_runtime_instance(instances, runtime, "mysql", name, "read_write");
+    }
+
+    #[cfg(feature = "sqlite")]
+    for name in runtime.sqlite_instances.keys() {
+        append_connected_runtime_instance(instances, runtime, "sqlite", name, "read_write");
+    }
+
+    #[cfg(feature = "mssql")]
+    for name in runtime.mssql_instances.keys() {
+        append_connected_runtime_instance(instances, runtime, "sqlserver", name, "read_write");
+    }
+
+    #[cfg(feature = "memcached")]
+    for name in runtime.memcached_instances.keys() {
+        append_connected_runtime_instance(instances, runtime, "memcached", name, "read_write");
+    }
+
+    #[cfg(feature = "elasticsearch")]
+    for name in runtime.elasticsearch_instances.keys() {
+        append_connected_runtime_instance(instances, runtime, "elasticsearch", name, "read_write");
+    }
+
+    #[cfg(feature = "weaviate")]
+    for name in runtime.weaviate_instances.keys() {
+        append_connected_runtime_instance(instances, runtime, "weaviate", name, "read_write");
+    }
+
+    #[cfg(feature = "pinecone")]
+    for name in runtime.pinecone_instances.keys() {
+        append_connected_runtime_instance(instances, runtime, "pinecone", name, "read_write");
+    }
+
+    #[cfg(feature = "cassandra")]
+    for name in runtime.cassandra_instances.keys() {
+        append_connected_runtime_instance(instances, runtime, "cassandra", name, "read_write");
+    }
+
+    #[cfg(feature = "azureblob")]
+    for name in runtime.azureblob_instances.keys() {
+        append_connected_runtime_instance(instances, runtime, "azureblob", name, "read_write");
+    }
+
+    #[cfg(feature = "gcs")]
+    for name in runtime.gcs_instances.keys() {
+        append_connected_runtime_instance(instances, runtime, "gcs", name, "read_write");
+    }
+}
+
+fn append_connected_runtime_instance(
+    instances: &mut Vec<RuntimeBackendInstance>,
+    runtime: &DataBrokerRuntime,
+    backend: &str,
+    name: &str,
+    role: &str,
+) {
+    if instances
+        .iter()
+        .any(|instance| instance.backend == backend && instance.name == name)
+    {
+        return;
+    }
+    let circuit_open = !runtime.circuit_breaker_allows(backend, Some(name));
+    instances.push(RuntimeBackendInstance {
+        name: name.to_string(),
+        backend: backend.to_string(),
+        role: role.to_string(),
+        enabled: true,
+        configured: true,
+        connected: true,
+        read_weight: 1,
+        write_weight: 1,
+        dsn_env: None,
+        labels: HashMap::new(),
+        capabilities: Vec::new(),
+        healthy: !circuit_open,
+        circuit_open,
+    });
+}
+
+pub(crate) fn reconcile_dispatch_factories(
+    instances: &mut [RuntimeBackendInstance],
+    runtime: &DataBrokerRuntime,
+    warnings: &mut Vec<String>,
+) {
+    for instance in instances
+        .iter_mut()
+        .filter(|instance| instance.enabled && instance.connected)
+    {
+        let Some(kind) = crate::backend::BackendKind::from_store_kind("", &instance.backend)
+            .or_else(|| crate::backend::BackendKind::from_token(&instance.backend))
+        else {
+            disconnect_dispatch_instance(
+                instance,
+                warnings,
+                format!("unknown backend '{}'", instance.backend),
+            );
+            continue;
+        };
+        if crate::runtime::executors::handle::dispatch_factory_for(&kind).is_none() {
+            disconnect_dispatch_instance(
+                instance,
+                warnings,
+                format!(
+                    "backend '{}' has no generic-dispatch factory",
+                    instance.backend
+                ),
+            );
+            continue;
+        }
+        let write = !instance.role.eq_ignore_ascii_case("read");
+        if let Err(err) = runtime.resolve_dispatch_executor(
+            &instance.backend,
+            Some(&instance.name),
+            write,
+            tonic::Code::FailedPrecondition,
+            None,
+        ) {
+            disconnect_dispatch_instance(
+                instance,
+                warnings,
+                format!("dispatch factory could not build executor: {err}"),
+            );
+        }
+    }
+}
+
+fn disconnect_dispatch_instance(
+    instance: &mut RuntimeBackendInstance,
+    warnings: &mut Vec<String>,
+    reason: String,
+) {
+    instance.connected = false;
+    instance.healthy = false;
+    warnings.push(format!(
+        "backend executor '{}:{}' not registered: {reason}",
+        instance.backend, instance.name
+    ));
+}
+
 fn instance_has_config_reference(instance: &BackendInstance) -> bool {
     instance
         .dsn
@@ -111,6 +348,16 @@ pub(crate) fn backend_connected(report: &RuntimeInitReport, backend: &str) -> bo
         "mongodb" => report.mongodb_configured,
         "neo4j" => report.neo4j_configured,
         "clickhouse" => report.clickhouse_configured,
+        "mysql" => report.mysql_configured,
+        "sqlite" => report.sqlite_configured,
+        "mssql" | "sqlserver" => report.mssql_configured,
+        "memcached" => report.memcached_configured,
+        "elasticsearch" => report.elasticsearch_configured,
+        "weaviate" => report.weaviate_configured,
+        "pinecone" => report.pinecone_configured,
+        "cassandra" => report.cassandra_configured,
+        "azureblob" => report.azureblob_configured,
+        "gcs" => report.gcs_configured,
         _ => false,
     }
 }
@@ -191,6 +438,26 @@ pub(crate) fn dispatch_params(value: &JsonValue) -> Result<Vec<JsonValue>, tonic
             "params/parameters must be an array",
         )),
         None => Ok(Vec::new()),
+    }
+}
+
+pub(crate) fn dispatch_param_types(
+    value: &JsonValue,
+) -> Result<Option<Vec<String>>, tonic::Status> {
+    match value.get("param_types") {
+        Some(JsonValue::Array(types)) => types
+            .iter()
+            .map(|value| {
+                value.as_str().map(str::to_string).ok_or_else(|| {
+                    tonic::Status::invalid_argument("param_types entries must be strings")
+                })
+            })
+            .collect::<Result<Vec<_>, _>>()
+            .map(Some),
+        Some(_) => Err(tonic::Status::invalid_argument(
+            "param_types must be an array",
+        )),
+        None => Ok(None),
     }
 }
 
@@ -291,29 +558,129 @@ pub(crate) fn bind_generic_pg_params<'q>(
     params: &'q [JsonValue],
 ) -> sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArguments> {
     for value in params {
-        query = match value {
-            JsonValue::Null => query.bind(Option::<String>::None),
-            JsonValue::Bool(value) => query.bind(*value),
-            JsonValue::Number(number) => {
-                if let Some(value) = number.as_i64() {
-                    query.bind(value)
-                } else if let Some(value) = number.as_u64() {
-                    if let Ok(value) = i64::try_from(value) {
-                        query.bind(value)
-                    } else {
-                        query.bind(value.to_string())
-                    }
-                } else {
-                    query.bind(number.as_f64().unwrap_or_default())
-                }
-            }
-            JsonValue::String(value) => query.bind(value.clone()),
-            JsonValue::Array(_) | JsonValue::Object(_) => {
-                query.bind(sqlx::types::Json(value.clone()))
-            }
-        };
+        query = bind_generic_pg_param(query, value);
     }
     query
+}
+
+pub(crate) fn bind_typed_generic_pg_params<'q>(
+    mut query: sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArguments>,
+    params: &'q [JsonValue],
+    param_types: Option<&[String]>,
+) -> Result<sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArguments>, tonic::Status> {
+    let Some(param_types) = param_types else {
+        return Ok(bind_generic_pg_params(query, params));
+    };
+    if param_types.len() != params.len() {
+        return Err(tonic::Status::invalid_argument(
+            "param_types length must match params length",
+        ));
+    }
+    for (value, param_type) in params.iter().zip(param_types) {
+        query = match param_type.as_str() {
+            "array_string" => {
+                let values = json_array_values(value, "array_string")?
+                    .iter()
+                    .map(|item| {
+                        item.as_str().map(str::to_string).ok_or_else(|| {
+                            tonic::Status::invalid_argument(
+                                "array_string params must contain only strings",
+                            )
+                        })
+                    })
+                    .collect::<Result<Vec<_>, _>>()?;
+                query.bind(values)
+            }
+            "array_int" => {
+                let values = json_array_values(value, "array_int")?
+                    .iter()
+                    .map(|item| {
+                        item.as_i64().ok_or_else(|| {
+                            tonic::Status::invalid_argument(
+                                "array_int params must contain only integers",
+                            )
+                        })
+                    })
+                    .collect::<Result<Vec<_>, _>>()?;
+                query.bind(values)
+            }
+            "array_float" => {
+                let values = json_array_values(value, "array_float")?
+                    .iter()
+                    .map(|item| {
+                        item.as_f64().ok_or_else(|| {
+                            tonic::Status::invalid_argument(
+                                "array_float params must contain only numbers",
+                            )
+                        })
+                    })
+                    .collect::<Result<Vec<_>, _>>()?;
+                query.bind(values)
+            }
+            "array_bool" => {
+                let values = json_array_values(value, "array_bool")?
+                    .iter()
+                    .map(|item| {
+                        item.as_bool().ok_or_else(|| {
+                            tonic::Status::invalid_argument(
+                                "array_bool params must contain only booleans",
+                            )
+                        })
+                    })
+                    .collect::<Result<Vec<_>, _>>()?;
+                query.bind(values)
+            }
+            "json" => query.bind(sqlx::types::Json(value.clone())),
+            "timestamptz" => {
+                // Parse the RFC-3339 text back into a real `DateTime<Utc>` so sqlx
+                // binds a `timestamptz` (a bare text bind is rejected by Postgres
+                // on INSERT/UPDATE into a `timestamp with time zone` column).
+                match value
+                    .as_str()
+                    .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
+                {
+                    Some(dt) => query.bind(dt.with_timezone(&chrono::Utc)),
+                    None => bind_generic_pg_param(query, value),
+                }
+            }
+            _ => bind_generic_pg_param(query, value),
+        };
+    }
+    Ok(query)
+}
+
+fn bind_generic_pg_param<'q>(
+    query: sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArguments>,
+    value: &'q JsonValue,
+) -> sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArguments> {
+    match value {
+        JsonValue::Null => query.bind(Option::<String>::None),
+        JsonValue::Bool(value) => query.bind(*value),
+        JsonValue::Number(number) => {
+            if let Some(value) = number.as_i64() {
+                query.bind(value)
+            } else if let Some(value) = number.as_u64() {
+                if let Ok(value) = i64::try_from(value) {
+                    query.bind(value)
+                } else {
+                    query.bind(value.to_string())
+                }
+            } else {
+                query.bind(number.as_f64().unwrap_or_default())
+            }
+        }
+        JsonValue::String(value) => query.bind(value.clone()),
+        JsonValue::Array(_) | JsonValue::Object(_) => query.bind(sqlx::types::Json(value.clone())),
+    }
+}
+
+fn json_array_values<'a>(
+    value: &'a JsonValue,
+    param_type: &str,
+) -> Result<&'a Vec<JsonValue>, tonic::Status> {
+    value.as_array().ok_or_else(|| {
+        tonic::Status::invalid_argument(format!("{param_type} params must be arrays"))
+    })
 }
 
 pub(crate) fn pg_rows_to_json(rows: Vec<PgRow>) -> Result<Vec<JsonValue>, tonic::Status> {

@@ -424,6 +424,15 @@ pub(crate) fn sqlite_outbox_ddl(table: &str) -> String {
 #[cfg(feature = "mssql")]
 pub(crate) fn mssql_outbox_ddl(relation: &str) -> String {
     let rel = relation;
+    // `relation` is a bracketed (and possibly schema-qualified) object reference
+    // such as `[outbox_events]` — valid for CREATE TABLE / ON <table>, but it must
+    // NOT be embedded inside a CONSTRAINT identifier: `df_[outbox_events]_…` is
+    // invalid T-SQL and SQL Server rejects it ("Incorrect syntax near
+    // 'outbox_events'"), which opens the mssql breaker at startup. Derive a bare
+    // `[A-Za-z0-9_]` token from `rel` for the named constraints. For an already
+    // bare name (e.g. the test's `udb_outbox_events`) the token equals `rel`, so
+    // the rendered DDL is unchanged.
+    let cn = mssql_identifier_token(rel);
     format!(
         "IF OBJECT_ID(N'{rel}', N'U') IS NULL \
          BEGIN \
@@ -431,24 +440,39 @@ pub(crate) fn mssql_outbox_ddl(relation: &str) -> String {
                 event_seq      BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY, \
                 event_id       UNIQUEIDENTIFIER NOT NULL UNIQUE, \
                 topic          NVARCHAR(255) NOT NULL, \
-                partition_key  NVARCHAR(255) NOT NULL CONSTRAINT df_{rel}_partition_key DEFAULT '', \
-                payload        NVARCHAR(MAX) NOT NULL CONSTRAINT chk_{rel}_payload_json CHECK (ISJSON(payload) = 1), \
+                partition_key  NVARCHAR(255) NOT NULL CONSTRAINT df_{cn}_partition_key DEFAULT '', \
+                payload        NVARCHAR(MAX) NOT NULL CONSTRAINT chk_{cn}_payload_json CHECK (ISJSON(payload) = 1), \
                 headers        NVARCHAR(MAX) NULL, \
-                delivery_state NVARCHAR(20) NOT NULL CONSTRAINT df_{rel}_delivery_state DEFAULT 'pending', \
+                delivery_state NVARCHAR(20) NOT NULL CONSTRAINT df_{cn}_delivery_state DEFAULT 'pending', \
                 publishing_started_at DATETIME2(7) NULL, \
                 published_at   DATETIME2(7) NULL, \
                 acked_at       DATETIME2(7) NULL, \
                 dlq_at         DATETIME2(7) NULL, \
-                producer_epoch BIGINT NOT NULL CONSTRAINT df_{rel}_producer_epoch DEFAULT 0, \
-                transactional_id NVARCHAR(255) NOT NULL CONSTRAINT df_{rel}_transactional_id DEFAULT '', \
+                producer_epoch BIGINT NOT NULL CONSTRAINT df_{cn}_producer_epoch DEFAULT 0, \
+                transactional_id NVARCHAR(255) NOT NULL CONSTRAINT df_{cn}_transactional_id DEFAULT '', \
                 kafka_partition INT NULL, \
                 kafka_offset   BIGINT NULL, \
                 last_error     NVARCHAR(MAX) NULL, \
-                created_at     DATETIME2(7) NOT NULL CONSTRAINT df_{rel}_created_at DEFAULT SYSUTCDATETIME() \
+                created_at     DATETIME2(7) NOT NULL CONSTRAINT df_{cn}_created_at DEFAULT SYSUTCDATETIME() \
             ); \
             CREATE INDEX idx_outbox_delivery_state ON {rel} (delivery_state, event_seq); \
          END"
     )
+}
+
+/// Bare identifier token for naming T-SQL CONSTRAINTs/INDEXes derived from a
+/// (possibly bracketed, schema-qualified) object reference: take the last
+/// `.`-segment and keep only `[A-Za-z0-9_]` (drops the `[ ]` quoting). E.g.
+/// `[dbo].[outbox_events]` and `[outbox_events]` both → `outbox_events`; a bare
+/// `udb_outbox_events` is returned unchanged.
+fn mssql_identifier_token(relation: &str) -> String {
+    relation
+        .rsplit('.')
+        .next()
+        .unwrap_or(relation)
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric() || *c == '_')
+        .collect()
 }
 
 /// B.8 — MSSQL advisory-lease `CREATE TABLE` (T-SQL). Mirrors the Postgres /
@@ -1326,6 +1350,24 @@ mod tests {
              END"
         );
         assert_eq!(mssql_outbox_ddl(rel), expected);
+    }
+
+    /// Regression: production passes a BRACKETED relation
+    /// (`CdcConfig::outbox_relation_mssql()` → `[outbox_events]`). The named
+    /// CONSTRAINTs must NOT inherit the brackets, or SQL Server rejects the batch
+    /// with "Incorrect syntax near 'outbox_events'" and the mssql breaker opens at
+    /// startup. The table reference itself stays bracketed.
+    #[cfg(feature = "mssql")]
+    #[test]
+    fn mssql_outbox_ddl_constraint_names_are_bracket_free() {
+        let sql = mssql_outbox_ddl("[outbox_events]");
+        assert!(sql.contains("CREATE TABLE [outbox_events] ("));
+        assert!(sql.contains("CONSTRAINT df_outbox_events_partition_key"));
+        assert!(sql.contains("CONSTRAINT chk_outbox_events_payload_json"));
+        assert!(
+            !sql.contains("df_[outbox_events]") && !sql.contains("[outbox_events]_"),
+            "constraint identifier leaked the bracketed relation: {sql}"
+        );
     }
 
     /// B.8 byte-identical gate for the MSSQL advisory-lease builder.

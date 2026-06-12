@@ -103,7 +103,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         tuning,
         deadline,
         headers,
-        GeneratedClientSupport.isReadOnlyRpcName("{{RPC_NAME}}"));
+        "{{RPC_OPERATION_KIND}}".equals("read_only"));
   }
   // @@UDB_RPC_END
 

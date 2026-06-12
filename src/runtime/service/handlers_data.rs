@@ -601,9 +601,9 @@ impl DataBrokerService {
 }
 
 #[derive(Debug, Clone)]
-struct CompiledDispatchRequest {
-    operation: String,
-    spec_json: String,
+pub(crate) struct CompiledDispatchRequest {
+    pub(crate) operation: String,
+    pub(crate) spec_json: String,
 }
 
 fn compile_neutral_ir_dispatch(
@@ -674,6 +674,7 @@ fn ir_payload(ir: &serde_json::Value) -> Result<serde_json::Value, Status> {
 enum LogicalOpFamily {
     Read,
     Write,
+    Update,
     Delete,
     Search,
     ResourceOp,
@@ -714,6 +715,14 @@ fn compile_ir_payload(
             Ok((
                 compile(CompileOperation::Write(&op))?,
                 LogicalOpFamily::Write,
+            ))
+        }
+        "update" => {
+            let op: crate::ir::LogicalUpdate = serde_json::from_value(payload)
+                .map_err(|err| Status::invalid_argument(format!("invalid LogicalUpdate: {err}")))?;
+            Ok((
+                compile(CompileOperation::Update(&op))?,
+                LogicalOpFamily::Update,
             ))
         }
         "delete" => {
@@ -758,6 +767,103 @@ fn compile_ir_payload(
     }
 }
 
+pub(crate) fn compile_logical_read_dispatch(
+    kind: &crate::backend::BackendKind,
+    op: &crate::ir::LogicalRead,
+    ctx: &crate::ir::compile::CompileContext<'_>,
+) -> Result<CompiledDispatchRequest, Status> {
+    use crate::ir::compile::{CompileOperation, compile_for_backend};
+    let rendering = compile_for_backend(kind, CompileOperation::Read(op), ctx)
+        .ok_or_else(|| {
+            Status::failed_precondition(format!(
+                "backend '{}' has no neutral-IR compiler in this build",
+                kind.as_str()
+            ))
+        })?
+        .map_err(|err| {
+            Status::invalid_argument(format!("neutral IR compile failed [{}]: {err}", err.code()))
+        })?;
+    compiled_rendering_to_dispatch(&rendering, LogicalOpFamily::Read)
+}
+
+pub(crate) fn compile_logical_write_dispatch(
+    kind: &crate::backend::BackendKind,
+    op: &crate::ir::LogicalWrite,
+    ctx: &crate::ir::compile::CompileContext<'_>,
+) -> Result<CompiledDispatchRequest, Status> {
+    use crate::ir::compile::{CompileOperation, compile_for_backend};
+    let rendering = compile_for_backend(kind, CompileOperation::Write(op), ctx)
+        .ok_or_else(|| {
+            Status::failed_precondition(format!(
+                "backend '{}' has no neutral-IR compiler in this build",
+                kind.as_str()
+            ))
+        })?
+        .map_err(|err| {
+            Status::invalid_argument(format!("neutral IR compile failed [{}]: {err}", err.code()))
+        })?;
+    compiled_rendering_to_dispatch(&rendering, LogicalOpFamily::Write)
+}
+
+#[allow(dead_code)]
+pub(crate) fn compile_logical_update_dispatch(
+    kind: &crate::backend::BackendKind,
+    op: &crate::ir::LogicalUpdate,
+    ctx: &crate::ir::compile::CompileContext<'_>,
+) -> Result<CompiledDispatchRequest, Status> {
+    use crate::ir::compile::{CompileOperation, compile_for_backend};
+    let rendering = compile_for_backend(kind, CompileOperation::Update(op), ctx)
+        .ok_or_else(|| {
+            Status::failed_precondition(format!(
+                "backend '{}' has no neutral-IR compiler in this build",
+                kind.as_str()
+            ))
+        })?
+        .map_err(|err| {
+            Status::invalid_argument(format!("neutral IR compile failed [{}]: {err}", err.code()))
+        })?;
+    compiled_rendering_to_dispatch(&rendering, LogicalOpFamily::Update)
+}
+
+pub(crate) fn compile_logical_aggregate_dispatch(
+    kind: &crate::backend::BackendKind,
+    op: &crate::ir::LogicalAggregate,
+    ctx: &crate::ir::compile::CompileContext<'_>,
+) -> Result<CompiledDispatchRequest, Status> {
+    use crate::ir::compile::{CompileOperation, compile_for_backend};
+    let rendering = compile_for_backend(kind, CompileOperation::Aggregate(op), ctx)
+        .ok_or_else(|| {
+            Status::failed_precondition(format!(
+                "backend '{}' has no neutral-IR compiler in this build",
+                kind.as_str()
+            ))
+        })?
+        .map_err(|err| {
+            Status::invalid_argument(format!("neutral IR compile failed [{}]: {err}", err.code()))
+        })?;
+    compiled_rendering_to_dispatch(&rendering, LogicalOpFamily::Aggregate)
+}
+
+#[allow(dead_code)]
+pub(crate) fn compile_logical_delete_dispatch(
+    kind: &crate::backend::BackendKind,
+    op: &crate::ir::LogicalDelete,
+    ctx: &crate::ir::compile::CompileContext<'_>,
+) -> Result<CompiledDispatchRequest, Status> {
+    use crate::ir::compile::{CompileOperation, compile_for_backend};
+    let rendering = compile_for_backend(kind, CompileOperation::Delete(op), ctx)
+        .ok_or_else(|| {
+            Status::failed_precondition(format!(
+                "backend '{}' has no neutral-IR compiler in this build",
+                kind.as_str()
+            ))
+        })?
+        .map_err(|err| {
+            Status::invalid_argument(format!("neutral IR compile failed [{}]: {err}", err.code()))
+        })?;
+    compiled_rendering_to_dispatch(&rendering, LogicalOpFamily::Delete)
+}
+
 fn compiled_rendering_to_dispatch(
     rendering: &crate::ir::compile::CompiledRendering,
     family: LogicalOpFamily,
@@ -780,6 +886,14 @@ fn compiled_rendering_to_dispatch(
             } else {
                 params.iter().map(logical_value_to_json).collect::<Vec<_>>()
             };
+            let param_types = if matches!(backend, BackendKind::Postgres) {
+                params
+                    .iter()
+                    .map(logical_value_param_type)
+                    .collect::<Vec<_>>()
+            } else {
+                Vec::new()
+            };
             let operation = if matches!(
                 family,
                 LogicalOpFamily::Read | LogicalOpFamily::Search | LogicalOpFamily::Aggregate
@@ -788,14 +902,17 @@ fn compiled_rendering_to_dispatch(
             } else {
                 "mutate"
             };
+            let mut spec = serde_json::json!({
+                "sql": sql,
+                "params": params_json,
+                "compiler_mediated": true,
+            });
+            if !param_types.is_empty() {
+                spec["param_types"] = serde_json::json!(param_types);
+            }
             Ok(CompiledDispatchRequest {
                 operation: operation.to_string(),
-                spec_json: serde_json::json!({
-                    "sql": sql,
-                    "params": params_json,
-                    "compiler_mediated": true,
-                })
-                .to_string(),
+                spec_json: spec.to_string(),
             })
         }
         CompiledRendering::Json {
@@ -881,7 +998,7 @@ fn json_rendering_to_dispatch(
 ) -> Result<CompiledDispatchRequest, Status> {
     use crate::backend::BackendKind;
     let operation = match family {
-        LogicalOpFamily::Write | LogicalOpFamily::Delete => "mutate",
+        LogicalOpFamily::Write | LogicalOpFamily::Update | LogicalOpFamily::Delete => "mutate",
         LogicalOpFamily::Search => "search",
         LogicalOpFamily::ResourceOp => "mutate",
         LogicalOpFamily::Read | LogicalOpFamily::Aggregate => "query",
@@ -926,7 +1043,7 @@ fn mongodb_rendering_body(
         LogicalOpFamily::Aggregate | LogicalOpFamily::Search => {
             map.insert("operation".into(), serde_json::json!("aggregate"));
         }
-        LogicalOpFamily::Write => {
+        LogicalOpFamily::Write | LogicalOpFamily::Update => {
             if path.ends_with("insertMany") || map.contains_key("documents") {
                 map.insert("operation".into(), serde_json::json!("insert_many"));
             } else if path.ends_with("insertOne") || map.contains_key("document") {
@@ -962,7 +1079,7 @@ fn qdrant_rendering_body(
         map.insert("collection".into(), serde_json::json!(collection));
     }
     match family {
-        LogicalOpFamily::Write => {
+        LogicalOpFamily::Write | LogicalOpFamily::Update => {
             map.insert("operation".into(), serde_json::json!("upsert"));
         }
         LogicalOpFamily::Delete => {
@@ -1013,6 +1130,30 @@ fn logical_value_to_json(value: &crate::ir::value::LogicalValue) -> serde_json::
         LogicalValue::Array(values) => {
             serde_json::Value::Array(values.iter().map(logical_value_to_json).collect())
         }
+    }
+}
+
+fn logical_value_param_type(value: &crate::ir::value::LogicalValue) -> &'static str {
+    use crate::ir::value::LogicalValue;
+    match value {
+        LogicalValue::Json(_) => "json",
+        // A `Timestamp` renders to an RFC-3339 *string*; without this hint the
+        // executor would bind it as `text`, which Postgres refuses to coerce
+        // into a `timestamptz` column on INSERT ("column … is of type timestamp
+        // with time zone but expression is of type text"). Type it so the bind
+        // path parses it back to a real `DateTime<Utc>`.
+        LogicalValue::Timestamp(_) => "timestamptz",
+        LogicalValue::Array(values) => match values
+            .iter()
+            .find(|value| !matches!(value, LogicalValue::Null))
+        {
+            Some(LogicalValue::String(_)) => "array_string",
+            Some(LogicalValue::Int(_)) => "array_int",
+            Some(LogicalValue::Float(_)) => "array_float",
+            Some(LogicalValue::Bool(_)) => "array_bool",
+            _ => "json",
+        },
+        _ => "",
     }
 }
 

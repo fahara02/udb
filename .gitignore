@@ -1,6 +1,7 @@
 # ── Rust build outputs ───────────────────────────────────────────────────────
 /bin/
 /target/
+/target*/
 /target_*/
 /target-*/
 target/
@@ -18,6 +19,7 @@ tmp/
 temp/
 .tmp/
 .temp/
+.verify-target/
 *.tmp
 *.temp
 *.bak
@@ -169,6 +171,7 @@ dhat-heap.json
 dhat-heap.json.*
 # Vibrant chart artifacts rendered by scripts/bench_charts.py (regenerable).
 /bench-artifacts/
+/bench-history/
 # Python bytecode cache (e.g. scripts/__pycache__).
 __pycache__/
 *.pyc

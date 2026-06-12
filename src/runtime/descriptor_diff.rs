@@ -691,6 +691,7 @@ mod tests {
             event_contract: None,
             emits: Vec::new(),
             dependency_contract: None,
+            operation_kind: 1,
         }
     }
 

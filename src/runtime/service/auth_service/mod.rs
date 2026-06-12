@@ -102,7 +102,12 @@ impl DataBrokerService {
         // shared cell via `AuthzServiceImpl::shared(...)` below.
         let shared_snapshot = Arc::new(arc_swap::ArcSwap::from_pointee(snapshot));
         let runtime = self.runtime.load_full();
-        let pg_pool = runtime.pg_pool().ok().cloned();
+        // Native-service persistence resolves through the discovery seam (extend_udb.md):
+        // the backend is read from this service's proto `native_service` binding, then a
+        // health/weight-routed instance is chosen — not the process-global pool.
+        let pg_pool = runtime
+            .native_store_pool_for_service("authn", true, "")
+            .ok();
         let authn_config = AuthnConfig::from_env();
         let security = SecurityConfig::current();
         // Wire the outbox-backed event sink so native auth mutations publish
@@ -167,6 +172,7 @@ impl DataBrokerService {
                 Arc::new(PostgresUserStore::new(pool.clone(), "")),
             )
             .with_postgres(Some(pool.clone()))
+            .with_runtime(Some(runtime.clone()))
             .with_event_sink(event_sink.clone())
             .with_metrics(self.metrics.clone())
             // Tier-0 #5 (D2-full): wire the shared authz snapshot so the admin-
@@ -179,6 +185,7 @@ impl DataBrokerService {
                 authn,
                 ApiKeyServiceImpl::with_store(authn_config, api_key_store)
                     .with_postgres(Some(pool.clone()))
+                    .with_runtime(Some(runtime.clone()))
                     .with_event_sink(event_sink.clone()),
             )
         } else {
@@ -194,6 +201,7 @@ impl DataBrokerService {
             authn_service,
             AuthzServiceImpl::shared(shared_snapshot)
                 .with_postgres(pg_pool)
+                .with_runtime(Some(runtime.clone()))
                 .with_event_sink(event_sink)
                 .with_metrics(self.metrics.clone())
                 // Tier-0 #1: wire the shared per-tenant fair-admission manager so
@@ -223,7 +231,7 @@ pub async fn bootstrap_admin_user(
     password: &str,
     tenant: &str,
     project: &str,
-) -> Result<String, String> {
+) -> Result<BootstrapAdmin, String> {
     use crate::proto::udb::core::authn::entity::v1 as authn_entity_pb;
     use crate::proto::udb::core::authn::services::v1 as authn_pb;
     use crate::proto::udb::core::authn::services::v1::authn_service_server::AuthnService;
@@ -249,6 +257,14 @@ pub async fn bootstrap_admin_user(
             tracing::debug!(error = %err, "bootstrap schema-ensure statement skipped");
         }
     }
+
+    // Tenant-first: resolve the human tenant `code` (or an explicit UUID) to its
+    // CANONICAL UUID, creating the `tenants` row if absent. The principal is bound
+    // to this UUID — not the free-text code — so the Login JWT tenant claim is a UUID
+    // that EVERY service accepts (the UUID-strict storage/webrtc/asset path and the
+    // free-text control-plane path alike). This is the fix that removes the need for
+    // a second "uuid tenant" admin.
+    let tenant_uuid = ensure_tenant(&pool, tenant, None).await?;
 
     let session_store: Arc<dyn SessionStore> =
         Arc::new(PostgresSessionStore::new(pool.clone(), ""));
@@ -279,7 +295,7 @@ pub async fn bootstrap_admin_user(
                     username: username.to_string(),
                     email: email.to_string(),
                     password: password.to_string(),
-                    tenant_id: tenant.to_string(),
+                    tenant_id: tenant_uuid.clone(),
                     project_id: project.to_string(),
                     full_name: "Bootstrap Admin".to_string(),
                     ..Default::default()
@@ -318,25 +334,62 @@ pub async fn bootstrap_admin_user(
         .await
         .map_err(|err| format!("seed system authz defaults failed: {err}"))?;
     {
-        use crate::proto::udb::core::authz::services::v1 as authz_pb;
-        use crate::proto::udb::core::authz::services::v1::authz_service_server::AuthzService;
-        let authz = AuthzServiceImpl::shared(Arc::new(arc_swap::ArcSwap::from_pointee(
-            AuthzSnapshot::default(),
-        )))
-        .with_postgres(Some(pool.clone()));
-        authz
-            .assign_role(Request::new(authz_pb::AssignRoleRequest {
-                user_id: user_id.clone(),
-                role_id: SYSTEM_ORG_OWNER_ROLE_ID.to_string(),
-                assigned_by: user_id.clone(),
-                tenant_id: tenant.to_string(),
-                ..Default::default()
-            }))
-            .await
-            .map_err(|err| format!("assign organization_owner role failed: {err}"))?;
+        // Bind the admin to `organization_owner` directly (bootstrap-exception raw
+        // SQL, like the schema DDL + `seed_system_authz_defaults` above). The offline
+        // bootstrap deliberately has NO `DataBrokerRuntime`, so it must not route
+        // through the P6.10 runtime-backed `assign_role` handler. This mirrors the
+        // exact user-role upsert that handler emits: idempotent
+        // `ON CONFLICT (user_id, role_id, domain)`, refreshing assigner/tenant.
+        use crate::runtime::native_catalog::native_model;
+        let ur = native_model(
+            "udb.core.authz.entity.v1.UserRole",
+            &[
+                "user_role_id",
+                "user_id",
+                "role_id",
+                "domain",
+                "assigned_by",
+                "tenant_id",
+                "created_by",
+            ],
+        );
+        sqlx::query(&format!(
+            "INSERT INTO {rel} \
+               ({user_role_id}, {user_id}, {role_id}, {domain}, {assigned_by}, {tenant_id}, {created_by}) \
+             VALUES (gen_random_uuid(), $1::UUID, $2::UUID, '', $1::UUID, $3, $1::UUID) \
+             ON CONFLICT ({user_id}, {role_id}, {domain}) DO UPDATE SET \
+               {assigned_by} = EXCLUDED.{assigned_by}, {tenant_id} = EXCLUDED.{tenant_id}, {created_by} = EXCLUDED.{created_by}",
+            rel = ur.relation,
+            user_role_id = ur.q("user_role_id"),
+            user_id = ur.q("user_id"),
+            role_id = ur.q("role_id"),
+            domain = ur.q("domain"),
+            assigned_by = ur.q("assigned_by"),
+            tenant_id = ur.q("tenant_id"),
+            created_by = ur.q("created_by"),
+        ))
+        .bind(&user_id)
+        .bind(SYSTEM_ORG_OWNER_ROLE_ID)
+        .bind(&tenant_uuid)
+        .execute(&pool)
+        .await
+        .map_err(|err| format!("assign organization_owner role failed: {err}"))?;
     }
 
-    Ok(user_id)
+    Ok(BootstrapAdmin {
+        user_id,
+        tenant_id: tenant_uuid,
+    })
+}
+
+/// Result of [`bootstrap_admin_user`]: the created/bound principal plus the
+/// CANONICAL tenant UUID it was bound to (resolved from the human code). Callers
+/// surface the tenant id so clients/tests use the same UUID the Login JWT claim
+/// carries — request bodies must match the claim or the per-RPC tenant cross-check
+/// rejects them.
+pub struct BootstrapAdmin {
+    pub user_id: String,
+    pub tenant_id: String,
 }
 
 /// Well-known id of the system `organization_owner` role row seeded by
@@ -347,6 +400,167 @@ pub(crate) const SYSTEM_ORG_OWNER_ROLE_ID: &str = "00000000-0000-0000-0000-00000
 pub(crate) const SYSTEM_ORG_OWNER_POLICY_ID: &str = "00000000-0000-0000-0000-0000000a0002";
 /// Role code the bootstrap binding and the login role→scope projection share.
 pub(crate) const ORG_OWNER_ROLE_CODE: &str = "organization_owner";
+
+/// Human name (`code`) of the zero-config DEFAULT tenant. This is only a fallback
+/// for first-run / CI / demo — the same role the Kubernetes `default` namespace or
+/// the Postgres `public` schema plays. Real deployments create their own tenants
+/// (each a fresh random UUID) and never share this one. Override:
+/// `UDB_DEFAULT_TENANT_CODE`.
+pub(crate) const DEFAULT_TENANT_CODE: &str = "acme";
+/// Predictable, FIXED uuid of the DEFAULT tenant — NEVER random, so a zero-config
+/// bootstrap always lands on the same well-known id (same convention as
+/// [`SYSTEM_ORG_OWNER_ROLE_ID`]). Only the DEFAULT tenant is predictable; every
+/// real tenant minted via [`ensure_tenant`] / `CreateTenant` gets an unguessable
+/// random v4 id so one customer can never guess another's. Override:
+/// `UDB_DEFAULT_TENANT_ID`.
+pub(crate) const DEFAULT_TENANT_ID: &str = "00000000-0000-0000-0000-0000000d0001";
+
+/// The DEFAULT tenant `code`, honoring a `UDB_DEFAULT_TENANT_CODE` override.
+pub(crate) fn default_tenant_code() -> String {
+    std::env::var("UDB_DEFAULT_TENANT_CODE")
+        .ok()
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or_else(|| DEFAULT_TENANT_CODE.to_string())
+}
+/// The DEFAULT tenant canonical UUID, honoring a `UDB_DEFAULT_TENANT_ID` override.
+pub(crate) fn default_tenant_id() -> String {
+    std::env::var("UDB_DEFAULT_TENANT_ID")
+        .ok()
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or_else(|| DEFAULT_TENANT_ID.to_string())
+}
+
+/// Resolve a tenant identifier to its CANONICAL UUID, creating the `tenants` row if
+/// absent (idempotent on `code`). This is the single chokepoint that makes the
+/// tenant-identity contract uniform: every principal is bound to the tenant UUID, so
+/// the Login JWT claim is a UUID that BOTH the UUID-strict services
+/// (storage/webrtc/asset — `parse_uuid`) and the free-text services accept.
+///
+/// - `tenant_in` may be a human `code` (e.g. `acme`) OR an explicit UUID.
+/// - If it is already a UUID → that is the canonical id (resolve-or-create by id).
+/// - If `code` == the configured DEFAULT → the fixed [`default_tenant_id`] is used
+///   and a loud warning is logged (so nobody ships production on the shared dev
+///   tenant by accident).
+/// - Any other code → reuse the existing row's id if present, else mint a random v4.
+pub(crate) async fn ensure_tenant(
+    pool: &sqlx::PgPool,
+    tenant_in: &str,
+    name: Option<&str>,
+) -> Result<String, String> {
+    use crate::runtime::native_catalog::native_model;
+
+    let trimmed = tenant_in.trim();
+    if trimmed.is_empty() {
+        return Err("tenant code or id is required".to_string());
+    }
+    let is_uuid = uuid::Uuid::parse_str(trimmed).is_ok();
+    let m = native_model(
+        "udb.core.tenant.entity.v1.Tenant",
+        &[
+            "tenant_id",
+            "code",
+            "name",
+            "type",
+            "status",
+            "config",
+            "branding",
+            "audit_info",
+            "deleted_at",
+        ],
+    );
+
+    // 1. Resolve an existing tenant (by canonical id when a UUID was supplied, else
+    //    by its unique human code). Soft-deleted rows do not count.
+    let lookup_sql = if is_uuid {
+        format!(
+            "SELECT {tid}::text FROM {rel} WHERE {tid} = $1::UUID AND {del} IS NULL",
+            rel = m.relation,
+            tid = m.q("tenant_id"),
+            del = m.q("deleted_at"),
+        )
+    } else {
+        format!(
+            "SELECT {tid}::text FROM {rel} WHERE {code} = $1 AND {del} IS NULL",
+            rel = m.relation,
+            tid = m.q("tenant_id"),
+            code = m.q("code"),
+            del = m.q("deleted_at"),
+        )
+    };
+    if let Some(found) = sqlx::query_scalar::<_, String>(&lookup_sql)
+        .bind(trimmed)
+        .fetch_optional(pool)
+        .await
+        .map_err(|err| format!("tenant lookup failed: {err}"))?
+    {
+        return Ok(found);
+    }
+
+    // 2. Not found — choose the canonical id. The DEFAULT tenant is the fixed
+    //    well-known id (predictable); everything else gets an unguessable v4.
+    let default_code = default_tenant_code();
+    let (canonical_id, code, is_default) = if is_uuid {
+        (
+            trimmed.to_string(),
+            format!("tenant-{}", &trimmed[..8.min(trimmed.len())]),
+            false,
+        )
+    } else if trimmed.eq_ignore_ascii_case(&default_code) {
+        (default_tenant_id(), trimmed.to_string(), true)
+    } else {
+        (uuid::Uuid::new_v4().to_string(), trimmed.to_string(), false)
+    };
+    if is_default {
+        tracing::warn!(
+            tenant_code = %code,
+            tenant_id = %canonical_id,
+            "bootstrapping the well-known DEFAULT tenant — set UDB_DEFAULT_TENANT_CODE or create your own tenant for production"
+        );
+    }
+    let tenant_name = name
+        .map(str::to_string)
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or_else(|| format!("{code} (bootstrap)"));
+
+    // 3. Insert; ON CONFLICT (code) DO NOTHING makes this safe under concurrent
+    //    bootstraps. JSONB columns default to '{}'.
+    let insert_sql = format!(
+        "INSERT INTO {rel} ({tid}, {code}, {name}, {type_c}, {status}, {config}, {branding}, {audit}) \
+         VALUES ($1::UUID, $2, $3, 'ORGANIZATION', 'ACTIVE', '{{}}'::JSONB, '{{}}'::JSONB, '{{}}'::JSONB) \
+         ON CONFLICT ({code}) DO NOTHING",
+        rel = m.relation,
+        tid = m.q("tenant_id"),
+        code = m.q("code"),
+        name = m.q("name"),
+        type_c = m.q("type"),
+        status = m.q("status"),
+        config = m.q("config"),
+        branding = m.q("branding"),
+        audit = m.q("audit_info"),
+    );
+    sqlx::query(&insert_sql)
+        .bind(&canonical_id)
+        .bind(&code)
+        .bind(&tenant_name)
+        .execute(pool)
+        .await
+        .map_err(|err| format!("create tenant '{code}' failed: {err}"))?;
+
+    // 4. Re-resolve (race-safe: a concurrent writer may have won the ON CONFLICT, in
+    //    which case the surviving row's id — not ours — is canonical).
+    sqlx::query_scalar::<_, String>(&format!(
+        "SELECT {tid}::text FROM {rel} WHERE {code} = $1 AND {del} IS NULL",
+        rel = m.relation,
+        tid = m.q("tenant_id"),
+        code = m.q("code"),
+        del = m.q("deleted_at"),
+    ))
+    .bind(&code)
+    .fetch_optional(pool)
+    .await
+    .map_err(|err| format!("tenant re-lookup failed: {err}"))?
+    .ok_or_else(|| "tenant ensure failed: row missing after insert".to_string())
+}
 
 /// Idempotently seed the system authz defaults the bootstrap admin path depends
 /// on (auth_fix.md Block 1, Decision C / change-point 1):

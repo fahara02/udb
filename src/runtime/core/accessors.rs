@@ -228,31 +228,15 @@ impl DataBrokerRuntime {
             if instance.enabled
                 && instance.connected
                 && self.circuit_breaker_allows(&instance.backend, Some(&instance.name))
+                && self
+                    .executor_registry
+                    .get(&instance.backend, Some(&instance.name))
+                    .filter(|registration| registration.connected)
+                    .is_some()
                 && !names.contains(&instance.backend)
             {
                 names.push(instance.backend.clone());
             }
-        }
-        if self.report.postgres_configured && !names.iter().any(|name| name == "postgres") {
-            names.push("postgres".to_string());
-        }
-        if self.report.redis_configured && !names.iter().any(|name| name == "redis") {
-            names.push("redis".to_string());
-        }
-        if self.report.qdrant_configured && !names.iter().any(|name| name == "qdrant") {
-            names.push("qdrant".to_string());
-        }
-        if self.report.s3_configured && !names.iter().any(|name| name == "s3") {
-            names.push("s3".to_string());
-        }
-        if self.report.mongodb_configured && !names.iter().any(|name| name == "mongodb") {
-            names.push("mongodb".to_string());
-        }
-        if self.report.neo4j_configured && !names.iter().any(|name| name == "neo4j") {
-            names.push("neo4j".to_string());
-        }
-        if self.report.clickhouse_configured && !names.iter().any(|name| name == "clickhouse") {
-            names.push("clickhouse".to_string());
         }
         names
     }

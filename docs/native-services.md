@@ -13,7 +13,7 @@
 │    UNIVERSAL DATA BROKER                                                   │
 │    gRPC data plane | native control plane | tenant/project scope guard     │
 │                                                                            │
-│    crate v0.3.3 | protocol v1.0.0                                          │
+│    crate v0.3.5 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 UDB includes a native control plane for identity, access, storage metadata,
@@ -29,7 +29,7 @@ it to an internal network or place it behind a trusted gateway.
 
 ## Service Table
 
-UDB 0.3.3 exposes 15 native services with 186 native RPCs.
+UDB 0.3.5 exposes 15 native services with 186 native RPCs.
 
 | Service | RPCs | Purpose |
 |---|---:|---|
@@ -50,6 +50,25 @@ UDB 0.3.3 exposes 15 native services with 186 native RPCs.
 | `SignalingService` | 1 | Bidirectional WebRTC signaling bridge |
 
 Generated table: [generated/native-services.md](generated/native-services.md).
+
+## 0.3.5 Native Store Path
+
+The 0.3.5 control-plane work aligns native services with UDB's canonical
+descriptor pipeline. Native services should persist through typed native entity
+stores and native runtime bindings, not through one-off SQL strings or a
+separate KV-only shortcut.
+
+That matters because service state then inherits the same contract that app
+entities do: generated table metadata, tenant/project scope checks, conflict and
+return-field semantics, CDC/outbox behavior, native-service event contracts, and
+manifest drift gates. Notification and analytics are part of this move in
+0.3.5; storage and asset flows use the same runtime direction while object bytes
+remain in the configured object backend.
+
+For operators, this means native-service startup should fail closed when a
+declared backend is missing, and release branches should keep
+`docs/generated/udb-native-contract.json` synchronized with
+`udb native manifest`.
 
 ## Authn And Authz
 

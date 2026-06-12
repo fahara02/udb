@@ -565,7 +565,12 @@ impl DataBrokerService {
     /// closed (every RPC errors) when no pool is configured.
     pub(crate) fn build_control_plane_service(&self) -> ControlPlaneServiceImpl {
         let runtime = self.runtime.load_full();
-        let pg_pool = runtime.pg_pool().ok().cloned();
+        // Native-service persistence resolves through the discovery seam (extend_udb.md):
+        // the backend is read from this service's proto `native_service` binding, then a
+        // health/weight-routed instance is chosen — not the process-global pool.
+        let pg_pool = runtime
+            .native_store_pool_for_service("control", true, "")
+            .ok();
         // Phase 9 scaling knobs (debounce/coalesce + concurrent-push throttle),
         // shared across every node stream so a fleet cannot stampede the registry.
         let scaler = Arc::new(scaling::PushScaler::from_env(Some(self.metrics.clone())));

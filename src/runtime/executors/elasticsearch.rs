@@ -310,9 +310,29 @@ impl ResourceAdminExecutor for ElasticsearchExecutor {
         resource_name: &str,
         spec_json: &str,
     ) -> Result<(), tonic::Status> {
-        let spec: JsonValue = serde_json::from_str(spec_json).map_err(|e| {
+        let raw: JsonValue = serde_json::from_str(spec_json).map_err(|e| {
             tonic::Status::invalid_argument(format!("invalid ensure_resource spec: {e}"))
         })?;
+        let dimension = raw
+            .get("dimension")
+            .or_else(|| raw.get("vector_size"))
+            .or_else(|| raw.get("size"))
+            .and_then(JsonValue::as_i64)
+            .unwrap_or(4)
+            .max(1);
+        let spec = serde_json::json!({
+            "mappings": {
+                "properties": {
+                    "vector": {
+                        "type": "dense_vector",
+                        "dims": dimension,
+                        "index": true,
+                        "similarity": "cosine"
+                    },
+                    "payload": { "type": "object", "enabled": true }
+                }
+            }
+        });
         let index = resource_name.to_ascii_lowercase();
         self.client
             .request_json(reqwest::Method::PUT, &format!("/{index}"), &spec)

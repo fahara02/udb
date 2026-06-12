@@ -68,6 +68,7 @@ service ApiKeyService {
   // ── Key lifecycle (admin-only) ────────────────────────────────────────────
   // Returns the plain key ONCE in CreateApiKeyResponse — never again.
   rpc CreateApiKey(CreateApiKeyRequest) returns (CreateApiKeyResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:apikey:create-api-key"
@@ -124,6 +125,7 @@ service ApiKeyService {
     };
   }
   rpc GetApiKey(GetApiKeyRequest) returns (GetApiKeyResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:apikey:get-api-key"
@@ -177,6 +179,7 @@ service ApiKeyService {
     option (google.api.http) = {get: "/v1/api_keys/{key_id}"};
   }
   rpc ListApiKeys(ListApiKeysRequest) returns (ListApiKeysResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:apikey:list-api-keys"
@@ -230,6 +233,7 @@ service ApiKeyService {
     option (google.api.http) = {get: "/v1/api_keys"};
   }
   rpc UpdateApiKey(UpdateApiKeyRequest) returns (UpdateApiKeyResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:apikey:update-api-key"
@@ -286,6 +290,7 @@ service ApiKeyService {
     };
   }
   rpc RevokeApiKey(RevokeApiKeyRequest) returns (RevokeApiKeyResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:apikey:revoke-api-key"
@@ -342,6 +347,7 @@ service ApiKeyService {
   // Rotate a key's secret in place (same key_id + lineage). Returns the new
   // plain key ONCE; the old secret is invalidated immediately.
   rpc RotateApiKey(RotateApiKeyRequest) returns (RotateApiKeyResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:apikey:rotate-api-key"
@@ -382,6 +388,7 @@ service ApiKeyService {
 
   // Emergency bulk revoke by selector (prefix/owner/tenant/project/scope/before).
   rpc EmergencyRevokeApiKeys(EmergencyRevokeApiKeysRequest) returns (EmergencyRevokeApiKeysResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:apikey:emergency-revoke-api-keys"
@@ -422,6 +429,7 @@ service ApiKeyService {
 
   // ── Validation (called by API gateway — internal, not public HTTP) ────────
   rpc ValidateApiKey(ValidateApiKeyRequest) returns (ValidateApiKeyResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:apikey:validate-api-key"
@@ -480,6 +488,7 @@ service ApiKeyService {
 
   // ── Usage stats ───────────────────────────────────────────────────────────
   rpc GetApiKeyUsageStats(GetApiKeyUsageStatsRequest) returns (GetApiKeyUsageStatsResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:apikey:get-api-key-usage-stats"

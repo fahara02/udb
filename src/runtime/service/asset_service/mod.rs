@@ -13,6 +13,10 @@ use sqlx::{PgPool, Row};
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
 
+use crate::ir::{
+    ComparisonOp, ConflictStrategy, LogicalFilter, LogicalPagination, LogicalProjection,
+    LogicalRead, LogicalRecord, LogicalSort, LogicalValue, SortDirection,
+};
 use crate::metrics::{MetricsRecorder, NoopMetrics};
 use crate::proto::udb::core::asset::entity::v1 as asset_entity_pb;
 use crate::proto::udb::core::asset::services::v1 as asset_pb;
@@ -25,8 +29,8 @@ pub use crate::proto::udb::core::asset::services::v1::asset_service_server::Asse
 
 use super::DataBrokerService;
 use super::native_helpers::{
-    admit_on as native_admit_on, emit_payload_event, storage_object_defaults,
-    validate_request_scope, validate_request_tenant,
+    admit_on as native_admit_on, emit_payload_event, native_service_context,
+    storage_object_defaults, validate_request_scope, validate_request_tenant,
 };
 
 const ASSET_MSG: &str = "udb.core.asset.entity.v1.Asset";
@@ -126,6 +130,15 @@ impl AssetServiceImpl {
                 }),
             None => Ok(stored_json.to_string()),
         }
+    }
+
+    /// Typed native entity dispatch is the P4 production path for the isolated
+    /// AssetService entity CRUD/read methods. Pipeline orchestration still keeps
+    /// the transitional Postgres pool for multi-table workflow state.
+    fn require_runtime(&self) -> Result<&DataBrokerRuntime, Status> {
+        self.runtime.as_deref().ok_or_else(|| {
+            Status::failed_precondition("asset service requires runtime native entity dispatch")
+        })
     }
 
     /// Per-tenant fair admission for a mutating/orchestration asset RPC.
@@ -878,6 +891,214 @@ fn pipeline_step_model() -> NativeModel {
 
 use super::native_helpers::{non_empty_json, parse_uuid};
 
+fn logical_string(value: impl Into<String>) -> LogicalValue {
+    LogicalValue::String(value.into())
+}
+
+fn logical_json_text(value: &str) -> Result<LogicalValue, Status> {
+    serde_json::from_str::<serde_json::Value>(value)
+        .map(LogicalValue::Json)
+        .map_err(|err| Status::invalid_argument(format!("native JSON field is invalid: {err}")))
+}
+
+fn eq_filter(field: &str, value: impl Into<String>) -> LogicalFilter {
+    LogicalFilter::Comparison {
+        field: field.to_string(),
+        op: ComparisonOp::Eq,
+        value: logical_string(value),
+    }
+}
+
+fn and_filter(filters: Vec<LogicalFilter>) -> LogicalFilter {
+    LogicalFilter::And(filters)
+}
+
+fn asset_projection() -> LogicalProjection {
+    LogicalProjection::fields([
+        "asset_id".to_string(),
+        "tenant_id".to_string(),
+        "project_id".to_string(),
+        "file_id".to_string(),
+        "name".to_string(),
+        "media_type".to_string(),
+        "status".to_string(),
+        "metadata".to_string(),
+    ])
+}
+
+fn pipeline_definition_projection() -> LogicalProjection {
+    LogicalProjection::fields([
+        "definition_id".to_string(),
+        "tenant_id".to_string(),
+        "name".to_string(),
+        "description".to_string(),
+        "media_type".to_string(),
+        "steps".to_string(),
+        "version".to_string(),
+        "status".to_string(),
+    ])
+}
+
+fn asset_read(
+    tenant_id: &str,
+    asset_id: Option<&str>,
+    media_type: Option<&str>,
+    status: Option<&str>,
+    offset: u64,
+    limit: u32,
+) -> LogicalRead {
+    let mut filters = vec![
+        eq_filter("tenant_id", tenant_id),
+        LogicalFilter::IsNull("deleted_at".to_string()),
+    ];
+    if let Some(asset_id) = asset_id.filter(|value| !value.trim().is_empty()) {
+        filters.push(eq_filter("asset_id", asset_id));
+    }
+    if let Some(media_type) = media_type.filter(|value| !value.trim().is_empty()) {
+        filters.push(eq_filter("media_type", media_type));
+    }
+    if let Some(status) = status.filter(|value| !value.trim().is_empty()) {
+        filters.push(eq_filter("status", status));
+    }
+    LogicalRead {
+        message_type: ASSET_MSG.to_string(),
+        filter: Some(and_filter(filters)),
+        projection: Some(asset_projection()),
+        sort: vec![LogicalSort {
+            field: "name".to_string(),
+            direction: SortDirection::Asc,
+            nulls: Default::default(),
+        }],
+        pagination: Some(LogicalPagination::page(offset, limit)),
+    }
+}
+
+fn pipeline_definition_read(tenant_id: &str, definition_id: &str) -> LogicalRead {
+    LogicalRead {
+        message_type: PIPELINE_DEFINITION_MSG.to_string(),
+        filter: Some(and_filter(vec![
+            eq_filter("definition_id", definition_id),
+            eq_filter("tenant_id", tenant_id),
+        ])),
+        projection: Some(pipeline_definition_projection()),
+        sort: Vec::new(),
+        pagination: Some(LogicalPagination::limit(1)),
+    }
+}
+
+fn native_json_object(row: &serde_json::Value) -> &serde_json::Map<String, serde_json::Value> {
+    row.get("n")
+        .and_then(serde_json::Value::as_object)
+        .or_else(|| row.as_object())
+        .unwrap_or_else(|| {
+            static EMPTY: std::sync::OnceLock<serde_json::Map<String, serde_json::Value>> =
+                std::sync::OnceLock::new();
+            EMPTY.get_or_init(serde_json::Map::new)
+        })
+}
+
+fn json_string_field(row: &serde_json::Map<String, serde_json::Value>, logical: &str) -> String {
+    row.get(logical)
+        .and_then(|value| match value {
+            serde_json::Value::String(value) => Some(value.clone()),
+            serde_json::Value::Number(value) => Some(value.to_string()),
+            serde_json::Value::Bool(value) => Some(value.to_string()),
+            serde_json::Value::Object(_) | serde_json::Value::Array(_) => Some(value.to_string()),
+            serde_json::Value::Null => None,
+        })
+        .unwrap_or_default()
+}
+
+fn json_i32_field(row: &serde_json::Map<String, serde_json::Value>, logical: &str) -> i32 {
+    row.get(logical)
+        .and_then(|value| value.as_i64())
+        .unwrap_or_default() as i32
+}
+
+fn asset_from_json(row: &serde_json::Value) -> asset_entity_pb::Asset {
+    let row = native_json_object(row);
+    asset_entity_pb::Asset {
+        asset_id: json_string_field(row, "asset_id"),
+        tenant_id: json_string_field(row, "tenant_id"),
+        project_id: json_string_field(row, "project_id"),
+        file_id: json_string_field(row, "file_id"),
+        name: json_string_field(row, "name"),
+        media_type: json_string_field(row, "media_type"),
+        status: asset_status_from_db(&json_string_field(row, "status")),
+        metadata: json_string_field(row, "metadata"),
+        ..Default::default()
+    }
+}
+
+fn pipeline_definition_from_json(row: &serde_json::Value) -> asset_entity_pb::PipelineDefinition {
+    let row = native_json_object(row);
+    asset_entity_pb::PipelineDefinition {
+        definition_id: json_string_field(row, "definition_id"),
+        tenant_id: json_string_field(row, "tenant_id"),
+        name: json_string_field(row, "name"),
+        description: json_string_field(row, "description"),
+        media_type: json_string_field(row, "media_type"),
+        steps: json_string_field(row, "steps"),
+        version: json_i32_field(row, "version"),
+        status: json_string_field(row, "status"),
+        ..Default::default()
+    }
+}
+
+fn asset_record(
+    asset_id: &str,
+    tenant_id: &str,
+    project_id: &str,
+    req: &asset_pb::RegisterAssetRequest,
+    metadata_json: &str,
+) -> Result<LogicalRecord, Status> {
+    let mut record = LogicalRecord::new();
+    record.insert("asset_id".to_string(), logical_string(asset_id));
+    record.insert("tenant_id".to_string(), logical_string(tenant_id));
+    record.insert(
+        "project_id".to_string(),
+        if project_id.trim().is_empty() {
+            LogicalValue::Null
+        } else {
+            logical_string(project_id)
+        },
+    );
+    record.insert("file_id".to_string(), logical_string(req.file_id.trim()));
+    record.insert("name".to_string(), logical_string(req.name.clone()));
+    record.insert(
+        "media_type".to_string(),
+        logical_string(req.media_type.clone()),
+    );
+    record.insert("status".to_string(), logical_string("PENDING"));
+    record.insert("metadata".to_string(), logical_json_text(metadata_json)?);
+    Ok(record)
+}
+
+fn pipeline_definition_record(
+    definition_id: &str,
+    tenant_id: &str,
+    req: &asset_pb::CreatePipelineDefinitionRequest,
+    steps_json: &str,
+    version: i32,
+) -> Result<LogicalRecord, Status> {
+    let mut record = LogicalRecord::new();
+    record.insert("definition_id".to_string(), logical_string(definition_id));
+    record.insert("tenant_id".to_string(), logical_string(tenant_id));
+    record.insert("name".to_string(), logical_string(req.name.clone()));
+    record.insert(
+        "description".to_string(),
+        logical_string(req.description.clone()),
+    );
+    record.insert(
+        "media_type".to_string(),
+        logical_string(req.media_type.clone()),
+    );
+    record.insert("steps".to_string(), logical_json_text(steps_json)?);
+    record.insert("version".to_string(), LogicalValue::Int(version as i64));
+    record.insert("status".to_string(), logical_string("ACTIVE"));
+    Ok(record)
+}
+
 // ── enum<->db (stored as SHORT tokens in VARCHAR(20) via the proto_enum serializer) ─
 
 fn asset_status_from_db(value: &str) -> i32 {
@@ -991,68 +1212,6 @@ fn step_type_to_db(value: &str, default: &str) -> Result<String, Status> {
     Ok(short.to_string())
 }
 
-// ── projections + row mappers ─────────────────────────────────────────────────
-
-fn asset_select_projection(m: &NativeModel) -> String {
-    [
-        m.text("asset_id"),
-        m.text("tenant_id"),
-        m.text_or_empty("project_id"),
-        m.text("file_id"),
-        m.text_or_empty("name"),
-        m.text_or_empty("media_type"),
-        m.text_or_empty("status"),
-        m.text_or_empty("metadata"),
-    ]
-    .join(", ")
-}
-
-fn asset_from_row(row: &sqlx::postgres::PgRow) -> Result<asset_entity_pb::Asset, Status> {
-    let map = |e: sqlx::Error| Status::internal(format!("decode asset failed: {e}"));
-    Ok(asset_entity_pb::Asset {
-        asset_id: row.try_get("asset_id").map_err(map)?,
-        tenant_id: row.try_get("tenant_id").map_err(map)?,
-        project_id: row.try_get("project_id").map_err(map)?,
-        file_id: row.try_get("file_id").map_err(map)?,
-        name: row.try_get("name").map_err(map)?,
-        media_type: row.try_get("media_type").map_err(map)?,
-        status: asset_status_from_db(&row.try_get::<String, _>("status").map_err(map)?),
-        metadata: row.try_get("metadata").map_err(map)?,
-        ..Default::default()
-    })
-}
-
-fn pipeline_definition_select_projection(m: &NativeModel) -> String {
-    [
-        m.text("definition_id"),
-        m.text("tenant_id"),
-        m.text_or_empty("name"),
-        m.text_or_empty("description"),
-        m.text_or_empty("media_type"),
-        m.text_or_empty("steps"),
-        m.select("version"),
-        m.text_or_empty("status"),
-    ]
-    .join(", ")
-}
-
-fn pipeline_definition_from_row(
-    row: &sqlx::postgres::PgRow,
-) -> Result<asset_entity_pb::PipelineDefinition, Status> {
-    let map = |e: sqlx::Error| Status::internal(format!("decode pipeline definition failed: {e}"));
-    Ok(asset_entity_pb::PipelineDefinition {
-        definition_id: row.try_get("definition_id").map_err(map)?,
-        tenant_id: row.try_get("tenant_id").map_err(map)?,
-        name: row.try_get("name").map_err(map)?,
-        description: row.try_get("description").map_err(map)?,
-        media_type: row.try_get("media_type").map_err(map)?,
-        steps: row.try_get("steps").map_err(map)?,
-        version: row.try_get::<i32, _>("version").map_err(map)?,
-        status: row.try_get("status").map_err(map)?,
-        ..Default::default()
-    })
-}
-
 fn pipeline_instance_select_projection(m: &NativeModel) -> String {
     [
         m.text("instance_id"),
@@ -1141,9 +1300,6 @@ impl AssetService for AssetServiceImpl {
         if req.name.trim().is_empty() {
             return Err(Status::invalid_argument("name is required"));
         }
-        let pool = self.require_pool()?;
-        let m = pipeline_definition_model();
-        let rel = m.relation.clone();
         let steps = {
             let s = req.steps.trim();
             if s.is_empty() {
@@ -1157,29 +1313,23 @@ impl AssetService for AssetServiceImpl {
         };
         let version = if req.version > 0 { req.version } else { 1 };
         let definition_id = Uuid::new_v4().to_string();
-        sqlx::query(&format!(
-            "INSERT INTO {rel} \
-             ({definition_id}, {tenant_id}, {name}, {description}, {media_type}, {steps}, {version}, {status}) \
-             VALUES ($1::UUID, $2::UUID, $3, $4, $5, $6::JSONB, $7, 'ACTIVE')",
-            definition_id = m.q("definition_id"),
-            tenant_id = m.q("tenant_id"),
-            name = m.q("name"),
-            description = m.q("description"),
-            media_type = m.q("media_type"),
-            steps = m.q("steps"),
-            version = m.q("version"),
-            status = m.q("status"),
-        ))
-        .bind(&definition_id)
-        .bind(tenant_id)
-        .bind(&req.name)
-        .bind(&req.description)
-        .bind(&req.media_type)
-        .bind(&steps)
-        .bind(version)
-        .execute(pool)
-        .await
-        .map_err(|err| Status::internal(format!("create pipeline definition failed: {err}")))?;
+        let context = native_service_context(&metadata, &req.tenant_id, "");
+        self.require_runtime()?
+            .native_entity_write_for_service(
+                "asset",
+                &context,
+                PIPELINE_DEFINITION_MSG,
+                pipeline_definition_record(
+                    &definition_id,
+                    &tenant_id.to_string(),
+                    &req,
+                    &steps,
+                    version,
+                )?,
+                ConflictStrategy::Error,
+            )
+            .await
+            .map_err(|err| Status::internal(format!("create pipeline definition failed: {err}")))?;
         Ok(Response::new(asset_pb::CreatePipelineDefinitionResponse {
             definition_id,
             message: "pipeline definition created".to_string(),
@@ -1198,25 +1348,19 @@ impl AssetService for AssetServiceImpl {
         let _admit = self.admit_read(&req.tenant_id).await?;
         let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?;
         let definition_id = parse_uuid("definition_id", &req.definition_id)?;
-        let pool = self.require_pool()?;
-        let m = pipeline_definition_model();
-        let rel = m.relation.clone();
-        let projection = pipeline_definition_select_projection(&m);
-        let row = sqlx::query(&format!(
-            "SELECT {projection} FROM {rel} \
-             WHERE {definition_id} = $1::UUID AND {tenant_id} = $2::UUID",
-            definition_id = m.q("definition_id"),
-            tenant_id = m.q("tenant_id"),
-        ))
-        .bind(definition_id)
-        .bind(tenant_id)
-        .fetch_optional(pool)
-        .await
-        .map_err(|err| Status::internal(format!("get pipeline definition failed: {err}")))?;
-        let definition = match row {
-            Some(row) => Some(pipeline_definition_from_row(&row)?),
-            None => return Err(Status::not_found("pipeline definition not found")),
-        };
+        let context = native_service_context(&metadata, &req.tenant_id, "");
+        let rows = self
+            .require_runtime()?
+            .native_entity_read_for_service(
+                "asset",
+                &context,
+                pipeline_definition_read(&tenant_id.to_string(), &definition_id.to_string()),
+            )
+            .await?;
+        let definition = rows.first().map(pipeline_definition_from_json);
+        if definition.is_none() {
+            return Err(Status::not_found("pipeline definition not found"));
+        }
         Ok(Response::new(asset_pb::GetPipelineDefinitionResponse {
             definition,
             error: None,
@@ -1250,33 +1394,25 @@ impl AssetService for AssetServiceImpl {
                 "file_id does not reference an active storage file owned by this tenant",
             ));
         }
-        let m = asset_model();
-        let rel = m.relation.clone();
         let asset_id = Uuid::new_v4().to_string();
-        let metadata = self.encrypt_native_json_state(&non_empty_json(&req.metadata))?;
-        sqlx::query(&format!(
-            "INSERT INTO {rel} \
-             ({asset_id}, {tenant_id}, {project_id}, {file_id}, {name}, {media_type}, {status}, {metadata}) \
-             VALUES ($1::UUID, $2::UUID, NULLIF($3, '')::UUID, $4::UUID, $5, $6, 'PENDING', $7::JSONB)",
-            asset_id = m.q("asset_id"),
-            tenant_id = m.q("tenant_id"),
-            project_id = m.q("project_id"),
-            file_id = m.q("file_id"),
-            name = m.q("name"),
-            media_type = m.q("media_type"),
-            status = m.q("status"),
-            metadata = m.q("metadata"),
-        ))
-        .bind(&asset_id)
-        .bind(tenant_id)
-        .bind(req.project_id.trim())
-        .bind(req.file_id.trim())
-        .bind(&req.name)
-        .bind(&req.media_type)
-        .bind(&metadata)
-        .execute(pool)
-        .await
-        .map_err(|err| Status::internal(format!("register asset failed: {err}")))?;
+        let asset_metadata = self.encrypt_native_json_state(&non_empty_json(&req.metadata))?;
+        let context = native_service_context(&metadata, &req.tenant_id, req.project_id.trim());
+        self.require_runtime()?
+            .native_entity_write_for_service(
+                "asset",
+                &context,
+                ASSET_MSG,
+                asset_record(
+                    &asset_id,
+                    &tenant_id.to_string(),
+                    req.project_id.trim(),
+                    &req,
+                    &asset_metadata,
+                )?,
+                ConflictStrategy::Error,
+            )
+            .await
+            .map_err(|err| Status::internal(format!("register asset failed: {err}")))?;
         emit_payload_event(
             pool,
             self.outbox_relation.as_deref(),
@@ -1768,15 +1904,14 @@ impl AssetService for AssetServiceImpl {
         // Per-tenant fair admission (lighter Read budget) so list scans can't starve the pool.
         let _admit = self.admit_read(&req.tenant_id).await?;
         let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?;
-        let pool = self.require_pool()?;
         let m = asset_model();
         let rel = m.relation.clone();
-        let projection = asset_select_projection(&m);
         let media_filter = req.media_type.trim().to_string();
         let status_filter = asset_status_to_db(&req.status, "")?;
-        let page_size = if req.page_size > 0 { req.page_size } else { 50 }.min(500) as i64;
-        let page = if req.page > 0 { req.page } else { 1 } as i64;
+        let page_size = if req.page_size > 0 { req.page_size } else { 50 }.min(500);
+        let page = if req.page > 0 { req.page } else { 1 };
         let offset = (page - 1) * page_size;
+        let pool = self.require_pool()?;
         let where_clause = format!(
             "WHERE {tenant_id} = $1::UUID AND {deleted} IS NULL \
              AND ($2 = '' OR {media_type} = $2) AND ($3 = '' OR {status} = $3)",
@@ -1792,21 +1927,25 @@ impl AssetService for AssetServiceImpl {
             .fetch_one(pool)
             .await
             .map_err(|err| Status::internal(format!("count assets failed: {err}")))?;
-        let rows = sqlx::query(&format!(
-            "SELECT {projection} FROM {rel} {where_clause} ORDER BY {name} LIMIT $4 OFFSET $5",
-            name = m.q("name"),
-        ))
-        .bind(tenant_id)
-        .bind(&media_filter)
-        .bind(&status_filter)
-        .bind(page_size)
-        .bind(offset)
-        .fetch_all(pool)
-        .await
-        .map_err(|err| Status::internal(format!("list assets failed: {err}")))?;
+        let context = native_service_context(&metadata, &req.tenant_id, "");
+        let rows = self
+            .require_runtime()?
+            .native_entity_read_for_service(
+                "asset",
+                &context,
+                asset_read(
+                    &tenant_id.to_string(),
+                    None,
+                    Some(&media_filter),
+                    Some(&status_filter),
+                    offset as u64,
+                    page_size as u32,
+                ),
+            )
+            .await?;
         let mut assets = Vec::with_capacity(rows.len());
         for row in &rows {
-            let mut asset = asset_from_row(row)?;
+            let mut asset = asset_from_json(row);
             asset.metadata = self.decrypt_native_json_state(&asset.metadata)?;
             assets.push(asset);
         }
@@ -1828,25 +1967,25 @@ impl AssetService for AssetServiceImpl {
         let _admit = self.admit_read(&req.tenant_id).await?;
         let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?;
         let asset_id = parse_uuid("asset_id", &req.asset_id)?;
-        let pool = self.require_pool()?;
-        let m = asset_model();
-        let rel = m.relation.clone();
-        let projection = asset_select_projection(&m);
-        let row = sqlx::query(&format!(
-            "SELECT {projection} FROM {rel} \
-             WHERE {asset_id} = $1::UUID AND {tenant_id} = $2::UUID AND {deleted} IS NULL",
-            asset_id = m.q("asset_id"),
-            tenant_id = m.q("tenant_id"),
-            deleted = m.q("deleted_at"),
-        ))
-        .bind(asset_id)
-        .bind(tenant_id)
-        .fetch_optional(pool)
-        .await
-        .map_err(|err| Status::internal(format!("get asset failed: {err}")))?;
-        let asset = match row {
+        let context = native_service_context(&metadata, &req.tenant_id, "");
+        let rows = self
+            .require_runtime()?
+            .native_entity_read_for_service(
+                "asset",
+                &context,
+                asset_read(
+                    &tenant_id.to_string(),
+                    Some(&asset_id.to_string()),
+                    None,
+                    None,
+                    0,
+                    1,
+                ),
+            )
+            .await?;
+        let asset = match rows.first() {
             Some(row) => {
-                let mut asset = asset_from_row(&row)?;
+                let mut asset = asset_from_json(row);
                 asset.metadata = self.decrypt_native_json_state(&asset.metadata)?;
                 Some(asset)
             }
@@ -1933,7 +2072,12 @@ impl DataBrokerService {
     /// Build the native `AssetService`, wired to the broker's Postgres pool.
     pub(crate) fn build_asset_service(&self) -> AssetServiceImpl {
         let runtime = self.runtime.load_full();
-        let pg_pool = runtime.pg_pool().ok().cloned();
+        // Native-service persistence resolves through the discovery seam (extend_udb.md):
+        // the backend is read from this service's proto `native_service` binding, then a
+        // health/weight-routed instance is chosen — not the process-global pool.
+        let pg_pool = runtime
+            .native_store_pool_for_service("asset", true, "")
+            .ok();
         let outbox = runtime.config().cdc.outbox_relation();
         let collection = std::env::var("UDB_ASSET_VECTOR_COLLECTION")
             .unwrap_or_else(|_| DEFAULT_VECTOR_COLLECTION.to_string());
@@ -1958,6 +2102,50 @@ fn storage_finalized_consumer_config(brokers: &str) -> rdkafka::ClientConfig {
         .set("enable.auto.commit", "false")
         .set("auto.offset.reset", "earliest");
     config
+}
+
+#[cfg(feature = "kafka")]
+async fn ensure_storage_finalized_topic(brokers: &str) -> Result<(), String> {
+    use rdkafka::ClientConfig;
+    use rdkafka::admin::{AdminClient, AdminOptions, NewTopic, TopicReplication};
+    use rdkafka::client::DefaultClientContext;
+
+    let admin: AdminClient<DefaultClientContext> = ClientConfig::new()
+        .set("bootstrap.servers", brokers)
+        .create()
+        .map_err(|err| format!("create Kafka admin client failed: {err}"))?;
+    match admin
+        .create_topics(
+            &[NewTopic::new(
+                STORAGE_FINALIZED_TOPIC,
+                1,
+                TopicReplication::Fixed(1),
+            )],
+            &AdminOptions::new(),
+        )
+        .await
+    {
+        Ok(results) => {
+            for result in results {
+                if let Err((name, code)) = result
+                    && !format!("{code:?}").contains("TopicAlreadyExists")
+                {
+                    return Err(format!("create Kafka topic {name} failed: {code:?}"));
+                }
+            }
+        }
+        Err(err) => return Err(format!("create Kafka topic request failed: {err}")),
+    }
+    admin
+        .inner()
+        .fetch_metadata(
+            Some(STORAGE_FINALIZED_TOPIC),
+            std::time::Duration::from_secs(10),
+        )
+        .map_err(|err| {
+            format!("Kafka topic {STORAGE_FINALIZED_TOPIC} metadata was not visible: {err}")
+        })?;
+    Ok(())
 }
 
 #[cfg(feature = "kafka")]
@@ -1999,6 +2187,14 @@ fn should_commit_storage_finalized_offset(result: &Result<Option<String>, Status
 }
 
 #[cfg(feature = "kafka")]
+fn is_storage_finalized_topic_missing_error(err: &rdkafka::error::KafkaError) -> bool {
+    let text = err.to_string();
+    text.contains("UnknownTopicOrPartition")
+        || text.contains("Broker: Unknown topic or partition")
+        || text.contains("unknown topic or partition")
+}
+
+#[cfg(feature = "kafka")]
 impl AssetServiceImpl {
     /// Spawn the storage→asset auto-trigger: a background Kafka consumer on
     /// `udb.storage.file.finalized.v1` that, per finalized file, registers the
@@ -2006,10 +2202,27 @@ impl AssetServiceImpl {
     /// (idempotent). Offsets are committed only after successful handling, so
     /// backlog is replayed at-least-once across restarts. Best-effort — a
     /// consumer error logs; the broker keeps running.
+    ///
+    /// Lifecycle (P6.4 decision): this runs **per node**, intentionally — every
+    /// replica joins the **shared** Kafka consumer group
+    /// `udb-asset-storage-finalized-trigger`, so the group coordinator
+    /// distributes partitions across replicas and each message is delivered to
+    /// exactly one consumer. This is NOT the leader-elected `NativeWorkerHost`
+    /// pattern and must NOT be converted to it: a singleton lease would collapse
+    /// every partition onto one node and forfeit horizontal consume throughput.
+    /// At-least-once redelivery on rebalance is made safe by
+    /// [`handle_storage_finalized`]'s idempotency, not by single-ownership.
     pub(crate) fn spawn_storage_finalized_consumer(self: std::sync::Arc<Self>, brokers: String) {
         tokio::spawn(async move {
             use rdkafka::Message;
             use rdkafka::consumer::{CommitMode, Consumer, StreamConsumer};
+            if let Err(err) = ensure_storage_finalized_topic(&brokers).await {
+                tracing::warn!(
+                    error = %err,
+                    topic = STORAGE_FINALIZED_TOPIC,
+                    "asset storage-finalized consumer: topic preflight failed; consumer will retry metadata"
+                );
+            }
             let config = storage_finalized_consumer_config(&brokers);
             let consumer: StreamConsumer = match config.create() {
                 Ok(c) => c,
@@ -2087,6 +2300,15 @@ impl AssetServiceImpl {
                         }
                     }
                     Err(err) => {
+                        if is_storage_finalized_topic_missing_error(&err) {
+                            tracing::debug!(
+                                error = %err,
+                                topic = STORAGE_FINALIZED_TOPIC,
+                                "asset storage-finalized consumer: topic not visible yet"
+                            );
+                            tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+                            continue;
+                        }
                         tracing::warn!(error = %err, "asset storage-finalized consumer recv error");
                     }
                 }

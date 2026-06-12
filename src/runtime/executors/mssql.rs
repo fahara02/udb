@@ -150,6 +150,30 @@ impl MssqlClient {
             .await
     }
 
+    /// Ensure the target database named by the ADO string exists. SQL Server
+    /// refuses the login handshake when `Database=...` points at a missing DB,
+    /// so bootstrap must connect to `master` first and create the configured DB
+    /// before the normal lazy client is opened.
+    pub(crate) async fn ensure_database_exists(&self) -> Result<(), String> {
+        let Some(database) = ado_database_name(&self.ado_string) else {
+            return Ok(());
+        };
+        if database.eq_ignore_ascii_case("master") {
+            return Ok(());
+        }
+        let master_ado = ado_with_database(&self.ado_string, "master");
+        let master = MssqlClient::new(master_ado);
+        let database_literal = mssql_string_literal(&database);
+        let database_ident = mssql_database_identifier(&database)?;
+        let sql = format!(
+            "IF DB_ID(N{database_literal}) IS NULL BEGIN CREATE DATABASE {database_ident}; END"
+        );
+        master
+            .simple_batch(&sql)
+            .await
+            .map_err(|err| format!("ensure SQL Server database '{database}' failed: {err}"))
+    }
+
     /// B.8 — run a parameterised query and return the first result
     /// set's rows. Thin wrapper over [`Self::with_client`] so the
     /// canonical store (which lives outside this module and cannot
@@ -234,6 +258,67 @@ fn is_transport_error(err: &tiberius::error::Error) -> bool {
         || text.contains("timeout")
         || text.contains("transport")
         || text.contains("tls")
+}
+
+fn ado_database_name(ado: &str) -> Option<String> {
+    ado.split(';').find_map(|part| {
+        let (key, value) = part.split_once('=')?;
+        let key = key.trim();
+        if key.eq_ignore_ascii_case("database") || key.eq_ignore_ascii_case("initial catalog") {
+            let value = value.trim();
+            if !value.is_empty() {
+                return Some(value.to_string());
+            }
+        }
+        None
+    })
+}
+
+fn ado_with_database(ado: &str, database: &str) -> String {
+    let mut replaced = false;
+    let parts = ado
+        .split(';')
+        .filter(|part| !part.trim().is_empty())
+        .map(|part| {
+            let Some((key, _)) = part.split_once('=') else {
+                return part.to_string();
+            };
+            let key = key.trim();
+            if key.eq_ignore_ascii_case("database") || key.eq_ignore_ascii_case("initial catalog") {
+                replaced = true;
+                format!("{key}={database}")
+            } else {
+                part.to_string()
+            }
+        })
+        .collect::<Vec<_>>();
+    if replaced {
+        format!("{};", parts.join(";"))
+    } else {
+        let mut out = ado.trim_end_matches(';').to_string();
+        if !out.is_empty() {
+            out.push(';');
+        }
+        out.push_str("Database=");
+        out.push_str(database);
+        out.push(';');
+        out
+    }
+}
+
+fn mssql_string_literal(value: &str) -> String {
+    format!("'{}'", value.replace('\'', "''"))
+}
+
+fn mssql_database_identifier(value: &str) -> Result<String, String> {
+    let value = value.trim();
+    if value.is_empty() {
+        return Err("SQL Server database name is empty".to_string());
+    }
+    if value.chars().any(|ch| ch.is_control() || ch == ';') {
+        return Err("SQL Server database name contains an unsafe character".to_string());
+    }
+    Ok(format!("[{}]", value.replace(']', "]]")))
 }
 
 /// Generic-dispatch executor wrapping an `MssqlClient`.
@@ -634,6 +719,33 @@ mod tests {
         // No assertions needed — the constructor returning means
         // no TCP attempt happened. Sanity: the Debug impl redacts.
         assert!(format!("{client:?}").contains("<redacted>"));
+    }
+
+    #[test]
+    fn ado_database_helpers_target_master_for_bootstrap() {
+        let ado = "Server=localhost,1433;Database=udb;User=sa;Password=x;";
+        assert_eq!(ado_database_name(ado).as_deref(), Some("udb"));
+        assert_eq!(
+            ado_with_database(ado, "master"),
+            "Server=localhost,1433;Database=master;User=sa;Password=x;"
+        );
+
+        let catalog = "Server=x;Initial Catalog=appdb;User=sa;";
+        assert_eq!(ado_database_name(catalog).as_deref(), Some("appdb"));
+        assert_eq!(
+            ado_with_database("Server=x;User=sa", "master"),
+            "Server=x;User=sa;Database=master;"
+        );
+    }
+
+    #[test]
+    fn mssql_database_identifier_is_escaped_and_rejects_batch_separator() {
+        assert_eq!(
+            mssql_database_identifier("udb]prod").unwrap(),
+            "[udb]]prod]"
+        );
+        assert!(mssql_database_identifier("udb;DROP DATABASE master").is_err());
+        assert_eq!(mssql_string_literal("tenant's db"), "'tenant''s db'");
     }
 
     #[test]

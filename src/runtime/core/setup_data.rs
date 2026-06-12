@@ -8,6 +8,45 @@ use super::*;
 use crate::backend::plugin::RegisterCtx;
 
 impl DataBrokerRuntime {
+    pub(crate) fn record_vector_resource_backend(
+        &self,
+        project_id: &str,
+        collection: &str,
+        backend: &str,
+        instance: Option<&str>,
+    ) {
+        let key = vector_route_key(project_id, collection);
+        let route = ResolvedBackendSelector {
+            backend: backend.to_ascii_lowercase(),
+            instance: instance.map(str::to_string),
+        };
+        if let Ok(mut routes) = self.vector_resource_routes.lock() {
+            routes.insert(key, route);
+        }
+    }
+
+    fn vector_resource_backend(
+        &self,
+        manifest: &CatalogManifest,
+        project_id: &str,
+        collection: &str,
+    ) -> Option<ResolvedBackendSelector> {
+        let key = vector_route_key(project_id, collection);
+        if let Ok(routes) = self.vector_resource_routes.lock()
+            && let Some(route) = routes.get(&key)
+        {
+            return Some(route.clone());
+        }
+        manifest
+            .stores
+            .iter()
+            .find(|store| store.store_kind == "vector" && store.resource_name == collection)
+            .map(|store| ResolvedBackendSelector {
+                backend: store.backend.to_ascii_lowercase(),
+                instance: None,
+            })
+    }
+
     pub async fn load_abac_policies(&self) -> Vec<AbacPolicy> {
         if let Some(raw) = self.config.abac_policies_json.as_ref() {
             match serde_json::from_str::<Vec<AbacPolicy>>(raw) {
@@ -125,6 +164,17 @@ impl DataBrokerRuntime {
                 plugin.register(&mut ctx).await;
             }
         }
+        // Store registration makes "first registered wins" the default SystemStores,
+        // which is a non-Postgres store (e.g. redis:default) whenever a cache/other
+        // backend registers before Postgres. The PG direct-outbox write path requires
+        // the primary Postgres SystemStores to be the default so outbox write-receipts
+        // read `outbox_max_seq` from the same store native services write to — promote
+        // postgres:primary explicitly before the consistency guard asserts it.
+        if runtime.pg_pool.is_some()
+            && let Ok(mut stores) = runtime.canonical_stores.lock()
+        {
+            let _ = stores.set_default("postgres", "primary");
+        }
         assert_pg_outbox_receipt_store_consistency(&runtime);
 
         match EncryptionRuntime::from_settings(&config.encryption).await {
@@ -138,7 +188,8 @@ impl DataBrokerRuntime {
                 .push(format!("field-level encryption disabled: {err}")),
         }
 
-        let runtime_instances = runtime_backend_instances(&instance_config, &report, &runtime);
+        let mut runtime_instances = runtime_backend_instances(&instance_config, &report, &runtime);
+        reconcile_dispatch_factories(&mut runtime_instances, &runtime, &mut report.warnings);
         report.backend_instances = runtime_instances.clone();
         runtime.executor_registry = build_executor_registry(&runtime_instances);
         runtime.backend_instances = runtime_instances;
@@ -585,16 +636,32 @@ impl DataBrokerRuntime {
                     limit: request.limit,
                 },
             );
-            reject_plan(&plan.errors)?;
-            ensure_typed_vector_backend(&plan.backend)?;
+            let route =
+                self.vector_resource_backend(manifest, &context.project_id, &request.collection);
+            reject_vector_plan_errors(&plan.errors, route.is_some())?;
+            let target = route.unwrap_or_else(|| ResolvedBackendSelector {
+                backend: plan.backend.to_ascii_lowercase(),
+                instance: None,
+            });
             let target_instance = if context.target_instance.trim().is_empty() {
-                self.choose_instance_name_for_project("qdrant", false, &context.project_id)
+                target.instance.as_deref().or_else(|| {
+                    self.choose_instance_name_for_project(
+                        &target.backend,
+                        false,
+                        &context.project_id,
+                    )
+                })
             } else {
                 Some(context.target_instance.as_str())
             };
-            let qdrant =
-                self.qdrant_for_instance_for_project(target_instance, &context.project_id)?;
-            qdrant.search(&request, filter).await
+            if target.backend == "qdrant" {
+                let qdrant =
+                    self.qdrant_for_instance_for_project(target_instance, &context.project_id)?;
+                qdrant.search(&request, filter).await
+            } else {
+                self.vector_search_dispatch_target(&target.backend, target_instance, &request)
+                    .await
+            }
         }
     }
 
@@ -631,7 +698,12 @@ impl DataBrokerRuntime {
                 },
             );
             reject_plan(&plan.errors)?;
-            ensure_typed_vector_backend(&plan.backend)?;
+            if !plan.backend.trim().is_empty() && !plan.backend.eq_ignore_ascii_case("qdrant") {
+                return Err(tonic::Status::failed_precondition(format!(
+                    "vector hybrid search is only wired for qdrant, not '{}'",
+                    plan.backend
+                )));
+            }
             let target_instance = if context.target_instance.trim().is_empty() {
                 self.choose_instance_name_for_project("qdrant", false, &context.project_id)
             } else {
@@ -703,16 +775,32 @@ impl DataBrokerRuntime {
                     payloads,
                 },
             );
-            reject_plan(&plan.errors)?;
-            ensure_typed_vector_backend(&plan.backend)?;
+            let route =
+                self.vector_resource_backend(manifest, &context.project_id, &request.collection);
+            reject_vector_plan_errors(&plan.errors, route.is_some())?;
+            let target = route.unwrap_or_else(|| ResolvedBackendSelector {
+                backend: plan.backend.to_ascii_lowercase(),
+                instance: None,
+            });
             let target_instance = if context.target_instance.trim().is_empty() {
-                self.choose_instance_name_for_project("qdrant", true, &context.project_id)
+                target.instance.as_deref().or_else(|| {
+                    self.choose_instance_name_for_project(
+                        &target.backend,
+                        true,
+                        &context.project_id,
+                    )
+                })
             } else {
                 Some(context.target_instance.as_str())
             };
-            let qdrant =
-                self.qdrant_for_instance_for_project(target_instance, &context.project_id)?;
-            qdrant.upsert(&request).await?;
+            if target.backend == "qdrant" {
+                let qdrant =
+                    self.qdrant_for_instance_for_project(target_instance, &context.project_id)?;
+                qdrant.upsert(&request).await?;
+            } else {
+                self.vector_upsert_dispatch_target(&target.backend, target_instance, &request)
+                    .await?;
+            }
             Ok(MutationResponse {
                 mutation_id: Uuid::new_v4().to_string(),
                 resource_uri: format!("vector://{}", request.collection),
@@ -720,6 +808,46 @@ impl DataBrokerRuntime {
                 ..MutationResponse::default()
             })
         }
+    }
+
+    async fn vector_search_dispatch_target(
+        &self,
+        backend: &str,
+        instance: Option<&str>,
+        request: &VectorSearchRequest,
+    ) -> Result<VectorSet, tonic::Status> {
+        use crate::runtime::executors::SearchExecutor;
+        let spec = vector_search_dispatch_spec(backend, request)?;
+        let executor = self.resolve_dispatch_executor(
+            backend,
+            instance,
+            false,
+            tonic::Code::FailedPrecondition,
+            None,
+        )?;
+        let raw = SearchExecutor::search(&executor, &spec).await?;
+        parse_vector_search_response(backend, &raw)
+    }
+
+    async fn vector_upsert_dispatch_target(
+        &self,
+        backend: &str,
+        instance: Option<&str>,
+        request: &VectorUpsertRequest,
+    ) -> Result<(), tonic::Status> {
+        use crate::runtime::executors::MutationExecutor;
+        let executor = self.resolve_dispatch_executor(
+            backend,
+            instance,
+            true,
+            tonic::Code::FailedPrecondition,
+            None,
+        )?;
+        for point in &request.points {
+            let spec = vector_upsert_dispatch_spec(backend, &request.collection, point)?;
+            MutationExecutor::mutate(&executor, &spec).await?;
+        }
+        Ok(())
     }
 
     pub async fn put_object(
@@ -1438,6 +1566,32 @@ fn ensure_full_canonical_store_registration_allowed(
     ))
 }
 
+async fn ensure_full_system_store_tables<S>(store: &S) -> Result<(), String>
+where
+    S: crate::runtime::canonical_store::SystemStores + ?Sized,
+{
+    crate::runtime::canonical_store::CanonicalStore::ensure_system_tables(store).await?;
+    crate::runtime::canonical_store::system_store::ProjectionTaskStore::ensure_projection_tables(
+        store,
+    )
+    .await
+    .map_err(|err| format!("ensure_projection_tables failed: {err}"))?;
+    crate::runtime::canonical_store::system_store::SagaStore::ensure_saga_tables(store)
+        .await
+        .map_err(|err| format!("ensure_saga_tables failed: {err}"))?;
+    crate::runtime::canonical_store::system_store::AdminAuditStore::ensure_admin_audit_tables(
+        store,
+    )
+    .await
+    .map_err(|err| format!("ensure_admin_audit_tables failed: {err}"))?;
+    crate::runtime::canonical_store::system_store::MigrationAuditStore::ensure_migration_audit_tables(
+        store,
+    )
+    .await
+    .map_err(|err| format!("ensure_migration_audit_tables failed: {err}"))?;
+    Ok(())
+}
+
 fn pg_outbox_receipt_store_mismatch(
     pg_write_path_configured: bool,
     default_store: Option<(&str, &str)>,
@@ -1663,10 +1817,26 @@ pub(crate) async fn register_postgres(ctx: &mut RegisterCtx<'_>) {
                     use crate::runtime::canonical_store::postgres::PostgresCanonicalStore;
                     use crate::runtime::cdc::CdcConfig;
                     let outbox_relation = CdcConfig::current().outbox_relation();
-                    let store: std::sync::Arc<dyn SystemStores> = std::sync::Arc::new(
-                        PostgresCanonicalStore::new(pool.clone(), "primary", outbox_relation),
-                    );
-                    runtime.register_full_canonical_store(store);
+                    let store =
+                        PostgresCanonicalStore::new(pool.clone(), "primary", outbox_relation);
+                    match ensure_full_system_store_tables(&store).await {
+                        Ok(()) => {
+                            let store: std::sync::Arc<dyn SystemStores> =
+                                std::sync::Arc::new(store);
+                            runtime.register_full_canonical_store(store);
+                        }
+                        Err(err) => {
+                            tracing::error!(
+                                error = %err,
+                                "PostgreSQL canonical store not registered \
+                                 (ensure_full_system_store_tables failed)"
+                            );
+                            report.warnings.push(format!(
+                                "PostgreSQL canonical store not registered \
+                                 (ensure_full_system_store_tables failed): {err}"
+                            ));
+                        }
+                    }
                 }
                 runtime.pg_pool = Some(pool);
             }
@@ -1836,10 +2006,19 @@ pub(crate) async fn register_mysql(ctx: &mut RegisterCtx<'_>) {
                 // #115: MySQL uses backtick identifiers within the connected
                 // database — not the Postgres double-quoted `schema.table`.
                 let outbox_relation = CdcConfig::current().outbox_relation_mysql();
-                let store: std::sync::Arc<dyn SystemStores> = std::sync::Arc::new(
-                    MysqlCanonicalStore::new(pool.clone(), "primary", outbox_relation),
-                );
-                runtime.register_full_canonical_store(store);
+                let store = MysqlCanonicalStore::new(pool.clone(), "primary", outbox_relation);
+                match ensure_full_system_store_tables(&store).await {
+                    Ok(()) => {
+                        let store: std::sync::Arc<dyn SystemStores> = std::sync::Arc::new(store);
+                        runtime.register_full_canonical_store(store);
+                    }
+                    Err(err) => {
+                        report.warnings.push(format!(
+                            "MySQL canonical store not registered \
+                             (ensure_full_system_store_tables failed): {err}"
+                        ));
+                    }
+                }
             }
             runtime.mysql_pool = Some(pool);
         }
@@ -1903,10 +2082,19 @@ pub(crate) async fn register_sqlite(ctx: &mut RegisterCtx<'_>) {
                 // #115: SQLite has no schemas and its store validates a bare
                 // `[A-Za-z0-9_]+` table name — pass the unquoted table.
                 let outbox_table = CdcConfig::current().outbox_table_bare();
-                let store: std::sync::Arc<dyn SystemStores> = std::sync::Arc::new(
-                    SqliteCanonicalStore::new(pool.clone(), "primary", outbox_table),
-                );
-                runtime.register_full_canonical_store(store);
+                let store = SqliteCanonicalStore::new(pool.clone(), "primary", outbox_table);
+                match ensure_full_system_store_tables(&store).await {
+                    Ok(()) => {
+                        let store: std::sync::Arc<dyn SystemStores> = std::sync::Arc::new(store);
+                        runtime.register_full_canonical_store(store);
+                    }
+                    Err(err) => {
+                        report.warnings.push(format!(
+                            "SQLite canonical store not registered \
+                             (ensure_full_system_store_tables failed): {err}"
+                        ));
+                    }
+                }
             }
             runtime.sqlite_pool = Some(pool);
         }
@@ -2153,8 +2341,15 @@ pub(crate) async fn register_mssql(ctx: &mut RegisterCtx<'_>) {
         if let Some(client) = mssql_executor_from_instance(instance) {
             tracing::info!(
                 instance = %instance.name,
-                "SQL Server client constructed (connection deferred to first use)"
+                "SQL Server client constructed; ensuring configured database exists"
             );
+            if let Err(err) = client.ensure_database_exists().await {
+                report.warnings.push(format!(
+                    "SQL Server instance {} unavailable during database bootstrap: {err}",
+                    instance.name
+                ));
+                continue;
+            }
             report.mssql_configured = true;
             if runtime.mssql.is_none() {
                 runtime.mssql = Some(client.clone());
@@ -2164,13 +2359,12 @@ pub(crate) async fn register_mssql(ctx: &mut RegisterCtx<'_>) {
             // succeeds (a reachable, permissioned SQL Server), mirroring the
             // PG/MySQL canonical registration but gated as the doc requires.
             if instance.name == "primary" {
-                use crate::runtime::canonical_store::CanonicalStore;
                 use crate::runtime::canonical_store::SystemStores;
                 use crate::runtime::canonical_store::mssql::MssqlCanonicalStore;
                 use crate::runtime::cdc::CdcConfig;
                 let outbox_relation = CdcConfig::current().outbox_relation_mssql();
                 let store = MssqlCanonicalStore::new(client.clone(), "primary", outbox_relation);
-                match CanonicalStore::ensure_system_tables(&store).await {
+                match ensure_full_system_store_tables(&store).await {
                     Ok(()) => {
                         let store: std::sync::Arc<dyn SystemStores> = std::sync::Arc::new(store);
                         runtime.register_full_canonical_store(store);
@@ -2179,7 +2373,7 @@ pub(crate) async fn register_mssql(ctx: &mut RegisterCtx<'_>) {
                     Err(err) => {
                         report.warnings.push(format!(
                             "SQL Server canonical store not registered \
-                             (ensure_system_tables failed): {err}"
+                             (ensure_full_system_store_tables failed): {err}"
                         ));
                     }
                 }
@@ -2954,23 +3148,196 @@ fn instance_labels(instance: &BackendInstance) -> HashMap<String, String> {
         .collect()
 }
 
-/// #126: typed vector RPCs (`VectorSearch`/`VectorUpsert`/`VectorHybridSearch`)
-/// are served by Qdrant only. Weaviate/Pinecone/Elasticsearch advertise vector
-/// support but are reachable through `GenericDispatch` (vector REST), not these
-/// typed RPCs. Reject a collection whose manifest declares a different backend
-/// instead of silently serving it from Qdrant (which would query an unrelated /
-/// empty collection). An empty/`qdrant` backend is accepted.
-#[cfg(feature = "qdrant")]
-fn ensure_typed_vector_backend(backend: &str) -> Result<(), tonic::Status> {
-    let normalized = backend.trim().to_ascii_lowercase();
-    if normalized.is_empty() || normalized == "qdrant" {
-        Ok(())
-    } else {
-        Err(tonic::Status::failed_precondition(format!(
-            "vector collection is configured for backend '{backend}', but typed vector RPCs are \
-             served by Qdrant only; use GenericDispatch (vector REST) to reach '{backend}'"
-        )))
+fn vector_route_key(project_id: &str, collection: &str) -> String {
+    format!("{}:{}", project_id.trim(), collection.trim())
+}
+
+fn reject_vector_plan_errors(
+    errors: &[String],
+    routed_ad_hoc_collection: bool,
+) -> Result<(), tonic::Status> {
+    if !routed_ad_hoc_collection {
+        return reject_plan(errors);
     }
+    let remaining = errors
+        .iter()
+        .filter(|error| !error.starts_with("unknown vector collection "))
+        .cloned()
+        .collect::<Vec<_>>();
+    reject_plan(&remaining)
+}
+
+fn vector_search_dispatch_spec(
+    backend: &str,
+    request: &VectorSearchRequest,
+) -> Result<String, tonic::Status> {
+    let limit = if request.limit > 0 { request.limit } else { 10 };
+    let spec = match backend {
+        "elasticsearch" => serde_json::json!({
+            "method": "POST",
+            "path": format!("/{}/_search", request.collection.to_ascii_lowercase()),
+            "body": {
+                "size": limit,
+                "query": {
+                    "script_score": {
+                        "query": { "match_all": {} },
+                        "script": {
+                            "source": "cosineSimilarity(params.query_vector, 'vector') + 1.0",
+                            "params": { "query_vector": request.vector }
+                        }
+                    }
+                }
+            }
+        }),
+        "weaviate" => {
+            let class_name = vector_weaviate_class_name(&request.collection);
+            serde_json::json!({
+                "method": "POST",
+                "path": "/v1/graphql",
+                "body": {
+                    "query": format!(
+                        "{{ Get {{ {class_name}(nearVector: {{ vector: {:?} }}, limit: {limit}) {{ _additional {{ id distance certainty }} }} }} }}",
+                        request.vector
+                    )
+                }
+            })
+        }
+        "pinecone" => serde_json::json!({
+            "method": "POST",
+            "path": "/query",
+            "body": {
+                "vector": request.vector,
+                "topK": limit,
+                "includeMetadata": request.with_payload
+            }
+        }),
+        other => {
+            return Err(tonic::Status::failed_precondition(format!(
+                "typed vector search is not wired for backend '{other}'"
+            )));
+        }
+    };
+    serde_json::to_string(&spec).map_err(|err| tonic::Status::internal(err.to_string()))
+}
+
+fn vector_upsert_dispatch_spec(
+    backend: &str,
+    collection: &str,
+    point: &VectorPointMutation,
+) -> Result<String, tonic::Status> {
+    let payload = point
+        .payload
+        .as_ref()
+        .map(struct_to_json)
+        .unwrap_or(JsonValue::Null);
+    let spec = match backend {
+        "elasticsearch" => {
+            let mut body = serde_json::Map::new();
+            body.insert("vector".to_string(), serde_json::json!(point.vector));
+            body.insert("payload".to_string(), payload);
+            serde_json::json!({
+                "method": "PUT",
+                "path": format!(
+                    "/{}/_doc/{}?refresh=true",
+                    collection.to_ascii_lowercase(),
+                    urlencoding::encode(&point.id)
+                ),
+                "body": JsonValue::Object(body)
+            })
+        }
+        "weaviate" => {
+            let class_name = vector_weaviate_class_name(collection);
+            serde_json::json!({
+                "method": "POST",
+                "path": "/v1/objects",
+                "body": {
+                    "class": class_name,
+                    "properties": payload,
+                    "vector": point.vector
+                }
+            })
+        }
+        "pinecone" => serde_json::json!({
+            "method": "POST",
+            "path": "/vectors/upsert",
+            "body": {
+                "vectors": [{
+                    "id": point.id,
+                    "values": point.vector,
+                    "metadata": payload
+                }]
+            }
+        }),
+        other => {
+            return Err(tonic::Status::failed_precondition(format!(
+                "typed vector upsert is not wired for backend '{other}'"
+            )));
+        }
+    };
+    serde_json::to_string(&spec).map_err(|err| tonic::Status::internal(err.to_string()))
+}
+
+fn parse_vector_search_response(backend: &str, raw: &str) -> Result<VectorSet, tonic::Status> {
+    let parsed: JsonValue = serde_json::from_str(raw)
+        .map_err(|err| tonic::Status::internal(format!("vector search response parse: {err}")))?;
+    let points = match backend {
+        "elasticsearch" => parsed
+            .pointer("/hits/hits")
+            .and_then(JsonValue::as_array)
+            .map(|hits| {
+                hits.iter()
+                    .map(|hit| VectorPoint {
+                        id: hit
+                            .get("_id")
+                            .and_then(JsonValue::as_str)
+                            .unwrap_or_default()
+                            .to_string(),
+                        score: hit.get("_score").and_then(JsonValue::as_f64).unwrap_or(0.0) as f32,
+                        payload: hit.get("_source").cloned().and_then(json_into_struct),
+                    })
+                    .collect()
+            })
+            .unwrap_or_default(),
+        "pinecone" => parsed
+            .get("matches")
+            .and_then(JsonValue::as_array)
+            .map(|matches| {
+                matches
+                    .iter()
+                    .map(|item| VectorPoint {
+                        id: item
+                            .get("id")
+                            .and_then(JsonValue::as_str)
+                            .unwrap_or_default()
+                            .to_string(),
+                        score: item.get("score").and_then(JsonValue::as_f64).unwrap_or(0.0) as f32,
+                        payload: item.get("metadata").cloned().and_then(json_into_struct),
+                    })
+                    .collect()
+            })
+            .unwrap_or_default(),
+        "weaviate" => Vec::new(),
+        _ => Vec::new(),
+    };
+    Ok(VectorSet { points })
+}
+
+fn vector_weaviate_class_name(resource_name: &str) -> String {
+    let mut out = String::new();
+    for ch in resource_name.chars() {
+        if ch.is_ascii_alphanumeric() {
+            out.push(ch);
+        } else if ch == '_' || ch == '-' {
+            out.push('_');
+        }
+    }
+    if out.is_empty() {
+        out.push_str("UdbVector");
+    }
+    if !out.chars().next().is_some_and(|ch| ch.is_ascii_uppercase()) {
+        out.insert_str(0, "Udb");
+    }
+    out
 }
 
 /// The gRPC `Chunk` stream returned by the typed `GetObject` path.

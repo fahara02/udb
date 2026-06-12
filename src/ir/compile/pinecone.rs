@@ -361,7 +361,7 @@ impl Compiler for PineconeCompiler {
         // /vectors/update (single vector, partial metadata + optional
         // values). Update is single-record only on Pinecone's REST
         // surface.
-        if let ConflictStrategy::Update { fields } = &op.conflict {
+        if let ConflictStrategy::Update { fields, .. } = &op.conflict {
             if op.records.len() != 1 {
                 return Err(CompileError::OperatorUnsupported {
                     backend: BackendKind::Pinecone,
@@ -919,9 +919,7 @@ mod tests {
         let write = LogicalWrite {
             message_type: "acme.docs.v1.Doc".into(),
             records: vec![rec],
-            conflict: ConflictStrategy::Update {
-                fields: vec!["title".into()],
-            },
+            conflict: ConflictStrategy::update(vec!["title".into()]),
             return_fields: vec![],
         };
         let (path, _, body) = extract_json(PineconeCompiler.compile_write(&write, &ctx).unwrap());
@@ -945,7 +943,7 @@ mod tests {
         let write = LogicalWrite {
             message_type: "acme.docs.v1.Doc".into(),
             records: vec![rec],
-            conflict: ConflictStrategy::Update { fields: vec![] },
+            conflict: ConflictStrategy::update(vec![]),
             return_fields: vec![],
         };
         let (_, _, body) = extract_json(PineconeCompiler.compile_write(&write, &ctx).unwrap());

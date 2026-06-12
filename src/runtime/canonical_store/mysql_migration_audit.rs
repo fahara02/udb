@@ -152,16 +152,34 @@ impl MigrationAuditStore for MysqlCanonicalStore {
                 .await
                 .map_err(|e| SystemStoreError::query("mysql", payload_col.clone(), e))?;
         }
-        let backfill = format!(
-            "UPDATE {LEDGER_TABLE}
-             SET payload_json = rollback_json
-             WHERE payload_json IS NULL
-               AND rollback_json IS NOT NULL"
-        );
-        sqlx::query(&backfill)
-            .execute(self.mysql_pool())
-            .await
-            .map_err(|e| SystemStoreError::query("mysql", backfill.clone(), e))?;
+        // Only tables created by an OLD schema have the legacy `rollback_json`
+        // column; one created by the current DDL never does, so an unconditional
+        // UPDATE referencing it fails with `Unknown column 'rollback_json'` and
+        // aborts canonical-store registration. Guard the backfill on the
+        // column's existence (the same INFORMATION_SCHEMA idiom as payload_json).
+        let has_rollback_col: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*)
+             FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE()
+               AND TABLE_NAME = ?
+               AND COLUMN_NAME = 'rollback_json'",
+        )
+        .bind(LEDGER_TABLE)
+        .fetch_one(self.mysql_pool())
+        .await
+        .map_err(|e| SystemStoreError::query("mysql", "check rollback_json column", e))?;
+        if has_rollback_col != 0 {
+            let backfill = format!(
+                "UPDATE {LEDGER_TABLE}
+                 SET payload_json = rollback_json
+                 WHERE payload_json IS NULL
+                   AND rollback_json IS NOT NULL"
+            );
+            sqlx::query(&backfill)
+                .execute(self.mysql_pool())
+                .await
+                .map_err(|e| SystemStoreError::query("mysql", backfill.clone(), e))?;
+        }
         Ok(())
     }
 

@@ -5,6 +5,7 @@ use crate::proto::udb::core::apikey::services::v1::api_key_service_server::ApiKe
 use crate::proto::udb::core::authn::services::v1 as authn_pb;
 use crate::proto::udb::core::authn::services::v1::authn_service_server::AuthnService;
 use crate::proto::udb::core::common::v1 as common_pb;
+use crate::runtime::service::method_security::{scope_claim_context_for_test, test_claim_context};
 use tonic::Request;
 use uuid::Uuid;
 
@@ -147,14 +148,18 @@ async fn live_postgres_authenticate_with_api_key() {
         .expect("principal");
     assert_eq!(principal.principal_id, owner_id);
 
-    apikeys
-        .revoke_api_key(Request::new(apikey_pb::RevokeApiKeyRequest {
+    // Revoke as the authenticated tenant-`acme` admin (validated claim installed
+    // by the transport layer over the wire); the tenant guard stays strict.
+    scope_claim_context_for_test(
+        test_claim_context(&owner_id, "acme", "billing", &[], &[]),
+        apikeys.revoke_api_key(Request::new(apikey_pb::RevokeApiKeyRequest {
             key_id: created.key.expect("key").key_id,
             revoke_reason: "live_test".to_string(),
             ..Default::default()
-        }))
-        .await
-        .expect("revoke api key");
+        })),
+    )
+    .await
+    .expect("revoke api key");
 
     let err = authn
         .authenticate(Request::new(authn_pb::AuthnRequest {

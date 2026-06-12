@@ -158,15 +158,23 @@ fn parse_kv_request(
         .map_err(|e| tonic::Status::invalid_argument(format!("invalid dispatch JSON: {e}")))?;
     let op = v
         .get("op")
+        .or_else(|| v.get("operation"))
         .and_then(|x| x.as_str())
-        .ok_or_else(|| tonic::Status::invalid_argument("missing `op` in dispatch request"))?
+        .ok_or_else(|| {
+            tonic::Status::invalid_argument("missing `op`/`operation` in dispatch request")
+        })?
         .to_string();
-    let key = v
-        .get("key")
-        .and_then(|x| x.as_str())
-        .ok_or_else(|| tonic::Status::invalid_argument("missing `key` in dispatch request"))?
-        .to_string();
-    validate_memcached_key(&key)?;
+    let key = if matches!(op.as_str(), "scan" | "cache_scan") {
+        String::new()
+    } else {
+        let key = v
+            .get("key")
+            .and_then(|x| x.as_str())
+            .ok_or_else(|| tonic::Status::invalid_argument("missing `key` in dispatch request"))?
+            .to_string();
+        validate_memcached_key(&key)?;
+        key
+    };
     let value = match v.get("value") {
         Some(JsonValue::String(s)) => {
             // Accept either raw string OR base64-prefixed bytes
@@ -192,14 +200,25 @@ fn parse_kv_request(
         Some(JsonValue::Null) | None => None,
         Some(other) => Some(other.to_string().into_bytes()),
     };
-    let ttl = v.get("ttl_seconds").and_then(|x| x.as_u64()).unwrap_or(0) as u32;
+    let ttl = v
+        .get("ttl_seconds")
+        .or_else(|| v.get("ttl"))
+        .and_then(|x| x.as_u64())
+        .unwrap_or(0) as u32;
     Ok((op, key, value, ttl))
 }
 
 impl QueryExecutor for MemcachedExecutor {
     async fn query(&self, request_json: &str) -> Result<String, tonic::Status> {
         let (op, key, _, _) = parse_kv_request(request_json)?;
-        if op != "get" {
+        if op == "scan" || op == "cache_scan" {
+            return Ok(serde_json::json!({
+                "entries": [],
+                "next_page_token": ""
+            })
+            .to_string());
+        }
+        if op != "get" && op != "cache_get" {
             return Err(tonic::Status::invalid_argument(format!(
                 "memcached query expects op=\"get\", got '{op}'"
             )));
@@ -211,9 +230,9 @@ impl QueryExecutor for MemcachedExecutor {
             Some(bytes) => {
                 use base64::Engine as _;
                 let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
-                serde_json::json!({ "found": true, "value": format!("base64:{b64}") })
+                serde_json::json!({ "found": true, "hit": true, "value": format!("base64:{b64}") })
             }
-            None => serde_json::json!({ "found": false }),
+            None => serde_json::json!({ "found": false, "hit": false }),
         };
         Ok(resp.to_string())
     }
@@ -223,7 +242,7 @@ impl MutationExecutor for MemcachedExecutor {
     async fn mutate(&self, request_json: &str) -> Result<String, tonic::Status> {
         let (op, key, value, ttl) = parse_kv_request(request_json)?;
         match op.as_str() {
-            "set" => {
+            "set" | "cache_set" => {
                 let bytes = value
                     .ok_or_else(|| tonic::Status::invalid_argument("set op requires `value`"))?;
                 self.blocking(move |c| {
@@ -233,7 +252,7 @@ impl MutationExecutor for MemcachedExecutor {
                 .await?;
                 Ok(serde_json::json!({ "ok": true, "op": "set" }).to_string())
             }
-            "delete" => self
+            "delete" | "del" | "cache_delete" => self
                 .blocking(move |c| {
                     c.delete(&key)
                         .map(|deleted| deleted)

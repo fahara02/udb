@@ -3,7 +3,7 @@
 //
 // UDB C# SDK — generated robustness/forwarding layer.
 //   Language:         csharp
-//   UDB version:      0.3.2
+//   UDB version:      0.3.5
 //   Protocol version: 1.0.0
 //   Services:         16
 //   RPCs:             262
@@ -491,7 +491,7 @@ public sealed partial class GeneratedAnalyticsServiceClient
             co => (object)_stub.GetExecutorPerformanceAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GetExecutorPerformance"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedAnalyticsServiceClient
@@ -512,7 +512,7 @@ public sealed partial class GeneratedAnalyticsServiceClient
             co => (object)_stub.GetPipelineSummaryAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GetPipelineSummary"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedAnalyticsServiceClient
@@ -533,7 +533,7 @@ public sealed partial class GeneratedAnalyticsServiceClient
             co => (object)_stub.GetReconciliationAnalyticsAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GetReconciliationAnalytics"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedAnalyticsServiceClient
@@ -554,7 +554,7 @@ public sealed partial class GeneratedAnalyticsServiceClient
             co => (object)_stub.GetSlaComplianceAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GetSlaCompliance"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedAnalyticsServiceClient
@@ -575,7 +575,7 @@ public sealed partial class GeneratedAnalyticsServiceClient
             co => (object)_stub.GetThroughputAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GetThroughput"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedAnalyticsServiceClient
@@ -596,7 +596,7 @@ public sealed partial class GeneratedAnalyticsServiceClient
             co => (object)_stub.RecordPipelineMetricAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("RecordPipelineMetric"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAnalyticsServiceClient
@@ -617,7 +617,7 @@ public sealed partial class GeneratedAnalyticsServiceClient
             co => (object)_stub.TriggerSnapshotAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("TriggerSnapshot"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedApiKeyServiceClient
@@ -638,7 +638,7 @@ public sealed partial class GeneratedApiKeyServiceClient
             co => (object)_stub.CreateApiKeyAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("CreateApiKey"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedApiKeyServiceClient
@@ -659,7 +659,7 @@ public sealed partial class GeneratedApiKeyServiceClient
             co => (object)_stub.EmergencyRevokeApiKeysAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("EmergencyRevokeApiKeys"));
+            "destructive" == "read_only");
     }
 }
 public sealed partial class GeneratedApiKeyServiceClient
@@ -680,7 +680,7 @@ public sealed partial class GeneratedApiKeyServiceClient
             co => (object)_stub.GetApiKeyAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GetApiKey"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedApiKeyServiceClient
@@ -701,7 +701,7 @@ public sealed partial class GeneratedApiKeyServiceClient
             co => (object)_stub.GetApiKeyUsageStatsAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GetApiKeyUsageStats"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedApiKeyServiceClient
@@ -722,7 +722,7 @@ public sealed partial class GeneratedApiKeyServiceClient
             co => (object)_stub.ListApiKeysAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ListApiKeys"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedApiKeyServiceClient
@@ -743,7 +743,7 @@ public sealed partial class GeneratedApiKeyServiceClient
             co => (object)_stub.RevokeApiKeyAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("RevokeApiKey"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedApiKeyServiceClient
@@ -764,7 +764,7 @@ public sealed partial class GeneratedApiKeyServiceClient
             co => (object)_stub.RotateApiKeyAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("RotateApiKey"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedApiKeyServiceClient
@@ -785,7 +785,7 @@ public sealed partial class GeneratedApiKeyServiceClient
             co => (object)_stub.UpdateApiKeyAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("UpdateApiKey"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedApiKeyServiceClient
@@ -806,7 +806,7 @@ public sealed partial class GeneratedApiKeyServiceClient
             co => (object)_stub.ValidateApiKeyAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ValidateApiKey"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedAssetServiceClient
@@ -827,7 +827,7 @@ public sealed partial class GeneratedAssetServiceClient
             co => (object)_stub.CompleteStepAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("CompleteStep"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAssetServiceClient
@@ -848,7 +848,7 @@ public sealed partial class GeneratedAssetServiceClient
             co => (object)_stub.CreatePipelineDefinitionAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("CreatePipelineDefinition"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAssetServiceClient
@@ -869,7 +869,7 @@ public sealed partial class GeneratedAssetServiceClient
             co => (object)_stub.GetAssetAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GetAsset"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedAssetServiceClient
@@ -890,7 +890,7 @@ public sealed partial class GeneratedAssetServiceClient
             co => (object)_stub.GetPipelineAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GetPipeline"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedAssetServiceClient
@@ -911,7 +911,7 @@ public sealed partial class GeneratedAssetServiceClient
             co => (object)_stub.GetPipelineDefinitionAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GetPipelineDefinition"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedAssetServiceClient
@@ -932,7 +932,7 @@ public sealed partial class GeneratedAssetServiceClient
             co => (object)_stub.ListAssetsAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ListAssets"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedAssetServiceClient
@@ -953,7 +953,7 @@ public sealed partial class GeneratedAssetServiceClient
             co => (object)_stub.RegisterAssetAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("RegisterAsset"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAssetServiceClient
@@ -974,7 +974,7 @@ public sealed partial class GeneratedAssetServiceClient
             co => (object)_stub.StartPipelineAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("StartPipeline"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -995,7 +995,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.AdminResetMfaAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("AdminResetMfa"));
+            "destructive" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1016,7 +1016,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.AdminResetPasswordAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("AdminResetPassword"));
+            "destructive" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1037,7 +1037,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.AdminRevokeAllTenantSessionsAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("AdminRevokeAllTenantSessions"));
+            "destructive" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1058,7 +1058,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.AdminRevokeAllUserSessionsAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("AdminRevokeAllUserSessions"));
+            "destructive" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1079,7 +1079,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.AdminRevokeSessionAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("AdminRevokeSession"));
+            "destructive" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1100,7 +1100,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.AuthenticateAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("Authenticate"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1121,7 +1121,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.ChangePasswordAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ChangePassword"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1142,7 +1142,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.ChangeUserStatusAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ChangeUserStatus"));
+            "destructive" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1163,7 +1163,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.ConfirmMFAEnrollmentAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ConfirmMFAEnrollment"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1184,7 +1184,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.CreateSessionAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("CreateSession"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1205,7 +1205,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.CreateUserAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("CreateUser"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1226,7 +1226,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.DeleteWebAuthnCredentialAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("DeleteWebAuthnCredential"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1247,7 +1247,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.DisableMfaFactorAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("DisableMfaFactor"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1268,7 +1268,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.EmergencyRevokeAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("EmergencyRevoke"));
+            "destructive" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1289,7 +1289,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.EnrollMFAAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("EnrollMFA"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1310,7 +1310,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.FinishWebAuthnAuthenticationAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("FinishWebAuthnAuthentication"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1331,7 +1331,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.FinishWebAuthnRegistrationAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("FinishWebAuthnRegistration"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1352,7 +1352,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.ForgotPasswordAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ForgotPassword"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1373,7 +1373,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.GenerateRecoveryCodesAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GenerateRecoveryCodes"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1394,7 +1394,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.GetJwksAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GetJwks"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1415,7 +1415,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.GetMfaPolicyAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GetMfaPolicy"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1436,7 +1436,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.GetSessionAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GetSession"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1457,7 +1457,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.GetUserAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GetUser"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1478,7 +1478,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.IntrospectTokenAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("IntrospectToken"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1499,7 +1499,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.IssueMfaChallengeAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("IssueMfaChallenge"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1520,7 +1520,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.ListDevicesAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ListDevices"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1541,7 +1541,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.ListMfaFactorsAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ListMfaFactors"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1562,7 +1562,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.ListSessionsAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ListSessions"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1583,7 +1583,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.ListUsersAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ListUsers"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1604,7 +1604,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.ListWebAuthnCredentialsAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ListWebAuthnCredentials"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1625,7 +1625,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.LoginAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("Login"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1646,7 +1646,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.LogoutAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("Logout"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1667,7 +1667,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.PutMfaPolicyAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("PutMfaPolicy"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1688,7 +1688,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.RefreshSessionAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("RefreshSession"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1709,7 +1709,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.RefreshTokenAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("RefreshToken"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1730,7 +1730,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.RenamePasskeyAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("RenamePasskey"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1751,7 +1751,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.ResendOTPAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ResendOTP"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1772,7 +1772,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.ResetPasswordAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ResetPassword"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1793,7 +1793,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.RevokeDeviceAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("RevokeDevice"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1814,7 +1814,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.RevokeRecoveryCodesAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("RevokeRecoveryCodes"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1835,7 +1835,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.RevokeSessionAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("RevokeSession"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1856,7 +1856,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.SendOTPAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("SendOTP"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1877,7 +1877,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.SendPhoneVerificationAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("SendPhoneVerification"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1898,7 +1898,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.StartWebAuthnAuthenticationAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("StartWebAuthnAuthentication"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1919,7 +1919,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.StartWebAuthnRegistrationAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("StartWebAuthnRegistration"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1940,7 +1940,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.UpdateUserAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("UpdateUser"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1961,7 +1961,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.ValidateCSRFAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ValidateCSRF"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1982,7 +1982,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.ValidateTokenAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ValidateToken"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -2003,7 +2003,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.VerifyMfaChallengeAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("VerifyMfaChallenge"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -2024,7 +2024,7 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.VerifyOTPAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("VerifyOTP"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2045,7 +2045,7 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.ActivateCanaryAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ActivateCanary"));
+            "destructive" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2066,7 +2066,7 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.ActivatePolicyVersionAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ActivatePolicyVersion"));
+            "destructive" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2087,7 +2087,7 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.ApprovePolicyDraftAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ApprovePolicyDraft"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2108,7 +2108,7 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.AssignRoleAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("AssignRole"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2129,7 +2129,7 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.AuthorizeAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("Authorize"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2150,7 +2150,7 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.BatchCheckPermissionsAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("BatchCheckPermissions"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2171,7 +2171,7 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.CheckAccessAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("CheckAccess"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2192,7 +2192,7 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.CreatePolicyDraftAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("CreatePolicyDraft"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2213,7 +2213,7 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.CreatePolicyRuleAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("CreatePolicyRule"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2234,7 +2234,7 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.CreateRoleAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("CreateRole"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2255,7 +2255,7 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.DeletePolicyRuleAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("DeletePolicyRule"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2276,7 +2276,7 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.DeleteRoleAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("DeleteRole"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2297,7 +2297,7 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.DiffPolicyDraftAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("DiffPolicyDraft"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2318,7 +2318,7 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.ExplainPolicyAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ExplainPolicy"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2339,7 +2339,7 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.GetAuthzRevisionAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GetAuthzRevision"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2360,7 +2360,7 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.GetCanaryStatusAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GetCanaryStatus"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2381,7 +2381,7 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.GetNativeAccessAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GetNativeAccess"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2402,7 +2402,7 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.GetPolicyBundleAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GetPolicyBundle"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2423,7 +2423,7 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.GetPolicyRuleAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GetPolicyRule"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2444,7 +2444,7 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.GetRoleAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GetRole"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2465,7 +2465,7 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.InvalidatePolicyBundlesAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("InvalidatePolicyBundles"));
+            "destructive" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2486,7 +2486,7 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.LintAuthzPoliciesAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("LintAuthzPolicies"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2507,7 +2507,7 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.ListAccessDecisionAuditsAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ListAccessDecisionAudits"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2528,7 +2528,7 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.ListPolicyRulesAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ListPolicyRules"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2549,7 +2549,7 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.ListPolicyVersionsAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ListPolicyVersions"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2570,7 +2570,7 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.ListRolesAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ListRoles"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2591,7 +2591,7 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.ListUserPermissionsAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ListUserPermissions"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2612,7 +2612,7 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.ListUserRolesAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ListUserRoles"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2633,7 +2633,7 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.MigrateLegacyPoliciesAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("MigrateLegacyPolicies"));
+            "destructive" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2654,7 +2654,7 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.PromoteCanaryAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("PromoteCanary"));
+            "destructive" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2675,7 +2675,7 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.PutAuthzPolicyAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("PutAuthzPolicy"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2696,7 +2696,7 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.PutRelationshipAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("PutRelationship"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2717,7 +2717,7 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.PutRoleBindingAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("PutRoleBinding"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2738,7 +2738,7 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.RejectPolicyDraftAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("RejectPolicyDraft"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2759,7 +2759,7 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.RevokeRoleAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("RevokeRole"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2780,7 +2780,7 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.RollbackPolicyVersionAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("RollbackPolicyVersion"));
+            "destructive" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2801,7 +2801,7 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.SeedBuiltinRolesAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("SeedBuiltinRoles"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2822,7 +2822,7 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.SimulatePolicyAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("SimulatePolicy"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2843,7 +2843,7 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.SubmitPolicyDraftAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("SubmitPolicyDraft"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2864,7 +2864,7 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.UpdatePolicyDraftAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("UpdatePolicyDraft"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2885,7 +2885,7 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.UpdateRoleAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("UpdateRole"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedControlPlaneServiceClient
@@ -2906,7 +2906,7 @@ public sealed partial class GeneratedControlPlaneServiceClient
             co => (object)_stub.AckStatusAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("AckStatus"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedControlPlaneServiceClient
@@ -2927,7 +2927,7 @@ public sealed partial class GeneratedControlPlaneServiceClient
             co => (object)_stub.GetResourcesAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GetResources"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedControlPlaneServiceClient
@@ -2948,7 +2948,7 @@ public sealed partial class GeneratedControlPlaneServiceClient
             co => (object)_stub.ListNodeStatesAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ListNodeStates"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -2969,7 +2969,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.CreateProviderAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("CreateProvider"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -2990,7 +2990,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.DisableProviderAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("DisableProvider"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3011,7 +3011,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.ForceJwksRefreshAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ForceJwksRefresh"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3032,7 +3032,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.GetProviderAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GetProvider"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3053,7 +3053,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.ImportSamlMetadataAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ImportSamlMetadata"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3074,7 +3074,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.LinkIdentityAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("LinkIdentity"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3095,7 +3095,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.ListExternalIdentitiesAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ListExternalIdentities"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3116,7 +3116,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.ListProvidersAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ListProviders"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3137,7 +3137,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.PreviewClaimMappingAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("PreviewClaimMapping"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3158,7 +3158,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.PreviewGroupMappingAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("PreviewGroupMapping"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3179,7 +3179,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.ResolveExternalIdentityAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ResolveExternalIdentity"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3200,7 +3200,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.SamlAcsAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("SamlAcs"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3221,7 +3221,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.ScimCreateGroupAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ScimCreateGroup"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3242,7 +3242,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.ScimCreateUserAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ScimCreateUser"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3263,7 +3263,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.ScimDeleteGroupAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ScimDeleteGroup"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3284,7 +3284,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.ScimDeleteUserAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ScimDeleteUser"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3305,7 +3305,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.ScimGetGroupAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ScimGetGroup"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3326,7 +3326,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.ScimGetUserAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ScimGetUser"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3347,7 +3347,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.ScimListGroupsAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ScimListGroups"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3368,7 +3368,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.ScimListUsersAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ScimListUsers"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3389,7 +3389,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.ScimPatchGroupAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ScimPatchGroup"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3410,7 +3410,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.ScimPatchUserAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ScimPatchUser"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3431,7 +3431,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.ScimReplaceUserAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ScimReplaceUser"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3452,7 +3452,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.StartSamlLoginAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("StartSamlLogin"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3473,7 +3473,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.TestProviderDiscoveryAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("TestProviderDiscovery"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3494,7 +3494,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.UnlinkIdentityAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("UnlinkIdentity"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3515,7 +3515,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.UpdateProviderAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("UpdateProvider"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedNotificationServiceClient
@@ -3536,7 +3536,7 @@ public sealed partial class GeneratedNotificationServiceClient
             co => (object)_stub.GetDeliveryStatsAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GetDeliveryStats"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedNotificationServiceClient
@@ -3557,7 +3557,7 @@ public sealed partial class GeneratedNotificationServiceClient
             co => (object)_stub.GetNotificationAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GetNotification"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedNotificationServiceClient
@@ -3578,7 +3578,7 @@ public sealed partial class GeneratedNotificationServiceClient
             co => (object)_stub.GetPreferenceAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GetPreference"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedNotificationServiceClient
@@ -3599,7 +3599,7 @@ public sealed partial class GeneratedNotificationServiceClient
             co => (object)_stub.GetTemplateAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GetTemplate"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedNotificationServiceClient
@@ -3620,7 +3620,7 @@ public sealed partial class GeneratedNotificationServiceClient
             co => (object)_stub.ListNotificationsAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ListNotifications"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedNotificationServiceClient
@@ -3641,7 +3641,7 @@ public sealed partial class GeneratedNotificationServiceClient
             co => (object)_stub.ListPreferencesAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ListPreferences"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedNotificationServiceClient
@@ -3662,7 +3662,7 @@ public sealed partial class GeneratedNotificationServiceClient
             co => (object)_stub.ListTemplatesAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ListTemplates"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedNotificationServiceClient
@@ -3683,7 +3683,7 @@ public sealed partial class GeneratedNotificationServiceClient
             co => (object)_stub.RetryNotificationAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("RetryNotification"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedNotificationServiceClient
@@ -3704,7 +3704,7 @@ public sealed partial class GeneratedNotificationServiceClient
             co => (object)_stub.SendNotificationAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("SendNotification"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedNotificationServiceClient
@@ -3725,7 +3725,7 @@ public sealed partial class GeneratedNotificationServiceClient
             co => (object)_stub.SetPreferenceAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("SetPreference"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedNotificationServiceClient
@@ -3746,7 +3746,7 @@ public sealed partial class GeneratedNotificationServiceClient
             co => (object)_stub.UpsertTemplateAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("UpsertTemplate"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedStorageServiceClient
@@ -3767,7 +3767,7 @@ public sealed partial class GeneratedStorageServiceClient
             co => (object)_stub.DeleteFileAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("DeleteFile"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedStorageServiceClient
@@ -3788,7 +3788,7 @@ public sealed partial class GeneratedStorageServiceClient
             co => (object)_stub.FinalizeUploadAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("FinalizeUpload"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedStorageServiceClient
@@ -3809,7 +3809,7 @@ public sealed partial class GeneratedStorageServiceClient
             co => (object)_stub.GetDownloadUrlAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GetDownloadUrl"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedStorageServiceClient
@@ -3830,7 +3830,7 @@ public sealed partial class GeneratedStorageServiceClient
             co => (object)_stub.GetFileAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GetFile"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedStorageServiceClient
@@ -3851,7 +3851,7 @@ public sealed partial class GeneratedStorageServiceClient
             co => (object)_stub.ListFilesAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ListFiles"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedStorageServiceClient
@@ -3872,7 +3872,7 @@ public sealed partial class GeneratedStorageServiceClient
             co => (object)_stub.RegisterUploadAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("RegisterUpload"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedStorageServiceClient
@@ -3893,7 +3893,7 @@ public sealed partial class GeneratedStorageServiceClient
             co => (object)_stub.UpdateFileAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("UpdateFile"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedTenantServiceClient
@@ -3914,7 +3914,7 @@ public sealed partial class GeneratedTenantServiceClient
             co => (object)_stub.CreateTenantAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("CreateTenant"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedTenantServiceClient
@@ -3935,7 +3935,7 @@ public sealed partial class GeneratedTenantServiceClient
             co => (object)_stub.GetTenantAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GetTenant"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedTenantServiceClient
@@ -3956,7 +3956,7 @@ public sealed partial class GeneratedTenantServiceClient
             co => (object)_stub.GetTenantConfigAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GetTenantConfig"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedTenantServiceClient
@@ -3977,7 +3977,7 @@ public sealed partial class GeneratedTenantServiceClient
             co => (object)_stub.ListTenantsAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ListTenants"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedTenantServiceClient
@@ -3998,7 +3998,7 @@ public sealed partial class GeneratedTenantServiceClient
             co => (object)_stub.UpdateTenantAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("UpdateTenant"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedTenantServiceClient
@@ -4019,7 +4019,7 @@ public sealed partial class GeneratedTenantServiceClient
             co => (object)_stub.UpdateTenantConfigAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("UpdateTenantConfig"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedPeerServiceClient
@@ -4040,7 +4040,7 @@ public sealed partial class GeneratedPeerServiceClient
             co => (object)_stub.GetPeerAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GetPeer"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedPeerServiceClient
@@ -4061,7 +4061,7 @@ public sealed partial class GeneratedPeerServiceClient
             co => (object)_stub.JoinRoomAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("JoinRoom"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedPeerServiceClient
@@ -4082,7 +4082,7 @@ public sealed partial class GeneratedPeerServiceClient
             co => (object)_stub.LeaveRoomAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("LeaveRoom"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedPeerServiceClient
@@ -4103,7 +4103,7 @@ public sealed partial class GeneratedPeerServiceClient
             co => (object)_stub.ListPeersAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ListPeers"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedRoomServiceClient
@@ -4124,7 +4124,7 @@ public sealed partial class GeneratedRoomServiceClient
             co => (object)_stub.CloseRoomAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("CloseRoom"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedRoomServiceClient
@@ -4145,7 +4145,7 @@ public sealed partial class GeneratedRoomServiceClient
             co => (object)_stub.CreateRoomAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("CreateRoom"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedRoomServiceClient
@@ -4166,7 +4166,7 @@ public sealed partial class GeneratedRoomServiceClient
             co => (object)_stub.GetRoomAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GetRoom"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedRoomServiceClient
@@ -4187,7 +4187,7 @@ public sealed partial class GeneratedRoomServiceClient
             co => (object)_stub.ListRoomsAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ListRooms"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedRoomServiceClient
@@ -4208,7 +4208,7 @@ public sealed partial class GeneratedRoomServiceClient
             co => (object)_stub.UpdateRoomAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("UpdateRoom"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedTrackServiceClient
@@ -4229,7 +4229,7 @@ public sealed partial class GeneratedTrackServiceClient
             co => (object)_stub.ListTracksAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ListTracks"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedTrackServiceClient
@@ -4250,7 +4250,7 @@ public sealed partial class GeneratedTrackServiceClient
             co => (object)_stub.MuteTrackAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("MuteTrack"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedTrackServiceClient
@@ -4271,7 +4271,7 @@ public sealed partial class GeneratedTrackServiceClient
             co => (object)_stub.PublishTrackAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("PublishTrack"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedTrackServiceClient
@@ -4292,7 +4292,7 @@ public sealed partial class GeneratedTrackServiceClient
             co => (object)_stub.UnpublishTrackAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("UnpublishTrack"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedTurnServiceClient
@@ -4313,7 +4313,7 @@ public sealed partial class GeneratedTurnServiceClient
             co => (object)_stub.IssueCredentialsAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("IssueCredentials"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4334,7 +4334,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.ActivateCatalogAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ActivateCatalog"));
+            "destructive" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4355,7 +4355,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.AnalyticalQueryAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("AnalyticalQuery"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4376,7 +4376,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.ApplyMigrationAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ApplyMigration"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4397,7 +4397,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.ApproveMigrationPlanAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ApproveMigrationPlan"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4418,7 +4418,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.CacheDeleteAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("CacheDelete"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4439,7 +4439,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.CacheGetAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("CacheGet"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4460,7 +4460,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.CacheScanAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("CacheScan"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4481,7 +4481,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.CacheSetAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("CacheSet"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4502,7 +4502,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.CreateMaterializedViewAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("CreateMaterializedView"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4523,7 +4523,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.DeleteAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("Delete"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4544,7 +4544,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.DeletePolicyAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("DeletePolicy"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4565,7 +4565,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.DismissDlqEventAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("DismissDlqEvent"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4586,7 +4586,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.DocumentDeleteAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("DocumentDelete"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4607,7 +4607,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.DocumentFindAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("DocumentFind"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4628,7 +4628,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.DocumentGetAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("DocumentGet"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4649,7 +4649,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.DocumentUpsertAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("DocumentUpsert"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4670,7 +4670,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.DropResourceAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("DropResource"));
+            "destructive" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4691,7 +4691,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.EnqueueOutboxEventAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("EnqueueOutboxEvent"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4712,7 +4712,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.EnsureProjectAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("EnsureProject"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4733,7 +4733,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.EnsureResourceAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("EnsureResource"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4754,7 +4754,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.GeneratePresignedUrlAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GeneratePresignedUrl"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4775,7 +4775,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.GenericDispatchAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GenericDispatch"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4796,7 +4796,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.GetAdminSummaryAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GetAdminSummary"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4817,7 +4817,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.GetCapabilitiesAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GetCapabilities"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4838,7 +4838,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.GetCatalogManifestAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GetCatalogManifest"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4859,7 +4859,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.GetCatalogVersionAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GetCatalogVersion"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4880,7 +4880,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.GetCatalogVersionsAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GetCatalogVersions"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4901,7 +4901,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.GetCdcStatusAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GetCdcStatus"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4922,7 +4922,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.GetDlqEventAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GetDlqEvent"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4943,7 +4943,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.GetHealthReportAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GetHealthReport"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4964,7 +4964,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.GetMigrationStatusAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GetMigrationStatus"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4985,7 +4985,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.GetSagaAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GetSaga"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5006,7 +5006,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.GraphMutateAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GraphMutate"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5027,7 +5027,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.GraphQueryAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("GraphQuery"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5048,7 +5048,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.InitiateMultipartUploadAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("InitiateMultipartUpload"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5069,7 +5069,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.LintPoliciesAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("LintPolicies"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5090,7 +5090,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.ListAdminAuditLogsAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ListAdminAuditLogs"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5111,7 +5111,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.ListDlqEventsAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ListDlqEvents"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5132,7 +5132,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.ListMessageSchemasAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ListMessageSchemas"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5153,7 +5153,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.ListMigrationRunsAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ListMigrationRuns"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5174,7 +5174,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.ListPoliciesAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ListPolicies"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5195,7 +5195,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.ListProjectsAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ListProjects"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5216,7 +5216,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.ListResourcesAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ListResources"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5237,7 +5237,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.ListSagasAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ListSagas"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5258,7 +5258,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.LookupMessageSchemaAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("LookupMessageSchema"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5279,7 +5279,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.MarkSagaReviewedAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("MarkSagaReviewed"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5300,7 +5300,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.PauseCdcAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("PauseCdc"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5321,7 +5321,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.PlanMigrationAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("PlanMigration"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5342,7 +5342,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.PreviewCdcRedactionAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("PreviewCdcRedaction"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5363,7 +5363,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.PutPolicyAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("PutPolicy"));
+            "destructive" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5384,7 +5384,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.QuarantineDlqEventAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("QuarantineDlqEvent"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5405,7 +5405,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.ReloadPoliciesAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ReloadPolicies"));
+            "destructive" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5426,7 +5426,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.ReplayDlqEventAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ReplayDlqEvent"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5447,7 +5447,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.ResumeCdcAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ResumeCdc"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5468,7 +5468,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.RetrySagaCompensationAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("RetrySagaCompensation"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5489,7 +5489,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.RollbackCatalogAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("RollbackCatalog"));
+            "destructive" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5510,7 +5510,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.ScanProjectionDriftAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ScanProjectionDrift"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5531,7 +5531,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.SelectAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("Select"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5552,7 +5552,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.StageCatalogAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("StageCatalog"));
+            "destructive" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5573,7 +5573,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.StepDownCdcLeaderAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("StepDownCdcLeader"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5594,7 +5594,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.TimeSeriesQueryAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("TimeSeriesQuery"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5615,7 +5615,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.TimeSeriesWriteAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("TimeSeriesWrite"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5636,7 +5636,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.UpsertAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("Upsert"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5657,7 +5657,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.ValidateCatalogAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("ValidateCatalog"));
+            "destructive" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5678,7 +5678,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.VectorHybridSearchAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("VectorHybridSearch"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5699,7 +5699,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.VectorSearchAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("VectorSearch"));
+            "read_only" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5720,7 +5720,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.VectorUpsertAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("VectorUpsert"));
+            "mutation" == "read_only");
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5741,7 +5741,7 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.VerifyAdminAuditLogAsync(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("VerifyAdminAuditLog"));
+            "read_only" == "read_only");
     }
 }
 

@@ -14,10 +14,16 @@ use sqlx::{PgPool, Row};
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
 
+use crate::ir::{
+    AggregateExpr, AggregateFunc, ComparisonOp, ConflictStrategy, LogicalAggregate, LogicalFilter,
+    LogicalPagination, LogicalProjection, LogicalRead, LogicalRecord, LogicalSort, LogicalValue,
+    NullOrder, SortDirection,
+};
 use crate::metrics::{MetricsRecorder, NoopMetrics};
 use crate::proto::udb::core::notification::entity::v1 as notif_entity_pb;
 use crate::proto::udb::core::notification::services::v1 as notif_pb;
 use crate::proto::udb::core::notification::services::v1::notification_service_server::NotificationService;
+use crate::runtime::DataBrokerRuntime;
 use crate::runtime::channels::{ChannelManager, OperationChannel};
 use crate::runtime::native_catalog::{NativeModel, native_model};
 
@@ -26,7 +32,7 @@ pub use crate::proto::udb::core::notification::services::v1::notification_servic
 use super::DataBrokerService;
 use super::native_helpers::{
     admit_on as native_admit_on, metadata_tenant_id, native_page_response, native_page_window,
-    parse_uuid, validate_request_scope, validate_request_tenant,
+    native_service_context, parse_uuid, validate_request_scope, validate_request_tenant,
 };
 
 const LOG_MSG: &str = "udb.core.notification.entity.v1.NotificationLog";
@@ -35,6 +41,10 @@ const PREFERENCE_MSG: &str = "udb.core.notification.entity.v1.NotificationPrefer
 
 pub struct NotificationServiceImpl {
     pg_pool: Option<PgPool>,
+    /// Runtime handle for P4 native-entity data-plane operations. Straightforward
+    /// notification CRUD persists as typed proto entities through the native
+    /// catalog, neutral IR compiler, and selected backend executor.
+    runtime: Option<Arc<DataBrokerRuntime>>,
     /// Schema-qualified outbox table (`udb_system.outbox_events`) the CDC engine
     /// tails → Apache Kafka → the Spark streaming consumer. `None` = no emit.
     outbox_relation: Option<String>,
@@ -54,6 +64,7 @@ impl NotificationServiceImpl {
     pub fn new() -> Self {
         Self {
             pg_pool: None,
+            runtime: None,
             outbox_relation: None,
             channels: None,
             metrics: Arc::new(NoopMetrics),
@@ -63,6 +74,21 @@ impl NotificationServiceImpl {
     pub fn with_postgres(mut self, pool: Option<PgPool>) -> Self {
         self.pg_pool = pool;
         self
+    }
+
+    /// Wire the runtime used for typed native-entity notification persistence.
+    pub(crate) fn with_runtime(mut self, runtime: Option<Arc<DataBrokerRuntime>>) -> Self {
+        self.runtime = runtime;
+        self
+    }
+
+    /// Typed notification entity operations fail closed when no runtime is wired.
+    fn require_runtime(&self) -> Result<&DataBrokerRuntime, Status> {
+        self.runtime.as_deref().ok_or_else(|| {
+            Status::failed_precondition(
+                "notification service requires runtime native entity dispatch",
+            )
+        })
     }
 
     pub(crate) fn with_metrics(mut self, metrics: Arc<dyn MetricsRecorder>) -> Self {
@@ -279,8 +305,434 @@ fn deliverable_channels(logs: &[notif_entity_pb::NotificationLog]) -> Vec<i32> {
         .collect()
 }
 
+fn logical_string(value: impl Into<String>) -> LogicalValue {
+    LogicalValue::String(value.into())
+}
+
+fn logical_optional_string(value: &str) -> LogicalValue {
+    if value.trim().is_empty() {
+        LogicalValue::Null
+    } else {
+        logical_string(value.to_string())
+    }
+}
+
+fn eq_filter(field: &str, value: impl Into<String>) -> LogicalFilter {
+    LogicalFilter::Comparison {
+        field: field.to_string(),
+        op: ComparisonOp::Eq,
+        value: logical_string(value),
+    }
+}
+
+fn notification_log_filter(
+    tenant_id: &str,
+    project_id: &str,
+    recipient_id: &str,
+    event_type: &str,
+    channel: &str,
+    status: &str,
+    resource_type: &str,
+    resource_id: &str,
+) -> LogicalFilter {
+    let mut filters = Vec::new();
+    if !recipient_id.trim().is_empty() {
+        filters.push(eq_filter("recipient_id", recipient_id.trim()));
+    }
+    if !tenant_id.trim().is_empty() {
+        filters.push(eq_filter("tenant_id", tenant_id.trim()));
+    }
+    if !event_type.trim().is_empty() {
+        filters.push(eq_filter("event_type", event_type.trim()));
+    }
+    if !channel.trim().is_empty() {
+        filters.push(eq_filter("channel", channel.trim()));
+    }
+    if !status.trim().is_empty() {
+        filters.push(eq_filter("status", status.trim()));
+    }
+    if !project_id.trim().is_empty() {
+        filters.push(eq_filter("project_id", project_id.trim()));
+    }
+    if !resource_type.trim().is_empty() {
+        filters.push(eq_filter("resource_type", resource_type.trim()));
+    }
+    if !resource_id.trim().is_empty() {
+        filters.push(eq_filter("resource_id", resource_id.trim()));
+    }
+    LogicalFilter::And(filters)
+}
+
+fn notification_log_list_read(filter: LogicalFilter, offset: u64, limit: u32) -> LogicalRead {
+    LogicalRead {
+        message_type: LOG_MSG.to_string(),
+        filter: Some(filter),
+        projection: Some(log_projection()),
+        sort: vec![LogicalSort {
+            field: "created_at".to_string(),
+            direction: SortDirection::Desc,
+            nulls: NullOrder::Default,
+        }],
+        pagination: Some(LogicalPagination::page(offset, limit)),
+    }
+}
+
+fn delivery_stats_aggregate(tenant_id: &str, event_type: &str) -> LogicalAggregate {
+    let filter = notification_log_filter(tenant_id, "", "", event_type, "", "", "", "");
+    LogicalAggregate {
+        message_type: LOG_MSG.to_string(),
+        filter: Some(filter),
+        group_by: vec!["channel".to_string(), "status".to_string()],
+        aggregates: vec![AggregateExpr {
+            func: AggregateFunc::Count,
+            field: "*".to_string(),
+            alias: "n".to_string(),
+        }],
+        having: None,
+        sort: vec![LogicalSort {
+            field: "channel".to_string(),
+            direction: SortDirection::Asc,
+            nulls: NullOrder::Default,
+        }],
+        pagination: None,
+    }
+}
+
+fn log_projection() -> LogicalProjection {
+    LogicalProjection::fields([
+        "log_id".to_string(),
+        "template_id".to_string(),
+        "event_type".to_string(),
+        "channel".to_string(),
+        "recipient_id".to_string(),
+        "recipient_address".to_string(),
+        "tenant_id".to_string(),
+        "project_id".to_string(),
+        "resource_type".to_string(),
+        "resource_id".to_string(),
+        "resource_name".to_string(),
+        "correlation_id".to_string(),
+        "status".to_string(),
+        "error_message".to_string(),
+        "provider_message_id".to_string(),
+        "retry_count".to_string(),
+    ])
+}
+
+fn template_projection() -> LogicalProjection {
+    LogicalProjection::fields([
+        "template_id".to_string(),
+        "event_type".to_string(),
+        "channel".to_string(),
+        "subject_template".to_string(),
+        "body_template".to_string(),
+        "locale".to_string(),
+        "is_active".to_string(),
+        "created_by".to_string(),
+        "tenant_id".to_string(),
+    ])
+}
+
+fn preference_projection() -> LogicalProjection {
+    LogicalProjection::fields([
+        "preference_id".to_string(),
+        "user_id".to_string(),
+        "tenant_id".to_string(),
+        "channel".to_string(),
+        "event_type".to_string(),
+        "is_opted_out".to_string(),
+        "created_by".to_string(),
+    ])
+}
+
+fn notification_log_read(log_id: &str, tenant_id: &str) -> LogicalRead {
+    LogicalRead {
+        message_type: LOG_MSG.to_string(),
+        filter: Some(LogicalFilter::And(vec![
+            eq_filter("log_id", log_id.to_string()),
+            eq_filter("tenant_id", tenant_id.to_string()),
+        ])),
+        projection: Some(log_projection()),
+        sort: Vec::new(),
+        pagination: Some(LogicalPagination::limit(1)),
+    }
+}
+
+fn template_scope_filter(
+    tenant_id: &str,
+    event_type: &str,
+    channel: &str,
+    locale: Option<&str>,
+    active_only: bool,
+) -> LogicalFilter {
+    let mut filters = vec![LogicalFilter::Or(vec![
+        LogicalFilter::IsNull("tenant_id".to_string()),
+        eq_filter("tenant_id", tenant_id.to_string()),
+    ])];
+    if !event_type.trim().is_empty() {
+        filters.push(eq_filter("event_type", event_type.trim()));
+    }
+    if !channel.trim().is_empty() {
+        filters.push(eq_filter("channel", channel.trim()));
+    }
+    if let Some(locale) = locale.filter(|value| !value.trim().is_empty()) {
+        filters.push(eq_filter("locale", locale.trim()));
+    }
+    if active_only {
+        filters.push(LogicalFilter::Comparison {
+            field: "is_active".to_string(),
+            op: ComparisonOp::Eq,
+            value: LogicalValue::Bool(true),
+        });
+    }
+    filters.push(LogicalFilter::IsNull("deleted_at".to_string()));
+    LogicalFilter::And(filters)
+}
+
+fn template_read(filter: LogicalFilter, offset: u64, limit: u32) -> LogicalRead {
+    LogicalRead {
+        message_type: TEMPLATE_MSG.to_string(),
+        filter: Some(filter),
+        projection: Some(template_projection()),
+        sort: vec![
+            LogicalSort {
+                field: "event_type".to_string(),
+                direction: SortDirection::Asc,
+                nulls: NullOrder::Default,
+            },
+            LogicalSort {
+                field: "channel".to_string(),
+                direction: SortDirection::Asc,
+                nulls: NullOrder::Default,
+            },
+            LogicalSort {
+                field: "locale".to_string(),
+                direction: SortDirection::Asc,
+                nulls: NullOrder::Default,
+            },
+            LogicalSort {
+                field: "tenant_id".to_string(),
+                direction: SortDirection::Asc,
+                nulls: NullOrder::Last,
+            },
+        ],
+        pagination: Some(LogicalPagination::page(offset, limit)),
+    }
+}
+
+fn preference_filter(
+    user_id: &str,
+    tenant_id: &str,
+    channel: i32,
+    event_type: &str,
+) -> LogicalFilter {
+    LogicalFilter::And(vec![
+        eq_filter("user_id", user_id.to_string()),
+        eq_filter("tenant_id", tenant_id.to_string()),
+        eq_filter("channel", channel_to_db(channel).to_string()),
+        eq_filter("event_type", event_type.to_string()),
+    ])
+}
+
+fn preference_read(user_id: &str, tenant_id: &str, channel: i32, event_type: &str) -> LogicalRead {
+    LogicalRead {
+        message_type: PREFERENCE_MSG.to_string(),
+        filter: Some(preference_filter(user_id, tenant_id, channel, event_type)),
+        projection: Some(preference_projection()),
+        sort: Vec::new(),
+        pagination: Some(LogicalPagination::limit(1)),
+    }
+}
+
+fn preference_list_filter(user_id: &str, tenant_id: &str) -> LogicalFilter {
+    let mut filters = vec![eq_filter("user_id", user_id.to_string())];
+    if !tenant_id.trim().is_empty() {
+        filters.push(eq_filter("tenant_id", tenant_id.to_string()));
+    }
+    LogicalFilter::And(filters)
+}
+
+fn preference_list_read(filter: LogicalFilter, offset: u64, limit: u32) -> LogicalRead {
+    LogicalRead {
+        message_type: PREFERENCE_MSG.to_string(),
+        filter: Some(filter),
+        projection: Some(preference_projection()),
+        sort: vec![LogicalSort {
+            field: "channel".to_string(),
+            direction: SortDirection::Asc,
+            nulls: NullOrder::Default,
+        }],
+        pagination: Some(LogicalPagination::page(offset, limit)),
+    }
+}
+
+fn json_object(row: &serde_json::Value) -> &serde_json::Map<String, serde_json::Value> {
+    row.get("n")
+        .and_then(serde_json::Value::as_object)
+        .or_else(|| row.as_object())
+        .unwrap_or_else(|| {
+            static EMPTY: std::sync::OnceLock<serde_json::Map<String, serde_json::Value>> =
+                std::sync::OnceLock::new();
+            EMPTY.get_or_init(serde_json::Map::new)
+        })
+}
+
+fn json_string_field(row: &serde_json::Map<String, serde_json::Value>, field: &str) -> String {
+    row.get(field)
+        .and_then(|value| match value {
+            serde_json::Value::String(value) => Some(value.clone()),
+            serde_json::Value::Number(value) => Some(value.to_string()),
+            serde_json::Value::Bool(value) => Some(value.to_string()),
+            _ => None,
+        })
+        .unwrap_or_default()
+}
+
+fn json_bool_field(row: &serde_json::Map<String, serde_json::Value>, field: &str) -> bool {
+    row.get(field)
+        .and_then(serde_json::Value::as_bool)
+        .unwrap_or(false)
+}
+
+fn json_i32_field(row: &serde_json::Map<String, serde_json::Value>, field: &str) -> i32 {
+    row.get(field)
+        .and_then(serde_json::Value::as_i64)
+        .and_then(|value| i32::try_from(value).ok())
+        .unwrap_or(0)
+}
+
+fn json_i64_field(row: &serde_json::Map<String, serde_json::Value>, field: &str) -> i64 {
+    row.get(field)
+        .and_then(|value| match value {
+            serde_json::Value::Number(value) => value.as_i64(),
+            serde_json::Value::String(value) => value.parse::<i64>().ok(),
+            _ => None,
+        })
+        .unwrap_or(0)
+}
+
+fn log_from_json(row: &serde_json::Value) -> notif_entity_pb::NotificationLog {
+    let row = json_object(row);
+    notif_entity_pb::NotificationLog {
+        log_id: json_string_field(row, "log_id"),
+        template_id: json_string_field(row, "template_id"),
+        event_type: json_string_field(row, "event_type"),
+        channel: channel_from_db(&json_string_field(row, "channel")),
+        recipient_id: json_string_field(row, "recipient_id"),
+        recipient_address: json_string_field(row, "recipient_address"),
+        tenant_id: json_string_field(row, "tenant_id"),
+        project_id: json_string_field(row, "project_id"),
+        resource_type: json_string_field(row, "resource_type"),
+        resource_id: json_string_field(row, "resource_id"),
+        resource_name: json_string_field(row, "resource_name"),
+        correlation_id: json_string_field(row, "correlation_id"),
+        status: status_from_db(&json_string_field(row, "status")),
+        error_message: json_string_field(row, "error_message"),
+        provider_message_id: json_string_field(row, "provider_message_id"),
+        retry_count: json_i32_field(row, "retry_count"),
+        ..Default::default()
+    }
+}
+
+fn preference_from_json_row(row: &serde_json::Value) -> notif_entity_pb::NotificationPreference {
+    let row = json_object(row);
+    notif_entity_pb::NotificationPreference {
+        preference_id: json_string_field(row, "preference_id"),
+        user_id: json_string_field(row, "user_id"),
+        tenant_id: json_string_field(row, "tenant_id"),
+        channel: channel_from_db(&json_string_field(row, "channel")),
+        event_type: json_string_field(row, "event_type"),
+        is_opted_out: json_bool_field(row, "is_opted_out"),
+        created_by: json_string_field(row, "created_by"),
+        ..Default::default()
+    }
+}
+
+fn template_from_json_row(row: &serde_json::Value) -> notif_entity_pb::NotificationTemplate {
+    let row = json_object(row);
+    notif_entity_pb::NotificationTemplate {
+        template_id: json_string_field(row, "template_id"),
+        event_type: json_string_field(row, "event_type"),
+        channel: channel_from_db(&json_string_field(row, "channel")),
+        subject_template: json_string_field(row, "subject_template"),
+        body_template: json_string_field(row, "body_template"),
+        locale: json_string_field(row, "locale"),
+        is_active: json_bool_field(row, "is_active"),
+        created_by: json_string_field(row, "created_by"),
+        tenant_id: json_string_field(row, "tenant_id"),
+        ..Default::default()
+    }
+}
+
+fn notification_log_record(
+    log: &notif_entity_pb::NotificationLog,
+    status_db: &str,
+) -> LogicalRecord {
+    let mut record = LogicalRecord::new();
+    record.insert("log_id".to_string(), logical_string(log.log_id.clone()));
+    record.insert(
+        "template_id".to_string(),
+        logical_optional_string(&log.template_id),
+    );
+    record.insert(
+        "event_type".to_string(),
+        logical_string(log.event_type.clone()),
+    );
+    record.insert(
+        "channel".to_string(),
+        logical_string(channel_to_db(log.channel)),
+    );
+    record.insert(
+        "recipient_id".to_string(),
+        logical_optional_string(&log.recipient_id),
+    );
+    record.insert(
+        "recipient_address".to_string(),
+        logical_string(log.recipient_address.clone()),
+    );
+    record.insert(
+        "tenant_id".to_string(),
+        logical_string(log.tenant_id.clone()),
+    );
+    record.insert(
+        "project_id".to_string(),
+        logical_string(log.project_id.clone()),
+    );
+    record.insert(
+        "resource_type".to_string(),
+        logical_string(log.resource_type.clone()),
+    );
+    record.insert(
+        "resource_id".to_string(),
+        logical_string(log.resource_id.clone()),
+    );
+    record.insert(
+        "resource_name".to_string(),
+        logical_string(log.resource_name.clone()),
+    );
+    record.insert(
+        "correlation_id".to_string(),
+        logical_string(log.correlation_id.clone()),
+    );
+    record.insert("status".to_string(), logical_string(status_db.to_string()));
+    record.insert(
+        "error_message".to_string(),
+        logical_string(log.error_message.clone()),
+    );
+    record.insert(
+        "provider_message_id".to_string(),
+        logical_string(log.provider_message_id.clone()),
+    );
+    record.insert(
+        "retry_count".to_string(),
+        LogicalValue::Int(log.retry_count as i64),
+    );
+    record
+}
+
 async fn is_notification_opted_out(
-    pool: &PgPool,
+    runtime: &DataBrokerRuntime,
+    context: &crate::RequestContext,
     recipient_id: &str,
     tenant_id: &str,
     channel: i32,
@@ -289,30 +741,20 @@ async fn is_notification_opted_out(
     if recipient_id.trim().is_empty() {
         return Ok(false);
     }
-    let user_id = parse_uuid("recipient_id", recipient_id)?;
-    let m = preference_model();
-    let rel = m.relation.clone();
-    sqlx::query_scalar::<_, bool>(&format!(
-        "SELECT COALESCE(( \
-             SELECT {is_opted_out} FROM {rel} \
-             WHERE {user_id} = $1::UUID AND {tenant_id} = $2 AND {channel} = $3 \
-               AND {event_type} IN ($4, '') \
-             ORDER BY CASE WHEN {event_type} = $4 THEN 0 ELSE 1 END \
-             LIMIT 1 \
-         ), FALSE)",
-        is_opted_out = m.q("is_opted_out"),
-        user_id = m.q("user_id"),
-        tenant_id = m.q("tenant_id"),
-        channel = m.q("channel"),
-        event_type = m.q("event_type"),
-    ))
-    .bind(user_id)
-    .bind(tenant_id)
-    .bind(channel_to_db(channel))
-    .bind(event_type)
-    .fetch_one(pool)
-    .await
-    .map_err(|err| Status::internal(format!("notification preference lookup failed: {err}")))
+    let user_id = parse_uuid("recipient_id", recipient_id)?.to_string();
+    for candidate_event in [event_type, ""] {
+        let rows = runtime
+            .native_entity_read_for_service(
+                "notification",
+                context,
+                preference_read(&user_id, tenant_id, channel, candidate_event),
+            )
+            .await?;
+        if let Some(row) = rows.first() {
+            return Ok(preference_from_json_row(row).is_opted_out);
+        }
+    }
+    Ok(false)
 }
 
 // ── projections + row mappers ─────────────────────────────────────────────────
@@ -383,6 +825,7 @@ fn template_select_projection(m: &NativeModel) -> String {
 /// a foreign tenant's override can never match — and `NULLS LAST` prefers the
 /// caller's override over the global default. Extracted so the tenant scoping
 /// of the selection is unit-testable without a live Postgres.
+#[cfg(test)]
 fn template_selection_sql(m: &NativeModel) -> String {
     format!(
         "SELECT {projection} FROM {rel} \
@@ -470,9 +913,8 @@ impl NotificationService for NotificationServiceImpl {
             None,
         )
         .await?;
-        let pool = self.require_pool()?;
-        let m = log_model();
-        let rel = m.relation.clone();
+        let runtime = self.require_runtime()?;
+        let context = native_service_context(&metadata, &req.tenant_id, &req.project_id);
         // Default to EMAIL when the caller did not pin channels; one log per channel.
         let channels = if req.channels.is_empty() {
             vec![notif_entity_pb::NotificationChannel::Email as i32]
@@ -482,7 +924,8 @@ impl NotificationService for NotificationServiceImpl {
         let mut logs = Vec::with_capacity(channels.len());
         for channel in channels.iter().copied() {
             let opted_out = is_notification_opted_out(
-                pool,
+                runtime,
+                &context,
                 &req.recipient_id,
                 &req.tenant_id,
                 channel,
@@ -491,42 +934,7 @@ impl NotificationService for NotificationServiceImpl {
             .await?;
             let (status_db, status_pb) = channel_send_decision(opted_out);
             let log_id = Uuid::new_v4().to_string();
-            sqlx::query(&format!(
-                "INSERT INTO {rel} \
-                 ({log_id}, {event_type}, {channel}, {recipient_id}, {recipient_address}, \
-                  {tenant_id}, {project_id}, {resource_type}, {resource_id}, {resource_name}, \
-                  {correlation_id}, {status}, {retry_count}) \
-                 VALUES ($1::UUID, $2, $3, NULLIF($4, '')::UUID, $5, $6, $7, $8, $9, $10, $11, $12, 0)",
-                log_id = m.q("log_id"),
-                event_type = m.q("event_type"),
-                channel = m.q("channel"),
-                recipient_id = m.q("recipient_id"),
-                recipient_address = m.q("recipient_address"),
-                tenant_id = m.q("tenant_id"),
-                project_id = m.q("project_id"),
-                resource_type = m.q("resource_type"),
-                resource_id = m.q("resource_id"),
-                resource_name = m.q("resource_name"),
-                correlation_id = m.q("correlation_id"),
-                status = m.q("status"),
-                retry_count = m.q("retry_count"),
-            ))
-            .bind(&log_id)
-            .bind(&req.event_type)
-            .bind(channel_to_db(channel))
-            .bind(&req.recipient_id)
-            .bind(&req.recipient_address)
-            .bind(&req.tenant_id)
-            .bind(&req.project_id)
-            .bind(&req.resource_type)
-            .bind(&req.resource_id)
-            .bind(&req.resource_name)
-            .bind(&req.correlation_id)
-            .bind(status_db)
-            .execute(pool)
-            .await
-            .map_err(|err| Status::internal(format!("send notification failed: {err}")))?;
-            logs.push(notif_entity_pb::NotificationLog {
+            let log = notif_entity_pb::NotificationLog {
                 log_id,
                 event_type: req.event_type.clone(),
                 channel,
@@ -534,29 +942,44 @@ impl NotificationService for NotificationServiceImpl {
                 recipient_address: req.recipient_address.clone(),
                 tenant_id: req.tenant_id.clone(),
                 project_id: req.project_id.clone(),
+                resource_type: req.resource_type.clone(),
+                resource_id: req.resource_id.clone(),
+                resource_name: req.resource_name.clone(),
                 correlation_id: req.correlation_id.clone(),
                 status: status_pb,
                 ..Default::default()
-            });
+            };
+            runtime
+                .native_entity_write_for_service(
+                    "notification",
+                    &context,
+                    LOG_MSG,
+                    notification_log_record(&log, status_db),
+                    ConflictStrategy::Error,
+                )
+                .await?;
+            logs.push(log);
         }
         let delivery_channels = deliverable_channels(&logs);
         if !delivery_channels.is_empty() {
-            let primary_log_id = logs
-                .iter()
-                .find(|log| log.status == notif_entity_pb::NotificationStatus::Pending as i32)
-                .map(|log| log.log_id.clone())
-                .unwrap_or_default();
-            self.emit_sent_event(
-                pool,
-                &primary_log_id,
-                &req.event_type,
-                &req.recipient_id,
-                &req.tenant_id,
-                &req.project_id,
-                &delivery_channels,
-                false,
-            )
-            .await;
+            if let Some(pool) = self.pg_pool.as_ref() {
+                let primary_log_id = logs
+                    .iter()
+                    .find(|log| log.status == notif_entity_pb::NotificationStatus::Pending as i32)
+                    .map(|log| log.log_id.clone())
+                    .unwrap_or_default();
+                self.emit_sent_event(
+                    pool,
+                    &primary_log_id,
+                    &req.event_type,
+                    &req.recipient_id,
+                    &req.tenant_id,
+                    &req.project_id,
+                    &delivery_channels,
+                    false,
+                )
+                .await;
+            }
         }
         Ok(Response::new(notif_pb::SendNotificationResponse { logs }))
     }
@@ -578,23 +1001,18 @@ impl NotificationService for NotificationServiceImpl {
         )
         .await?;
         let req = request.into_inner();
-        let log_id = parse_uuid("log_id", &req.log_id)?;
-        let pool = self.require_pool()?;
-        let m = log_model();
-        let rel = m.relation.clone();
-        let projection = log_select_projection(&m);
-        let row = sqlx::query(&format!(
-            "SELECT {projection} FROM {rel} WHERE {log_id} = $1::UUID AND {tenant_id} = $2",
-            log_id = m.q("log_id"),
-            tenant_id = m.q("tenant_id"),
-        ))
-        .bind(log_id)
-        .bind(&scoped_tenant)
-        .fetch_optional(pool)
-        .await
-        .map_err(|err| Status::internal(format!("get notification failed: {err}")))?;
-        let log = match row {
-            Some(row) => Some(log_from_row(&row)?),
+        let log_id = parse_uuid("log_id", &req.log_id)?.to_string();
+        let runtime = self.require_runtime()?;
+        let context = native_service_context(&metadata, &scoped_tenant, "");
+        let rows = runtime
+            .native_entity_read_for_service(
+                "notification",
+                &context,
+                notification_log_read(&log_id, &scoped_tenant),
+            )
+            .await?;
+        let log = match rows.first() {
+            Some(row) => Some(log_from_json(row)),
             None => return Err(Status::not_found("notification not found")),
         };
         Ok(Response::new(notif_pb::GetNotificationResponse { log }))
@@ -616,10 +1034,6 @@ impl NotificationService for NotificationServiceImpl {
             None,
         )
         .await?;
-        let pool = self.require_pool()?;
-        let m = log_model();
-        let rel = m.relation.clone();
-        let projection = log_select_projection(&m);
         let page = native_page_window(req.page.as_ref(), 50);
         let channel = if req.channel == 0 {
             String::new()
@@ -640,48 +1054,34 @@ impl NotificationService for NotificationServiceImpl {
             }
             .to_string()
         };
-        let rows = sqlx::query(&format!(
-            "SELECT {projection}, COUNT(*) OVER() AS total_count FROM {rel} \
-             WHERE ($1 = '' OR {recipient}::TEXT = $1) \
-               AND ($2 = '' OR {tenant} = $2) \
-               AND ($3 = '' OR {event} = $3) \
-               AND ($4 = '' OR {channel} = $4) \
-               AND ($5 = '' OR {status} = $5) \
-               AND ($6 = '' OR {project} = $6) \
-               AND ($7 = '' OR {resource_type} = $7) \
-               AND ($8 = '' OR {resource_id} = $8) \
-             ORDER BY {created} DESC LIMIT $9 OFFSET $10",
-            recipient = m.q("recipient_id"),
-            tenant = m.q("tenant_id"),
-            event = m.q("event_type"),
-            channel = m.q("channel"),
-            status = m.q("status"),
-            project = m.q("project_id"),
-            resource_type = m.q("resource_type"),
-            resource_id = m.q("resource_id"),
-            created = m.q("created_at"),
-        ))
-        .bind(&req.recipient_id)
-        .bind(&req.tenant_id)
-        .bind(&req.event_type)
-        .bind(&channel)
-        .bind(&status)
-        .bind(&req.project_id)
-        .bind(&req.resource_type)
-        .bind(&req.resource_id)
-        .bind(page.limit_i64())
-        .bind(page.offset_i64())
-        .fetch_all(pool)
-        .await
-        .map_err(|err| Status::internal(format!("list notifications failed: {err}")))?;
-        let total: i64 = rows
-            .first()
-            .and_then(|r| r.try_get("total_count").ok())
-            .unwrap_or(0);
-        let mut logs = Vec::with_capacity(rows.len());
-        for row in &rows {
-            logs.push(log_from_row(row)?);
-        }
+        let filter = notification_log_filter(
+            &req.tenant_id,
+            &req.project_id,
+            &req.recipient_id,
+            &req.event_type,
+            &channel,
+            &status,
+            &req.resource_type,
+            &req.resource_id,
+        );
+        let runtime = self.require_runtime()?;
+        let context = native_service_context(&metadata, &req.tenant_id, &req.project_id);
+        let total = runtime
+            .native_entity_count_for_service(
+                "notification",
+                &context,
+                LOG_MSG,
+                Some(filter.clone()),
+            )
+            .await?;
+        let rows = runtime
+            .native_entity_read_for_service(
+                "notification",
+                &context,
+                notification_log_list_read(filter, page.offset as u64, page.limit as u32),
+            )
+            .await?;
+        let logs = rows.iter().map(log_from_json).collect();
         Ok(Response::new(notif_pb::ListNotificationsResponse {
             logs,
             page: Some(native_page_response(req.page.as_ref(), total, 50)),
@@ -706,6 +1106,9 @@ impl NotificationService for NotificationServiceImpl {
         .await?;
         let req = request.into_inner();
         let log_id = parse_uuid("log_id", &req.log_id)?;
+        // Transitional: retry needs conditional update plus retry_count + 1 with
+        // RETURNING. The current typed write helper cannot express increments or
+        // status-gated updates, so this path remains capability-gated to Postgres.
         let pool = self.require_pool()?;
         let m = log_model();
         let rel = m.relation.clone();
@@ -770,6 +1173,8 @@ impl NotificationService for NotificationServiceImpl {
             None,
         )
         .await?;
+        // Transitional: global template upsert conflicts on (event_type, channel),
+        // not the manifest primary key, and returns the stored row.
         let pool = self.require_pool()?;
         let m = template_model();
         let rel = m.relation.clone();
@@ -836,23 +1241,25 @@ impl NotificationService for NotificationServiceImpl {
             None,
         )
         .await?;
-        let pool = self.require_pool()?;
-        let m = template_model();
         let locale = if req.locale.trim().is_empty() {
             "en".to_string()
         } else {
             req.locale.clone()
         };
-        let row = sqlx::query(&template_selection_sql(&m))
-            .bind(&req.event_type)
-            .bind(channel_to_db(req.channel))
-            .bind(&locale)
-            .bind(&scoped_tenant)
-            .fetch_optional(pool)
-            .await
-            .map_err(|err| Status::internal(format!("get template failed: {err}")))?;
-        let template = match row {
-            Some(row) => Some(template_from_row(&row)?),
+        let runtime = self.require_runtime()?;
+        let context = native_service_context(&metadata, &scoped_tenant, "");
+        let filter = template_scope_filter(
+            &scoped_tenant,
+            &req.event_type,
+            channel_to_db(req.channel),
+            Some(&locale),
+            false,
+        );
+        let rows = runtime
+            .native_entity_read_for_service("notification", &context, template_read(filter, 0, 1))
+            .await?;
+        let template = match rows.first() {
+            Some(row) => Some(template_from_json_row(row)),
             None => return Err(Status::not_found("template not found")),
         };
         Ok(Response::new(notif_pb::GetTemplateResponse { template }))
@@ -875,48 +1282,37 @@ impl NotificationService for NotificationServiceImpl {
             None,
         )
         .await?;
-        let pool = self.require_pool()?;
-        let m = template_model();
-        let rel = m.relation.clone();
-        let projection = template_select_projection(&m);
         let page = native_page_window(req.page.as_ref(), 50);
         let channel = if req.channel == 0 {
             String::new()
         } else {
             channel_to_db(req.channel).to_string()
         };
-        let rows = sqlx::query(&format!(
-            "SELECT {projection}, COUNT(*) OVER() AS total_count FROM {rel} \
-             WHERE {deleted} IS NULL \
-               AND ($1 = '' OR {event_type} = $1) \
-               AND ($2 = '' OR {channel} = $2) \
-               AND (NOT $3 OR {is_active} = TRUE) \
-               AND ({tenant_id} IS NULL OR {tenant_id} = $4) \
-             ORDER BY {event_type}, {channel}, {locale}, {tenant_id} NULLS LAST LIMIT $5 OFFSET $6",
-            deleted = m.q("deleted_at"),
-            event_type = m.q("event_type"),
-            channel = m.q("channel"),
-            is_active = m.q("is_active"),
-            tenant_id = m.q("tenant_id"),
-            locale = m.q("locale"),
-        ))
-        .bind(&req.event_type)
-        .bind(&channel)
-        .bind(req.active_only)
-        .bind(&scoped_tenant)
-        .bind(page.limit_i64())
-        .bind(page.offset_i64())
-        .fetch_all(pool)
-        .await
-        .map_err(|err| Status::internal(format!("list templates failed: {err}")))?;
-        let total: i64 = rows
-            .first()
-            .and_then(|r| r.try_get("total_count").ok())
-            .unwrap_or(0);
-        let mut templates = Vec::with_capacity(rows.len());
-        for row in &rows {
-            templates.push(template_from_row(row)?);
-        }
+        let filter = template_scope_filter(
+            &scoped_tenant,
+            &req.event_type,
+            &channel,
+            None,
+            req.active_only,
+        );
+        let runtime = self.require_runtime()?;
+        let context = native_service_context(&metadata, &scoped_tenant, "");
+        let total = runtime
+            .native_entity_count_for_service(
+                "notification",
+                &context,
+                TEMPLATE_MSG,
+                Some(filter.clone()),
+            )
+            .await?;
+        let rows = runtime
+            .native_entity_read_for_service(
+                "notification",
+                &context,
+                template_read(filter, page.offset as u64, page.limit as u32),
+            )
+            .await?;
+        let templates = rows.iter().map(template_from_json_row).collect();
         Ok(Response::new(notif_pb::ListTemplatesResponse {
             templates,
             page: Some(native_page_response(req.page.as_ref(), total, 50)),
@@ -939,6 +1335,73 @@ impl NotificationService for NotificationServiceImpl {
             None,
         )
         .await?;
+        if req.date_from.trim().is_empty() && req.date_to.trim().is_empty() {
+            let runtime = self.require_runtime()?;
+            let context = native_service_context(&metadata, &req.tenant_id, "");
+            let rows = runtime
+                .native_entity_aggregate_for_service(
+                    "notification",
+                    &context,
+                    delivery_stats_aggregate(&req.tenant_id, &req.event_type),
+                )
+                .await?;
+            let (mut total_sent, mut total_delivered, mut total_failed) = (0i64, 0i64, 0i64);
+            let mut by_channel = std::collections::BTreeMap::<i32, notif_pb::ChannelStats>::new();
+            for row in &rows {
+                let row = json_object(row);
+                let channel = channel_from_db(&json_string_field(row, "channel"));
+                let status = json_string_field(row, "status");
+                let n = json_i64_field(row, "n");
+                let entry = by_channel
+                    .entry(channel)
+                    .or_insert_with(|| notif_pb::ChannelStats {
+                        channel,
+                        ..Default::default()
+                    });
+                match status.as_str() {
+                    "SENT" => {
+                        entry.sent += n;
+                        total_sent += n;
+                    }
+                    "DELIVERED" => {
+                        entry.sent += n;
+                        entry.delivered += n;
+                        total_sent += n;
+                        total_delivered += n;
+                    }
+                    "FAILED" => {
+                        entry.failed += n;
+                        total_failed += n;
+                    }
+                    "SUPPRESSED" => {
+                        entry.suppressed += n;
+                    }
+                    _ => {}
+                }
+            }
+            let mut by_channel = by_channel.into_values().collect::<Vec<_>>();
+            for entry in &mut by_channel {
+                entry.delivery_rate = if entry.sent > 0 {
+                    entry.delivered as f64 / entry.sent as f64
+                } else {
+                    0.0
+                };
+            }
+            let overall_delivery_rate = if total_sent > 0 {
+                total_delivered as f64 / total_sent as f64
+            } else {
+                0.0
+            };
+            return Ok(Response::new(notif_pb::GetDeliveryStatsResponse {
+                total_sent,
+                total_delivered,
+                total_failed,
+                overall_delivery_rate,
+                by_channel,
+            }));
+        }
+        // Transitional: date-window filters require backend date casts; the
+        // no-window per-channel aggregate uses LogicalAggregate above.
         let pool = self.require_pool()?;
         let m = log_model();
         let rel = m.relation.clone();
@@ -1031,6 +1494,9 @@ impl NotificationService for NotificationServiceImpl {
         if req.tenant_id.trim().is_empty() {
             return Err(Status::invalid_argument("tenant_id is required"));
         }
+        // Transitional: public upsert conflicts on (user_id, channel, event_type),
+        // not the manifest primary key. Keep exact Postgres semantics until the
+        // typed write helper can target alternate unique keys.
         let pool = self.require_pool()?;
         let m = preference_model();
         let rel = m.relation.clone();
@@ -1078,29 +1544,18 @@ impl NotificationService for NotificationServiceImpl {
             None,
         )
         .await?;
-        let user_id = parse_uuid("user_id", &req.user_id)?;
-        let pool = self.require_pool()?;
-        let m = preference_model();
-        let rel = m.relation.clone();
-        let projection = preference_select_projection(&m);
-        let row = sqlx::query(&format!(
-            "SELECT {projection} FROM {rel} \
-             WHERE {user_id} = $1::UUID AND {tenant_id} = $2 \
-               AND {channel} = $3 AND {event_type} = $4",
-            user_id = m.q("user_id"),
-            tenant_id = m.q("tenant_id"),
-            channel = m.q("channel"),
-            event_type = m.q("event_type"),
-        ))
-        .bind(user_id)
-        .bind(&req.tenant_id)
-        .bind(channel_to_db(req.channel))
-        .bind(&req.event_type)
-        .fetch_optional(pool)
-        .await
-        .map_err(|err| Status::internal(format!("get preference failed: {err}")))?;
-        let preference = match row {
-            Some(row) => Some(preference_from_row(&row)?),
+        let user_id = parse_uuid("user_id", &req.user_id)?.to_string();
+        let runtime = self.require_runtime()?;
+        let context = native_service_context(&metadata, &req.tenant_id, "");
+        let rows = runtime
+            .native_entity_read_for_service(
+                "notification",
+                &context,
+                preference_read(&user_id, &req.tenant_id, req.channel, &req.event_type),
+            )
+            .await?;
+        let preference = match rows.first() {
+            Some(row) => Some(preference_from_json_row(row)),
             None => return Err(Status::not_found("preference not found")),
         };
         Ok(Response::new(notif_pb::GetPreferenceResponse {
@@ -1125,34 +1580,27 @@ impl NotificationService for NotificationServiceImpl {
         )
         .await?;
         let user_id = parse_uuid("user_id", &req.user_id)?;
-        let pool = self.require_pool()?;
-        let m = preference_model();
-        let rel = m.relation.clone();
-        let projection = preference_select_projection(&m);
         let page = native_page_window(req.page.as_ref(), 50);
-        let rows = sqlx::query(&format!(
-            "SELECT {projection}, COUNT(*) OVER() AS total_count FROM {rel} \
-             WHERE {user_id} = $1::UUID AND ($2 = '' OR {tenant_id} = $2) \
-             ORDER BY {channel} LIMIT $3 OFFSET $4",
-            user_id = m.q("user_id"),
-            tenant_id = m.q("tenant_id"),
-            channel = m.q("channel"),
-        ))
-        .bind(user_id)
-        .bind(&req.tenant_id)
-        .bind(page.limit_i64())
-        .bind(page.offset_i64())
-        .fetch_all(pool)
-        .await
-        .map_err(|err| Status::internal(format!("list preferences failed: {err}")))?;
-        let total: i64 = rows
-            .first()
-            .and_then(|r| r.try_get("total_count").ok())
-            .unwrap_or(0);
-        let mut preferences = Vec::with_capacity(rows.len());
-        for row in &rows {
-            preferences.push(preference_from_row(row)?);
-        }
+        let user_id = user_id.to_string();
+        let filter = preference_list_filter(&user_id, &req.tenant_id);
+        let runtime = self.require_runtime()?;
+        let context = native_service_context(&metadata, &req.tenant_id, "");
+        let total = runtime
+            .native_entity_count_for_service(
+                "notification",
+                &context,
+                PREFERENCE_MSG,
+                Some(filter.clone()),
+            )
+            .await?;
+        let rows = runtime
+            .native_entity_read_for_service(
+                "notification",
+                &context,
+                preference_list_read(filter, page.offset as u64, page.limit as u32),
+            )
+            .await?;
+        let preferences = rows.iter().map(preference_from_json_row).collect();
         Ok(Response::new(notif_pb::ListPreferencesResponse {
             preferences,
             page: Some(native_page_response(req.page.as_ref(), total, 50)),
@@ -1290,11 +1738,17 @@ impl DataBrokerService {
     /// Build the native `NotificationService`, wired to the broker's Postgres pool.
     pub(crate) fn build_notification_service(&self) -> NotificationServiceImpl {
         let runtime = self.runtime.load_full();
-        let pg_pool = runtime.pg_pool().ok().cloned();
+        // Native-service persistence resolves through the discovery seam (extend_udb.md):
+        // the backend is read from this service's proto `native_service` binding, then a
+        // health/weight-routed instance is chosen — not the process-global pool.
+        let pg_pool = runtime
+            .native_store_pool_for_service("notification", true, "")
+            .ok();
         let outbox = runtime.config().cdc.outbox_relation();
         let channels = Some(runtime.channels().clone());
         NotificationServiceImpl::new()
             .with_postgres(pg_pool)
+            .with_runtime(Some(runtime))
             .with_outbox(Some(outbox))
             .with_channels(channels)
             .with_metrics(self.metrics.clone())

@@ -3,6 +3,7 @@ use crate::proto::udb::core::apikey::entity::v1 as apikey_entity_pb;
 use crate::proto::udb::core::apikey::services::v1 as apikey_pb;
 use crate::proto::udb::core::apikey::services::v1::api_key_service_server::ApiKeyService;
 use crate::proto::udb::core::common::v1 as common_pb;
+use crate::runtime::service::method_security::{scope_claim_context_for_test, test_claim_context};
 use tonic::Request;
 use uuid::Uuid;
 
@@ -49,11 +50,19 @@ async fn live_postgres_apikey_roundtrip() {
     assert!(valid.valid);
     assert_eq!(valid.owner_id, principal_id);
 
-    svc.revoke_api_key(Request::new(apikey_pb::RevokeApiKeyRequest {
-        key_id: key.key_id,
-        revoke_reason: "live_test".to_string(),
-        ..Default::default()
-    }))
+    // Revoke runs as the authenticated tenant-`acme` admin — the same validated
+    // claim `MethodSecurityLayer` installs from the bearer token over the wire.
+    // The tenant guard stays strict: the caller IS tenant `acme`, so it matches
+    // the key's tenant (no bypass).
+    let caller = test_claim_context(&principal_id, "acme", "billing", &[], &[]);
+    scope_claim_context_for_test(
+        caller,
+        svc.revoke_api_key(Request::new(apikey_pb::RevokeApiKeyRequest {
+            key_id: key.key_id,
+            revoke_reason: "live_test".to_string(),
+            ..Default::default()
+        })),
+    )
     .await
     .expect("revoke API key through Postgres store");
 
@@ -112,29 +121,35 @@ async fn live_postgres_apikey_admin_lifecycle() {
         .into_inner();
     assert!(!missing_scope.valid);
 
-    let listed = svc
-        .list_api_keys(Request::new(apikey_pb::ListApiKeysRequest {
+    // All admin operations run as the authenticated tenant-`acme` admin (the
+    // validated claim the transport layer installs over the wire).
+    let listed = scope_claim_context_for_test(
+        test_claim_context(&owner_id, "acme", "billing", &[], &[]),
+        svc.list_api_keys(Request::new(apikey_pb::ListApiKeysRequest {
             owner_id: owner_id.clone(),
             status: apikey_entity_pb::ApiKeyStatus::Active as i32,
             ..Default::default()
-        }))
-        .await
-        .expect("list active API keys")
-        .into_inner();
+        })),
+    )
+    .await
+    .expect("list active API keys")
+    .into_inner();
     assert_eq!(listed.keys.len(), 1);
     assert_eq!(listed.keys[0].key_id, key_id);
 
-    let updated = svc
-        .update_api_key(Request::new(apikey_pb::UpdateApiKeyRequest {
+    let updated = scope_claim_context_for_test(
+        test_claim_context(&owner_id, "acme", "billing", &[], &[]),
+        svc.update_api_key(Request::new(apikey_pb::UpdateApiKeyRequest {
             key_id: key_id.clone(),
             scopes: vec!["data:read".to_string(), "data:write".to_string()],
             ..Default::default()
-        }))
-        .await
-        .expect("update API key scopes")
-        .into_inner()
-        .key
-        .expect("updated key");
+        })),
+    )
+    .await
+    .expect("update API key scopes")
+    .into_inner()
+    .key
+    .expect("updated key");
     assert!(updated.scopes_json.contains("data:write"));
 
     let write_ok = svc
@@ -149,13 +164,15 @@ async fn live_postgres_apikey_admin_lifecycle() {
     assert!(write_ok.valid);
     assert_eq!(write_ok.owner_id, owner_id);
 
-    let got = svc
-        .get_api_key(Request::new(apikey_pb::GetApiKeyRequest { key_id }))
-        .await
-        .expect("get API key")
-        .into_inner()
-        .key
-        .expect("got key");
+    let got = scope_claim_context_for_test(
+        test_claim_context(&owner_id, "acme", "billing", &[], &[]),
+        svc.get_api_key(Request::new(apikey_pb::GetApiKeyRequest { key_id })),
+    )
+    .await
+    .expect("get API key")
+    .into_inner()
+    .key
+    .expect("got key");
     assert_eq!(got.owner_id, owner_id);
 
     cleanup_native_auth_db(&pool).await;

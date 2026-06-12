@@ -5,6 +5,7 @@
 
 // Struct imported via prost_types in method signatures (reqwest bring it in transitively)
 use serde_json::{Value as JsonValue, json};
+use sha2::{Digest, Sha256};
 
 use crate::generation::ManifestStore;
 use crate::proto::{
@@ -35,6 +36,35 @@ fn point_to_vector_point(mut point: JsonValue) -> VectorPoint {
         .map(JsonValue::take)
         .and_then(json_into_struct);
     VectorPoint { id, score, payload }
+}
+
+fn qdrant_point_id(id: &str) -> JsonValue {
+    if let Ok(n) = id.parse::<u64>() {
+        return json!(n);
+    }
+    if uuid::Uuid::parse_str(id).is_ok() {
+        return json!(id);
+    }
+    let digest = Sha256::digest(id.as_bytes());
+    json!(format!(
+        "{:02x}{:02x}{:02x}{:02x}-{:02x}{:02x}-4{:01x}{:02x}-{:02x}{:02x}-{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}",
+        digest[0],
+        digest[1],
+        digest[2],
+        digest[3],
+        digest[4],
+        digest[5],
+        digest[6] & 0x0f,
+        digest[7],
+        (digest[8] & 0x3f) | 0x80,
+        digest[9],
+        digest[10],
+        digest[11],
+        digest[12],
+        digest[13],
+        digest[14],
+        digest[15],
+    ))
 }
 use crate::runtime::executors::{
     BackendExecutor, BackendHealth, BackendProbe, MutationExecutor, ObjectExecutor, QueryExecutor,
@@ -232,7 +262,7 @@ impl QdrantHttpClient {
             .iter()
             .map(|point| {
                 json!({
-                    "id": point.id,
+                    "id": qdrant_point_id(&point.id),
                     "vector": point.vector,
                     "payload": point.payload.as_ref().map(struct_to_json).unwrap_or(JsonValue::Null),
                 })
@@ -269,7 +299,9 @@ impl QdrantHttpClient {
         );
         let response = self
             .auth(self.http.post(url))
-            .json(&json!({ "points": point_ids }))
+            .json(&json!({
+                "points": point_ids.iter().map(|id| qdrant_point_id(id)).collect::<Vec<_>>()
+            }))
             .send()
             .await
             .map_err(|err| tonic::Status::unavailable(format!("Qdrant delete failed: {err}")))?;
@@ -800,15 +832,42 @@ impl ResourceAdminExecutor for QdrantExecutor {
     async fn ensure_resource(
         &self,
         resource_name: &str,
-        _spec_json: &str,
+        spec_json: &str,
     ) -> Result<(), tonic::Status> {
-        // ensure_resource = collection must already exist; creation needs the full
-        // dimension + distance spec, which flows through catalog stage/activate.
-        self.0.collection_exists(resource_name).await.map_err(|_| {
-            tonic::Status::failed_precondition(
-                "Qdrant collection does not exist; use the full catalog stage/activate flow to create it with dimension + distance",
-            )
-        })
+        let spec: JsonValue = serde_json::from_str(spec_json).map_err(|e| {
+            tonic::Status::invalid_argument(format!("invalid qdrant ensure_resource spec: {e}"))
+        })?;
+        let dimension = spec
+            .get("dimension")
+            .or_else(|| spec.get("vector_size"))
+            .or_else(|| spec.get("size"))
+            .and_then(JsonValue::as_i64)
+            .unwrap_or(4)
+            .max(1)
+            .to_string();
+        let distance = spec
+            .get("distance")
+            .and_then(JsonValue::as_str)
+            .unwrap_or("cosine")
+            .to_string();
+        let store = ManifestStore {
+            store_kind: "vector".to_string(),
+            backend: "qdrant".to_string(),
+            logical_name: resource_name.to_string(),
+            resource_name: resource_name.to_string(),
+            options: vec![
+                crate::generation::ManifestStoreOption {
+                    key: "dimension".to_string(),
+                    value: dimension,
+                },
+                crate::generation::ManifestStoreOption {
+                    key: "distance".to_string(),
+                    value: distance,
+                },
+            ],
+            ..ManifestStore::default()
+        };
+        self.0.ensure_collection(&store).await
     }
     async fn drop_resource(&self, resource_name: &str) -> Result<(), tonic::Status> {
         let url = format!("{}/collections/{}", self.0.base_url, resource_name);

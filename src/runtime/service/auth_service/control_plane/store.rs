@@ -13,7 +13,14 @@
 
 use sqlx::{PgPool, Row};
 use tonic::Status;
+use uuid::Uuid;
 
+use crate::backend::BackendKind;
+use crate::ir::compile::CompileContext;
+use crate::ir::{
+    ComparisonOp, ConflictStrategy, LogicalFilter, LogicalPagination, LogicalProjection,
+    LogicalRead, LogicalRecord, LogicalValue, LogicalWrite,
+};
 use crate::proto::udb::core::control::entity::v1::ResourceType;
 use crate::runtime::native_catalog::native_model;
 
@@ -39,6 +46,75 @@ pub struct NodeStateRow {
 
 fn map_err(context: &'static str) -> impl Fn(sqlx::Error) -> Status {
     move |err| Status::internal(format!("{context}: {err}"))
+}
+
+fn native_compile_context() -> CompileContext<'static> {
+    CompileContext::new(crate::runtime::native_catalog::native_manifest())
+}
+
+fn eq(field: &str, value: LogicalValue) -> LogicalFilter {
+    LogicalFilter::Comparison {
+        field: field.to_string(),
+        op: ComparisonOp::Eq,
+        value,
+    }
+}
+
+async fn execute_typed_write(pool: &PgPool, op: LogicalWrite) -> Result<u64, Status> {
+    let ctx = native_compile_context();
+    let compiled = crate::runtime::service::handlers_data::compile_logical_write_dispatch(
+        &BackendKind::Postgres,
+        &op,
+        &ctx,
+    )?;
+    let spec: serde_json::Value = serde_json::from_str(&compiled.spec_json)
+        .map_err(|err| Status::internal(format!("typed native write JSON failed: {err}")))?;
+    let sql = spec
+        .get("sql")
+        .and_then(serde_json::Value::as_str)
+        .ok_or_else(|| Status::internal("typed native write did not compile to SQL"))?;
+    crate::runtime::core::validate_pg_mutation_sql(sql)?;
+    let params = crate::runtime::core::dispatch_params(&spec)?;
+    let param_types = crate::runtime::core::dispatch_param_types(&spec)?;
+    let result = crate::runtime::core::bind_typed_generic_pg_params(
+        sqlx::query(sql),
+        &params,
+        param_types.as_deref(),
+    )?
+    .execute(pool)
+    .await
+    .map_err(map_err("typed control-plane write failed"))?;
+    Ok(result.rows_affected())
+}
+
+async fn execute_typed_read(
+    pool: &PgPool,
+    op: LogicalRead,
+) -> Result<Vec<serde_json::Value>, Status> {
+    let ctx = native_compile_context();
+    let compiled = crate::runtime::service::handlers_data::compile_logical_read_dispatch(
+        &BackendKind::Postgres,
+        &op,
+        &ctx,
+    )?;
+    let spec: serde_json::Value = serde_json::from_str(&compiled.spec_json)
+        .map_err(|err| Status::internal(format!("typed native read JSON failed: {err}")))?;
+    let sql = spec
+        .get("sql")
+        .and_then(serde_json::Value::as_str)
+        .ok_or_else(|| Status::internal("typed native read did not compile to SQL"))?;
+    crate::runtime::core::validate_pg_read_sql(sql)?;
+    let params = crate::runtime::core::dispatch_params(&spec)?;
+    let param_types = crate::runtime::core::dispatch_param_types(&spec)?;
+    let rows = crate::runtime::core::bind_typed_generic_pg_params(
+        sqlx::query(sql),
+        &params,
+        param_types.as_deref(),
+    )?
+    .fetch_all(pool)
+    .await
+    .map_err(map_err("typed control-plane read failed"))?;
+    crate::runtime::core::pg_rows_to_json(rows)
 }
 
 // ── ControlPlaneResource (the versioned registry) ──────────────────────────────
@@ -364,6 +440,58 @@ fn node_state_row_from(row: &sqlx::postgres::PgRow) -> NodeStateRow {
     }
 }
 
+fn node_state_row_from_json(row: &serde_json::Value) -> NodeStateRow {
+    let updated_at_unix = row
+        .get("updated_at")
+        .and_then(serde_json::Value::as_str)
+        .and_then(|value| chrono::DateTime::parse_from_rfc3339(value).ok())
+        .map(|value| value.timestamp())
+        .unwrap_or(0);
+    NodeStateRow {
+        node_id: row
+            .get("node_id")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or_default()
+            .to_string(),
+        resource_type: row
+            .get("resource_type")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or_default()
+            .to_string(),
+        subscribed_names_json: row
+            .get("subscribed_names")
+            .map(|value| {
+                if value.is_string() {
+                    value.as_str().unwrap_or_default().to_string()
+                } else {
+                    value.to_string()
+                }
+            })
+            .unwrap_or_else(|| "[]".to_string()),
+        accepted_version: row
+            .get("accepted_version")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or_default()
+            .to_string(),
+        last_good_version: row
+            .get("last_good_version")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or_default()
+            .to_string(),
+        last_response_nonce: row
+            .get("last_response_nonce")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or_default()
+            .to_string(),
+        nack_error_detail: row
+            .get("nack_error_detail")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or_default()
+            .to_string(),
+        updated_at_unix,
+    }
+}
+
 /// Ensure a ledger row exists for (node, type) and return it. Idempotent.
 pub async fn ensure_node_state(
     pool: &PgPool,
@@ -374,27 +502,7 @@ pub async fn ensure_node_state(
     if node_id.trim().is_empty() {
         return Err(Status::invalid_argument("node_id is required"));
     }
-    let m = native_model(
-        NODE_STATE_MSG,
-        &[
-            "node_state_id",
-            "node_id",
-            "resource_type",
-            "subscribed_names",
-        ],
-    );
     let names_json = serde_json::to_string(subscribed_names).unwrap_or_else(|_| "[]".to_string());
-    let insert_sql = format!(
-        "INSERT INTO {rel} ({id}, {node}, {rtype}, {subs}) \
-         VALUES (gen_random_uuid(), $1, $2, $3::JSONB) \
-         ON CONFLICT ({node}, {rtype}) DO UPDATE SET {subs} = EXCLUDED.{subs}, {updated} = NOW()",
-        rel = m.relation,
-        id = m.q("node_state_id"),
-        node = m.q("node_id"),
-        rtype = m.q("resource_type"),
-        subs = m.q("subscribed_names"),
-        updated = m.q("updated_at"),
-    );
     // Only overwrite the subscription set when the caller actually provided one,
     // so a bare ACK (no names) does not wipe an established subscription.
     let effective_names = if subscribed_names.is_empty() {
@@ -405,31 +513,73 @@ pub async fn ensure_node_state(
     };
     match effective_names {
         Some(json) => {
-            sqlx::query(&insert_sql)
-                .bind(node_id)
-                .bind(resource_type_to_db(resource_type))
-                .bind(json)
-                .execute(pool)
-                .await
-                .map_err(map_err("control node-state ensure failed"))?;
+            let mut record = LogicalRecord::new();
+            record.insert(
+                "node_state_id".to_string(),
+                LogicalValue::String(Uuid::new_v4().to_string()),
+            );
+            record.insert(
+                "node_id".to_string(),
+                LogicalValue::String(node_id.to_string()),
+            );
+            record.insert(
+                "resource_type".to_string(),
+                LogicalValue::String(resource_type_to_db(resource_type).to_string()),
+            );
+            record.insert(
+                "subscribed_names".to_string(),
+                serde_json::from_str(&json)
+                    .map(LogicalValue::Json)
+                    .map_err(|err| {
+                        Status::invalid_argument(format!("subscribed_names JSON failed: {err}"))
+                    })?,
+            );
+            record.insert(
+                "updated_at".to_string(),
+                LogicalValue::Timestamp(chrono::Utc::now()),
+            );
+            execute_typed_write(
+                pool,
+                LogicalWrite {
+                    message_type: NODE_STATE_MSG.to_string(),
+                    records: vec![record],
+                    conflict: ConflictStrategy::update_on(
+                        vec!["subscribed_names".to_string(), "updated_at".to_string()],
+                        vec!["node_id".to_string(), "resource_type".to_string()],
+                    ),
+                    return_fields: Vec::new(),
+                },
+            )
+            .await?;
         }
         None => {
-            let bare_sql = format!(
-                "INSERT INTO {rel} ({id}, {node}, {rtype}, {subs}) \
-                 VALUES (gen_random_uuid(), $1, $2, '[]'::JSONB) \
-                 ON CONFLICT ({node}, {rtype}) DO NOTHING",
-                rel = m.relation,
-                id = m.q("node_state_id"),
-                node = m.q("node_id"),
-                rtype = m.q("resource_type"),
-                subs = m.q("subscribed_names"),
+            let mut record = LogicalRecord::new();
+            record.insert(
+                "node_state_id".to_string(),
+                LogicalValue::String(Uuid::new_v4().to_string()),
             );
-            sqlx::query(&bare_sql)
-                .bind(node_id)
-                .bind(resource_type_to_db(resource_type))
-                .execute(pool)
-                .await
-                .map_err(map_err("control node-state ensure failed"))?;
+            record.insert(
+                "node_id".to_string(),
+                LogicalValue::String(node_id.to_string()),
+            );
+            record.insert(
+                "resource_type".to_string(),
+                LogicalValue::String(resource_type_to_db(resource_type).to_string()),
+            );
+            record.insert(
+                "subscribed_names".to_string(),
+                LogicalValue::Json(serde_json::json!([])),
+            );
+            execute_typed_write(
+                pool,
+                LogicalWrite {
+                    message_type: NODE_STATE_MSG.to_string(),
+                    records: vec![record],
+                    conflict: ConflictStrategy::Ignore,
+                    return_fields: Vec::new(),
+                },
+            )
+            .await?;
         }
     }
     get_node_state(pool, node_id, resource_type)
@@ -443,21 +593,29 @@ pub async fn get_node_state(
     node_id: &str,
     resource_type: ResourceType,
 ) -> Result<Option<NodeStateRow>, Status> {
-    let m = native_model(NODE_STATE_MSG, &["node_id", "resource_type"]);
-    let sql = format!(
-        "SELECT {cols} FROM {rel} WHERE {node} = $1 AND {rtype} = $2",
-        cols = node_state_select_clause(),
-        rel = m.relation,
-        node = m.q("node_id"),
-        rtype = m.q("resource_type"),
-    );
-    let row = sqlx::query(&sql)
-        .bind(node_id)
-        .bind(resource_type_to_db(resource_type))
-        .fetch_optional(pool)
-        .await
-        .map_err(map_err("control node-state get failed"))?;
-    Ok(row.map(|r| node_state_row_from(&r)))
+    let rows = execute_typed_read(
+        pool,
+        LogicalRead {
+            message_type: NODE_STATE_MSG.to_string(),
+            filter: Some(LogicalFilter::And(vec![
+                eq("node_id", LogicalValue::String(node_id.to_string())),
+                eq(
+                    "resource_type",
+                    LogicalValue::String(resource_type_to_db(resource_type).to_string()),
+                ),
+            ])),
+            projection: Some(LogicalProjection::fields(
+                node_state_select_columns()
+                    .into_iter()
+                    .map(str::to_string)
+                    .collect::<Vec<_>>(),
+            )),
+            sort: Vec::new(),
+            pagination: Some(LogicalPagination::limit(1)),
+        },
+    )
+    .await?;
+    Ok(rows.first().map(node_state_row_from_json))
 }
 
 /// Allocate the next monotonic nonce for (node, type) and stamp it as the

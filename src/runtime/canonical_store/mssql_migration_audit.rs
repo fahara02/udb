@@ -149,8 +149,15 @@ impl MigrationAuditStore for MssqlCanonicalStore {
             .simple_batch(&payload_col)
             .await
             .map_err(|e| SystemStoreError::query("mssql", payload_col.clone(), e))?;
+        // Only tables created by an OLD schema have the legacy `rollback_json`
+        // column; one created by the current DDL never does, so an
+        // unconditional UPDATE referencing it fails with
+        // `Invalid column name 'rollback_json'` (code 207) and aborts
+        // canonical-store registration. Guard the backfill on the column's
+        // existence (COL_LENGTH, the same idiom used for payload_json above).
         let backfill = format!(
-            "UPDATE {ledger_rel} \
+            "IF COL_LENGTH('{ledger_rel}', 'rollback_json') IS NOT NULL \
+             UPDATE {ledger_rel} \
              SET payload_json = rollback_json \
              WHERE payload_json IS NULL AND rollback_json IS NOT NULL"
         );

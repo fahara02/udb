@@ -133,12 +133,30 @@ impl MigrationAuditStore for PostgresCanonicalStore {
             .execute(self.pg_pool())
             .await
             .map_err(|e| SystemStoreError::query("postgres", payload_col.clone(), e))?;
+        // One-time backfill of the legacy `rollback_json` column into the
+        // renamed `payload_json`. Only tables created by an OLD schema have
+        // `rollback_json`; a table created by the current DDL never does, so
+        // running the UPDATE unconditionally fails with
+        // `column "rollback_json" does not exist` and aborts canonical-store
+        // registration. Guard it on the column's existence (via to_regclass +
+        // pg_attribute, which accept the already-quoted relation reference) so
+        // the backfill is a no-op when there is nothing to migrate.
         let backfill = format!(
-            "UPDATE {ledger_rel}
-             SET payload_json = rollback_json
-             WHERE payload_json = '{{}}'::JSONB
-               AND rollback_json IS NOT NULL
-               AND rollback_json <> '{{}}'::JSONB"
+            "DO $$
+             BEGIN
+               IF EXISTS (
+                 SELECT 1 FROM pg_attribute
+                 WHERE attrelid = to_regclass('{ledger_rel}')
+                   AND attname = 'rollback_json'
+                   AND NOT attisdropped
+               ) THEN
+                 UPDATE {ledger_rel}
+                 SET payload_json = rollback_json
+                 WHERE payload_json = '{{}}'::JSONB
+                   AND rollback_json IS NOT NULL
+                   AND rollback_json <> '{{}}'::JSONB;
+               END IF;
+             END $$;"
         );
         sqlx::query(&backfill)
             .execute(self.pg_pool())

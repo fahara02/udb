@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>UDB :: Universal Data Broker</strong><br>
-  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.3.3 | protocol v1.0.0</sub>
+  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.3.5 | protocol v1.0.0</sub>
 </p>
 
 UDB uses one product version for the crate, release binaries, Docker image, and
@@ -16,13 +16,25 @@ SDK packages, plus one separate wire-protocol version.
 
 | Item | Version |
 |---|---:|
-| UDB crate and CLI | `0.3.3` |
-| SDK packages | `0.3.3` |
+| UDB crate and CLI | `0.3.5` |
+| SDK packages | `0.3.5` |
 | Wire protocol | `1.0.0` |
-| Release tag | `v0.3.3` |
+| Release tag | `v0.3.5` |
 
 The source of truth is [versions.json](versions.json). Package manifests and SDK
 protocol constants are checked against it in CI.
+
+## 0.3.5 Release Gate Assumptions
+
+Before tagging 0.3.5, the staged tree should satisfy the gates that failed the
+last two release attempts:
+
+- `node scripts/check-versions.mjs` must agree with [versions.json](versions.json).
+- `cargo fmt --all -- --check` must be clean.
+- `udb native manifest` must match
+  [docs/generated/udb-native-contract.json](docs/generated/udb-native-contract.json).
+- CI must provide GitHub credentials to `bufbuild/buf-setup-action` and create
+  the MinIO buckets required by live SDK/native-service startup.
 
 ## Version Model
 

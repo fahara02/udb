@@ -1167,7 +1167,7 @@ fn service_matches(svc: &ServiceInfo, filter: &str) -> bool {
 }
 
 fn substitute_rpc(body: &str, rpc: &RpcDescriptor) -> String {
-    let pairs: [(&str, String); 18] = [
+    let pairs: [(&str, String); 20] = [
         ("{{RPC_NAME}}", rpc.method.clone()),
         ("{{RPC_SNAKE}}", rpc.method_snake.clone()),
         ("{{RPC_INPUT}}", rpc.input_short.clone()),
@@ -1198,6 +1198,8 @@ fn substitute_rpc(body: &str, rpc: &RpcDescriptor) -> String {
             "{{RPC_PEER_LISTENER}}",
             rpc.peer_listener_allowed.to_string(),
         ),
+        ("{{RPC_READ_ONLY}}", rpc.read_only.to_string()),
+        ("{{RPC_OPERATION_KIND}}", rpc.operation_kind.clone()),
     ];
     let mut text = body.to_string();
     for (key, value) in &pairs {
@@ -1327,6 +1329,8 @@ mod tests {
                 public_listener_allowed: true,
                 control_plane_listener_allowed: false,
                 peer_listener_allowed: false,
+                operation_kind: "read_only".to_string(),
+                read_only: true,
             },
             RpcDescriptor {
                 service_name: "DataBroker".into(),
@@ -1372,6 +1376,8 @@ mod tests {
                 public_listener_allowed: true,
                 control_plane_listener_allowed: false,
                 peer_listener_allowed: false,
+                operation_kind: "read_only".to_string(),
+                read_only: true,
             },
         ]
     }

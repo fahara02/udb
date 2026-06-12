@@ -141,6 +141,7 @@ async fn live_cdc_topic_policy_rejection_routes_to_dlq_and_acks() {
             "event_type": rejected_topic,
             "correlation_id": format!("cdc-policy:{event_id}"),
             "document_id": user_id,
+            "tenant_id": "acme",
             "timestamp": chrono::Utc::now().to_rfc3339(),
             "payload": {"user_id": user_id}
         }),
@@ -169,6 +170,7 @@ async fn live_cdc_topic_policy_rejection_routes_to_dlq_and_acks() {
                 "event_id": event_id.to_string(),
                 "event_type": rejected_topic,
                 "correlation_id": format!("cdc-policy:{event_id}"),
+                "tenant_id": "acme",
                 "timestamp": chrono::Utc::now().to_rfc3339(),
                 "payload": {}
             }),

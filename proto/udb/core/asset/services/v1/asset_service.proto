@@ -62,6 +62,7 @@ service AssetService {
 
   // Create a reusable pipeline definition
   rpc CreatePipelineDefinition(CreatePipelineDefinitionRequest) returns (CreatePipelineDefinitionResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:asset:create-pipeline-definition"
@@ -121,6 +122,7 @@ service AssetService {
 
   // Get a pipeline definition
   rpc GetPipelineDefinition(GetPipelineDefinitionRequest) returns (GetPipelineDefinitionResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:asset:get-pipeline-definition"
@@ -177,6 +179,7 @@ service AssetService {
 
   // Register a managed asset wrapping a storage file
   rpc RegisterAsset(RegisterAssetRequest) returns (RegisterAssetResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:asset:register-asset"
@@ -237,6 +240,7 @@ service AssetService {
 
   // Start a pipeline instance for an asset
   rpc StartPipeline(StartPipelineRequest) returns (StartPipelineResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:asset:start-pipeline"
@@ -297,6 +301,7 @@ service AssetService {
 
   // Get a pipeline instance with its steps
   rpc GetPipeline(GetPipelineRequest) returns (GetPipelineResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:asset:get-pipeline"
@@ -353,6 +358,7 @@ service AssetService {
 
   // Complete (or skip/fail) a pipeline step
   rpc CompleteStep(CompleteStepRequest) returns (CompleteStepResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:asset:complete-step"
@@ -415,6 +421,7 @@ service AssetService {
 
   // List assets
   rpc ListAssets(ListAssetsRequest) returns (ListAssetsResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:asset:list-assets"
@@ -471,6 +478,7 @@ service AssetService {
 
   // Get an asset
   rpc GetAsset(GetAssetRequest) returns (GetAssetResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:asset:get-asset"

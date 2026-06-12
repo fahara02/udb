@@ -471,6 +471,7 @@ jobs:
           # is what previously forced a soft-fail).
           version: 1.65.0
           buf_api_token: ${{ secrets.BUF_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
       - run: buf lint
       - run: buf build
       - name: buf breaking (against origin/main)
@@ -676,8 +677,23 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20
+      minio:
+        image: bitnami/minio:latest
+        env:
+          MINIO_ROOT_USER: minio
+          MINIO_ROOT_PASSWORD: minio123
+        ports:
+          - 9000:9000
+        options: >-
+          --health-cmd "curl -f http://localhost:9000/minio/health/live"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
     env:
       UDB_PG_DSN: postgres://udb:udb@localhost:5432/udb_ci
+      UDB_MINIO_ENDPOINT: http://localhost:9000
+      UDB_MINIO_ACCESS_KEY: minio
+      UDB_MINIO_SECRET_KEY: minio123
       UDB_GRPC_ADDR: 127.0.0.1:50051
       UDB_GRPC_TARGET: 127.0.0.1:50051
       UDB_AUTH_GRPC_ADDR: 127.0.0.1:50061
@@ -714,6 +730,14 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Build UDB broker
         run: cargo build --locked --bin udb --no-default-features --features "postgres,runtime-logging"
+      - name: Create live-sdk MinIO bucket
+        shell: bash
+        run: |
+          # mc is not pre-installed; install the minio client binary directly.
+          curl -sSL https://dl.min.io/client/mc/release/linux-amd64/mc -o /usr/local/bin/mc
+          chmod +x /usr/local/bin/mc
+          mc alias set local http://localhost:9000 minio minio123
+          mc mb --ignore-existing local/udb-live-sdk
       - name: Start UDB
         shell: bash
         run: |

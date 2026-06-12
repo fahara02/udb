@@ -53,6 +53,20 @@ final class GeneratedClient
         8,  // RESOURCE_EXHAUSTED
     ];
 
+    /**
+     * Proto-derived operation_kind per RPC, keyed by method name (globally unique):
+     * "read_only" | "mutation" | "destructive". The SINGLE authoritative
+     * state-change classification — used for retry safety and SDK conformance
+     * probing. Never derived from the method name's spelling.
+     *
+     * @var array<string, string>
+     */
+    public const OPERATION_KIND = [
+        // @@UDB_RPC_BEGIN
+        "{{RPC_NAME}}" => "{{RPC_OPERATION_KIND}}",
+        // @@UDB_RPC_END
+    ];
+
     private ?UdbMetadata $boundContext = null;
 
     /** @var array<class-string, BaseStub> Lazily-built, channel-sharing stubs. */
@@ -133,7 +147,7 @@ final class GeneratedClient
             '{{SERVICE_PKG}}',
             fn (BaseStub $stub, array $md, array $opts) => $stub->{{RPC_NAME}}($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('{{RPC_NAME}}'),
+            '{{RPC_OPERATION_KIND}}' === 'read_only',
         );
     }
     // @@UDB_RPC_END
@@ -378,20 +392,8 @@ final class GeneratedClient
         return in_array($code, self::RETRYABLE_CODES, true);
     }
 
-    private function isReadOnlyRpcName(string $name): bool
-    {
-        foreach ([
-            'Get', 'List', 'Check', 'Validate', 'Introspect', 'Authorize',
-            'BatchCheck', 'Preview', 'Resolve', 'Explain', 'Diff', 'Lint',
-            'Test', 'Select', 'AnalyticalQuery', 'VectorSearch', 'GraphQuery',
-            'CacheGet', 'CacheScan', 'DocumentGet', 'DocumentFind',
-        ] as $prefix) {
-            if (str_starts_with($name, $prefix)) {
-                return true;
-            }
-        }
-        return false;
-    }
+    // Retry safety is read from the proto-derived operation_kind per RPC (each
+    // wrapper passes operation_kind === 'read_only') — never guessed from the name.
 
     /**
      * Exponential backoff with full jitter, capped at `max_delay_ms`. Sleeps

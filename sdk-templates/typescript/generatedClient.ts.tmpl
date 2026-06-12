@@ -159,31 +159,20 @@ function decodeErrorDetail(err: grpc.ServiceError): UdbErrorDetail | undefined {
   return detail;
 }
 
-function isReadOnlyRpcName(name: string): boolean {
-  return [
-    "Get",
-    "List",
-    "Check",
-    "Validate",
-    "Introspect",
-    "Authorize",
-    "BatchCheck",
-    "Preview",
-    "Resolve",
-    "Explain",
-    "Diff",
-    "Lint",
-    "Test",
-    "Select",
-    "AnalyticalQuery",
-    "VectorSearch",
-    "GraphQuery",
-    "CacheGet",
-    "CacheScan",
-    "DocumentGet",
-    "DocumentFind",
-  ].some((prefix) => name.startsWith(prefix));
-}
+// Retry safety is read from the proto-derived operation_kind per RPC (each
+// wrapper passes `operationKind === "read_only"`) — never guessed from the name.
+
+// Proto-derived operation_kind for every RPC, keyed by full gRPC path
+// ("/pkg.Service/Method"): "read_only" | "mutation" | "destructive". The SINGLE
+// authoritative state-change classification — used for retry safety and SDK
+// conformance probing. Never derived from the method name.
+// Keyed by full gRPC path "/<serviceFull>/<MethodName>" (the canonical proto
+// method name), so `unary` looks it up directly from the method it dispatches.
+export const RPC_OPERATION_KIND: Record<string, string> = {
+  // @@UDB_RPC_BEGIN
+  "/{{SERVICE_FULL}}/{{RPC_NAME}}": "{{RPC_OPERATION_KIND}}",
+  // @@UDB_RPC_END
+};
 
 // ── Channel & service resolution ────────────────────────────────────────────────
 
@@ -257,6 +246,13 @@ export class UdbCore {
     this.loaded = grpc.loadPackageDefinition(definition);
   }
 
+  /** Update the bearer token / API key used for subsequent calls (e.g. after a
+   *  Login or token refresh). */
+  setCredentials(credentials: { bearerToken?: string; apiKey?: string }): void {
+    if ("bearerToken" in credentials) this.opts.bearerToken = credentials.bearerToken;
+    if ("apiKey" in credentials) this.opts.apiKey = credentials.apiKey;
+  }
+
   /** Lazily construct (and cache) the dynamic stub for a service full-name. */
   private stub(fullName: string): any {
     let stub = this.stubs.get(fullName);
@@ -314,14 +310,16 @@ export class UdbCore {
     });
   }
 
-  /** Unary call with retry/backoff and typed error mapping. */
+  /** Unary call with retry/backoff and typed error mapping. Retry safety is
+   *  read from the proto-derived operation_kind for this RPC (RPC_OPERATION_KIND)
+   *  — only READ_ONLY RPCs are auto-retried — never guessed from the name. */
   async unary<TRes = any>(
     fullName: string,
     method: string,
     request: any,
-    readOnly: boolean,
     call?: CallOptions,
   ): Promise<TRes> {
+    const readOnly = RPC_OPERATION_KIND[`/${fullName}/${method}`] === "read_only";
     const stub = this.stub(fullName);
     const retryEnabled = !call?.noRetry;
     let attempt = 0;
@@ -485,7 +483,7 @@ const SERVICE_METHOD_INSTALLERS: Array<(core: UdbCore, api: any) => void> = [];
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "{{SERVICE_FULL}}") return;
   api.{{RPC_SNAKE}} = (request: any, call?: CallOptions) =>
-    core.unary("{{SERVICE_FULL}}", "{{RPC_NAME}}", request, isReadOnlyRpcName("{{RPC_NAME}}"), call);
+    core.unary("{{SERVICE_FULL}}", "{{RPC_NAME}}", request, call);
 });
 // @@UDB_RPC_END
 // @@UDB_RPC_BEGIN kind=server_streaming

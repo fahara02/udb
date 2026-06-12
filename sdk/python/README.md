@@ -7,7 +7,7 @@
 
 <p align="center">
   <strong>UDB :: Universal Data Broker</strong><br>
-  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.3.3 | protocol v1.0.0</sub>
+  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.3.5 | protocol v1.0.0</sub>
 </p>
 <!-- UDB_BRAND_HEADER_END -->
 
@@ -18,13 +18,13 @@ every broker RPC, and a version-matched `udb` CLI launcher.
 ## Install
 
 ```bash
-pip install udb-client==0.3.3
+pip install udb-client==0.3.5
 ```
 
 Optional validated command models:
 
 ```bash
-pip install "udb-client[pydantic]==0.3.3"
+pip install "udb-client[pydantic]==0.3.5"
 ```
 
 Runtime: Python 3.10+

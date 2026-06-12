@@ -942,6 +942,10 @@ mod tests {
             "src/runtime/xa_recovery.rs",
             "src/runtime/core/helpers.rs",
             "src/runtime/core/setup_data.rs",
+            // Native-store discovery reads `UDB_NATIVE_STORE` (operator override of
+            // the proto-derived native-service persistence backend) once via OnceLock
+            // — startup-config knob, same category as the other UDB_* tuning reads.
+            "src/runtime/core/native_store.rs",
             "src/runtime/executor_utils.rs",
             "src/runtime/executors/clickhouse.rs",
             "src/runtime/executors/http.rs",

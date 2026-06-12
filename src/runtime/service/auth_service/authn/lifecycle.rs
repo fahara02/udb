@@ -372,9 +372,9 @@ impl AuthnServiceImpl {
                     COALESCE({tenant}::TEXT,'') AS tenant_id, COALESCE({project}::TEXT,'') AS project_id, \
                     COALESCE({name}::TEXT,'') AS device_name, COALESCE({dtype}::TEXT,'') AS device_type, \
                     COALESCE({ip}::TEXT,'') AS last_ip_masked, \
-                    {seen} AS last_seen_at, {created} AS created_at, {revoked} AS revoked_at \
+                    {seen}, {created}, {revoked} AS revoked_at \
              FROM {rel} WHERE {user} = $1 AND {revoked} IS NULL \
-             ORDER BY {created} DESC OFFSET $2 LIMIT $3",
+             ORDER BY {created_col} DESC OFFSET $2 LIMIT $3",
             id = m.q("device_id"),
             user = m.q("user_id"),
             tenant = m.q("tenant_id"),
@@ -384,6 +384,10 @@ impl AuthnServiceImpl {
             ip = m.q("last_ip_masked"),
             seen = m.timestamp_unix_as("last_seen_at", "last_seen_at"),
             created = m.timestamp_unix_as("created_at", "created_at"),
+            // ORDER BY must use the BARE column, NOT the `{created}` projection — that
+            // one ends in `AS "created_at"`, and an `AS alias` inside ORDER BY is a
+            // syntax error ("at or near AS"). This is the §1 ListDevices bug.
+            created_col = m.q("created_at"),
             revoked = m.q("revoked_at"),
             rel = m.relation,
         );
@@ -1158,6 +1162,43 @@ impl AuthnServiceImpl {
         } else {
             self.device_fingerprint_hash(&req.device_fingerprint)
         };
+        if let Ok(runtime) = self.authn_runtime() {
+            let expires_at = unix_to_utc(expires)
+                .ok_or_else(|| Status::internal("invalid MFA challenge expiry"))?;
+            let context = self.authn_context(&user.tenant_id, &user.project_id);
+            let record = authn_record([
+                ("challenge_id", LogicalValue::String(challenge_id.clone())),
+                ("user_id", LogicalValue::String(user.user_id.clone())),
+                ("tenant_id", LogicalValue::String(user.tenant_id.clone())),
+                ("project_id", LogicalValue::String(user.project_id.clone())),
+                ("factor_kind", LogicalValue::String(auth_factor_db(factor))),
+                ("purpose", LogicalValue::String(mfa_purpose_db(purpose))),
+                (
+                    "device_fingerprint_hash",
+                    LogicalValue::String(fp_hash.clone()),
+                ),
+                (
+                    "ip_address_masked",
+                    LogicalValue::String(mask_ip(&req.ip_address)),
+                ),
+                ("expires_at", LogicalValue::Timestamp(expires_at)),
+            ]);
+            runtime
+                .native_entity_write_for_service(
+                    "authn",
+                    &context,
+                    "udb.core.authn.entity.v1.MfaChallenge",
+                    record,
+                    crate::ir::ConflictStrategy::Error,
+                )
+                .await
+                .map_err(|err| Status::internal(format!("issue MFA challenge failed: {err}")))?;
+            return Ok(Response::new(authn_pb::IssueMfaChallengeResponse {
+                challenge_id,
+                expires_at_unix: expires as i64,
+                factor_kind: factor,
+            }));
+        }
         let sql = format!(
             "INSERT INTO {rel} ({id}, {user}, {tenant}, {project}, {factor}, {purpose}, {fp}, {ip}, {expires}) \
              VALUES ($1::UUID, $2, $3, $4, $5, $6, $7, $8, to_timestamp($9::DOUBLE PRECISION))",
@@ -1199,6 +1240,83 @@ impl AuthnServiceImpl {
         let req = request.into_inner();
         if req.challenge_id.trim().is_empty() {
             return Err(Status::invalid_argument("challenge_id is required"));
+        }
+        if let Ok(runtime) = self.authn_runtime() {
+            let now = unix_to_utc(now_unix())
+                .ok_or_else(|| Status::internal("invalid MFA verification time"))?;
+            let context = self.authn_context("", "");
+            let mut assignments = std::collections::BTreeMap::new();
+            assignments.insert("consumed_at".to_string(), LogicalAssignment::ServerNow);
+            assignments.insert(
+                "attempt_count".to_string(),
+                LogicalAssignment::Increment {
+                    by: LogicalValue::Int(1),
+                },
+            );
+            let op = LogicalUpdate {
+                message_type: "udb.core.authn.entity.v1.MfaChallenge".to_string(),
+                filter: authn_and(vec![
+                    authn_eq(
+                        "challenge_id",
+                        LogicalValue::String(req.challenge_id.clone()),
+                    ),
+                    LogicalFilter::IsNull("consumed_at".to_string()),
+                    authn_cmp("expires_at", ComparisonOp::Gt, LogicalValue::Timestamp(now)),
+                    authn_cmp("attempt_count", ComparisonOp::Lt, LogicalValue::Int(5)),
+                ]),
+                assignments,
+                return_fields: vec![
+                    "user_id".to_string(),
+                    "factor_kind".to_string(),
+                    "device_fingerprint_hash".to_string(),
+                ],
+                require_affected: false,
+            };
+            let (_, rows) = runtime
+                .native_entity_update_for_service("authn", &context, op)
+                .await
+                .map_err(|err| Status::internal(format!("verify MFA challenge failed: {err}")))?;
+            let Some(row) = rows.first() else {
+                return Ok(Response::new(authn_pb::VerifyMfaChallengeResponse {
+                    verified: false,
+                    user_id: String::new(),
+                }));
+            };
+            let user_id = row
+                .get("user_id")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or_default()
+                .to_string();
+            let fp_stored = row
+                .get("device_fingerprint_hash")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or_default()
+                .to_string();
+            if !fp_stored.is_empty() {
+                let presented = if req.device_fingerprint.trim().is_empty() {
+                    String::new()
+                } else {
+                    self.device_fingerprint_hash(&req.device_fingerprint)
+                };
+                if presented != fp_stored {
+                    return Ok(Response::new(authn_pb::VerifyMfaChallengeResponse {
+                        verified: false,
+                        user_id: String::new(),
+                    }));
+                }
+            }
+            let factor_db = row
+                .get("factor_kind")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or_default()
+                .to_string();
+            let verified = self
+                .verify_mfa_proof(&user_id, &factor_db, &req.code, now_unix())
+                .await?;
+            return Ok(Response::new(authn_pb::VerifyMfaChallengeResponse {
+                verified,
+                user_id: if verified { user_id } else { String::new() },
+            }));
         }
         let pool = self.require_pool()?;
         let m = mfa_challenge_model();
@@ -1478,6 +1596,21 @@ impl AuthnServiceImpl {
     }
 
     async fn delete_all_webauthn_credentials(&self, user_id: &str) -> Result<u64, Status> {
+        if let Ok(runtime) = self.authn_runtime() {
+            let context = self.authn_context("", "");
+            let op = LogicalDelete {
+                message_type: "udb.core.authn.entity.v1.WebAuthnCredential".to_string(),
+                filter: authn_eq("user_id", LogicalValue::String(user_id.to_string())),
+                return_fields: vec!["credential_id".to_string()],
+            };
+            let rows = runtime
+                .native_entity_delete_rows_for_service("authn", &context, op)
+                .await
+                .map_err(|err| {
+                    Status::internal(format!("delete WebAuthn credentials failed: {err}"))
+                })?;
+            return Ok(rows.len() as u64);
+        }
         let pool = self.require_pool()?;
         let m = native_model(
             "udb.core.authn.entity.v1.WebAuthnCredential",
@@ -1554,6 +1687,29 @@ impl AuthnServiceImpl {
                 "user_id and credential_id are required",
             ));
         }
+        if let Ok(runtime) = self.authn_runtime() {
+            let context = self.authn_context("", "");
+            let op = LogicalDelete {
+                message_type: "udb.core.authn.entity.v1.WebAuthnCredential".to_string(),
+                filter: authn_and(vec![
+                    authn_eq(
+                        "credential_id",
+                        LogicalValue::String(req.credential_id.clone()),
+                    ),
+                    authn_eq("user_id", LogicalValue::String(req.user_id.clone())),
+                ]),
+                return_fields: vec!["credential_id".to_string()],
+            };
+            let rows = runtime
+                .native_entity_delete_rows_for_service("authn", &context, op)
+                .await
+                .map_err(|err| {
+                    Status::internal(format!("delete WebAuthn credential failed: {err}"))
+                })?;
+            return Ok(Response::new(authn_pb::DeleteWebAuthnCredentialResponse {
+                deleted: !rows.is_empty(),
+            }));
+        }
         let pool = self.require_pool()?;
         let m = native_model(
             "udb.core.authn.entity.v1.WebAuthnCredential",
@@ -1584,6 +1740,35 @@ impl AuthnServiceImpl {
             return Err(Status::invalid_argument(
                 "user_id and credential_id are required",
             ));
+        }
+        if let Ok(runtime) = self.authn_runtime() {
+            let context = self.authn_context("", "");
+            let mut assignments = std::collections::BTreeMap::new();
+            assignments.insert(
+                "label".to_string(),
+                authn_set(LogicalValue::String(req.new_label.clone())),
+            );
+            assignments.insert("updated_at".to_string(), LogicalAssignment::ServerNow);
+            let op = LogicalUpdate {
+                message_type: "udb.core.authn.entity.v1.WebAuthnCredential".to_string(),
+                filter: authn_and(vec![
+                    authn_eq(
+                        "credential_id",
+                        LogicalValue::String(req.credential_id.clone()),
+                    ),
+                    authn_eq("user_id", LogicalValue::String(req.user_id.clone())),
+                ]),
+                assignments,
+                return_fields: vec!["credential_id".to_string()],
+                require_affected: false,
+            };
+            let (_, rows) = runtime
+                .native_entity_update_for_service("authn", &context, op)
+                .await
+                .map_err(|err| Status::internal(format!("rename passkey failed: {err}")))?;
+            return Ok(Response::new(authn_pb::RenamePasskeyResponse {
+                renamed: !rows.is_empty(),
+            }));
         }
         let pool = self.require_pool()?;
         let m = native_model(

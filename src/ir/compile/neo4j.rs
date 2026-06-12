@@ -356,7 +356,7 @@ impl Compiler for Neo4jCompiler {
 
         // SET clause for non-PK fields (Update) or all fields (Replace).
         let set_fields: Vec<&str> = match &op.conflict {
-            ConflictStrategy::Update { fields } => fields.iter().map(String::as_str).collect(),
+            ConflictStrategy::Update { fields, .. } => fields.iter().map(String::as_str).collect(),
             ConflictStrategy::Replace | ConflictStrategy::Error => record
                 .keys()
                 .filter(|k| !table.primary_key.iter().any(|pk| pk == *k))
@@ -1001,9 +1001,7 @@ mod tests {
         let write = LogicalWrite {
             message_type: "acme.billing.v1.Customer".into(),
             records: vec![rec],
-            conflict: ConflictStrategy::Update {
-                fields: vec!["name".into()],
-            },
+            conflict: ConflictStrategy::update(vec!["name".into()]),
             return_fields: vec![],
         };
         let (statement, params) = cypher(Neo4jCompiler.compile_write(&write, &ctx).unwrap());
@@ -1071,9 +1069,7 @@ mod tests {
         let write = LogicalWrite {
             message_type: "acme.billing.v1.Customer".into(),
             records: vec![rec],
-            conflict: ConflictStrategy::Update {
-                fields: vec!["name".into()],
-            },
+            conflict: ConflictStrategy::update(vec!["name".into()]),
             return_fields: vec![],
         };
         let (statement, params) = cypher(Neo4jCompiler.compile_write(&write, &ctx).unwrap());

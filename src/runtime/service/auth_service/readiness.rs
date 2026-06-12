@@ -144,6 +144,8 @@ pub(crate) async fn check_auth_readiness(security: &SecurityConfig) -> AuthReadi
 
     // 3. Casbin model — the same parse-check the startup gate runs.
     checks.push(check_casbin_model().await);
+    let hardened =
+        SecurityConfig::current().is_production() || crate::runtime::security::fail_closed_mode();
 
     // 4. JWKS reachability (Phase 6): a configured external JWKS URL must be
     // fetchable and return a JWK set, or asymmetric JWT verification fails on the
@@ -158,23 +160,7 @@ pub(crate) async fn check_auth_readiness(security: &SecurityConfig) -> AuthReadi
 
     // 5. Audit sink posture (Phase 6): a configured external sink should be an
     // http(s) endpoint; absence means local/stdout auditing (valid for dev).
-    let audit_sink = security.audit_sink_url.trim();
-    if audit_sink.is_empty() {
-        checks.push(AuthReadinessCheck::pass(
-            "audit_sink",
-            "no external audit sink configured; using local/stdout auditing (dev)",
-        ));
-    } else if audit_sink.starts_with("http://") || audit_sink.starts_with("https://") {
-        checks.push(AuthReadinessCheck::pass(
-            "audit_sink",
-            "external audit sink configured (http endpoint)",
-        ));
-    } else {
-        checks.push(AuthReadinessCheck::fail(
-            "audit_sink",
-            "audit sink URL is set but is not an http(s) endpoint",
-        ));
-    }
+    checks.push(check_audit_sink(security.audit_sink_url.trim(), hardened));
 
     // 6. Token-issuance posture (informational). Signing returns `None` when no
     // private key is set, and verification is skipped when neither a public key
@@ -205,9 +191,6 @@ pub(crate) async fn check_auth_readiness(security: &SecurityConfig) -> AuthReadi
     // reachability of the auth Postgres/Redis is covered by the runtime backend
     // probes that feed `GetHealthReport`.
     let authn = AuthnConfig::from_env();
-    let hardened =
-        SecurityConfig::current().is_production() || crate::runtime::security::fail_closed_mode();
-
     checks.push(check_auth_schema_migration(hardened));
     checks.push(check_session_revocation_store(&authn));
     checks.push(check_outbox_table(hardened));
@@ -218,6 +201,37 @@ pub(crate) async fn check_auth_readiness(security: &SecurityConfig) -> AuthReadi
 
     let ok = checks.iter().all(|c| c.ok);
     AuthReadinessReport { ok, checks }
+}
+
+fn check_audit_sink(audit_sink: &str, hardened: bool) -> AuthReadinessCheck {
+    if audit_sink.is_empty() {
+        return AuthReadinessCheck::pass(
+            "audit_sink",
+            "no external audit sink configured; using local/stdout auditing (dev)",
+        );
+    }
+    if audit_sink.starts_with("http://") || audit_sink.starts_with("https://") {
+        return AuthReadinessCheck::pass(
+            "audit_sink",
+            "external audit sink configured (http endpoint)",
+        );
+    }
+    if audit_sink.starts_with("noop://") && !hardened {
+        return AuthReadinessCheck::pass(
+            "audit_sink",
+            "no-op audit sink configured for non-production development",
+        );
+    }
+    if audit_sink.starts_with("noop://") {
+        return AuthReadinessCheck::fail(
+            "audit_sink",
+            "no-op audit sink is not allowed in production or fail-closed posture",
+        );
+    }
+    AuthReadinessCheck::fail(
+        "audit_sink",
+        "audit sink URL is set but is not an http(s) endpoint",
+    )
 }
 
 /// Env truthiness helper shared by the posture probes (`1`/`true`/`yes`/`on`).
@@ -657,6 +671,18 @@ mod tests {
             .find(|c| c.name == "audit_sink")
             .expect("audit_sink check runs");
         assert!(check.ok, "https audit sink should pass: {}", check.detail);
+    }
+
+    #[test]
+    fn noop_audit_sink_is_dev_only() {
+        let dev = check_audit_sink("noop://audit", false);
+        assert!(dev.ok, "noop sink should be accepted in dev posture");
+
+        let hardened = check_audit_sink("noop://audit", true);
+        assert!(
+            !hardened.ok,
+            "noop sink must fail under production/fail-closed posture"
+        );
     }
 
     #[tokio::test]

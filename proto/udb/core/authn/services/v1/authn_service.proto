@@ -65,6 +65,7 @@ service AuthnService {
 
   // ── User management (admin-only) ─────────────────────────────────────────
   rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authn:create-user"
@@ -121,6 +122,7 @@ service AuthnService {
     };
   }
   rpc GetUser(GetUserRequest) returns (GetUserResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authn:get-user"
@@ -174,6 +176,7 @@ service AuthnService {
     option (google.api.http) = {get: "/v1/auth/users/{user_id}"};
   }
   rpc ListUsers(ListUsersRequest) returns (ListUsersResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authn:list-users"
@@ -227,6 +230,7 @@ service AuthnService {
     option (google.api.http) = {get: "/v1/auth/users"};
   }
   rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authn:update-user"
@@ -283,6 +287,7 @@ service AuthnService {
     };
   }
   rpc ChangeUserStatus(ChangeUserStatusRequest) returns (ChangeUserStatusResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authn:change-user-status"
@@ -340,6 +345,7 @@ service AuthnService {
   }
   // Admin-triggered password reset — sends email OTP to complete flow
   rpc AdminResetPassword(AdminResetPasswordRequest) returns (AdminResetPasswordResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authn:admin-reset-password"
@@ -398,6 +404,7 @@ service AuthnService {
 
   // ── OTP ──────────────────────────────────────────────────────────────────
   rpc SendOTP(SendOTPRequest) returns (SendOTPResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authn:send-otp"
@@ -454,6 +461,7 @@ service AuthnService {
     };
   }
   rpc VerifyOTP(VerifyOTPRequest) returns (VerifyOTPResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authn:verify-otp"
@@ -510,6 +518,7 @@ service AuthnService {
     };
   }
   rpc ResendOTP(ResendOTPRequest) returns (ResendOTPResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authn:resend-otp"
@@ -568,6 +577,7 @@ service AuthnService {
 
   // ── Authentication ───────────────────────────────────────────────────────
   rpc Authenticate(AuthnRequest) returns (AuthnResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_PUBLIC
       tenant_required: false
@@ -624,6 +634,7 @@ service AuthnService {
   }
 
   rpc Login(LoginRequest) returns (LoginResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_PUBLIC
       tenant_required: false
@@ -680,6 +691,7 @@ service AuthnService {
     };
   }
   rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_PUBLIC
       tenant_required: false
@@ -736,6 +748,7 @@ service AuthnService {
     };
   }
   rpc Logout(LogoutRequest) returns (LogoutResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authn:logout"
@@ -792,6 +805,7 @@ service AuthnService {
     };
   }
   rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authn:change-password"
@@ -850,6 +864,7 @@ service AuthnService {
 
   // ── Token validation (called by gateway + per-service interceptors) ───────
   rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authn:validate-token"
@@ -908,6 +923,7 @@ service AuthnService {
 
   // ── Session management ───────────────────────────────────────────────────
   rpc CreateSession(CreateSessionRequest) returns (CreateSessionResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authn:create-session"
@@ -965,6 +981,7 @@ service AuthnService {
   }
 
   rpc RefreshSession(RefreshSessionRequest) returns (RefreshSessionResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authn:refresh-session"
@@ -1022,6 +1039,7 @@ service AuthnService {
   }
 
   rpc GetSession(GetSessionRequest) returns (GetSessionResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authn:get-session"
@@ -1075,6 +1093,7 @@ service AuthnService {
     option (google.api.http) = {get: "/v1/auth/sessions/{session_id}"};
   }
   rpc ListSessions(ListSessionsRequest) returns (ListSessionsResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authn:list-sessions"
@@ -1128,6 +1147,7 @@ service AuthnService {
     option (google.api.http) = {get: "/v1/auth/users/{user_id}/sessions"};
   }
   rpc RevokeSession(RevokeSessionRequest) returns (RevokeSessionResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authn:revoke-session"
@@ -1183,6 +1203,7 @@ service AuthnService {
 
   // ── CSRF (server-side sessions only) ────────────────────────────────────
   rpc ValidateCSRF(ValidateCSRFRequest) returns (ValidateCSRFResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authn:validate-csrf"
@@ -1242,6 +1263,7 @@ service AuthnService {
   // ── MFA enrollment ───────────────────────────────────────────────────────
   // Step 1: initiate enrollment — returns TOTP secret / QR URI
   rpc EnrollMFA(EnrollMFARequest) returns (EnrollMFAResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authn:enroll-mfa"
@@ -1299,6 +1321,7 @@ service AuthnService {
   }
   // Step 2: confirm with first TOTP code (or email OTP)
   rpc ConfirmMFAEnrollment(ConfirmMFAEnrollmentRequest) returns (ConfirmMFAEnrollmentResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authn:confirm-mfa-enrollment"
@@ -1358,6 +1381,7 @@ service AuthnService {
   // Generate a fresh set of single-use MFA recovery/backup codes (returned once;
   // any prior codes for the user are invalidated).
   rpc GenerateRecoveryCodes(GenerateRecoveryCodesRequest) returns (GenerateRecoveryCodesResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authn:generate-recovery-codes"
@@ -1416,6 +1440,7 @@ service AuthnService {
 
   // Set the per-tenant MFA enforcement policy.
   rpc PutMfaPolicy(PutMfaPolicyRequest) returns (PutMfaPolicyResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authn:put-mfa-policy"
@@ -1474,6 +1499,7 @@ service AuthnService {
 
   // Read the per-tenant MFA enforcement policy.
   rpc GetMfaPolicy(GetMfaPolicyRequest) returns (GetMfaPolicyResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authn:get-mfa-policy"
@@ -1532,6 +1558,7 @@ service AuthnService {
   // User-initiated password reset: issues a PASSWORD_RESET OTP (delivered to the
   // account's channel). Public — no bearer required.
   rpc ForgotPassword(ForgotPasswordRequest) returns (ForgotPasswordResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_PUBLIC
       rate_limit_policy_ref: "authn.password.forgot.public"
@@ -1589,6 +1616,7 @@ service AuthnService {
   // Complete a password reset with the OTP from ForgotPassword (no current
   // password required). Public — the OTP is the proof of control.
   rpc ResetPassword(ResetPasswordRequest) returns (ResetPasswordResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_PUBLIC
       rate_limit_policy_ref: "authn.password.reset.public"
@@ -1645,6 +1673,7 @@ service AuthnService {
 
   // OAuth2-style token introspection for a UDB-issued JWT.
   rpc IntrospectToken(IntrospectTokenRequest) returns (IntrospectTokenResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authn:introspect-token"
@@ -1703,6 +1732,7 @@ service AuthnService {
   // Set the user's phone number and send an SMS verification OTP. Complete with
   // VerifyOTP (the response is verified the same way as email).
   rpc SendPhoneVerification(SendPhoneVerificationRequest) returns (SendPhoneVerificationResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authn:send-phone-verification"
@@ -1761,6 +1791,7 @@ service AuthnService {
 
   // JSON Web Key Set for verifying UDB-issued JWTs. Public.
   rpc GetJwks(GetJwksRequest) returns (GetJwksResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_PUBLIC
       rate_limit_policy_ref: "authn.jwks.public"
@@ -1813,6 +1844,7 @@ service AuthnService {
 
   // ── WebAuthn / passkeys ─────────────────────────────────────────────────
   rpc StartWebAuthnRegistration(StartWebAuthnRegistrationRequest) returns (StartWebAuthnRegistrationResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authn:start-web-authn-registration"
@@ -1864,6 +1896,7 @@ service AuthnService {
     };
   }
   rpc FinishWebAuthnRegistration(FinishWebAuthnRegistrationRequest) returns (FinishWebAuthnRegistrationResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authn:finish-web-authn-registration"
@@ -1915,6 +1948,7 @@ service AuthnService {
     };
   }
   rpc StartWebAuthnAuthentication(StartWebAuthnAuthenticationRequest) returns (StartWebAuthnAuthenticationResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_PUBLIC
       tenant_required: false
@@ -1965,6 +1999,7 @@ service AuthnService {
     };
   }
   rpc FinishWebAuthnAuthentication(FinishWebAuthnAuthenticationRequest) returns (FinishWebAuthnAuthenticationResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_PUBLIC
       tenant_required: false
@@ -2017,6 +2052,7 @@ service AuthnService {
 
   // ── Device + session revocation lifecycle (Phase 3 / I2.4) ───────────────
   rpc ListDevices(ListDevicesRequest) returns (ListDevicesResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authn:list-devices"
@@ -2031,6 +2067,7 @@ service AuthnService {
     option (google.api.http) = {get: "/v1/auth/users/{user_id}/devices"};
   }
   rpc RevokeDevice(RevokeDeviceRequest) returns (RevokeDeviceResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authn:revoke-device"
@@ -2046,6 +2083,7 @@ service AuthnService {
     option (google.api.http) = {delete: "/v1/auth/devices/{device_id}"};
   }
   rpc AdminRevokeSession(AdminRevokeSessionRequest) returns (AdminRevokeSessionResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authn:admin-revoke-session"
@@ -2061,6 +2099,7 @@ service AuthnService {
     option (google.api.http) = { post: "/v1/auth/admin/users/{user_id}/sessions:revoke" body: "*" };
   }
   rpc AdminRevokeAllUserSessions(AdminRevokeAllUserSessionsRequest) returns (AdminRevokeAllUserSessionsResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authn:admin-revoke-all-user-sessions"
@@ -2076,6 +2115,7 @@ service AuthnService {
     option (google.api.http) = { post: "/v1/auth/admin/users/{user_id}/sessions:revoke-all" body: "*" };
   }
   rpc AdminRevokeAllTenantSessions(AdminRevokeAllTenantSessionsRequest) returns (AdminRevokeAllTenantSessionsResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authn:admin-revoke-all-tenant-sessions"
@@ -2091,6 +2131,7 @@ service AuthnService {
     option (google.api.http) = { post: "/v1/auth/admin/tenants/{tenant_id}/sessions:revoke-all" body: "*" };
   }
   rpc EmergencyRevoke(EmergencyRevokeRequest) returns (EmergencyRevokeResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authn:emergency-revoke"
@@ -2108,6 +2149,7 @@ service AuthnService {
 
   // ── MFA challenge + factor lifecycle (Phase 3 / I2.6) ────────────────────
   rpc IssueMfaChallenge(IssueMfaChallengeRequest) returns (IssueMfaChallengeResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authn:issue-mfa-challenge"
@@ -2122,6 +2164,7 @@ service AuthnService {
     option (google.api.http) = { post: "/v1/auth/mfa/challenges:issue" body: "*" };
   }
   rpc VerifyMfaChallenge(VerifyMfaChallengeRequest) returns (VerifyMfaChallengeResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authn:verify-mfa-challenge"
@@ -2136,6 +2179,7 @@ service AuthnService {
     option (google.api.http) = { post: "/v1/auth/mfa/challenges:verify" body: "*" };
   }
   rpc ListMfaFactors(ListMfaFactorsRequest) returns (ListMfaFactorsResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authn:list-mfa-factors"
@@ -2150,6 +2194,7 @@ service AuthnService {
     option (google.api.http) = {get: "/v1/auth/users/{user_id}/mfa/factors"};
   }
   rpc DisableMfaFactor(DisableMfaFactorRequest) returns (DisableMfaFactorResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authn:disable-mfa-factor"
@@ -2165,6 +2210,7 @@ service AuthnService {
     option (google.api.http) = { post: "/v1/auth/users/{user_id}/mfa/factors:disable" body: "*" };
   }
   rpc RenamePasskey(RenamePasskeyRequest) returns (RenamePasskeyResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authn:rename-passkey"
@@ -2179,6 +2225,7 @@ service AuthnService {
     option (google.api.http) = { post: "/v1/auth/users/{user_id}/webauthn/credentials:rename" body: "*" };
   }
   rpc RevokeRecoveryCodes(RevokeRecoveryCodesRequest) returns (RevokeRecoveryCodesResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authn:revoke-recovery-codes"
@@ -2194,6 +2241,7 @@ service AuthnService {
     option (google.api.http) = { post: "/v1/auth/users/{user_id}/recovery-codes:revoke" body: "*" };
   }
   rpc AdminResetMfa(AdminResetMfaRequest) returns (AdminResetMfaResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authn:admin-reset-mfa"
@@ -2211,6 +2259,7 @@ service AuthnService {
 
   // ── WebAuthn enterprise credential lifecycle (Phase 3 / I2.7) ────────────
   rpc ListWebAuthnCredentials(ListWebAuthnCredentialsRequest) returns (ListWebAuthnCredentialsResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authn:list-web-authn-credentials"
@@ -2225,6 +2274,7 @@ service AuthnService {
     option (google.api.http) = {get: "/v1/auth/users/{user_id}/webauthn/credentials"};
   }
   rpc DeleteWebAuthnCredential(DeleteWebAuthnCredentialRequest) returns (DeleteWebAuthnCredentialResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authn:delete-web-authn-credential"

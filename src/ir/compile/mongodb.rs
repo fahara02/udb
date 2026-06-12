@@ -301,20 +301,29 @@ impl Compiler for MongoDbCompiler {
                             .into(),
                     });
                 }
-                if table.primary_key.is_empty() {
-                    return Err(CompileError::Malformed {
-                        reason: format!(
-                            "upsert requested but message '{}' has no primary key in manifest",
-                            op.message_type
-                        ),
-                    });
-                }
+                // Conflict arbiter: the explicit alternate-unique target when
+                // given (`replaceOne({key_hash}, upsert)`), else the primary key.
+                let conflict_fields: Vec<String> = match op.conflict.conflict_target() {
+                    Some(cols) => cols.to_vec(),
+                    None => {
+                        if table.primary_key.is_empty() {
+                            return Err(CompileError::Malformed {
+                                reason: format!(
+                                    "upsert requested but message '{}' has no primary key in \
+                                     manifest and no explicit conflict_on target",
+                                    op.message_type
+                                ),
+                            });
+                        }
+                        table.primary_key.clone()
+                    }
+                };
                 let record = &op.records[0];
                 let mut filter = Map::new();
-                for pk in &table.primary_key {
-                    let f = self.field_for(table, pk, &op.message_type)?;
-                    let value = record.get(pk).ok_or_else(|| CompileError::Malformed {
-                        reason: format!("record missing primary-key field '{pk}'"),
+                for key in &conflict_fields {
+                    let f = self.field_for(table, key, &op.message_type)?;
+                    let value = record.get(key).ok_or_else(|| CompileError::Malformed {
+                        reason: format!("record missing conflict-key field '{key}'"),
                     })?;
                     filter.insert(f.to_string(), value_to_json(value));
                 }
@@ -339,7 +348,7 @@ impl Compiler for MongoDbCompiler {
                         "/action/replaceOne",
                         json!(record_to_json_with_context(record, table, ctx)),
                     ),
-                    ConflictStrategy::Update { fields } => {
+                    ConflictStrategy::Update { fields, .. } => {
                         let mut set = Map::new();
                         for f_name in fields {
                             let f = self.field_for(table, f_name, &op.message_type)?;
@@ -1019,9 +1028,7 @@ mod tests {
         let write = LogicalWrite {
             message_type: "acme.billing.v1.Customer".into(),
             records: vec![rec],
-            conflict: ConflictStrategy::Update {
-                fields: vec!["name".into()],
-            },
+            conflict: ConflictStrategy::update(vec!["name".into()]),
             return_fields: vec![],
         };
         let (path, body) = extract_json(

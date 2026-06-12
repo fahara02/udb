@@ -35,12 +35,46 @@ pub(super) async fn live_pg_pool() -> sqlx::PgPool {
 }
 
 pub(super) async fn cleanup_native_auth_db(pool: &sqlx::PgPool) {
-    for schema in crate::runtime::native_catalog::native_schema_names() {
+    // Drop EVERY native `udb_*` schema present, not just the migration-enabled
+    // subset returned by `native_schema_names()`. `native_service_catalog_ddl()`
+    // creates schemas that subset omits (e.g. the control-plane registry
+    // `udb_control`), so listing only the subset LEAKS them across runs: the next
+    // run's `CREATE SCHEMA` then fails with a duplicate-namespace error and
+    // control-plane rows (the `cp-world-N` versions) accumulate. Enumerating the
+    // live schemas drops whatever migrate created, regardless of that filter.
+    let schemas: Vec<String> = sqlx::query_scalar(
+        "SELECT nspname FROM pg_namespace WHERE nspname LIKE 'udb\\_%' ESCAPE '\\'",
+    )
+    .fetch_all(pool)
+    .await
+    .expect("list native udb_* schemas");
+    for schema in schemas {
         let stmt = format!("DROP SCHEMA IF EXISTS {} CASCADE", quote_ident(&schema));
         sqlx::query(&stmt)
             .execute(pool)
             .await
             .unwrap_or_else(|err| panic!("drop native schema {schema}: {err}"));
+    }
+    // The migration-tracking tables (`schema_migrations`, `proto_schema_versions`,
+    // `migration_error_log`, `migration_runtime_state`) are created in `public` by
+    // the startup lifecycle, OUTSIDE the `udb_*` schemas — so they also leak across
+    // runs and a re-migrate collides on their row types. The test DB's `public`
+    // holds only these native tables, so dropping all of them is safe and avoids
+    // hardcoding their names.
+    let public_tables: Vec<String> =
+        sqlx::query_scalar("SELECT tablename FROM pg_tables WHERE schemaname = 'public'")
+            .fetch_all(pool)
+            .await
+            .expect("list public tables");
+    for table in public_tables {
+        let stmt = format!(
+            "DROP TABLE IF EXISTS public.{} CASCADE",
+            quote_ident(&table)
+        );
+        sqlx::query(&stmt)
+            .execute(pool)
+            .await
+            .unwrap_or_else(|err| panic!("drop public table {table}: {err}"));
     }
     sqlx::query("DROP EXTENSION IF EXISTS pg_partman CASCADE")
         .execute(pool)
@@ -335,7 +369,19 @@ pub(super) async fn create_verified_user(
     let user = created.user.expect("created user");
     let verified = verify_issued_otp(svc, &created.otp_id).await;
     assert!(verified.verified);
-    user
+    // `create_user` returns the user as PENDING_VERIFICATION; verifying the email
+    // OTP activates it in the store (`mfa::verify_otp_impl`). Re-read so the helper
+    // returns the ACTUAL post-verification (ACTIVE) record rather than the stale
+    // create-time snapshot — a "verified user" must reflect the verified state.
+    svc.get_user(Request::new(authn_pb::GetUserRequest {
+        user_id: user.user_id.clone(),
+        ..Default::default()
+    }))
+    .await
+    .expect("re-read verified user")
+    .into_inner()
+    .user
+    .expect("verified user present")
 }
 
 pub(super) async fn assert_native_table_columns(

@@ -12,7 +12,7 @@
 │    UNIVERSAL DATA BROKER                                                   │
 │    gRPC data plane | native control plane | tenant/project scope guard     │
 │                                                                            │
-│    crate v0.3.3 | protocol v1.0.0                                          │
+│    crate v0.3.5 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -20,19 +20,35 @@ UDB SDKs are language clients for a running UDB broker. They attach request
 metadata, expose common DataBroker helpers, provide native auth/authz clients,
 and include a version-matched `udb` CLI launcher.
 
-Current SDK release: `0.3.3`
+Current SDK release: `0.3.5`
 
 Current wire protocol: [`1.0.0`](UDB_PROTOCOL_VERSION)
+
+## 0.3.5 SDK Focus
+
+The 0.3.5 SDK cut tracks the native-store control-plane release. Generated
+clients were refreshed for Go, Python, TypeScript/Node, Java, C#, and
+PHP/Laravel so each language sees the same DataBroker, native-service, metadata,
+and version contract.
+
+The CI story has two layers:
+
+- static cross-language conformance for all six SDKs through
+  `node sdk-conformance/run.mjs typescript python go csharp java php`;
+- deep live broker coverage for the Go, TypeScript, Python, and PHP harnesses,
+  including DataBroker RPCs, native auth, tenant/authz/API key flows,
+  notification/analytics/storage/asset/WebRTC facades, and backend capability
+  checks.
 
 ## Install
 
 | Language | Package | Install |
 |---|---|---|
-| Go | `github.com/fahara02/udb/sdk/go` | `go get github.com/fahara02/udb/sdk/go@v0.3.3` |
-| Python | `udb-client` | `pip install udb-client==0.3.3` |
-| TypeScript / Node | `@udb_plus/sdk` | `npm i @udb_plus/sdk@0.3.3` |
-| PHP / Laravel | `fahara02/udb-laravel` | `composer require fahara02/udb-laravel:^0.3.3` |
-| C# | `Udb.Client` | `dotnet add package Udb.Client --version 0.3.3` |
+| Go | `github.com/fahara02/udb/sdk/go` | `go get github.com/fahara02/udb/sdk/go@v0.3.5` |
+| Python | `udb-client` | `pip install udb-client==0.3.5` |
+| TypeScript / Node | `@udb_plus/sdk` | `npm i @udb_plus/sdk@0.3.5` |
+| PHP / Laravel | `fahara02/udb-laravel` | `composer require fahara02/udb-laravel:^0.3.5` |
+| C# | `Udb.Client` | `dotnet add package Udb.Client --version 0.3.5` |
 | Java | `dev.udb:udb-java-client` | build from checkout until Maven Central publishing lands |
 
 ## What Every SDK Provides
@@ -134,7 +150,7 @@ udb sdk generate --lang all
 
 Generated code should stay tied to:
 
-- crate/package version `0.3.3`;
+- crate/package version `0.3.5`;
 - protocol version `1.0.0`;
 - descriptor-derived RPC and service metadata;
 - the shared metadata contract used by every SDK.
@@ -156,7 +172,7 @@ Release flow:
 Consumer install command:
 
 ```bash
-composer require fahara02/udb-laravel:^0.3.3
+composer require fahara02/udb-laravel:^0.3.5
 ```
 
 The monorepo remains the source of truth for generated PHP code, tests, and

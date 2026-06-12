@@ -232,7 +232,6 @@ fn pg_dsn_from_libpq_env() -> Option<String> {
     Some(dsn)
 }
 
-
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct TlsSettings {
@@ -1847,6 +1846,7 @@ pub fn validate_udb_config(
 
 /// Heuristic: does a string look like a connection string / URL?
 fn looks_like_dsn(value: &str) -> bool {
+    let value = value.trim();
     value.contains("://")
         || value.starts_with("postgres://")
         || value.starts_with("redis://")
@@ -1856,6 +1856,33 @@ fn looks_like_dsn(value: &str) -> bool {
         || value.starts_with("clickhouse://")
         || value.starts_with("http://")
         || value.starts_with("https://")
+        // SQL Server / MSSQL ADO.NET connection string (parsed by tiberius'
+        // `from_ado_string`), e.g. `Server=host,1433;User=sa;Password=...;Database=udb`.
+        // It is schemeless by design, so the `://` checks above never match it.
+        || value.to_ascii_lowercase().contains("server=")
+        // Cassandra / ScyllaDB contact points: a schemeless `host:port` list, e.g.
+        // `127.0.0.1:9042` or `n1:9042,n2:9042` (the form the cassandra executor
+        // and the live conformance suite both use).
+        || is_host_port_list(value)
+}
+
+/// True when `value` is a non-empty, comma-separated list where every element is
+/// `host:port` with a numeric port — the schemeless contact-point form used by
+/// the Cassandra/ScyllaDB backend. Keeps `looks_like_dsn` from rejecting a valid
+/// `UDB_CASSANDRA_DSN` just because it carries no URL scheme.
+fn is_host_port_list(value: &str) -> bool {
+    let value = value.trim();
+    !value.is_empty()
+        && value
+            .split(',')
+            .all(|part| match part.trim().rsplit_once(':') {
+                Some((host, port)) => {
+                    !host.trim().is_empty()
+                        && !port.is_empty()
+                        && port.chars().all(|c| c.is_ascii_digit())
+                }
+                None => false,
+            })
 }
 
 fn health_gate(tier: &str, backend: &str, required: bool, configured: bool) -> StartupHealthGate {

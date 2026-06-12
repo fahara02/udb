@@ -27,12 +27,41 @@ pub(super) async fn live_pg_pool() -> sqlx::PgPool {
 }
 
 pub(super) async fn cleanup_native_service_db(pool: &sqlx::PgPool) {
-    for schema in crate::runtime::native_catalog::native_schema_names() {
+    // Drop EVERY native `udb_*` schema present plus the lifecycle's `public`
+    // migration tables — NOT just the migration-enabled subset returned by
+    // `native_schema_names()`. `native_service_catalog_ddl()` creates schemas that
+    // subset omits (e.g. the control-plane registry `udb_control`) and the
+    // migration-tracking tables live in `public`, so listing only the subset
+    // leaks them across runs: the next `CREATE SCHEMA` fails with a duplicate and
+    // control-plane rows accumulate. Enumerating live objects drops whatever
+    // migrate created, regardless of that filter.
+    let schemas: Vec<String> = sqlx::query_scalar(
+        "SELECT nspname FROM pg_namespace WHERE nspname LIKE 'udb\\_%' ESCAPE '\\'",
+    )
+    .fetch_all(pool)
+    .await
+    .expect("list native udb_* schemas");
+    for schema in schemas {
         let stmt = format!("DROP SCHEMA IF EXISTS {} CASCADE", quote_ident(&schema));
         sqlx::query(&stmt)
             .execute(pool)
             .await
             .unwrap_or_else(|err| panic!("drop native schema {schema}: {err}"));
+    }
+    let public_tables: Vec<String> =
+        sqlx::query_scalar("SELECT tablename FROM pg_tables WHERE schemaname = 'public'")
+            .fetch_all(pool)
+            .await
+            .expect("list public tables");
+    for table in public_tables {
+        let stmt = format!(
+            "DROP TABLE IF EXISTS public.{} CASCADE",
+            quote_ident(&table)
+        );
+        sqlx::query(&stmt)
+            .execute(pool)
+            .await
+            .unwrap_or_else(|err| panic!("drop public table {table}: {err}"));
     }
     sqlx::query("DROP EXTENSION IF EXISTS pg_partman CASCADE")
         .execute(pool)

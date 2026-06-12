@@ -13,6 +13,12 @@ use redis::AsyncCommands;
 use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, Row};
 
+use crate::backend::BackendKind;
+use crate::ir::compile::CompileContext;
+use crate::ir::{
+    ComparisonOp, ConflictStrategy, LogicalAssignment, LogicalDelete, LogicalFilter, LogicalRecord,
+    LogicalUpdate, LogicalValue, LogicalWrite,
+};
 use crate::runtime::security::hmac_sha256;
 
 use crate::runtime::authz::Principal;
@@ -1015,6 +1021,14 @@ pub trait UserStore: Send + Sync {
     ) -> Result<(), String> {
         self.put_user(record).await
     }
+
+    /// The backing Postgres pool when this store is Postgres-backed, so a service
+    /// built from stores alone can run the multi-statement transactions the atomic
+    /// paths need (e.g. `create_user`'s user+OTP+outbox-event commit) WITHOUT a
+    /// separately-wired `.with_postgres()`. Default `None` for non-Postgres stores.
+    fn backing_pool(&self) -> Option<PgPool> {
+        None
+    }
     async fn get_user_by_id(&self, user_id: &str) -> Result<Option<UserRecord>, String>;
     async fn get_user_by_username(&self, username: &str) -> Result<Option<UserRecord>, String>;
     async fn get_user_by_email(&self, email: &str) -> Result<Option<UserRecord>, String>;
@@ -1283,6 +1297,198 @@ pub fn auth_catalog_ddl(_schema: &str) -> Vec<String> {
         .collect()
 }
 
+fn native_compile_context() -> CompileContext<'static> {
+    CompileContext::new(crate::runtime::native_catalog::native_manifest())
+}
+
+const SESSION_MSG: &str = "udb.core.authn.entity.v1.Session";
+const API_KEY_MSG: &str = "udb.core.apikey.entity.v1.ApiKey";
+const USER_MSG: &str = "udb.core.authn.entity.v1.User";
+const OTP_MSG: &str = "udb.core.authn.entity.v1.OTP";
+const RECOVERY_CODE_MSG: &str = "udb.core.authn.entity.v1.RecoveryCode";
+const MFA_POLICY_MSG: &str = "udb.core.authn.entity.v1.MfaPolicy";
+
+fn logical_ts(unix: u64) -> Result<LogicalValue, String> {
+    chrono::DateTime::from_timestamp(unix as i64, 0)
+        .map(LogicalValue::Timestamp)
+        .ok_or_else(|| format!("unix timestamp {unix} is out of range"))
+}
+
+fn logical_ts_or_null(unix: u64) -> Result<LogicalValue, String> {
+    if unix == 0 {
+        Ok(LogicalValue::Null)
+    } else {
+        logical_ts(unix)
+    }
+}
+
+fn uuid_or_null(value: &str) -> LogicalValue {
+    if value.trim().is_empty() {
+        LogicalValue::Null
+    } else {
+        LogicalValue::String(value.trim().to_string())
+    }
+}
+
+fn eq(field: &str, value: LogicalValue) -> LogicalFilter {
+    LogicalFilter::Comparison {
+        field: field.to_string(),
+        op: ComparisonOp::Eq,
+        value,
+    }
+}
+
+async fn execute_typed_update_on<'c, E>(executor: E, op: LogicalUpdate) -> Result<u64, String>
+where
+    E: sqlx::Executor<'c, Database = sqlx::Postgres>,
+{
+    let ctx = native_compile_context();
+    let compiled = crate::runtime::service::handlers_data::compile_logical_update_dispatch(
+        &BackendKind::Postgres,
+        &op,
+        &ctx,
+    )
+    .map_err(|err| format!("compile typed authn update failed: {err}"))?;
+    let spec: serde_json::Value = serde_json::from_str(&compiled.spec_json)
+        .map_err(|err| format!("typed authn update JSON failed: {err}"))?;
+    let sql = spec
+        .get("sql")
+        .and_then(serde_json::Value::as_str)
+        .ok_or_else(|| "typed authn update did not compile to SQL".to_string())?;
+    crate::runtime::core::validate_pg_mutation_sql(sql).map_err(|err| err.to_string())?;
+    let mut params = crate::runtime::core::dispatch_params(&spec).map_err(|err| err.to_string())?;
+    strip_nul_text_params(&mut params, "authn update");
+    let param_types =
+        crate::runtime::core::dispatch_param_types(&spec).map_err(|err| err.to_string())?;
+    let result = crate::runtime::core::bind_typed_generic_pg_params(
+        sqlx::query(sql),
+        &params,
+        param_types.as_deref(),
+    )
+    .map_err(|err| err.to_string())?
+    .execute(executor)
+    .await
+    .map_err(|err| format!("typed authn update failed: {err}"))?;
+    Ok(result.rows_affected())
+}
+
+async fn execute_typed_write_on<'c, E>(executor: E, op: LogicalWrite) -> Result<u64, String>
+where
+    E: sqlx::Executor<'c, Database = sqlx::Postgres>,
+{
+    let ctx = native_compile_context();
+    let compiled = crate::runtime::service::handlers_data::compile_logical_write_dispatch(
+        &BackendKind::Postgres,
+        &op,
+        &ctx,
+    )
+    .map_err(|err| format!("compile typed authn write failed: {err}"))?;
+    let spec: serde_json::Value = serde_json::from_str(&compiled.spec_json)
+        .map_err(|err| format!("typed authn write JSON failed: {err}"))?;
+    let sql = spec
+        .get("sql")
+        .and_then(serde_json::Value::as_str)
+        .ok_or_else(|| "typed authn write did not compile to SQL".to_string())?;
+    crate::runtime::core::validate_pg_mutation_sql(sql).map_err(|err| err.to_string())?;
+    let mut params = crate::runtime::core::dispatch_params(&spec).map_err(|err| err.to_string())?;
+    strip_nul_text_params(&mut params, "authn write");
+    let param_types =
+        crate::runtime::core::dispatch_param_types(&spec).map_err(|err| err.to_string())?;
+    let result = crate::runtime::core::bind_typed_generic_pg_params(
+        sqlx::query(sql),
+        &params,
+        param_types.as_deref(),
+    )
+    .map_err(|err| err.to_string())?
+    .execute(executor)
+    .await
+    .map_err(|err| format!("typed authn write failed: {err}"))?;
+    Ok(result.rows_affected())
+}
+
+/// B14: A NUL byte (`0x00`) cannot exist in a Postgres `text`/`varchar`/`json`
+/// value — the server rejects the whole statement with
+/// `invalid byte sequence for encoding "UTF8": 0x00`. A typed authn write value
+/// that carries one is upstream corruption (a binary/random value bound as text
+/// instead of being hex/base64-encoded), and it can never be persisted as-is, so
+/// failing the Login/Refresh hard helps nobody. Strip the NUL(s) so the
+/// credential/session write succeeds, and warn so the un-encoded source field can
+/// be found and fixed at the root. Operates on the JSON params just before binding,
+/// the single chokepoint shared by every typed authn write/update.
+fn strip_nul_text_params(params: &mut [serde_json::Value], op: &str) {
+    let mut stripped = 0usize;
+    for param in params.iter_mut() {
+        stripped += strip_nul_in_json(param);
+    }
+    if stripped > 0 {
+        tracing::warn!(
+            op = %op,
+            stripped,
+            "typed {op}: stripped NUL byte(s) from text param(s) (B14) — an upstream \
+             authn field is binding un-encoded binary as text; encode it (hex/base64) \
+             or store it as bytea at the source"
+        );
+    }
+}
+
+/// Recursively strip NUL (`\u{0}`) bytes from every string anywhere in a JSON
+/// param — top-level strings, array elements, and object values alike — and
+/// return how many strings were rewritten. A NUL can never be stored in a
+/// Postgres `text`/`varchar`/`text[]` value, so this is always safe; it just
+/// turns a hard write failure into a successful one. (See [`strip_nul_text_params`].)
+fn strip_nul_in_json(value: &mut serde_json::Value) -> usize {
+    match value {
+        serde_json::Value::String(text) => {
+            if text.contains('\u{0}') {
+                *text = text.replace('\u{0}', "");
+                1
+            } else {
+                0
+            }
+        }
+        serde_json::Value::Array(items) => items.iter_mut().map(strip_nul_in_json).sum(),
+        serde_json::Value::Object(map) => map.values_mut().map(strip_nul_in_json).sum(),
+        _ => 0,
+    }
+}
+
+async fn execute_typed_write(pool: &PgPool, op: LogicalWrite) -> Result<u64, String> {
+    execute_typed_write_on(pool, op).await
+}
+
+async fn execute_typed_delete_on<'c, E>(executor: E, op: LogicalDelete) -> Result<u64, String>
+where
+    E: sqlx::Executor<'c, Database = sqlx::Postgres>,
+{
+    let ctx = native_compile_context();
+    let compiled = crate::runtime::service::handlers_data::compile_logical_delete_dispatch(
+        &BackendKind::Postgres,
+        &op,
+        &ctx,
+    )
+    .map_err(|err| format!("compile typed authn delete failed: {err}"))?;
+    let spec: serde_json::Value = serde_json::from_str(&compiled.spec_json)
+        .map_err(|err| format!("typed authn delete JSON failed: {err}"))?;
+    let sql = spec
+        .get("sql")
+        .and_then(serde_json::Value::as_str)
+        .ok_or_else(|| "typed authn delete did not compile to SQL".to_string())?;
+    crate::runtime::core::validate_pg_mutation_sql(sql).map_err(|err| err.to_string())?;
+    let params = crate::runtime::core::dispatch_params(&spec).map_err(|err| err.to_string())?;
+    let param_types =
+        crate::runtime::core::dispatch_param_types(&spec).map_err(|err| err.to_string())?;
+    let result = crate::runtime::core::bind_typed_generic_pg_params(
+        sqlx::query(sql),
+        &params,
+        param_types.as_deref(),
+    )
+    .map_err(|err| err.to_string())?
+    .execute(executor)
+    .await
+    .map_err(|err| format!("typed authn delete failed: {err}"))?;
+    Ok(result.rows_affected())
+}
+
 /// Postgres-backed session store for native auth serving.
 pub struct PostgresSessionStore {
     pool: PgPool,
@@ -1337,21 +1543,43 @@ impl PostgresSessionStore {
     where
         E: sqlx::Executor<'c, Database = sqlx::Postgres>,
     {
-        let rel = self.relation();
-        let principal_id_col = self.model.q("principal_id");
-        let is_active = self.model.q("is_active");
-        let last_active_at = self.model.q("last_active_at");
-        let revoke_reason = self.model.q("revoke_reason");
-        let result = sqlx::query(&format!(
-            "UPDATE {rel} SET {is_active} = FALSE, {last_active_at} = to_timestamp($2::DOUBLE PRECISION), {revoke_reason} = 'principal_revoke' \
-             WHERE {principal_id_col} = $1 AND {is_active} = TRUE"
-        ))
-        .bind(principal_id)
-        .bind(now_unix as i64)
-        .execute(executor)
+        let mut assignments = std::collections::BTreeMap::new();
+        assignments.insert(
+            "is_active".to_string(),
+            LogicalAssignment::Set {
+                value: LogicalValue::Bool(false),
+            },
+        );
+        assignments.insert(
+            "last_active_at".to_string(),
+            LogicalAssignment::Set {
+                value: logical_ts(now_unix)?,
+            },
+        );
+        assignments.insert(
+            "revoke_reason".to_string(),
+            LogicalAssignment::Set {
+                value: LogicalValue::String("principal_revoke".to_string()),
+            },
+        );
+        execute_typed_update_on(
+            executor,
+            LogicalUpdate {
+                message_type: SESSION_MSG.to_string(),
+                filter: LogicalFilter::And(vec![
+                    eq(
+                        "principal_id",
+                        LogicalValue::String(principal_id.to_string()),
+                    ),
+                    eq("is_active", LogicalValue::Bool(true)),
+                ]),
+                assignments,
+                return_fields: Vec::new(),
+                require_affected: false,
+            },
+        )
         .await
-        .map_err(|err| format!("revoke principal sessions failed: {err}"))?;
-        Ok(result.rows_affected() as usize)
+        .map(|rows| rows as usize)
     }
 }
 
@@ -1457,37 +1685,70 @@ impl SessionStore for PostgresSessionStore {
     }
 
     async fn revoke(&self, session_id_hash: &str, now_unix: u64) -> Result<bool, String> {
-        let rel = self.relation();
-        let session_token_lookup = self.model.q("session_token_lookup");
-        let is_active = self.model.q("is_active");
-        let last_active_at = self.model.q("last_active_at");
-        let revoke_reason = self.model.q("revoke_reason");
-        let result = sqlx::query(&format!(
-            "UPDATE {rel} SET {is_active} = FALSE, {last_active_at} = to_timestamp($2::DOUBLE PRECISION), {revoke_reason} = 'revoked' \
-             WHERE {session_token_lookup} = $1 AND {is_active} = TRUE"
-        ))
-        .bind(session_id_hash)
-        .bind(now_unix as i64)
-        .execute(&self.pool)
-        .await
-        .map_err(|err| format!("revoke session failed: {err}"))?;
-        Ok(result.rows_affected() > 0)
+        let mut assignments = std::collections::BTreeMap::new();
+        assignments.insert(
+            "is_active".to_string(),
+            LogicalAssignment::Set {
+                value: LogicalValue::Bool(false),
+            },
+        );
+        assignments.insert(
+            "last_active_at".to_string(),
+            LogicalAssignment::Set {
+                value: logical_ts(now_unix)?,
+            },
+        );
+        assignments.insert(
+            "revoke_reason".to_string(),
+            LogicalAssignment::Set {
+                value: LogicalValue::String("revoked".to_string()),
+            },
+        );
+        let affected = execute_typed_update_on(
+            &self.pool,
+            LogicalUpdate {
+                message_type: SESSION_MSG.to_string(),
+                filter: LogicalFilter::And(vec![
+                    eq(
+                        "session_token_lookup",
+                        LogicalValue::String(session_id_hash.to_string()),
+                    ),
+                    eq("is_active", LogicalValue::Bool(true)),
+                ]),
+                assignments,
+                return_fields: Vec::new(),
+                require_affected: false,
+            },
+        )
+        .await?;
+        Ok(affected > 0)
     }
 
     async fn touch_last_active(&self, session_id_hash: &str, now_unix: u64) -> Result<(), String> {
-        let rel = self.relation();
-        let session_token_lookup = self.model.q("session_token_lookup");
-        let is_active = self.model.q("is_active");
-        let last_active_at = self.model.q("last_active_at");
-        sqlx::query(&format!(
-            "UPDATE {rel} SET {last_active_at} = to_timestamp($2::DOUBLE PRECISION) \
-             WHERE {session_token_lookup} = $1 AND {is_active} = TRUE"
-        ))
-        .bind(session_id_hash)
-        .bind(now_unix as i64)
-        .execute(&self.pool)
-        .await
-        .map_err(|err| format!("touch session last_active_at failed: {err}"))?;
+        let mut assignments = std::collections::BTreeMap::new();
+        assignments.insert(
+            "last_active_at".to_string(),
+            LogicalAssignment::Set {
+                value: logical_ts(now_unix)?,
+            },
+        );
+        execute_typed_update_on(
+            &self.pool,
+            LogicalUpdate {
+                message_type: SESSION_MSG.to_string(),
+                filter: LogicalFilter::And(vec![
+                    eq(
+                        "session_token_lookup",
+                        LogicalValue::String(session_id_hash.to_string()),
+                    ),
+                    eq("is_active", LogicalValue::Bool(true)),
+                ]),
+                assignments,
+                return_fields: Vec::new(),
+                require_affected: false,
+            },
+        )
+        .await?;
         Ok(())
     }
 
@@ -1838,66 +2099,106 @@ pub struct PostgresApiKeyStore {
     model: NativeModel,
 }
 
-/// Bind the 11 positional params for the api-key INSERT (`put_sql`), shared by
-/// `put` and the atomic `rotate` so the bind order lives in one place (#209).
-fn bind_api_key_insert<'q>(
-    query: sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArguments>,
-    record: &'q ApiKeyRecord,
-    status: ApiKeyStatus,
-    metadata_json: String,
-) -> sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArguments> {
-    query
-        .bind(&record.key_prefix)
-        .bind(&record.key_hash)
-        .bind(&record.principal_id)
-        .bind(string_list_to_json(&record.scopes))
-        .bind(api_key_status_to_db(status))
-        .bind(record.last_used_at_unix as i64)
-        .bind(record.expires_at_unix as i64)
-        .bind(&record.tenant_id)
-        .bind(&record.project_id)
-        .bind(metadata_json)
-        .bind(record.revoked_at_unix as i64)
+fn api_key_write_op(record: &ApiKeyRecord, status: ApiKeyStatus) -> Result<LogicalWrite, String> {
+    let metadata_json = serde_json::json!({
+        "service_identity": record.service_identity,
+    });
+    let mut row = LogicalRecord::new();
+    row.insert(
+        "key_prefix".to_string(),
+        LogicalValue::String(record.key_prefix.clone()),
+    );
+    row.insert(
+        "key_hash".to_string(),
+        LogicalValue::String(record.key_hash.clone()),
+    );
+    row.insert(
+        "name".to_string(),
+        LogicalValue::String(record.key_prefix.clone()),
+    );
+    row.insert(
+        "description".to_string(),
+        LogicalValue::String(String::new()),
+    );
+    row.insert(
+        "owner_type".to_string(),
+        LogicalValue::String("SERVICE_ACCOUNT".to_string()),
+    );
+    row.insert(
+        "owner_id".to_string(),
+        LogicalValue::String(record.principal_id.clone()),
+    );
+    row.insert(
+        "scopes_json".to_string(),
+        LogicalValue::Json(
+            serde_json::from_str(&string_list_to_json(&record.scopes))
+                .map_err(|err| format!("api key scopes JSON failed: {err}"))?,
+        ),
+    );
+    row.insert(
+        "status".to_string(),
+        LogicalValue::String(api_key_status_to_db(status).to_string()),
+    );
+    row.insert(
+        "last_used_at".to_string(),
+        logical_ts_or_null(record.last_used_at_unix)?,
+    );
+    row.insert(
+        "expires_at".to_string(),
+        logical_ts_or_null(record.expires_at_unix)?,
+    );
+    row.insert(
+        "created_by".to_string(),
+        LogicalValue::String(record.principal_id.clone()),
+    );
+    row.insert(
+        "tenant_id".to_string(),
+        LogicalValue::String(record.tenant_id.clone()),
+    );
+    row.insert(
+        "project_id".to_string(),
+        LogicalValue::String(record.project_id.clone()),
+    );
+    row.insert(
+        "metadata_json".to_string(),
+        LogicalValue::Json(metadata_json),
+    );
+    row.insert(
+        "deleted_at".to_string(),
+        logical_ts_or_null(record.revoked_at_unix)?,
+    );
+    row.insert(
+        "deleted_by".to_string(),
+        LogicalValue::String(if record.revoked_at_unix > 0 {
+            record.principal_id.clone()
+        } else {
+            String::new()
+        }),
+    );
+    Ok(LogicalWrite {
+        message_type: API_KEY_MSG.to_string(),
+        records: vec![row],
+        conflict: ConflictStrategy::update_on(
+            vec![
+                "key_prefix".to_string(),
+                "owner_id".to_string(),
+                "scopes_json".to_string(),
+                "status".to_string(),
+                "last_used_at".to_string(),
+                "expires_at".to_string(),
+                "tenant_id".to_string(),
+                "project_id".to_string(),
+                "metadata_json".to_string(),
+                "deleted_at".to_string(),
+                "deleted_by".to_string(),
+            ],
+            vec!["key_hash".to_string()],
+        ),
+        return_fields: Vec::new(),
+    })
 }
 
 impl PostgresApiKeyStore {
-    /// The `INSERT … ON CONFLICT` used by both `put` and the atomic `rotate`
-    /// (#209). Binds are positional `$1..$11` (see `bind_put_record`).
-    fn put_sql(&self) -> String {
-        let rel = self.relation();
-        let m = &self.model;
-        let key_prefix = m.q("key_prefix");
-        let key_hash = m.q("key_hash");
-        let name = m.q("name");
-        let description = m.q("description");
-        let owner_type = m.q("owner_type");
-        let owner_id = m.q("owner_id");
-        let scopes_json = m.q("scopes_json");
-        let status_col = m.q("status");
-        let last_used_at = m.q("last_used_at");
-        let expires_at = m.q("expires_at");
-        let created_by = m.q("created_by");
-        let tenant_id = m.q("tenant_id");
-        let project_id = m.q("project_id");
-        let metadata_json_col = m.q("metadata_json");
-        let deleted_at = m.q("deleted_at");
-        let deleted_by = m.q("deleted_by");
-        format!(
-            "INSERT INTO {rel} \
-             ({key_prefix}, {key_hash}, {name}, {description}, {owner_type}, {owner_id}, {scopes_json}, {status_col}, {last_used_at}, {expires_at}, {created_by}, {tenant_id}, {project_id}, {metadata_json_col}, {deleted_at}, {deleted_by}) \
-             VALUES ($1, $2, $1, '', 'SERVICE_ACCOUNT', $3, $4::JSONB, $5, \
-                     CASE WHEN $6::BIGINT > 0 THEN to_timestamp($6::DOUBLE PRECISION) ELSE NULL END, \
-                     CASE WHEN $7::BIGINT > 0 THEN to_timestamp($7::DOUBLE PRECISION) ELSE NULL END, \
-                     $3, $8, $9, $10::JSONB, \
-                     CASE WHEN $11::BIGINT > 0 THEN to_timestamp($11::DOUBLE PRECISION) ELSE NULL END, \
-                     CASE WHEN $11::BIGINT > 0 THEN $3 ELSE '' END) \
-             ON CONFLICT ({key_hash}) DO UPDATE SET \
-               {key_prefix} = EXCLUDED.{key_prefix}, {owner_id} = EXCLUDED.{owner_id}, {scopes_json} = EXCLUDED.{scopes_json}, {status_col} = EXCLUDED.{status_col}, \
-               {last_used_at} = EXCLUDED.{last_used_at}, {expires_at} = EXCLUDED.{expires_at}, {tenant_id} = EXCLUDED.{tenant_id}, {project_id} = EXCLUDED.{project_id}, \
-               {metadata_json_col} = EXCLUDED.{metadata_json_col}, {deleted_at} = EXCLUDED.{deleted_at}, {deleted_by} = EXCLUDED.{deleted_by}"
-        )
-    }
-
     /// The revoke `UPDATE`, parameterized so `rotate` can renumber the binds.
     /// `prefix_param`/`now_param` are the 1-based positional placeholders the
     /// caller will bind (`put`/`revoke` use `$1`/`$2`; `rotate` uses `$12`/`$13`).
@@ -1961,14 +2262,7 @@ impl ApiKeyStore for PostgresApiKeyStore {
         } else {
             ApiKeyStatus::Active
         };
-        let metadata_json = serde_json::json!({
-            "service_identity": record.service_identity,
-        })
-        .to_string();
-        bind_api_key_insert(sqlx::query(&self.put_sql()), &record, status, metadata_json)
-            .execute(&self.pool)
-            .await
-            .map_err(|err| format!("put api key failed: {err}"))?;
+        execute_typed_write(&self.pool, api_key_write_op(&record, status)?).await?;
         Ok(())
     }
 
@@ -1985,24 +2279,14 @@ impl ApiKeyStore for PostgresApiKeyStore {
         } else {
             ApiKeyStatus::Active
         };
-        let metadata_json = serde_json::json!({
-            "service_identity": new_record.service_identity,
-        })
-        .to_string();
         let mut tx = self
             .pool
             .begin()
             .await
             .map_err(|err| format!("rotate api key begin failed: {err}"))?;
-        bind_api_key_insert(
-            sqlx::query(&self.put_sql()),
-            &new_record,
-            status,
-            metadata_json,
-        )
-        .execute(&mut *tx)
-        .await
-        .map_err(|err| format!("rotate api key insert failed: {err}"))?;
+        execute_typed_write_on(&mut *tx, api_key_write_op(&new_record, status)?)
+            .await
+            .map_err(|err| format!("rotate api key insert failed: {err}"))?;
         sqlx::query(&self.revoke_sql(1, 2))
             .bind(old_key_prefix)
             .bind(now_unix as i64)
@@ -2270,20 +2554,27 @@ impl ApiKeyStore for PostgresApiKeyStore {
     }
 
     async fn touch_last_used(&self, key_prefix: &str, now_unix: u64) -> Result<(), String> {
-        let rel = self.relation();
-        let m = &self.model;
-        let last_used_at = m.q("last_used_at");
-        let key_prefix_col = m.q("key_prefix");
-        let deleted_at = m.q("deleted_at");
-        sqlx::query(&format!(
-            "UPDATE {rel} SET {last_used_at} = to_timestamp($2::DOUBLE PRECISION) \
-             WHERE {key_prefix_col} = $1 AND {deleted_at} IS NULL"
-        ))
-        .bind(key_prefix)
-        .bind(now_unix as i64)
-        .execute(&self.pool)
-        .await
-        .map_err(|err| format!("touch api key last_used_at failed: {err}"))?;
+        let mut assignments = std::collections::BTreeMap::new();
+        assignments.insert(
+            "last_used_at".to_string(),
+            LogicalAssignment::Set {
+                value: logical_ts(now_unix)?,
+            },
+        );
+        execute_typed_update_on(
+            &self.pool,
+            LogicalUpdate {
+                message_type: API_KEY_MSG.to_string(),
+                filter: LogicalFilter::And(vec![
+                    eq("key_prefix", LogicalValue::String(key_prefix.to_string())),
+                    LogicalFilter::IsNull("deleted_at".to_string()),
+                ]),
+                assignments,
+                return_fields: Vec::new(),
+                require_affected: false,
+            },
+        )
+        .await?;
         Ok(())
     }
 }
@@ -2292,7 +2583,6 @@ pub struct PostgresUserStore {
     pool: PgPool,
     users_model: NativeModel,
     otps_model: NativeModel,
-    recovery_codes_model: NativeModel,
     mfa_policies_model: NativeModel,
 }
 
@@ -2349,16 +2639,6 @@ impl PostgresUserStore {
                     "correlation_id",
                 ],
             ),
-            recovery_codes_model: native_model(
-                "udb.core.authn.entity.v1.RecoveryCode",
-                &[
-                    "recovery_code_id",
-                    "user_id",
-                    "code_hash",
-                    "used_at",
-                    "created_at",
-                ],
-            ),
             mfa_policies_model: native_model(
                 "udb.core.authn.entity.v1.MfaPolicy",
                 &[
@@ -2378,10 +2658,6 @@ impl PostgresUserStore {
 
     fn otps_relation(&self) -> String {
         self.otps_model.relation.clone()
-    }
-
-    fn recovery_codes_relation(&self) -> String {
-        self.recovery_codes_model.relation.clone()
     }
 
     fn user_select_projection(&self) -> String {
@@ -2448,75 +2724,121 @@ impl PostgresUserStore {
     where
         E: sqlx::Executor<'c, Database = sqlx::Postgres>,
     {
-        let rel = self.users_relation();
-        let m = &self.users_model;
-        let user_id = m.q("user_id");
-        let username = m.q("username");
-        let email = m.q("email");
-        let password_hash = m.q("password_hash");
-        let account_kind = m.q("account_kind");
-        let status = m.q("status");
-        let tenant_id = m.q("tenant_id");
-        let full_name = m.q("full_name");
-        let totp_secret_enc = m.q("totp_secret_enc");
-        let mfa_enabled = m.q("mfa_enabled");
-        let failed_login_count = m.q("failed_login_count");
-        let locked_until = m.q("locked_until");
-        let email_verified_at = m.q("email_verified_at");
-        let last_login_at = m.q("last_login_at");
-        let created_by = m.q("created_by");
-        let created_at = m.q("created_at");
-        let updated_at = m.q("updated_at");
-        let deleted_at = m.q("deleted_at");
-        let deleted_by = m.q("deleted_by");
-        let project_id = m.q("project_id");
-        let external_provider_id = m.q("external_provider_id");
-        let external_subject = m.q("external_subject");
-        let profile_attributes_json = m.q("profile_attributes_json");
-        sqlx::query(&format!(
-            "INSERT INTO {rel} \
-             ({user_id}, {username}, {email}, {password_hash}, {account_kind}, {status}, {tenant_id}, {full_name}, {totp_secret_enc}, {mfa_enabled}, {failed_login_count}, {locked_until}, {email_verified_at}, {last_login_at}, {created_by}, {created_at}, {updated_at}, {deleted_at}, {deleted_by}, {project_id}, {external_provider_id}, {external_subject}, {profile_attributes_json}) \
-             VALUES ($1::UUID, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, \
-                     CASE WHEN $12::BIGINT > 0 THEN to_timestamp($12::DOUBLE PRECISION) ELSE NULL END, \
-                     CASE WHEN $13::BIGINT > 0 THEN to_timestamp($13::DOUBLE PRECISION) ELSE NULL END, \
-                     CASE WHEN $14::BIGINT > 0 THEN to_timestamp($14::DOUBLE PRECISION) ELSE NULL END, \
-                     NULLIF($15, '')::UUID, to_timestamp($16::DOUBLE PRECISION), to_timestamp($17::DOUBLE PRECISION), \
-                     CASE WHEN $18::BIGINT > 0 THEN to_timestamp($18::DOUBLE PRECISION) ELSE NULL END, \
-                     NULLIF($19, '')::UUID, $20, $21, $22, $23::JSONB) \
-             ON CONFLICT ({user_id}) DO UPDATE SET \
-               {username} = EXCLUDED.{username}, {email} = EXCLUDED.{email}, {password_hash} = EXCLUDED.{password_hash}, {account_kind} = EXCLUDED.{account_kind}, \
-               {status} = EXCLUDED.{status}, {tenant_id} = EXCLUDED.{tenant_id}, {full_name} = EXCLUDED.{full_name}, {totp_secret_enc} = EXCLUDED.{totp_secret_enc}, \
-               {mfa_enabled} = EXCLUDED.{mfa_enabled}, {failed_login_count} = EXCLUDED.{failed_login_count}, {locked_until} = EXCLUDED.{locked_until}, \
-               {email_verified_at} = EXCLUDED.{email_verified_at}, {last_login_at} = EXCLUDED.{last_login_at}, {updated_at} = EXCLUDED.{updated_at}, \
-               {deleted_at} = EXCLUDED.{deleted_at}, {deleted_by} = EXCLUDED.{deleted_by}, {project_id} = EXCLUDED.{project_id}, \
-               {external_provider_id} = EXCLUDED.{external_provider_id}, {external_subject} = EXCLUDED.{external_subject}, {profile_attributes_json} = EXCLUDED.{profile_attributes_json}"
-        ))
-        .bind(&record.user_id)
-        .bind(&record.username)
-        .bind(&record.email)
-        .bind(&record.password_hash)
-        .bind(record.account_kind.to_db())
-        .bind(record.status.to_db())
-        .bind(&record.tenant_id)
-        .bind(&record.full_name)
-        .bind(&record.totp_secret_hash)
-        .bind(record.mfa_enabled)
-        .bind(record.failed_login_count)
-        .bind(record.locked_until_unix as i64)
-        .bind(record.email_verified_at_unix as i64)
-        .bind(record.last_login_at_unix as i64)
-        .bind(&record.created_by)
-        .bind(record.created_at_unix as i64)
-        .bind(record.updated_at_unix as i64)
-        .bind(record.deleted_at_unix as i64)
-        .bind(&record.deleted_by)
-        .bind(&record.project_id)
-        .bind(&record.external_provider_id)
-        .bind(&record.external_subject)
-        .bind(json_object_or_empty(&record.profile_attributes_json))
-        .execute(executor)
-        .await
-        .map_err(|err| format!("put user failed: {err}"))?;
+        let mut row = LogicalRecord::new();
+        row.insert("user_id".to_string(), LogicalValue::String(record.user_id));
+        row.insert(
+            "username".to_string(),
+            LogicalValue::String(record.username),
+        );
+        row.insert("email".to_string(), LogicalValue::String(record.email));
+        row.insert(
+            "password_hash".to_string(),
+            LogicalValue::String(record.password_hash),
+        );
+        row.insert(
+            "account_kind".to_string(),
+            LogicalValue::String(record.account_kind.to_db().to_string()),
+        );
+        row.insert(
+            "status".to_string(),
+            LogicalValue::String(record.status.to_db().to_string()),
+        );
+        row.insert(
+            "tenant_id".to_string(),
+            LogicalValue::String(record.tenant_id),
+        );
+        row.insert(
+            "full_name".to_string(),
+            LogicalValue::String(record.full_name),
+        );
+        row.insert(
+            "totp_secret_enc".to_string(),
+            LogicalValue::String(record.totp_secret_hash),
+        );
+        row.insert(
+            "mfa_enabled".to_string(),
+            LogicalValue::Bool(record.mfa_enabled),
+        );
+        row.insert(
+            "failed_login_count".to_string(),
+            LogicalValue::Int(record.failed_login_count.into()),
+        );
+        row.insert(
+            "locked_until".to_string(),
+            logical_ts_or_null(record.locked_until_unix)?,
+        );
+        row.insert(
+            "email_verified_at".to_string(),
+            logical_ts_or_null(record.email_verified_at_unix)?,
+        );
+        row.insert(
+            "last_login_at".to_string(),
+            logical_ts_or_null(record.last_login_at_unix)?,
+        );
+        row.insert("created_by".to_string(), uuid_or_null(&record.created_by));
+        row.insert(
+            "created_at".to_string(),
+            logical_ts(record.created_at_unix)?,
+        );
+        row.insert(
+            "updated_at".to_string(),
+            logical_ts(record.updated_at_unix)?,
+        );
+        row.insert(
+            "deleted_at".to_string(),
+            logical_ts_or_null(record.deleted_at_unix)?,
+        );
+        row.insert("deleted_by".to_string(), uuid_or_null(&record.deleted_by));
+        row.insert(
+            "project_id".to_string(),
+            LogicalValue::String(record.project_id),
+        );
+        row.insert(
+            "external_provider_id".to_string(),
+            LogicalValue::String(record.external_provider_id),
+        );
+        row.insert(
+            "external_subject".to_string(),
+            LogicalValue::String(record.external_subject),
+        );
+        row.insert(
+            "profile_attributes_json".to_string(),
+            LogicalValue::Json(
+                serde_json::from_str(&json_object_or_empty(&record.profile_attributes_json))
+                    .map_err(|err| format!("profile attributes JSON failed: {err}"))?,
+            ),
+        );
+        execute_typed_write_on(
+            executor,
+            LogicalWrite {
+                message_type: USER_MSG.to_string(),
+                records: vec![row],
+                conflict: ConflictStrategy::update(vec![
+                    "username".to_string(),
+                    "email".to_string(),
+                    "password_hash".to_string(),
+                    "account_kind".to_string(),
+                    "status".to_string(),
+                    "tenant_id".to_string(),
+                    "full_name".to_string(),
+                    "totp_secret_enc".to_string(),
+                    "mfa_enabled".to_string(),
+                    "failed_login_count".to_string(),
+                    "locked_until".to_string(),
+                    "email_verified_at".to_string(),
+                    "last_login_at".to_string(),
+                    "updated_at".to_string(),
+                    "deleted_at".to_string(),
+                    "deleted_by".to_string(),
+                    "project_id".to_string(),
+                    "external_provider_id".to_string(),
+                    "external_subject".to_string(),
+                    "profile_attributes_json".to_string(),
+                ]),
+                return_fields: Vec::new(),
+            },
+        )
+        .await?;
         Ok(())
     }
 
@@ -2531,46 +2853,76 @@ impl PostgresUserStore {
     where
         E: sqlx::Executor<'c, Database = sqlx::Postgres>,
     {
-        let rel = self.otps_relation();
-        let m = &self.otps_model;
-        let otp_id = m.q("otp_id");
-        let user_id = m.q("user_id");
-        let otp_type = m.q("otp_type");
-        let code_hash = m.q("code_hash");
-        let delivery_channel = m.q("delivery_channel");
-        let delivery_address = m.q("delivery_address");
-        let status = m.q("status");
-        let attempt_count = m.q("attempt_count");
-        let superseded_by_id = m.q("superseded_by_id");
-        let expires_at = m.q("expires_at");
-        let used_at = m.q("used_at");
-        let created_at = m.q("created_at");
-        let correlation_id = m.q("correlation_id");
-        let tenant_id = m.q("tenant_id");
-        sqlx::query(&format!(
-            "INSERT INTO {rel} \
-             ({otp_id}, {user_id}, {otp_type}, {code_hash}, {delivery_channel}, {delivery_address}, {status}, {attempt_count}, {superseded_by_id}, {expires_at}, {used_at}, {created_at}, {correlation_id}, {tenant_id}) \
-             VALUES ($1::UUID, $2::UUID, $3, $4, $5, $6, $7, $8, NULLIF($9, '')::UUID, to_timestamp($10::DOUBLE PRECISION), \
-                     CASE WHEN $11::BIGINT > 0 THEN to_timestamp($11::DOUBLE PRECISION) ELSE NULL END, to_timestamp($12::DOUBLE PRECISION), $13, NULLIF($14, '')) \
-             ON CONFLICT ({otp_id}) DO UPDATE SET {status} = EXCLUDED.{status}, {attempt_count} = EXCLUDED.{attempt_count}, {superseded_by_id} = EXCLUDED.{superseded_by_id}, {used_at} = EXCLUDED.{used_at}"
-        ))
-        .bind(&record.otp_id)
-        .bind(&record.user_id)
-        .bind(otp_type_to_db(record.otp_type))
-        .bind(&record.code_hash)
-        .bind(&record.delivery_channel)
-        .bind(&record.delivery_address)
-        .bind(otp_status_to_db(record.status))
-        .bind(record.attempt_count)
-        .bind(&record.superseded_by_id)
-        .bind(record.expires_at_unix as i64)
-        .bind(record.used_at_unix as i64)
-        .bind(record.created_at_unix as i64)
-        .bind(&record.correlation_id)
-        .bind(&record.tenant_id)
-        .execute(executor)
-        .await
-        .map_err(|err| format!("put otp failed: {err}"))?;
+        let mut row = LogicalRecord::new();
+        row.insert("otp_id".to_string(), LogicalValue::String(record.otp_id));
+        row.insert("user_id".to_string(), LogicalValue::String(record.user_id));
+        row.insert(
+            "otp_type".to_string(),
+            LogicalValue::String(otp_type_to_db(record.otp_type).to_string()),
+        );
+        row.insert(
+            "code_hash".to_string(),
+            LogicalValue::String(record.code_hash),
+        );
+        row.insert(
+            "delivery_channel".to_string(),
+            LogicalValue::String(record.delivery_channel),
+        );
+        row.insert(
+            "delivery_address".to_string(),
+            LogicalValue::String(record.delivery_address),
+        );
+        row.insert(
+            "status".to_string(),
+            LogicalValue::String(otp_status_to_db(record.status).to_string()),
+        );
+        row.insert(
+            "attempt_count".to_string(),
+            LogicalValue::Int(record.attempt_count.into()),
+        );
+        row.insert(
+            "superseded_by_id".to_string(),
+            uuid_or_null(&record.superseded_by_id),
+        );
+        row.insert(
+            "expires_at".to_string(),
+            logical_ts(record.expires_at_unix)?,
+        );
+        row.insert(
+            "used_at".to_string(),
+            logical_ts_or_null(record.used_at_unix)?,
+        );
+        row.insert(
+            "created_at".to_string(),
+            logical_ts(record.created_at_unix)?,
+        );
+        row.insert(
+            "correlation_id".to_string(),
+            LogicalValue::String(record.correlation_id),
+        );
+        row.insert(
+            "tenant_id".to_string(),
+            if record.tenant_id.trim().is_empty() {
+                LogicalValue::Null
+            } else {
+                LogicalValue::String(record.tenant_id)
+            },
+        );
+        execute_typed_write_on(
+            executor,
+            LogicalWrite {
+                message_type: OTP_MSG.to_string(),
+                records: vec![row],
+                conflict: ConflictStrategy::update(vec![
+                    "status".to_string(),
+                    "attempt_count".to_string(),
+                    "superseded_by_id".to_string(),
+                    "used_at".to_string(),
+                ]),
+                return_fields: Vec::new(),
+            },
+        )
+        .await?;
         Ok(())
     }
 }
@@ -2579,6 +2931,10 @@ impl PostgresUserStore {
 impl UserStore for PostgresUserStore {
     async fn put_user(&self, record: UserRecord) -> Result<(), String> {
         self.put_user_on(&self.pool, record).await
+    }
+
+    fn backing_pool(&self) -> Option<PgPool> {
+        Some(self.pool.clone())
     }
 
     /// Atomic variant: upsert the user on the caller's transaction connection so
@@ -2717,21 +3073,40 @@ impl UserStore for PostgresUserStore {
         deleted_by: &str,
         now_unix: u64,
     ) -> Result<bool, String> {
-        let rel = self.users_relation();
-        let user_id_col = self.users_model.q("user_id");
-        let deleted_at = self.users_model.q("deleted_at");
-        let deleted_by_col = self.users_model.q("deleted_by");
-        let updated_at = self.users_model.q("updated_at");
-        let result = sqlx::query(&format!(
-            "UPDATE {rel} SET {deleted_at} = to_timestamp($2::DOUBLE PRECISION), {deleted_by_col} = NULLIF($3, '')::UUID, {updated_at} = to_timestamp($2::DOUBLE PRECISION) WHERE {user_id_col} = $1::UUID AND {deleted_at} IS NULL"
-        ))
-        .bind(user_id)
-        .bind(now_unix as i64)
-        .bind(deleted_by)
-        .execute(&self.pool)
-        .await
-        .map_err(|err| format!("delete user failed: {err}"))?;
-        Ok(result.rows_affected() > 0)
+        let mut assignments = std::collections::BTreeMap::new();
+        assignments.insert(
+            "deleted_at".to_string(),
+            LogicalAssignment::Set {
+                value: logical_ts(now_unix)?,
+            },
+        );
+        assignments.insert(
+            "deleted_by".to_string(),
+            LogicalAssignment::Set {
+                value: uuid_or_null(deleted_by),
+            },
+        );
+        assignments.insert(
+            "updated_at".to_string(),
+            LogicalAssignment::Set {
+                value: logical_ts(now_unix)?,
+            },
+        );
+        let affected = execute_typed_update_on(
+            &self.pool,
+            LogicalUpdate {
+                message_type: USER_MSG.to_string(),
+                filter: LogicalFilter::And(vec![
+                    eq("user_id", LogicalValue::String(user_id.to_string())),
+                    LogicalFilter::IsNull("deleted_at".to_string()),
+                ]),
+                assignments,
+                return_fields: Vec::new(),
+                require_affected: false,
+            },
+        )
+        .await?;
+        Ok(affected > 0)
     }
 
     async fn put_otp(&self, record: OtpRecord) -> Result<(), String> {
@@ -2794,24 +3169,39 @@ impl UserStore for PostgresUserStore {
     }
 
     async fn consume_otp_pending(&self, otp_id: &str, now_unix: u64) -> Result<bool, String> {
-        let rel = self.otps_relation();
-        let id_col = self.otps_model.q("otp_id");
-        let status_col = self.otps_model.q("status");
-        let used_col = self.otps_model.q("used_at");
-        // Single-use: only a PENDING row flips, and RETURNING proves exactly one
-        // caller consumes even under concurrent submissions of the same otp_id.
-        let consumed: Option<String> = sqlx::query_scalar(&format!(
-            "UPDATE {rel} SET {status_col} = $3, {used_col} = to_timestamp($2::DOUBLE PRECISION) \
-             WHERE {id_col} = $1::UUID AND {status_col} = $4 RETURNING {id_col}::text"
-        ))
-        .bind(otp_id)
-        .bind(now_unix as i64)
-        .bind(otp_status_to_db(OtpStatus::Used.as_i32()))
-        .bind(otp_status_to_db(OtpStatus::Pending.as_i32()))
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(|err| format!("consume otp failed: {err}"))?;
-        Ok(consumed.is_some())
+        let mut assignments = std::collections::BTreeMap::new();
+        assignments.insert(
+            "status".to_string(),
+            LogicalAssignment::Set {
+                value: LogicalValue::String(otp_status_to_db(OtpStatus::Used.as_i32()).to_string()),
+            },
+        );
+        assignments.insert(
+            "used_at".to_string(),
+            LogicalAssignment::Set {
+                value: logical_ts(now_unix)?,
+            },
+        );
+        let affected = execute_typed_update_on(
+            &self.pool,
+            LogicalUpdate {
+                message_type: OTP_MSG.to_string(),
+                filter: LogicalFilter::And(vec![
+                    eq("otp_id", LogicalValue::String(otp_id.to_string())),
+                    eq(
+                        "status",
+                        LogicalValue::String(
+                            otp_status_to_db(OtpStatus::Pending.as_i32()).to_string(),
+                        ),
+                    ),
+                ]),
+                assignments,
+                return_fields: Vec::new(),
+                require_affected: false,
+            },
+        )
+        .await?;
+        Ok(affected > 0)
     }
 
     async fn replace_recovery_codes(
@@ -2820,28 +3210,45 @@ impl UserStore for PostgresUserStore {
         tenant_id: &str,
         code_hashes: &[String],
     ) -> Result<(), String> {
-        let rel = self.recovery_codes_relation();
-        let user_col = self.recovery_codes_model.q("user_id");
-        let code_col = self.recovery_codes_model.q("code_hash");
-        let tenant_col = self.recovery_codes_model.q("tenant_id");
         let mut tx = self
             .pool
             .begin()
             .await
             .map_err(|err| format!("recovery codes tx begin failed: {err}"))?;
-        sqlx::query(&format!("DELETE FROM {rel} WHERE {user_col} = $1::UUID"))
-            .bind(user_id)
-            .execute(&mut *tx)
-            .await
-            .map_err(|err| format!("recovery codes clear failed: {err}"))?;
+        execute_typed_delete_on(
+            &mut *tx,
+            LogicalDelete {
+                message_type: RECOVERY_CODE_MSG.to_string(),
+                filter: eq("user_id", LogicalValue::String(user_id.to_string())),
+                return_fields: Vec::new(),
+            },
+        )
+        .await
+        .map_err(|err| format!("recovery codes clear failed: {err}"))?;
         for hash in code_hashes {
-            sqlx::query(&format!(
-                "INSERT INTO {rel} ({user_col}, {code_col}, {tenant_col}) VALUES ($1::UUID, $2, NULLIF($3, ''))"
-            ))
-            .bind(user_id)
-            .bind(hash)
-            .bind(tenant_id)
-            .execute(&mut *tx)
+            let mut row = LogicalRecord::new();
+            row.insert(
+                "user_id".to_string(),
+                LogicalValue::String(user_id.to_string()),
+            );
+            row.insert("code_hash".to_string(), LogicalValue::String(hash.clone()));
+            row.insert(
+                "tenant_id".to_string(),
+                if tenant_id.trim().is_empty() {
+                    LogicalValue::Null
+                } else {
+                    LogicalValue::String(tenant_id.to_string())
+                },
+            );
+            execute_typed_write_on(
+                &mut *tx,
+                LogicalWrite {
+                    message_type: RECOVERY_CODE_MSG.to_string(),
+                    records: vec![row],
+                    conflict: ConflictStrategy::Error,
+                    return_fields: Vec::new(),
+                },
+            )
             .await
             .map_err(|err| format!("recovery code insert failed: {err}"))?;
         }
@@ -2856,42 +3263,55 @@ impl UserStore for PostgresUserStore {
         code_hash: &str,
         now_unix: u64,
     ) -> Result<bool, String> {
-        let rel = self.recovery_codes_relation();
-        let user_col = self.recovery_codes_model.q("user_id");
-        let code_col = self.recovery_codes_model.q("code_hash");
-        let used_col = self.recovery_codes_model.q("used_at");
-        let id_col = self.recovery_codes_model.q("recovery_code_id");
-        // Single-use: only an unused row flips, and the RETURNING proves exactly
-        // one consume even under concurrent attempts.
-        let consumed: Option<uuid::Uuid> = sqlx::query_scalar(&format!(
-            "UPDATE {rel} SET {used_col} = to_timestamp($3::DOUBLE PRECISION) \
-             WHERE {user_col} = $1::UUID AND {code_col} = $2 AND {used_col} IS NULL \
-             RETURNING {id_col}"
-        ))
-        .bind(user_id)
-        .bind(code_hash)
-        .bind(now_unix as i64)
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(|err| format!("recovery code consume failed: {err}"))?;
-        Ok(consumed.is_some())
+        let mut assignments = std::collections::BTreeMap::new();
+        assignments.insert(
+            "used_at".to_string(),
+            LogicalAssignment::Set {
+                value: logical_ts(now_unix)?,
+            },
+        );
+        let affected = execute_typed_update_on(
+            &self.pool,
+            LogicalUpdate {
+                message_type: RECOVERY_CODE_MSG.to_string(),
+                filter: LogicalFilter::And(vec![
+                    eq("user_id", LogicalValue::String(user_id.to_string())),
+                    eq("code_hash", LogicalValue::String(code_hash.to_string())),
+                    LogicalFilter::IsNull("used_at".to_string()),
+                ]),
+                assignments,
+                return_fields: Vec::new(),
+                require_affected: false,
+            },
+        )
+        .await?;
+        Ok(affected > 0)
     }
 
     async fn put_mfa_policy(&self, tenant_id: &str, require_mfa: bool) -> Result<(), String> {
-        let rel = self.mfa_policies_model.relation.clone();
-        let tenant_col = self.mfa_policies_model.q("tenant_id");
-        let require_col = self.mfa_policies_model.q("require_mfa");
-        let updated_col = self.mfa_policies_model.q("updated_at");
-        sqlx::query(&format!(
-            "INSERT INTO {rel} ({tenant_col}, {require_col}) VALUES ($1, $2) \
-             ON CONFLICT ({tenant_col}) DO UPDATE SET {require_col} = EXCLUDED.{require_col}, \
-             {updated_col} = CURRENT_TIMESTAMP"
-        ))
-        .bind(tenant_id)
-        .bind(require_mfa)
-        .execute(&self.pool)
-        .await
-        .map_err(|err| format!("put mfa policy failed: {err}"))?;
+        let mut row = LogicalRecord::new();
+        row.insert(
+            "tenant_id".to_string(),
+            LogicalValue::String(tenant_id.to_string()),
+        );
+        row.insert("require_mfa".to_string(), LogicalValue::Bool(require_mfa));
+        row.insert(
+            "updated_at".to_string(),
+            LogicalValue::Timestamp(chrono::Utc::now()),
+        );
+        execute_typed_write(
+            &self.pool,
+            LogicalWrite {
+                message_type: MFA_POLICY_MSG.to_string(),
+                records: vec![row],
+                conflict: ConflictStrategy::update_on(
+                    vec!["require_mfa".to_string(), "updated_at".to_string()],
+                    vec!["tenant_id".to_string()],
+                ),
+                return_fields: Vec::new(),
+            },
+        )
+        .await?;
         Ok(())
     }
 
@@ -2910,38 +3330,54 @@ impl UserStore for PostgresUserStore {
     }
 
     async fn set_user_phone(&self, user_id: &str, phone: &str) -> Result<(), String> {
-        let rel = self.users_relation();
-        let phone_col = self.users_model.q("phone");
-        let verified_col = self.users_model.q("phone_verified_at");
-        let updated_col = self.users_model.q("updated_at");
-        let id_col = self.users_model.q("user_id");
-        // Setting/replacing the number clears any prior verification.
-        sqlx::query(&format!(
-            "UPDATE {rel} SET {phone_col} = $2, {verified_col} = NULL, \
-             {updated_col} = CURRENT_TIMESTAMP WHERE {id_col} = $1::UUID"
-        ))
-        .bind(user_id)
-        .bind(phone)
-        .execute(&self.pool)
-        .await
-        .map_err(|err| format!("set user phone failed: {err}"))?;
+        let mut assignments = std::collections::BTreeMap::new();
+        assignments.insert(
+            "phone".to_string(),
+            LogicalAssignment::Set {
+                value: LogicalValue::String(phone.to_string()),
+            },
+        );
+        assignments.insert(
+            "phone_verified_at".to_string(),
+            LogicalAssignment::Set {
+                value: LogicalValue::Null,
+            },
+        );
+        assignments.insert("updated_at".to_string(), LogicalAssignment::ServerNow);
+        execute_typed_update_on(
+            &self.pool,
+            LogicalUpdate {
+                message_type: USER_MSG.to_string(),
+                filter: eq("user_id", LogicalValue::String(user_id.to_string())),
+                assignments,
+                return_fields: Vec::new(),
+                require_affected: false,
+            },
+        )
+        .await?;
         Ok(())
     }
 
     async fn mark_phone_verified(&self, user_id: &str, now_unix: u64) -> Result<(), String> {
-        let rel = self.users_relation();
-        let verified_col = self.users_model.q("phone_verified_at");
-        let updated_col = self.users_model.q("updated_at");
-        let id_col = self.users_model.q("user_id");
-        sqlx::query(&format!(
-            "UPDATE {rel} SET {verified_col} = to_timestamp($2::DOUBLE PRECISION), \
-             {updated_col} = CURRENT_TIMESTAMP WHERE {id_col} = $1::UUID"
-        ))
-        .bind(user_id)
-        .bind(now_unix as i64)
-        .execute(&self.pool)
-        .await
-        .map_err(|err| format!("mark phone verified failed: {err}"))?;
+        let mut assignments = std::collections::BTreeMap::new();
+        assignments.insert(
+            "phone_verified_at".to_string(),
+            LogicalAssignment::Set {
+                value: logical_ts(now_unix)?,
+            },
+        );
+        assignments.insert("updated_at".to_string(), LogicalAssignment::ServerNow);
+        execute_typed_update_on(
+            &self.pool,
+            LogicalUpdate {
+                message_type: USER_MSG.to_string(),
+                filter: eq("user_id", LogicalValue::String(user_id.to_string())),
+                assignments,
+                return_fields: Vec::new(),
+                require_affected: false,
+            },
+        )
+        .await?;
         Ok(())
     }
 }

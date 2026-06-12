@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>UDB :: Universal Data Broker</strong><br>
-  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.3.3 | protocol v1.0.0</sub>
+  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.3.5 | protocol v1.0.0</sub>
 </p>
 
 <p align="center">
@@ -56,10 +56,28 @@ CDC, and backend-specific execution.
 | Contract manifest | 733 messages, 49 table-backed models, 192 event contracts |
 | Backends | 18 backend kinds across SQL, cache, vector, object, document, graph, and column stores |
 | SDKs | Go, Python, TypeScript/Node, Java, C#, PHP/Laravel |
-| Release | crate/SDK version `0.3.3`, wire protocol `1.0.0` |
+| Release | crate/SDK version `0.3.5`, wire protocol `1.0.0` |
 
 The native-service table is generated from the embedded descriptor:
 [docs/generated/native-services.md](docs/generated/native-services.md).
+
+## 0.3.5 Release Focus
+
+UDB 0.3.5 is the native-store release. It moves the P4 work out of ad-hoc
+service SQL and into descriptor-backed native entity paths, so control-plane
+features use the same typed model, tenant scope, event contracts, and migration
+guards as the rest of the broker.
+
+- Native notification and analytics flows now run through the native entity
+  store path instead of hand-built SQL call sites.
+- Storage, asset, WebRTC, tenant, auth, IdP, and control services share the same
+  native runtime/store binding and generated contract checks.
+- SDKs were regenerated for Go, Python, TypeScript, Java, C#, and PHP, with
+  cross-language conformance plus deep live coverage for the broker-backed SDK
+  harnesses.
+- CI release gates now cover version consistency, native contract drift, SDK
+  service coverage, MinIO-backed live SDK startup, and native-service live
+  integration assumptions.
 
 ## How It Feels
 
@@ -204,12 +222,12 @@ Details: [docs/native-services.md](docs/native-services.md).
 
 | Language | Install |
 |---|---|
-| Go | `go get github.com/fahara02/udb/sdk/go@v0.3.3` |
-| Python | `pip install udb-client==0.3.3` |
-| TypeScript / Node | `npm i @udb_plus/sdk@0.3.3` |
-| PHP / Laravel | `composer require fahara02/udb-laravel:^0.3.3` |
-| C# | `dotnet add package Udb.Client --version 0.3.3` |
-| Java | `dev.udb:udb-java-client` (`0.3.3` target; build from checkout until publishing lands) |
+| Go | `go get github.com/fahara02/udb/sdk/go@v0.3.5` |
+| Python | `pip install udb-client==0.3.5` |
+| TypeScript / Node | `npm i @udb_plus/sdk@0.3.5` |
+| PHP / Laravel | `composer require fahara02/udb-laravel:^0.3.5` |
+| C# | `dotnet add package Udb.Client --version 0.3.5` |
+| Java | `dev.udb:udb-java-client` (`0.3.5` target; build from checkout until publishing lands) |
 
 Start here: [sdk/README.md](sdk/README.md).
 

@@ -58,6 +58,10 @@ pub struct RpcContract {
     /// kept for back-compat. See docs/event-contract-model.md.
     pub emits: Vec<EmittedEvent>,
     pub dependency_contract: Option<DependencyContract>,
+    /// `operation_kind` method option (proto OperationKind enum): 0=unspecified,
+    /// 1=read_only, 2=mutation, 3=destructive. Authoritative state-change class —
+    /// drives client retry safety + SDK probe classification (never the name).
+    pub operation_kind: i32,
 }
 
 impl RpcContract {
@@ -132,6 +136,18 @@ impl EndpointSecurityContract {
             4 => "service_account",
             _ => "unspecified",
         }
+    }
+}
+
+/// Canonical `operation_kind` token (proto OperationKind enum) for the
+/// generator/lint. The SINGLE source of truth for client retry safety and SDK
+/// probe classification — never derived from the method name.
+pub fn operation_kind_name(value: i32) -> &'static str {
+    match value {
+        1 => "read_only",
+        2 => "mutation",
+        3 => "destructive",
+        _ => "unspecified",
     }
 }
 
@@ -438,6 +454,11 @@ fn build_contract_manifest(set: &FdSet) -> DescriptorContractManifest {
                         .as_ref()
                         .and_then(|options| options.dependency_contract.as_ref())
                         .map(DependencyContract::from),
+                    operation_kind: method
+                        .options
+                        .as_ref()
+                        .map(|options| options.operation_kind)
+                        .unwrap_or(0),
                 });
             }
             methods.sort_by(|a, b| a.method.cmp(&b.method));
@@ -881,6 +902,8 @@ struct MethodOpts {
     event_contract: Option<EventContractOpts>,
     #[prost(message, optional, tag = "51006")]
     dependency_contract: Option<DependencyContractOpts>,
+    #[prost(int32, tag = "51007")]
+    operation_kind: i32,
     #[prost(message, optional, tag = "72295728")]
     http_rule: Option<HttpRuleOpts>,
 }

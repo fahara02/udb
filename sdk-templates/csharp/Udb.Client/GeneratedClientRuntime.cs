@@ -153,24 +153,8 @@ public abstract class GeneratedServiceBase
         }
     }
 
-    protected static bool IsReadOnlyRpcName(string name)
-    {
-        string[] prefixes =
-        {
-            "Get", "List", "Check", "Validate", "Introspect", "Authorize",
-            "BatchCheck", "Preview", "Resolve", "Explain", "Diff", "Lint",
-            "Test", "Select", "AnalyticalQuery", "VectorSearch", "GraphQuery",
-            "CacheGet", "CacheScan", "DocumentGet", "DocumentFind",
-        };
-        foreach (var prefix in prefixes)
-        {
-            if (name.StartsWith(prefix, StringComparison.Ordinal))
-            {
-                return true;
-            }
-        }
-        return false;
-    }
+    // Retry safety is read from the proto-derived operation_kind per RPC (each
+    // wrapper passes operation_kind == "read_only") — never guessed from the name.
 
     private bool IsRetryable(StatusCode code, bool readOnly)
     {

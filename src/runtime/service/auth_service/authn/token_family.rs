@@ -121,6 +121,36 @@ impl AuthnServiceImpl {
         } else {
             authn::hash_secret(session_handle, &self.hash_key())
         };
+        if let Ok(runtime) = self.authn_runtime() {
+            let context = self.authn_context(tenant_id, project_id);
+            let record = authn_record([
+                ("family_id", LogicalValue::String(family_id.clone())),
+                ("session_id", LogicalValue::String(session_hash.clone())),
+                ("user_id", LogicalValue::String(user_id.to_string())),
+                (
+                    "principal_id",
+                    LogicalValue::String(principal_id.to_string()),
+                ),
+                ("tenant_id", LogicalValue::String(tenant_id.to_string())),
+                ("project_id", LogicalValue::String(project_id.to_string())),
+                ("device_id", LogicalValue::String(device_id.to_string())),
+                (
+                    "current_refresh_jti_hash",
+                    LogicalValue::String(jti_hash.clone()),
+                ),
+            ]);
+            runtime
+                .native_entity_write_for_service(
+                    "authn",
+                    &context,
+                    "udb.core.authn.entity.v1.TokenFamily",
+                    record,
+                    crate::ir::ConflictStrategy::Error,
+                )
+                .await
+                .map_err(|err| Status::internal(format!("mint refresh family failed: {err}")))?;
+            return Ok(authn::token_family::format_refresh_token(&family_id, &jti));
+        }
         let sql = format!(
             "INSERT INTO {rel} ({id}, {session}, {user}, {principal}, {tenant}, {project}, {device}, {cur}) \
              VALUES ($1::UUID, $2, $3, $4, $5, $6, $7, $8)",
@@ -147,6 +177,134 @@ impl AuthnServiceImpl {
             .await
             .map_err(|err| Status::internal(format!("mint refresh family failed: {err}")))?;
         Ok(authn::token_family::format_refresh_token(&family_id, &jti))
+    }
+
+    /// Revoke every live refresh-token family bound to `session_handle`, so a
+    /// refresh token cannot outlive the session it was minted under (a logged-out
+    /// session must not keep minting access tokens via `RefreshToken`). The handle
+    /// is hashed with the same key `mint_refresh_family` used, so the stored
+    /// `session_id` digest matches. No-op (0) without a Postgres pool.
+    pub(super) async fn revoke_families_for_session(
+        &self,
+        session_handle: &str,
+    ) -> Result<u64, Status> {
+        let Some(pool) = self.pg_pool.as_ref() else {
+            return Ok(0);
+        };
+        if session_handle.trim().is_empty() {
+            return Ok(0);
+        }
+        let session_hash = authn::hash_secret(session_handle, &self.hash_key());
+        if let Ok(runtime) = self.authn_runtime() {
+            let context = self.authn_context("", "");
+            let mut assignments = std::collections::BTreeMap::new();
+            assignments.insert("revoked_at".to_string(), LogicalAssignment::ServerNow);
+            assignments.insert(
+                "revocation_reason".to_string(),
+                authn_set(LogicalValue::String("logout".to_string())),
+            );
+            assignments.insert("updated_at".to_string(), LogicalAssignment::ServerNow);
+            let op = LogicalUpdate {
+                message_type: "udb.core.authn.entity.v1.TokenFamily".to_string(),
+                filter: authn_and(vec![
+                    authn_eq("session_id", LogicalValue::String(session_hash.clone())),
+                    LogicalFilter::IsNull("revoked_at".to_string()),
+                ]),
+                assignments,
+                return_fields: Vec::new(),
+                require_affected: false,
+            };
+            return runtime
+                .native_entity_update_for_service("authn", &context, op)
+                .await
+                .map(|(affected, _)| affected)
+                .map_err(|err| {
+                    Status::internal(format!("revoke families for session failed: {err}"))
+                });
+        }
+        let m = token_family_model();
+        let sql = format!(
+            "UPDATE {rel} SET {revoked} = COALESCE({revoked}, NOW()), \
+                    {reason} = COALESCE(NULLIF({reason}, ''), 'logout'), {updated} = NOW() \
+             WHERE {session} = $1 AND {revoked} IS NULL",
+            rel = m.relation,
+            revoked = m.q("revoked_at"),
+            reason = m.q("revocation_reason"),
+            updated = m.q("updated_at"),
+            session = m.q("session_id"),
+        );
+        Ok(sqlx::query(&sql)
+            .bind(&session_hash)
+            .execute(pool)
+            .await
+            .map_err(|err| Status::internal(format!("revoke families for session failed: {err}")))?
+            .rows_affected())
+    }
+
+    /// Revoke every live refresh-token family for a principal (all-sessions
+    /// logout), so no refresh token survives a logout-all. No-op (0) without a
+    /// Postgres pool.
+    pub(super) async fn revoke_families_for_principal(
+        &self,
+        principal_id: &str,
+    ) -> Result<u64, Status> {
+        let Some(pool) = self.pg_pool.as_ref() else {
+            return Ok(0);
+        };
+        if principal_id.trim().is_empty() {
+            return Ok(0);
+        }
+        if let Ok(runtime) = self.authn_runtime() {
+            let context = self.authn_context("", "");
+            let mut total = 0u64;
+            for field in ["user_id", "principal_id"] {
+                let mut assignments = std::collections::BTreeMap::new();
+                assignments.insert("revoked_at".to_string(), LogicalAssignment::ServerNow);
+                assignments.insert(
+                    "revocation_reason".to_string(),
+                    authn_set(LogicalValue::String("logout_all".to_string())),
+                );
+                assignments.insert("updated_at".to_string(), LogicalAssignment::ServerNow);
+                let op = LogicalUpdate {
+                    message_type: "udb.core.authn.entity.v1.TokenFamily".to_string(),
+                    filter: authn_and(vec![
+                        authn_eq(field, LogicalValue::String(principal_id.to_string())),
+                        LogicalFilter::IsNull("revoked_at".to_string()),
+                    ]),
+                    assignments,
+                    return_fields: Vec::new(),
+                    require_affected: false,
+                };
+                let (affected, _) = runtime
+                    .native_entity_update_for_service("authn", &context, op)
+                    .await
+                    .map_err(|err| {
+                        Status::internal(format!("revoke families for principal failed: {err}"))
+                    })?;
+                total += affected;
+            }
+            return Ok(total);
+        }
+        let m = token_family_model();
+        let sql = format!(
+            "UPDATE {rel} SET {revoked} = COALESCE({revoked}, NOW()), \
+                    {reason} = COALESCE(NULLIF({reason}, ''), 'logout_all'), {updated} = NOW() \
+             WHERE ({user} = $1 OR {principal} = $1) AND {revoked} IS NULL",
+            rel = m.relation,
+            revoked = m.q("revoked_at"),
+            reason = m.q("revocation_reason"),
+            updated = m.q("updated_at"),
+            user = m.q("user_id"),
+            principal = m.q("principal_id"),
+        );
+        Ok(sqlx::query(&sql)
+            .bind(principal_id)
+            .execute(pool)
+            .await
+            .map_err(|err| {
+                Status::internal(format!("revoke families for principal failed: {err}"))
+            })?
+            .rows_affected())
     }
 
     /// Atomically rotate a presented refresh token. See module docs for the

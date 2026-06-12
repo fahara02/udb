@@ -19,35 +19,54 @@ impl AuthzServiceImpl {
         draft_id: &str,
         document: &PolicyDocument,
     ) -> Result<(), Status> {
-        let pool = self.require_pool()?;
-        let m = self.policy_drafts_model();
-        let rel = m.relation.clone();
-        let policies_json = serde_json::to_string(
-            &document
+        let runtime = self.runtime.as_ref().ok_or_else(|| {
+            Status::failed_precondition("native authz requires runtime-backed draft persistence")
+        })?;
+        // P6.10 Wave 4: typed UPDATE of the two JSONB document columns (was raw
+        // UPDATE). Values are built as JSON directly and bound as JSONB.
+        let policies_value = serde_json::Value::Array(
+            document
                 .policies
                 .iter()
                 .map(glogic::policy_to_json)
                 .collect::<Vec<_>>(),
-        )
-        .unwrap_or_else(|_| "[]".to_string());
+        );
         let full = document.to_json();
-        let tuples_json = serde_json::json!({
+        let tuples_value = serde_json::json!({
             "relationship_tuples": full["relationship_tuples"],
             "role_bindings": full["role_bindings"],
-        })
-        .to_string();
-        sqlx::query(&format!(
-            "UPDATE {rel} SET {proposed_policies_json} = $2, {proposed_tuples_json} = $3 WHERE {draft_id} = $1::UUID",
-            proposed_policies_json = m.q("proposed_policies_json"),
-            proposed_tuples_json = m.q("proposed_tuples_json"),
-            draft_id = m.q("draft_id"),
-        ))
-        .bind(draft_id)
-        .bind(&policies_json)
-        .bind(&tuples_json)
-        .execute(pool)
-        .await
-        .map_err(|err| Status::internal(format!("persist draft document failed: {err}")))?;
+        });
+        let mut assignments = std::collections::BTreeMap::new();
+        assignments.insert(
+            "proposed_policies_json".to_string(),
+            LogicalAssignment::Set {
+                value: LogicalValue::Json(policies_value),
+            },
+        );
+        assignments.insert(
+            "proposed_tuples_json".to_string(),
+            LogicalAssignment::Set {
+                value: LogicalValue::Json(tuples_value),
+            },
+        );
+        runtime
+            .native_entity_update_for_service(
+                "authz",
+                &crate::RequestContext::default(),
+                LogicalUpdate {
+                    message_type: "udb.core.authz.entity.v1.PolicyDraft".to_string(),
+                    filter: LogicalFilter::Comparison {
+                        field: "draft_id".to_string(),
+                        op: ComparisonOp::Eq,
+                        value: LogicalValue::String(draft_id.to_string()),
+                    },
+                    assignments,
+                    return_fields: Vec::new(),
+                    require_affected: false,
+                },
+            )
+            .await
+            .map_err(|err| Status::internal(format!("persist draft document failed: {err}")))?;
         Ok(())
     }
 

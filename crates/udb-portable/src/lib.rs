@@ -257,6 +257,7 @@ pub mod parser {
         AnnotationParserMode, ParseError, ParseReport, ParserConfig, ParserDiagnostic,
         UDB_ANNOTATION_VERSION,
     };
+    pub use options::{ParserOptionMetadata, documented_option_metadata, parser_option_kind_name};
 
     /// Parse a proto-DB schema from in-memory bytes. The portable
     /// equivalent of `udb::parser::parse_file`, minus the filesystem.

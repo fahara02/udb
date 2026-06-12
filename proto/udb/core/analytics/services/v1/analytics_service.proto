@@ -62,6 +62,7 @@ service AnalyticsService {
 
   // Record a single pipeline stage request observation (called per-request).
   rpc RecordPipelineMetric(RecordPipelineMetricRequest) returns (RecordPipelineMetricResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:analytics:record-pipeline-metric"
@@ -120,6 +121,7 @@ service AnalyticsService {
 
   // Query aggregated pipeline stage performance snapshots.
   rpc GetPipelineSummary(GetPipelineSummaryRequest) returns (GetPipelineSummaryResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:analytics:get-pipeline-summary"
@@ -175,6 +177,7 @@ service AnalyticsService {
 
   // Query daily executor performance roll-ups.
   rpc GetExecutorPerformance(GetExecutorPerformanceRequest) returns (GetExecutorPerformanceResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:analytics:get-executor-performance"
@@ -230,6 +233,7 @@ service AnalyticsService {
 
   // Query daily reconciliation and conflict analytics.
   rpc GetReconciliationAnalytics(GetReconciliationAnalyticsRequest) returns (GetReconciliationAnalyticsResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:analytics:get-reconciliation-analytics"
@@ -285,6 +289,7 @@ service AnalyticsService {
 
   // Get throughput statistics over a time window.
   rpc GetThroughput(GetThroughputRequest) returns (GetThroughputResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:analytics:get-throughput"
@@ -340,6 +345,7 @@ service AnalyticsService {
 
   // Get SLA compliance report for a stage and time period.
   rpc GetSlaCompliance(GetSlaComplianceRequest) returns (GetSlaComplianceResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:analytics:get-sla-compliance"
@@ -395,6 +401,7 @@ service AnalyticsService {
 
   // Manually trigger hourly snapshot aggregation (normally a cron job).
   rpc TriggerSnapshot(TriggerSnapshotRequest) returns (TriggerSnapshotResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:analytics:trigger-snapshot"

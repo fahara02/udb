@@ -61,6 +61,7 @@ service StorageService {
 
   // Register a new upload and obtain a pre-signed upload URL
   rpc RegisterUpload(RegisterUploadRequest) returns (RegisterUploadResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:storage:register-upload"
@@ -121,6 +122,7 @@ service StorageService {
 
   // Finalize an upload after the object has been written to the store
   rpc FinalizeUpload(FinalizeUploadRequest) returns (FinalizeUploadResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:storage:finalize-upload"
@@ -181,6 +183,7 @@ service StorageService {
 
   // Get a pre-signed download URL for a file
   rpc GetDownloadUrl(GetDownloadUrlRequest) returns (GetDownloadUrlResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:storage:get-download-url"
@@ -237,6 +240,7 @@ service StorageService {
 
   // Get file metadata
   rpc GetFile(GetFileRequest) returns (GetFileResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:storage:get-file"
@@ -293,6 +297,7 @@ service StorageService {
 
   // Update file metadata
   rpc UpdateFile(UpdateFileRequest) returns (UpdateFileResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:storage:update-file"
@@ -353,6 +358,7 @@ service StorageService {
 
   // Delete a file (soft delete)
   rpc DeleteFile(DeleteFileRequest) returns (DeleteFileResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:storage:delete-file"
@@ -410,6 +416,7 @@ service StorageService {
 
   // List files
   rpc ListFiles(ListFilesRequest) returns (ListFilesResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:storage:list-files"

@@ -28,6 +28,7 @@ use crate::proto::udb::core::authz::services::v1 as authz_pb;
 use crate::proto::udb::core::authz::services::v1::authz_service_server::AuthzService;
 use crate::proto::udb::core::common::v1 as common_pb;
 use crate::proto::udb::core::control::entity::v1::ResourceType;
+use crate::runtime::service::method_security::{scope_claim_context_for_test, test_claim_context};
 use tonic::Request;
 use uuid::Uuid;
 
@@ -563,15 +564,18 @@ async fn live_postgres_ha_apikey_revocation_propagation() {
         .into_inner();
     assert!(valid.valid, "key created on node1 must validate on node2");
 
-    // node1 revokes it.
-    node1
-        .revoke_api_key(Request::new(apikey_pb::RevokeApiKeyRequest {
+    // node1 revokes it — as the authenticated tenant-`acme` admin (the validated
+    // claim the transport layer installs over the wire); the guard stays strict.
+    scope_claim_context_for_test(
+        test_claim_context("live-admin", "acme", "billing", &[], &[]),
+        node1.revoke_api_key(Request::new(apikey_pb::RevokeApiKeyRequest {
             key_id,
             revoke_reason: "ha_multinode_test".to_string(),
             ..Default::default()
-        }))
-        .await
-        .expect("node1 revoke API key");
+        })),
+    )
+    .await
+    .expect("node1 revoke API key");
 
     // node2 must now deny it — durable revocation, no per-node cache to lag.
     let after = node2
@@ -736,6 +740,7 @@ async fn live_postgres_ha_cdc_idempotent_double_process() {
         "event_type": topic,
         "correlation_id": format!("cdc-idem:{event_id}"),
         "document_id": partition_key,
+        "tenant_id": "acme",
         "timestamp": chrono::Utc::now().to_rfc3339(),
         "payload": {"user_id": partition_key}
     });

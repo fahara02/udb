@@ -13,6 +13,7 @@ use crate::proto::udb::core::authn::entity::v1 as authn_entity_pb;
 use crate::proto::udb::core::authn::services::v1 as authn_pb;
 use authn_pb::authn_service_server::AuthnService;
 
+use crate::runtime::DataBrokerRuntime;
 use crate::runtime::authn::{
     self, ApiKeyStore, AuthnConfig, ExternalJwtProvider, ExternalProviderConfig, IdentityProvider,
     OtpRecord, SessionRecord, SessionStore, UnavailableApiKeyStore, UnavailableSessionStore,
@@ -30,6 +31,10 @@ use super::mappings::{
     timestamp_from_unix,
 };
 use super::now_unix;
+use crate::ir::{
+    ComparisonOp, LogicalAssignment, LogicalDelete, LogicalFilter, LogicalRecord, LogicalUpdate,
+    LogicalValue,
+};
 
 // ── Proto ⟷ domain enum conversion (adapter boundary) ───────────────────────
 // The domain engine (`runtime/authn`) stores domain-owned `AccountKind` /
@@ -97,6 +102,10 @@ pub struct AuthnServiceImpl {
     config: AuthnConfig,
     security: SecurityConfig,
     pg_pool: Option<PgPool>,
+    /// Runtime handle for the typed native-entity authn path. Production wiring
+    /// attaches this from `DataBrokerService`; direct test construction may leave
+    /// it absent and continue through the store/pool fallbacks those tests own.
+    runtime: Option<Arc<DataBrokerRuntime>>,
     /// Publishes authn domain events to the outbox → Kafka relay.
     event_sink: Arc<dyn AuthEventSink>,
     /// Records auth-plane metrics (login success/failure, lockout, MFA failure,
@@ -180,6 +189,46 @@ fn webauthn_challenge_model() -> NativeModel {
     )
 }
 
+pub(super) fn authn_eq(field: &str, value: LogicalValue) -> LogicalFilter {
+    LogicalFilter::Comparison {
+        field: field.to_string(),
+        op: ComparisonOp::Eq,
+        value,
+    }
+}
+
+pub(super) fn authn_cmp(field: &str, op: ComparisonOp, value: LogicalValue) -> LogicalFilter {
+    LogicalFilter::Comparison {
+        field: field.to_string(),
+        op,
+        value,
+    }
+}
+
+pub(super) fn authn_and(filters: Vec<LogicalFilter>) -> LogicalFilter {
+    LogicalFilter::And(filters)
+}
+
+pub(super) fn authn_record(
+    fields: impl IntoIterator<Item = (&'static str, LogicalValue)>,
+) -> LogicalRecord {
+    fields
+        .into_iter()
+        .map(|(field, value)| (field.to_string(), value))
+        .collect()
+}
+
+pub(super) fn authn_set(value: LogicalValue) -> LogicalAssignment {
+    LogicalAssignment::Set { value }
+}
+
+pub(super) fn unix_to_utc(unix: u64) -> Option<chrono::DateTime<chrono::Utc>> {
+    if unix == 0 {
+        return None;
+    }
+    chrono::DateTime::<chrono::Utc>::from_timestamp(unix as i64, 0)
+}
+
 #[cfg(feature = "webauthn")]
 fn principal_from_user_record(user: &UserRecord, method: authn::AuthnMethod) -> Principal {
     Principal {
@@ -217,6 +266,7 @@ impl AuthnServiceImpl {
             config,
             security,
             pg_pool: None,
+            runtime: None,
             event_sink: events::noop_sink(),
             metrics: Arc::new(crate::metrics::NoopMetrics),
             #[cfg(feature = "redis")]
@@ -233,13 +283,20 @@ impl AuthnServiceImpl {
         api_keys: Arc<dyn ApiKeyStore>,
         users: Arc<dyn UserStore>,
     ) -> Self {
+        // Derive the Postgres pool from a Postgres-backed user store so the atomic
+        // paths (create_user's user+OTP+event transaction, refresh-token families)
+        // work when the service is built from stores alone — an explicit
+        // `.with_postgres()` still overrides this. Fixes the inconsistent state
+        // where Postgres stores were wired but `pg_pool` stayed `None`.
+        let pg_pool = users.backing_pool();
         Self {
             sessions,
             api_keys,
             users,
             config,
             security,
-            pg_pool: None,
+            pg_pool,
+            runtime: None,
             event_sink: events::noop_sink(),
             metrics: Arc::new(crate::metrics::NoopMetrics),
             #[cfg(feature = "redis")]
@@ -251,6 +308,25 @@ impl AuthnServiceImpl {
     pub fn with_postgres(mut self, pool: Option<PgPool>) -> Self {
         self.pg_pool = pool;
         self
+    }
+
+    pub(crate) fn with_runtime(mut self, runtime: Option<Arc<DataBrokerRuntime>>) -> Self {
+        self.runtime = runtime;
+        self
+    }
+
+    pub(super) fn authn_runtime(&self) -> Result<&DataBrokerRuntime, Status> {
+        self.runtime.as_deref().ok_or_else(|| {
+            Status::failed_precondition("this operation requires the native typed authn runtime")
+        })
+    }
+
+    pub(super) fn authn_context(&self, tenant_id: &str, project_id: &str) -> crate::RequestContext {
+        crate::RequestContext {
+            tenant_id: tenant_id.to_string(),
+            project_id: project_id.to_string(),
+            ..crate::RequestContext::default()
+        }
     }
 
     /// Attach the short-TTL cluster jti denylist (Redis). When set, revokes also
@@ -732,10 +808,40 @@ impl AuthnServiceImpl {
         state_json: String,
         expires_at: u64,
     ) -> Result<String, Status> {
+        let challenge_id = Uuid::new_v4().to_string();
+        if let Ok(runtime) = self.authn_runtime() {
+            let state = serde_json::from_str(&state_json).map_err(|err| {
+                Status::internal(format!("decode WebAuthn challenge JSON failed: {err}"))
+            })?;
+            let expires_at = unix_to_utc(expires_at)
+                .ok_or_else(|| Status::internal("invalid WebAuthn challenge expiry"))?;
+            let context = self.authn_context(&user.tenant_id, &user.project_id);
+            let record = authn_record([
+                ("challenge_id", LogicalValue::String(challenge_id.clone())),
+                ("user_id", LogicalValue::String(user.user_id.clone())),
+                ("ceremony", LogicalValue::String(ceremony.to_string())),
+                ("state_json", LogicalValue::Json(state)),
+                ("tenant_id", LogicalValue::String(user.tenant_id.clone())),
+                ("project_id", LogicalValue::String(user.project_id.clone())),
+                ("expires_at", LogicalValue::Timestamp(expires_at)),
+            ]);
+            runtime
+                .native_entity_write_for_service(
+                    "authn",
+                    &context,
+                    "udb.core.authn.entity.v1.WebAuthnChallenge",
+                    record,
+                    crate::ir::ConflictStrategy::Error,
+                )
+                .await
+                .map_err(|err| {
+                    Status::internal(format!("store WebAuthn challenge failed: {err}"))
+                })?;
+            return Ok(challenge_id);
+        }
         let pool = self.require_pg_pool()?;
         let model = webauthn_challenge_model();
         let rel = &model.relation;
-        let challenge_id = Uuid::new_v4().to_string();
         sqlx::query(&format!(
             "INSERT INTO {rel} ({}, {}, {}, {}, {}, {}, {}) VALUES ($1::UUID, $2::UUID, $3, $4::JSONB, $5, $6, to_timestamp($7::DOUBLE PRECISION))",
             model.q("challenge_id"), model.q("user_id"), model.q("ceremony"),
@@ -802,6 +908,31 @@ impl AuthnServiceImpl {
 
     #[cfg(feature = "webauthn")]
     async fn consume_webauthn_challenge(&self, challenge_id: &str) -> Result<(), Status> {
+        if let Ok(runtime) = self.authn_runtime() {
+            let context = self.authn_context("", "");
+            let mut assignments = std::collections::BTreeMap::new();
+            assignments.insert("consumed_at".to_string(), LogicalAssignment::ServerNow);
+            let op = LogicalUpdate {
+                message_type: "udb.core.authn.entity.v1.WebAuthnChallenge".to_string(),
+                filter: authn_and(vec![
+                    authn_eq(
+                        "challenge_id",
+                        LogicalValue::String(challenge_id.to_string()),
+                    ),
+                    LogicalFilter::IsNull("consumed_at".to_string()),
+                ]),
+                assignments,
+                return_fields: Vec::new(),
+                require_affected: false,
+            };
+            runtime
+                .native_entity_update_for_service("authn", &context, op)
+                .await
+                .map_err(|err| {
+                    Status::internal(format!("consume WebAuthn challenge failed: {err}"))
+                })?;
+            return Ok(());
+        }
         let pool = self.require_pg_pool()?;
         let model = webauthn_challenge_model();
         let rel = &model.relation;
@@ -868,6 +999,36 @@ impl AuthnServiceImpl {
         passkey_json: String,
         label: &str,
     ) -> Result<(), Status> {
+        if let Ok(runtime) = self.authn_runtime() {
+            let passkey = serde_json::from_str(&passkey_json).map_err(|err| {
+                Status::internal(format!("decode WebAuthn passkey JSON failed: {err}"))
+            })?;
+            let context = self.authn_context(&user.tenant_id, &user.project_id);
+            let record = authn_record([
+                (
+                    "credential_id",
+                    LogicalValue::String(credential_id.to_string()),
+                ),
+                ("user_id", LogicalValue::String(user.user_id.clone())),
+                ("passkey_json", LogicalValue::Json(passkey)),
+                ("label", LogicalValue::String(label.to_string())),
+                ("tenant_id", LogicalValue::String(user.tenant_id.clone())),
+                ("project_id", LogicalValue::String(user.project_id.clone())),
+            ]);
+            runtime
+                .native_entity_write_for_service(
+                    "authn",
+                    &context,
+                    "udb.core.authn.entity.v1.WebAuthnCredential",
+                    record,
+                    crate::ir::ConflictStrategy::Error,
+                )
+                .await
+                .map_err(|err| {
+                    Status::already_exists(format!("store WebAuthn passkey failed: {err}"))
+                })?;
+            return Ok(());
+        }
         let pool = self.require_pg_pool()?;
         let model = webauthn_credential_model();
         let rel = &model.relation;
@@ -894,6 +1055,36 @@ impl AuthnServiceImpl {
         credential_id: &str,
         passkey_json: String,
     ) -> Result<(), Status> {
+        if let Ok(runtime) = self.authn_runtime() {
+            let passkey = serde_json::from_str(&passkey_json).map_err(|err| {
+                Status::internal(format!("decode WebAuthn passkey JSON failed: {err}"))
+            })?;
+            let context = self.authn_context("", "");
+            let mut assignments = std::collections::BTreeMap::new();
+            assignments.insert(
+                "passkey_json".to_string(),
+                authn_set(LogicalValue::Json(passkey)),
+            );
+            assignments.insert("updated_at".to_string(), LogicalAssignment::ServerNow);
+            assignments.insert("last_used_at".to_string(), LogicalAssignment::ServerNow);
+            let op = LogicalUpdate {
+                message_type: "udb.core.authn.entity.v1.WebAuthnCredential".to_string(),
+                filter: authn_eq(
+                    "credential_id",
+                    LogicalValue::String(credential_id.to_string()),
+                ),
+                assignments,
+                return_fields: Vec::new(),
+                require_affected: true,
+            };
+            runtime
+                .native_entity_update_for_service("authn", &context, op)
+                .await
+                .map_err(|err| {
+                    Status::internal(format!("update WebAuthn passkey failed: {err}"))
+                })?;
+            return Ok(());
+        }
         let pool = self.require_pg_pool()?;
         let model = webauthn_credential_model();
         let rel = &model.relation;
@@ -1214,7 +1405,13 @@ impl AuthnServiceImpl {
         let (scopes, roles) =
             self.resolve_effective_grants(&user.user_id, &user.tenant_id, &user.project_id);
         let (session_id, session_expires) = self
-            .create_login_session(&user, "webauthn".to_string(), scopes.clone(), roles.clone(), now)
+            .create_login_session(
+                &user,
+                "webauthn".to_string(),
+                scopes.clone(),
+                roles.clone(),
+                now,
+            )
             .await?;
         let (access_token, access_exp) = self.issue_access_token(
             &user.user_id,

@@ -1401,6 +1401,43 @@ async fn broker_v2_admin_rpc_denied_without_grant() {
 }
 
 #[tokio::test]
+async fn broker_v2_control_rpc_not_locked_out_by_nonmatching_policy() {
+    // §5 lockout fix (regression guard): a data-plane policy set that matches no
+    // control RPC must NOT lock out control/meta RPCs. Control RPCs reach the gate
+    // with the WILDCARD message_type ("*", from `authorized_call!`) and are governed
+    // by their own coarse `require_admin_scope` gate — NEVER by the data-plane policy
+    // set. Without the carve-out (`service::mod::authorize` returns early on `"*"`),
+    // the FIRST non-matching `PutPolicy` would deny `GetCapabilities`, `PutPolicy`,
+    // `DeletePolicy` and every control RPC, making the cluster unrecoverable without a
+    // broker restart. This test pins that the carve-out holds while data ops stay
+    // deny-by-default.
+    let svc = v2_service(vec![allow_policy("Select", "udb:read")]); // matches data Select only
+    let ctx = billing_ctx(&["udb:admin"]);
+    assert!(
+        svc.authorize(&ctx, "*", "GetCapabilities").await.is_ok(),
+        "control RPC (wildcard message_type) must survive a non-matching policy set"
+    );
+    assert!(
+        svc.authorize(&ctx, "*", "PutPolicy").await.is_ok(),
+        "PutPolicy must stay reachable so a bad policy is removable WITHOUT a restart"
+    );
+    assert!(
+        svc.authorize(&ctx, "*", "DeletePolicy").await.is_ok(),
+        "DeletePolicy must stay reachable so the cluster can recover from a bad policy"
+    );
+    // A real data op with no matching policy is still deny-by-default — the intended
+    // opt-in-to-enforcement behavior, NOT a lockout.
+    assert_eq!(
+        svc.authorize(&ctx, "Payment", "Upsert")
+            .await
+            .unwrap_err()
+            .code(),
+        tonic::Code::PermissionDenied,
+        "data ops stay deny-by-default once any policy is present"
+    );
+}
+
+#[tokio::test]
 async fn broker_v2_external_roles_alone_do_not_bypass_policy() {
     // 128: a caller carrying external IdP "roles" as scopes but with no UDB
     // policy granting the operation is denied. External identity is mapped, but

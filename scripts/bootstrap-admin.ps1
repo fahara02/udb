@@ -75,7 +75,23 @@ if ([string]::IsNullOrWhiteSpace($env:UDB_PG_DSN)) {
     throw "UDB_PG_DSN not set — ensure it is present (uncommented) in $EnvFile"
 }
 
-$bootArgs = @(
+if ($Cargo) {
+    $env:CMAKE = $env:CMAKE  # honor a preset CMAKE if building
+    $runner = { param($a) & cargo run --bin udb -- @a }
+} else {
+    $bin = Join-Path $RepoRoot "target\debug\udb.exe"
+    if (-not (Test-Path $bin)) { throw "binary not found at $bin — build first (launch-broker.ps1) or use -Cargo" }
+    $runner = { param($a) & $bin @a }
+}
+
+# Tenant-first bootstrap: ONE org-owner admin. `bootstrap_admin_user` resolves the
+# tenant code (or uuid) to its CANONICAL UUID — creating the tenants row if absent —
+# and binds the admin to that UUID, so the Login JWT tenant claim is a UUID that
+# EVERY service accepts (the UUID-strict storage/webrtc/asset path and the free-text
+# control plane alike). No second "uuid tenant" admin is needed (auth_fix.md
+# tenant-identity fix). The emitted JSON includes `tenant_id` (the canonical UUID);
+# the live runners read it back so request bodies match the claim.
+$args = @(
     "auth", "bootstrap", "user",
     "--username", $Username,
     "--email", $Email,
@@ -83,14 +99,6 @@ $bootArgs = @(
     "--tenant", $Tenant,
     "--project", $Project
 )
-
 Write-Host "Bootstrapping admin '$Username' (tenant=$Tenant project=$Project)" -ForegroundColor Cyan
-if ($Cargo) {
-    $env:CMAKE = $env:CMAKE  # honor a preset CMAKE if building
-    & cargo run --bin udb -- @bootArgs
-} else {
-    $bin = Join-Path $RepoRoot "target\debug\udb.exe"
-    if (-not (Test-Path $bin)) { throw "binary not found at $bin — build first (launch-broker.ps1) or use -Cargo" }
-    & $bin @bootArgs
-}
+& $runner $args
 exit $LASTEXITCODE

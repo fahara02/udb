@@ -89,9 +89,11 @@ impl BackendKind {
                 BackendTier::Sql
             }
             Self::Redis | Self::Memcached => BackendTier::Cache,
-            Self::Qdrant | Self::Weaviate | Self::Pinecone => BackendTier::Vector,
+            Self::Qdrant | Self::Weaviate | Self::Pinecone | Self::Elasticsearch => {
+                BackendTier::Vector
+            }
             Self::Minio | Self::S3 | Self::AzureBlob | Self::Gcs => BackendTier::Object,
-            Self::Mongodb | Self::Elasticsearch => BackendTier::Document,
+            Self::Mongodb => BackendTier::Document,
             Self::Neo4j => BackendTier::Graph,
             Self::Cassandra => BackendTier::Column,
         }

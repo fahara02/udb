@@ -25,11 +25,17 @@ use tonic::{Request, Response, Status};
 use uuid::Uuid;
 
 use super::native_helpers::{
-    MAX_LIST_ROWS, admit_on as native_admit_on, emit_payload_event, validate_request_tenant,
+    MAX_LIST_ROWS, admit_on as native_admit_on, emit_payload_event, native_service_context,
+    validate_request_tenant,
+};
+use crate::ir::{
+    ComparisonOp, ConflictStrategy, LogicalFilter, LogicalPagination, LogicalProjection,
+    LogicalRead, LogicalRecord, LogicalSort, LogicalValue, NullOrder, SortDirection,
 };
 use crate::metrics::{MetricsRecorder, NoopMetrics};
 use crate::proto::udb::core::webrtc::entity::v1 as webrtc_entity_pb;
 use crate::proto::udb::core::webrtc::services::v1 as webrtc_pb;
+use crate::runtime::DataBrokerRuntime;
 use crate::runtime::channels::{ChannelManager, ChannelPermit, OperationChannel};
 use crate::runtime::native_catalog::{NativeModel, native_model};
 
@@ -220,6 +226,13 @@ impl SignalingHub {
 #[derive(Clone)]
 pub struct WebrtcServiceImpl {
     pg_pool: Option<PgPool>,
+    /// Runtime handle for the typed native-entity data-plane path
+    /// (`native_entity_read_for_service`). Room/peer/track CRUD reads + simple
+    /// inserts ride the IR compiler → backend dispatch (extend_udb.md P4); the
+    /// genuinely atomic/arithmetic lifecycle writes keep their bespoke SQL on
+    /// `pg_pool` (capability-gated escape hatch, P4.D). `None` in bare test
+    /// construction — `build_webrtc_service` always wires it in production.
+    runtime: Option<Arc<DataBrokerRuntime>>,
     turn: TurnConfig,
     signaling: Arc<SignalingHub>,
     #[cfg(feature = "webrtc")]
@@ -240,6 +253,7 @@ impl WebrtcServiceImpl {
     pub fn new() -> Self {
         Self {
             pg_pool: None,
+            runtime: None,
             turn: TurnConfig::from_env(),
             signaling: Arc::new(SignalingHub::default()),
             #[cfg(feature = "webrtc")]
@@ -305,6 +319,21 @@ impl WebrtcServiceImpl {
         self
     }
 
+    /// Wire the runtime used for the typed native-entity path (room/peer/track
+    /// CRUD reads + simple inserts compile through the IR and dispatch to the
+    /// proto-bound backend). `build_webrtc_service` always wires it.
+    pub(crate) fn with_runtime(mut self, runtime: Option<Arc<DataBrokerRuntime>>) -> Self {
+        self.runtime = runtime;
+        self
+    }
+
+    /// The typed-path runtime; fail closed when absent (bare test construction).
+    fn require_runtime(&self) -> Result<&DataBrokerRuntime, Status> {
+        self.runtime.as_deref().ok_or_else(|| {
+            Status::failed_precondition("webrtc service requires runtime native entity dispatch")
+        })
+    }
+
     /// Wire the transactional outbox so room/peer/track mutations publish domain
     /// events to Kafka (via the CDC relay). `relation` is the schema-qualified
     /// table, e.g. `"udb_system"."outbox_events"` (`CdcConfig::outbox_relation`).
@@ -331,6 +360,9 @@ impl WebrtcServiceImpl {
     ) -> Result<(), Status> {
         let pm = peer_model();
         let rm = room_model();
+        // Transitional P4 gate: membership validation is a cross-entity join with
+        // state guards; keep it on the Postgres-native path until typed native
+        // reads expose a portable join/capability contract.
         let member: Option<i32> = sqlx::query_scalar(&format!(
             "SELECT 1 FROM {prel} p \
              JOIN {rrel} r ON r.{rrid} = p.{prid} AND r.{rtid} = p.{ptid} \
@@ -921,35 +953,323 @@ fn peer_from_row(row: &sqlx::postgres::PgRow) -> Result<webrtc_entity_pb::Peer, 
     })
 }
 
-fn track_select_projection(m: &NativeModel) -> String {
-    [
-        m.text("track_id"),
-        m.text("room_id"),
-        m.text("peer_id"),
-        m.text("tenant_id"),
-        m.text_or_empty("kind"),
-        m.text_or_empty("label"),
-        m.text_or_empty("state"),
-        m.text_or_empty("settings"),
-        m.text_or_empty("metadata"),
-    ]
-    .join(", ")
+// `track_select_projection` / `track_from_row` (the raw PgRow track mappers)
+// were removed when ListTracks/GetTrack moved to the typed read path below; the
+// track row→proto mapping now lives in `track_from_json`. Room/peer keep their
+// PgRow mappers because list_rooms + join_room still issue raw SQL (aggregate /
+// atomic CAS — see P4.D).
+
+// ── typed native-entity READ path (extend_udb.md P4) ──────────────────────────
+// Room/peer/track READS (get_room/get_peer/list_peers/list_tracks) compile through
+// the IR (`native_entity_read_for_service`) and dispatch to the proto-bound
+// backend, instead of bespoke Postgres SELECTs — the same path
+// `tenant_service::get_tenant` rides. The two STANDALONE inserts (create_room,
+// publish_track) likewise ride the typed WRITE path (`native_entity_write_for_service`,
+// JSONB via `LogicalValue::Json` + UUID via String, proven by storage/asset).
+// Still raw (P4.D — not IR-expressible): the atomic/arithmetic lifecycle (join CAS,
+// close-room txn, stale-peer reap, participant_count math, cross-table gates), the
+// blind conditional UPDATEs (update_room/mute/unpublish/leave — the IR has no
+// UPDATE-only op, only insert/upsert-on-PK), and `list_rooms`' exact `total_count`
+// aggregate (precedent: `ListTenants`).
+
+fn wv_eq(field: &str, value: &str) -> LogicalFilter {
+    LogicalFilter::Comparison {
+        field: field.to_string(),
+        op: ComparisonOp::Eq,
+        value: LogicalValue::String(value.to_string()),
+    }
 }
 
-fn track_from_row(row: &sqlx::postgres::PgRow) -> Result<webrtc_entity_pb::Track, Status> {
-    let map = |e: sqlx::Error| Status::internal(format!("decode track failed: {e}"));
-    Ok(webrtc_entity_pb::Track {
-        track_id: row.try_get("track_id").map_err(map)?,
-        room_id: row.try_get("room_id").map_err(map)?,
-        peer_id: row.try_get("peer_id").map_err(map)?,
-        tenant_id: row.try_get("tenant_id").map_err(map)?,
-        kind: track_kind_from_db(&row.try_get::<String, _>("kind").map_err(map)?),
-        label: row.try_get("label").map_err(map)?,
-        state: track_state_from_db(&row.try_get::<String, _>("state").map_err(map)?),
-        settings: row.try_get("settings").map_err(map)?,
-        metadata: row.try_get("metadata").map_err(map)?,
+fn wv_asc(field: &str) -> LogicalSort {
+    LogicalSort {
+        field: field.to_string(),
+        direction: SortDirection::Asc,
+        nulls: NullOrder::Default,
+    }
+}
+
+/// Read a string-ish field from a typed-read JSON row. JSONB columns come back
+/// as nested JSON (object/array) and are re-stringified, matching the proto
+/// `string` shape — the same coercion `tenant_service::json_string_field` uses.
+fn webrtc_json_str(row: &serde_json::Value, key: &str) -> String {
+    match row.get(key) {
+        Some(serde_json::Value::String(value)) => value.clone(),
+        Some(serde_json::Value::Number(value)) => value.to_string(),
+        Some(serde_json::Value::Bool(value)) => value.to_string(),
+        Some(value @ (serde_json::Value::Object(_) | serde_json::Value::Array(_))) => {
+            value.to_string()
+        }
+        _ => String::new(),
+    }
+}
+
+fn webrtc_json_i32(row: &serde_json::Value, key: &str) -> i32 {
+    row.get(key)
+        .and_then(serde_json::Value::as_i64)
+        .unwrap_or(0) as i32
+}
+
+fn room_projection() -> LogicalProjection {
+    LogicalProjection::fields(
+        [
+            "room_id",
+            "tenant_id",
+            "name",
+            "state",
+            "max_participants",
+            "participant_count",
+            "config",
+            "created_by",
+        ]
+        .into_iter()
+        .map(String::from),
+    )
+}
+
+fn room_read_by_id(room_id: &str, tenant_id: &str) -> LogicalRead {
+    LogicalRead {
+        message_type: ROOM_MSG.to_string(),
+        filter: Some(LogicalFilter::And(vec![
+            wv_eq("room_id", room_id),
+            wv_eq("tenant_id", tenant_id),
+            LogicalFilter::IsNull("deleted_at".to_string()),
+        ])),
+        projection: Some(room_projection()),
+        sort: Vec::new(),
+        pagination: Some(LogicalPagination::limit(1)),
+    }
+}
+
+fn room_from_json(row: &serde_json::Value) -> webrtc_entity_pb::Room {
+    webrtc_entity_pb::Room {
+        room_id: webrtc_json_str(row, "room_id"),
+        tenant_id: webrtc_json_str(row, "tenant_id"),
+        name: webrtc_json_str(row, "name"),
+        state: room_state_from_db(&webrtc_json_str(row, "state")),
+        max_participants: webrtc_json_i32(row, "max_participants"),
+        participant_count: webrtc_json_i32(row, "participant_count"),
+        config: webrtc_json_str(row, "config"),
+        created_by: webrtc_json_str(row, "created_by"),
         ..Default::default()
-    })
+    }
+}
+
+fn peer_projection() -> LogicalProjection {
+    LogicalProjection::fields(
+        [
+            "peer_id",
+            "room_id",
+            "tenant_id",
+            "display_name",
+            "state",
+            "metadata",
+            "user_agent",
+        ]
+        .into_iter()
+        .map(String::from),
+    )
+}
+
+fn peer_read_by_id(peer_id: &str, tenant_id: &str) -> LogicalRead {
+    LogicalRead {
+        message_type: PEER_MSG.to_string(),
+        filter: Some(LogicalFilter::And(vec![
+            wv_eq("peer_id", peer_id),
+            wv_eq("tenant_id", tenant_id),
+            LogicalFilter::IsNull("deleted_at".to_string()),
+        ])),
+        projection: Some(peer_projection()),
+        sort: Vec::new(),
+        pagination: Some(LogicalPagination::limit(1)),
+    }
+}
+
+fn peer_list_read(tenant_id: &str, room_id: &str, state_filter: &str) -> LogicalRead {
+    let mut clauses = vec![
+        wv_eq("tenant_id", tenant_id),
+        wv_eq("room_id", room_id),
+        LogicalFilter::IsNull("deleted_at".to_string()),
+    ];
+    if !state_filter.trim().is_empty() {
+        clauses.push(wv_eq("state", state_filter));
+    }
+    LogicalRead {
+        message_type: PEER_MSG.to_string(),
+        filter: Some(LogicalFilter::And(clauses)),
+        projection: Some(peer_projection()),
+        sort: vec![wv_asc("display_name")],
+        pagination: Some(LogicalPagination::limit(MAX_LIST_ROWS as u32)),
+    }
+}
+
+fn peer_from_json(row: &serde_json::Value) -> webrtc_entity_pb::Peer {
+    webrtc_entity_pb::Peer {
+        peer_id: webrtc_json_str(row, "peer_id"),
+        room_id: webrtc_json_str(row, "room_id"),
+        tenant_id: webrtc_json_str(row, "tenant_id"),
+        display_name: webrtc_json_str(row, "display_name"),
+        state: peer_state_from_db(&webrtc_json_str(row, "state")),
+        metadata: webrtc_json_str(row, "metadata"),
+        user_agent: webrtc_json_str(row, "user_agent"),
+        ..Default::default()
+    }
+}
+
+fn track_projection() -> LogicalProjection {
+    LogicalProjection::fields(
+        [
+            "track_id",
+            "room_id",
+            "peer_id",
+            "tenant_id",
+            "kind",
+            "label",
+            "state",
+            "settings",
+            "metadata",
+        ]
+        .into_iter()
+        .map(String::from),
+    )
+}
+
+fn track_list_read(
+    tenant_id: &str,
+    room_id: &str,
+    kind_filter: &str,
+    peer_filter: &str,
+) -> LogicalRead {
+    let mut clauses = vec![wv_eq("tenant_id", tenant_id), wv_eq("room_id", room_id)];
+    if !kind_filter.trim().is_empty() {
+        clauses.push(wv_eq("kind", kind_filter));
+    }
+    if !peer_filter.trim().is_empty() {
+        clauses.push(wv_eq("peer_id", peer_filter));
+    }
+    LogicalRead {
+        message_type: TRACK_MSG.to_string(),
+        filter: Some(LogicalFilter::And(clauses)),
+        projection: Some(track_projection()),
+        sort: vec![wv_asc("label")],
+        pagination: Some(LogicalPagination::limit(MAX_LIST_ROWS as u32)),
+    }
+}
+
+fn track_from_json(row: &serde_json::Value) -> webrtc_entity_pb::Track {
+    webrtc_entity_pb::Track {
+        track_id: webrtc_json_str(row, "track_id"),
+        room_id: webrtc_json_str(row, "room_id"),
+        peer_id: webrtc_json_str(row, "peer_id"),
+        tenant_id: webrtc_json_str(row, "tenant_id"),
+        kind: track_kind_from_db(&webrtc_json_str(row, "kind")),
+        label: webrtc_json_str(row, "label"),
+        state: track_state_from_db(&webrtc_json_str(row, "state")),
+        settings: webrtc_json_str(row, "settings"),
+        metadata: webrtc_json_str(row, "metadata"),
+        ..Default::default()
+    }
+}
+
+// ── typed native-entity WRITE records (extend_udb.md P4) ──────────────────────
+// Only the two STANDALONE inserts (create_room, publish_track) ride the typed
+// write path — the IR's `LogicalWrite` is insert/upsert-keyed-on-PK, so a blind
+// conditional `UPDATE … WHERE` (update_room / mute / unpublish / leave's peer
+// close) and the atomic lifecycle (join CAS / close-room txn / reap CTE) are NOT
+// expressible without an unwanted INSERT or lost atomicity — those stay raw (P4.D).
+
+/// Empty → SQL NULL (UUID columns reject `''::uuid`), else the id as a `String`
+/// the per-backend compiler binds/casts to UUID (proven live by `storage_service`).
+fn wv_uuid_or_null(value: &str) -> LogicalValue {
+    let value = value.trim();
+    if value.is_empty() {
+        LogicalValue::Null
+    } else {
+        LogicalValue::String(value.to_string())
+    }
+}
+
+/// A JSONB column value: parse the (always-valid, `{}`-defaulted) JSON text into
+/// `LogicalValue::Json`, which the compiler binds as jsonb — the idiom
+/// `asset_service`/`authz` already use. Invalid JSON fails closed exactly as the
+/// raw `$n::JSONB` bind did.
+fn wv_json(value: &str) -> Result<LogicalValue, Status> {
+    serde_json::from_str::<serde_json::Value>(value)
+        .map(LogicalValue::Json)
+        .map_err(|err| Status::invalid_argument(format!("webrtc JSON field is invalid: {err}")))
+}
+
+fn room_create_record(
+    room_id: &str,
+    tenant_id: &str,
+    req: &webrtc_pb::CreateRoomRequest,
+) -> Result<LogicalRecord, Status> {
+    let mut record = LogicalRecord::new();
+    record.insert(
+        "room_id".to_string(),
+        LogicalValue::String(room_id.to_string()),
+    );
+    record.insert(
+        "tenant_id".to_string(),
+        LogicalValue::String(tenant_id.to_string()),
+    );
+    record.insert("name".to_string(), LogicalValue::String(req.name.clone()));
+    record.insert(
+        "state".to_string(),
+        LogicalValue::String("ACTIVE".to_string()),
+    );
+    record.insert(
+        "max_participants".to_string(),
+        LogicalValue::Int(req.max_participants as i64),
+    );
+    record.insert("participant_count".to_string(), LogicalValue::Int(0));
+    record.insert("config".to_string(), wv_json(&non_empty_json(&req.config))?);
+    record.insert("created_by".to_string(), wv_uuid_or_null(&req.created_by));
+    // `audit_info` (JSONB) + `deleted_*` omitted → DB defaults ('{}'::jsonb / NULL).
+    Ok(record)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn track_create_record(
+    track_id: &str,
+    tenant_id: &str,
+    room_id: &str,
+    peer_id: &str,
+    req: &webrtc_pb::PublishTrackRequest,
+    kind: &str,
+) -> Result<LogicalRecord, Status> {
+    let mut record = LogicalRecord::new();
+    record.insert(
+        "track_id".to_string(),
+        LogicalValue::String(track_id.to_string()),
+    );
+    record.insert(
+        "room_id".to_string(),
+        LogicalValue::String(room_id.to_string()),
+    );
+    record.insert(
+        "peer_id".to_string(),
+        LogicalValue::String(peer_id.to_string()),
+    );
+    record.insert(
+        "tenant_id".to_string(),
+        LogicalValue::String(tenant_id.to_string()),
+    );
+    record.insert("kind".to_string(), LogicalValue::String(kind.to_string()));
+    record.insert("label".to_string(), LogicalValue::String(req.label.clone()));
+    record.insert(
+        "state".to_string(),
+        LogicalValue::String("ACTIVE".to_string()),
+    );
+    record.insert(
+        "settings".to_string(),
+        wv_json(&non_empty_json(&req.settings))?,
+    );
+    record.insert(
+        "metadata".to_string(),
+        wv_json(&non_empty_json(&req.metadata))?,
+    );
+    // `audit_info` (JSONB, NOT NULL DEFAULT '{}') omitted → DB default applies.
+    Ok(record)
 }
 
 // ── RoomService ────────────────────────────────────────────────────────────────
@@ -968,46 +1288,38 @@ impl RoomService for WebrtcServiceImpl {
         }
         // Per-tenant fair admission (held for the whole RPC).
         let _admit = self.admit(&req.tenant_id).await?;
-        let pool = self.require_pool()?;
-        let m = room_model();
-        let rel = m.relation.clone();
+        let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
         let room_id = Uuid::new_v4().to_string();
-        let config = non_empty_json(&req.config);
-        sqlx::query(&format!(
-            "INSERT INTO {rel} \
-             ({room_id}, {tenant_id}, {name}, {state}, {max_p}, {count}, {config}, {created_by}) \
-             VALUES ($1::UUID, $2::UUID, $3, 'ACTIVE', $4, 0, $5::JSONB, NULLIF($6, '')::UUID)",
-            room_id = m.q("room_id"),
-            tenant_id = m.q("tenant_id"),
-            name = m.q("name"),
-            state = m.q("state"),
-            max_p = m.q("max_participants"),
-            count = m.q("participant_count"),
-            config = m.q("config"),
-            created_by = m.q("created_by"),
-        ))
-        .bind(&room_id)
-        .bind(&req.tenant_id)
-        .bind(&req.name)
-        .bind(req.max_participants)
-        .bind(&config)
-        .bind(&req.created_by)
-        .execute(pool)
-        .await
-        .map_err(|err| Status::internal(format!("create room failed: {err}")))?;
-        emit_payload_event(
-            pool,
-            self.outbox_relation.as_deref(),
-            "udb.webrtc.room.created.v1",
-            &room_id,
-            serde_json::json!({
-                "room_id": room_id.clone(),
-                "tenant_id": req.tenant_id.clone(),
-                "name": req.name.clone(),
-            }),
-            Some(&self.metrics),
-        )
-        .await;
+        let context = native_service_context(&metadata, &tenant_id, "");
+        // Typed native-entity insert (extend_udb.md P4): the row (incl. its JSONB
+        // `config` + UUID columns) compiles through the IR and dispatches to the
+        // proto-bound backend — no bespoke SQL. `Error` conflict = plain INSERT.
+        self.require_runtime()?
+            .native_entity_write_for_service(
+                "webrtc.room",
+                &context,
+                ROOM_MSG,
+                room_create_record(&room_id, &tenant_id, &req)?,
+                ConflictStrategy::Error,
+            )
+            .await?;
+        // The outbox event is emitted post-insert on the pool (the raw path did
+        // the same — not in the insert txn, so no atomicity change).
+        if let Ok(pool) = self.require_pool() {
+            emit_payload_event(
+                pool,
+                self.outbox_relation.as_deref(),
+                "udb.webrtc.room.created.v1",
+                &room_id,
+                serde_json::json!({
+                    "room_id": room_id.clone(),
+                    "tenant_id": tenant_id.clone(),
+                    "name": req.name.clone(),
+                }),
+                Some(&self.metrics),
+            )
+            .await;
+        }
         Ok(Response::new(webrtc_pb::CreateRoomResponse {
             room_id,
             message: "room created".to_string(),
@@ -1023,31 +1335,24 @@ impl RoomService for WebrtcServiceImpl {
         let req = request.into_inner();
         validate_request_tenant(&metadata, &req.tenant_id)?;
         let _admit = self.admit_read(&req.tenant_id).await?;
-        let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?;
-        let room_id = parse_uuid("room_id", &req.room_id)?;
-        let pool = self.require_pool()?;
-        let m = room_model();
-        let rel = m.relation.clone();
-        let projection = room_select_projection(&m);
-        let row = sqlx::query(&format!(
-            "SELECT {projection} FROM {rel} \
-             WHERE {room_id} = $1::UUID AND {tenant_id} = $2::UUID AND {deleted} IS NULL",
-            room_id = m.q("room_id"),
-            tenant_id = m.q("tenant_id"),
-            deleted = m.q("deleted_at"),
-        ))
-        .bind(room_id)
-        .bind(tenant_id)
-        .fetch_optional(pool)
-        .await
-        .map_err(|err| Status::internal(format!("get room failed: {err}")))?;
-        match row {
-            Some(row) => Ok(Response::new(webrtc_pb::GetRoomResponse {
-                room: Some(room_from_row(&row)?),
-                error: None,
-            })),
-            None => Err(Status::not_found("room not found")),
-        }
+        let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
+        let room_id = parse_uuid("room_id", &req.room_id)?.to_string();
+        let context = native_service_context(&metadata, &tenant_id, "");
+        let room = self
+            .require_runtime()?
+            .native_entity_read_for_service(
+                "webrtc.room",
+                &context,
+                room_read_by_id(&room_id, &tenant_id),
+            )
+            .await?
+            .first()
+            .map(room_from_json)
+            .ok_or_else(|| Status::not_found("room not found"))?;
+        Ok(Response::new(webrtc_pb::GetRoomResponse {
+            room: Some(room),
+            error: None,
+        }))
     }
 
     async fn update_room(
@@ -1108,6 +1413,9 @@ impl RoomService for WebrtcServiceImpl {
         let m = room_model();
         let pm = peer_model();
         let tm = track_model();
+        // Transitional P4 gate: close_room is a multi-entity transactional state
+        // transition plus event fan-out. It must stay on a backend that can
+        // express the room/peer/track updates atomically.
         let mut tx = pool
             .begin()
             .await
@@ -1290,6 +1598,9 @@ impl RoomService for WebrtcServiceImpl {
             deleted = m.q("deleted_at"),
             state = m.q("state"),
         );
+        // P4.D: kept raw. ListRooms returns an exact `total_count`; the typed
+        // `LogicalRead` helper has no aggregate-count surface yet, so keep the
+        // SQL count+page (precedent: `tenant_service::list_tenants`).
         let total: i64 = sqlx::query_scalar(&format!("SELECT COUNT(*) FROM {rel} {where_clause}"))
             .bind(tenant_id)
             .bind(&state_filter)
@@ -1345,6 +1656,9 @@ impl PeerService for WebrtcServiceImpl {
         // the room exists, belongs to the tenant, is open, and has capacity. 0 rows
         // ⇒ reject — no peer is inserted into a missing/foreign/closed/full room,
         // and capacity is enforced atomically (no TOCTOU).
+        // Transitional P4 gate: this compare-and-increment is intentionally not
+        // lowered to generic typed CRUD until the native path has a CAS/update
+        // capability that every eligible backend can declare honestly.
         let rm = room_model();
         let claimed = sqlx::query(&format!(
             "UPDATE {room_rel} SET {count} = {count} + 1 \
@@ -1482,6 +1796,9 @@ impl PeerService for WebrtcServiceImpl {
         let pool = self.require_pool()?;
         let m = peer_model();
         let rel = m.relation.clone();
+        // Transitional P4 gate: leave_room couples a guarded peer transition with
+        // a room counter decrement and signaling teardown; keep the durable part
+        // on the current transactional Postgres path.
         let result = sqlx::query(&format!(
             "UPDATE {rel} SET {state} = 'CLOSED', {left_at} = CURRENT_TIMESTAMP, \
                {deleted} = CURRENT_TIMESTAMP \
@@ -1564,31 +1881,24 @@ impl PeerService for WebrtcServiceImpl {
         let req = request.into_inner();
         validate_request_tenant(&metadata, &req.tenant_id)?;
         let _admit = self.admit_read(&req.tenant_id).await?;
-        let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?;
-        let peer_id = parse_uuid("peer_id", &req.peer_id)?;
-        let pool = self.require_pool()?;
-        let m = peer_model();
-        let rel = m.relation.clone();
-        let projection = peer_select_projection(&m);
-        let row = sqlx::query(&format!(
-            "SELECT {projection} FROM {rel} \
-             WHERE {peer_id} = $1::UUID AND {tenant_id} = $2::UUID AND {deleted} IS NULL",
-            peer_id = m.q("peer_id"),
-            tenant_id = m.q("tenant_id"),
-            deleted = m.q("deleted_at"),
-        ))
-        .bind(peer_id)
-        .bind(tenant_id)
-        .fetch_optional(pool)
-        .await
-        .map_err(|err| Status::internal(format!("get peer failed: {err}")))?;
-        match row {
-            Some(row) => Ok(Response::new(webrtc_pb::GetPeerResponse {
-                peer: Some(peer_from_row(&row)?),
-                error: None,
-            })),
-            None => Err(Status::not_found("peer not found")),
-        }
+        let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
+        let peer_id = parse_uuid("peer_id", &req.peer_id)?.to_string();
+        let context = native_service_context(&metadata, &tenant_id, "");
+        let peer = self
+            .require_runtime()?
+            .native_entity_read_for_service(
+                "webrtc.room",
+                &context,
+                peer_read_by_id(&peer_id, &tenant_id),
+            )
+            .await?
+            .first()
+            .map(peer_from_json)
+            .ok_or_else(|| Status::not_found("peer not found"))?;
+        Ok(Response::new(webrtc_pb::GetPeerResponse {
+            peer: Some(peer),
+            error: None,
+        }))
     }
 
     async fn list_peers(
@@ -1599,35 +1909,23 @@ impl PeerService for WebrtcServiceImpl {
         let req = request.into_inner();
         validate_request_tenant(&metadata, &req.tenant_id)?;
         let _admit = self.admit_read(&req.tenant_id).await?;
-        let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?;
-        let room_id = parse_uuid("room_id", &req.room_id)?;
-        let pool = self.require_pool()?;
-        let m = peer_model();
-        let rel = m.relation.clone();
-        let projection = peer_select_projection(&m);
+        let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
+        let room_id = parse_uuid("room_id", &req.room_id)?.to_string();
+        // Validated/normalized into the short DB token before it reaches the IR
+        // filter ("" = no state filter), preserving the raw path's semantics.
         let state_filter = peer_state_to_db(&req.state, "")?;
-        let rows = sqlx::query(&format!(
-            "SELECT {projection} FROM {rel} \
-             WHERE {tenant_id} = $1::UUID AND {room_id} = $2::UUID AND {deleted} IS NULL \
-               AND ($3 = '' OR {state} = $3) \
-             ORDER BY {display_name} LIMIT {cap}",
-            cap = MAX_LIST_ROWS,
-            tenant_id = m.q("tenant_id"),
-            room_id = m.q("room_id"),
-            deleted = m.q("deleted_at"),
-            state = m.q("state"),
-            display_name = m.q("display_name"),
-        ))
-        .bind(tenant_id)
-        .bind(room_id)
-        .bind(&state_filter)
-        .fetch_all(pool)
-        .await
-        .map_err(|err| Status::internal(format!("list peers failed: {err}")))?;
-        let mut peers = Vec::with_capacity(rows.len());
-        for row in &rows {
-            peers.push(peer_from_row(row)?);
-        }
+        let context = native_service_context(&metadata, &tenant_id, "");
+        let peers = self
+            .require_runtime()?
+            .native_entity_read_for_service(
+                "webrtc.room",
+                &context,
+                peer_list_read(&tenant_id, &room_id, &state_filter),
+            )
+            .await?
+            .iter()
+            .map(peer_from_json)
+            .collect();
         Ok(Response::new(webrtc_pb::ListPeersResponse {
             peers,
             error: None,
@@ -1654,37 +1952,30 @@ impl TrackService for WebrtcServiceImpl {
         let pool = self.require_pool()?;
         self.require_active_peer_membership(pool, tenant_id, room_id, peer_id)
             .await?;
-        let m = track_model();
-        let rel = m.relation.clone();
         let track_id = Uuid::new_v4().to_string();
         let kind = track_kind_to_db(&req.kind, "VIDEO")?;
-        let settings = non_empty_json(&req.settings);
-        let metadata = non_empty_json(&req.metadata);
-        sqlx::query(&format!(
-            "INSERT INTO {rel} \
-             ({track_id}, {room_id}, {peer_id}, {tenant_id}, {kind}, {label}, {state}, {settings}, {metadata}) \
-             VALUES ($1::UUID, $2::UUID, $3::UUID, $4::UUID, $5, $6, 'ACTIVE', $7::JSONB, $8::JSONB)",
-            track_id = m.q("track_id"),
-            room_id = m.q("room_id"),
-            peer_id = m.q("peer_id"),
-            tenant_id = m.q("tenant_id"),
-            kind = m.q("kind"),
-            label = m.q("label"),
-            state = m.q("state"),
-            settings = m.q("settings"),
-            metadata = m.q("metadata"),
-        ))
-        .bind(&track_id)
-        .bind(room_id)
-        .bind(peer_id)
-        .bind(tenant_id)
-        .bind(&kind)
-        .bind(&req.label)
-        .bind(&settings)
-        .bind(&metadata)
-        .execute(pool)
-        .await
-        .map_err(|err| Status::internal(format!("publish track failed: {err}")))?;
+        let tenant_str = tenant_id.to_string();
+        let context = native_service_context(&metadata, &tenant_str, "");
+        // Typed native-entity insert (extend_udb.md P4): the track row incl. its
+        // JSONB settings/metadata + UUID columns compiles through the IR and
+        // dispatches to the proto-bound backend. The peer-membership gate above
+        // stays raw (cross-table JOIN, not IR-expressible — P4.D).
+        self.require_runtime()?
+            .native_entity_write_for_service(
+                "webrtc.room",
+                &context,
+                TRACK_MSG,
+                track_create_record(
+                    &track_id,
+                    &tenant_str,
+                    &room_id.to_string(),
+                    &peer_id.to_string(),
+                    &req,
+                    &kind,
+                )?,
+                ConflictStrategy::Error,
+            )
+            .await?;
 
         emit_payload_event(
             pool,
@@ -1798,38 +2089,25 @@ impl TrackService for WebrtcServiceImpl {
         let req = request.into_inner();
         validate_request_tenant(&metadata, &req.tenant_id)?;
         let _admit = self.admit_read(&req.tenant_id).await?;
-        let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?;
-        let room_id = parse_uuid("room_id", &req.room_id)?;
-        let pool = self.require_pool()?;
-        let m = track_model();
-        let rel = m.relation.clone();
-        let projection = track_select_projection(&m);
+        let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
+        let room_id = parse_uuid("room_id", &req.room_id)?.to_string();
+        // Normalize the optional kind filter to its short DB token ("" = any);
+        // the optional peer filter stays the raw id (empty = any), matching the
+        // raw path which only applied it when non-empty.
         let kind_filter = track_kind_to_db(&req.kind, "")?;
         let peer_filter = req.peer_id.trim().to_string();
-        let rows = sqlx::query(&format!(
-            "SELECT {projection} FROM {rel} \
-             WHERE {tenant_id} = $1::UUID AND {room_id} = $2::UUID \
-               AND ($3 = '' OR {kind} = $3) \
-               AND ($4 = '' OR {peer_id} = $4::UUID) \
-             ORDER BY {label} LIMIT {cap}",
-            cap = MAX_LIST_ROWS,
-            tenant_id = m.q("tenant_id"),
-            room_id = m.q("room_id"),
-            kind = m.q("kind"),
-            peer_id = m.q("peer_id"),
-            label = m.q("label"),
-        ))
-        .bind(tenant_id)
-        .bind(room_id)
-        .bind(&kind_filter)
-        .bind(&peer_filter)
-        .fetch_all(pool)
-        .await
-        .map_err(|err| Status::internal(format!("list tracks failed: {err}")))?;
-        let mut tracks = Vec::with_capacity(rows.len());
-        for row in &rows {
-            tracks.push(track_from_row(row)?);
-        }
+        let context = native_service_context(&metadata, &tenant_id, "");
+        let tracks = self
+            .require_runtime()?
+            .native_entity_read_for_service(
+                "webrtc.room",
+                &context,
+                track_list_read(&tenant_id, &room_id, &kind_filter, &peer_filter),
+            )
+            .await?
+            .iter()
+            .map(track_from_json)
+            .collect();
         Ok(Response::new(webrtc_pb::ListTracksResponse {
             tracks,
             error: None,
@@ -2426,11 +2704,17 @@ impl DataBrokerService {
     /// Build the native WebRTC service, wired to the broker's Postgres pool.
     pub(crate) fn build_webrtc_service(&self) -> WebrtcServiceImpl {
         let runtime = self.runtime.load_full();
-        let pg_pool = runtime.pg_pool().ok().cloned();
+        // Native-service persistence resolves through the discovery seam (extend_udb.md):
+        // the backend is read from this service's proto `native_service` binding, then a
+        // health/weight-routed instance is chosen — not the process-global pool.
+        let pg_pool = runtime
+            .native_store_pool_for_service("webrtc.room", true, "")
+            .ok();
         let outbox = runtime.config().cdc.outbox_relation();
         let channels = Some(runtime.channels().clone());
         let svc = WebrtcServiceImpl::new()
             .with_postgres(pg_pool)
+            .with_runtime(Some(runtime.clone()))
             .with_outbox(Some(outbox))
             .with_channels(channels)
             .with_metrics(self.metrics.clone());
@@ -2447,44 +2731,22 @@ impl DataBrokerService {
             let reaper = svc.clone();
             let singleton_pool = svc.pg_pool.clone().expect("checked above");
             let singleton_relation = runtime.config().cdc.lock_log_relation();
-            tokio::spawn(async move {
-                let mut ticker = tokio::time::interval(Duration::from_secs(interval_secs));
-                loop {
-                    ticker.tick().await;
+            crate::runtime::service::native_runtime::NativeWorkerHost::spawn_while_leader(
+                crate::runtime::singleton::WORKER_WEBRTC_STALE_PEER_REAPER,
+                "webrtc stale-peer reaper disconnected peers",
+                singleton_pool,
+                singleton_relation,
+                Duration::from_secs(interval_secs),
+                move || {
                     let reaper_once = reaper.clone();
-                    match crate::runtime::singleton::run_while_leader(
-                        &singleton_pool,
-                        &singleton_relation,
-                        crate::runtime::singleton::WORKER_WEBRTC_STALE_PEER_REAPER,
-                        crate::runtime::singleton::WORKER_SINGLETON_LEASE_TTL,
-                        || async move {
-                            reaper_once
-                                .reap_stale_peers(stale_after_secs, STALE_PEER_REAP_BATCH_SIZE)
-                                .await
-                        },
-                    )
-                    .await
-                    {
-                        Ok(Some(Ok(n))) if n > 0 => {
-                            tracing::info!(
-                                reaped = n,
-                                "webrtc stale-peer reaper disconnected peers"
-                            )
-                        }
-                        Ok(Some(Ok(_))) => {}
-                        Ok(Some(Err(err))) => {
-                            tracing::warn!(error = %err, "webrtc stale-peer reaper failed")
-                        }
-                        Ok(None) => tracing::debug!(
-                            "webrtc stale-peer reaper skipped: singleton lease held by peer"
-                        ),
-                        Err(err) => tracing::warn!(
-                            error = %err,
-                            "webrtc stale-peer reaper singleton lease failed"
-                        ),
+                    async move {
+                        reaper_once
+                            .reap_stale_peers(stale_after_secs, STALE_PEER_REAP_BATCH_SIZE)
+                            .await
+                            .map(|n| n as i64)
                     }
-                }
-            });
+                },
+            );
         }
 
         svc

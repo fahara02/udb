@@ -316,6 +316,76 @@ pub(crate) fn metadata_tenant_id(metadata: &MetadataMap) -> Option<String> {
         })
 }
 
+pub(crate) fn metadata_project_id(metadata: &MetadataMap) -> Option<String> {
+    metadata_value(metadata, "x-udb-project-id")
+        .or_else(|| metadata_value(metadata, "x-project-id"))
+        .map(ToString::to_string)
+        .or_else(|| {
+            bearer_claims(metadata)
+                .and_then(|claims| claims.project_id)
+                .map(|project| project.trim().to_string())
+                .filter(|project| !project.is_empty())
+        })
+}
+
+/// The one request-context builder for native services (P6.1). Empty `project_id`
+/// ⇒ resolve from metadata (x-udb-project-id / x-project-id / bearer claim); a
+/// non-empty `project_id` is used verbatim. Sets tenant/project/correlation only;
+/// all other `RequestContext` fields default. Subsumes the six former per-service
+/// `*_context` copies — including the asset variant, which previously skipped the
+/// metadata fallback (latent empty-project inconsistency, now unified).
+pub(crate) fn native_service_context(
+    metadata: &MetadataMap,
+    tenant_id: &str,
+    project_id: &str,
+) -> crate::RequestContext {
+    crate::RequestContext {
+        tenant_id: tenant_id.to_string(),
+        project_id: if project_id.trim().is_empty() {
+            metadata_project_id(metadata).unwrap_or_default()
+        } else {
+            project_id.to_string()
+        },
+        correlation_id: metadata
+            .get("x-correlation-id")
+            .and_then(|value| value.to_str().ok())
+            .unwrap_or_default()
+            .to_string(),
+        ..crate::RequestContext::default()
+    }
+}
+
+#[cfg(test)]
+mod native_service_context_tests {
+    use super::native_service_context;
+    use tonic::metadata::MetadataMap;
+
+    #[test]
+    fn empty_project_falls_back_to_metadata() {
+        let mut md = MetadataMap::new();
+        md.insert("x-udb-project-id", "proj-from-md".parse().unwrap());
+        let ctx = native_service_context(&md, "tenant-1", "");
+        assert_eq!(ctx.project_id, "proj-from-md");
+        assert_eq!(ctx.tenant_id, "tenant-1");
+    }
+
+    #[test]
+    fn non_empty_project_used_verbatim() {
+        let mut md = MetadataMap::new();
+        md.insert("x-udb-project-id", "proj-from-md".parse().unwrap());
+        let ctx = native_service_context(&md, "tenant-1", "explicit-proj");
+        assert_eq!(ctx.project_id, "explicit-proj");
+    }
+
+    #[test]
+    fn reads_correlation_id() {
+        let mut md = MetadataMap::new();
+        md.insert("x-correlation-id", "corr-9".parse().unwrap());
+        let ctx = native_service_context(&md, "tenant-1", "p");
+        assert_eq!(ctx.correlation_id, "corr-9");
+    }
+}
+
 /// Compliance context a native data-plane service can attach to an outbox event
 /// so the durable audit row carries the SAME field set as the auth lane
 /// (Phase 10 telemetry coherence). All fields are optional: a service supplies
@@ -559,7 +629,8 @@ pub(crate) async fn enqueue_outbox_event_with_context(
         }
     }
 
-    let event_id = Uuid::new_v4().to_string();
+    let event_uuid = Uuid::new_v4();
+    let event_id = event_uuid.to_string();
     let envelope = build_native_compliance_envelope(
         &event_id,
         topic,
@@ -573,17 +644,19 @@ pub(crate) async fn enqueue_outbox_event_with_context(
         &[],
         payload,
     );
-    let sql = format!(
-        "INSERT INTO {rel} (event_id, topic, partition_key, payload, created_at) \
-         VALUES ($1::UUID, $2, $3, $4::JSONB, NOW())"
-    );
-    if let Err(err) = sqlx::query(&sql)
-        .bind(&event_id)
-        .bind(topic)
-        .bind(partition_key)
-        .bind(envelope.to_string())
-        .execute(pool)
-        .await
+    // ONE shared insert path (the auth lane uses the SAME `insert_outbox_row`), which
+    // takes `event_id: Uuid` — so the two lanes can NEVER again diverge on the `$1`
+    // bind type and re-introduce the sqlx prepared-statement collision that poisoned
+    // the pooled connection (§4). Native emission stays best-effort (WARN, not fatal).
+    if let Err(err) = crate::runtime::cdc::insert_outbox_row(
+        pool,
+        rel,
+        event_uuid,
+        topic,
+        partition_key,
+        &envelope,
+    )
+    .await
     {
         tracing::warn!(topic, error = %err, "native outbox enqueue failed");
         if let Some(m) = metrics {

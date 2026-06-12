@@ -72,6 +72,18 @@ pub(super) trait SqlDialect {
             ComparisonOp::ILike => "ILIKE",
         }
     }
+
+    /// Cast a comparison placeholder to a column's SQL type when the dialect's
+    /// operator resolution is type-exact. Postgres has no implicit `uuid = text`
+    /// operator, so a `LogicalValue::String` bound for a `UUID` column must be cast
+    /// (`$1::UUID`) in WHERE / IN comparisons, or the query fails with
+    /// `operator does not exist: uuid = text`. INSERT `VALUES` need NO cast — there
+    /// Postgres coerces the input to the known target column type. MySQL / SQLite /
+    /// MSSQL coerce in comparisons too, so the default is a no-op and their emitted
+    /// SQL stays byte-identical.
+    fn cast_compare_placeholder(_column_sql_type: &str, placeholder: &str) -> String {
+        placeholder.to_string()
+    }
 }
 
 /// Generic SQL compiler parameterised over a [`SqlDialect`]. Holds no
@@ -106,6 +118,24 @@ impl<D: SqlDialect> SqlCompiler<D> {
             .iter()
             .find(|c| c.field_name.eq_ignore_ascii_case(field) || c.column_name == field)
             .map(|c| c.column_name.as_str())
+            .ok_or_else(|| CompileError::UnknownField {
+                message_type: message_type.to_string(),
+                field: field.to_string(),
+            })
+    }
+
+    /// Like [`Self::column_for`] but returns the full manifest column so the caller
+    /// can consult its `sql_type` (e.g. to cast a comparison placeholder for a
+    /// type-exact dialect — see [`SqlDialect::cast_compare_placeholder`]).
+    pub(super) fn column_meta_for<'a>(
+        table: &'a ManifestTable,
+        field: &str,
+        message_type: &str,
+    ) -> Result<&'a crate::generation::ManifestColumn, CompileError> {
+        table
+            .columns
+            .iter()
+            .find(|c| c.field_name.eq_ignore_ascii_case(field) || c.column_name == field)
             .ok_or_else(|| CompileError::UnknownField {
                 message_type: message_type.to_string(),
                 field: field.to_string(),
@@ -169,7 +199,7 @@ impl<D: SqlDialect> SqlCompiler<D> {
                 Ok(format!("(NOT {rendered})"))
             }
             LogicalFilter::Comparison { field, op, value } => {
-                let column = Self::column_for(table, field, message_type)?;
+                let col = Self::column_meta_for(table, field, message_type)?;
                 // SQL surprise: `col = NULL` is always UNKNOWN. Reject it
                 // here so callers explicitly use `IsNull`.
                 if value.is_null() {
@@ -181,9 +211,12 @@ impl<D: SqlDialect> SqlCompiler<D> {
                     });
                 }
                 let placeholder = Self::push_param(params, value.clone());
+                // Cast the placeholder to the column's SQL type when the dialect needs
+                // it (Postgres `uuid = $1::UUID`); a no-op for the coercing dialects.
+                let placeholder = D::cast_compare_placeholder(&col.sql_type, &placeholder);
                 let sql_op = D::sql_op_for(*op);
                 let rhs = D::wrap_value_for_op(*op, &placeholder);
-                Ok(format!("{} {sql_op} {rhs}", D::quote(column)))
+                Ok(format!("{} {sql_op} {rhs}", D::quote(&col.column_name)))
             }
             LogicalFilter::IsNull(field) => {
                 let column = Self::column_for(table, field, message_type)?;
@@ -210,13 +243,19 @@ impl<D: SqlDialect> SqlCompiler<D> {
                         });
                     }
                 }
-                let column = Self::column_for(table, field, message_type)?;
+                let col = Self::column_meta_for(table, field, message_type)?;
                 let placeholders = values
                     .iter()
-                    .map(|v| Self::push_param(params, v.clone()))
+                    .map(|v| {
+                        let p = Self::push_param(params, v.clone());
+                        D::cast_compare_placeholder(&col.sql_type, &p)
+                    })
                     .collect::<Vec<_>>()
                     .join(", ");
-                Ok(format!("{} IN ({placeholders})", D::quote(column)))
+                Ok(format!(
+                    "{} IN ({placeholders})",
+                    D::quote(&col.column_name)
+                ))
             }
         }
     }

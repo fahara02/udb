@@ -7,6 +7,7 @@ use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
 use arc_swap::ArcSwap;
+use sha2::{Digest, Sha256};
 use sqlx::{PgPool, Row};
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
@@ -21,6 +22,11 @@ use super::mappings::{
     timestamp_from_unix,
 };
 use super::now_unix;
+use crate::ir::{
+    ComparisonOp, ConflictStrategy, LogicalAssignment, LogicalDelete, LogicalFilter, LogicalRecord,
+    LogicalUpdate, LogicalValue,
+};
+use crate::runtime::DataBrokerRuntime;
 use crate::runtime::authz::Effect;
 use crate::runtime::authz::{
     AuthzPolicy, AuthzQuery, AuthzSnapshot, Decision, PolicyEngine, Principal, RelationshipTuple,
@@ -518,6 +524,10 @@ pub struct AuthzServiceImpl {
     /// shared PG pool / snapshot path. `None` only in bare/test construction (no
     /// runtime wired) — production wires it via [`AuthzServiceImpl::with_channels`].
     channels: Option<ChannelManager>,
+    /// Runtime handle used for native typed entity persistence. `pg_pool` remains
+    /// for raw SQL paths that need joins, transactions, or conditional updates
+    /// until the native substrate supports those shapes.
+    runtime: Option<Arc<DataBrokerRuntime>>,
 }
 
 impl AuthzServiceImpl {
@@ -536,6 +546,7 @@ impl AuthzServiceImpl {
             event_sink: events::noop_sink(),
             metrics: Arc::new(crate::metrics::NoopMetrics),
             channels: None,
+            runtime: None,
         }
     }
 
@@ -549,6 +560,7 @@ impl AuthzServiceImpl {
             event_sink: events::noop_sink(),
             metrics: Arc::new(crate::metrics::NoopMetrics),
             channels: None,
+            runtime: None,
         }
     }
 
@@ -558,6 +570,11 @@ impl AuthzServiceImpl {
     /// keeps the bare/test path admitting without a permit.
     pub(crate) fn with_channels(mut self, channels: Option<ChannelManager>) -> Self {
         self.channels = channels;
+        self
+    }
+
+    pub(crate) fn with_runtime(mut self, runtime: Option<Arc<DataBrokerRuntime>>) -> Self {
+        self.runtime = runtime;
         self
     }
 
@@ -796,14 +813,15 @@ impl AuthzServiceImpl {
         if !decision.allowed {
             self.metrics.record_authz_deny();
         }
-        let Some(pool) = &self.pg_pool else {
-            return;
-        };
         if decision.allowed && !decision.audit_required {
             return;
         }
-        let audit = self.audits_model();
-        let rel = audit.relation.clone();
+        let Some(runtime) = &self.runtime else {
+            tracing::warn!(
+                "skipping access-decision audit write: authz runtime handle is not wired"
+            );
+            return;
+        };
         let user_uuid = stable_audit_user_uuid(principal);
         let effect = if decision.allowed { "ALLOW" } else { "DENY" };
         let source = if decision.matched_policy_ids.is_empty() {
@@ -827,66 +845,132 @@ impl AuthzServiceImpl {
             "external"
         };
         let scopes = decision.required_scopes.join(",");
-        let result = sqlx::query(&format!(
-            "INSERT INTO {rel} \
-             ({decision_audit_id}, {user_id}, {domain_col}, {object_col}, {action_col}, {effect_col}, {decision_source}, {matched_rule}, {reason}, {ip_address}, {correlation_id}, {tenant_id}, \
-              {decision_id}, {policy_version}, {relationship_version}, {purpose}, {scopes}, {matched_policy_ids}, {project_id}, {actor_kind}, {resource_type}, {trace_id}, {span_id}, {user_agent_hash}, {decision_input}) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25::JSONB)",
-            decision_audit_id = audit.q("decision_audit_id"),
-            user_id = audit.q("user_id"),
-            domain_col = audit.q("domain"),
-            object_col = audit.q("object"),
-            action_col = audit.q("action"),
-            effect_col = audit.q("effect"),
-            decision_source = audit.q("decision_source"),
-            matched_rule = audit.q("matched_rule"),
-            reason = audit.q("reason"),
-            ip_address = audit.q("ip_address"),
-            correlation_id = audit.q("correlation_id"),
-            tenant_id = audit.q("tenant_id"),
-            decision_id = audit.q("decision_id"),
-            policy_version = audit.q("policy_version"),
-            relationship_version = audit.q("relationship_version"),
-            purpose = audit.q("purpose"),
-            scopes = audit.q("scopes"),
-            matched_policy_ids = audit.q("matched_policy_ids"),
-            project_id = audit.q("project_id"),
-            actor_kind = audit.q("actor_kind"),
-            resource_type = audit.q("resource_type"),
-            trace_id = audit.q("trace_id"),
-            span_id = audit.q("span_id"),
-            user_agent_hash = audit.q("user_agent_hash"),
-            decision_input = audit.q("decision_input"),
-        ))
-        .bind(Uuid::new_v4())
-        .bind(user_uuid)
-        .bind(domain)
-        .bind(&resource.resource_name)
-        .bind(action)
-        .bind(effect)
-        .bind(source)
-        .bind(decision.matched_policy_ids.first().cloned().unwrap_or_default())
-        .bind(&decision.deny_reason)
+        let decision_input = serde_json::from_str(&ctx.decision_input)
+            .unwrap_or_else(|_| serde_json::Value::String(ctx.decision_input.clone()));
+        let mut record = LogicalRecord::new();
+        record.insert(
+            "decision_audit_id".to_string(),
+            LogicalValue::String(Uuid::new_v4().to_string()),
+        );
+        record.insert(
+            "user_id".to_string(),
+            LogicalValue::String(user_uuid.to_string()),
+        );
+        record.insert("domain".to_string(), LogicalValue::String(domain));
+        record.insert(
+            "object".to_string(),
+            LogicalValue::String(resource.resource_name.clone()),
+        );
+        record.insert(
+            "action".to_string(),
+            LogicalValue::String(action.to_string()),
+        );
+        record.insert(
+            "effect".to_string(),
+            LogicalValue::String(effect.to_string()),
+        );
+        record.insert(
+            "decision_source".to_string(),
+            LogicalValue::String(source.to_string()),
+        );
+        record.insert(
+            "matched_rule".to_string(),
+            LogicalValue::String(
+                decision
+                    .matched_policy_ids
+                    .first()
+                    .cloned()
+                    .unwrap_or_default(),
+            ),
+        );
+        record.insert(
+            "reason".to_string(),
+            LogicalValue::String(decision.deny_reason.clone()),
+        );
         // Phase L3 task4: populate source IP + correlation id from AccessContext
         // instead of binding empty strings.
-        .bind(&ctx.source_ip)
-        .bind(&ctx.correlation_id)
-        .bind(&principal.tenant_id)
-        .bind(&decision.decision_id)
-        .bind(&decision.policy_version)
-        .bind(&decision.relationship_version)
-        .bind(&ctx.purpose)
-        .bind(scopes)
-        .bind(&decision.matched_policy_ids)
-        .bind(&principal.project_id)
-        .bind(actor_kind)
-        .bind(&resource.resource_type)
-        .bind(&ctx.trace_id)
-        .bind(&ctx.span_id)
-        .bind(&ctx.user_agent)
-        .bind(&ctx.decision_input)
-        .execute(pool)
-        .await;
+        record.insert(
+            "ip_address".to_string(),
+            LogicalValue::String(ctx.source_ip.clone()),
+        );
+        record.insert(
+            "correlation_id".to_string(),
+            LogicalValue::String(ctx.correlation_id.clone()),
+        );
+        record.insert(
+            "tenant_id".to_string(),
+            LogicalValue::String(principal.tenant_id.clone()),
+        );
+        record.insert(
+            "decision_id".to_string(),
+            LogicalValue::String(decision.decision_id.clone()),
+        );
+        record.insert(
+            "policy_version".to_string(),
+            LogicalValue::String(decision.policy_version.clone()),
+        );
+        record.insert(
+            "relationship_version".to_string(),
+            LogicalValue::String(decision.relationship_version.clone()),
+        );
+        record.insert(
+            "purpose".to_string(),
+            LogicalValue::String(ctx.purpose.clone()),
+        );
+        record.insert("scopes".to_string(), LogicalValue::String(scopes));
+        record.insert(
+            "matched_policy_ids".to_string(),
+            LogicalValue::Array(
+                decision
+                    .matched_policy_ids
+                    .iter()
+                    .cloned()
+                    .map(LogicalValue::String)
+                    .collect(),
+            ),
+        );
+        record.insert(
+            "project_id".to_string(),
+            LogicalValue::String(principal.project_id.clone()),
+        );
+        record.insert(
+            "actor_kind".to_string(),
+            LogicalValue::String(actor_kind.to_string()),
+        );
+        record.insert(
+            "resource_type".to_string(),
+            LogicalValue::String(resource.resource_type.clone()),
+        );
+        record.insert(
+            "trace_id".to_string(),
+            LogicalValue::String(ctx.trace_id.clone()),
+        );
+        record.insert(
+            "span_id".to_string(),
+            LogicalValue::String(ctx.span_id.clone()),
+        );
+        record.insert(
+            "user_agent_hash".to_string(),
+            LogicalValue::String(ctx.user_agent.clone()),
+        );
+        record.insert(
+            "decision_input".to_string(),
+            LogicalValue::Json(decision_input),
+        );
+        let audit_context = crate::RequestContext {
+            tenant_id: principal.tenant_id.clone(),
+            project_id: principal.project_id.clone(),
+            ..crate::RequestContext::default()
+        };
+        let result = runtime
+            .native_entity_write_for_service(
+                "authz",
+                &audit_context,
+                "udb.core.authz.entity.v1.AccessDecisionAudit",
+                record,
+                ConflictStrategy::Error,
+            )
+            .await;
         if let Err(err) = result {
             tracing::warn!(error = %err, "failed to write access-decision audit");
         }
@@ -947,6 +1031,61 @@ impl AuthzServiceImpl {
         Err(Status::failed_precondition(
             "native authz requires a Postgres-backed auth store",
         ))
+    }
+
+    async fn authz_revision_fingerprint(&self) -> Result<String, Status> {
+        let Some(pool) = &self.pg_pool else {
+            return Ok(String::new());
+        };
+        let m = self.authz_revisions_model();
+        let rows = sqlx::query(&format!(
+            "SELECT DISTINCT ON ({tenant_id}, {project_id}) \
+                    {tenant_id}::TEXT AS tenant_id, COALESCE({project_id}, '') AS project_id, \
+                    {policy_revision} AS policy_revision, \
+                    {relationship_revision} AS relationship_revision, \
+                    COALESCE({content_hash}, '') AS content_hash \
+             FROM {rel} \
+             ORDER BY {tenant_id}, {project_id}, {policy_revision} DESC, \
+                      {relationship_revision} DESC, {changed_at} DESC",
+            rel = m.relation.clone(),
+            tenant_id = m.q("tenant_id"),
+            project_id = m.q("project_id"),
+            policy_revision = m.q("policy_revision"),
+            relationship_revision = m.q("relationship_revision"),
+            content_hash = m.q("content_hash"),
+            changed_at = m.q("changed_at"),
+        ))
+        .fetch_all(pool)
+        .await
+        .map_err(|err| Status::internal(format!("read authz revision fence failed: {err}")))?;
+
+        let mut hasher = Sha256::new();
+        for row in rows {
+            let tenant_id: String = row
+                .try_get("tenant_id")
+                .map_err(|err| Status::internal(format!("decode authz fence failed: {err}")))?;
+            let project_id: String = row
+                .try_get("project_id")
+                .map_err(|err| Status::internal(format!("decode authz fence failed: {err}")))?;
+            let policy_revision: i64 = row
+                .try_get("policy_revision")
+                .map_err(|err| Status::internal(format!("decode authz fence failed: {err}")))?;
+            let relationship_revision: i64 = row
+                .try_get("relationship_revision")
+                .map_err(|err| Status::internal(format!("decode authz fence failed: {err}")))?;
+            let content_hash: String = row
+                .try_get("content_hash")
+                .map_err(|err| Status::internal(format!("decode authz fence failed: {err}")))?;
+            hasher.update(tenant_id.as_bytes());
+            hasher.update([0]);
+            hasher.update(project_id.as_bytes());
+            hasher.update([0]);
+            hasher.update(policy_revision.to_be_bytes());
+            hasher.update(relationship_revision.to_be_bytes());
+            hasher.update(content_hash.as_bytes());
+            hasher.update([0xff]);
+        }
+        Ok(format!("{:x}", hasher.finalize()))
     }
 
     async fn load_snapshot_from_postgres(&self) -> Result<Option<AuthzSnapshot>, Status> {
@@ -1145,9 +1284,16 @@ impl AuthzServiceImpl {
         // missing call site. Covers the real DB round-trip + decode in
         // `load_snapshot_from_postgres`.
         let reload_started = Instant::now();
+        let revision_before = self.authz_revision_fingerprint().await?;
         let loaded = self.load_snapshot_from_postgres().await?;
+        let revision_after = self.authz_revision_fingerprint().await?;
         self.metrics
             .observe_policy_reload_seconds(reload_started.elapsed().as_secs_f64());
+        if revision_before != revision_after {
+            return Err(Status::aborted(
+                "authz revision changed while loading snapshot; retry snapshot load",
+            ));
+        }
         if let Some(snapshot) = loaded {
             self.snapshot.store(Arc::new(snapshot));
             if let Ok(mut guard) = self.snapshot_loaded_at.lock() {
@@ -1359,10 +1505,13 @@ impl AuthzService for AuthzServiceImpl {
             conditions: p.conditions.into_iter().collect(),
             required_scopes: p.required_scopes,
         };
-        if let Some(pool) = &self.pg_pool {
+        if self.pg_pool.is_some() {
+            let runtime = self.runtime.as_ref().ok_or_else(|| {
+                Status::failed_precondition(
+                    "native authz requires runtime-backed policy persistence",
+                )
+            })?;
             let policy_id = parse_uuid_field("policy.id", &policy.id)?;
-            let policy_model = self.policies_model();
-            let rel = policy_model.relation.clone();
             let mut attributes = serde_json::Map::new();
             for (key, value) in &policy.conditions {
                 attributes.insert(key.clone(), serde_json::Value::String(value.clone()));
@@ -1387,38 +1536,78 @@ impl AuthzService for AuthzServiceImpl {
                 "required_scopes".to_string(),
                 serde_json::Value::String(scopes_to_db(&policy.required_scopes)),
             );
-            sqlx::query(&format!(
-                "INSERT INTO {rel} \
-                 ({policy_id}, {subject}, {domain_col}, {object_col}, {action_col}, {effect_col}, {condition}, {description}, {is_active}, {tenant_id}, {project_id}, {attributes_json}) \
-                 VALUES ($1::UUID, $2, $3, $4, $5, $6, '', '', $7, $3, $8, $9::JSONB) \
-                 ON CONFLICT ({policy_id}) DO UPDATE SET \
-                   {subject} = EXCLUDED.{subject}, {domain_col} = EXCLUDED.{domain_col}, {object_col} = EXCLUDED.{object_col}, {action_col} = EXCLUDED.{action_col}, {effect_col} = EXCLUDED.{effect_col}, \
-                   {is_active} = EXCLUDED.{is_active}, {tenant_id} = EXCLUDED.{tenant_id}, {project_id} = EXCLUDED.{project_id}, {attributes_json} = EXCLUDED.{attributes_json}",
-                policy_id = policy_model.q("policy_id"),
-                subject = policy_model.q("subject"),
-                domain_col = policy_model.q("domain"),
-                object_col = policy_model.q("object"),
-                action_col = policy_model.q("action"),
-                effect_col = policy_model.q("effect"),
-                condition = policy_model.q("condition"),
-                description = policy_model.q("description"),
-                is_active = policy_model.q("is_active"),
-                tenant_id = policy_model.q("tenant_id"),
-                project_id = policy_model.q("project_id"),
-                attributes_json = policy_model.q("attributes_json"),
-            ))
-            .bind(policy_id)
-            .bind(&policy.subject)
-            .bind(&policy.tenant)
-            .bind(&policy.resource)
-            .bind(&policy.action)
-            .bind(effect_to_db(policy.effect))
-            .bind(policy.enabled)
-            .bind(&policy.project)
-            .bind(serde_json::Value::Object(attributes))
-            .execute(pool)
-            .await
-            .map_err(|err| Status::internal(format!("store authz policy failed: {err}")))?;
+            // P6.10 Wave 4: typed upsert on PK `policy_id` (was raw INSERT … ON
+            // CONFLICT (policy_id) DO UPDATE). `condition`/`description` are
+            // insert-only ('' literals, NOT in the update set); `domain` binds to
+            // `policy.tenant` exactly as the raw `$3` reuse; attributes_json → JSONB.
+            let mut record = LogicalRecord::new();
+            record.insert(
+                "policy_id".to_string(),
+                LogicalValue::String(policy_id.to_string()),
+            );
+            record.insert(
+                "subject".to_string(),
+                LogicalValue::String(policy.subject.clone()),
+            );
+            record.insert(
+                "domain".to_string(),
+                LogicalValue::String(policy.tenant.clone()),
+            );
+            record.insert(
+                "object".to_string(),
+                LogicalValue::String(policy.resource.clone()),
+            );
+            record.insert(
+                "action".to_string(),
+                LogicalValue::String(policy.action.clone()),
+            );
+            record.insert(
+                "effect".to_string(),
+                LogicalValue::String(effect_to_db(policy.effect).to_string()),
+            );
+            record.insert("condition".to_string(), LogicalValue::String(String::new()));
+            record.insert(
+                "description".to_string(),
+                LogicalValue::String(String::new()),
+            );
+            record.insert("is_active".to_string(), LogicalValue::Bool(policy.enabled));
+            record.insert(
+                "tenant_id".to_string(),
+                LogicalValue::String(policy.tenant.clone()),
+            );
+            record.insert(
+                "project_id".to_string(),
+                LogicalValue::String(policy.project.clone()),
+            );
+            record.insert(
+                "attributes_json".to_string(),
+                LogicalValue::Json(serde_json::Value::Object(attributes)),
+            );
+            let context = crate::RequestContext {
+                tenant_id: policy.tenant.clone(),
+                project_id: policy.project.clone(),
+                ..crate::RequestContext::default()
+            };
+            runtime
+                .native_entity_write_for_service(
+                    "authz",
+                    &context,
+                    "udb.core.authz.entity.v1.PolicyRule",
+                    record,
+                    ConflictStrategy::update(vec![
+                        "subject".to_string(),
+                        "domain".to_string(),
+                        "object".to_string(),
+                        "action".to_string(),
+                        "effect".to_string(),
+                        "is_active".to_string(),
+                        "tenant_id".to_string(),
+                        "project_id".to_string(),
+                        "attributes_json".to_string(),
+                    ]),
+                )
+                .await
+                .map_err(|err| Status::internal(format!("store authz policy failed: {err}")))?;
             let _ = self
                 .bump_authz_revision(
                     &policy.tenant,
@@ -1560,9 +1749,9 @@ impl AuthzService for AuthzServiceImpl {
             return Err(Status::invalid_argument("created_by is required"));
         }
         let created_by = parse_uuid_field("created_by", &req.created_by)?;
-        let pool = self.require_pool()?;
-        let role_model = self.roles_model();
-        let rel = role_model.relation.clone();
+        let runtime = self.runtime.as_ref().ok_or_else(|| {
+            Status::failed_precondition("native authz requires runtime-backed role persistence")
+        })?;
         let role_id = Uuid::new_v4().to_string();
         let tenant_id = tenant_from_domain(&req.tenant_id, &req.domain);
         if tenant_id.trim().is_empty() {
@@ -1570,38 +1759,69 @@ impl AuthzService for AuthzServiceImpl {
         }
         let metadata_json =
             serde_json::to_string(&req.metadata).unwrap_or_else(|_| "{}".to_string());
-        sqlx::query(&format!(
-            "INSERT INTO {rel} \
-             ({role_id}, {name}, {description}, {is_system}, {is_active}, {created_by}, {tenant_id}, {project_id}, {role_code}, {domain_col}, {scope_type}, {access_surface}, {metadata_json}) \
-             VALUES ($1::UUID, $2, $3, FALSE, TRUE, NULLIF($4, '')::UUID, $5, $6, $7, $8, $9, $10, $11::JSONB)",
-            role_id = role_model.q("role_id"),
-            name = role_model.q("name"),
-            description = role_model.q("description"),
-            is_system = role_model.q("is_system"),
-            is_active = role_model.q("is_active"),
-            created_by = role_model.q("created_by"),
-            tenant_id = role_model.q("tenant_id"),
-            project_id = role_model.q("project_id"),
-            role_code = role_model.q("role_code"),
-            domain_col = role_model.q("domain"),
-            scope_type = role_model.q("scope_type"),
-            access_surface = role_model.q("access_surface"),
-            metadata_json = role_model.q("metadata_json"),
-        ))
-        .bind(&role_id)
-        .bind(&req.name)
-        .bind(&req.description)
-        .bind(created_by.to_string())
-        .bind(&tenant_id)
-        .bind(&req.project_id)
-        .bind(&req.role_code)
-        .bind(&req.domain)
-        .bind(role_scope_type_to_db(req.scope_type))
-        .bind(&req.access_surface)
-        .bind(&metadata_json)
-        .execute(pool)
-        .await
-        .map_err(|err| Status::internal(format!("create role failed: {err}")))?;
+        // P6.10 Wave 1: typed native insert (was raw INSERT). `is_system=false`,
+        // `is_active=true` literals preserved; `created_by` is a validated UUID
+        // (so the old `NULLIF($4,'')` never fired); `metadata_json` binds as JSONB
+        // via `LogicalValue::Json`.
+        let mut record = LogicalRecord::new();
+        record.insert("role_id".to_string(), LogicalValue::String(role_id.clone()));
+        record.insert("name".to_string(), LogicalValue::String(req.name.clone()));
+        record.insert(
+            "description".to_string(),
+            LogicalValue::String(req.description.clone()),
+        );
+        record.insert("is_system".to_string(), LogicalValue::Bool(false));
+        record.insert("is_active".to_string(), LogicalValue::Bool(true));
+        record.insert(
+            "created_by".to_string(),
+            LogicalValue::String(created_by.to_string()),
+        );
+        record.insert(
+            "tenant_id".to_string(),
+            LogicalValue::String(tenant_id.clone()),
+        );
+        record.insert(
+            "project_id".to_string(),
+            LogicalValue::String(req.project_id.clone()),
+        );
+        record.insert(
+            "role_code".to_string(),
+            LogicalValue::String(req.role_code.clone()),
+        );
+        record.insert(
+            "domain".to_string(),
+            LogicalValue::String(req.domain.clone()),
+        );
+        record.insert(
+            "scope_type".to_string(),
+            LogicalValue::String(role_scope_type_to_db(req.scope_type).to_string()),
+        );
+        record.insert(
+            "access_surface".to_string(),
+            LogicalValue::String(req.access_surface.clone()),
+        );
+        record.insert(
+            "metadata_json".to_string(),
+            LogicalValue::Json(
+                serde_json::from_str(&metadata_json)
+                    .unwrap_or_else(|_| serde_json::Value::Object(Default::default())),
+            ),
+        );
+        let context = crate::RequestContext {
+            tenant_id: tenant_id.clone(),
+            project_id: req.project_id.clone(),
+            ..crate::RequestContext::default()
+        };
+        runtime
+            .native_entity_write_for_service(
+                "authz",
+                &context,
+                "udb.core.authz.entity.v1.Role",
+                record,
+                ConflictStrategy::Error,
+            )
+            .await
+            .map_err(|err| Status::internal(format!("create role failed: {err}")))?;
         self.emit_event(
             AuthEvent::new(
                 topics::ROLE_CREATED,
@@ -1709,12 +1929,10 @@ impl AuthzService for AuthzServiceImpl {
         let role_id = parse_uuid_field("role_id", &req.role_id)?;
         let assigned_by = parse_uuid_field("assigned_by", &req.assigned_by)?;
         let expires_at_unix = timestamp_unix_field("expires_at", req.expires_at.clone())?;
-        let expires_at_bind = expires_at_unix.map(|seconds| seconds as f64);
         let tenant_id = tenant_from_domain(&req.tenant_id, &req.domain);
         if tenant_id.trim().is_empty() {
             return Err(Status::invalid_argument("tenant_id or domain is required"));
         }
-        let pool = self.require_pool()?;
 
         // Non-USER principals (service account / workload / group / external)
         // bind via a grouping tuple keyed on the LITERAL principal id so the
@@ -1736,37 +1954,79 @@ impl AuthzService for AuthzServiceImpl {
                 .role_code_for(role_id, &req.domain)
                 .await?
                 .unwrap_or_else(|| req.role_id.clone());
-            let tuple = self.relationship_tuples_model();
-            let trel = tuple.relation.clone();
             let condition = serde_json::json!({
                 "source": "assign_role",
                 "principal_kind": req.principal_kind,
                 "expires_at_unix": expires_at_unix.unwrap_or(0),
             })
             .to_string();
-            sqlx::query(&format!(
-                "INSERT INTO {trel} ({tuple_kind}, {subject}, {domain_col}, {object_col}, {action_col}, {effect_col}, {condition}, {tenant_id}, {project_id}) \
-                 VALUES ('grouping', $1, $3, '', $2, '', $4, $3, $5) \
-                 ON CONFLICT ({tuple_kind}, {subject}, {domain_col}, {object_col}, {action_col}, {effect_col}) \
-                 DO UPDATE SET {condition} = EXCLUDED.{condition}, {tenant_id} = EXCLUDED.{tenant_id}",
-                tuple_kind = tuple.q("tuple_kind"),
-                subject = tuple.q("subject"),
-                domain_col = tuple.q("domain"),
-                object_col = tuple.q("object"),
-                action_col = tuple.q("action"),
-                effect_col = tuple.q("effect"),
-                condition = tuple.q("condition"),
-                tenant_id = tuple.q("tenant_id"),
-                project_id = tuple.q("project_id"),
-            ))
-            .bind(principal_ref.trim())
-            .bind(&role_code)
-            .bind(&tenant_id)
-            .bind(&condition)
-            .bind(&req.project_id)
-            .execute(pool)
-            .await
-            .map_err(|err| Status::internal(format!("assign role (principal) failed: {err}")))?;
+            // P6.10 Wave 4: typed grouping-tuple upsert on the composite unique
+            // (tuple_kind,subject,domain,object,action,effect); only condition+tenant_id
+            // update on conflict. domain and tenant_id both = tenant_id (raw `$3` reuse);
+            // object/effect are insert literals ''.
+            let runtime = self.runtime.as_ref().ok_or_else(|| {
+                Status::failed_precondition(
+                    "native authz requires runtime-backed tuple persistence",
+                )
+            })?;
+            let mut record = LogicalRecord::new();
+            record.insert(
+                "tuple_kind".to_string(),
+                LogicalValue::String("grouping".to_string()),
+            );
+            record.insert(
+                "subject".to_string(),
+                LogicalValue::String(principal_ref.trim().to_string()),
+            );
+            record.insert(
+                "domain".to_string(),
+                LogicalValue::String(tenant_id.clone()),
+            );
+            record.insert("object".to_string(), LogicalValue::String(String::new()));
+            record.insert(
+                "action".to_string(),
+                LogicalValue::String(role_code.clone()),
+            );
+            record.insert("effect".to_string(), LogicalValue::String(String::new()));
+            record.insert(
+                "condition".to_string(),
+                LogicalValue::String(condition.clone()),
+            );
+            record.insert(
+                "tenant_id".to_string(),
+                LogicalValue::String(tenant_id.clone()),
+            );
+            record.insert(
+                "project_id".to_string(),
+                LogicalValue::String(req.project_id.clone()),
+            );
+            let context = crate::RequestContext {
+                tenant_id: tenant_id.clone(),
+                project_id: req.project_id.clone(),
+                ..crate::RequestContext::default()
+            };
+            runtime
+                .native_entity_write_for_service(
+                    "authz",
+                    &context,
+                    "udb.core.authz.entity.v1.PolicyTuple",
+                    record,
+                    ConflictStrategy::update_on(
+                        vec!["condition".to_string(), "tenant_id".to_string()],
+                        vec![
+                            "tuple_kind".to_string(),
+                            "subject".to_string(),
+                            "domain".to_string(),
+                            "object".to_string(),
+                            "action".to_string(),
+                            "effect".to_string(),
+                        ],
+                    ),
+                )
+                .await
+                .map_err(|err| {
+                    Status::internal(format!("assign role (principal) failed: {err}"))
+                })?;
             self.emit_event(
                 AuthEvent::new(
                     topics::ROLE_ASSIGNED,
@@ -1829,47 +2089,86 @@ impl AuthzService for AuthzServiceImpl {
             }));
         }
 
-        let user_role_model = self.user_roles_model();
-        let rel = user_role_model.relation.clone();
         let new_user_role_id = Uuid::new_v4().to_string();
-        // Idempotent: re-assigning an already-held (user, role, domain) binding
-        // refreshes its assigner/tenant/expiry instead of raising the
-        // `uq_user_roles_user_role_domain` unique violation (which previously
-        // surfaced as a 500). RETURNING yields the row's real id (existing on
-        // conflict, new on insert).
-        let row = sqlx::query(&format!(
-            "INSERT INTO {rel} \
-             ({user_role_id}, {user_id}, {role_id}, {domain_col}, {assigned_by}, {tenant_id}, {created_by}, {expires_at}) \
-             VALUES ($1::UUID, $2::UUID, $3::UUID, $4, $5::UUID, $6, $7, CASE WHEN $8::DOUBLE PRECISION IS NULL OR $8 <= 0.0 THEN NULL ELSE to_timestamp($8) END) \
-             ON CONFLICT ({user_id}, {role_id}, {domain_col}) DO UPDATE SET \
-               {assigned_by} = EXCLUDED.{assigned_by}, \
-               {tenant_id} = EXCLUDED.{tenant_id}, \
-               {created_by} = EXCLUDED.{created_by}, \
-               {expires_at} = EXCLUDED.{expires_at} \
-             RETURNING {user_role_id}",
-            user_role_id = user_role_model.q("user_role_id"),
-            user_id = user_role_model.q("user_id"),
-            role_id = user_role_model.q("role_id"),
-            domain_col = user_role_model.q("domain"),
-            assigned_by = user_role_model.q("assigned_by"),
-            tenant_id = user_role_model.q("tenant_id"),
-            created_by = user_role_model.q("created_by"),
-            expires_at = user_role_model.q("expires_at"),
-        ))
-        .bind(&new_user_role_id)
-        .bind(user_id)
-        .bind(role_id)
-        .bind(&req.domain)
-        .bind(assigned_by)
-        .bind(&tenant_id)
-        .bind(&req.assigned_by)
-        .bind(expires_at_bind)
-        .fetch_one(pool)
-        .await
-        .map_err(|err| Status::internal(format!("assign role failed: {err}")))?;
-        let user_role_id = row
-            .try_get::<Uuid, _>(user_role_model.column("user_role_id"))
-            .map(|id| id.to_string())
+        // P6.10 Wave 4: typed UserRole upsert on the composite unique
+        // (user_id,role_id,domain) + RETURNING user_role_id (existing on conflict,
+        // new on insert). The raw `CASE WHEN $8 <= 0 THEN NULL ELSE to_timestamp($8)`
+        // expiry is computed here as a typed Timestamp (NULL when absent/non-positive).
+        // `created_by` binds req.assigned_by verbatim (parity with the raw `$7`).
+        let expires_value = match expires_at_unix {
+            Some(seconds) if seconds > 0 => chrono::DateTime::from_timestamp(seconds, 0)
+                .map(LogicalValue::Timestamp)
+                .unwrap_or(LogicalValue::Null),
+            _ => LogicalValue::Null,
+        };
+        let runtime = self.runtime.as_ref().ok_or_else(|| {
+            Status::failed_precondition(
+                "native authz requires runtime-backed user-role persistence",
+            )
+        })?;
+        let mut record = LogicalRecord::new();
+        record.insert(
+            "user_role_id".to_string(),
+            LogicalValue::String(new_user_role_id.clone()),
+        );
+        record.insert(
+            "user_id".to_string(),
+            LogicalValue::String(user_id.to_string()),
+        );
+        record.insert(
+            "role_id".to_string(),
+            LogicalValue::String(role_id.to_string()),
+        );
+        record.insert(
+            "domain".to_string(),
+            LogicalValue::String(req.domain.clone()),
+        );
+        record.insert(
+            "assigned_by".to_string(),
+            LogicalValue::String(assigned_by.to_string()),
+        );
+        record.insert(
+            "tenant_id".to_string(),
+            LogicalValue::String(tenant_id.clone()),
+        );
+        record.insert(
+            "created_by".to_string(),
+            LogicalValue::String(req.assigned_by.clone()),
+        );
+        record.insert("expires_at".to_string(), expires_value);
+        let context = crate::RequestContext {
+            tenant_id: tenant_id.clone(),
+            project_id: req.project_id.clone(),
+            ..crate::RequestContext::default()
+        };
+        let returned = runtime
+            .native_entity_write_for_service_returning(
+                "authz",
+                &context,
+                "udb.core.authz.entity.v1.UserRole",
+                record,
+                ConflictStrategy::update_on(
+                    vec![
+                        "assigned_by".to_string(),
+                        "tenant_id".to_string(),
+                        "created_by".to_string(),
+                        "expires_at".to_string(),
+                    ],
+                    vec![
+                        "user_id".to_string(),
+                        "role_id".to_string(),
+                        "domain".to_string(),
+                    ],
+                ),
+                vec!["user_role_id".to_string()],
+            )
+            .await
+            .map_err(|err| Status::internal(format!("assign role failed: {err}")))?;
+        let user_role_id = returned
+            .first()
+            .and_then(|r| r.get("user_role_id"))
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string())
             .unwrap_or(new_user_role_id);
         self.emit_event(
             AuthEvent::new(
@@ -1978,47 +2277,88 @@ impl AuthzService for AuthzServiceImpl {
             required_scopes: Vec::new(),
         };
         let policy_rule = policy_to_rule_pb(&policy);
-        if let Some(pool) = &self.pg_pool {
-            let policy_model = self.policies_model();
-            let rel = policy_model.relation.clone();
+        if self.pg_pool.is_some() {
+            let runtime = self.runtime.as_ref().ok_or_else(|| {
+                Status::failed_precondition(
+                    "native authz requires runtime-backed policy persistence",
+                )
+            })?;
             let attributes = serde_json::to_value(&policy.conditions).map_err(|err| {
                 Status::internal(format!("encode policy conditions failed: {err}"))
             })?;
-            sqlx::query(&format!(
-                "INSERT INTO {rel} \
-                 ({policy_id}, {subject}, {domain_col}, {object_col}, {action_col}, {effect_col}, {condition}, {description}, {is_active}, {created_by}, {tenant_id}, {project_id}, {resource_type}, {attributes_json}) \
-                 VALUES ($1::UUID, $2, $3, $4, $5, $6, $7, $8, TRUE, $9::UUID, $10, $11, $12, $13::JSONB)",
-                policy_id = policy_model.q("policy_id"),
-                subject = policy_model.q("subject"),
-                domain_col = policy_model.q("domain"),
-                object_col = policy_model.q("object"),
-                action_col = policy_model.q("action"),
-                effect_col = policy_model.q("effect"),
-                condition = policy_model.q("condition"),
-                description = policy_model.q("description"),
-                is_active = policy_model.q("is_active"),
-                created_by = policy_model.q("created_by"),
-                tenant_id = policy_model.q("tenant_id"),
-                project_id = policy_model.q("project_id"),
-                resource_type = policy_model.q("resource_type"),
-                attributes_json = policy_model.q("attributes_json"),
-            ))
-            .bind(&policy.id)
-            .bind(&policy.subject)
-            .bind(&req.domain)
-            .bind(&policy.resource)
-            .bind(&policy.action)
-            .bind(effect_to_db(policy.effect))
-            .bind(&req.condition)
-            .bind(&req.description)
-            .bind(created_by)
-            .bind(&policy.tenant)
-            .bind(&policy.project)
-            .bind(&req.resource_type)
-            .bind(attributes)
-            .execute(pool)
-            .await
-            .map_err(|err| Status::internal(format!("create policy rule failed: {err}")))?;
+            // P6.10 Wave 1: typed native insert (was raw INSERT). `is_active=TRUE`
+            // literal preserved; `created_by` is a validated UUID; `attributes_json`
+            // binds as JSONB via `LogicalValue::Json`. Column→value parity is exact:
+            // domain=req.domain, object=policy.resource, tenant_id=policy.tenant.
+            let mut record = LogicalRecord::new();
+            record.insert(
+                "policy_id".to_string(),
+                LogicalValue::String(policy.id.clone()),
+            );
+            record.insert(
+                "subject".to_string(),
+                LogicalValue::String(policy.subject.clone()),
+            );
+            record.insert(
+                "domain".to_string(),
+                LogicalValue::String(req.domain.clone()),
+            );
+            record.insert(
+                "object".to_string(),
+                LogicalValue::String(policy.resource.clone()),
+            );
+            record.insert(
+                "action".to_string(),
+                LogicalValue::String(policy.action.clone()),
+            );
+            record.insert(
+                "effect".to_string(),
+                LogicalValue::String(effect_to_db(policy.effect).to_string()),
+            );
+            record.insert(
+                "condition".to_string(),
+                LogicalValue::String(req.condition.clone()),
+            );
+            record.insert(
+                "description".to_string(),
+                LogicalValue::String(req.description.clone()),
+            );
+            record.insert("is_active".to_string(), LogicalValue::Bool(true));
+            record.insert(
+                "created_by".to_string(),
+                LogicalValue::String(created_by.to_string()),
+            );
+            record.insert(
+                "tenant_id".to_string(),
+                LogicalValue::String(policy.tenant.clone()),
+            );
+            record.insert(
+                "project_id".to_string(),
+                LogicalValue::String(policy.project.clone()),
+            );
+            record.insert(
+                "resource_type".to_string(),
+                LogicalValue::String(req.resource_type.clone()),
+            );
+            record.insert(
+                "attributes_json".to_string(),
+                LogicalValue::Json(attributes),
+            );
+            let context = crate::RequestContext {
+                tenant_id: policy.tenant.clone(),
+                project_id: policy.project.clone(),
+                ..crate::RequestContext::default()
+            };
+            runtime
+                .native_entity_write_for_service(
+                    "authz",
+                    &context,
+                    "udb.core.authz.entity.v1.PolicyRule",
+                    record,
+                    ConflictStrategy::Error,
+                )
+                .await
+                .map_err(|err| Status::internal(format!("create policy rule failed: {err}")))?;
             let _ = self
                 .bump_authz_revision(
                     &policy.tenant,
@@ -2113,25 +2453,35 @@ impl AuthzService for AuthzServiceImpl {
             return Err(Status::invalid_argument("user_role_id is required"));
         }
         let user_role_id = parse_uuid_field("user_role_id", &req.user_role_id)?;
-        let pool = self.require_pool()?;
-        let user_role_model = self.user_roles_model();
-        let rel = user_role_model.relation.clone();
-        // RETURNING the tenant/project so the revocation can bump the
-        // tenant-scoped authz revision (K2.1).
-        let row = sqlx::query(&format!(
-            "DELETE FROM {rel} WHERE {user_role_id} = $1::UUID \
-             RETURNING {tenant_id}::TEXT AS tenant, '' AS project",
-            user_role_id = user_role_model.q("user_role_id"),
-            tenant_id = user_role_model.q("tenant_id"),
-        ))
-        .bind(user_role_id)
-        .fetch_optional(pool)
-        .await
-        .map_err(|err| Status::internal(format!("revoke role failed: {err}")))?;
-        let revoked = row.is_some();
-        if let Some(row) = row {
-            let tenant: String = row.try_get("tenant").unwrap_or_default();
-            let project: String = row.try_get("project").unwrap_or_default();
+        let runtime = self.runtime.as_ref().ok_or_else(|| {
+            Status::failed_precondition(
+                "native authz requires runtime-backed user-role persistence",
+            )
+        })?;
+        // P6.10 Wave 1: typed DELETE returning the tenant so the revocation can bump
+        // the tenant-scoped authz revision (K2.1). project stays '' (raw literal).
+        let op = LogicalDelete {
+            message_type: "udb.core.authz.entity.v1.UserRole".to_string(),
+            filter: LogicalFilter::Comparison {
+                field: "user_role_id".to_string(),
+                op: ComparisonOp::Eq,
+                value: LogicalValue::String(user_role_id.to_string()),
+            },
+            return_fields: vec!["tenant_id".to_string()],
+        };
+        let context = crate::RequestContext::default();
+        let deleted_rows = runtime
+            .native_entity_delete_rows_for_service("authz", &context, op)
+            .await
+            .map_err(|err| Status::internal(format!("revoke role failed: {err}")))?;
+        let revoked = !deleted_rows.is_empty();
+        if let Some(row) = deleted_rows.first() {
+            let tenant: String = row
+                .get("tenant_id")
+                .and_then(|v| v.as_str())
+                .unwrap_or_default()
+                .to_string();
+            let project = String::new();
             self.emit_event(
                 AuthEvent::new(
                     topics::ROLE_REVOKED,
@@ -2447,11 +2797,9 @@ impl AuthzService for AuthzServiceImpl {
         let deleted_by = parse_uuid_field("deleted_by", &req.deleted_by)?;
         let pool = self.require_pool()?;
         let role_model = self.roles_model();
-        let user_role_model = self.user_roles_model();
         let role_rel = role_model.relation.clone();
-        let user_role_rel = user_role_model.relation.clone();
         // Capture the role's tenant/project before the soft delete so the authz
-        // revision bump is scoped correctly.
+        // revision bump is scoped correctly. (Scope read stays a raw read.)
         let scope_row = sqlx::query(&format!(
             "SELECT {tenant_id}::TEXT AS tenant, COALESCE({project_id}, '') AS project FROM {role_rel} WHERE {role_id} = $1::UUID",
             tenant_id = role_model.q("tenant_id"),
@@ -2470,30 +2818,68 @@ impl AuthzService for AuthzServiceImpl {
                 )
             })
             .unwrap_or_default();
-        let result = sqlx::query(&format!(
-            "UPDATE {role_rel} SET {deleted_at} = NOW(), {deleted_by} = $2, {is_active} = FALSE \
-             WHERE {role_id} = $1::UUID AND {deleted_at} IS NULL",
-            deleted_at = role_model.q("deleted_at"),
-            deleted_by = role_model.q("deleted_by"),
-            is_active = role_model.q("is_active"),
-            role_id = role_model.q("role_id"),
-        ))
-        .bind(role_id)
-        .bind(deleted_by)
-        .execute(pool)
-        .await
-        .map_err(|err| Status::internal(format!("delete role failed: {err}")))?;
-        if result.rows_affected() > 0 {
-            sqlx::query(&format!(
-                "DELETE FROM {user_role_rel} WHERE {role_id} = $1::UUID",
-                role_id = user_role_model.q("role_id"),
-            ))
-            .bind(role_id)
-            .execute(pool)
+        let runtime = self.runtime.as_ref().ok_or_else(|| {
+            Status::failed_precondition("native authz requires runtime-backed role persistence")
+        })?;
+        // P6.10 Wave 1: typed soft-delete (deleted_at=NOW, deleted_by, is_active=FALSE)
+        // with the `deleted_at IS NULL` idempotency guard, then the typed cascade
+        // delete of the role's user_role assignments.
+        let mut assignments = std::collections::BTreeMap::new();
+        assignments.insert("deleted_at".to_string(), LogicalAssignment::ServerNow);
+        assignments.insert(
+            "deleted_by".to_string(),
+            LogicalAssignment::Set {
+                value: LogicalValue::String(deleted_by.to_string()),
+            },
+        );
+        assignments.insert(
+            "is_active".to_string(),
+            LogicalAssignment::Set {
+                value: LogicalValue::Bool(false),
+            },
+        );
+        let (affected, _) = runtime
+            .native_entity_update_for_service(
+                "authz",
+                &crate::RequestContext::default(),
+                LogicalUpdate {
+                    message_type: "udb.core.authz.entity.v1.Role".to_string(),
+                    filter: LogicalFilter::And(vec![
+                        LogicalFilter::Comparison {
+                            field: "role_id".to_string(),
+                            op: ComparisonOp::Eq,
+                            value: LogicalValue::String(role_id.to_string()),
+                        },
+                        LogicalFilter::IsNull("deleted_at".to_string()),
+                    ]),
+                    assignments,
+                    return_fields: Vec::new(),
+                    require_affected: false,
+                },
+            )
             .await
-            .map_err(|err| Status::internal(format!("delete role assignments failed: {err}")))?;
+            .map_err(|err| Status::internal(format!("delete role failed: {err}")))?;
+        if affected > 0 {
+            runtime
+                .native_entity_delete_for_service(
+                    "authz",
+                    &crate::RequestContext::default(),
+                    LogicalDelete {
+                        message_type: "udb.core.authz.entity.v1.UserRole".to_string(),
+                        filter: LogicalFilter::Comparison {
+                            field: "role_id".to_string(),
+                            op: ComparisonOp::Eq,
+                            value: LogicalValue::String(role_id.to_string()),
+                        },
+                        return_fields: Vec::new(),
+                    },
+                )
+                .await
+                .map_err(|err| {
+                    Status::internal(format!("delete role assignments failed: {err}"))
+                })?;
         }
-        if result.rows_affected() > 0 && !role_tenant.trim().is_empty() {
+        if affected > 0 && !role_tenant.trim().is_empty() {
             let _ = self
                 .bump_authz_revision(
                     &role_tenant,
@@ -2506,7 +2892,7 @@ impl AuthzService for AuthzServiceImpl {
         }
         self.invalidate_snapshot_cache();
         Ok(Response::new(authz_pb::DeleteRoleResponse {
-            deleted: result.rows_affected() > 0,
+            deleted: affected > 0,
         }))
     }
     async fn get_policy_rule(
@@ -2626,29 +3012,58 @@ impl AuthzService for AuthzServiceImpl {
             return Err(Status::invalid_argument("policy_id is required"));
         }
         let mut deleted = false;
-        if let Some(pool) = &self.pg_pool {
+        if self.pg_pool.is_some() {
+            let runtime = self.runtime.as_ref().ok_or_else(|| {
+                Status::failed_precondition(
+                    "native authz requires runtime-backed policy persistence",
+                )
+            })?;
             let policy_id = parse_uuid_field("policy_id", &req.policy_id)?;
             let deleted_by = if req.deleted_by.trim().is_empty() {
                 None
             } else {
                 Some(parse_uuid_field("deleted_by", &req.deleted_by)?)
             };
-            let policy_model = self.policies_model();
-            let rel = policy_model.relation.clone();
-            let result = sqlx::query(&format!(
-                "UPDATE {rel} SET {deleted_at} = NOW(), {deleted_by} = $2, {is_active} = FALSE \
-                 WHERE {policy_id} = $1::UUID AND {deleted_at} IS NULL",
-                policy_id = policy_model.q("policy_id"),
-                deleted_at = policy_model.q("deleted_at"),
-                deleted_by = policy_model.q("deleted_by"),
-                is_active = policy_model.q("is_active"),
-            ))
-            .bind(policy_id)
-            .bind(deleted_by)
-            .execute(pool)
-            .await
-            .map_err(|err| Status::internal(format!("delete policy rule failed: {err}")))?;
-            deleted = result.rows_affected() > 0;
+            // P6.10 Wave 1: typed conditional soft-delete (was raw UPDATE). The
+            // `deleted_at IS NULL` guard preserves idempotency; `deleted_by` is NULL
+            // when absent; `require_affected=false` (caller reports deleted=affected>0).
+            let mut assignments = std::collections::BTreeMap::new();
+            assignments.insert("deleted_at".to_string(), LogicalAssignment::ServerNow);
+            assignments.insert(
+                "deleted_by".to_string(),
+                LogicalAssignment::Set {
+                    value: match &deleted_by {
+                        Some(u) => LogicalValue::String(u.to_string()),
+                        None => LogicalValue::Null,
+                    },
+                },
+            );
+            assignments.insert(
+                "is_active".to_string(),
+                LogicalAssignment::Set {
+                    value: LogicalValue::Bool(false),
+                },
+            );
+            let op = LogicalUpdate {
+                message_type: "udb.core.authz.entity.v1.PolicyRule".to_string(),
+                filter: LogicalFilter::And(vec![
+                    LogicalFilter::Comparison {
+                        field: "policy_id".to_string(),
+                        op: ComparisonOp::Eq,
+                        value: LogicalValue::String(policy_id.to_string()),
+                    },
+                    LogicalFilter::IsNull("deleted_at".to_string()),
+                ]),
+                assignments,
+                return_fields: Vec::new(),
+                require_affected: false,
+            };
+            let context = crate::RequestContext::default();
+            let (affected, _) = runtime
+                .native_entity_update_for_service("authz", &context, op)
+                .await
+                .map_err(|err| Status::internal(format!("delete policy rule failed: {err}")))?;
+            deleted = affected > 0;
         } else {
             self.require_snapshot_fallback()?;
         }

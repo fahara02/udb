@@ -10,6 +10,12 @@ use sqlx::{PgPool, Row};
 use tonic::Status;
 use uuid::Uuid;
 
+use crate::backend::BackendKind;
+use crate::ir::compile::CompileContext;
+use crate::ir::{
+    ComparisonOp, ConflictStrategy, LogicalAssignment, LogicalFilter, LogicalRecord, LogicalUpdate,
+    LogicalValue, LogicalWrite,
+};
 use crate::runtime::core::DataBrokerRuntime;
 use crate::runtime::native_catalog::native_model;
 
@@ -33,6 +39,7 @@ pub const EXTERNAL_IDENTITY_MSG: &str = "udb.core.idp.entity.v1.ExternalIdentity
 pub const SCIM_STATE_MSG: &str = "udb.core.idp.entity.v1.ScimDirectoryState";
 pub const SAML_REPLAY_MSG: &str = "udb.core.idp.entity.v1.SamlReplayEntry";
 pub const USER_MSG: &str = "udb.core.authn.entity.v1.User";
+pub const SESSION_MSG: &str = "udb.core.authn.entity.v1.Session";
 
 /// A fully-resolved provider row (runtime view; secrets stay server-side).
 #[derive(Debug, Clone, Default)]
@@ -79,6 +86,119 @@ pub struct ExternalIdentityRow {
 
 fn map_err(context: &str) -> impl Fn(sqlx::Error) -> Status + '_ {
     move |err| Status::internal(format!("{context}: {err}"))
+}
+
+fn native_compile_context() -> CompileContext<'static> {
+    CompileContext::new(crate::runtime::native_catalog::native_manifest())
+}
+
+fn uuid_value(value: &str, field: &str) -> Result<LogicalValue, Status> {
+    let uuid = Uuid::parse_str(value.trim())
+        .map_err(|_| Status::invalid_argument(format!("{field} must be a UUID")))?;
+    Ok(LogicalValue::String(uuid.to_string()))
+}
+
+fn string_or_null(value: &str) -> LogicalValue {
+    if value.is_empty() {
+        LogicalValue::Null
+    } else {
+        LogicalValue::String(value.to_string())
+    }
+}
+
+fn json_or_null(value: &str) -> Result<LogicalValue, Status> {
+    if value.is_empty() {
+        return Ok(LogicalValue::Null);
+    }
+    serde_json::from_str(value)
+        .map(LogicalValue::Json)
+        .map_err(|err| Status::invalid_argument(format!("invalid JSON field value: {err}")))
+}
+
+fn json_value(value: &str, field: &str) -> Result<LogicalValue, Status> {
+    serde_json::from_str(value)
+        .map(LogicalValue::Json)
+        .map_err(|err| Status::invalid_argument(format!("{field} must be valid JSON: {err}")))
+}
+
+fn eq(field: &str, value: LogicalValue) -> LogicalFilter {
+    LogicalFilter::Comparison {
+        field: field.to_string(),
+        op: ComparisonOp::Eq,
+        value,
+    }
+}
+
+fn active_provider_filter(provider_id: &str, tenant_id: &str) -> Result<LogicalFilter, Status> {
+    Ok(LogicalFilter::And(vec![
+        eq("provider_id", uuid_value(provider_id, "provider_id")?),
+        eq("tenant_id", LogicalValue::String(tenant_id.to_string())),
+        LogicalFilter::IsNull("deleted_at".to_string()),
+    ]))
+}
+
+async fn execute_typed_write(
+    pool: &PgPool,
+    op: LogicalWrite,
+) -> Result<(u64, Vec<serde_json::Value>), Status> {
+    let ctx = native_compile_context();
+    let compiled = crate::runtime::service::handlers_data::compile_logical_write_dispatch(
+        &BackendKind::Postgres,
+        &op,
+        &ctx,
+    )?;
+    execute_compiled_mutation(pool, &compiled.spec_json).await
+}
+
+async fn execute_typed_update(
+    pool: &PgPool,
+    op: LogicalUpdate,
+) -> Result<(u64, Vec<serde_json::Value>), Status> {
+    let ctx = native_compile_context();
+    let compiled = crate::runtime::service::handlers_data::compile_logical_update_dispatch(
+        &BackendKind::Postgres,
+        &op,
+        &ctx,
+    )?;
+    execute_compiled_mutation(pool, &compiled.spec_json).await
+}
+
+async fn execute_compiled_mutation(
+    pool: &PgPool,
+    spec_json: &str,
+) -> Result<(u64, Vec<serde_json::Value>), Status> {
+    let spec: serde_json::Value = serde_json::from_str(spec_json)
+        .map_err(|err| Status::internal(format!("typed native mutation JSON failed: {err}")))?;
+    let sql = spec
+        .get("sql")
+        .and_then(serde_json::Value::as_str)
+        .ok_or_else(|| Status::internal("typed native mutation did not compile to SQL"))?;
+    crate::runtime::core::validate_pg_mutation_sql(sql)?;
+    let params = crate::runtime::core::dispatch_params(&spec)?;
+    let param_types = crate::runtime::core::dispatch_param_types(&spec)?;
+    let return_rows = sql.to_ascii_lowercase().contains(" returning ");
+    if return_rows {
+        let rows = crate::runtime::core::bind_typed_generic_pg_params(
+            sqlx::query(sql),
+            &params,
+            param_types.as_deref(),
+        )?
+        .fetch_all(pool)
+        .await
+        .map_err(map_err("typed native mutation failed"))?;
+        let rows = crate::runtime::core::pg_rows_to_json(rows)?;
+        Ok((rows.len() as u64, rows))
+    } else {
+        let result = crate::runtime::core::bind_typed_generic_pg_params(
+            sqlx::query(sql),
+            &params,
+            param_types.as_deref(),
+        )?
+        .execute(pool)
+        .await
+        .map_err(map_err("typed native mutation failed"))?;
+        Ok((result.rows_affected(), Vec::new()))
+    }
 }
 
 /// Column list selected for a provider (excludes secret columns by design — the
@@ -201,99 +321,109 @@ pub async fn insert_provider(
 ) -> Result<String, Status> {
     let client_secret = seal_idp_secret(runtime, client_secret)?;
     let saml_signing_key_pem = seal_idp_secret(runtime, saml_signing_key_pem)?;
-    let m = native_model(
-        PROVIDER_MSG,
-        &[
-            "provider_id",
-            "tenant_id",
-            "kind",
-            "display_name",
-            "issuer",
-            "entity_id",
-            "jwks_url",
-            "saml_metadata_url",
-            "client_ids_json",
-            "audiences_json",
-            "claim_mapping_json",
-            "group_mapping_json",
-            "jit_policy_json",
-            "account_linking_policy",
-            "enabled",
-            "client_secret",
-            "saml_signing_key_pem",
-            "saml_idp_certs_json",
-            "saml_sso_url",
-            "health",
-            "created_by",
-            "updated_by",
-        ],
-    );
     let provider_id = Uuid::new_v4();
-    let sql = format!(
-        "INSERT INTO {rel} ({pid}, {tenant}, {kind}, {name}, {issuer}, {entity}, {jwks}, \
-            {meta}, {clients}, {auds}, {claim}, {group}, {jit}, {alp}, {enabled}, {secret}, \
-            {signkey}, {certs}, {sso}, {health}, {cby}, {uby}) \
-         VALUES ($1::UUID, $2, $3, $4, $5, $6, $7, $8, $9::JSONB, $10::JSONB, $11::JSONB, \
-            $12::JSONB, $13::JSONB, $14, $15, NULLIF($16,''), NULLIF($17,''), $18::JSONB, $19, \
-            $20, $21, $22) \
-         RETURNING {pid}::TEXT AS provider_id",
-        rel = m.relation,
-        pid = m.q("provider_id"),
-        tenant = m.q("tenant_id"),
-        kind = m.q("kind"),
-        name = m.q("display_name"),
-        issuer = m.q("issuer"),
-        entity = m.q("entity_id"),
-        jwks = m.q("jwks_url"),
-        meta = m.q("saml_metadata_url"),
-        clients = m.q("client_ids_json"),
-        auds = m.q("audiences_json"),
-        claim = m.q("claim_mapping_json"),
-        group = m.q("group_mapping_json"),
-        jit = m.q("jit_policy_json"),
-        alp = m.q("account_linking_policy"),
-        enabled = m.q("enabled"),
-        secret = m.q("client_secret"),
-        signkey = m.q("saml_signing_key_pem"),
-        certs = m.q("saml_idp_certs_json"),
-        sso = m.q("saml_sso_url"),
-        health = m.q("health"),
-        cby = m.q("created_by"),
-        uby = m.q("updated_by"),
+    let mut record = LogicalRecord::new();
+    record.insert(
+        "provider_id".to_string(),
+        LogicalValue::String(provider_id.to_string()),
     );
-    let created = sqlx::query(&sql)
-        .bind(provider_id)
-        .bind(&row.tenant_id)
-        .bind(&row.kind)
-        .bind(&row.display_name)
-        .bind(&row.issuer)
-        .bind(&row.entity_id)
-        .bind(&row.jwks_url)
-        .bind(&row.saml_metadata_url)
-        .bind(&row.client_ids_json)
-        .bind(&row.audiences_json)
-        .bind(&row.claim_mapping_json)
-        .bind(&row.group_mapping_json)
-        .bind(&row.jit_policy_json)
-        .bind(&row.account_linking_policy)
-        .bind(row.enabled)
-        .bind(client_secret)
-        .bind(saml_signing_key_pem)
-        .bind(&row.saml_idp_certs_json)
-        .bind(&row.saml_sso_url)
-        .bind(if row.health.is_empty() {
-            "PROVIDER_HEALTH_UNSPECIFIED".to_string()
+    record.insert(
+        "tenant_id".to_string(),
+        LogicalValue::String(row.tenant_id.clone()),
+    );
+    record.insert("kind".to_string(), LogicalValue::String(row.kind.clone()));
+    record.insert(
+        "display_name".to_string(),
+        LogicalValue::String(row.display_name.clone()),
+    );
+    record.insert(
+        "issuer".to_string(),
+        LogicalValue::String(row.issuer.clone()),
+    );
+    record.insert(
+        "entity_id".to_string(),
+        LogicalValue::String(row.entity_id.clone()),
+    );
+    record.insert(
+        "jwks_url".to_string(),
+        LogicalValue::String(row.jwks_url.clone()),
+    );
+    record.insert(
+        "saml_metadata_url".to_string(),
+        LogicalValue::String(row.saml_metadata_url.clone()),
+    );
+    record.insert(
+        "client_ids_json".to_string(),
+        json_value(&row.client_ids_json, "client_ids_json")?,
+    );
+    record.insert(
+        "audiences_json".to_string(),
+        json_value(&row.audiences_json, "audiences_json")?,
+    );
+    record.insert(
+        "claim_mapping_json".to_string(),
+        json_value(&row.claim_mapping_json, "claim_mapping_json")?,
+    );
+    record.insert(
+        "group_mapping_json".to_string(),
+        json_value(&row.group_mapping_json, "group_mapping_json")?,
+    );
+    record.insert(
+        "jit_policy_json".to_string(),
+        json_value(&row.jit_policy_json, "jit_policy_json")?,
+    );
+    record.insert(
+        "account_linking_policy".to_string(),
+        LogicalValue::String(row.account_linking_policy.clone()),
+    );
+    record.insert("enabled".to_string(), LogicalValue::Bool(row.enabled));
+    record.insert("client_secret".to_string(), string_or_null(&client_secret));
+    record.insert(
+        "saml_signing_key_pem".to_string(),
+        string_or_null(&saml_signing_key_pem),
+    );
+    record.insert(
+        "saml_idp_certs_json".to_string(),
+        json_value(&row.saml_idp_certs_json, "saml_idp_certs_json")?,
+    );
+    record.insert(
+        "saml_sso_url".to_string(),
+        LogicalValue::String(row.saml_sso_url.clone()),
+    );
+    record.insert(
+        "health".to_string(),
+        LogicalValue::String(if row.health.is_empty() {
+            // §2 fix: short token (was "PROVIDER_HEALTH_UNSPECIFIED", 27 chars, which
+            // overflowed a VARCHAR(24) `health` column).
+            "UNSPECIFIED".to_string()
         } else {
             row.health.clone()
-        })
-        .bind(&row.created_by)
-        .bind(&row.updated_by)
-        .fetch_one(pool)
-        .await
-        .map_err(map_err("idp provider insert failed"))?;
-    Ok(created
-        .try_get::<String, _>("provider_id")
-        .unwrap_or_default())
+        }),
+    );
+    record.insert(
+        "created_by".to_string(),
+        LogicalValue::String(row.created_by.clone()),
+    );
+    record.insert(
+        "updated_by".to_string(),
+        LogicalValue::String(row.updated_by.clone()),
+    );
+    let (_, rows) = execute_typed_write(
+        pool,
+        LogicalWrite {
+            message_type: PROVIDER_MSG.to_string(),
+            records: vec![record],
+            conflict: ConflictStrategy::Error,
+            return_fields: vec!["provider_id".to_string()],
+        },
+    )
+    .await?;
+    Ok(rows
+        .first()
+        .and_then(|row| row.get("provider_id"))
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or_default()
+        .to_string())
 }
 
 /// Fetch one provider by id, scoped to tenant. Excludes soft-deleted rows.
@@ -392,87 +522,53 @@ pub async fn update_provider(
     // for the COALESCE(NULLIF(...)) clauses, so it is passed through unsealed.
     let client_secret = seal_idp_secret(runtime, client_secret)?;
     let saml_signing_key_pem = seal_idp_secret(runtime, saml_signing_key_pem)?;
-    let m = native_model(
-        PROVIDER_MSG,
-        &[
-            "provider_id",
-            "tenant_id",
-            "display_name",
-            "issuer",
-            "entity_id",
-            "jwks_url",
-            "saml_metadata_url",
-            "client_ids_json",
-            "audiences_json",
-            "claim_mapping_json",
-            "group_mapping_json",
-            "jit_policy_json",
+    let mut assignments = std::collections::BTreeMap::new();
+    for (field, value) in [
+        ("display_name", fields.display_name.as_str()),
+        ("issuer", fields.issuer.as_str()),
+        ("entity_id", fields.entity_id.as_str()),
+        ("jwks_url", fields.jwks_url.as_str()),
+        ("saml_metadata_url", fields.saml_metadata_url.as_str()),
+        (
             "account_linking_policy",
-            "client_secret",
-            "saml_signing_key_pem",
-            "updated_by",
-            "deleted_at",
-        ],
-    );
-    let sql = format!(
-        "UPDATE {rel} SET \
-            {name} = COALESCE(NULLIF($3,''), {name}), \
-            {issuer} = COALESCE(NULLIF($4,''), {issuer}), \
-            {entity} = COALESCE(NULLIF($5,''), {entity}), \
-            {jwks} = COALESCE(NULLIF($6,''), {jwks}), \
-            {meta} = COALESCE(NULLIF($7,''), {meta}), \
-            {clients} = COALESCE(NULLIF($8,'')::JSONB, {clients}), \
-            {auds} = COALESCE(NULLIF($9,'')::JSONB, {auds}), \
-            {claim} = COALESCE(NULLIF($10,'')::JSONB, {claim}), \
-            {group} = COALESCE(NULLIF($11,'')::JSONB, {group}), \
-            {jit} = COALESCE(NULLIF($12,'')::JSONB, {jit}), \
-            {alp} = COALESCE(NULLIF($13,''), {alp}), \
-            {secret} = COALESCE(NULLIF($14,''), {secret}), \
-            {signkey} = COALESCE(NULLIF($15,''), {signkey}), \
-            {uby} = COALESCE(NULLIF($16,''), {uby}) \
-         WHERE {pid} = $1::UUID AND {tenant} = $2 AND {del} IS NULL",
-        rel = m.relation,
-        name = m.q("display_name"),
-        issuer = m.q("issuer"),
-        entity = m.q("entity_id"),
-        jwks = m.q("jwks_url"),
-        meta = m.q("saml_metadata_url"),
-        clients = m.q("client_ids_json"),
-        auds = m.q("audiences_json"),
-        claim = m.q("claim_mapping_json"),
-        group = m.q("group_mapping_json"),
-        jit = m.q("jit_policy_json"),
-        alp = m.q("account_linking_policy"),
-        secret = m.q("client_secret"),
-        signkey = m.q("saml_signing_key_pem"),
-        uby = m.q("updated_by"),
-        pid = m.q("provider_id"),
-        tenant = m.q("tenant_id"),
-        del = m.q("deleted_at"),
-    );
-    let pid = Uuid::parse_str(provider_id.trim())
-        .map_err(|_| Status::invalid_argument("provider_id must be a UUID"))?;
-    let affected = sqlx::query(&sql)
-        .bind(pid)
-        .bind(tenant_id)
-        .bind(&fields.display_name)
-        .bind(&fields.issuer)
-        .bind(&fields.entity_id)
-        .bind(&fields.jwks_url)
-        .bind(&fields.saml_metadata_url)
-        .bind(&fields.client_ids_json)
-        .bind(&fields.audiences_json)
-        .bind(&fields.claim_mapping_json)
-        .bind(&fields.group_mapping_json)
-        .bind(&fields.jit_policy_json)
-        .bind(&fields.account_linking_policy)
-        .bind(client_secret)
-        .bind(saml_signing_key_pem)
-        .bind(&fields.updated_by)
-        .execute(pool)
-        .await
-        .map_err(map_err("idp provider update failed"))?
-        .rows_affected();
+            fields.account_linking_policy.as_str(),
+        ),
+        ("client_secret", client_secret.as_str()),
+        ("saml_signing_key_pem", saml_signing_key_pem.as_str()),
+        ("updated_by", fields.updated_by.as_str()),
+    ] {
+        assignments.insert(
+            field.to_string(),
+            LogicalAssignment::Coalesce {
+                value: string_or_null(value),
+            },
+        );
+    }
+    for (field, value) in [
+        ("client_ids_json", fields.client_ids_json.as_str()),
+        ("audiences_json", fields.audiences_json.as_str()),
+        ("claim_mapping_json", fields.claim_mapping_json.as_str()),
+        ("group_mapping_json", fields.group_mapping_json.as_str()),
+        ("jit_policy_json", fields.jit_policy_json.as_str()),
+    ] {
+        assignments.insert(
+            field.to_string(),
+            LogicalAssignment::Coalesce {
+                value: json_or_null(value)?,
+            },
+        );
+    }
+    let (affected, _) = execute_typed_update(
+        pool,
+        LogicalUpdate {
+            message_type: PROVIDER_MSG.to_string(),
+            filter: active_provider_filter(provider_id, tenant_id)?,
+            assignments,
+            return_fields: Vec::new(),
+            require_affected: false,
+        },
+    )
+    .await?;
     if affected == 0 {
         return Ok(None);
     }
@@ -486,36 +582,30 @@ pub async fn disable_provider(
     provider_id: &str,
     updated_by: &str,
 ) -> Result<Option<ProviderRow>, Status> {
-    let m = native_model(
-        PROVIDER_MSG,
-        &[
-            "provider_id",
-            "tenant_id",
-            "enabled",
-            "updated_by",
-            "deleted_at",
-        ],
+    let mut assignments = std::collections::BTreeMap::new();
+    assignments.insert(
+        "enabled".to_string(),
+        LogicalAssignment::Set {
+            value: LogicalValue::Bool(false),
+        },
     );
-    let sql = format!(
-        "UPDATE {rel} SET {enabled} = false, {uby} = COALESCE(NULLIF($3,''), {uby}) \
-         WHERE {pid} = $1::UUID AND {tenant} = $2 AND {del} IS NULL",
-        rel = m.relation,
-        enabled = m.q("enabled"),
-        uby = m.q("updated_by"),
-        pid = m.q("provider_id"),
-        tenant = m.q("tenant_id"),
-        del = m.q("deleted_at"),
+    assignments.insert(
+        "updated_by".to_string(),
+        LogicalAssignment::Coalesce {
+            value: string_or_null(updated_by),
+        },
     );
-    let pid = Uuid::parse_str(provider_id.trim())
-        .map_err(|_| Status::invalid_argument("provider_id must be a UUID"))?;
-    let affected = sqlx::query(&sql)
-        .bind(pid)
-        .bind(tenant_id)
-        .bind(updated_by)
-        .execute(pool)
-        .await
-        .map_err(map_err("idp provider disable failed"))?
-        .rows_affected();
+    let (affected, _) = execute_typed_update(
+        pool,
+        LogicalUpdate {
+            message_type: PROVIDER_MSG.to_string(),
+            filter: active_provider_filter(provider_id, tenant_id)?,
+            assignments,
+            return_fields: Vec::new(),
+            require_affected: false,
+        },
+    )
+    .await?;
     if affected == 0 {
         return Ok(None);
     }
@@ -530,36 +620,37 @@ pub async fn record_jwks_refresh(
     health: &str,
     status: &str,
 ) -> Result<(), Status> {
-    let m = native_model(
-        PROVIDER_MSG,
-        &[
-            "provider_id",
-            "tenant_id",
-            "health",
-            "last_jwks_refresh_status",
-            "last_jwks_refresh_at",
-        ],
+    let mut assignments = std::collections::BTreeMap::new();
+    assignments.insert(
+        "health".to_string(),
+        LogicalAssignment::Set {
+            value: LogicalValue::String(health.to_string()),
+        },
     );
-    let sql = format!(
-        "UPDATE {rel} SET {health} = $3, {status} = $4, {at} = NOW() \
-         WHERE {pid} = $1::UUID AND {tenant} = $2",
-        rel = m.relation,
-        health = m.q("health"),
-        status = m.q("last_jwks_refresh_status"),
-        at = m.q("last_jwks_refresh_at"),
-        pid = m.q("provider_id"),
-        tenant = m.q("tenant_id"),
+    assignments.insert(
+        "last_jwks_refresh_status".to_string(),
+        LogicalAssignment::Set {
+            value: LogicalValue::String(status.to_string()),
+        },
     );
-    let pid = Uuid::parse_str(provider_id.trim())
-        .map_err(|_| Status::invalid_argument("provider_id must be a UUID"))?;
-    sqlx::query(&sql)
-        .bind(pid)
-        .bind(tenant_id)
-        .bind(health)
-        .bind(status)
-        .execute(pool)
-        .await
-        .map_err(map_err("idp jwks-refresh status update failed"))?;
+    assignments.insert(
+        "last_jwks_refresh_at".to_string(),
+        LogicalAssignment::ServerNow,
+    );
+    execute_typed_update(
+        pool,
+        LogicalUpdate {
+            message_type: PROVIDER_MSG.to_string(),
+            filter: LogicalFilter::And(vec![
+                eq("provider_id", uuid_value(provider_id, "provider_id")?),
+                eq("tenant_id", LogicalValue::String(tenant_id.to_string())),
+            ]),
+            assignments,
+            return_fields: Vec::new(),
+            require_affected: false,
+        },
+    )
+    .await?;
     Ok(())
 }
 
@@ -635,46 +726,42 @@ pub async fn update_saml_metadata(
     certs_json: &str,
     updated_by: &str,
 ) -> Result<Option<ProviderRow>, Status> {
-    let m = native_model(
-        PROVIDER_MSG,
-        &[
-            "provider_id",
-            "tenant_id",
-            "entity_id",
-            "saml_sso_url",
-            "saml_idp_certs_json",
-            "updated_by",
-            "deleted_at",
-        ],
+    let mut assignments = std::collections::BTreeMap::new();
+    assignments.insert(
+        "entity_id".to_string(),
+        LogicalAssignment::Coalesce {
+            value: string_or_null(entity_id),
+        },
     );
-    let sql = format!(
-        "UPDATE {rel} SET {entity} = COALESCE(NULLIF($3,''), {entity}), \
-            {sso} = COALESCE(NULLIF($4,''), {sso}), \
-            {certs} = $5::JSONB, \
-            {uby} = COALESCE(NULLIF($6,''), {uby}) \
-         WHERE {pid} = $1::UUID AND {tenant} = $2 AND {del} IS NULL",
-        rel = m.relation,
-        entity = m.q("entity_id"),
-        sso = m.q("saml_sso_url"),
-        certs = m.q("saml_idp_certs_json"),
-        uby = m.q("updated_by"),
-        pid = m.q("provider_id"),
-        tenant = m.q("tenant_id"),
-        del = m.q("deleted_at"),
+    assignments.insert(
+        "saml_sso_url".to_string(),
+        LogicalAssignment::Coalesce {
+            value: string_or_null(sso_url),
+        },
     );
-    let pid = Uuid::parse_str(provider_id.trim())
-        .map_err(|_| Status::invalid_argument("provider_id must be a UUID"))?;
-    let affected = sqlx::query(&sql)
-        .bind(pid)
-        .bind(tenant_id)
-        .bind(entity_id)
-        .bind(sso_url)
-        .bind(certs_json)
-        .bind(updated_by)
-        .execute(pool)
-        .await
-        .map_err(map_err("idp saml metadata update failed"))?
-        .rows_affected();
+    assignments.insert(
+        "saml_idp_certs_json".to_string(),
+        LogicalAssignment::Set {
+            value: json_value(certs_json, "saml_idp_certs_json")?,
+        },
+    );
+    assignments.insert(
+        "updated_by".to_string(),
+        LogicalAssignment::Coalesce {
+            value: string_or_null(updated_by),
+        },
+    );
+    let (affected, _) = execute_typed_update(
+        pool,
+        LogicalUpdate {
+            message_type: PROVIDER_MSG.to_string(),
+            filter: active_provider_filter(provider_id, tenant_id)?,
+            assignments,
+            return_fields: Vec::new(),
+            require_affected: false,
+        },
+    )
+    .await?;
     if affected == 0 {
         return Ok(None);
     }
@@ -889,26 +976,26 @@ pub async fn unlink_external_identity(
     tenant_id: &str,
     external_identity_id: &str,
 ) -> Result<bool, Status> {
-    let m = native_model(
-        EXTERNAL_IDENTITY_MSG,
-        &["external_identity_id", "tenant_id", "deleted_at"],
-    );
-    let sql = format!(
-        "UPDATE {rel} SET {del} = NOW() WHERE {id} = $1::UUID AND {tenant} = $2 AND {del} IS NULL",
-        rel = m.relation,
-        del = m.q("deleted_at"),
-        id = m.q("external_identity_id"),
-        tenant = m.q("tenant_id"),
-    );
-    let id = Uuid::parse_str(external_identity_id.trim())
-        .map_err(|_| Status::invalid_argument("external_identity_id must be a UUID"))?;
-    let affected = sqlx::query(&sql)
-        .bind(id)
-        .bind(tenant_id)
-        .execute(pool)
-        .await
-        .map_err(map_err("external identity unlink failed"))?
-        .rows_affected();
+    let mut assignments = std::collections::BTreeMap::new();
+    assignments.insert("deleted_at".to_string(), LogicalAssignment::ServerNow);
+    let (affected, _) = execute_typed_update(
+        pool,
+        LogicalUpdate {
+            message_type: EXTERNAL_IDENTITY_MSG.to_string(),
+            filter: LogicalFilter::And(vec![
+                eq(
+                    "external_identity_id",
+                    uuid_value(external_identity_id, "external_identity_id")?,
+                ),
+                eq("tenant_id", LogicalValue::String(tenant_id.to_string())),
+                LogicalFilter::IsNull("deleted_at".to_string()),
+            ]),
+            assignments,
+            return_fields: Vec::new(),
+            require_affected: false,
+        },
+    )
+    .await?;
     Ok(affected > 0)
 }
 
@@ -924,38 +1011,39 @@ pub async fn record_saml_assertion(
     assertion_id: &str,
     not_on_or_after_unix: i64,
 ) -> Result<bool, Status> {
-    let m = native_model(
-        SAML_REPLAY_MSG,
-        &[
-            "saml_replay_entry_id",
-            "tenant_id",
-            "provider_id",
-            "assertion_id",
-            "not_on_or_after",
-        ],
+    let not_on_or_after = chrono::DateTime::from_timestamp(not_on_or_after_unix, 0)
+        .ok_or_else(|| Status::invalid_argument("not_on_or_after_unix is out of range"))?;
+    let mut record = LogicalRecord::new();
+    record.insert(
+        "saml_replay_entry_id".to_string(),
+        LogicalValue::String(Uuid::new_v4().to_string()),
     );
-    let sql = format!(
-        "INSERT INTO {rel} ({id}, {tenant}, {pid}, {aid}, {noa}) \
-         VALUES (gen_random_uuid(), $1, $2::UUID, $3, to_timestamp($4)) \
-         ON CONFLICT ({tenant}, {pid}, {aid}) DO NOTHING",
-        rel = m.relation,
-        id = m.q("saml_replay_entry_id"),
-        tenant = m.q("tenant_id"),
-        pid = m.q("provider_id"),
-        aid = m.q("assertion_id"),
-        noa = m.q("not_on_or_after"),
+    record.insert(
+        "tenant_id".to_string(),
+        LogicalValue::String(tenant_id.to_string()),
     );
-    let pid = Uuid::parse_str(provider_id.trim())
-        .map_err(|_| Status::invalid_argument("provider_id must be a UUID"))?;
-    let affected = sqlx::query(&sql)
-        .bind(tenant_id)
-        .bind(pid)
-        .bind(assertion_id)
-        .bind(not_on_or_after_unix)
-        .execute(pool)
-        .await
-        .map_err(map_err("saml replay record failed"))?
-        .rows_affected();
+    record.insert(
+        "provider_id".to_string(),
+        uuid_value(provider_id, "provider_id")?,
+    );
+    record.insert(
+        "assertion_id".to_string(),
+        LogicalValue::String(assertion_id.to_string()),
+    );
+    record.insert(
+        "not_on_or_after".to_string(),
+        LogicalValue::Timestamp(not_on_or_after),
+    );
+    let (affected, _) = execute_typed_write(
+        pool,
+        LogicalWrite {
+            message_type: SAML_REPLAY_MSG.to_string(),
+            records: vec![record],
+            conflict: ConflictStrategy::Ignore,
+            return_fields: Vec::new(),
+        },
+    )
+    .await?;
     Ok(affected > 0)
 }
 
@@ -1089,46 +1177,59 @@ pub async fn deactivate_user(
     tenant_id: &str,
     user_id: &str,
 ) -> Result<bool, Status> {
-    let um = native_model(USER_MSG, &["user_id", "tenant_id", "status", "deleted_at"]);
-    let user_sql = format!(
-        "UPDATE {rel} SET {status} = 'SUSPENDED' \
-         WHERE {uid} = $1::UUID AND {tenant} = $2 AND {del} IS NULL",
-        rel = um.relation,
-        status = um.q("status"),
-        uid = um.q("user_id"),
-        tenant = um.q("tenant_id"),
-        del = um.q("deleted_at"),
+    let mut user_assignments = std::collections::BTreeMap::new();
+    user_assignments.insert(
+        "status".to_string(),
+        LogicalAssignment::Set {
+            value: LogicalValue::String("SUSPENDED".to_string()),
+        },
     );
-    let uid = Uuid::parse_str(user_id.trim())
-        .map_err(|_| Status::invalid_argument("user_id must be a UUID"))?;
-    let affected = sqlx::query(&user_sql)
-        .bind(uid)
-        .bind(tenant_id)
-        .execute(pool)
-        .await
-        .map_err(map_err("user deactivate failed"))?
-        .rows_affected();
+    let (affected, _) = execute_typed_update(
+        pool,
+        LogicalUpdate {
+            message_type: USER_MSG.to_string(),
+            filter: LogicalFilter::And(vec![
+                eq("user_id", uuid_value(user_id, "user_id")?),
+                eq("tenant_id", LogicalValue::String(tenant_id.to_string())),
+                LogicalFilter::IsNull("deleted_at".to_string()),
+            ]),
+            assignments: user_assignments,
+            return_fields: Vec::new(),
+            require_affected: false,
+        },
+    )
+    .await?;
 
     // Revoke active sessions for the user (tenant-scoped). The plan ties this to
     // tenant policy; we revoke unconditionally on deprovision (fail-safe).
-    let sm = native_model(
-        "udb.core.authn.entity.v1.Session",
-        &["user_id", "tenant_id", "is_active", "revoke_reason"],
+    let mut session_assignments = std::collections::BTreeMap::new();
+    session_assignments.insert(
+        "is_active".to_string(),
+        LogicalAssignment::Set {
+            value: LogicalValue::Bool(false),
+        },
     );
-    let sess_sql = format!(
-        "UPDATE {rel} SET {active} = false, {reason} = 'scim_deprovision' \
-         WHERE {uid} = $1::UUID AND {tenant} = $2 AND {active} = true",
-        rel = sm.relation,
-        active = sm.q("is_active"),
-        reason = sm.q("revoke_reason"),
-        uid = sm.q("user_id"),
-        tenant = sm.q("tenant_id"),
+    session_assignments.insert(
+        "revoke_reason".to_string(),
+        LogicalAssignment::Set {
+            value: LogicalValue::String("scim_deprovision".to_string()),
+        },
     );
-    let _ = sqlx::query(&sess_sql)
-        .bind(uid)
-        .bind(tenant_id)
-        .execute(pool)
-        .await; // best-effort
+    let _ = execute_typed_update(
+        pool,
+        LogicalUpdate {
+            message_type: SESSION_MSG.to_string(),
+            filter: LogicalFilter::And(vec![
+                eq("user_id", uuid_value(user_id, "user_id")?),
+                eq("tenant_id", LogicalValue::String(tenant_id.to_string())),
+                eq("is_active", LogicalValue::Bool(true)),
+            ]),
+            assignments: session_assignments,
+            return_fields: Vec::new(),
+            require_affected: false,
+        },
+    )
+    .await; // best-effort
     Ok(affected > 0)
 }
 

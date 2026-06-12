@@ -210,6 +210,13 @@ impl DataBrokerService {
             None
         };
 
+        // Native-service statuses — single source, reused by the readiness probe
+        // loop below and the unified readiness contract further down.
+        let native_statuses =
+            crate::runtime::service::native_registry::resolved_native_service_statuses(
+                self.runtime_snapshot().config(),
+            );
+
         // Live probes
         let mut probes = Vec::new();
         if request.with_probes {
@@ -218,6 +225,36 @@ impl DataBrokerService {
             }
             #[cfg(feature = "kafka")]
             probes.push(self.runtime_snapshot().probe_kafka_metadata());
+
+            // Native-store writability (P6.2): probe EVERY mounted native service
+            // that declares a canonical persistence backing — a real KV round-trip
+            // on the backend its proto `native_service` binding resolves to, not a
+            // capability claim (directive #4). Previously only "storage" was probed,
+            // so the other mounted native services' persistence was never verified.
+            // Degraded → per-service warning, never fatal.
+            for status in native_statuses.iter().filter(|s| {
+                s.mounted
+                    && crate::runtime::service::native_store_binding::native_service_store_backend(
+                        &s.service_id,
+                    )
+                    .is_some()
+            }) {
+                match self
+                    .runtime_snapshot()
+                    .native_store_self_check(&status.service_id, &project_scope)
+                    .await
+                {
+                    Ok(backend) => warnings.push(format!(
+                        "native store [{}]: persistence verified on '{backend}'",
+                        status.service_id
+                    )),
+                    Err(err) => warnings.push(format!(
+                        "native store [{}]: persistence self-check failed: {}",
+                        status.service_id,
+                        err.message()
+                    )),
+                }
+            }
         }
 
         // Annotate MongoDB transport in warnings.
@@ -264,10 +301,6 @@ impl DataBrokerService {
             .and_then(|p| serde_json::to_vec(p).ok())
             .unwrap_or_default();
         let probes_json = serde_json::to_vec(&probes).unwrap_or_default();
-        let native_statuses =
-            crate::runtime::service::native_registry::resolved_native_service_statuses(
-                self.runtime_snapshot().config(),
-            );
 
         // ── Phase 10: unified readiness contract ──────────────────────────────
         // GetHealthReport, `udb native doctor`, the gRPC health service, and the

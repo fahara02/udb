@@ -93,6 +93,24 @@ fn weaviate_status_to_tonic(status: reqwest::StatusCode, body: &str) -> tonic::S
     http_status_to_tonic(status, &detail, "weaviate")
 }
 
+pub(crate) fn weaviate_class_name(resource_name: &str) -> String {
+    let mut out = String::new();
+    for ch in resource_name.chars() {
+        if ch.is_ascii_alphanumeric() {
+            out.push(ch);
+        } else if ch == '_' || ch == '-' {
+            out.push('_');
+        }
+    }
+    if out.is_empty() {
+        out.push_str("UdbVector");
+    }
+    if !out.chars().next().is_some_and(|ch| ch.is_ascii_uppercase()) {
+        out.insert_str(0, "Udb");
+    }
+    out
+}
+
 #[derive(Debug, Clone)]
 pub struct WeaviateExecutor {
     client: WeaviateHttpClient,
@@ -165,14 +183,17 @@ impl ResourceAdminExecutor for WeaviateExecutor {
         resource_name: &str,
         spec_json: &str,
     ) -> Result<(), tonic::Status> {
-        let mut spec: JsonValue = serde_json::from_str(spec_json)
+        let _spec: JsonValue = serde_json::from_str(spec_json)
             .map_err(|e| tonic::Status::invalid_argument(format!("invalid spec: {e}")))?;
-        if let JsonValue::Object(map) = &mut spec {
-            map.entry("class".to_string())
-                .or_insert_with(|| JsonValue::String(resource_name.to_string()));
-            map.entry("vectorizer".to_string())
-                .or_insert_with(|| JsonValue::String("none".to_string()));
-        }
+        let spec = serde_json::json!({
+            "class": weaviate_class_name(resource_name),
+            "vectorizer": "none",
+            "properties": [
+                { "name": "tag", "dataType": ["text"] },
+                { "name": "_tenant_id", "dataType": ["text"] },
+                { "name": "_project_id", "dataType": ["text"] }
+            ]
+        });
         self.client
             .request_json(reqwest::Method::POST, "/v1/schema", &spec)
             .await?;

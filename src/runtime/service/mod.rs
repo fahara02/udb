@@ -59,16 +59,21 @@ mod auth_service;
 pub use auth_service::auth_readiness_triples;
 // urgent_fix #20: offline root-bootstrap entry point for the `udb auth bootstrap`
 // CLI (the bin crate can only reach `pub` items re-exported to this level).
-pub use auth_service::bootstrap_admin_user;
 /// Wildcard CDC topic patterns covering every native auth/authz/apikey/idp/ops
 /// event. Re-exported so the CDC config (`crate::runtime::cdc`) can guarantee a
 /// tightened operator topic allowlist never silences auth security/audit events
 /// — see `CdcConfig::normalize`. (The `auth_service` module is private to this
 /// `service` module, so this `pub(crate)` re-export is the reachable handle.)
 pub(crate) use auth_service::events::topics::AUTH_TOPIC_PATTERNS;
+pub use auth_service::{BootstrapAdmin, bootstrap_admin_user};
 mod method_security;
+pub(crate) mod native_entity_store;
+#[cfg(test)]
+mod native_entity_store_tests;
 mod native_helpers;
 pub mod native_registry;
+pub(crate) mod native_runtime;
+pub(crate) mod native_store_binding;
 mod notification_service;
 mod storage_service;
 mod tenant_service;
@@ -486,64 +491,52 @@ impl DataBrokerService {
             operation = operation,
             "authorizing UDB request"
         );
-        // Milestone 7: when UDB_AUTHZ_V2 is enabled, route the same loaded ABAC
-        // policies through the v2 decision engine (structured Decision +
-        // decision_id), preserving the mandatory tenant/purpose checks so
-        // behavior matches `evaluate_abac`. Default OFF → unchanged legacy path.
-        // A per-instance override wins over the env flag (deterministic tests;
-        // staged rollout seam for item 132).
-        if self.abac_v2_override.unwrap_or_else(authz_v2_enabled) {
-            if security.tenant_id.trim().is_empty() {
-                return Err(Status::unauthenticated("tenant_id is required"));
-            }
-            if security.purpose.trim().is_empty() {
-                return Err(Status::permission_denied("purpose is required"));
-            }
-            let principal = Principal::from_security_context(security, Vec::new());
-            let resource = ResourceRef::message(message_type);
-            let attributes = std::collections::BTreeMap::new();
-            let snapshot = self.current_abac_snapshot();
-            let decision = snapshot.authorize(&AuthzQuery {
+        // #5 lockout fix — control/meta RPCs reach this gate with a WILDCARD
+        // message type ("*", from `authorized_call!`); data operations pass their
+        // real message type. Control RPCs are authorized by their own coarse
+        // `require_admin_scope` gate, and the auth listener keeps the public
+        // routes (Login/Authenticate/RefreshToken) open — NEITHER is governed by
+        // the data-plane policy set. Subjecting the wildcard gate to
+        // policy-match-or-deny means the FIRST user policy insert (matching no
+        // control method) would deny `GetCapabilities` and every control RPC,
+        // locking out the cluster. Deny-by-default governs ONLY real data ops.
+        if message_type == "*" {
+            return Ok(Uuid::new_v4().to_string());
+        }
+        // Block 2 (auth_fix.md) — the data plane decides through the SAME Casbin
+        // engine the native AuthzService uses (`casbin_authorize`): no hand-rolled
+        // matcher, no legacy `evaluate_abac`, no v2 flag. Deny-by-default. A data
+        // operation must carry tenant + purpose.
+        if security.tenant_id.trim().is_empty() {
+            return Err(Status::unauthenticated("tenant_id is required"));
+        }
+        if security.purpose.trim().is_empty() {
+            return Err(Status::permission_denied("purpose is required"));
+        }
+        let principal = Principal::from_security_context(security, Vec::new());
+        let resource = ResourceRef::message(message_type);
+        let attributes = std::collections::BTreeMap::new();
+        let snapshot = self.current_abac_snapshot();
+        let decision = snapshot
+            .casbin_authorize(&AuthzQuery {
                 principal: &principal,
                 resource: &resource,
                 action: operation,
                 purpose: &security.purpose,
                 attributes: &attributes,
-            });
-            tracing::debug!(
-                trace_id = security.trace_id,
-                decision_id = decision.decision_id,
-                allowed = decision.allowed,
-                "authz v2 decision"
-            );
-            return if decision.allowed {
-                Ok(decision.decision_id)
-            } else {
-                Err(Status::permission_denied(decision.deny_reason))
-            };
+            })
+            .await;
+        tracing::debug!(
+            trace_id = security.trace_id,
+            decision_id = decision.decision_id,
+            allowed = decision.allowed,
+            "authz casbin decision"
+        );
+        if decision.allowed {
+            Ok(decision.decision_id)
+        } else {
+            Err(Status::permission_denied(decision.deny_reason))
         }
-
-        // Legacy (v2-off) path: `evaluate_abac` is synchronous, so borrow the
-        // policies under the read guard instead of cloning the whole Vec per
-        // request. The default v2 path above already serves the cached
-        // `current_abac_snapshot()` (built once per reload) — #83.
-        let result = match self.abac_policies.read() {
-            Ok(guard) => evaluate_abac(
-                &guard,
-                security,
-                message_type,
-                operation,
-                self.abac_default_allow,
-            ),
-            Err(_) => evaluate_abac(
-                &[],
-                security,
-                message_type,
-                operation,
-                self.abac_default_allow,
-            ),
-        };
-        result.map(|()| Uuid::new_v4().to_string())
     }
 
     /// #112: per-item ABAC authorization usable from inside a `'static` batch
@@ -1589,9 +1582,7 @@ pub async fn serve(
             // dry-run (it must not write). Non-fatal.
             if !startup_dry_run {
                 if let Ok(pool) = runtime.pg_pool() {
-                    if let Err(err) =
-                        auth_service::seed_system_authz_defaults(pool).await
-                    {
+                    if let Err(err) = auth_service::seed_system_authz_defaults(pool).await {
                         tracing::warn!(error = %err, "seed system authz defaults failed (non-fatal)");
                     }
                 }
@@ -2822,7 +2813,7 @@ fn insert_ascii_header(
 // Phase G: service.rs split — inherent RPC handler bodies + tests.
 mod handlers_admin;
 mod handlers_catalog;
-mod handlers_data;
+pub(crate) mod handlers_data;
 mod handlers_meta;
 mod handlers_object;
 mod handlers_policy;

@@ -582,19 +582,18 @@ impl DataBrokerRuntime {
         let cdc_config = self.config.cdc.clone();
 
         let outbox_relation = cdc_config.outbox_relation();
-        let sql = format!(
-            "INSERT INTO {outbox_relation} \
-             (event_id, topic, partition_key, payload, created_at) \
-             VALUES ($1::UUID, $2, $3, $4::JSONB, NOW())"
-        );
-        sqlx::query(&sql)
-            .bind(event_id_uuid)
-            .bind(topic)
-            .bind(partition_key)
-            .bind(enriched.to_string())
-            .execute(pool)
-            .await
-            .map_err(|e| tonic::Status::internal(format!("failed to enqueue event: {e}")))?;
+        // ONE shared insert path (`cdc::insert_outbox_row`) — same SQL + bind types as
+        // every other outbox writer, so the §4 prepared-statement collision can't recur.
+        crate::runtime::cdc::insert_outbox_row(
+            pool,
+            &outbox_relation,
+            event_id_uuid,
+            topic,
+            partition_key,
+            &enriched,
+        )
+        .await
+        .map_err(|e| tonic::Status::internal(format!("failed to enqueue event: {e}")))?;
 
         // Store idempotency key in Redis with 7-day TTL.
         if let Some(ikey) = idempotency_key

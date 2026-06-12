@@ -920,10 +920,25 @@ impl DataBrokerRuntime {
             qi_runtime(schema),
             qi_runtime(name)
         );
-        sqlx::query(&sql)
-            .execute(self.pg_pool()?)
-            .await
-            .map_err(|err| tonic::Status::internal(format!("refresh view failed: {err}")))?;
+        if let Err(err) = sqlx::query(&sql).execute(self.pg_pool()?).await {
+            let error_text = err.to_string();
+            if !is_unpopulated_materialized_view_refresh_error(&error_text) {
+                return Err(tonic::Status::internal(format!(
+                    "refresh view failed: {err}"
+                )));
+            }
+            let sql = format!(
+                "REFRESH MATERIALIZED VIEW {}.{}",
+                qi_runtime(schema),
+                qi_runtime(name)
+            );
+            sqlx::query(&sql)
+                .execute(self.pg_pool()?)
+                .await
+                .map_err(|err| {
+                    tonic::Status::internal(format!("initial refresh view failed: {err}"))
+                })?;
+        }
         Ok(())
     }
 
@@ -1631,5 +1646,28 @@ impl DataBrokerRuntime {
                 error: Some(format!("Kafka metadata fetch failed: {err}")),
             },
         }
+    }
+}
+
+fn is_unpopulated_materialized_view_refresh_error(error_text: &str) -> bool {
+    let text = error_text.to_ascii_lowercase();
+    text.contains("concurrently")
+        && (text.contains("has not been populated")
+            || text.contains("not been populated")
+            || text.contains("cannot refresh materialized view"))
+}
+
+#[cfg(test)]
+mod materialized_view_refresh_tests {
+    use super::is_unpopulated_materialized_view_refresh_error;
+
+    #[test]
+    fn detects_unpopulated_materialized_view_concurrent_refresh_error() {
+        assert!(is_unpopulated_materialized_view_refresh_error(
+            "ERROR: CONCURRENTLY cannot be used when the materialized view has not been populated"
+        ));
+        assert!(!is_unpopulated_materialized_view_refresh_error(
+            "ERROR: could not create unique index for materialized view"
+        ));
     }
 }

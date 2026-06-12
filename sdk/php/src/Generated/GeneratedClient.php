@@ -18,7 +18,7 @@ use Grpc\ChannelCredentials;
  * the embedded proto descriptor set by `udb sdk generate`, so its surface can
  * never drift from the wire contract.
  *
- *   UDB version ...... 0.3.2
+ *   UDB version ...... 0.3.5
  *   Protocol version . 1.0.0
  *   Services ......... 16
  *   RPCs ............. 262
@@ -51,6 +51,279 @@ final class GeneratedClient
     private const RETRYABLE_CODES = [
         14, // UNAVAILABLE
         8,  // RESOURCE_EXHAUSTED
+    ];
+
+    /**
+     * Proto-derived operation_kind per RPC, keyed by method name (globally unique):
+     * "read_only" | "mutation" | "destructive". The SINGLE authoritative
+     * state-change classification — used for retry safety and SDK conformance
+     * probing. Never derived from the method name's spelling.
+     *
+     * @var array<string, string>
+     */
+    public const OPERATION_KIND = [
+        "GetExecutorPerformance" => "read_only",
+        "GetPipelineSummary" => "read_only",
+        "GetReconciliationAnalytics" => "read_only",
+        "GetSlaCompliance" => "read_only",
+        "GetThroughput" => "read_only",
+        "RecordPipelineMetric" => "mutation",
+        "TriggerSnapshot" => "mutation",
+        "CreateApiKey" => "mutation",
+        "EmergencyRevokeApiKeys" => "destructive",
+        "GetApiKey" => "read_only",
+        "GetApiKeyUsageStats" => "read_only",
+        "ListApiKeys" => "read_only",
+        "RevokeApiKey" => "mutation",
+        "RotateApiKey" => "mutation",
+        "UpdateApiKey" => "mutation",
+        "ValidateApiKey" => "read_only",
+        "CompleteStep" => "mutation",
+        "CreatePipelineDefinition" => "mutation",
+        "GetAsset" => "read_only",
+        "GetPipeline" => "read_only",
+        "GetPipelineDefinition" => "read_only",
+        "ListAssets" => "read_only",
+        "RegisterAsset" => "mutation",
+        "StartPipeline" => "mutation",
+        "AdminResetMfa" => "destructive",
+        "AdminResetPassword" => "destructive",
+        "AdminRevokeAllTenantSessions" => "destructive",
+        "AdminRevokeAllUserSessions" => "destructive",
+        "AdminRevokeSession" => "destructive",
+        "Authenticate" => "read_only",
+        "ChangePassword" => "mutation",
+        "ChangeUserStatus" => "destructive",
+        "ConfirmMFAEnrollment" => "mutation",
+        "CreateSession" => "mutation",
+        "CreateUser" => "mutation",
+        "DeleteWebAuthnCredential" => "mutation",
+        "DisableMfaFactor" => "mutation",
+        "EmergencyRevoke" => "destructive",
+        "EnrollMFA" => "mutation",
+        "FinishWebAuthnAuthentication" => "mutation",
+        "FinishWebAuthnRegistration" => "mutation",
+        "ForgotPassword" => "mutation",
+        "GenerateRecoveryCodes" => "mutation",
+        "GetJwks" => "read_only",
+        "GetMfaPolicy" => "read_only",
+        "GetSession" => "read_only",
+        "GetUser" => "read_only",
+        "IntrospectToken" => "read_only",
+        "IssueMfaChallenge" => "mutation",
+        "ListDevices" => "read_only",
+        "ListMfaFactors" => "read_only",
+        "ListSessions" => "read_only",
+        "ListUsers" => "read_only",
+        "ListWebAuthnCredentials" => "read_only",
+        "Login" => "mutation",
+        "Logout" => "mutation",
+        "PutMfaPolicy" => "mutation",
+        "RefreshSession" => "mutation",
+        "RefreshToken" => "mutation",
+        "RenamePasskey" => "mutation",
+        "ResendOTP" => "mutation",
+        "ResetPassword" => "mutation",
+        "RevokeDevice" => "mutation",
+        "RevokeRecoveryCodes" => "mutation",
+        "RevokeSession" => "mutation",
+        "SendOTP" => "mutation",
+        "SendPhoneVerification" => "mutation",
+        "StartWebAuthnAuthentication" => "mutation",
+        "StartWebAuthnRegistration" => "mutation",
+        "UpdateUser" => "mutation",
+        "ValidateCSRF" => "read_only",
+        "ValidateToken" => "read_only",
+        "VerifyMfaChallenge" => "read_only",
+        "VerifyOTP" => "read_only",
+        "ActivateCanary" => "destructive",
+        "ActivatePolicyVersion" => "destructive",
+        "ApprovePolicyDraft" => "mutation",
+        "AssignRole" => "mutation",
+        "Authorize" => "read_only",
+        "BatchCheckPermissions" => "read_only",
+        "CheckAccess" => "read_only",
+        "CreatePolicyDraft" => "mutation",
+        "CreatePolicyRule" => "mutation",
+        "CreateRole" => "mutation",
+        "DeletePolicyRule" => "mutation",
+        "DeleteRole" => "mutation",
+        "DiffPolicyDraft" => "read_only",
+        "ExplainPolicy" => "read_only",
+        "GetAuthzRevision" => "read_only",
+        "GetCanaryStatus" => "read_only",
+        "GetNativeAccess" => "read_only",
+        "GetPolicyBundle" => "read_only",
+        "GetPolicyRule" => "read_only",
+        "GetRole" => "read_only",
+        "InvalidatePolicyBundles" => "destructive",
+        "LintAuthzPolicies" => "read_only",
+        "ListAccessDecisionAudits" => "read_only",
+        "ListPolicyRules" => "read_only",
+        "ListPolicyVersions" => "read_only",
+        "ListRoles" => "read_only",
+        "ListUserPermissions" => "read_only",
+        "ListUserRoles" => "read_only",
+        "MigrateLegacyPolicies" => "destructive",
+        "PromoteCanary" => "destructive",
+        "PutAuthzPolicy" => "mutation",
+        "PutRelationship" => "mutation",
+        "PutRoleBinding" => "mutation",
+        "RejectPolicyDraft" => "mutation",
+        "RevokeRole" => "mutation",
+        "RollbackPolicyVersion" => "destructive",
+        "SeedBuiltinRoles" => "mutation",
+        "SimulatePolicy" => "mutation",
+        "SubmitPolicyDraft" => "mutation",
+        "UpdatePolicyDraft" => "mutation",
+        "UpdateRole" => "mutation",
+        "AckStatus" => "mutation",
+        "DeltaResources" => "mutation",
+        "GetResources" => "read_only",
+        "ListNodeStates" => "read_only",
+        "StreamResources" => "mutation",
+        "CreateProvider" => "mutation",
+        "DisableProvider" => "mutation",
+        "ForceJwksRefresh" => "mutation",
+        "GetProvider" => "read_only",
+        "ImportSamlMetadata" => "mutation",
+        "LinkIdentity" => "mutation",
+        "ListExternalIdentities" => "read_only",
+        "ListProviders" => "read_only",
+        "PreviewClaimMapping" => "read_only",
+        "PreviewGroupMapping" => "read_only",
+        "ResolveExternalIdentity" => "mutation",
+        "SamlAcs" => "mutation",
+        "ScimCreateGroup" => "mutation",
+        "ScimCreateUser" => "mutation",
+        "ScimDeleteGroup" => "mutation",
+        "ScimDeleteUser" => "mutation",
+        "ScimGetGroup" => "mutation",
+        "ScimGetUser" => "mutation",
+        "ScimListGroups" => "mutation",
+        "ScimListUsers" => "mutation",
+        "ScimPatchGroup" => "mutation",
+        "ScimPatchUser" => "mutation",
+        "ScimReplaceUser" => "mutation",
+        "StartSamlLogin" => "mutation",
+        "TestProviderDiscovery" => "read_only",
+        "UnlinkIdentity" => "mutation",
+        "UpdateProvider" => "mutation",
+        "GetDeliveryStats" => "read_only",
+        "GetNotification" => "read_only",
+        "GetPreference" => "read_only",
+        "GetTemplate" => "read_only",
+        "ListNotifications" => "read_only",
+        "ListPreferences" => "read_only",
+        "ListTemplates" => "read_only",
+        "RetryNotification" => "mutation",
+        "SendNotification" => "mutation",
+        "SetPreference" => "mutation",
+        "UpsertTemplate" => "mutation",
+        "DeleteFile" => "mutation",
+        "FinalizeUpload" => "mutation",
+        "GetDownloadUrl" => "read_only",
+        "GetFile" => "read_only",
+        "ListFiles" => "read_only",
+        "RegisterUpload" => "mutation",
+        "UpdateFile" => "mutation",
+        "CreateTenant" => "mutation",
+        "GetTenant" => "read_only",
+        "GetTenantConfig" => "read_only",
+        "ListTenants" => "read_only",
+        "UpdateTenant" => "mutation",
+        "UpdateTenantConfig" => "mutation",
+        "GetPeer" => "read_only",
+        "JoinRoom" => "mutation",
+        "LeaveRoom" => "mutation",
+        "ListPeers" => "read_only",
+        "CloseRoom" => "mutation",
+        "CreateRoom" => "mutation",
+        "GetRoom" => "read_only",
+        "ListRooms" => "read_only",
+        "UpdateRoom" => "mutation",
+        "Signal" => "mutation",
+        "ListTracks" => "read_only",
+        "MuteTrack" => "mutation",
+        "PublishTrack" => "mutation",
+        "UnpublishTrack" => "mutation",
+        "IssueCredentials" => "mutation",
+        "ActivateCatalog" => "destructive",
+        "AnalyticalQuery" => "read_only",
+        "ApplyMigration" => "mutation",
+        "ApproveMigrationPlan" => "mutation",
+        "BatchSelect" => "mutation",
+        "BatchUpsert" => "mutation",
+        "BeginTx" => "mutation",
+        "CacheDelete" => "mutation",
+        "CacheGet" => "read_only",
+        "CacheScan" => "read_only",
+        "CacheSet" => "mutation",
+        "CreateMaterializedView" => "mutation",
+        "Delete" => "mutation",
+        "DeletePolicy" => "mutation",
+        "DismissDlqEvent" => "mutation",
+        "DocumentDelete" => "mutation",
+        "DocumentFind" => "read_only",
+        "DocumentGet" => "read_only",
+        "DocumentUpsert" => "mutation",
+        "DropResource" => "destructive",
+        "EnqueueOutboxEvent" => "mutation",
+        "EnsureProject" => "mutation",
+        "EnsureResource" => "mutation",
+        "GeneratePresignedUrl" => "mutation",
+        "GenericDispatch" => "mutation",
+        "GetAdminSummary" => "read_only",
+        "GetCapabilities" => "read_only",
+        "GetCatalogManifest" => "read_only",
+        "GetCatalogVersion" => "read_only",
+        "GetCatalogVersions" => "read_only",
+        "GetCdcStatus" => "read_only",
+        "GetDlqEvent" => "read_only",
+        "GetHealthReport" => "read_only",
+        "GetMigrationStatus" => "read_only",
+        "GetObject" => "read_only",
+        "GetSaga" => "read_only",
+        "GraphMutate" => "mutation",
+        "GraphQuery" => "read_only",
+        "InitiateMultipartUpload" => "mutation",
+        "LintPolicies" => "read_only",
+        "ListAdminAuditLogs" => "read_only",
+        "ListDlqEvents" => "read_only",
+        "ListMessageSchemas" => "read_only",
+        "ListMigrationRuns" => "read_only",
+        "ListPolicies" => "read_only",
+        "ListProjects" => "read_only",
+        "ListResources" => "read_only",
+        "ListSagas" => "read_only",
+        "LookupMessageSchema" => "read_only",
+        "MarkSagaReviewed" => "mutation",
+        "PauseCdc" => "mutation",
+        "PlanMigration" => "mutation",
+        "PreviewCdcRedaction" => "read_only",
+        "PublishCDC" => "mutation",
+        "PutObject" => "mutation",
+        "PutPolicy" => "destructive",
+        "QuarantineDlqEvent" => "mutation",
+        "ReloadPolicies" => "destructive",
+        "ReplayDlqEvent" => "mutation",
+        "ResumeCdc" => "mutation",
+        "RetrySagaCompensation" => "mutation",
+        "RollbackCatalog" => "destructive",
+        "ScanProjectionDrift" => "read_only",
+        "Select" => "read_only",
+        "SelectV2" => "read_only",
+        "StageCatalog" => "destructive",
+        "StepDownCdcLeader" => "mutation",
+        "TimeSeriesQuery" => "read_only",
+        "TimeSeriesWrite" => "mutation",
+        "Upsert" => "mutation",
+        "ValidateCatalog" => "destructive",
+        "VectorBatchUpsert" => "mutation",
+        "VectorHybridSearch" => "read_only",
+        "VectorSearch" => "read_only",
+        "VectorUpsert" => "mutation",
+        "VerifyAdminAuditLog" => "read_only",
     ];
 
     private ?UdbMetadata $boundContext = null;
@@ -132,7 +405,7 @@ final class GeneratedClient
             'udb.core.analytics.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetExecutorPerformance($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GetExecutorPerformance'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -152,7 +425,7 @@ final class GeneratedClient
             'udb.core.analytics.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetPipelineSummary($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GetPipelineSummary'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -172,7 +445,7 @@ final class GeneratedClient
             'udb.core.analytics.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetReconciliationAnalytics($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GetReconciliationAnalytics'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -192,7 +465,7 @@ final class GeneratedClient
             'udb.core.analytics.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetSlaCompliance($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GetSlaCompliance'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -212,7 +485,7 @@ final class GeneratedClient
             'udb.core.analytics.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetThroughput($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GetThroughput'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -232,7 +505,7 @@ final class GeneratedClient
             'udb.core.analytics.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->RecordPipelineMetric($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('RecordPipelineMetric'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -252,7 +525,7 @@ final class GeneratedClient
             'udb.core.analytics.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->TriggerSnapshot($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('TriggerSnapshot'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -272,7 +545,7 @@ final class GeneratedClient
             'udb.core.apikey.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->CreateApiKey($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('CreateApiKey'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -292,7 +565,7 @@ final class GeneratedClient
             'udb.core.apikey.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->EmergencyRevokeApiKeys($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('EmergencyRevokeApiKeys'),
+            'destructive' === 'read_only',
         );
     }
     /**
@@ -312,7 +585,7 @@ final class GeneratedClient
             'udb.core.apikey.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetApiKey($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GetApiKey'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -332,7 +605,7 @@ final class GeneratedClient
             'udb.core.apikey.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetApiKeyUsageStats($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GetApiKeyUsageStats'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -352,7 +625,7 @@ final class GeneratedClient
             'udb.core.apikey.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListApiKeys($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ListApiKeys'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -372,7 +645,7 @@ final class GeneratedClient
             'udb.core.apikey.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->RevokeApiKey($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('RevokeApiKey'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -392,7 +665,7 @@ final class GeneratedClient
             'udb.core.apikey.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->RotateApiKey($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('RotateApiKey'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -412,7 +685,7 @@ final class GeneratedClient
             'udb.core.apikey.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->UpdateApiKey($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('UpdateApiKey'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -432,7 +705,7 @@ final class GeneratedClient
             'udb.core.apikey.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ValidateApiKey($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ValidateApiKey'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -452,7 +725,7 @@ final class GeneratedClient
             'udb.core.asset.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->CompleteStep($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('CompleteStep'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -472,7 +745,7 @@ final class GeneratedClient
             'udb.core.asset.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->CreatePipelineDefinition($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('CreatePipelineDefinition'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -492,7 +765,7 @@ final class GeneratedClient
             'udb.core.asset.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetAsset($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GetAsset'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -512,7 +785,7 @@ final class GeneratedClient
             'udb.core.asset.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetPipeline($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GetPipeline'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -532,7 +805,7 @@ final class GeneratedClient
             'udb.core.asset.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetPipelineDefinition($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GetPipelineDefinition'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -552,7 +825,7 @@ final class GeneratedClient
             'udb.core.asset.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListAssets($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ListAssets'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -572,7 +845,7 @@ final class GeneratedClient
             'udb.core.asset.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->RegisterAsset($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('RegisterAsset'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -592,7 +865,7 @@ final class GeneratedClient
             'udb.core.asset.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->StartPipeline($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('StartPipeline'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -612,7 +885,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->AdminResetMfa($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('AdminResetMfa'),
+            'destructive' === 'read_only',
         );
     }
     /**
@@ -632,7 +905,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->AdminResetPassword($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('AdminResetPassword'),
+            'destructive' === 'read_only',
         );
     }
     /**
@@ -652,7 +925,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->AdminRevokeAllTenantSessions($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('AdminRevokeAllTenantSessions'),
+            'destructive' === 'read_only',
         );
     }
     /**
@@ -672,7 +945,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->AdminRevokeAllUserSessions($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('AdminRevokeAllUserSessions'),
+            'destructive' === 'read_only',
         );
     }
     /**
@@ -692,7 +965,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->AdminRevokeSession($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('AdminRevokeSession'),
+            'destructive' === 'read_only',
         );
     }
     /**
@@ -712,7 +985,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->Authenticate($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('Authenticate'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -732,7 +1005,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ChangePassword($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ChangePassword'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -752,7 +1025,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ChangeUserStatus($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ChangeUserStatus'),
+            'destructive' === 'read_only',
         );
     }
     /**
@@ -772,7 +1045,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ConfirmMFAEnrollment($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ConfirmMFAEnrollment'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -792,7 +1065,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->CreateSession($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('CreateSession'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -812,7 +1085,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->CreateUser($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('CreateUser'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -832,7 +1105,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->DeleteWebAuthnCredential($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('DeleteWebAuthnCredential'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -852,7 +1125,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->DisableMfaFactor($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('DisableMfaFactor'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -872,7 +1145,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->EmergencyRevoke($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('EmergencyRevoke'),
+            'destructive' === 'read_only',
         );
     }
     /**
@@ -892,7 +1165,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->EnrollMFA($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('EnrollMFA'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -912,7 +1185,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->FinishWebAuthnAuthentication($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('FinishWebAuthnAuthentication'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -932,7 +1205,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->FinishWebAuthnRegistration($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('FinishWebAuthnRegistration'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -952,7 +1225,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ForgotPassword($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ForgotPassword'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -972,7 +1245,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GenerateRecoveryCodes($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GenerateRecoveryCodes'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -992,7 +1265,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetJwks($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GetJwks'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -1012,7 +1285,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetMfaPolicy($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GetMfaPolicy'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -1032,7 +1305,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetSession($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GetSession'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -1052,7 +1325,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetUser($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GetUser'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -1072,7 +1345,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->IntrospectToken($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('IntrospectToken'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -1092,7 +1365,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->IssueMfaChallenge($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('IssueMfaChallenge'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -1112,7 +1385,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListDevices($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ListDevices'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -1132,7 +1405,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListMfaFactors($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ListMfaFactors'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -1152,7 +1425,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListSessions($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ListSessions'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -1172,7 +1445,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListUsers($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ListUsers'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -1192,7 +1465,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListWebAuthnCredentials($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ListWebAuthnCredentials'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -1212,7 +1485,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->Login($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('Login'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -1232,7 +1505,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->Logout($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('Logout'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -1252,7 +1525,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->PutMfaPolicy($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('PutMfaPolicy'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -1272,7 +1545,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->RefreshSession($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('RefreshSession'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -1292,7 +1565,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->RefreshToken($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('RefreshToken'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -1312,7 +1585,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->RenamePasskey($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('RenamePasskey'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -1332,7 +1605,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ResendOTP($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ResendOTP'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -1352,7 +1625,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ResetPassword($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ResetPassword'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -1372,7 +1645,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->RevokeDevice($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('RevokeDevice'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -1392,7 +1665,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->RevokeRecoveryCodes($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('RevokeRecoveryCodes'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -1412,7 +1685,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->RevokeSession($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('RevokeSession'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -1432,7 +1705,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->SendOTP($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('SendOTP'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -1452,7 +1725,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->SendPhoneVerification($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('SendPhoneVerification'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -1472,7 +1745,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->StartWebAuthnAuthentication($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('StartWebAuthnAuthentication'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -1492,7 +1765,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->StartWebAuthnRegistration($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('StartWebAuthnRegistration'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -1512,7 +1785,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->UpdateUser($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('UpdateUser'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -1532,7 +1805,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ValidateCSRF($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ValidateCSRF'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -1552,7 +1825,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ValidateToken($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ValidateToken'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -1572,7 +1845,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->VerifyMfaChallenge($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('VerifyMfaChallenge'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -1592,7 +1865,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->VerifyOTP($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('VerifyOTP'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -1612,7 +1885,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ActivateCanary($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ActivateCanary'),
+            'destructive' === 'read_only',
         );
     }
     /**
@@ -1632,7 +1905,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ActivatePolicyVersion($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ActivatePolicyVersion'),
+            'destructive' === 'read_only',
         );
     }
     /**
@@ -1652,7 +1925,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ApprovePolicyDraft($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ApprovePolicyDraft'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -1672,7 +1945,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->AssignRole($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('AssignRole'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -1692,7 +1965,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->Authorize($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('Authorize'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -1712,7 +1985,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->BatchCheckPermissions($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('BatchCheckPermissions'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -1732,7 +2005,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->CheckAccess($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('CheckAccess'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -1752,7 +2025,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->CreatePolicyDraft($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('CreatePolicyDraft'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -1772,7 +2045,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->CreatePolicyRule($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('CreatePolicyRule'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -1792,7 +2065,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->CreateRole($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('CreateRole'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -1812,7 +2085,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->DeletePolicyRule($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('DeletePolicyRule'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -1832,7 +2105,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->DeleteRole($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('DeleteRole'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -1852,7 +2125,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->DiffPolicyDraft($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('DiffPolicyDraft'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -1872,7 +2145,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ExplainPolicy($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ExplainPolicy'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -1892,7 +2165,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetAuthzRevision($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GetAuthzRevision'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -1912,7 +2185,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetCanaryStatus($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GetCanaryStatus'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -1932,7 +2205,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetNativeAccess($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GetNativeAccess'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -1952,7 +2225,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetPolicyBundle($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GetPolicyBundle'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -1972,7 +2245,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetPolicyRule($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GetPolicyRule'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -1992,7 +2265,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetRole($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GetRole'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -2012,7 +2285,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->InvalidatePolicyBundles($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('InvalidatePolicyBundles'),
+            'destructive' === 'read_only',
         );
     }
     /**
@@ -2032,7 +2305,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->LintAuthzPolicies($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('LintAuthzPolicies'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -2052,7 +2325,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListAccessDecisionAudits($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ListAccessDecisionAudits'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -2072,7 +2345,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListPolicyRules($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ListPolicyRules'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -2092,7 +2365,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListPolicyVersions($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ListPolicyVersions'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -2112,7 +2385,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListRoles($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ListRoles'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -2132,7 +2405,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListUserPermissions($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ListUserPermissions'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -2152,7 +2425,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListUserRoles($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ListUserRoles'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -2172,7 +2445,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->MigrateLegacyPolicies($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('MigrateLegacyPolicies'),
+            'destructive' === 'read_only',
         );
     }
     /**
@@ -2192,7 +2465,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->PromoteCanary($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('PromoteCanary'),
+            'destructive' === 'read_only',
         );
     }
     /**
@@ -2212,7 +2485,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->PutAuthzPolicy($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('PutAuthzPolicy'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -2232,7 +2505,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->PutRelationship($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('PutRelationship'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -2252,7 +2525,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->PutRoleBinding($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('PutRoleBinding'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -2272,7 +2545,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->RejectPolicyDraft($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('RejectPolicyDraft'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -2292,7 +2565,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->RevokeRole($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('RevokeRole'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -2312,7 +2585,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->RollbackPolicyVersion($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('RollbackPolicyVersion'),
+            'destructive' === 'read_only',
         );
     }
     /**
@@ -2332,7 +2605,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->SeedBuiltinRoles($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('SeedBuiltinRoles'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -2352,7 +2625,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->SimulatePolicy($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('SimulatePolicy'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -2372,7 +2645,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->SubmitPolicyDraft($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('SubmitPolicyDraft'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -2392,7 +2665,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->UpdatePolicyDraft($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('UpdatePolicyDraft'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -2412,7 +2685,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->UpdateRole($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('UpdateRole'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -2432,7 +2705,7 @@ final class GeneratedClient
             'udb.core.control.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->AckStatus($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('AckStatus'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -2452,7 +2725,7 @@ final class GeneratedClient
             'udb.core.control.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetResources($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GetResources'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -2472,7 +2745,7 @@ final class GeneratedClient
             'udb.core.control.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListNodeStates($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ListNodeStates'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -2492,7 +2765,7 @@ final class GeneratedClient
             'udb.core.idp.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->CreateProvider($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('CreateProvider'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -2512,7 +2785,7 @@ final class GeneratedClient
             'udb.core.idp.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->DisableProvider($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('DisableProvider'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -2532,7 +2805,7 @@ final class GeneratedClient
             'udb.core.idp.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ForceJwksRefresh($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ForceJwksRefresh'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -2552,7 +2825,7 @@ final class GeneratedClient
             'udb.core.idp.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetProvider($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GetProvider'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -2572,7 +2845,7 @@ final class GeneratedClient
             'udb.core.idp.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ImportSamlMetadata($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ImportSamlMetadata'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -2592,7 +2865,7 @@ final class GeneratedClient
             'udb.core.idp.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->LinkIdentity($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('LinkIdentity'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -2612,7 +2885,7 @@ final class GeneratedClient
             'udb.core.idp.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListExternalIdentities($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ListExternalIdentities'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -2632,7 +2905,7 @@ final class GeneratedClient
             'udb.core.idp.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListProviders($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ListProviders'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -2652,7 +2925,7 @@ final class GeneratedClient
             'udb.core.idp.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->PreviewClaimMapping($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('PreviewClaimMapping'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -2672,7 +2945,7 @@ final class GeneratedClient
             'udb.core.idp.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->PreviewGroupMapping($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('PreviewGroupMapping'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -2692,7 +2965,7 @@ final class GeneratedClient
             'udb.core.idp.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ResolveExternalIdentity($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ResolveExternalIdentity'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -2712,7 +2985,7 @@ final class GeneratedClient
             'udb.core.idp.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->SamlAcs($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('SamlAcs'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -2732,7 +3005,7 @@ final class GeneratedClient
             'udb.core.idp.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ScimCreateGroup($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ScimCreateGroup'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -2752,7 +3025,7 @@ final class GeneratedClient
             'udb.core.idp.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ScimCreateUser($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ScimCreateUser'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -2772,7 +3045,7 @@ final class GeneratedClient
             'udb.core.idp.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ScimDeleteGroup($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ScimDeleteGroup'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -2792,7 +3065,7 @@ final class GeneratedClient
             'udb.core.idp.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ScimDeleteUser($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ScimDeleteUser'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -2812,7 +3085,7 @@ final class GeneratedClient
             'udb.core.idp.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ScimGetGroup($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ScimGetGroup'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -2832,7 +3105,7 @@ final class GeneratedClient
             'udb.core.idp.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ScimGetUser($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ScimGetUser'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -2852,7 +3125,7 @@ final class GeneratedClient
             'udb.core.idp.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ScimListGroups($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ScimListGroups'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -2872,7 +3145,7 @@ final class GeneratedClient
             'udb.core.idp.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ScimListUsers($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ScimListUsers'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -2892,7 +3165,7 @@ final class GeneratedClient
             'udb.core.idp.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ScimPatchGroup($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ScimPatchGroup'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -2912,7 +3185,7 @@ final class GeneratedClient
             'udb.core.idp.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ScimPatchUser($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ScimPatchUser'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -2932,7 +3205,7 @@ final class GeneratedClient
             'udb.core.idp.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ScimReplaceUser($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ScimReplaceUser'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -2952,7 +3225,7 @@ final class GeneratedClient
             'udb.core.idp.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->StartSamlLogin($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('StartSamlLogin'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -2972,7 +3245,7 @@ final class GeneratedClient
             'udb.core.idp.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->TestProviderDiscovery($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('TestProviderDiscovery'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -2992,7 +3265,7 @@ final class GeneratedClient
             'udb.core.idp.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->UnlinkIdentity($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('UnlinkIdentity'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -3012,7 +3285,7 @@ final class GeneratedClient
             'udb.core.idp.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->UpdateProvider($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('UpdateProvider'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -3032,7 +3305,7 @@ final class GeneratedClient
             'udb.core.notification.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetDeliveryStats($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GetDeliveryStats'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -3052,7 +3325,7 @@ final class GeneratedClient
             'udb.core.notification.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetNotification($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GetNotification'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -3072,7 +3345,7 @@ final class GeneratedClient
             'udb.core.notification.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetPreference($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GetPreference'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -3092,7 +3365,7 @@ final class GeneratedClient
             'udb.core.notification.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetTemplate($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GetTemplate'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -3112,7 +3385,7 @@ final class GeneratedClient
             'udb.core.notification.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListNotifications($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ListNotifications'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -3132,7 +3405,7 @@ final class GeneratedClient
             'udb.core.notification.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListPreferences($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ListPreferences'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -3152,7 +3425,7 @@ final class GeneratedClient
             'udb.core.notification.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListTemplates($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ListTemplates'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -3172,7 +3445,7 @@ final class GeneratedClient
             'udb.core.notification.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->RetryNotification($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('RetryNotification'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -3192,7 +3465,7 @@ final class GeneratedClient
             'udb.core.notification.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->SendNotification($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('SendNotification'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -3212,7 +3485,7 @@ final class GeneratedClient
             'udb.core.notification.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->SetPreference($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('SetPreference'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -3232,7 +3505,7 @@ final class GeneratedClient
             'udb.core.notification.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->UpsertTemplate($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('UpsertTemplate'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -3252,7 +3525,7 @@ final class GeneratedClient
             'udb.core.storage.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->DeleteFile($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('DeleteFile'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -3272,7 +3545,7 @@ final class GeneratedClient
             'udb.core.storage.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->FinalizeUpload($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('FinalizeUpload'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -3292,7 +3565,7 @@ final class GeneratedClient
             'udb.core.storage.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetDownloadUrl($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GetDownloadUrl'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -3312,7 +3585,7 @@ final class GeneratedClient
             'udb.core.storage.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetFile($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GetFile'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -3332,7 +3605,7 @@ final class GeneratedClient
             'udb.core.storage.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListFiles($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ListFiles'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -3352,7 +3625,7 @@ final class GeneratedClient
             'udb.core.storage.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->RegisterUpload($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('RegisterUpload'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -3372,7 +3645,7 @@ final class GeneratedClient
             'udb.core.storage.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->UpdateFile($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('UpdateFile'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -3392,7 +3665,7 @@ final class GeneratedClient
             'udb.core.tenant.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->CreateTenant($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('CreateTenant'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -3412,7 +3685,7 @@ final class GeneratedClient
             'udb.core.tenant.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetTenant($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GetTenant'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -3432,7 +3705,7 @@ final class GeneratedClient
             'udb.core.tenant.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetTenantConfig($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GetTenantConfig'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -3452,7 +3725,7 @@ final class GeneratedClient
             'udb.core.tenant.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListTenants($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ListTenants'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -3472,7 +3745,7 @@ final class GeneratedClient
             'udb.core.tenant.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->UpdateTenant($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('UpdateTenant'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -3492,7 +3765,7 @@ final class GeneratedClient
             'udb.core.tenant.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->UpdateTenantConfig($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('UpdateTenantConfig'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -3512,7 +3785,7 @@ final class GeneratedClient
             'udb.core.webrtc.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetPeer($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GetPeer'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -3532,7 +3805,7 @@ final class GeneratedClient
             'udb.core.webrtc.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->JoinRoom($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('JoinRoom'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -3552,7 +3825,7 @@ final class GeneratedClient
             'udb.core.webrtc.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->LeaveRoom($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('LeaveRoom'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -3572,7 +3845,7 @@ final class GeneratedClient
             'udb.core.webrtc.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListPeers($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ListPeers'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -3592,7 +3865,7 @@ final class GeneratedClient
             'udb.core.webrtc.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->CloseRoom($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('CloseRoom'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -3612,7 +3885,7 @@ final class GeneratedClient
             'udb.core.webrtc.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->CreateRoom($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('CreateRoom'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -3632,7 +3905,7 @@ final class GeneratedClient
             'udb.core.webrtc.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetRoom($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GetRoom'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -3652,7 +3925,7 @@ final class GeneratedClient
             'udb.core.webrtc.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListRooms($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ListRooms'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -3672,7 +3945,7 @@ final class GeneratedClient
             'udb.core.webrtc.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->UpdateRoom($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('UpdateRoom'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -3692,7 +3965,7 @@ final class GeneratedClient
             'udb.core.webrtc.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListTracks($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ListTracks'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -3712,7 +3985,7 @@ final class GeneratedClient
             'udb.core.webrtc.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->MuteTrack($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('MuteTrack'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -3732,7 +4005,7 @@ final class GeneratedClient
             'udb.core.webrtc.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->PublishTrack($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('PublishTrack'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -3752,7 +4025,7 @@ final class GeneratedClient
             'udb.core.webrtc.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->UnpublishTrack($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('UnpublishTrack'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -3772,7 +4045,7 @@ final class GeneratedClient
             'udb.core.webrtc.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->IssueCredentials($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('IssueCredentials'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -3792,7 +4065,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ActivateCatalog($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ActivateCatalog'),
+            'destructive' === 'read_only',
         );
     }
     /**
@@ -3812,7 +4085,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->AnalyticalQuery($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('AnalyticalQuery'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -3832,7 +4105,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ApplyMigration($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ApplyMigration'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -3852,7 +4125,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ApproveMigrationPlan($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ApproveMigrationPlan'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -3872,7 +4145,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->CacheDelete($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('CacheDelete'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -3892,7 +4165,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->CacheGet($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('CacheGet'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -3912,7 +4185,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->CacheScan($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('CacheScan'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -3932,7 +4205,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->CacheSet($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('CacheSet'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -3952,7 +4225,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->CreateMaterializedView($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('CreateMaterializedView'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -3972,7 +4245,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->Delete($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('Delete'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -3992,7 +4265,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->DeletePolicy($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('DeletePolicy'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -4012,7 +4285,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->DismissDlqEvent($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('DismissDlqEvent'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -4032,7 +4305,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->DocumentDelete($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('DocumentDelete'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -4052,7 +4325,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->DocumentFind($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('DocumentFind'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -4072,7 +4345,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->DocumentGet($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('DocumentGet'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -4092,7 +4365,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->DocumentUpsert($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('DocumentUpsert'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -4112,7 +4385,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->DropResource($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('DropResource'),
+            'destructive' === 'read_only',
         );
     }
     /**
@@ -4132,7 +4405,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->EnqueueOutboxEvent($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('EnqueueOutboxEvent'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -4152,7 +4425,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->EnsureProject($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('EnsureProject'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -4172,7 +4445,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->EnsureResource($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('EnsureResource'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -4192,7 +4465,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GeneratePresignedUrl($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GeneratePresignedUrl'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -4212,7 +4485,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GenericDispatch($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GenericDispatch'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -4232,7 +4505,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetAdminSummary($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GetAdminSummary'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -4252,7 +4525,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetCapabilities($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GetCapabilities'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -4272,7 +4545,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetCatalogManifest($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GetCatalogManifest'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -4292,7 +4565,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetCatalogVersion($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GetCatalogVersion'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -4312,7 +4585,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetCatalogVersions($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GetCatalogVersions'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -4332,7 +4605,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetCdcStatus($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GetCdcStatus'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -4352,7 +4625,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetDlqEvent($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GetDlqEvent'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -4372,7 +4645,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetHealthReport($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GetHealthReport'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -4392,7 +4665,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetMigrationStatus($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GetMigrationStatus'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -4412,7 +4685,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetSaga($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GetSaga'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -4432,7 +4705,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GraphMutate($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GraphMutate'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -4452,7 +4725,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GraphQuery($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('GraphQuery'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -4472,7 +4745,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->InitiateMultipartUpload($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('InitiateMultipartUpload'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -4492,7 +4765,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->LintPolicies($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('LintPolicies'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -4512,7 +4785,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListAdminAuditLogs($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ListAdminAuditLogs'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -4532,7 +4805,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListDlqEvents($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ListDlqEvents'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -4552,7 +4825,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListMessageSchemas($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ListMessageSchemas'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -4572,7 +4845,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListMigrationRuns($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ListMigrationRuns'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -4592,7 +4865,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListPolicies($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ListPolicies'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -4612,7 +4885,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListProjects($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ListProjects'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -4632,7 +4905,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListResources($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ListResources'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -4652,7 +4925,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListSagas($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ListSagas'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -4672,7 +4945,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->LookupMessageSchema($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('LookupMessageSchema'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -4692,7 +4965,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->MarkSagaReviewed($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('MarkSagaReviewed'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -4712,7 +4985,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->PauseCdc($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('PauseCdc'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -4732,7 +5005,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->PlanMigration($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('PlanMigration'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -4752,7 +5025,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->PreviewCdcRedaction($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('PreviewCdcRedaction'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -4772,7 +5045,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->PutPolicy($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('PutPolicy'),
+            'destructive' === 'read_only',
         );
     }
     /**
@@ -4792,7 +5065,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->QuarantineDlqEvent($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('QuarantineDlqEvent'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -4812,7 +5085,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ReloadPolicies($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ReloadPolicies'),
+            'destructive' === 'read_only',
         );
     }
     /**
@@ -4832,7 +5105,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ReplayDlqEvent($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ReplayDlqEvent'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -4852,7 +5125,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ResumeCdc($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ResumeCdc'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -4872,7 +5145,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->RetrySagaCompensation($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('RetrySagaCompensation'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -4892,7 +5165,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->RollbackCatalog($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('RollbackCatalog'),
+            'destructive' === 'read_only',
         );
     }
     /**
@@ -4912,7 +5185,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ScanProjectionDrift($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ScanProjectionDrift'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -4932,7 +5205,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->Select($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('Select'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -4952,7 +5225,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->StageCatalog($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('StageCatalog'),
+            'destructive' === 'read_only',
         );
     }
     /**
@@ -4972,7 +5245,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->StepDownCdcLeader($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('StepDownCdcLeader'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -4992,7 +5265,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->TimeSeriesQuery($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('TimeSeriesQuery'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -5012,7 +5285,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->TimeSeriesWrite($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('TimeSeriesWrite'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -5032,7 +5305,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->Upsert($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('Upsert'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -5052,7 +5325,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ValidateCatalog($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('ValidateCatalog'),
+            'destructive' === 'read_only',
         );
     }
     /**
@@ -5072,7 +5345,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->VectorHybridSearch($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('VectorHybridSearch'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -5092,7 +5365,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->VectorSearch($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('VectorSearch'),
+            'read_only' === 'read_only',
         );
     }
     /**
@@ -5112,7 +5385,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->VectorUpsert($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('VectorUpsert'),
+            'mutation' === 'read_only',
         );
     }
     /**
@@ -5132,7 +5405,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->VerifyAdminAuditLog($request, $md, $opts),
             $metadata,
-            $this->isReadOnlyRpcName('VerifyAdminAuditLog'),
+            'read_only' === 'read_only',
         );
     }
 
@@ -5624,20 +5897,8 @@ final class GeneratedClient
         return in_array($code, self::RETRYABLE_CODES, true);
     }
 
-    private function isReadOnlyRpcName(string $name): bool
-    {
-        foreach ([
-            'Get', 'List', 'Check', 'Validate', 'Introspect', 'Authorize',
-            'BatchCheck', 'Preview', 'Resolve', 'Explain', 'Diff', 'Lint',
-            'Test', 'Select', 'AnalyticalQuery', 'VectorSearch', 'GraphQuery',
-            'CacheGet', 'CacheScan', 'DocumentGet', 'DocumentFind',
-        ] as $prefix) {
-            if (str_starts_with($name, $prefix)) {
-                return true;
-            }
-        }
-        return false;
-    }
+    // Retry safety is read from the proto-derived operation_kind per RPC (each
+    // wrapper passes operation_kind === 'read_only') — never guessed from the name.
 
     /**
      * Exponential backoff with full jitter, capped at `max_delay_ms`. Sleeps

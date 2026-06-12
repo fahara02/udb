@@ -1,0 +1,61 @@
+# Optional auxiliary backends (search / 2nd-vector / 2nd-cache) for the live SDK
+# conformance suite's "almost all backends" coverage. NOT in the integration or
+# canonical stacks (which stay lean). Bring up only when exercising
+# Elasticsearch / Weaviate / Memcached.
+#
+#   docker compose -f docker-compose.extras.yml up -d
+#
+# Host-side DSNs (broker runs on the host, reaches these via published ports):
+#   UDB_ELASTIC_DSN=http://127.0.0.1:59200
+#   UDB_WEAVIATE_DSN=http://127.0.0.1:58090
+#   UDB_MEMCACHED_DSN=memcache://127.0.0.1:51211
+name: udb
+
+services:
+  # C9 — Elasticsearch (single node, security disabled for local dev so the
+  # bare-URL DSN is no-auth).
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      xpack.security.http.ssl.enabled: "false"
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+    ports:
+      - "59200:9200"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 40
+      start_period: 30s
+
+  # Weaviate (anonymous auth, no external vectorizer — the broker supplies vectors).
+  weaviate:
+    image: semitechnologies/weaviate:1.27.0
+    command: ["--host", "0.0.0.0", "--port", "8080", "--scheme", "http"]
+    environment:
+      AUTHENTICATION_ANONYMOUS_ENABLED: "true"
+      PERSISTENCE_DATA_PATH: "/var/lib/weaviate"
+      DEFAULT_VECTORIZER_MODULE: "none"
+      ENABLE_MODULES: ""
+      QUERY_DEFAULTS_LIMIT: "25"
+    ports:
+      - "58090:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/v1/.well-known/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 15s
+
+  # Memcached (TCP — the broker's memcached client rejects unix sockets on Windows).
+  memcached:
+    image: memcached:1.6-alpine
+    ports:
+      - "51211:11211"
+    healthcheck:
+      test: ["CMD-SHELL", "echo stats | nc -w1 127.0.0.1 11211 | grep -q uptime || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20

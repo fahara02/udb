@@ -51,6 +51,7 @@ service IdentityProviderService {
 
   // ── Provider administration (J2.6) ────────────────────────────────────────
   rpc CreateProvider(CreateProviderRequest) returns (CreateProviderResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:idp:create-provider"
@@ -67,6 +68,7 @@ service IdentityProviderService {
   }
 
   rpc UpdateProvider(UpdateProviderRequest) returns (UpdateProviderResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:idp:update-provider"
@@ -83,6 +85,7 @@ service IdentityProviderService {
   }
 
   rpc DisableProvider(DisableProviderRequest) returns (DisableProviderResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:idp:disable-provider"
@@ -99,6 +102,7 @@ service IdentityProviderService {
   }
 
   rpc GetProvider(GetProviderRequest) returns (GetProviderResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:idp:get-provider"
@@ -112,6 +116,7 @@ service IdentityProviderService {
   }
 
   rpc ListProviders(ListProvidersRequest) returns (ListProvidersResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:idp:list-providers"
@@ -125,6 +130,7 @@ service IdentityProviderService {
   }
 
   rpc TestProviderDiscovery(TestProviderDiscoveryRequest) returns (TestProviderDiscoveryResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:idp:test-provider-discovery"
@@ -141,6 +147,7 @@ service IdentityProviderService {
   }
 
   rpc ForceJwksRefresh(ForceJwksRefreshRequest) returns (ForceJwksRefreshResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:idp:force-jwks-refresh"
@@ -157,6 +164,7 @@ service IdentityProviderService {
   }
 
   rpc PreviewClaimMapping(PreviewClaimMappingRequest) returns (PreviewClaimMappingResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:idp:preview-claim-mapping"
@@ -173,6 +181,7 @@ service IdentityProviderService {
   }
 
   rpc PreviewGroupMapping(PreviewGroupMappingRequest) returns (PreviewGroupMappingResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:idp:preview-group-mapping"
@@ -189,6 +198,7 @@ service IdentityProviderService {
   }
 
   rpc ListExternalIdentities(ListExternalIdentitiesRequest) returns (ListExternalIdentitiesResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:idp:list-external-identities"
@@ -202,6 +212,7 @@ service IdentityProviderService {
   }
 
   rpc LinkIdentity(LinkIdentityRequest) returns (LinkIdentityResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:idp:link-identity"
@@ -218,6 +229,7 @@ service IdentityProviderService {
   }
 
   rpc UnlinkIdentity(UnlinkIdentityRequest) returns (UnlinkIdentityResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:idp:unlink-identity"
@@ -235,6 +247,7 @@ service IdentityProviderService {
 
   // ── SAML 2.0 (J2.2) ───────────────────────────────────────────────────────
   rpc ImportSamlMetadata(ImportSamlMetadataRequest) returns (ImportSamlMetadataResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:idp:import-saml-metadata"
@@ -251,6 +264,7 @@ service IdentityProviderService {
   }
 
   rpc StartSamlLogin(StartSamlLoginRequest) returns (StartSamlLoginResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:idp:start-saml-login"
@@ -267,6 +281,7 @@ service IdentityProviderService {
   }
 
   rpc SamlAcs(SamlAcsRequest) returns (SamlAcsResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:idp:saml-acs"
@@ -284,6 +299,7 @@ service IdentityProviderService {
 
   // ── JIT provisioning + assurance (J2.4 / J2.5) ────────────────────────────
   rpc ResolveExternalIdentity(ResolveExternalIdentityRequest) returns (ResolveExternalIdentityResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:idp:resolve-external-identity"
@@ -301,6 +317,7 @@ service IdentityProviderService {
 
   // ── SCIM 2.0 (J2.3) ───────────────────────────────────────────────────────
   rpc ScimCreateUser(ScimCreateUserRequest) returns (ScimCreateUserResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:idp:scim-create-user"
@@ -317,6 +334,7 @@ service IdentityProviderService {
   }
 
   rpc ScimGetUser(ScimGetUserRequest) returns (ScimGetUserResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:idp:scim-get-user"
@@ -330,6 +348,7 @@ service IdentityProviderService {
   }
 
   rpc ScimListUsers(ScimListUsersRequest) returns (ScimListUsersResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:idp:scim-list-users"
@@ -343,6 +362,7 @@ service IdentityProviderService {
   }
 
   rpc ScimReplaceUser(ScimReplaceUserRequest) returns (ScimReplaceUserResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:idp:scim-replace-user"
@@ -359,6 +379,7 @@ service IdentityProviderService {
   }
 
   rpc ScimPatchUser(ScimPatchUserRequest) returns (ScimPatchUserResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:idp:scim-patch-user"
@@ -375,6 +396,7 @@ service IdentityProviderService {
   }
 
   rpc ScimDeleteUser(ScimDeleteUserRequest) returns (ScimDeleteUserResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:idp:scim-delete-user"
@@ -388,6 +410,7 @@ service IdentityProviderService {
   }
 
   rpc ScimCreateGroup(ScimCreateGroupRequest) returns (ScimCreateGroupResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:idp:scim-create-group"
@@ -404,6 +427,7 @@ service IdentityProviderService {
   }
 
   rpc ScimGetGroup(ScimGetGroupRequest) returns (ScimGetGroupResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:idp:scim-get-group"
@@ -417,6 +441,7 @@ service IdentityProviderService {
   }
 
   rpc ScimListGroups(ScimListGroupsRequest) returns (ScimListGroupsResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:idp:scim-list-groups"
@@ -430,6 +455,7 @@ service IdentityProviderService {
   }
 
   rpc ScimPatchGroup(ScimPatchGroupRequest) returns (ScimPatchGroupResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:idp:scim-patch-group"
@@ -446,6 +472,7 @@ service IdentityProviderService {
   }
 
   rpc ScimDeleteGroup(ScimDeleteGroupRequest) returns (ScimDeleteGroupResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:idp:scim-delete-group"

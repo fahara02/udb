@@ -58,7 +58,42 @@ pub struct LogicalWrite {
     pub return_fields: Vec<String>,
 }
 
-/// How to handle a primary-key collision on insert.
+/// A field assignment in a conditional update.
+///
+/// This is deliberately expression-shaped rather than "partial record" shaped:
+/// native services need safe updates such as counters, server timestamps, and
+/// presence-aware patches without hand-written SQL.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum LogicalAssignment {
+    /// `field = value`
+    Set { value: LogicalValue },
+    /// `field = CURRENT_TIMESTAMP`
+    ServerNow,
+    /// `field = field + by` for numeric counters.
+    Increment { by: LogicalValue },
+    /// `field = COALESCE(value, field)` for proto optional partial updates.
+    Coalesce { value: LogicalValue },
+}
+
+/// A neutral conditional update.
+///
+/// `filter` is required; there is no unbounded update path through this IR.
+/// Callers that rely on optimistic concurrency set `require_affected = true`
+/// and must treat zero affected rows as a failed precondition/not-found at the
+/// service boundary.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct LogicalUpdate {
+    pub message_type: String,
+    pub filter: LogicalFilter,
+    pub assignments: BTreeMap<String, LogicalAssignment>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub return_fields: Vec<String>,
+    #[serde(default)]
+    pub require_affected: bool,
+}
+
+/// How to handle a uniqueness collision on insert.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum ConflictStrategy {
@@ -73,7 +108,50 @@ pub enum ConflictStrategy {
     Replace,
     /// Update only the listed columns; leave others unchanged. Lowers to
     /// SQL `ON CONFLICT DO UPDATE SET col = EXCLUDED.col` for each.
-    Update { fields: Vec<String> },
+    Update {
+        fields: Vec<String>,
+        /// The unique columns that arbitrate the conflict — the
+        /// `ON CONFLICT (cols)` / `MERGE … ON` target / Mongo upsert filter.
+        /// `None` ⇒ the manifest **primary key** (the historical default).
+        /// `Some` ⇒ an **alternate** unique constraint (e.g. `key_hash` for api
+        /// keys, `code` for tenants), so an upsert can collide on a non-PK
+        /// unique index. The named columns must back a real unique/PK index on
+        /// the target backend; the engine enforces this (fail-closed) if not.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        conflict_on: Option<Vec<String>>,
+    },
+}
+
+impl ConflictStrategy {
+    /// Build a partial-update upsert keyed on the manifest primary key.
+    pub fn update(fields: Vec<String>) -> Self {
+        Self::Update {
+            fields,
+            conflict_on: None,
+        }
+    }
+
+    /// Build a partial-update upsert keyed on an explicit alternate-unique
+    /// column set (the `ON CONFLICT (conflict_on)` target).
+    pub fn update_on(fields: Vec<String>, conflict_on: Vec<String>) -> Self {
+        Self::Update {
+            fields,
+            conflict_on: Some(conflict_on),
+        }
+    }
+
+    /// The explicit alternate-unique conflict target, if one was specified and
+    /// non-empty. `None` means "use the manifest primary key" — every SQL
+    /// compiler reads this to choose the `ON CONFLICT` / `MERGE` arbiter.
+    pub fn conflict_target(&self) -> Option<&[String]> {
+        match self {
+            Self::Update {
+                conflict_on: Some(cols),
+                ..
+            } if !cols.is_empty() => Some(cols),
+            _ => None,
+        }
+    }
 }
 
 /// A neutral delete. `filter` is **required** — there is no
@@ -330,6 +408,35 @@ mod tests {
             return_fields: vec![],
         };
         assert_eq!(w.conflict, ConflictStrategy::Error);
+    }
+
+    #[test]
+    fn conflict_on_is_back_compat_and_targeted() {
+        // Legacy payload (no conflict_on) deserializes to the PK-keyed default.
+        let legacy: ConflictStrategy =
+            serde_json::from_str(r#"{"kind":"update","fields":["name"]}"#).expect("parse legacy");
+        assert_eq!(legacy, ConflictStrategy::update(vec!["name".into()]));
+        assert_eq!(
+            legacy.conflict_target(),
+            None,
+            "no conflict_on ⇒ use the PK"
+        );
+
+        // Explicit alternate-key target round-trips and is exposed.
+        let alt = ConflictStrategy::update_on(vec!["name".into()], vec!["email".into()]);
+        assert_eq!(alt.conflict_target(), Some(&["email".to_string()][..]));
+        let json = serde_json::to_string(&alt).expect("serialize");
+        assert_eq!(
+            serde_json::from_str::<ConflictStrategy>(&json).expect("round-trip"),
+            alt
+        );
+
+        // An empty conflict_on is treated as "unset" (falls back to the PK).
+        let empty = ConflictStrategy::Update {
+            fields: vec!["name".into()],
+            conflict_on: Some(vec![]),
+        };
+        assert_eq!(empty.conflict_target(), None);
     }
 
     #[test]

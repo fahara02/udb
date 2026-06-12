@@ -12,11 +12,17 @@
 //! intentionally empty in v1 — clients mint the actual URLs separately.
 
 use std::sync::Arc;
+use std::time::Duration;
 
-use sqlx::{PgPool, Row};
+use sqlx::PgPool;
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
 
+use crate::ir::{
+    ComparisonOp, ConflictStrategy, LogicalDelete, LogicalFilter, LogicalPagination,
+    LogicalProjection, LogicalRead, LogicalRecord, LogicalSort, LogicalValue, NullOrder,
+    SortDirection,
+};
 use crate::metrics::{MetricsRecorder, NoopMetrics};
 use crate::runtime::DataBrokerRuntime;
 use crate::runtime::channels::{ChannelManager, ChannelPermit, OperationChannel};
@@ -24,14 +30,14 @@ use crate::runtime::channels::{ChannelManager, ChannelPermit, OperationChannel};
 use crate::proto::udb::core::storage::entity::v1 as storage_entity_pb;
 use crate::proto::udb::core::storage::services::v1 as storage_pb;
 use crate::proto::udb::core::storage::services::v1::storage_service_server::StorageService;
-use crate::runtime::native_catalog::{NativeModel, native_model};
 
 pub use crate::proto::udb::core::storage::services::v1::storage_service_server::StorageServiceServer;
 
 use super::DataBrokerService;
 use super::native_helpers::{
     DEFAULT_OBJECT_BACKEND, DEFAULT_OBJECT_BUCKET, admit_on as native_admit_on, emit_payload_event,
-    storage_object_defaults, validate_request_scope, validate_request_tenant,
+    native_service_context, storage_object_defaults, validate_request_scope,
+    validate_request_tenant,
 };
 
 const FILE_MSG: &str = "udb.core.storage.entity.v1.File";
@@ -183,12 +189,40 @@ impl StorageServiceImpl {
     }
 
     /// File metadata CRUD is durable-only: fail closed when no Postgres pool exists.
-    fn require_pool(&self) -> Result<&PgPool, Status> {
-        self.pg_pool.as_ref().ok_or_else(|| {
-            Status::failed_precondition(
-                "storage service requires a Postgres-backed store (no PG pool configured)",
-            )
+    /// Typed File entities persist through native-entity dispatch on the backend
+    /// bound to this service (extend_udb.md P4) — not the hardcoded PG pool. Fail
+    /// closed when no runtime is wired (bare metadata-only/test construction).
+    fn require_runtime(&self) -> Result<&DataBrokerRuntime, Status> {
+        self.runtime.as_deref().ok_or_else(|| {
+            Status::failed_precondition("storage service requires runtime native entity dispatch")
         })
+    }
+
+    /// Serialize per-tenant quota check-then-write across the cluster via the
+    /// canonical advisory lease — the backend-agnostic analog of the old
+    /// `pg_advisory_xact_lock`. Bounded retry (≈5s) then fail closed so a
+    /// contended quota gate never silently lets a concurrent over-quota write
+    /// slip through. Returns `true` when the lease is held (caller MUST release).
+    /// Only invoked when a quota is configured (`quota > 0`).
+    async fn acquire_quota_lease(
+        &self,
+        runtime: &DataBrokerRuntime,
+        tenant_id: &str,
+        owner: &str,
+    ) -> Result<bool, Status> {
+        let name = quota_lease_name(tenant_id);
+        for _ in 0..50 {
+            if runtime
+                .try_acquire_native_lease(&name, owner, Duration::from_secs(30))
+                .await?
+            {
+                return Ok(true);
+            }
+            tokio::time::sleep(Duration::from_millis(100)).await;
+        }
+        Err(Status::unavailable(
+            "storage quota lock contended; retry shortly",
+        ))
     }
 
     /// Per-tenant fair admission for a mutating/heavy storage RPC. Acquires the
@@ -240,43 +274,6 @@ impl StorageServiceImpl {
             .unwrap_or(0)
     }
 
-    /// Sum the live (non-soft-deleted) byte usage for a tenant.
-    async fn tenant_used_bytes_on<'e, E>(
-        executor: E,
-        m: &NativeModel,
-        tenant_id: Uuid,
-    ) -> Result<i64, Status>
-    where
-        E: sqlx::Executor<'e, Database = sqlx::Postgres>,
-    {
-        let rel = m.relation.clone();
-        sqlx::query_scalar(&format!(
-            "SELECT COALESCE(SUM({size_bytes}), 0) FROM {rel} \
-             WHERE {tenant_id} = $1::UUID AND {deleted_at} IS NULL",
-            size_bytes = m.q("size_bytes"),
-            tenant_id = m.q("tenant_id"),
-            deleted_at = m.q("deleted_at"),
-        ))
-        .bind(tenant_id)
-        .fetch_one(executor)
-        .await
-        .map_err(|err| Status::internal(format!("tenant usage query failed: {err}")))
-    }
-
-    /// Serialize quota checks and writes per tenant. This closes the classic
-    /// check-then-insert race without adding a durable counter table.
-    async fn lock_tenant_quota(
-        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-        tenant_id: Uuid,
-    ) -> Result<(), Status> {
-        sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))")
-            .bind(tenant_id.to_string())
-            .execute(&mut **tx)
-            .await
-            .map_err(|err| Status::internal(format!("tenant quota lock failed: {err}")))?;
-        Ok(())
-    }
-
     async fn object_exists(&self, project_id: &str, object_key: &str) -> Result<bool, Status> {
         let Some(runtime) = self.runtime.as_ref() else {
             return Ok(true);
@@ -295,48 +292,81 @@ impl StorageServiceImpl {
     }
 
     /// Hard-DELETE orphaned `PENDING` files older than `older_than_minutes`
-    /// (uploads that were registered but never finalized). Uses the
-    /// auto-injected `created_at` audit column (`audit_fields: true` on the File
-    /// table). Returns the number of rows deleted. Best-effort caller.
+    /// (uploads that were registered but never finalized) and remove their
+    /// abandoned object bytes. Uses the auto-injected `created_at` audit column
+    /// (`audit_fields: true` on the File table). Returns the number deleted.
+    ///
+    /// Fully on the typed path (no raw SQL). This is a CROSS-TENANT maintenance
+    /// sweep, so it runs under a SYSTEM context (empty tenant) and supplies NO
+    /// tenant filter — it reaps every tenant's orphans. That is sound because the
+    /// broker's platform-admin pool bypasses the File table's `force_rls`
+    /// (per-tenant isolation for normal RPCs comes from each handler's tenant
+    /// filter, which this maintenance path deliberately omits). The reap is bounded
+    /// oldest-first via a `LogicalRead` (`ORDER BY created_at … LIMIT`), then exactly
+    /// that batch is hard-deleted by primary key (`file_id IN (…)`). The cutoff is
+    /// computed in Rust and bound as a timestamp, so no backend-specific `INTERVAL`
+    /// arithmetic leaks into the neutral IR.
     pub(crate) async fn reap_orphans(
         &self,
         older_than_minutes: i64,
         batch_size: i64,
     ) -> Result<u64, Status> {
-        let pool = self.require_pool()?;
-        let m = file_model();
-        let rel = m.relation.clone();
+        let runtime = self.require_runtime()?;
         let batch_size = batch_size.clamp(1, 10_000);
-        // Delete a bounded batch and recover object_keys so abandoned bytes are
-        // cleaned up too. The CTE gives Postgres an ordered LIMIT for DELETE.
-        let rows = sqlx::query(&format!(
-            "WITH doomed AS ( \
-                SELECT ctid, {object_key}::TEXT AS object_key, \
-                       COALESCE({project_id}::TEXT, '') AS project_id FROM {rel} \
-                WHERE {status} = 'PENDING' \
-                  AND {created_at} < NOW() - ($1 * INTERVAL '1 minute') \
-                ORDER BY {created_at} \
-                LIMIT $2 \
-             ) \
-             DELETE FROM {rel} f USING doomed d \
-             WHERE f.ctid = d.ctid \
-             RETURNING d.object_key, d.project_id",
-            status = m.q("status"),
-            created_at = m.q("created_at"),
-            object_key = m.q("object_key"),
-            project_id = m.q("project_id"),
-        ))
-        .bind(older_than_minutes as f64)
-        .bind(batch_size)
-        .fetch_all(pool)
-        .await
-        .map_err(|err| Status::internal(format!("reap orphans failed: {err}")))?;
-        for row in &rows {
-            let object_key: String = row.try_get("object_key").unwrap_or_default();
-            let project_id: String = row.try_get("project_id").unwrap_or_default();
-            self.delete_object_bytes(&project_id, &object_key).await;
+        let context = crate::RequestContext {
+            correlation_id: "storage-orphan-reaper".to_string(),
+            ..crate::RequestContext::default()
+        };
+        let cutoff = chrono::Utc::now() - chrono::Duration::minutes(older_than_minutes.max(0));
+        // 1) Bounded, oldest-first batch of PENDING orphans across all tenants.
+        let read = LogicalRead {
+            message_type: FILE_MSG.to_string(),
+            filter: Some(LogicalFilter::And(vec![
+                file_eq("status", "PENDING"),
+                LogicalFilter::Comparison {
+                    field: "created_at".to_string(),
+                    op: ComparisonOp::Lt,
+                    value: LogicalValue::Timestamp(cutoff),
+                },
+            ])),
+            projection: Some(file_projection()),
+            sort: vec![LogicalSort {
+                field: "created_at".to_string(),
+                direction: SortDirection::Asc,
+                nulls: NullOrder::Default,
+            }],
+            pagination: Some(LogicalPagination::limit(batch_size as u32)),
+        };
+        let doomed: Vec<storage_entity_pb::File> = runtime
+            .native_entity_read_for_service("storage", &context, read)
+            .await?
+            .iter()
+            .map(file_from_json)
+            .collect();
+        if doomed.is_empty() {
+            return Ok(0);
         }
-        Ok(rows.len() as u64)
+        // 2) Hard-DELETE exactly that batch by primary key (UUID `file_id`).
+        let delete = LogicalDelete {
+            message_type: FILE_MSG.to_string(),
+            filter: LogicalFilter::InList {
+                field: "file_id".to_string(),
+                values: doomed
+                    .iter()
+                    .map(|f| logical_string(f.file_id.as_str()))
+                    .collect(),
+            },
+            return_fields: Vec::new(),
+        };
+        runtime
+            .native_entity_delete_for_service("storage", &context, delete)
+            .await?;
+        // 3) Best-effort: remove the now-orphaned object bytes too.
+        for file in &doomed {
+            self.delete_object_bytes(&file.project_id, &file.object_key)
+                .await;
+        }
+        Ok(doomed.len() as u64)
     }
 }
 
@@ -344,37 +374,6 @@ impl Default for StorageServiceImpl {
     fn default() -> Self {
         Self::new()
     }
-}
-
-fn file_model() -> NativeModel {
-    native_model(
-        FILE_MSG,
-        &[
-            "file_id",
-            "tenant_id",
-            "project_id",
-            "filename",
-            "content_type",
-            "size_bytes",
-            "backend",
-            "bucket",
-            "object_key",
-            "url",
-            "cdn_url",
-            "file_type",
-            "reference_id",
-            "reference_type",
-            "is_public",
-            "status",
-            "checksum",
-            "uploaded_by",
-            "deleted_at",
-            "deleted_by",
-            // Auto-injected audit column (File has `audit_fields: true`); used by
-            // the orphan reaper and not a proto field on the File message.
-            "created_at",
-        ],
-    )
 }
 
 use super::native_helpers::parse_uuid;
@@ -455,33 +454,6 @@ fn file_status_to_db(value: &str, default: &str) -> Result<String, Status> {
     Ok(short.to_string())
 }
 
-// ── projections + row mappers ─────────────────────────────────────────────────
-
-fn file_select_projection(m: &NativeModel) -> String {
-    [
-        m.text("file_id"),
-        m.text("tenant_id"),
-        m.text_or_empty("project_id"),
-        m.select("filename"),
-        m.text_or_empty("content_type"),
-        m.select("size_bytes"),
-        m.text_or_empty("backend"),
-        m.text_or_empty("bucket"),
-        m.text("object_key"),
-        m.text_or_empty("url"),
-        m.text_or_empty("cdn_url"),
-        m.text_or_empty("file_type"),
-        m.text_or_empty("reference_id"),
-        m.text_or_empty("reference_type"),
-        m.select("is_public"),
-        m.text_or_empty("status"),
-        m.text_or_empty("checksum"),
-        m.text_or_empty("uploaded_by"),
-        m.text_or_empty("deleted_by"),
-    ]
-    .join(", ")
-}
-
 // ── is_public presence handling (proto3 optional) ─────────────────────────────
 
 /// Bind value for `is_public` on the register INSERT. The column is NOT NULL,
@@ -491,93 +463,344 @@ fn register_is_public_bind(requested: Option<bool>) -> bool {
     requested.unwrap_or(false)
 }
 
-/// Bind value for `is_public` on the presence-guarded UPDATEs
-/// ([`finalize_upload_sql`]/[`update_file_sql`]): `None` binds SQL NULL so the
-/// `COALESCE($n, is_public)` SET clause keeps the stored visibility; `Some(v)`
-/// applies `v`. A partial update can therefore never silently flip a file
-/// public/private.
-fn update_is_public_bind(requested: Option<bool>) -> Option<bool> {
-    requested
+// ── typed data-plane path (extend_udb.md P4) ─────────────────────────────────
+//
+// File metadata persists through the neutral-IR compiler + the backend bound to
+// the `storage` native service (per its proto `native_service` annotation),
+// instead of hand-written Postgres SQL. Mirrors the `tenant_service` reference
+// migration: build `LogicalRead`/`LogicalRecord`/`LogicalFilter`, dispatch via
+// `runtime.native_entity_*_for_service("storage", …)`, and map rows back from
+// the JSON the executor/native driver returns.
+
+/// Name of the cluster-wide advisory lease serializing a tenant's storage quota
+/// check-then-write (one lease per tenant).
+fn quota_lease_name(tenant_id: &str) -> String {
+    format!("storage_quota:{tenant_id}")
 }
 
-/// UPDATE statement used by `finalize_upload`. `$7` is the proto3-optional
-/// `is_public` (bound via [`update_is_public_bind`]): COALESCE keeps the
-/// stored visibility when the field is absent, like the string fields.
-fn finalize_upload_sql(m: &NativeModel) -> String {
-    format!(
-        "UPDATE {rel} SET \
-           {status} = 'ACTIVE', \
-           {size_bytes} = CASE WHEN $8 >= 0 THEN $8 ELSE {size_bytes} END, \
-           {content_type} = COALESCE(NULLIF($3, ''), {content_type}), \
-           {file_type} = CASE WHEN $4 = '' THEN {file_type} ELSE $4 END, \
-           {reference_id} = CASE WHEN $5 = '' THEN {reference_id} ELSE $5::UUID END, \
-           {reference_type} = COALESCE(NULLIF($6, ''), {reference_type}), \
-           {is_public} = COALESCE($7, {is_public}) \
-         WHERE {file_id} = $1::UUID AND {tenant_id} = $2::UUID AND {deleted_at} IS NULL",
-        rel = m.relation,
-        status = m.q("status"),
-        size_bytes = m.q("size_bytes"),
-        content_type = m.q("content_type"),
-        file_type = m.q("file_type"),
-        reference_id = m.q("reference_id"),
-        reference_type = m.q("reference_type"),
-        is_public = m.q("is_public"),
-        file_id = m.q("file_id"),
-        tenant_id = m.q("tenant_id"),
-        deleted_at = m.q("deleted_at"),
+fn logical_string(value: impl Into<String>) -> LogicalValue {
+    LogicalValue::String(value.into())
+}
+
+/// UUID-typed columns reject `''::uuid`, so an absent optional UUID binds SQL
+/// NULL (Mongo `null` / etc.) rather than an empty string.
+fn logical_uuid_or_null(value: &str) -> LogicalValue {
+    let value = value.trim();
+    if value.is_empty() {
+        LogicalValue::Null
+    } else {
+        LogicalValue::String(value.to_string())
+    }
+}
+
+/// Nullable text/varchar column (e.g. `file_type`): empty → SQL NULL, matching
+/// the old `NULLIF($n, '')` binds.
+fn logical_text_or_null(value: &str) -> LogicalValue {
+    if value.is_empty() {
+        LogicalValue::Null
+    } else {
+        LogicalValue::String(value.to_string())
+    }
+}
+
+fn file_eq(field: &str, value: &str) -> LogicalFilter {
+    LogicalFilter::Comparison {
+        field: field.to_string(),
+        op: ComparisonOp::Eq,
+        value: logical_string(value),
+    }
+}
+
+/// A single live (non-soft-deleted) file scoped to its tenant.
+fn file_active_by_id_filter(tenant_id: &str, file_id: &str) -> LogicalFilter {
+    LogicalFilter::And(vec![
+        file_eq("tenant_id", tenant_id),
+        file_eq("file_id", file_id),
+        LogicalFilter::IsNull("deleted_at".to_string()),
+    ])
+}
+
+/// All live files for a tenant — quota usage scan and the `list_files` base set.
+fn file_tenant_active_filter(tenant_id: &str) -> LogicalFilter {
+    LogicalFilter::And(vec![
+        file_eq("tenant_id", tenant_id),
+        LogicalFilter::IsNull("deleted_at".to_string()),
+    ])
+}
+
+/// `list_files` filter: tenant + live + optional metadata facets. Each facet is
+/// applied only when supplied (mirrors the old `$n = '' OR col = $n` guards).
+fn file_list_filter(
+    tenant_id: &str,
+    file_type: &str,
+    reference_id: &str,
+    reference_type: &str,
+    uploaded_by: &str,
+) -> LogicalFilter {
+    let mut filters = vec![
+        file_eq("tenant_id", tenant_id),
+        LogicalFilter::IsNull("deleted_at".to_string()),
+    ];
+    if !file_type.is_empty() {
+        filters.push(file_eq("file_type", file_type));
+    }
+    if !reference_id.trim().is_empty() {
+        filters.push(file_eq("reference_id", reference_id.trim()));
+    }
+    if !reference_type.trim().is_empty() {
+        filters.push(file_eq("reference_type", reference_type.trim()));
+    }
+    if !uploaded_by.trim().is_empty() {
+        filters.push(file_eq("uploaded_by", uploaded_by.trim()));
+    }
+    LogicalFilter::And(filters)
+}
+
+fn file_projection() -> LogicalProjection {
+    LogicalProjection::fields(
+        [
+            "file_id",
+            "tenant_id",
+            "project_id",
+            "filename",
+            "content_type",
+            "size_bytes",
+            "backend",
+            "bucket",
+            "object_key",
+            "url",
+            "cdn_url",
+            "file_type",
+            "reference_id",
+            "reference_type",
+            "is_public",
+            "status",
+            "checksum",
+            "uploaded_by",
+            "deleted_by",
+        ]
+        .into_iter()
+        .map(str::to_string),
     )
 }
 
-/// UPDATE statement used by `update_file`. `$8` is the proto3-optional
-/// `is_public` (bound via [`update_is_public_bind`]): COALESCE keeps the
-/// stored visibility when the field is absent, like the string fields.
-fn update_file_sql(m: &NativeModel) -> String {
-    format!(
-        "UPDATE {rel} SET \
-           {filename} = COALESCE(NULLIF($3, ''), {filename}), \
-           {content_type} = COALESCE(NULLIF($4, ''), {content_type}), \
-           {file_type} = CASE WHEN $5 = '' THEN {file_type} ELSE $5 END, \
-           {reference_id} = CASE WHEN $6 = '' THEN {reference_id} ELSE $6::UUID END, \
-           {reference_type} = COALESCE(NULLIF($7, ''), {reference_type}), \
-           {is_public} = COALESCE($8, {is_public}) \
-         WHERE {file_id} = $1::UUID AND {tenant_id} = $2::UUID AND {deleted_at} IS NULL",
-        rel = m.relation,
-        filename = m.q("filename"),
-        content_type = m.q("content_type"),
-        file_type = m.q("file_type"),
-        reference_id = m.q("reference_id"),
-        reference_type = m.q("reference_type"),
-        is_public = m.q("is_public"),
-        file_id = m.q("file_id"),
-        tenant_id = m.q("tenant_id"),
-        deleted_at = m.q("deleted_at"),
-    )
+fn file_read_by_id(tenant_id: &str, file_id: &str) -> LogicalRead {
+    LogicalRead {
+        message_type: FILE_MSG.to_string(),
+        filter: Some(file_active_by_id_filter(tenant_id, file_id)),
+        projection: Some(file_projection()),
+        sort: Vec::new(),
+        pagination: Some(LogicalPagination::limit(1)),
+    }
 }
 
-fn file_from_row(row: &sqlx::postgres::PgRow) -> Result<storage_entity_pb::File, Status> {
-    let map = |e: sqlx::Error| Status::internal(format!("decode file failed: {e}"));
-    Ok(storage_entity_pb::File {
-        file_id: row.try_get("file_id").map_err(map)?,
-        tenant_id: row.try_get("tenant_id").map_err(map)?,
-        project_id: row.try_get("project_id").map_err(map)?,
-        filename: row.try_get("filename").map_err(map)?,
-        content_type: row.try_get("content_type").map_err(map)?,
-        size_bytes: row.try_get::<i64, _>("size_bytes").map_err(map)?,
-        backend: row.try_get("backend").map_err(map)?,
-        bucket: row.try_get("bucket").map_err(map)?,
-        object_key: row.try_get("object_key").map_err(map)?,
-        url: row.try_get("url").map_err(map)?,
-        cdn_url: row.try_get("cdn_url").map_err(map)?,
-        file_type: file_type_from_db(&row.try_get::<String, _>("file_type").map_err(map)?),
-        reference_id: row.try_get("reference_id").map_err(map)?,
-        reference_type: row.try_get("reference_type").map_err(map)?,
-        is_public: row.try_get::<bool, _>("is_public").map_err(map)?,
-        status: file_status_from_db(&row.try_get::<String, _>("status").map_err(map)?),
-        checksum: row.try_get("checksum").map_err(map)?,
-        uploaded_by: row.try_get("uploaded_by").map_err(map)?,
-        deleted_by: row.try_get("deleted_by").map_err(map)?,
+fn file_json_object(row: &serde_json::Value) -> &serde_json::Map<String, serde_json::Value> {
+    row.get("n")
+        .and_then(serde_json::Value::as_object)
+        .or_else(|| row.as_object())
+        .unwrap_or_else(|| {
+            static EMPTY: std::sync::OnceLock<serde_json::Map<String, serde_json::Value>> =
+                std::sync::OnceLock::new();
+            EMPTY.get_or_init(serde_json::Map::new)
+        })
+}
+
+fn json_string(row: &serde_json::Map<String, serde_json::Value>, key: &str) -> String {
+    row.get(key)
+        .and_then(|value| match value {
+            serde_json::Value::String(value) => Some(value.clone()),
+            serde_json::Value::Number(value) => Some(value.to_string()),
+            serde_json::Value::Bool(value) => Some(value.to_string()),
+            serde_json::Value::Null => None,
+            other => Some(other.to_string()),
+        })
+        .unwrap_or_default()
+}
+
+fn json_i64(row: &serde_json::Map<String, serde_json::Value>, key: &str) -> i64 {
+    row.get(key)
+        .and_then(|value| match value {
+            serde_json::Value::Number(value) => value.as_i64(),
+            serde_json::Value::String(value) => value.trim().parse::<i64>().ok(),
+            _ => None,
+        })
+        .unwrap_or(0)
+}
+
+fn json_bool(row: &serde_json::Map<String, serde_json::Value>, key: &str) -> bool {
+    row.get(key)
+        .and_then(|value| match value {
+            serde_json::Value::Bool(value) => Some(*value),
+            serde_json::Value::Number(value) => value.as_i64().map(|n| n != 0),
+            serde_json::Value::String(value) => match value.trim().to_ascii_lowercase().as_str() {
+                "true" | "t" | "1" | "yes" => Some(true),
+                "false" | "f" | "0" | "no" => Some(false),
+                _ => None,
+            },
+            _ => None,
+        })
+        .unwrap_or(false)
+}
+
+fn file_from_json(row: &serde_json::Value) -> storage_entity_pb::File {
+    let row = file_json_object(row);
+    storage_entity_pb::File {
+        file_id: json_string(row, "file_id"),
+        tenant_id: json_string(row, "tenant_id"),
+        project_id: json_string(row, "project_id"),
+        filename: json_string(row, "filename"),
+        content_type: json_string(row, "content_type"),
+        size_bytes: json_i64(row, "size_bytes"),
+        backend: json_string(row, "backend"),
+        bucket: json_string(row, "bucket"),
+        object_key: json_string(row, "object_key"),
+        url: json_string(row, "url"),
+        cdn_url: json_string(row, "cdn_url"),
+        file_type: file_type_from_db(&json_string(row, "file_type")),
+        reference_id: json_string(row, "reference_id"),
+        reference_type: json_string(row, "reference_type"),
+        is_public: json_bool(row, "is_public"),
+        status: file_status_from_db(&json_string(row, "status")),
+        checksum: json_string(row, "checksum"),
+        uploaded_by: json_string(row, "uploaded_by"),
+        deleted_by: json_string(row, "deleted_by"),
         ..Default::default()
-    })
+    }
+}
+
+/// Full INSERT record for a freshly registered (`PENDING`) upload.
+fn file_register_record(
+    file_id: &str,
+    tenant_id: &str,
+    req: &storage_pb::RegisterUploadRequest,
+    file_type: &str,
+    object_key: &str,
+    declared_size: i64,
+) -> LogicalRecord {
+    let mut record = LogicalRecord::new();
+    record.insert("file_id".to_string(), logical_string(file_id));
+    record.insert("tenant_id".to_string(), logical_string(tenant_id));
+    record.insert(
+        "project_id".to_string(),
+        logical_uuid_or_null(&req.project_id),
+    );
+    record.insert("filename".to_string(), logical_string(req.filename.clone()));
+    record.insert(
+        "content_type".to_string(),
+        logical_string(req.content_type.clone()),
+    );
+    record.insert("file_type".to_string(), logical_text_or_null(file_type));
+    record.insert("status".to_string(), logical_string("PENDING"));
+    record.insert(
+        "reference_id".to_string(),
+        logical_uuid_or_null(&req.reference_id),
+    );
+    record.insert(
+        "reference_type".to_string(),
+        logical_string(req.reference_type.clone()),
+    );
+    record.insert(
+        "is_public".to_string(),
+        LogicalValue::Bool(register_is_public_bind(req.is_public)),
+    );
+    record.insert("object_key".to_string(), logical_string(object_key));
+    record.insert("size_bytes".to_string(), LogicalValue::Int(declared_size));
+    record
+}
+
+/// Map the `File.file_type` enum back to its canonical stored token ("" =
+/// unspecified → SQL NULL). Inverse of [`file_type_from_db`].
+fn file_type_to_short(value: i32) -> &'static str {
+    use storage_entity_pb::FileType as T;
+    match T::try_from(value).unwrap_or(T::Unspecified) {
+        T::Image => "IMAGE",
+        T::Video => "VIDEO",
+        T::Audio => "AUDIO",
+        T::Pdf => "PDF",
+        T::Document => "DOCUMENT",
+        T::Archive => "ARCHIVE",
+        T::Other => "OTHER",
+        T::Unspecified => "",
+    }
+}
+
+/// Map the `File.status` enum back to its canonical stored token. Inverse of
+/// [`file_status_from_db`].
+fn file_status_to_short(value: i32) -> &'static str {
+    use storage_entity_pb::FileStatus as S;
+    match S::try_from(value).unwrap_or(S::Unspecified) {
+        S::Pending => "PENDING",
+        S::Active => "ACTIVE",
+        S::Deleted => "DELETED",
+        S::Unspecified => "",
+    }
+}
+
+/// A full column record reflecting a file's current state. The typed upsert
+/// (`ConflictStrategy::Update`) compiles to `INSERT … ON CONFLICT DO UPDATE`, so
+/// the record must carry every column to satisfy NOT-NULL on the insert arm even
+/// though an existing row always takes the update arm (mirrors
+/// `tenant_config_record`). Callers override the fields they mutate, then list
+/// exactly those in `ConflictStrategy::Update { fields }`. `deleted_at` is
+/// intentionally omitted (lifecycle-only; set explicitly by `delete_file`).
+fn file_full_record(file: &storage_entity_pb::File) -> LogicalRecord {
+    let mut record = LogicalRecord::new();
+    record.insert("file_id".to_string(), logical_string(file.file_id.clone()));
+    record.insert(
+        "tenant_id".to_string(),
+        logical_uuid_or_null(&file.tenant_id),
+    );
+    record.insert(
+        "project_id".to_string(),
+        logical_uuid_or_null(&file.project_id),
+    );
+    record.insert(
+        "filename".to_string(),
+        logical_string(file.filename.clone()),
+    );
+    record.insert(
+        "content_type".to_string(),
+        logical_string(file.content_type.clone()),
+    );
+    record.insert("size_bytes".to_string(), LogicalValue::Int(file.size_bytes));
+    record.insert("backend".to_string(), logical_string(file.backend.clone()));
+    record.insert("bucket".to_string(), logical_string(file.bucket.clone()));
+    record.insert(
+        "object_key".to_string(),
+        logical_string(file.object_key.clone()),
+    );
+    record.insert("url".to_string(), logical_string(file.url.clone()));
+    record.insert("cdn_url".to_string(), logical_string(file.cdn_url.clone()));
+    record.insert(
+        "file_type".to_string(),
+        logical_text_or_null(file_type_to_short(file.file_type)),
+    );
+    record.insert(
+        "reference_id".to_string(),
+        logical_uuid_or_null(&file.reference_id),
+    );
+    record.insert(
+        "reference_type".to_string(),
+        logical_string(file.reference_type.clone()),
+    );
+    record.insert("is_public".to_string(), LogicalValue::Bool(file.is_public));
+    record.insert(
+        "status".to_string(),
+        logical_string(file_status_to_short(file.status)),
+    );
+    record.insert(
+        "checksum".to_string(),
+        logical_string(file.checksum.clone()),
+    );
+    record.insert(
+        "uploaded_by".to_string(),
+        logical_uuid_or_null(&file.uploaded_by),
+    );
+    record.insert(
+        "deleted_by".to_string(),
+        logical_uuid_or_null(&file.deleted_by),
+    );
+    record
 }
 
 #[tonic::async_trait]
@@ -603,85 +826,87 @@ impl StorageService for StorageServiceImpl {
         // Per-tenant fair admission (held for the whole RPC) — one tenant's
         // upload flood can't starve shared object capacity.
         let _admit = self.admit(&req.tenant_id, &req.project_id).await?;
-        let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?;
-        let pool = self.require_pool()?;
-        let m = file_model();
-        let rel = m.relation.clone();
-        let mut tx = pool
-            .begin()
-            .await
-            .map_err(|err| Status::internal(format!("register upload tx begin failed: {err}")))?;
-        Self::lock_tenant_quota(&mut tx, tenant_id).await?;
+        let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
+        let context = native_service_context(&metadata, &tenant_id, "");
+        let runtime = self.require_runtime()?;
         let file_id = Uuid::new_v4().to_string();
-        // file_type column is nullable: NULLIF stores NULL when caller omits it.
+        // file_type column is nullable: stored NULL when the caller omits it.
         let file_type = file_type_to_db(&req.file_type, "")?;
-        let object_key = format!("{}/{}/{}", req.tenant_id, file_id, req.filename);
-        // Real per-tenant byte quota pre-check (0 = unlimited). The declared
-        // `size_bytes` is persisted so the running total stays accurate even
-        // before finalize replaces it with the actual uploaded size.
+        let object_key = format!("{}/{}/{}", tenant_id, file_id, req.filename);
+        // The declared `size_bytes` is persisted so the running quota total stays
+        // accurate even before finalize replaces it with the actual uploaded size.
         let declared_size = req.size_bytes.max(0);
         let quota = Self::tenant_quota_bytes();
-        if quota > 0 {
-            let used = Self::tenant_used_bytes_on(&mut *tx, &m, tenant_id).await?;
-            if used + declared_size > quota {
-                return Err(Status::resource_exhausted(format!(
-                    "tenant storage quota exceeded: {used}+{} > {quota}",
-                    declared_size
-                )));
+        // Real per-tenant byte quota pre-check (0 = unlimited), serialized per
+        // tenant by the canonical advisory lease so concurrent registers can't
+        // race past the gate (the backend-agnostic analog of the old
+        // `pg_advisory_xact_lock`).
+        let lease_held = if quota > 0 {
+            self.acquire_quota_lease(runtime, &tenant_id, &file_id)
+                .await?
+        } else {
+            false
+        };
+        let write = async {
+            if quota > 0 {
+                let used = runtime
+                    .native_entity_sum_i64_for_service(
+                        "storage",
+                        &context,
+                        FILE_MSG,
+                        Some(file_tenant_active_filter(&tenant_id)),
+                        "size_bytes",
+                    )
+                    .await?;
+                if used + declared_size > quota {
+                    return Err(Status::resource_exhausted(format!(
+                        "tenant storage quota exceeded: {used}+{declared_size} > {quota}"
+                    )));
+                }
             }
+            runtime
+                .native_entity_write_for_service(
+                    "storage",
+                    &context,
+                    FILE_MSG,
+                    file_register_record(
+                        &file_id,
+                        &tenant_id,
+                        &req,
+                        &file_type,
+                        &object_key,
+                        declared_size,
+                    ),
+                    ConflictStrategy::Error,
+                )
+                .await?;
+            Ok::<(), Status>(())
         }
-        sqlx::query(&format!(
-            "INSERT INTO {rel} \
-             ({file_id}, {tenant_id}, {project_id}, {filename}, {content_type}, {file_type}, \
-              {status}, {reference_id}, {reference_type}, {is_public}, {object_key}, {size_bytes}) \
-             VALUES ($1::UUID, $2::UUID, NULLIF($3, '')::UUID, $4, $5, NULLIF($6, ''), \
-              'PENDING', NULLIF($7, '')::UUID, $8, $9, $10, $11)",
-            file_id = m.q("file_id"),
-            tenant_id = m.q("tenant_id"),
-            project_id = m.q("project_id"),
-            filename = m.q("filename"),
-            content_type = m.q("content_type"),
-            file_type = m.q("file_type"),
-            status = m.q("status"),
-            reference_id = m.q("reference_id"),
-            reference_type = m.q("reference_type"),
-            is_public = m.q("is_public"),
-            object_key = m.q("object_key"),
-            size_bytes = m.q("size_bytes"),
-        ))
-        .bind(&file_id)
-        .bind(tenant_id)
-        .bind(&req.project_id)
-        .bind(&req.filename)
-        .bind(&req.content_type)
-        .bind(&file_type)
-        .bind(&req.reference_id)
-        .bind(&req.reference_type)
-        .bind(register_is_public_bind(req.is_public))
-        .bind(&object_key)
-        .bind(declared_size)
-        .execute(&mut *tx)
-        .await
-        .map_err(|err| Status::internal(format!("register upload failed: {err}")))?;
-        tx.commit()
-            .await
-            .map_err(|err| Status::internal(format!("register upload tx commit failed: {err}")))?;
-        emit_payload_event(
-            pool,
-            self.outbox_relation.as_deref(),
-            TOPIC_UPLOAD_URL_ISSUED,
-            &file_id,
-            serde_json::json!({
-                "file_id": file_id.clone(),
-                "tenant_id": req.tenant_id.clone(),
-                "project_id": req.project_id.clone(),
-                "object_key": object_key.clone(),
-                "filename": req.filename.clone(),
-                "size_bytes": declared_size,
-            }),
-            Some(&self.metrics),
-        )
         .await;
+        if lease_held {
+            runtime
+                .release_native_lease(&quota_lease_name(&tenant_id), &file_id)
+                .await;
+        }
+        write?;
+        if let Some(pool) = self.pg_pool.as_ref() {
+            emit_payload_event(
+                pool,
+                self.outbox_relation.as_deref(),
+                TOPIC_UPLOAD_URL_ISSUED,
+                &file_id,
+                serde_json::json!({
+                    "file_id": file_id.clone(),
+                    "tenant_id": req.tenant_id.clone(),
+                    "project_id": req.project_id.clone(),
+                    "object_key": object_key.clone(),
+                    "filename": req.filename.clone(),
+                    "size_bytes": declared_size,
+                }),
+                Some(&self.metrics),
+            )
+            .await;
+        }
         // Mint a presigned PUT URL the client uploads bytes to directly (empty in
         // metadata-only mode / on error — client then uses the public PutObject RPC).
         let upload_minutes = if req.expires_in_minutes > 0 {
@@ -717,112 +942,153 @@ impl StorageService for StorageServiceImpl {
         validate_request_tenant(&metadata, &req.tenant_id)?;
         // Per-tenant fair admission (held for the whole RPC).
         let _admit = self.admit(&req.tenant_id, "").await?;
-        let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?;
-        let file_id = parse_uuid("file_id", &req.file_id)?;
-        let pool = self.require_pool()?;
-        let m = file_model();
-        let rel = m.relation.clone();
+        let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
+        let file_id = parse_uuid("file_id", &req.file_id)?.to_string();
         let file_type = file_type_to_db(&req.file_type, "")?;
-        let mut tx = pool
-            .begin()
-            .await
-            .map_err(|err| Status::internal(format!("finalize upload tx begin failed: {err}")))?;
-        Self::lock_tenant_quota(&mut tx, tenant_id).await?;
+        let context = native_service_context(&metadata, &tenant_id, "");
+        let runtime = self.require_runtime()?;
 
-        // Real per-tenant byte quota re-check against the size delta (actual
-        // uploaded size vs the declared size persisted at register time).
-        // A negative `size_bytes` means "leave the size unchanged".
-        let new_size = req.size_bytes;
-        let prior: Option<(i64, String, String)> = sqlx::query_as(&format!(
-            "SELECT {size_bytes}, {object_key}::TEXT AS object_key, \
-                    COALESCE({project_id}::TEXT, '') AS project_id FROM {rel} \
-             WHERE {file_id} = $1::UUID AND {tenant_id} = $2::UUID AND {deleted_at} IS NULL",
-            size_bytes = m.q("size_bytes"),
-            object_key = m.q("object_key"),
-            project_id = m.q("project_id"),
-            file_id = m.q("file_id"),
-            tenant_id = m.q("tenant_id"),
-            deleted_at = m.q("deleted_at"),
-        ))
-        .bind(file_id)
-        .bind(tenant_id)
-        .fetch_optional(&mut *tx)
-        .await
-        .map_err(|err| Status::internal(format!("finalize upload failed: {err}")))?;
-        let (prior_size, object_key, project_id) = match prior {
-            Some(row) => row,
+        // Load the current row: confirms existence, gives the object_key/project to
+        // verify the bytes landed, and the prior size for the quota delta.
+        let prior_rows = runtime
+            .native_entity_read_for_service(
+                "storage",
+                &context,
+                file_read_by_id(&tenant_id, &file_id),
+            )
+            .await?;
+        let prior = match prior_rows.first() {
+            Some(row) => file_from_json(row),
             None => return Err(Status::not_found("file not found")),
         };
-        if !self.object_exists(&project_id, &object_key).await? {
+        if !self
+            .object_exists(&prior.project_id, &prior.object_key)
+            .await?
+        {
             return Err(Status::failed_precondition(
                 "uploaded object is not present in the configured object store",
             ));
         }
+
+        // Partial update onto a full record (NOT-NULL-safe upsert): ACTIVE
+        // transition plus only the fields the caller supplied. A negative
+        // `size_bytes` means "leave the size unchanged".
+        let new_size = req.size_bytes;
+        let mut record = file_full_record(&prior);
+        record.insert("status".to_string(), logical_string("ACTIVE"));
+        let mut fields = vec!["status".to_string()];
+        if new_size >= 0 {
+            record.insert("size_bytes".to_string(), LogicalValue::Int(new_size));
+            fields.push("size_bytes".to_string());
+        }
+        if !req.content_type.trim().is_empty() {
+            record.insert(
+                "content_type".to_string(),
+                logical_string(req.content_type.clone()),
+            );
+            fields.push("content_type".to_string());
+        }
+        if !file_type.is_empty() {
+            record.insert("file_type".to_string(), logical_text_or_null(&file_type));
+            fields.push("file_type".to_string());
+        }
+        if !req.reference_id.trim().is_empty() {
+            record.insert(
+                "reference_id".to_string(),
+                logical_uuid_or_null(&req.reference_id),
+            );
+            fields.push("reference_id".to_string());
+        }
+        if !req.reference_type.trim().is_empty() {
+            record.insert(
+                "reference_type".to_string(),
+                logical_string(req.reference_type.clone()),
+            );
+            fields.push("reference_type".to_string());
+        }
+        if let Some(is_public) = req.is_public {
+            record.insert("is_public".to_string(), LogicalValue::Bool(is_public));
+            fields.push("is_public".to_string());
+        }
+
+        // Quota re-check against the size delta, serialized per tenant by the same
+        // lease as register. Only matters when the size grows under a finite quota.
         let quota = Self::tenant_quota_bytes();
-        if quota > 0 && new_size >= 0 {
-            let delta = new_size - prior_size;
-            if delta > 0 {
-                let used = Self::tenant_used_bytes_on(&mut *tx, &m, tenant_id).await?;
+        let delta = if new_size >= 0 {
+            new_size - prior.size_bytes
+        } else {
+            0
+        };
+        let lease_held = if quota > 0 && delta > 0 {
+            self.acquire_quota_lease(runtime, &tenant_id, &file_id)
+                .await?
+        } else {
+            false
+        };
+        let apply = async {
+            if quota > 0 && delta > 0 {
+                let used = runtime
+                    .native_entity_sum_i64_for_service(
+                        "storage",
+                        &context,
+                        FILE_MSG,
+                        Some(file_tenant_active_filter(&tenant_id)),
+                        "size_bytes",
+                    )
+                    .await?;
                 if used + delta > quota {
                     return Err(Status::resource_exhausted(format!(
                         "tenant storage quota exceeded: {used}+{delta} > {quota}"
                     )));
                 }
             }
+            runtime
+                .native_entity_write_for_service(
+                    "storage",
+                    &context,
+                    FILE_MSG,
+                    record,
+                    ConflictStrategy::update(fields),
+                )
+                .await?;
+            Ok::<(), Status>(())
         }
+        .await;
+        if lease_held {
+            runtime
+                .release_native_lease(&quota_lease_name(&tenant_id), &file_id)
+                .await;
+        }
+        apply?;
 
-        let result = sqlx::query(&finalize_upload_sql(&m))
-            .bind(file_id)
-            .bind(tenant_id)
-            .bind(&req.content_type)
-            .bind(&file_type)
-            .bind(&req.reference_id)
-            .bind(&req.reference_type)
-            .bind(update_is_public_bind(req.is_public))
-            .bind(new_size)
-            .execute(&mut *tx)
-            .await
-            .map_err(|err| Status::internal(format!("finalize upload failed: {err}")))?;
-        if result.rows_affected() == 0 {
-            return Err(Status::not_found("file not found"));
-        }
-        let projection = file_select_projection(&m);
-        let row = sqlx::query(&format!(
-            "SELECT {projection} FROM {rel} \
-             WHERE {file_id} = $1::UUID AND {tenant_id} = $2::UUID AND {deleted_at} IS NULL",
-            file_id = m.q("file_id"),
-            tenant_id = m.q("tenant_id"),
-            deleted_at = m.q("deleted_at"),
-        ))
-        .bind(file_id)
-        .bind(tenant_id)
-        .fetch_optional(&mut *tx)
-        .await
-        .map_err(|err| Status::internal(format!("finalize upload failed: {err}")))?;
-        let file = match row {
-            Some(row) => Some(file_from_row(&row)?),
-            None => return Err(Status::not_found("file not found")),
-        };
-        tx.commit()
-            .await
-            .map_err(|err| Status::internal(format!("finalize upload tx commit failed: {err}")))?;
-        if let Some(f) = &file {
-            emit_payload_event(
-                pool,
-                self.outbox_relation.as_deref(),
-                TOPIC_FILE_FINALIZED,
-                &f.file_id,
-                serde_json::json!({
-                    "file_id": f.file_id,
-                    "tenant_id": f.tenant_id,
-                    "project_id": f.project_id,
-                    "object_key": f.object_key,
-                    "size_bytes": f.size_bytes,
-                    "status": "ACTIVE",
-                }),
-                Some(&self.metrics),
+        // Read back the finalized row for the response.
+        let rows = runtime
+            .native_entity_read_for_service(
+                "storage",
+                &context,
+                file_read_by_id(&tenant_id, &file_id),
             )
-            .await;
+            .await?;
+        let file = rows.first().map(file_from_json);
+        if let Some(f) = &file {
+            if let Some(pool) = self.pg_pool.as_ref() {
+                emit_payload_event(
+                    pool,
+                    self.outbox_relation.as_deref(),
+                    TOPIC_FILE_FINALIZED,
+                    &f.file_id,
+                    serde_json::json!({
+                        "file_id": f.file_id,
+                        "tenant_id": f.tenant_id,
+                        "project_id": f.project_id,
+                        "object_key": f.object_key,
+                        "size_bytes": f.size_bytes,
+                        "status": "ACTIVE",
+                    }),
+                    Some(&self.metrics),
+                )
+                .await;
+            }
         }
         Ok(Response::new(storage_pb::FinalizeUploadResponse {
             file,
@@ -845,30 +1111,22 @@ impl StorageService for StorageServiceImpl {
         // Per-tenant fair admission: GetDownloadUrl mints a presigned URL via the
         // object backend, so it's an Object-class op gated per tenant.
         let _admit = self.admit(&req.tenant_id, "").await?;
-        let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?;
-        let file_id = parse_uuid("file_id", &req.file_id)?;
-        let pool = self.require_pool()?;
-        let m = file_model();
-        let rel = m.relation.clone();
-        let row = sqlx::query(&format!(
-            "SELECT {object_key}, {project_id} FROM {rel} \
-             WHERE {file_id} = $1::UUID AND {tenant_id} = $2::UUID AND {deleted_at} IS NULL",
-            object_key = m.text("object_key"),
-            project_id = m.text_or_empty("project_id"),
-            file_id = m.q("file_id"),
-            tenant_id = m.q("tenant_id"),
-            deleted_at = m.q("deleted_at"),
-        ))
-        .bind(file_id)
-        .bind(tenant_id)
-        .fetch_optional(pool)
-        .await
-        .map_err(|err| Status::internal(format!("get download url failed: {err}")))?;
-        let Some(row) = row else {
+        let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
+        let file_id = parse_uuid("file_id", &req.file_id)?.to_string();
+        let context = native_service_context(&metadata, &tenant_id, "");
+        let runtime = self.require_runtime()?;
+        let rows = runtime
+            .native_entity_read_for_service(
+                "storage",
+                &context,
+                file_read_by_id(&tenant_id, &file_id),
+            )
+            .await?;
+        let Some(file) = rows.first().map(file_from_json) else {
             return Err(Status::not_found("file not found"));
         };
-        let object_key: String = row.try_get("object_key").unwrap_or_default();
-        let project_id: String = row.try_get("project_id").unwrap_or_default();
+        let object_key = file.object_key;
+        let project_id = file.project_id;
         let minutes = if req.expires_in_minutes > 0 {
             req.expires_in_minutes.min(1440)
         } else {
@@ -909,28 +1167,21 @@ impl StorageService for StorageServiceImpl {
         // Per-tenant fair admission (lighter Read budget) so one tenant can't
         // exhaust the shared pool with reads.
         let _admit = self.admit_read(&req.tenant_id).await?;
-        let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?;
-        let file_id = parse_uuid("file_id", &req.file_id)?;
-        let pool = self.require_pool()?;
-        let m = file_model();
-        let rel = m.relation.clone();
-        let projection = file_select_projection(&m);
-        let row = sqlx::query(&format!(
-            "SELECT {projection} FROM {rel} \
-             WHERE {file_id} = $1::UUID AND {tenant_id} = $2::UUID AND {deleted_at} IS NULL",
-            file_id = m.q("file_id"),
-            tenant_id = m.q("tenant_id"),
-            deleted_at = m.q("deleted_at"),
-        ))
-        .bind(file_id)
-        .bind(tenant_id)
-        .fetch_optional(pool)
-        .await
-        .map_err(|err| Status::internal(format!("get file failed: {err}")))?;
-        let file = match row {
-            Some(row) => Some(file_from_row(&row)?),
-            None => return Err(Status::not_found("file not found")),
-        };
+        let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
+        let file_id = parse_uuid("file_id", &req.file_id)?.to_string();
+        let context = native_service_context(&metadata, &tenant_id, "");
+        let runtime = self.require_runtime()?;
+        let rows = runtime
+            .native_entity_read_for_service(
+                "storage",
+                &context,
+                file_read_by_id(&tenant_id, &file_id),
+            )
+            .await?;
+        let file = rows.first().map(file_from_json);
+        if file.is_none() {
+            return Err(Status::not_found("file not found"));
+        }
         Ok(Response::new(storage_pb::GetFileResponse {
             file,
             error: None,
@@ -947,38 +1198,85 @@ impl StorageService for StorageServiceImpl {
         validate_request_tenant(&metadata, &req.tenant_id)?;
         // Per-tenant fair admission (held for the whole RPC).
         let _admit = self.admit(&req.tenant_id, "").await?;
-        let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?;
-        let file_id = parse_uuid("file_id", &req.file_id)?;
-        let pool = self.require_pool()?;
-        let m = file_model();
+        let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
+        let file_id = parse_uuid("file_id", &req.file_id)?.to_string();
         let file_type = file_type_to_db(&req.file_type, "")?;
-        let result = sqlx::query(&update_file_sql(&m))
-            .bind(file_id)
-            .bind(tenant_id)
-            .bind(&req.filename)
-            .bind(&req.content_type)
-            .bind(&file_type)
-            .bind(&req.reference_id)
-            .bind(&req.reference_type)
-            .bind(update_is_public_bind(req.is_public))
-            .execute(pool)
-            .await
-            .map_err(|err| Status::internal(format!("update file failed: {err}")))?;
-        if result.rows_affected() == 0 {
-            return Err(Status::not_found("file not found"));
+        let context = native_service_context(&metadata, &tenant_id, "");
+        let runtime = self.require_runtime()?;
+        let rows = runtime
+            .native_entity_read_for_service(
+                "storage",
+                &context,
+                file_read_by_id(&tenant_id, &file_id),
+            )
+            .await?;
+        let prior = match rows.first() {
+            Some(row) => file_from_json(row),
+            None => return Err(Status::not_found("file not found")),
+        };
+        // Partial update onto a full record (NOT-NULL-safe upsert): only the
+        // fields the caller supplied are changed (mirrors the old COALESCE/NULLIF
+        // guards).
+        let mut record = file_full_record(&prior);
+        let mut fields = Vec::new();
+        if !req.filename.trim().is_empty() {
+            record.insert("filename".to_string(), logical_string(req.filename.clone()));
+            fields.push("filename".to_string());
         }
-        emit_payload_event(
-            pool,
-            self.outbox_relation.as_deref(),
-            TOPIC_FILE_METADATA_UPDATED,
-            &req.file_id,
-            serde_json::json!({
-                "file_id": req.file_id,
-                "tenant_id": req.tenant_id,
-            }),
-            Some(&self.metrics),
-        )
-        .await;
+        if !req.content_type.trim().is_empty() {
+            record.insert(
+                "content_type".to_string(),
+                logical_string(req.content_type.clone()),
+            );
+            fields.push("content_type".to_string());
+        }
+        if !file_type.is_empty() {
+            record.insert("file_type".to_string(), logical_text_or_null(&file_type));
+            fields.push("file_type".to_string());
+        }
+        if !req.reference_id.trim().is_empty() {
+            record.insert(
+                "reference_id".to_string(),
+                logical_uuid_or_null(&req.reference_id),
+            );
+            fields.push("reference_id".to_string());
+        }
+        if !req.reference_type.trim().is_empty() {
+            record.insert(
+                "reference_type".to_string(),
+                logical_string(req.reference_type.clone()),
+            );
+            fields.push("reference_type".to_string());
+        }
+        if let Some(is_public) = req.is_public {
+            record.insert("is_public".to_string(), LogicalValue::Bool(is_public));
+            fields.push("is_public".to_string());
+        }
+        if !fields.is_empty() {
+            runtime
+                .native_entity_write_for_service(
+                    "storage",
+                    &context,
+                    FILE_MSG,
+                    record,
+                    ConflictStrategy::update(fields),
+                )
+                .await?;
+        }
+        if let Some(pool) = self.pg_pool.as_ref() {
+            emit_payload_event(
+                pool,
+                self.outbox_relation.as_deref(),
+                TOPIC_FILE_METADATA_UPDATED,
+                &req.file_id,
+                serde_json::json!({
+                    "file_id": req.file_id,
+                    "tenant_id": req.tenant_id,
+                }),
+                Some(&self.metrics),
+            )
+            .await;
+        }
         Ok(Response::new(storage_pb::UpdateFileResponse {
             message: "file updated".to_string(),
             error: None,
@@ -999,51 +1297,57 @@ impl StorageService for StorageServiceImpl {
         // Per-tenant fair admission (held for the whole RPC) — DeleteFile also
         // removes object bytes via the object executor, so it's an Object-class op.
         let _admit = self.admit(&req.tenant_id, "").await?;
-        let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?;
-        let file_id = parse_uuid("file_id", &req.file_id)?;
-        let pool = self.require_pool()?;
-        let m = file_model();
-        let rel = m.relation.clone();
-        // Soft-delete the metadata (keeps it auditable) and recover the object_key
-        // so we can remove the bytes too.
-        let row = sqlx::query(&format!(
-            "UPDATE {rel} SET \
-               {deleted_at} = CURRENT_TIMESTAMP, \
-               {status} = 'DELETED' \
-             WHERE {file_id} = $1::UUID AND {tenant_id} = $2::UUID AND {deleted_at} IS NULL \
-             RETURNING {object_key}::TEXT AS object_key, COALESCE({project_id}::TEXT, '') AS project_id",
-            deleted_at = m.q("deleted_at"),
-            status = m.q("status"),
-            file_id = m.q("file_id"),
-            tenant_id = m.q("tenant_id"),
-            object_key = m.q("object_key"),
-            project_id = m.q("project_id"),
-        ))
-        .bind(file_id)
-        .bind(tenant_id)
-        .fetch_optional(pool)
-        .await
-        .map_err(|err| Status::internal(format!("delete file failed: {err}")))?;
-        let Some(row) = row else {
-            return Err(Status::not_found("file not found"));
+        let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
+        let file_id = parse_uuid("file_id", &req.file_id)?.to_string();
+        let context = native_service_context(&metadata, &tenant_id, "");
+        let runtime = self.require_runtime()?;
+        // Load the live row first: confirms existence (and not already deleted) and
+        // recovers the object_key/project so the bytes can be removed too.
+        let rows = runtime
+            .native_entity_read_for_service(
+                "storage",
+                &context,
+                file_read_by_id(&tenant_id, &file_id),
+            )
+            .await?;
+        let prior = match rows.first() {
+            Some(row) => file_from_json(row),
+            None => return Err(Status::not_found("file not found")),
         };
-        let object_key: String = row.try_get("object_key").unwrap_or_default();
-        let project_id: String = row.try_get("project_id").unwrap_or_default();
-        // Remove the bytes (best-effort; metadata stays auditable on failure).
-        self.delete_object_bytes(&project_id, &object_key).await;
-        emit_payload_event(
-            pool,
-            self.outbox_relation.as_deref(),
-            TOPIC_FILE_DELETED,
-            &req.file_id,
-            serde_json::json!({
-                "file_id": req.file_id,
-                "tenant_id": req.tenant_id,
-                "project_id": project_id,
-            }),
-            Some(&self.metrics),
-        )
-        .await;
+        // Soft-delete the metadata (keeps it auditable) on a full record.
+        let mut record = file_full_record(&prior);
+        record.insert(
+            "deleted_at".to_string(),
+            LogicalValue::Timestamp(chrono::Utc::now()),
+        );
+        record.insert("status".to_string(), logical_string("DELETED"));
+        runtime
+            .native_entity_write_for_service(
+                "storage",
+                &context,
+                FILE_MSG,
+                record,
+                ConflictStrategy::update(vec!["deleted_at".to_string(), "status".to_string()]),
+            )
+            .await?;
+        // Remove the bytes (best-effort; metadata stays soft-deleted on failure).
+        self.delete_object_bytes(&prior.project_id, &prior.object_key)
+            .await;
+        if let Some(pool) = self.pg_pool.as_ref() {
+            emit_payload_event(
+                pool,
+                self.outbox_relation.as_deref(),
+                TOPIC_FILE_DELETED,
+                &req.file_id,
+                serde_json::json!({
+                    "file_id": req.file_id,
+                    "tenant_id": req.tenant_id,
+                    "project_id": prior.project_id,
+                }),
+                Some(&self.metrics),
+            )
+            .await;
+        }
         Ok(Response::new(storage_pb::DeleteFileResponse {
             success: true,
             error: None,
@@ -1061,56 +1365,41 @@ impl StorageService for StorageServiceImpl {
         // Per-tenant fair admission (lighter Read budget) so one tenant can't
         // exhaust the shared pool with list scans.
         let _admit = self.admit_read(&req.tenant_id).await?;
-        let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?;
-        let pool = self.require_pool()?;
-        let m = file_model();
-        let rel = m.relation.clone();
-        let projection = file_select_projection(&m);
+        let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
         let type_filter = file_type_to_db(&req.file_type, "")?;
-        let page_size = if req.page_size > 0 { req.page_size } else { 50 }.min(500) as i64;
-        let page = if req.page > 0 { req.page } else { 1 } as i64;
-        let offset = (page - 1) * page_size;
-        let where_clause = format!(
-            "WHERE {deleted} IS NULL AND {tenant_id} = $1::UUID \
-             AND ($2 = '' OR {file_type} = $2) \
-             AND ($3 = '' OR {reference_id} = $3::UUID) \
-             AND ($4 = '' OR {reference_type} = $4) \
-             AND ($5 = '' OR {uploaded_by} = $5::UUID)",
-            deleted = m.q("deleted_at"),
-            tenant_id = m.q("tenant_id"),
-            file_type = m.q("file_type"),
-            reference_id = m.q("reference_id"),
-            reference_type = m.q("reference_type"),
-            uploaded_by = m.q("uploaded_by"),
+        let page_size = (if req.page_size > 0 { req.page_size } else { 50 }).min(500);
+        let page = if req.page > 0 { req.page } else { 1 };
+        let offset = (page as u64 - 1) * page_size as u64;
+        let context = native_service_context(&metadata, &tenant_id, "");
+        let runtime = self.require_runtime()?;
+        let filter = file_list_filter(
+            &tenant_id,
+            &type_filter,
+            &req.reference_id,
+            &req.reference_type,
+            &req.uploaded_by,
         );
-        let total: i64 = sqlx::query_scalar(&format!("SELECT COUNT(*) FROM {rel} {where_clause}"))
-            .bind(tenant_id)
-            .bind(&type_filter)
-            .bind(&req.reference_id)
-            .bind(&req.reference_type)
-            .bind(&req.uploaded_by)
-            .fetch_one(pool)
-            .await
-            .map_err(|err| Status::internal(format!("count files failed: {err}")))?;
-        let rows = sqlx::query(&format!(
-            "SELECT {projection} FROM {rel} {where_clause} \
-             ORDER BY {filename} LIMIT $6 OFFSET $7",
-            filename = m.q("filename"),
-        ))
-        .bind(tenant_id)
-        .bind(&type_filter)
-        .bind(&req.reference_id)
-        .bind(&req.reference_type)
-        .bind(&req.uploaded_by)
-        .bind(page_size)
-        .bind(offset)
-        .fetch_all(pool)
-        .await
-        .map_err(|err| Status::internal(format!("list files failed: {err}")))?;
-        let mut files = Vec::with_capacity(rows.len());
-        for row in &rows {
-            files.push(file_from_row(row)?);
-        }
+        // Count via the typed path (reads the per-tenant-bounded matching set). No
+        // IR-level aggregate yet (P4.D), so this is a bounded scan, not a hot-path
+        // COUNT — acceptable for a tenant's file list.
+        let total = runtime
+            .native_entity_count_for_service("storage", &context, FILE_MSG, Some(filter.clone()))
+            .await?;
+        let read = LogicalRead {
+            message_type: FILE_MSG.to_string(),
+            filter: Some(filter),
+            projection: Some(file_projection()),
+            sort: vec![LogicalSort {
+                field: "filename".to_string(),
+                direction: SortDirection::Asc,
+                nulls: NullOrder::Default,
+            }],
+            pagination: Some(LogicalPagination::page(offset, page_size as u32)),
+        };
+        let rows = runtime
+            .native_entity_read_for_service("storage", &context, read)
+            .await?;
+        let files = rows.iter().map(file_from_json).collect::<Vec<_>>();
         Ok(Response::new(storage_pb::ListFilesResponse {
             files,
             total_count: total as i32,
@@ -1124,7 +1413,12 @@ impl DataBrokerService {
     /// and the transactional outbox, and spawn the periodic orphan reaper.
     pub(crate) fn build_storage_service(&self) -> StorageServiceImpl {
         let runtime = self.runtime.load_full();
-        let pg_pool = runtime.pg_pool().ok().cloned();
+        // Native-service persistence resolves through the discovery seam (extend_udb.md):
+        // the backend is read from this service's proto `native_service` binding, then a
+        // health/weight-routed instance is chosen — not the process-global pool.
+        let pg_pool = runtime
+            .native_store_pool_for_service("storage", true, "")
+            .ok();
         let outbox = runtime.config().cdc.outbox_relation();
         let (object_backend, object_bucket) = storage_object_defaults(
             std::env::var("UDB_STORAGE_OBJECT_BACKEND").ok(),
@@ -1156,45 +1450,22 @@ impl DataBrokerService {
             let reaper = svc.clone();
             let singleton_pool = svc.pg_pool.clone().expect("checked above");
             let singleton_relation = runtime.config().cdc.lock_log_relation();
-            tokio::spawn(async move {
-                let mut ticker =
-                    tokio::time::interval(std::time::Duration::from_secs(interval_secs));
-                loop {
-                    ticker.tick().await;
+            crate::runtime::service::native_runtime::NativeWorkerHost::spawn_while_leader(
+                crate::runtime::singleton::WORKER_STORAGE_ORPHAN_REAPER,
+                "storage orphan reaper deleted PENDING files",
+                singleton_pool,
+                singleton_relation,
+                std::time::Duration::from_secs(interval_secs),
+                move || {
                     let reaper_once = reaper.clone();
-                    match crate::runtime::singleton::run_while_leader(
-                        &singleton_pool,
-                        &singleton_relation,
-                        crate::runtime::singleton::WORKER_STORAGE_ORPHAN_REAPER,
-                        crate::runtime::singleton::WORKER_SINGLETON_LEASE_TTL,
-                        || async move {
-                            reaper_once
-                                .reap_orphans(orphan_age_minutes, orphan_batch_size)
-                                .await
-                        },
-                    )
-                    .await
-                    {
-                        Ok(Some(Ok(n))) if n > 0 => {
-                            tracing::info!(
-                                reaped = n,
-                                "storage orphan reaper deleted PENDING files"
-                            )
-                        }
-                        Ok(Some(Ok(_))) => {}
-                        Ok(Some(Err(err))) => {
-                            tracing::warn!(error = %err, "storage orphan reaper failed")
-                        }
-                        Ok(None) => tracing::debug!(
-                            "storage orphan reaper skipped: singleton lease held by peer"
-                        ),
-                        Err(err) => tracing::warn!(
-                            error = %err,
-                            "storage orphan reaper singleton lease failed"
-                        ),
+                    async move {
+                        reaper_once
+                            .reap_orphans(orphan_age_minutes, orphan_batch_size)
+                            .await
+                            .map(|n| n as i64)
                     }
-                }
-            });
+                },
+            );
         }
 
         svc
@@ -1232,45 +1503,21 @@ mod tenant_scope_tests {
 mod is_public_presence_tests {
     use super::*;
 
-    /// The REAL UPDATE statements the handlers execute (`update_file_sql` /
-    /// `finalize_upload_sql`) must presence-guard `is_public` with COALESCE so
-    /// an absent proto3-optional field (bound as SQL NULL) leaves the stored
-    /// visibility unchanged. Uses the embedded proto manifest — no DB needed.
+    /// `is_public` presence handling after the P4 typed-entity migration.
+    ///
+    /// `update_file`/`finalize_upload` no longer build raw `COALESCE` SQL; they
+    /// presence-guard `is_public` *structurally* on the typed `LogicalWrite`
+    /// field set — an absent proto3-optional `is_public` is never added to
+    /// `fields` (`if let Some(is_public) = req.is_public { … }`), so the stored
+    /// visibility is left untouched. That is the v0.3.2 #47 guarantee, now
+    /// enforced by the type system rather than a hand-built SQL string. The
+    /// register INSERT differs: the column is NOT NULL, so an absent value must
+    /// default to private — that decision lives in the pure
+    /// `register_is_public_bind` helper (still called from `register_upload`),
+    /// covered here. End-to-end preservation of stored visibility on an absent
+    /// update is exercised by the env-gated storage live tests.
     #[test]
-    fn update_and_finalize_sql_presence_guard_is_public() {
-        let m = file_model();
-        let col = m.q("is_public");
-
-        let update = update_file_sql(&m);
-        assert!(
-            update.contains(&format!("{col} = COALESCE($8, {col})")),
-            "update_file SQL must keep stored is_public when $8 is NULL: {update}"
-        );
-        assert!(
-            !update.contains(&format!("{col} = $8")),
-            "update_file SQL must not bind is_public unconditionally: {update}"
-        );
-
-        let finalize = finalize_upload_sql(&m);
-        assert!(
-            finalize.contains(&format!("{col} = COALESCE($7, {col})")),
-            "finalize_upload SQL must keep stored is_public when $7 is NULL: {finalize}"
-        );
-        assert!(
-            !finalize.contains(&format!("{col} = $7 ")),
-            "finalize_upload SQL must not bind is_public unconditionally: {finalize}"
-        );
-    }
-
-    /// The bind helpers the handlers feed those statements: absent → NULL bind
-    /// (COALESCE keeps the stored value), present → applied. The INSERT-side
-    /// helper never produces NULL because the column is NOT NULL.
-    #[test]
-    fn is_public_binds_only_when_present() {
-        // update_file / finalize_upload: absent field binds NULL → unchanged.
-        assert_eq!(update_is_public_bind(None), None);
-        assert_eq!(update_is_public_bind(Some(true)), Some(true));
-        assert_eq!(update_is_public_bind(Some(false)), Some(false));
+    fn register_is_public_defaults_to_private_when_absent() {
         // register_upload INSERT: absent field defaults to private, never NULL.
         assert!(!register_is_public_bind(None));
         assert!(register_is_public_bind(Some(true)));

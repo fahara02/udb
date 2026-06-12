@@ -45,6 +45,10 @@ extend google.protobuf.MethodOptions {
   CliScaffoldOptions method_cli_scaffold = 51004;
   EventContractOptions method_event_contract = 51005;
   DependencyContractOptions method_dependency_contract = 51006;
+  // Authoritative state-change classification — see the OperationKind enum.
+  // Standalone (not in endpoint_security) so it is decoupled from auth and every
+  // RPC can carry it, including the DataBroker data-plane RPCs.
+  OperationKind operation_kind = 51007;
 }
 
 extend google.protobuf.MessageOptions {
@@ -80,6 +84,22 @@ message EndpointSecurity {
   string project_field = 16;
   bool idempotency_required = 17;
   bool request_context_required = 18;
+}
+
+// State-change semantics of an RPC, set via the standalone `operation_kind`
+// method option (NOT nested in endpoint_security, so it never affects the
+// auth/method-security path — it is pure metadata). SINGLE source of truth for
+// (a) client retry safety — only READ_ONLY is safe to auto-retry on a transient
+// failure (retrying a MUTATION risks duplicate side effects), and (b) SDK
+// conformance probing — READ_ONLY/MUTATION requests may be field-populated,
+// DESTRUCTIVE requests must not be (populating them could corrupt shared/global
+// state). Every facade RPC MUST set it; the generation lint rejects UNSPECIFIED,
+// so new RPCs are classified explicitly, never guessed from the method name.
+enum OperationKind {
+  OPERATION_KIND_UNSPECIFIED = 0; // not set — rejected by the generation lint
+  OPERATION_KIND_READ_ONLY = 1;   // no state change; retry-safe
+  OPERATION_KIND_MUTATION = 2;    // tenant/resource-scoped state change; not retry-safe
+  OPERATION_KIND_DESTRUCTIVE = 3; // irreversible or cluster-global blast radius
 }
 
 message RestContract {

@@ -89,7 +89,7 @@ public sealed partial class Generated{{SERVICE_NAME}}Client
             co => (object)_stub.{{RPC_NAME}}Async(request, co),
             deadline,
             cancellationToken,
-            IsReadOnlyRpcName("{{RPC_NAME}}"));
+            "{{RPC_OPERATION_KIND}}" == "read_only");
     }
 }
 // @@UDB_RPC_END

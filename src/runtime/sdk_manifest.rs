@@ -79,6 +79,14 @@ pub struct RpcDescriptor {
     /// From the owning service's `NativeServiceContract`: may bind the WebRTC
     /// peer listener.
     pub peer_listener_allowed: bool,
+    /// From the method's `EndpointSecurity.operation_kind`: the authoritative
+    /// state-change class (`read_only` | `mutation` | `destructive` |
+    /// `unspecified`). The SINGLE source for client retry-safety and SDK probe
+    /// classification — replaces any method-name guessing.
+    pub operation_kind: String,
+    /// Convenience: `operation_kind == read_only`. Only read-only RPCs are
+    /// safe to auto-retry / safe to fully field-populate in conformance probes.
+    pub read_only: bool,
 }
 
 impl RpcDescriptor {
@@ -230,6 +238,11 @@ pub fn rpc_manifest() -> Vec<RpcDescriptor> {
                     .map(|n| n.control_plane_listener_allowed)
                     .unwrap_or(false),
                 peer_listener_allowed: native.map(|n| n.peer_listener_allowed).unwrap_or(false),
+                operation_kind: crate::runtime::descriptor_manifest::operation_kind_name(
+                    method.operation_kind,
+                )
+                .to_string(),
+                read_only: method.operation_kind == 1,
             });
         }
     }

@@ -10,6 +10,75 @@ fn tuple_scope_tenant(tenant: &str, project: &str) -> String {
     }
 }
 
+fn policy_tuple_record(
+    tuple_kind: &str,
+    subject: &str,
+    domain: &str,
+    object: &str,
+    action: &str,
+    effect: &str,
+    condition: &str,
+    tenant_id: &str,
+    project_id: &str,
+) -> LogicalRecord {
+    let mut record = LogicalRecord::new();
+    record.insert(
+        "tuple_kind".to_string(),
+        LogicalValue::String(tuple_kind.to_string()),
+    );
+    record.insert(
+        "subject".to_string(),
+        LogicalValue::String(subject.to_string()),
+    );
+    record.insert(
+        "domain".to_string(),
+        LogicalValue::String(domain.to_string()),
+    );
+    record.insert(
+        "object".to_string(),
+        LogicalValue::String(object.to_string()),
+    );
+    record.insert(
+        "action".to_string(),
+        LogicalValue::String(action.to_string()),
+    );
+    record.insert(
+        "effect".to_string(),
+        LogicalValue::String(effect.to_string()),
+    );
+    record.insert(
+        "condition".to_string(),
+        LogicalValue::String(condition.to_string()),
+    );
+    record.insert(
+        "tenant_id".to_string(),
+        LogicalValue::String(tenant_id.to_string()),
+    );
+    record.insert(
+        "project_id".to_string(),
+        LogicalValue::String(project_id.to_string()),
+    );
+    record
+}
+
+fn policy_tuple_conflict() -> ConflictStrategy {
+    ConflictStrategy::update_on(
+        vec![
+            "condition".to_string(),
+            "tenant_id".to_string(),
+            "project_id".to_string(),
+        ],
+        vec![
+            "tuple_kind".to_string(),
+            "subject".to_string(),
+            "domain".to_string(),
+            "object".to_string(),
+            "action".to_string(),
+            "effect".to_string(),
+        ],
+    )
+}
+
 impl AuthzServiceImpl {
     pub(super) async fn put_role_binding_impl(
         &self,
@@ -41,44 +110,43 @@ impl AuthzServiceImpl {
             "expires_at_unix": binding.expires_at_unix,
         })
         .to_string();
-        if let Some(pool) = &self.pg_pool {
-            let tuple = self.relationship_tuples_model();
-            let rel = tuple.relation.clone();
-            sqlx::query(&format!(
-                "INSERT INTO {rel} ({tuple_kind}, {subject}, {domain_col}, {object_col}, {action_col}, {effect_col}, {condition}, {tenant_id}, {project_id}) \
-                 VALUES ('grouping', $1, $3, '', $2, '', $5, $3, $4) \
-                 ON CONFLICT ({tuple_kind}, {subject}, {domain_col}, {object_col}, {action_col}, {effect_col}) \
-                 DO UPDATE SET {condition} = EXCLUDED.{condition}, {tenant_id} = EXCLUDED.{tenant_id}, {project_id} = EXCLUDED.{project_id}",
-                tuple_kind = tuple.q("tuple_kind"),
-                subject = tuple.q("subject"),
-                domain_col = tuple.q("domain"),
-                object_col = tuple.q("object"),
-                action_col = tuple.q("action"),
-                effect_col = tuple.q("effect"),
-                condition = tuple.q("condition"),
-                tenant_id = tuple.q("tenant_id"),
-                project_id = tuple.q("project_id"),
-            ))
-            .bind(&binding.subject)
-            .bind(&binding.role)
-            .bind(&scope_tenant)
-            .bind(&binding.project)
-            .bind(&condition)
-            .execute(pool)
-            .await
-            .map_err(|err| Status::internal(format!("store role binding failed: {err}")))?;
-            let _ = self
-                .bump_authz_revision(
+        let runtime = self.runtime.as_ref().ok_or_else(|| {
+            Status::failed_precondition("native authz requires runtime-backed tuple persistence")
+        })?;
+        let context = crate::RequestContext {
+            tenant_id: scope_tenant.clone(),
+            project_id: binding.project.clone(),
+            ..crate::RequestContext::default()
+        };
+        runtime
+            .native_entity_write_for_service(
+                "authz",
+                &context,
+                "udb.core.authz.entity.v1.PolicyTuple",
+                policy_tuple_record(
+                    "grouping",
+                    &binding.subject,
+                    &scope_tenant,
+                    "",
+                    &binding.role,
+                    "",
+                    &condition,
                     &scope_tenant,
                     &binding.project,
-                    authz_entity_pb::AuthzChangeType::RoleAssignment,
-                    "role-binding-put",
-                    &binding.source,
-                )
-                .await;
-        } else {
-            self.require_snapshot_fallback()?;
-        }
+                ),
+                policy_tuple_conflict(),
+            )
+            .await
+            .map_err(|err| Status::internal(format!("store role binding failed: {err}")))?;
+        let _ = self
+            .bump_authz_revision(
+                &scope_tenant,
+                &binding.project,
+                authz_entity_pb::AuthzChangeType::RoleAssignment,
+                "role-binding-put",
+                &binding.source,
+            )
+            .await;
         self.invalidate_snapshot_cache();
         Ok(Response::new(authz_pb::AuthMutationResponse {
             ok: true,
@@ -120,45 +188,43 @@ impl AuthzServiceImpl {
             "expires_at_unix": tuple.expires_at_unix,
         })
         .to_string();
-        if let Some(pool) = &self.pg_pool {
-            let tuple_model = self.relationship_tuples_model();
-            let rel = tuple_model.relation.clone();
-            sqlx::query(&format!(
-                "INSERT INTO {rel} ({tuple_kind}, {subject}, {domain_col}, {object_col}, {action_col}, {effect_col}, {condition}, {tenant_id}, {project_id}) \
-                 VALUES ('relationship', $1, $4, $3, $2, '', $6, $4, $5) \
-                 ON CONFLICT ({tuple_kind}, {subject}, {domain_col}, {object_col}, {action_col}, {effect_col}) \
-                 DO UPDATE SET {condition} = EXCLUDED.{condition}, {tenant_id} = EXCLUDED.{tenant_id}, {project_id} = EXCLUDED.{project_id}",
-                tuple_kind = tuple_model.q("tuple_kind"),
-                subject = tuple_model.q("subject"),
-                domain_col = tuple_model.q("domain"),
-                object_col = tuple_model.q("object"),
-                action_col = tuple_model.q("action"),
-                effect_col = tuple_model.q("effect"),
-                condition = tuple_model.q("condition"),
-                tenant_id = tuple_model.q("tenant_id"),
-                project_id = tuple_model.q("project_id"),
-            ))
-            .bind(&tuple.subject)
-            .bind(&tuple.relation)
-            .bind(&tuple.object)
-            .bind(&scope_tenant)
-            .bind(&tuple.project)
-            .bind(&condition)
-            .execute(pool)
-            .await
-            .map_err(|err| Status::internal(format!("store relationship tuple failed: {err}")))?;
-            let _ = self
-                .bump_authz_revision(
+        let runtime = self.runtime.as_ref().ok_or_else(|| {
+            Status::failed_precondition("native authz requires runtime-backed tuple persistence")
+        })?;
+        let context = crate::RequestContext {
+            tenant_id: scope_tenant.clone(),
+            project_id: tuple.project.clone(),
+            ..crate::RequestContext::default()
+        };
+        runtime
+            .native_entity_write_for_service(
+                "authz",
+                &context,
+                "udb.core.authz.entity.v1.PolicyTuple",
+                policy_tuple_record(
+                    "relationship",
+                    &tuple.subject,
+                    &scope_tenant,
+                    &tuple.object,
+                    &tuple.relation,
+                    "",
+                    &condition,
                     &scope_tenant,
                     &tuple.project,
-                    authz_entity_pb::AuthzChangeType::Relationship,
-                    "relationship-put",
-                    &tuple.source,
-                )
-                .await;
-        } else {
-            self.require_snapshot_fallback()?;
-        }
+                ),
+                policy_tuple_conflict(),
+            )
+            .await
+            .map_err(|err| Status::internal(format!("store relationship tuple failed: {err}")))?;
+        let _ = self
+            .bump_authz_revision(
+                &scope_tenant,
+                &tuple.project,
+                authz_entity_pb::AuthzChangeType::Relationship,
+                "relationship-put",
+                &tuple.source,
+            )
+            .await;
         self.invalidate_snapshot_cache();
         // Phase L2/L3 task5: publish the relationship-tuple change so security
         // dashboards and the audit plane observe ReBAC edits (no raw condition

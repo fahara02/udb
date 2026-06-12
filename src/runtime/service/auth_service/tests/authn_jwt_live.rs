@@ -257,3 +257,103 @@ async fn live_postgres_refresh_token_family_rotation_and_reuse() {
 
     cleanup_native_auth_db(&pool).await;
 }
+
+/// Logout must kill the refresh-token family bound to the session — otherwise a
+/// logged-out session's refresh token keeps minting access tokens (the family
+/// path only checks the user is active, not whether the session was revoked).
+#[tokio::test]
+#[ignore = "requires live Postgres; run with UDB_LIVE_AUTH_TESTS=1 cargo test --lib live_postgres_refresh_token_dies_with_session_logout -- --ignored --nocapture"]
+async fn live_postgres_refresh_token_dies_with_session_logout() {
+    let _guard = live_auth_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_auth_db(&pool).await;
+    let authn = authn_service_with_jwt(pool.clone());
+    let user = create_verified_user(&authn, "rtlogout", "CorrectHorse1!").await;
+
+    let login = authn
+        .login(Request::new(authn_pb::LoginRequest {
+            username: user.email.clone(),
+            password: "CorrectHorse1!".to_string(),
+            device_name: "rtl".to_string(),
+            ..Default::default()
+        }))
+        .await
+        .expect("login")
+        .into_inner();
+    assert!(login.refresh_token.starts_with("rt_"));
+
+    // Sanity: the refresh token works BEFORE logout (and rotates).
+    let ok = authn
+        .refresh_token(Request::new(authn_pb::RefreshTokenRequest {
+            refresh_token: login.refresh_token.clone(),
+            ..Default::default()
+        }))
+        .await
+        .expect("refresh before logout")
+        .into_inner();
+    assert!(!ok.access_token.is_empty());
+
+    // Log the session out.
+    authn
+        .logout(Request::new(authn_pb::LogoutRequest {
+            session_id: login.session_id.clone(),
+            revoke_reason: "live_test".to_string(),
+            ..Default::default()
+        }))
+        .await
+        .expect("logout");
+
+    // The refresh token must now be DEAD: logout revoked the family, so the
+    // logged-out session can no longer mint access tokens via RefreshToken.
+    let denied = authn
+        .refresh_token(Request::new(authn_pb::RefreshTokenRequest {
+            refresh_token: ok.refresh_token.clone(),
+            ..Default::default()
+        }))
+        .await
+        .expect_err("refresh must fail after the session is logged out");
+    assert_eq!(denied.code(), tonic::Code::Unauthenticated);
+
+    // bug_report #3 (second path): RefreshSession must ALSO fail after logout — a
+    // revoked session can't be refreshed, and the RPC must ERROR (not return a
+    // success envelope a caller would read as "still active").
+    let session_denied = authn
+        .refresh_session(Request::new(authn_pb::RefreshSessionRequest {
+            session_id: login.session_id.clone(),
+            ttl_seconds: 120,
+        }))
+        .await
+        .expect_err("refresh_session must fail after logout");
+    assert_eq!(session_denied.code(), tonic::Code::Unauthenticated);
+
+    // bug_report §3 UPDATE 2: the ACCESS TOKEN itself must die with logout — it
+    // must neither validate nor introspect Active afterwards. The JWT `jti` is the
+    // issuing session id, so the durable session/jti revocation logout performs
+    // must be visible to both `ValidateToken` and `IntrospectToken`.
+    let validated = authn
+        .validate_token(Request::new(authn_pb::ValidateTokenRequest {
+            token: login.access_token.clone(),
+            token_type: authn_entity_pb::TokenType::JwtAccess as i32,
+        }))
+        .await
+        .expect("validate access token after logout")
+        .into_inner();
+    assert!(
+        !validated.valid,
+        "access token must NOT validate after logout (bug_report §3)"
+    );
+    let introspected = authn
+        .introspect_token(Request::new(authn_pb::IntrospectTokenRequest {
+            token: login.access_token.clone(),
+            ..Default::default()
+        }))
+        .await
+        .expect("introspect access token after logout")
+        .into_inner();
+    assert!(
+        !introspected.active,
+        "access token must NOT introspect Active after logout (bug_report §3)"
+    );
+
+    cleanup_native_auth_db(&pool).await;
+}

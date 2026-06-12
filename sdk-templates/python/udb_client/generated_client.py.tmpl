@@ -133,32 +133,19 @@ def _map_error(rpc_name: str, error: grpc.RpcError) -> UdbRpcError:
     return UdbRpcError(rpc_name, error)
 
 
-def _is_read_only_rpc_name(name: str) -> bool:
-    return name.startswith(
-        (
-            "Get",
-            "List",
-            "Check",
-            "Validate",
-            "Introspect",
-            "Authorize",
-            "BatchCheck",
-            "Preview",
-            "Resolve",
-            "Explain",
-            "Diff",
-            "Lint",
-            "Test",
-            "Select",
-            "AnalyticalQuery",
-            "VectorSearch",
-            "GraphQuery",
-            "CacheGet",
-            "CacheScan",
-            "DocumentGet",
-            "DocumentFind",
-        )
-    )
+# Retry safety is read from the proto-derived operation_kind per RPC (see the
+# generated wrappers' read_only= argument) — never guessed from the method name.
+
+# Proto-derived operation_kind for every RPC, keyed by full gRPC path
+# ("/pkg.Service/Method"): "read_only" | "mutation" | "destructive". The SINGLE
+# authoritative state-change classification (from EndpointSecurity's sibling
+# operation_kind method option) — used for retry safety and SDK conformance
+# probing. Never derived from the method name.
+RPC_OPERATION_KIND: dict[str, str] = {
+    # @@UDB_RPC_BEGIN
+    "{{RPC_PATH}}": "{{RPC_OPERATION_KIND}}",
+    # @@UDB_RPC_END
+}
 
 
 def _discover_stub_class(service_pkg: str, service_name: str) -> type:
@@ -409,7 +396,7 @@ class {{SERVICE_NAME}}Client(_ServiceClientBase):
             metadata=metadata,
             timeout=timeout,
             retryable=retry,
-            read_only=_is_read_only_rpc_name("{{RPC_NAME}}"),
+            read_only=("{{RPC_OPERATION_KIND}}" == "read_only"),
         )
 
     # @@UDB_RPC_END
@@ -438,7 +425,7 @@ class {{SERVICE_NAME}}Client(_ServiceClientBase):
             metadata=metadata,
             timeout=timeout,
             retryable=retry,
-            read_only=_is_read_only_rpc_name("{{RPC_NAME}}"),
+            read_only=("{{RPC_OPERATION_KIND}}" == "read_only"),
         )
 
     # @@UDB_RPC_END

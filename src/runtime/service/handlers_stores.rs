@@ -78,7 +78,7 @@ impl DataBrokerService {
                 let value = v
                     .get("value")
                     .and_then(serde_json::Value::as_str)
-                    .map(|s| s.as_bytes().to_vec())
+                    .map(cache_value_bytes)
                     .unwrap_or_default();
                 Response::new(crate::proto::CacheGetResponse {
                     found,
@@ -186,7 +186,7 @@ impl DataBrokerService {
                                 value: e
                                     .get("value")
                                     .and_then(serde_json::Value::as_str)
-                                    .map(|s| s.as_bytes().to_vec())
+                                    .map(cache_value_bytes)
                                     .unwrap_or_default(),
                                 ..Default::default()
                             })
@@ -543,6 +543,16 @@ fn collection_of(resource: &Option<crate::proto::StoreResource>) -> String {
             }
         })
         .unwrap_or_default()
+}
+
+fn cache_value_bytes(value: &str) -> Vec<u8> {
+    if let Some(encoded) = value.strip_prefix("base64:") {
+        use base64::Engine as _;
+        return base64::engine::general_purpose::STANDARD
+            .decode(encoded)
+            .unwrap_or_default();
+    }
+    value.as_bytes().to_vec()
 }
 
 /// JSON for an optional protobuf `Struct` field (empty object when absent).

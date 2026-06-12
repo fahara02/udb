@@ -22,34 +22,66 @@ impl AuthzServiceImpl {
         name: &str,
         created_by: &str,
     ) -> Result<String, Status> {
-        let pool = self.require_pool()?;
-        let m = self.policy_sets_model();
-        let rel = m.relation.clone();
+        let runtime = self.runtime.as_ref().ok_or_else(|| {
+            Status::failed_precondition(
+                "native authz requires runtime-backed policy-set persistence",
+            )
+        })?;
         let name = if name.trim().is_empty() {
             "default"
         } else {
             name.trim()
         };
-        let row = sqlx::query(&format!(
-            "INSERT INTO {rel} ({policy_set_id}, {tenant_id}, {project_id}, {name}, {created_by}) \
-             VALUES (gen_random_uuid(), $1, $2, $3, $4) \
-             ON CONFLICT ({tenant_id}, {project_id}, {name}) DO UPDATE SET {name} = EXCLUDED.{name} \
-             RETURNING {policy_set_id}::TEXT AS policy_set_id",
-            policy_set_id = m.q("policy_set_id"),
-            tenant_id = m.q("tenant_id"),
-            project_id = m.q("project_id"),
-            name = m.q("name"),
-            created_by = m.q("created_by"),
-        ))
-        .bind(tenant)
-        .bind(project)
-        .bind(name)
-        .bind(created_by)
-        .fetch_one(pool)
-        .await
-        .map_err(|err| Status::internal(format!("ensure policy set failed: {err}")))?;
-        row.try_get::<String, _>("policy_set_id")
-            .map_err(|err| Status::internal(format!("decode policy set id failed: {err}")))
+        // P6.10 Wave 4: typed upsert on the alternate-unique (tenant_id,project_id,name)
+        // [manifest idx uq_policy_sets_tenant_project_name] + RETURNING policy_set_id.
+        // policy_set_id is server-generated in Rust (was gen_random_uuid()).
+        let mut record = LogicalRecord::new();
+        record.insert(
+            "policy_set_id".to_string(),
+            LogicalValue::String(Uuid::new_v4().to_string()),
+        );
+        record.insert(
+            "tenant_id".to_string(),
+            LogicalValue::String(tenant.to_string()),
+        );
+        record.insert(
+            "project_id".to_string(),
+            LogicalValue::String(project.to_string()),
+        );
+        record.insert("name".to_string(), LogicalValue::String(name.to_string()));
+        record.insert(
+            "created_by".to_string(),
+            LogicalValue::String(created_by.to_string()),
+        );
+        let context = crate::RequestContext {
+            tenant_id: tenant.to_string(),
+            project_id: project.to_string(),
+            ..crate::RequestContext::default()
+        };
+        let returned = runtime
+            .native_entity_write_for_service_returning(
+                "authz",
+                &context,
+                "udb.core.authz.entity.v1.PolicySet",
+                record,
+                ConflictStrategy::update_on(
+                    vec!["name".to_string()],
+                    vec![
+                        "tenant_id".to_string(),
+                        "project_id".to_string(),
+                        "name".to_string(),
+                    ],
+                ),
+                vec!["policy_set_id".to_string()],
+            )
+            .await
+            .map_err(|err| Status::internal(format!("ensure policy set failed: {err}")))?;
+        returned
+            .first()
+            .and_then(|r| r.get("policy_set_id"))
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string())
+            .ok_or_else(|| Status::internal("ensure policy set returned no id".to_string()))
     }
 
     pub(super) async fn create_policy_draft_impl(

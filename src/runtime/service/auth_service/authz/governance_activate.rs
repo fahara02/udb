@@ -215,6 +215,20 @@ impl AuthzServiceImpl {
             .begin()
             .await
             .map_err(|err| Status::internal(format!("activation tx begin failed: {err}")))?;
+        // P6.10 carve-out: install request-local tenant/project context as the FIRST
+        // tx statement so the replace-all legs run with the same RLS/audit context the
+        // typed path would set (defense-in-depth — the legs are already explicitly
+        // tenant-scoped, and authz tables are enable_rls-not-force so the broker owner
+        // bypasses RLS, but this keeps the context correct and audit-attributable).
+        crate::runtime::core::set_request_local_settings(
+            &mut tx,
+            &crate::RequestContext {
+                tenant_id: tenant.clone(),
+                project_id: project.clone(),
+                ..crate::RequestContext::default()
+            },
+        )
+        .await?;
 
         // 1. Replace policy_rules for this tenant/project with the version's.
         let pm = self.policies_model();
@@ -903,25 +917,59 @@ impl AuthzServiceImpl {
         new_state: authz_entity_pb::CanaryState,
         reason: &str,
     ) -> Result<bool, Status> {
-        let pool = self.require_pool()?;
-        let m = self.policy_canaries_model();
-        let result = sqlx::query(&format!(
-            "UPDATE {rel} SET {state} = $2, {outcome_reason} = $3, {revision} = {revision} + 1 \
-             WHERE {canary_id} = $1::UUID AND {state} = $4",
-            rel = m.relation,
-            state = m.q("state"),
-            outcome_reason = m.q("outcome_reason"),
-            revision = m.q("revision"),
-            canary_id = m.q("canary_id"),
-        ))
-        .bind(canary_id)
-        .bind(canary_state_to_db(new_state))
-        .bind(reason)
-        .bind(canary_state_to_db(authz_entity_pb::CanaryState::Active))
-        .execute(pool)
-        .await
-        .map_err(|err| Status::internal(format!("update canary state failed: {err}")))?;
-        Ok(result.rows_affected() > 0)
+        let runtime = self.runtime.as_ref().ok_or_else(|| {
+            Status::failed_precondition("native authz requires runtime-backed canary persistence")
+        })?;
+        // P6.10 Wave 1: typed conditional UPDATE (was raw). `state=$4` (ACTIVE) guard
+        // keeps the single-transition semantic; revision bumps via Increment.
+        let mut assignments = std::collections::BTreeMap::new();
+        assignments.insert(
+            "state".to_string(),
+            LogicalAssignment::Set {
+                value: LogicalValue::String(canary_state_to_db(new_state).to_string()),
+            },
+        );
+        assignments.insert(
+            "outcome_reason".to_string(),
+            LogicalAssignment::Set {
+                value: LogicalValue::String(reason.to_string()),
+            },
+        );
+        assignments.insert(
+            "revision".to_string(),
+            LogicalAssignment::Increment {
+                by: LogicalValue::Int(1),
+            },
+        );
+        let (affected, _) = runtime
+            .native_entity_update_for_service(
+                "authz",
+                &crate::RequestContext::default(),
+                LogicalUpdate {
+                    message_type: "udb.core.authz.entity.v1.PolicyCanary".to_string(),
+                    filter: LogicalFilter::And(vec![
+                        LogicalFilter::Comparison {
+                            field: "canary_id".to_string(),
+                            op: ComparisonOp::Eq,
+                            value: LogicalValue::String(canary_id.to_string()),
+                        },
+                        LogicalFilter::Comparison {
+                            field: "state".to_string(),
+                            op: ComparisonOp::Eq,
+                            value: LogicalValue::String(
+                                canary_state_to_db(authz_entity_pb::CanaryState::Active)
+                                    .to_string(),
+                            ),
+                        },
+                    ]),
+                    assignments,
+                    return_fields: Vec::new(),
+                    require_affected: false,
+                },
+            )
+            .await
+            .map_err(|err| Status::internal(format!("update canary state failed: {err}")))?;
+        Ok(affected > 0)
     }
 
     /// Emit a governance audit event for a canary transition.

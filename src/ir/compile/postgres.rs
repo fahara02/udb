@@ -13,10 +13,11 @@
 //! before any SQL is emitted.
 
 use crate::backend::BackendKind;
+use crate::generation::ManifestTable;
 use crate::ir::filter::ComparisonOp;
 use crate::ir::operations::{
-    ConflictStrategy, LogicalAggregate, LogicalDelete, LogicalRead, LogicalResourceOp,
-    LogicalSearch, LogicalWrite, ResourceKind, ResourceOpKind,
+    ConflictStrategy, LogicalAggregate, LogicalAssignment, LogicalDelete, LogicalRead,
+    LogicalResourceOp, LogicalSearch, LogicalUpdate, LogicalWrite, ResourceKind, ResourceOpKind,
 };
 use crate::ir::value::LogicalValue;
 
@@ -64,9 +65,162 @@ impl SqlDialect for Postgres {
             _ => placeholder.to_string(),
         }
     }
+
+    /// Postgres operators and assignments are type-exact — there is no `uuid = text`
+    /// nor `timestamptz < text` operator, and `INSERT ... VALUES ($1)` / `UPDATE ...
+    /// SET col = $1` reject a `text`-bound parameter for a `uuid`/`timestamptz`
+    /// column with `column "x" is of type uuid but expression is of type text`. A
+    /// `LogicalValue` whose JSON binding lands as `text` (UUID strings, and
+    /// `Timestamp`, which binds as an RFC-3339 string with no param-type hint) must
+    /// therefore be cast wherever it meets a typed column: WHERE / IN comparisons
+    /// (`"file_id" = $1::UUID`, `"created_at" < $2::TIMESTAMPTZ`), INSERT `VALUES`,
+    /// and UPDATE `SET`. (Postgres coerces string *literals* in VALUES but NOT a
+    /// bound text *parameter* — which is what the IR always emits — so writes do
+    /// need the cast; this is the B8 native-write fix that pairs with B1's read fix.)
+    fn cast_compare_placeholder(column_sql_type: &str, placeholder: &str) -> String {
+        let ty = column_sql_type.trim();
+        if ty.eq_ignore_ascii_case("uuid") {
+            format!("{placeholder}::UUID")
+        } else if ty.eq_ignore_ascii_case("timestamptz")
+            || ty.eq_ignore_ascii_case("timestamp with time zone")
+        {
+            format!("{placeholder}::TIMESTAMPTZ")
+        } else if ty.eq_ignore_ascii_case("timestamp")
+            || ty.eq_ignore_ascii_case("timestamp without time zone")
+        {
+            format!("{placeholder}::TIMESTAMP")
+        } else {
+            placeholder.to_string()
+        }
+    }
 }
 
 type Pg = SqlCompiler<Postgres>;
+
+fn field_set(fields: &[String]) -> std::collections::BTreeSet<String> {
+    fields
+        .iter()
+        .map(|field| field.trim().to_ascii_lowercase())
+        .filter(|field| !field.is_empty())
+        .collect()
+}
+
+fn logical_field_name(
+    table: &ManifestTable,
+    field: &str,
+    message_type: &str,
+) -> Result<String, CompileError> {
+    let column = Pg::column_meta_for(table, field, message_type)?;
+    Ok(if column.field_name.trim().is_empty() {
+        column.column_name.clone()
+    } else {
+        column.field_name.clone()
+    })
+}
+
+fn partition_aware_fields(table: &ManifestTable, fields: &[String]) -> Vec<String> {
+    let mut resolved = fields.to_vec();
+    if !table.partition_strategy.trim().is_empty() && !table.partition_column.trim().is_empty() {
+        let partition_field = table
+            .columns
+            .iter()
+            .find(|column| {
+                column.column_name == table.partition_column
+                    || column
+                        .field_name
+                        .eq_ignore_ascii_case(&table.partition_column)
+            })
+            .map(|column| {
+                if column.field_name.trim().is_empty() {
+                    column.column_name.clone()
+                } else {
+                    column.field_name.clone()
+                }
+            })
+            .unwrap_or_else(|| table.partition_column.clone());
+        if !resolved
+            .iter()
+            .any(|field| field.eq_ignore_ascii_case(&partition_field))
+        {
+            resolved.push(partition_field);
+        }
+    }
+    resolved
+}
+
+fn declared_unique_fields(
+    table: &ManifestTable,
+    message_type: &str,
+    fields: &[String],
+) -> Vec<String> {
+    fields
+        .iter()
+        .map(|field| {
+            logical_field_name(table, field, message_type).unwrap_or_else(|_| field.clone())
+        })
+        .collect()
+}
+
+fn validate_unique_conflict_target(
+    table: &ManifestTable,
+    message_type: &str,
+    conflict_fields: &[String],
+) -> Result<Vec<String>, CompileError> {
+    if conflict_fields.is_empty() {
+        return Err(CompileError::Malformed {
+            reason: "conflict target must be non-empty".into(),
+        });
+    }
+
+    let mut resolved = Vec::with_capacity(conflict_fields.len());
+    for field in conflict_fields {
+        resolved.push(logical_field_name(table, field, message_type)?);
+    }
+    let effective = partition_aware_fields(table, &resolved);
+    let effective_set = field_set(&effective);
+
+    let primary = partition_aware_fields(
+        table,
+        &declared_unique_fields(table, message_type, &table.primary_key),
+    );
+    if !primary.is_empty() && field_set(&primary) == effective_set {
+        return Ok(effective);
+    }
+
+    for column in &table.columns {
+        if column.unique {
+            let field = if column.field_name.trim().is_empty() {
+                column.column_name.clone()
+            } else {
+                column.field_name.clone()
+            };
+            let unique = partition_aware_fields(table, &[field]);
+            if field_set(&unique) == effective_set {
+                return Ok(effective);
+            }
+        }
+    }
+
+    for index in &table.indexes {
+        if !index.unique || !index.where_clause.trim().is_empty() {
+            continue;
+        }
+        let unique = partition_aware_fields(
+            table,
+            &declared_unique_fields(table, message_type, &index.columns),
+        );
+        if field_set(&unique) == effective_set {
+            return Ok(effective);
+        }
+    }
+
+    Err(CompileError::Malformed {
+        reason: format!(
+            "conflict target {:?} for '{}' is not backed by a manifest primary key or declared unique index",
+            conflict_fields, message_type
+        ),
+    })
+}
 
 /// Postgres / postgres-compatible SQL compiler.
 #[derive(Debug, Default, Clone, Copy)]
@@ -182,6 +336,21 @@ impl Compiler for PostgresCompiler {
             .collect::<Vec<_>>()
             .join(", ");
 
+        // Per-column SQL types in key order, so each bound VALUES placeholder can be
+        // cast to its target column type (B8: `$1::UUID` / `$1::TIMESTAMPTZ` — a
+        // text-bound param is not coerced into a uuid/timestamptz column). Computed
+        // once, not per row.
+        let col_sql_types: Vec<&str> = first
+            .keys()
+            .map(|k| {
+                Ok::<_, CompileError>(
+                    Pg::column_meta_for(table, k, &op.message_type)?
+                        .sql_type
+                        .as_str(),
+                )
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
         // Bind every record's values in column order, writing the VALUES list in a
         // single pass into one preallocated String — no intermediate per-row
         // `Vec<String>` and no per-row `format!` allocation (#106).
@@ -203,7 +372,11 @@ impl Compiler for PostgresCompiler {
                 if col_idx > 0 {
                     value_rows.push_str(", ");
                 }
-                value_rows.push_str(&Pg::push_param(&mut params, record[k].clone()));
+                let placeholder = Pg::push_param(&mut params, record[k].clone());
+                value_rows.push_str(&<Postgres as SqlDialect>::cast_compare_placeholder(
+                    col_sql_types[col_idx],
+                    &placeholder,
+                ));
             }
             value_rows.push(')');
         }
@@ -220,16 +393,27 @@ impl Compiler for PostgresCompiler {
             ConflictStrategy::Error => { /* default — no clause */ }
             ConflictStrategy::Ignore => sql.push_str(" ON CONFLICT DO NOTHING"),
             ConflictStrategy::Replace | ConflictStrategy::Update { .. } => {
-                if table.primary_key.is_empty() {
-                    return Err(CompileError::Malformed {
-                        reason: format!(
-                            "upsert requested but message '{}' has no primary key in manifest",
-                            op.message_type
-                        ),
-                    });
-                }
-                let pk_cols: Vec<String> = table
-                    .primary_key
+                // Conflict arbiter columns: an explicit alternate-unique target
+                // when the caller gave one (e.g. `ON CONFLICT (key_hash)`), else
+                // the manifest primary key (the historical default).
+                let conflict_fields: Vec<String> = match op.conflict.conflict_target() {
+                    Some(cols) => cols.to_vec(),
+                    None => {
+                        if table.primary_key.is_empty() {
+                            return Err(CompileError::Malformed {
+                                reason: format!(
+                                    "upsert requested but message '{}' has no primary key in \
+                                     manifest and no explicit conflict_on target",
+                                    op.message_type
+                                ),
+                            });
+                        }
+                        table.primary_key.clone()
+                    }
+                };
+                let conflict_fields =
+                    validate_unique_conflict_target(table, &op.message_type, &conflict_fields)?;
+                let pk_cols: Vec<String> = conflict_fields
                     .iter()
                     .map(|f| {
                         let c = Pg::column_for(table, f, &op.message_type)?;
@@ -238,7 +422,7 @@ impl Compiler for PostgresCompiler {
                     .collect::<Result<Vec<_>, CompileError>>()?;
 
                 let target_cols: Vec<&str> = match &op.conflict {
-                    ConflictStrategy::Update { fields } => fields
+                    ConflictStrategy::Update { fields, .. } => fields
                         .iter()
                         .map(|f| Pg::column_for(table, f, &op.message_type))
                         .collect::<Result<Vec<_>, _>>()?,
@@ -258,6 +442,101 @@ impl Compiler for PostgresCompiler {
         }
 
         // RETURNING.
+        if !op.return_fields.is_empty() {
+            let cols = op
+                .return_fields
+                .iter()
+                .map(|f| {
+                    let c = Pg::column_for(table, f, &op.message_type)?;
+                    Ok(format!("\"{c}\""))
+                })
+                .collect::<Result<Vec<_>, CompileError>>()?;
+            sql.push_str(&format!(" RETURNING {}", cols.join(", ")));
+        }
+
+        Ok(CompiledRendering::Sql {
+            backend: BackendKind::Postgres,
+            statement: sql,
+            params,
+        })
+    }
+
+    fn compile_update(
+        &self,
+        op: &LogicalUpdate,
+        ctx: &CompileContext<'_>,
+    ) -> Result<CompiledRendering, CompileError> {
+        if op.assignments.is_empty() {
+            return Err(CompileError::Malformed {
+                reason: "LogicalUpdate::assignments must be non-empty".into(),
+            });
+        }
+        let table = Pg::resolve_table(&op.message_type, ctx.manifest)?;
+        let mut params: Vec<LogicalValue> = Vec::new();
+
+        let mut assignments = Vec::with_capacity(op.assignments.len());
+        for (field, assignment) in &op.assignments {
+            let column = Pg::column_meta_for(table, field, &op.message_type)?;
+            if column.exclude_from_update {
+                return Err(CompileError::Malformed {
+                    reason: format!("field '{field}' is excluded from update by the manifest"),
+                });
+            }
+            let quoted = format!("\"{}\"", column.column_name);
+            let expr = match assignment {
+                LogicalAssignment::Set { value } => {
+                    let placeholder = Pg::push_param(&mut params, value.clone());
+                    // B8: cast the bound param to the target column type so a
+                    // text-bound UUID/timestamp value lands in a uuid/timestamptz
+                    // column (`SET "config_id" = $1::UUID`).
+                    let placeholder = <Postgres as SqlDialect>::cast_compare_placeholder(
+                        &column.sql_type,
+                        &placeholder,
+                    );
+                    format!("{quoted} = {placeholder}")
+                }
+                LogicalAssignment::ServerNow => format!("{quoted} = CURRENT_TIMESTAMP"),
+                LogicalAssignment::Increment { by } => {
+                    if !matches!(by, LogicalValue::Int(_) | LogicalValue::Float(_)) {
+                        return Err(CompileError::Malformed {
+                            reason: format!(
+                                "increment assignment for field '{field}' requires int or float"
+                            ),
+                        });
+                    }
+                    let placeholder = Pg::push_param(&mut params, by.clone());
+                    format!("{quoted} = {quoted} + {placeholder}")
+                }
+                LogicalAssignment::Coalesce { value } => {
+                    let placeholder = Pg::push_param(&mut params, value.clone());
+                    let placeholder = <Postgres as SqlDialect>::cast_compare_placeholder(
+                        &column.sql_type,
+                        &placeholder,
+                    );
+                    format!("{quoted} = COALESCE({placeholder}, {quoted})")
+                }
+            };
+            assignments.push(expr);
+        }
+
+        let body = Pg::render_where(&op.filter, table, &op.message_type, &mut params)?.ok_or_else(
+            || CompileError::Malformed {
+                reason: "LogicalUpdate::filter cannot be empty; refusing unbounded update".into(),
+            },
+        )?;
+        if body == "FALSE" {
+            return Err(CompileError::Malformed {
+                reason: "LogicalUpdate::filter resolves to FALSE; refusing no-op update".into(),
+            });
+        }
+
+        let mut sql = format!(
+            "UPDATE \"{schema}\".\"{table}\" SET {assignments} WHERE {body}",
+            schema = table.schema,
+            table = table.table,
+            assignments = assignments.join(", "),
+        );
+
         if !op.return_fields.is_empty() {
             let cols = op
                 .return_fields
@@ -748,11 +1027,11 @@ impl Compiler for PostgresCompiler {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::generation::{CatalogManifest, ManifestColumn, ManifestTable};
+    use crate::generation::{CatalogManifest, ManifestColumn, ManifestIndex, ManifestTable};
     use crate::ir::filter::{ComparisonOp, LogicalFilter};
     use crate::ir::operations::{
-        AggregateExpr, AggregateFunc, ConflictStrategy, LogicalAggregate, LogicalDelete,
-        LogicalRead, LogicalWrite,
+        AggregateExpr, AggregateFunc, ConflictStrategy, LogicalAggregate, LogicalAssignment,
+        LogicalDelete, LogicalRead, LogicalUpdate, LogicalWrite,
     };
     use crate::ir::projection::{LogicalPagination, LogicalSort, SortDirection};
     use crate::ir::value::LogicalValue;
@@ -787,6 +1066,14 @@ mod tests {
                     column_name: "email".into(),
                     proto_type: "string".into(),
                     sql_type: "text".into(),
+                    unique: true,
+                    ..Default::default()
+                },
+                ManifestColumn {
+                    field_name: "created_at".into(),
+                    column_name: "created_at".into(),
+                    proto_type: "google.protobuf.Timestamp".into(),
+                    sql_type: "TIMESTAMPTZ".into(),
                     ..Default::default()
                 },
             ],
@@ -854,6 +1141,97 @@ mod tests {
     }
 
     #[test]
+    fn uuid_column_comparison_casts_the_placeholder() {
+        // P6: Postgres has no `uuid = text` operator, so a String value bound for a
+        // UUID column MUST be cast `$N::UUID` — otherwise every typed read/delete that
+        // filters on a UUID column fails with "operator does not exist: uuid = text".
+        // (Text columns are NOT cast — see the other tests, which stay byte-identical.)
+        let m = fixture_manifest();
+        let ctx = CompileContext::new(&m);
+        let read = LogicalRead::message("acme.billing.v1.Customer").with_filter(
+            LogicalFilter::Comparison {
+                field: "id".into(), // the fixture's UUID column
+                op: ComparisonOp::Eq,
+                value: LogicalValue::String("11111111-1111-4111-8111-111111111111".into()),
+            },
+        );
+        let (sql, _) = extract_sql(PostgresCompiler.compile_read(&read, &ctx).expect("compile"));
+        assert!(
+            sql.contains("WHERE \"id\" = $1::UUID"),
+            "uuid-column comparison must cast the placeholder; got: {sql}"
+        );
+    }
+
+    #[test]
+    fn uuid_column_in_list_casts_each_placeholder() {
+        let m = fixture_manifest();
+        let ctx = CompileContext::new(&m);
+        let read =
+            LogicalRead::message("acme.billing.v1.Customer").with_filter(LogicalFilter::InList {
+                field: "id".into(),
+                values: vec![
+                    LogicalValue::String("11111111-1111-4111-8111-111111111111".into()),
+                    LogicalValue::String("22222222-2222-4222-8222-222222222222".into()),
+                ],
+            });
+        let (sql, _) = extract_sql(PostgresCompiler.compile_read(&read, &ctx).expect("compile"));
+        assert!(
+            sql.contains("WHERE \"id\" IN ($1::UUID, $2::UUID)"),
+            "uuid IN-list must cast each placeholder; got: {sql}"
+        );
+    }
+
+    #[test]
+    fn timestamptz_column_comparison_casts_the_placeholder() {
+        // Live bug (storage orphan reaper): Postgres has no `timestamptz < text`
+        // operator, and `LogicalValue::Timestamp` binds as an RFC-3339 *text* param
+        // (no param-type hint), so a `created_at < cutoff` range filter MUST cast the
+        // placeholder `$N::TIMESTAMPTZ` — else it fails with
+        // "operator does not exist: timestamp with time zone < text".
+        let m = fixture_manifest();
+        let ctx = CompileContext::new(&m);
+        let read = LogicalRead::message("acme.billing.v1.Customer").with_filter(
+            LogicalFilter::Comparison {
+                field: "created_at".into(), // the fixture's TIMESTAMPTZ column
+                op: ComparisonOp::Lt,
+                value: LogicalValue::Timestamp(
+                    chrono::DateTime::parse_from_rfc3339("2026-06-12T18:00:00Z")
+                        .unwrap()
+                        .with_timezone(&chrono::Utc),
+                ),
+            },
+        );
+        let (sql, _) = extract_sql(PostgresCompiler.compile_read(&read, &ctx).expect("compile"));
+        assert!(
+            sql.contains("WHERE \"created_at\" < $1::TIMESTAMPTZ"),
+            "timestamptz-column comparison must cast the placeholder; got: {sql}"
+        );
+    }
+
+    #[test]
+    fn timestamptz_column_in_list_casts_each_placeholder() {
+        let m = fixture_manifest();
+        let ctx = CompileContext::new(&m);
+        let ts = |s: &str| {
+            LogicalValue::Timestamp(
+                chrono::DateTime::parse_from_rfc3339(s)
+                    .unwrap()
+                    .with_timezone(&chrono::Utc),
+            )
+        };
+        let read =
+            LogicalRead::message("acme.billing.v1.Customer").with_filter(LogicalFilter::InList {
+                field: "created_at".into(),
+                values: vec![ts("2026-06-12T18:00:00Z"), ts("2026-06-12T19:00:00Z")],
+            });
+        let (sql, _) = extract_sql(PostgresCompiler.compile_read(&read, &ctx).expect("compile"));
+        assert!(
+            sql.contains("WHERE \"created_at\" IN ($1::TIMESTAMPTZ, $2::TIMESTAMPTZ)"),
+            "timestamptz IN-list must cast each placeholder; got: {sql}"
+        );
+    }
+
+    #[test]
     fn unknown_field_is_rejected() {
         let m = fixture_manifest();
         let ctx = CompileContext::new(&m);
@@ -895,9 +1273,7 @@ mod tests {
         let write = LogicalWrite {
             message_type: "acme.billing.v1.Customer".into(),
             records: vec![rec],
-            conflict: ConflictStrategy::Update {
-                fields: vec!["name".into()],
-            },
+            conflict: ConflictStrategy::update(vec!["name".into()]),
             return_fields: vec!["id".into()],
         };
         let (sql, params) = extract_sql(
@@ -909,6 +1285,263 @@ mod tests {
         assert!(sql.contains("ON CONFLICT (\"id\") DO UPDATE SET \"name\" = EXCLUDED.\"name\""));
         assert!(sql.ends_with("RETURNING \"id\""));
         assert_eq!(params.len(), 2);
+    }
+
+    #[test]
+    fn upsert_on_alternate_key_targets_conflict_on_not_pk() {
+        // Alternate-key upsert (extend_udb.md P4): `conflict_on` makes the
+        // ON CONFLICT arbiter an alternate unique column (e.g. `email`, or
+        // `key_hash` for api keys) instead of the manifest primary key.
+        let m = fixture_manifest();
+        let ctx = CompileContext::new(&m);
+        let mut rec = crate::ir::operations::LogicalRecord::new();
+        rec.insert("id".into(), LogicalValue::String("abc".into()));
+        rec.insert("email".into(), LogicalValue::String("a@b.com".into()));
+        rec.insert("name".into(), LogicalValue::String("Alice".into()));
+        let write = LogicalWrite {
+            message_type: "acme.billing.v1.Customer".into(),
+            records: vec![rec],
+            conflict: ConflictStrategy::update_on(vec!["name".into()], vec!["email".into()]),
+            return_fields: vec![],
+        };
+        let (sql, _) = extract_sql(
+            PostgresCompiler
+                .compile_write(&write, &ctx)
+                .expect("compile"),
+        );
+        assert!(
+            sql.contains("ON CONFLICT (\"email\") DO UPDATE SET \"name\" = EXCLUDED.\"name\""),
+            "alternate-key target should be email, got: {sql}"
+        );
+        assert!(
+            !sql.contains("ON CONFLICT (\"id\")"),
+            "must not fall back to the primary key, got: {sql}"
+        );
+    }
+
+    #[test]
+    fn upsert_conflict_on_non_unique_field_is_rejected() {
+        let m = fixture_manifest();
+        let ctx = CompileContext::new(&m);
+        let mut rec = crate::ir::operations::LogicalRecord::new();
+        rec.insert("id".into(), LogicalValue::String("abc".into()));
+        rec.insert("name".into(), LogicalValue::String("Alice".into()));
+        let write = LogicalWrite {
+            message_type: "acme.billing.v1.Customer".into(),
+            records: vec![rec],
+            conflict: ConflictStrategy::update_on(vec!["email".into()], vec!["name".into()]),
+            return_fields: vec![],
+        };
+        let err = PostgresCompiler.compile_write(&write, &ctx).unwrap_err();
+        assert!(
+            matches!(err, CompileError::Malformed { .. }),
+            "non-unique conflict target must fail closed, got: {err:?}"
+        );
+    }
+
+    #[test]
+    fn partitioned_unique_conflict_target_adds_partition_column() {
+        let table = ManifestTable {
+            message_name: "acme.billing.v1.Invoice".to_string(),
+            schema: "public".to_string(),
+            table: "invoices".to_string(),
+            primary_key: vec!["id".to_string()],
+            partition_strategy: "RANGE".to_string(),
+            partition_column: "tenant_id".to_string(),
+            indexes: vec![ManifestIndex {
+                name: "invoices_number_tenant_key".to_string(),
+                columns: vec!["number".to_string(), "tenant_id".to_string()],
+                unique: true,
+                ..Default::default()
+            }],
+            columns: vec![
+                ManifestColumn {
+                    field_name: "id".into(),
+                    column_name: "id".into(),
+                    sql_type: "uuid".into(),
+                    is_primary: true,
+                    ..Default::default()
+                },
+                ManifestColumn {
+                    field_name: "tenant_id".into(),
+                    column_name: "tenant_id".into(),
+                    sql_type: "uuid".into(),
+                    ..Default::default()
+                },
+                ManifestColumn {
+                    field_name: "number".into(),
+                    column_name: "invoice_number".into(),
+                    sql_type: "text".into(),
+                    ..Default::default()
+                },
+                ManifestColumn {
+                    field_name: "status".into(),
+                    column_name: "status".into(),
+                    sql_type: "text".into(),
+                    ..Default::default()
+                },
+            ],
+            ..Default::default()
+        };
+        let m = CatalogManifest {
+            tables: vec![table],
+            ..Default::default()
+        };
+        let ctx = CompileContext::new(&m);
+        let mut rec = crate::ir::operations::LogicalRecord::new();
+        rec.insert("id".into(), LogicalValue::String("abc".into()));
+        rec.insert("tenant_id".into(), LogicalValue::String("tenant".into()));
+        rec.insert("number".into(), LogicalValue::String("INV-1".into()));
+        rec.insert("status".into(), LogicalValue::String("open".into()));
+        let write = LogicalWrite {
+            message_type: "acme.billing.v1.Invoice".into(),
+            records: vec![rec],
+            conflict: ConflictStrategy::update_on(vec!["status".into()], vec!["number".into()]),
+            return_fields: vec![],
+        };
+        let (sql, _) = extract_sql(
+            PostgresCompiler
+                .compile_write(&write, &ctx)
+                .expect("compile"),
+        );
+        assert!(
+            sql.contains(
+                "ON CONFLICT (\"invoice_number\", \"tenant_id\") DO UPDATE SET \"status\" = EXCLUDED.\"status\""
+            ),
+            "partitioned unique conflict target must include partition column, got: {sql}"
+        );
+    }
+
+    #[test]
+    fn conditional_update_emits_typed_assignments_and_filter() {
+        let m = fixture_manifest();
+        let ctx = CompileContext::new(&m);
+        let mut assignments = std::collections::BTreeMap::new();
+        assignments.insert(
+            "name".into(),
+            LogicalAssignment::Set {
+                value: LogicalValue::String("Alice".into()),
+            },
+        );
+        assignments.insert("created_at".into(), LogicalAssignment::ServerNow);
+        let update = LogicalUpdate {
+            message_type: "acme.billing.v1.Customer".into(),
+            filter: LogicalFilter::Comparison {
+                field: "id".into(),
+                op: ComparisonOp::Eq,
+                value: LogicalValue::String("11111111-1111-4111-8111-111111111111".into()),
+            },
+            assignments,
+            return_fields: vec!["id".into(), "name".into()],
+            require_affected: true,
+        };
+
+        let (sql, params) = extract_sql(
+            PostgresCompiler
+                .compile_update(&update, &ctx)
+                .expect("compile"),
+        );
+        assert_eq!(
+            sql,
+            "UPDATE \"public\".\"customers\" SET \"created_at\" = CURRENT_TIMESTAMP, \
+             \"name\" = $1 WHERE \"id\" = $2::UUID RETURNING \"id\", \"name\""
+        );
+        assert_eq!(
+            params,
+            vec![
+                LogicalValue::String("Alice".into()),
+                LogicalValue::String("11111111-1111-4111-8111-111111111111".into()),
+            ]
+        );
+    }
+
+    #[test]
+    fn uuid_column_insert_values_casts_each_placeholder() {
+        // B8: Postgres does not coerce a bound *text* parameter into a uuid column,
+        // so a text-bound UUID value in INSERT VALUES must be cast `$N::UUID` — else
+        // storage RegisterUpload / authz audit writes fail with
+        // `column "file_id" is of type uuid but expression is of type text`.
+        // The text column (`name`) stays uncast (byte-identical).
+        let m = fixture_manifest();
+        let ctx = CompileContext::new(&m);
+        let mut rec = crate::ir::operations::LogicalRecord::new();
+        rec.insert(
+            "id".into(),
+            LogicalValue::String("11111111-1111-4111-8111-111111111111".into()),
+        );
+        rec.insert("name".into(), LogicalValue::String("Alice".into()));
+        let write = LogicalWrite {
+            message_type: "acme.billing.v1.Customer".into(),
+            records: vec![rec],
+            conflict: ConflictStrategy::Error,
+            return_fields: vec![],
+        };
+        let (sql, _) = extract_sql(
+            PostgresCompiler
+                .compile_write(&write, &ctx)
+                .expect("compile"),
+        );
+        assert!(
+            sql.contains("VALUES ($1::UUID, $2)"),
+            "uuid-column INSERT must cast its placeholder (text column uncast); got: {sql}"
+        );
+    }
+
+    #[test]
+    fn uuid_column_update_set_casts_the_placeholder() {
+        // B8 (the write side of UpdateTenantConfig's `config_id`): a `SET` on a uuid
+        // column must cast the bound param `$N::UUID`.
+        let m = fixture_manifest();
+        let ctx = CompileContext::new(&m);
+        let mut assignments = std::collections::BTreeMap::new();
+        assignments.insert(
+            "id".into(),
+            LogicalAssignment::Set {
+                value: LogicalValue::String("22222222-2222-4222-8222-222222222222".into()),
+            },
+        );
+        let update = LogicalUpdate {
+            message_type: "acme.billing.v1.Customer".into(),
+            filter: LogicalFilter::Comparison {
+                field: "name".into(),
+                op: ComparisonOp::Eq,
+                value: LogicalValue::String("Alice".into()),
+            },
+            assignments,
+            return_fields: vec![],
+            require_affected: false,
+        };
+        let (sql, _) = extract_sql(
+            PostgresCompiler
+                .compile_update(&update, &ctx)
+                .expect("compile"),
+        );
+        assert!(
+            sql.contains("SET \"id\" = $1::UUID"),
+            "uuid-column UPDATE SET must cast its placeholder; got: {sql}"
+        );
+    }
+
+    #[test]
+    fn update_without_filter_is_rejected() {
+        let m = fixture_manifest();
+        let ctx = CompileContext::new(&m);
+        let mut assignments = std::collections::BTreeMap::new();
+        assignments.insert(
+            "name".into(),
+            LogicalAssignment::Set {
+                value: LogicalValue::String("Alice".into()),
+            },
+        );
+        let update = LogicalUpdate {
+            message_type: "acme.billing.v1.Customer".into(),
+            filter: LogicalFilter::always(),
+            assignments,
+            return_fields: vec![],
+            require_affected: false,
+        };
+        let err = PostgresCompiler.compile_update(&update, &ctx).unwrap_err();
+        assert!(matches!(err, CompileError::Malformed { .. }));
     }
 
     #[test]

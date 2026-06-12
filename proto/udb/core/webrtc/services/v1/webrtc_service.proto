@@ -59,6 +59,7 @@ service RoomService {
 
   // Create a room
   rpc CreateRoom(CreateRoomRequest) returns (CreateRoomResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:webrtc:room:create-room"
@@ -118,6 +119,7 @@ service RoomService {
 
   // Get a room
   rpc GetRoom(GetRoomRequest) returns (GetRoomResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:webrtc:room:get-room"
@@ -173,6 +175,7 @@ service RoomService {
 
   // Update a room
   rpc UpdateRoom(UpdateRoomRequest) returns (UpdateRoomResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:webrtc:room:update-room"
@@ -231,6 +234,7 @@ service RoomService {
 
   // Close a room
   rpc CloseRoom(CloseRoomRequest) returns (CloseRoomResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:webrtc:room:close-room"
@@ -292,6 +296,7 @@ service RoomService {
 
   // List rooms
   rpc ListRooms(ListRoomsRequest) returns (ListRoomsResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:webrtc:room:list-rooms"
@@ -390,6 +395,7 @@ service PeerService {
 
   // Join a room
   rpc JoinRoom(JoinRoomRequest) returns (JoinRoomResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:webrtc:peer:join-room"
@@ -449,6 +455,7 @@ service PeerService {
 
   // Leave a room
   rpc LeaveRoom(LeaveRoomRequest) returns (LeaveRoomResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:webrtc:peer:leave-room"
@@ -508,6 +515,7 @@ service PeerService {
 
   // Get a peer
   rpc GetPeer(GetPeerRequest) returns (GetPeerResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:webrtc:peer:get-peer"
@@ -563,6 +571,7 @@ service PeerService {
 
   // List peers
   rpc ListPeers(ListPeersRequest) returns (ListPeersResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:webrtc:peer:list-peers"
@@ -661,6 +670,7 @@ service TrackService {
 
   // Publish a track
   rpc PublishTrack(PublishTrackRequest) returns (PublishTrackResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:webrtc:track:publish-track"
@@ -720,6 +730,7 @@ service TrackService {
 
   // Unpublish a track
   rpc UnpublishTrack(UnpublishTrackRequest) returns (UnpublishTrackResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:webrtc:track:unpublish-track"
@@ -778,6 +789,7 @@ service TrackService {
 
   // Mute or unmute a track
   rpc MuteTrack(MuteTrackRequest) returns (MuteTrackResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:webrtc:track:mute-track"
@@ -836,6 +848,7 @@ service TrackService {
 
   // List tracks
   rpc ListTracks(ListTracksRequest) returns (ListTracksResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:webrtc:track:list-tracks"
@@ -935,6 +948,7 @@ service TurnService {
 
   // Issue ephemeral TURN/STUN credentials
   rpc IssueCredentials(IssueCredentialsRequest) returns (IssueCredentialsResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:webrtc:turn:issue-credentials"
@@ -1040,6 +1054,7 @@ service SignalingService {
   // Named `Signal` (not `Connect`) because tonic generates a client `connect`
   // associated constructor; an RPC named `Connect` collides with it.
   rpc Signal(stream SignalRequest) returns (stream SignalResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:webrtc:signal"

@@ -189,9 +189,7 @@ fn same_logical_write_upsert_compiles_to_both_backends() {
     let write = LogicalWrite {
         message_type: "acme.billing.v1.Customer".into(),
         records: vec![record],
-        conflict: ConflictStrategy::Update {
-            fields: vec!["name".into(), "email".into()],
-        },
+        conflict: ConflictStrategy::update(vec!["name".into(), "email".into()]),
         return_fields: vec![],
     };
 

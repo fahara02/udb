@@ -30,8 +30,8 @@ use sqlx::PgPool;
 
 use crate::broker::RequestContext;
 use crate::runtime::core::{
-    bind_generic_pg_params, dispatch_params, pg_rows_to_json, set_request_local_settings,
-    validate_pg_mutation_sql, validate_pg_read_sql,
+    bind_typed_generic_pg_params, dispatch_param_types, dispatch_params, pg_rows_to_json,
+    set_request_local_settings, validate_pg_mutation_sql, validate_pg_read_sql,
 };
 use crate::runtime::executor_utils::{build_probe, json_required_str, with_executor_timeout};
 use crate::runtime::executors::{
@@ -116,24 +116,29 @@ impl QueryExecutor for PostgresExecutor {
             let sql = json_required_str(&spec, "sql")?;
             validate_pg_read_sql(sql)?;
             let params = dispatch_params(&spec)?;
+            let param_types = dispatch_param_types(&spec)?;
 
             let rows = if let Some(ctx) = &self.context {
                 let mut tx = self.pool.begin().await.map_err(|err| {
                     tonic::Status::internal(format!("PostgreSQL transaction start failed: {err}"))
                 })?;
                 set_request_local_settings(&mut tx, ctx).await?;
-                let rows = bind_generic_pg_params(sqlx::query(sql), &params)
-                    .fetch_all(&mut *tx)
-                    .await
-                    .map_err(|err| {
-                        tonic::Status::internal(format!("PostgreSQL generic query failed: {err}"))
-                    })?;
+                let rows = bind_typed_generic_pg_params(
+                    sqlx::query(sql),
+                    &params,
+                    param_types.as_deref(),
+                )?
+                .fetch_all(&mut *tx)
+                .await
+                .map_err(|err| {
+                    tonic::Status::internal(format!("PostgreSQL generic query failed: {err}"))
+                })?;
                 tx.commit().await.map_err(|err| {
                     tonic::Status::internal(format!("PostgreSQL transaction commit failed: {err}"))
                 })?;
                 rows
             } else {
-                bind_generic_pg_params(sqlx::query(sql), &params)
+                bind_typed_generic_pg_params(sqlx::query(sql), &params, param_types.as_deref())?
                     .fetch_all(&self.pool)
                     .await
                     .map_err(|err| {
@@ -162,6 +167,7 @@ impl MutationExecutor for PostgresExecutor {
             let sql = json_required_str(&spec, "sql")?;
             validate_pg_mutation_sql(sql)?;
             let params = dispatch_params(&spec)?;
+            let param_types = dispatch_param_types(&spec)?;
             let return_rows = spec
                 .get("return_rows")
                 .and_then(JsonValue::as_bool)
@@ -173,14 +179,18 @@ impl MutationExecutor for PostgresExecutor {
                 })?;
                 set_request_local_settings(&mut tx, ctx).await?;
                 let result = if return_rows {
-                    let rows = bind_generic_pg_params(sqlx::query(sql), &params)
-                        .fetch_all(&mut *tx)
-                        .await
-                        .map_err(|err| {
-                            tonic::Status::internal(format!(
-                                "PostgreSQL generic mutation failed: {err}"
-                            ))
-                        })?;
+                    let rows = bind_typed_generic_pg_params(
+                        sqlx::query(sql),
+                        &params,
+                        param_types.as_deref(),
+                    )?
+                    .fetch_all(&mut *tx)
+                    .await
+                    .map_err(|err| {
+                        tonic::Status::internal(format!(
+                            "PostgreSQL generic mutation failed: {err}"
+                        ))
+                    })?;
                     let rows_json = pg_rows_to_json(rows)?;
                     serde_json::json!({
                         "affected_rows": rows_json.len(),
@@ -188,14 +198,18 @@ impl MutationExecutor for PostgresExecutor {
                     })
                     .to_string()
                 } else {
-                    let result = bind_generic_pg_params(sqlx::query(sql), &params)
-                        .execute(&mut *tx)
-                        .await
-                        .map_err(|err| {
-                            tonic::Status::internal(format!(
-                                "PostgreSQL generic mutation failed: {err}"
-                            ))
-                        })?;
+                    let result = bind_typed_generic_pg_params(
+                        sqlx::query(sql),
+                        &params,
+                        param_types.as_deref(),
+                    )?
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|err| {
+                        tonic::Status::internal(format!(
+                            "PostgreSQL generic mutation failed: {err}"
+                        ))
+                    })?;
                     serde_json::json!({ "affected_rows": result.rows_affected() }).to_string()
                 };
                 tx.commit().await.map_err(|err| {
@@ -205,14 +219,16 @@ impl MutationExecutor for PostgresExecutor {
             }
 
             if return_rows {
-                let rows = bind_generic_pg_params(sqlx::query(sql), &params)
-                    .fetch_all(&self.pool)
-                    .await
-                    .map_err(|err| {
-                        tonic::Status::internal(format!(
-                            "PostgreSQL generic mutation failed: {err}"
-                        ))
-                    })?;
+                let rows = bind_typed_generic_pg_params(
+                    sqlx::query(sql),
+                    &params,
+                    param_types.as_deref(),
+                )?
+                .fetch_all(&self.pool)
+                .await
+                .map_err(|err| {
+                    tonic::Status::internal(format!("PostgreSQL generic mutation failed: {err}"))
+                })?;
                 let rows_json = pg_rows_to_json(rows)?;
                 return Ok(serde_json::json!({
                     "affected_rows": rows_json.len(),
@@ -220,12 +236,15 @@ impl MutationExecutor for PostgresExecutor {
                 })
                 .to_string());
             }
-            let result = bind_generic_pg_params(sqlx::query(sql), &params)
-                .execute(&self.pool)
-                .await
-                .map_err(|err| {
-                    tonic::Status::internal(format!("PostgreSQL generic mutation failed: {err}"))
-                })?;
+            let result =
+                bind_typed_generic_pg_params(sqlx::query(sql), &params, param_types.as_deref())?
+                    .execute(&self.pool)
+                    .await
+                    .map_err(|err| {
+                        tonic::Status::internal(format!(
+                            "PostgreSQL generic mutation failed: {err}"
+                        ))
+                    })?;
             Ok(serde_json::json!({ "affected_rows": result.rows_affected() }).to_string())
         })
         .await

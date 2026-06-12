@@ -224,16 +224,24 @@ impl Compiler for SqliteCompiler {
             ConflictStrategy::Error => {}
             ConflictStrategy::Ignore => sql.push_str(" ON CONFLICT DO NOTHING"),
             ConflictStrategy::Replace | ConflictStrategy::Update { .. } => {
-                if table.primary_key.is_empty() {
-                    return Err(CompileError::Malformed {
-                        reason: format!(
-                            "upsert requested but message '{}' has no primary key in manifest",
-                            op.message_type
-                        ),
-                    });
-                }
-                let pk_cols: Vec<String> = table
-                    .primary_key
+                // Conflict arbiter columns: explicit alternate-unique target when
+                // given (`ON CONFLICT (cols)`), else the manifest primary key.
+                let conflict_fields: Vec<&str> = match op.conflict.conflict_target() {
+                    Some(cols) => cols.iter().map(String::as_str).collect(),
+                    None => {
+                        if table.primary_key.is_empty() {
+                            return Err(CompileError::Malformed {
+                                reason: format!(
+                                    "upsert requested but message '{}' has no primary key in \
+                                     manifest and no explicit conflict_on target",
+                                    op.message_type
+                                ),
+                            });
+                        }
+                        table.primary_key.iter().map(String::as_str).collect()
+                    }
+                };
+                let pk_cols: Vec<String> = conflict_fields
                     .iter()
                     .map(|f| {
                         let c = Sl::column_for(table, f, &op.message_type)?;
@@ -241,7 +249,7 @@ impl Compiler for SqliteCompiler {
                     })
                     .collect::<Result<Vec<_>, CompileError>>()?;
                 let target_cols: Vec<&str> = match &op.conflict {
-                    ConflictStrategy::Update { fields } => fields
+                    ConflictStrategy::Update { fields, .. } => fields
                         .iter()
                         .map(|f| Sl::column_for(table, f, &op.message_type))
                         .collect::<Result<Vec<_>, _>>()?,
@@ -698,9 +706,7 @@ mod tests {
         let write = LogicalWrite {
             message_type: "acme.notes.v1.Note".into(),
             records: vec![rec],
-            conflict: ConflictStrategy::Update {
-                fields: vec!["title".into()],
-            },
+            conflict: ConflictStrategy::update(vec!["title".into()]),
             return_fields: vec![],
         };
         let (statement, _) = sql(SqliteCompiler.compile_write(&write, &ctx).unwrap());

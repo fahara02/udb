@@ -133,6 +133,60 @@ impl QueryExecutor for RedisExecutor {
                 })?;
                 Ok(json!({ "key": key, "exists": exists }).to_string())
             }
+            "scan" | "cache_scan" => {
+                let pattern = spec.get("pattern").and_then(Json::as_str).unwrap_or("*");
+                let cursor = spec
+                    .get("cursor")
+                    .and_then(|value| {
+                        value
+                            .as_u64()
+                            .or_else(|| value.as_str().and_then(|raw| raw.parse::<u64>().ok()))
+                    })
+                    .unwrap_or(0);
+                let limit = spec
+                    .get("limit")
+                    .and_then(Json::as_u64)
+                    .unwrap_or(10)
+                    .max(1);
+                let (next_cursor, keys): (u64, Vec<String>) = redis::cmd("SCAN")
+                    .arg(cursor)
+                    .arg("MATCH")
+                    .arg(pattern)
+                    .arg("COUNT")
+                    .arg(limit)
+                    .query_async(&mut conn)
+                    .await
+                    .map_err(|err| {
+                        tonic::Status::unavailable(format!("redis SCAN failed: {err}"))
+                    })?;
+                let values: Vec<Option<Vec<u8>>> = if keys.is_empty() {
+                    Vec::new()
+                } else {
+                    conn.get(&keys).await.map_err(|err| {
+                        tonic::Status::unavailable(format!("redis MGET after SCAN failed: {err}"))
+                    })?
+                };
+                let entries = keys
+                    .into_iter()
+                    .zip(values.into_iter())
+                    .map(|(key, value)| {
+                        json!({
+                            "key": key,
+                            "value": value.and_then(|bytes| String::from_utf8(bytes).ok())
+                        })
+                    })
+                    .collect::<Vec<_>>();
+                let next_page_token = if next_cursor == 0 {
+                    String::new()
+                } else {
+                    next_cursor.to_string()
+                };
+                Ok(json!({
+                    "entries": entries,
+                    "next_page_token": next_page_token
+                })
+                .to_string())
+            }
             other => Err(tonic::Status::invalid_argument(format!(
                 "unsupported Redis query operation '{other}'"
             ))),

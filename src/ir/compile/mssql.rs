@@ -266,7 +266,7 @@ impl Compiler for MssqlCompiler {
                         op: "batch_insert_ignore",
                     });
                 }
-                let on_clause = build_merge_on_clause(table, &op.message_type)?;
+                let on_clause = build_merge_on_clause(table, &op.message_type, &table.primary_key)?;
                 let sql = format!(
                     "MERGE INTO [{schema}].[{table}] AS target \
                      USING (VALUES {values}) AS source({column_list}) \
@@ -289,23 +289,32 @@ impl Compiler for MssqlCompiler {
                 })
             }
             ConflictStrategy::Replace | ConflictStrategy::Update { .. } => {
-                if table.primary_key.is_empty() {
-                    return Err(CompileError::Malformed {
-                        reason: format!(
-                            "upsert on '{}' requires a primary key in the manifest",
-                            op.message_type
-                        ),
-                    });
-                }
+                // Conflict arbiter: explicit alternate-unique target when given
+                // (MERGE … ON target.[col] = source.[col]), else the primary key.
+                let conflict_fields: Vec<String> = match op.conflict.conflict_target() {
+                    Some(cols) => cols.to_vec(),
+                    None => {
+                        if table.primary_key.is_empty() {
+                            return Err(CompileError::Malformed {
+                                reason: format!(
+                                    "upsert on '{}' requires a primary key in the manifest or \
+                                     an explicit conflict_on target",
+                                    op.message_type
+                                ),
+                            });
+                        }
+                        table.primary_key.clone()
+                    }
+                };
                 if op.records.len() != 1 {
                     return Err(CompileError::OperatorUnsupported {
                         backend: BackendKind::Mssql,
                         op: "batch_upsert",
                     });
                 }
-                let on_clause = build_merge_on_clause(table, &op.message_type)?;
+                let on_clause = build_merge_on_clause(table, &op.message_type, &conflict_fields)?;
                 let target_cols: Vec<&str> = match &op.conflict {
-                    ConflictStrategy::Update { fields } => fields
+                    ConflictStrategy::Update { fields, .. } => fields
                         .iter()
                         .map(|f| Ms::column_for(table, f, &op.message_type))
                         .collect::<Result<Vec<_>, _>>()?,
@@ -682,12 +691,15 @@ impl Compiler for MssqlCompiler {
     }
 }
 
+/// Build the `MERGE … ON` predicate matching `source` to `target` on the given
+/// conflict columns (the manifest primary key, or an explicit alternate-unique
+/// `conflict_on` target).
 fn build_merge_on_clause(
     table: &ManifestTable,
     message_type: &str,
+    conflict_fields: &[String],
 ) -> Result<String, CompileError> {
-    let parts = table
-        .primary_key
+    let parts = conflict_fields
         .iter()
         .map(|pk| {
             let col = Ms::column_for(table, pk, message_type)?;
@@ -814,9 +826,7 @@ mod tests {
         let write = LogicalWrite {
             message_type: "acme.billing.v1.Customer".into(),
             records: vec![rec],
-            conflict: ConflictStrategy::Update {
-                fields: vec!["name".into()],
-            },
+            conflict: ConflictStrategy::update(vec!["name".into()]),
             return_fields: vec![],
         };
         let (statement, _) = sql(MssqlCompiler.compile_write(&write, &ctx).unwrap());

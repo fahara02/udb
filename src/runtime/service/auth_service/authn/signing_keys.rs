@@ -97,6 +97,39 @@ impl AuthnServiceImpl {
                 return;
             }
         };
+        if let Ok(authn_runtime) = self.authn_runtime() {
+            let context = self.authn_context("", "");
+            let record = authn_record([
+                ("key_id", LogicalValue::String(UDB_RS256_KID.to_string())),
+                (
+                    "algorithm",
+                    LogicalValue::String(signing_key_domain::DEFAULT_SIGNING_ALGORITHM.to_string()),
+                ),
+                ("public_material", LogicalValue::String(public.clone())),
+                (
+                    "encrypted_private_material",
+                    LogicalValue::String(private.clone()),
+                ),
+                (
+                    "state",
+                    LogicalValue::String(signing_key_domain::STATE_ACTIVE.to_string()),
+                ),
+                ("created_by", LogicalValue::String("env-seed".to_string())),
+            ]);
+            if let Err(err) = authn_runtime
+                .native_entity_write_for_service(
+                    "authn",
+                    &context,
+                    "udb.core.authn.entity.v1.SigningKey",
+                    record,
+                    crate::ir::ConflictStrategy::Ignore,
+                )
+                .await
+            {
+                tracing::warn!(error = %err, "failed to seed signing-key registry from env key");
+            }
+            return;
+        }
         let sql = format!(
             "INSERT INTO {rel} ({kid}, {alg}, {pubm}, {privm}, {state}, {by}) \
              VALUES ($1, $2, $3, $4, $5, 'env-seed') ON CONFLICT ({kid}) DO NOTHING",

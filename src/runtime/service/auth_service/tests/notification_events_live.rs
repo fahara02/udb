@@ -36,6 +36,9 @@ async fn notification_event_outbox_to_cdc_to_kafka_end_to_end() {
     let _guard = live_auth_db_lock().lock().await;
     let pool = live_pg_pool().await;
     migrate_native_auth_db(&pool).await;
+    crate::runtime::system::ensure_system_catalog(&pool)
+        .await
+        .expect("ensure live UDB system catalog (CDC journal/DLQ tables)");
     ensure_outbox_table(&pool).await;
 
     // Real notification service wired to the real outbox (no in-memory double).

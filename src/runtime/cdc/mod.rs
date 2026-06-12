@@ -29,6 +29,42 @@ use wildmatch::WildMatch;
 use crate::generation::CatalogManifest;
 use crate::metrics::MetricsRecorder;
 
+/// THE one canonical outbox-row insert, shared by EVERY writer of the
+/// `(event_id, topic, partition_key, payload, created_at)` outbox table: the auth
+/// lane (`auth_service::events::write_outbox_row`), the native data-plane lane
+/// (`service::native_helpers`), the generic `EnqueueOutboxEvent` path
+/// (`core::probe_dispatch`), and DLQ replay (`core::catalog_admin`). Centralizing the
+/// INSERT here means the SQL and — critically — the bind TYPES can never diverge across
+/// writers. A prior `Uuid`-vs-`String` drift on `$1` between two lanes caused a sqlx
+/// prepared-statement collision ("incorrect binary data format in bind parameter 1")
+/// that poisoned the pooled connection and cascaded into bogus "invalid byte sequence
+/// for encoding UTF8" failures on the next clean write (§4). Taking `event_id: Uuid`
+/// makes that drift unrepresentable at the type level.
+pub(crate) async fn insert_outbox_row<'c, E>(
+    executor: E,
+    relation: &str,
+    event_id: Uuid,
+    topic: &str,
+    partition_key: &str,
+    envelope: &serde_json::Value,
+) -> Result<(), sqlx::Error>
+where
+    E: sqlx::Executor<'c, Database = sqlx::Postgres>,
+{
+    let sql = format!(
+        "INSERT INTO {relation} (event_id, topic, partition_key, payload, created_at) \
+         VALUES ($1::UUID, $2, $3, $4::JSONB, NOW())"
+    );
+    sqlx::query(&sql)
+        .bind(event_id)
+        .bind(topic)
+        .bind(partition_key)
+        .bind(envelope.to_string())
+        .execute(executor)
+        .await
+        .map(|_| ())
+}
+
 pub mod source; // C2 + C3: per-backend CDC source trait + Postgres / MongoDB / MySQL impls
 pub use source::{CdcEvent, CdcSource};
 
@@ -686,11 +722,8 @@ pub(crate) fn current_egress_traceparent() -> Option<String> {
 /// domain topics are tenant-scoped by contract; non-UDB application topics can
 /// opt into tenant/project policy via `udb_topic_policy`.
 pub fn tenant_scoped_topic(topic: &str) -> bool {
-    topic
-        .trim()
-        .to_ascii_lowercase()
-        .strip_prefix("udb.")
-        .is_some()
+    let topic = topic.trim().to_ascii_lowercase();
+    topic.starts_with("udb.") && !topic.starts_with("udb.ops.")
 }
 
 pub fn validate_topic_tenant_scope(topic: &str, envelope: &EventEnvelope) -> Result<(), String> {
@@ -1252,6 +1285,22 @@ mod tests {
 
         validate_topic_tenant_scope("billing.invoice.created", &envelope)
             .expect("non-UDB topics use explicit topic policy, not implicit tenant scope");
+    }
+
+    #[test]
+    fn udb_ops_topics_are_platform_scoped() {
+        let event_id = Uuid::new_v4().to_string();
+        let envelope: EventEnvelope = serde_json::from_value(json!({
+            "event_id": event_id,
+            "event_type": "udb.ops.readiness.failure.v1",
+            "correlation_id": "corr-ops",
+            "payload": {"check": "audit_sink"}
+        }))
+        .expect("ops envelope should decode");
+
+        validate_topic_tenant_scope("udb.ops.readiness.failure.v1", &envelope)
+            .expect("platform ops topics are not tenant-scoped CDC topics");
+        assert!(!tenant_scoped_topic("udb.ops.readiness.failure.v1"));
     }
 
     #[test]

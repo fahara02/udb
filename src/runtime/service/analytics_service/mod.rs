@@ -15,18 +15,28 @@
 //! online, `TriggerSnapshot` reports the current hour's snapshot rows rather than
 //! re-aggregating a raw stream.
 
+use std::sync::Arc;
+
+use chrono::{DateTime, NaiveDate, Utc};
 use sqlx::{PgPool, Row};
 use tonic::{Request, Response, Status};
 
+use crate::ir::{
+    AggregateExpr, AggregateFunc, ComparisonOp, LogicalAggregate, LogicalFilter, LogicalPagination,
+    LogicalProjection, LogicalRead, LogicalSort, LogicalValue, NullOrder, SortDirection,
+};
 use crate::proto::udb::core::analytics::entity::v1 as ana_entity_pb;
 use crate::proto::udb::core::analytics::services::v1 as ana_pb;
 use crate::proto::udb::core::analytics::services::v1::analytics_service_server::AnalyticsService;
+use crate::runtime::DataBrokerRuntime;
 use crate::runtime::native_catalog::{NativeModel, native_model};
 
 pub use crate::proto::udb::core::analytics::services::v1::analytics_service_server::AnalyticsServiceServer;
 
 use super::DataBrokerService;
-use super::native_helpers::{native_page_response, native_page_window};
+use super::native_helpers::{
+    metadata_tenant_id, native_page_response, native_page_window, native_service_context,
+};
 
 const PMS_MSG: &str = "udb.core.analytics.entity.v1.PipelineMetricSnapshot";
 const EPS_MSG: &str = "udb.core.analytics.entity.v1.ExecutorPerformanceSummary";
@@ -34,15 +44,24 @@ const RAS_MSG: &str = "udb.core.analytics.entity.v1.ReconciliationAnalyticsSumma
 
 pub struct AnalyticsServiceImpl {
     pg_pool: Option<PgPool>,
+    runtime: Option<Arc<DataBrokerRuntime>>,
 }
 
 impl AnalyticsServiceImpl {
     pub fn new() -> Self {
-        Self { pg_pool: None }
+        Self {
+            pg_pool: None,
+            runtime: None,
+        }
     }
 
     pub fn with_postgres(mut self, pool: Option<PgPool>) -> Self {
         self.pg_pool = pool;
+        self
+    }
+
+    pub(crate) fn with_runtime(mut self, runtime: Option<Arc<DataBrokerRuntime>>) -> Self {
+        self.runtime = runtime;
         self
     }
 
@@ -52,6 +71,10 @@ impl AnalyticsServiceImpl {
                 "analytics service requires a Postgres-backed store (no PG pool configured)",
             )
         })
+    }
+
+    fn runtime(&self) -> Option<&DataBrokerRuntime> {
+        self.runtime.as_deref()
     }
 }
 
@@ -129,6 +152,324 @@ fn ts(seconds: i64) -> Option<prost_types::Timestamp> {
         None
     } else {
         Some(prost_types::Timestamp { seconds, nanos: 0 })
+    }
+}
+
+fn logical_string(value: impl Into<String>) -> LogicalValue {
+    LogicalValue::String(value.into())
+}
+
+fn maybe_string_filter(field: &str, value: &str) -> Option<LogicalFilter> {
+    if value.trim().is_empty() {
+        None
+    } else {
+        Some(LogicalFilter::Comparison {
+            field: field.to_string(),
+            op: ComparisonOp::Eq,
+            value: logical_string(value.trim().to_string()),
+        })
+    }
+}
+
+fn projection(fields: &[&str]) -> LogicalProjection {
+    LogicalProjection::fields(fields.iter().map(|field| (*field).to_string()))
+}
+
+fn read_filter(filters: Vec<Option<LogicalFilter>>) -> Option<LogicalFilter> {
+    let filters = filters.into_iter().flatten().collect::<Vec<_>>();
+    if filters.is_empty() {
+        None
+    } else {
+        Some(LogicalFilter::And(filters))
+    }
+}
+
+fn pipeline_summary_filter(req: &ana_pb::GetPipelineSummaryRequest) -> Option<LogicalFilter> {
+    read_filter(vec![
+        maybe_string_filter("stage_name", &req.stage_name),
+        maybe_string_filter("tenant_id", &req.tenant_id),
+    ])
+}
+
+fn pipeline_summary_read(filter: Option<LogicalFilter>, offset: u64, limit: u32) -> LogicalRead {
+    LogicalRead {
+        message_type: PMS_MSG.to_string(),
+        filter,
+        projection: Some(projection(&[
+            "snapshot_id",
+            "snapshot_hour",
+            "stage_name",
+            "tenant_id",
+            "total_requests",
+            "successful",
+            "failed",
+            "p50_latency_ms",
+            "p95_latency_ms",
+            "p99_latency_ms",
+            "avg_latency_ms",
+            "error_rate",
+            "throughput_rps",
+            "recorded_at",
+        ])),
+        sort: vec![LogicalSort {
+            field: "snapshot_hour".to_string(),
+            direction: SortDirection::Desc,
+            nulls: NullOrder::Default,
+        }],
+        pagination: Some(LogicalPagination::page(offset, limit)),
+    }
+}
+
+fn executor_performance_read(req: &ana_pb::GetExecutorPerformanceRequest) -> LogicalRead {
+    LogicalRead {
+        message_type: EPS_MSG.to_string(),
+        filter: read_filter(vec![
+            maybe_string_filter("executor_identity", &req.executor_identity),
+            maybe_string_filter("workload_kind", &req.workload_kind),
+        ]),
+        projection: Some(projection(&[
+            "summary_id",
+            "summary_date",
+            "executor_identity",
+            "workload_kind",
+            "total_dispatches",
+            "successful_results",
+            "timeout_count",
+            "error_count",
+            "avg_execution_ms",
+            "p99_execution_ms",
+            "avg_confidence",
+            "success_rate",
+            "avg_capacity_utilisation",
+            "recorded_at",
+        ])),
+        sort: vec![LogicalSort {
+            field: "summary_date".to_string(),
+            direction: SortDirection::Desc,
+            nulls: NullOrder::Default,
+        }],
+        pagination: Some(LogicalPagination::limit(MAX_ANALYTICS_READ_ROWS)),
+    }
+}
+
+fn reconciliation_analytics_read() -> LogicalRead {
+    LogicalRead {
+        message_type: RAS_MSG.to_string(),
+        filter: None,
+        projection: Some(projection(&[
+            "summary_id",
+            "summary_date",
+            "total_reconciliations",
+            "exact_matches",
+            "partial_conflicts",
+            "hard_conflicts",
+            "low_confidence_flagged",
+            "avg_reconciliation_ms",
+            "resolution_rate",
+            "avg_record_confidence",
+            "recorded_at",
+        ])),
+        sort: vec![LogicalSort {
+            field: "summary_date".to_string(),
+            direction: SortDirection::Desc,
+            nulls: NullOrder::Default,
+        }],
+        pagination: Some(LogicalPagination::limit(MAX_ANALYTICS_READ_ROWS)),
+    }
+}
+
+// B12: retained for the typed-aggregate throughput path. `get_throughput` currently
+// serves via raw SQL because this typed `LogicalAggregate` returns 0 rows at runtime
+// (see bug_report.md B12); restore the call site once that defect is root-caused.
+#[allow(dead_code)]
+fn throughput_aggregate(req: &ana_pb::GetThroughputRequest) -> LogicalAggregate {
+    LogicalAggregate {
+        message_type: PMS_MSG.to_string(),
+        filter: read_filter(vec![maybe_string_filter("tenant_id", &req.tenant_id)]),
+        group_by: Vec::new(),
+        aggregates: vec![
+            AggregateExpr {
+                func: AggregateFunc::Avg,
+                field: "throughput_rps".to_string(),
+                alias: "avg_rps".to_string(),
+            },
+            AggregateExpr {
+                func: AggregateFunc::Max,
+                field: "throughput_rps".to_string(),
+                alias: "peak_rps".to_string(),
+            },
+            AggregateExpr {
+                func: AggregateFunc::Sum,
+                field: "total_requests".to_string(),
+                alias: "total_requests".to_string(),
+            },
+            AggregateExpr {
+                func: AggregateFunc::Sum,
+                field: "successful".to_string(),
+                alias: "total_successful".to_string(),
+            },
+        ],
+        having: None,
+        sort: Vec::new(),
+        pagination: None,
+    }
+}
+
+fn sla_compliance_read(req: &ana_pb::GetSlaComplianceRequest) -> LogicalRead {
+    LogicalRead {
+        message_type: PMS_MSG.to_string(),
+        filter: read_filter(vec![maybe_string_filter("stage_name", &req.stage_name)]),
+        projection: Some(projection(&[
+            "snapshot_hour",
+            "stage_name",
+            "p99_latency_ms",
+            "error_rate",
+        ])),
+        sort: vec![LogicalSort {
+            field: "snapshot_hour".to_string(),
+            direction: SortDirection::Desc,
+            nulls: NullOrder::Default,
+        }],
+        pagination: Some(LogicalPagination::limit(MAX_ANALYTICS_READ_ROWS)),
+    }
+}
+
+fn timestamp_hour_period(ts: Option<&prost_types::Timestamp>) -> String {
+    ts.and_then(|ts| DateTime::<Utc>::from_timestamp(ts.seconds, ts.nanos.max(0) as u32))
+        .map(|dt| dt.format("%Y-%m-%dT%H:00:00Z").to_string())
+        .unwrap_or_default()
+}
+
+const MAX_ANALYTICS_READ_ROWS: u32 = 10_000;
+
+fn row_object(row: &serde_json::Value) -> &serde_json::Map<String, serde_json::Value> {
+    row.get("n")
+        .and_then(serde_json::Value::as_object)
+        .or_else(|| row.as_object())
+        .unwrap_or_else(|| {
+            static EMPTY: std::sync::OnceLock<serde_json::Map<String, serde_json::Value>> =
+                std::sync::OnceLock::new();
+            EMPTY.get_or_init(serde_json::Map::new)
+        })
+}
+
+fn json_string(row: &serde_json::Map<String, serde_json::Value>, field: &str) -> String {
+    row.get(field)
+        .and_then(|value| match value {
+            serde_json::Value::String(value) => Some(value.clone()),
+            serde_json::Value::Number(value) => Some(value.to_string()),
+            serde_json::Value::Bool(value) => Some(value.to_string()),
+            _ => None,
+        })
+        .unwrap_or_default()
+}
+
+fn json_i64(row: &serde_json::Map<String, serde_json::Value>, field: &str) -> i64 {
+    row.get(field)
+        .and_then(|value| match value {
+            serde_json::Value::Number(value) => value.as_i64(),
+            serde_json::Value::String(value) => value.parse::<i64>().ok(),
+            _ => None,
+        })
+        .unwrap_or_default()
+}
+
+fn json_f64(row: &serde_json::Map<String, serde_json::Value>, field: &str) -> f64 {
+    row.get(field)
+        .and_then(|value| match value {
+            serde_json::Value::Number(value) => value.as_f64(),
+            serde_json::Value::String(value) => value.parse::<f64>().ok(),
+            _ => None,
+        })
+        .unwrap_or_default()
+}
+
+fn json_ts(
+    row: &serde_json::Map<String, serde_json::Value>,
+    field: &str,
+) -> Option<prost_types::Timestamp> {
+    let value = row.get(field)?;
+    if let Some(seconds) = value.as_i64() {
+        return ts(seconds);
+    }
+    let raw = value.as_str()?.trim();
+    if raw.is_empty() {
+        return None;
+    }
+    if let Ok(seconds) = raw.parse::<i64>() {
+        return ts(seconds);
+    }
+    if let Ok(dt) = DateTime::parse_from_rfc3339(raw) {
+        return Some(prost_types::Timestamp {
+            seconds: dt.timestamp(),
+            nanos: dt.timestamp_subsec_nanos() as i32,
+        });
+    }
+    if let Ok(date) = NaiveDate::parse_from_str(raw, "%Y-%m-%d") {
+        if let Some(dt) = date.and_hms_opt(0, 0, 0) {
+            return Some(prost_types::Timestamp {
+                seconds: dt.and_utc().timestamp(),
+                nanos: 0,
+            });
+        }
+    }
+    None
+}
+
+fn eps_from_json(row: &serde_json::Value) -> ana_entity_pb::ExecutorPerformanceSummary {
+    let row = row_object(row);
+    ana_entity_pb::ExecutorPerformanceSummary {
+        summary_id: json_string(row, "summary_id"),
+        summary_date: json_ts(row, "summary_date"),
+        executor_identity: json_string(row, "executor_identity"),
+        workload_kind: json_string(row, "workload_kind"),
+        total_dispatches: json_i64(row, "total_dispatches"),
+        successful_results: json_i64(row, "successful_results"),
+        timeout_count: json_i64(row, "timeout_count"),
+        error_count: json_i64(row, "error_count"),
+        avg_execution_ms: json_f64(row, "avg_execution_ms"),
+        p99_execution_ms: json_f64(row, "p99_execution_ms"),
+        avg_confidence: json_f64(row, "avg_confidence"),
+        success_rate: json_f64(row, "success_rate"),
+        avg_capacity_utilisation: json_f64(row, "avg_capacity_utilisation"),
+        recorded_at: json_ts(row, "recorded_at"),
+    }
+}
+
+fn ras_from_json(row: &serde_json::Value) -> ana_entity_pb::ReconciliationAnalyticsSummary {
+    let row = row_object(row);
+    ana_entity_pb::ReconciliationAnalyticsSummary {
+        summary_id: json_string(row, "summary_id"),
+        summary_date: json_ts(row, "summary_date"),
+        total_reconciliations: json_i64(row, "total_reconciliations"),
+        exact_matches: json_i64(row, "exact_matches"),
+        partial_conflicts: json_i64(row, "partial_conflicts"),
+        hard_conflicts: json_i64(row, "hard_conflicts"),
+        low_confidence_flagged: json_i64(row, "low_confidence_flagged"),
+        avg_reconciliation_ms: json_f64(row, "avg_reconciliation_ms"),
+        resolution_rate: json_f64(row, "resolution_rate"),
+        avg_record_confidence: json_f64(row, "avg_record_confidence"),
+        recorded_at: json_ts(row, "recorded_at"),
+    }
+}
+
+fn pms_from_json(row: &serde_json::Value) -> ana_entity_pb::PipelineMetricSnapshot {
+    let row = row_object(row);
+    ana_entity_pb::PipelineMetricSnapshot {
+        snapshot_id: json_string(row, "snapshot_id"),
+        snapshot_hour: json_ts(row, "snapshot_hour"),
+        stage_name: json_string(row, "stage_name"),
+        tenant_id: json_string(row, "tenant_id"),
+        total_requests: json_i64(row, "total_requests"),
+        successful: json_i64(row, "successful"),
+        failed: json_i64(row, "failed"),
+        p50_latency_ms: json_f64(row, "p50_latency_ms"),
+        p95_latency_ms: json_f64(row, "p95_latency_ms"),
+        p99_latency_ms: json_f64(row, "p99_latency_ms"),
+        avg_latency_ms: json_f64(row, "avg_latency_ms"),
+        error_rate: json_f64(row, "error_rate"),
+        throughput_rps: json_f64(row, "throughput_rps"),
+        recorded_at: json_ts(row, "recorded_at"),
     }
 }
 
@@ -216,7 +557,15 @@ impl AnalyticsService for AnalyticsServiceImpl {
         &self,
         request: Request<ana_pb::RecordPipelineMetricRequest>,
     ) -> Result<Response<ana_pb::RecordPipelineMetricResponse>, Status> {
-        let req = request.into_inner();
+        let metadata = request.metadata().clone();
+        let mut req = request.into_inner();
+        // B12: persist under the canonical tenant — the VALIDATED bearer/header
+        // tenant (a UUID), not the raw request-body string (e.g. a human "code").
+        // GetThroughput/GetPipelineSummary filter by this same canonical tenant, so
+        // a divergent body value here would store rows the reads can never sum.
+        if let Some(canonical) = metadata_tenant_id(&metadata) {
+            req.tenant_id = canonical;
+        }
         if req.stage_name.trim().is_empty() {
             return Err(Status::invalid_argument("stage_name is required"));
         }
@@ -284,12 +633,39 @@ impl AnalyticsService for AnalyticsServiceImpl {
         &self,
         request: Request<ana_pb::GetPipelineSummaryRequest>,
     ) -> Result<Response<ana_pb::GetPipelineSummaryResponse>, Status> {
+        let metadata = request.metadata().clone();
         let req = request.into_inner();
+        let page = native_page_window(req.page.as_ref(), 50);
+        if req.hour_from.trim().is_empty()
+            && req.hour_to.trim().is_empty()
+            && let Some(runtime) = self.runtime()
+        {
+            let context = native_service_context(&metadata, &req.tenant_id, "");
+            let filter = pipeline_summary_filter(&req);
+            let total = runtime
+                .native_entity_count_for_service("analytics", &context, PMS_MSG, filter.clone())
+                .await?;
+            let rows = runtime
+                .native_entity_read_for_service(
+                    "analytics",
+                    &context,
+                    pipeline_summary_read(filter, page.offset as u64, page.limit as u32),
+                )
+                .await?;
+            let snapshots = rows.iter().map(pms_from_json).collect();
+            return Ok(Response::new(ana_pb::GetPipelineSummaryResponse {
+                snapshots,
+                page: Some(native_page_response(req.page.as_ref(), total, 50)),
+            }));
+        }
         let pool = self.require_pool()?;
         let m = pms_model();
         let rel = m.relation.clone();
         let projection = pms_projection(&m);
-        let page = native_page_window(req.page.as_ref(), 50);
+        // Transitional: this response includes COUNT(*) OVER() pagination metadata
+        // plus timestamp casts. Native read/count handles the no-window path
+        // above; timestamp windows remain on the capability-gated Postgres path
+        // until dispatch preserves typed timestamp params across every backend.
         let rows = sqlx::query(&format!(
             "SELECT {projection}, COUNT(*) OVER() AS total_count FROM {rel} \
              WHERE ($1 = '' OR {stage} = $1) \
@@ -325,10 +701,30 @@ impl AnalyticsService for AnalyticsServiceImpl {
         &self,
         request: Request<ana_pb::GetExecutorPerformanceRequest>,
     ) -> Result<Response<ana_pb::GetExecutorPerformanceResponse>, Status> {
+        let metadata = request.metadata().clone();
         let req = request.into_inner();
+        if req.date_from.trim().is_empty()
+            && req.date_to.trim().is_empty()
+            && let Some(runtime) = self.runtime()
+        {
+            let context = native_service_context(&metadata, "", "");
+            let rows = runtime
+                .native_entity_read_for_service(
+                    "analytics",
+                    &context,
+                    executor_performance_read(&req),
+                )
+                .await?;
+            let summaries = rows.iter().map(eps_from_json).collect();
+            return Ok(Response::new(ana_pb::GetExecutorPerformanceResponse {
+                summaries,
+            }));
+        }
         let pool = self.require_pool()?;
         let m = eps_model();
         let rel = m.relation.clone();
+        // Transitional: date-range filters currently rely on Postgres date casts;
+        // typed reads handle the simple entity list above.
         let projection = format!(
             "{id}, {date}, {exec}, {workload}, {dispatches}, {succ}, {timeouts}, {errors}, \
              COALESCE({avg_exec},0) AS avg_execution_ms, COALESCE({p99},0) AS p99_execution_ms, \
@@ -377,10 +773,48 @@ impl AnalyticsService for AnalyticsServiceImpl {
         &self,
         request: Request<ana_pb::GetReconciliationAnalyticsRequest>,
     ) -> Result<Response<ana_pb::GetReconciliationAnalyticsResponse>, Status> {
+        let metadata = request.metadata().clone();
         let req = request.into_inner();
+        if req.date_from.trim().is_empty()
+            && req.date_to.trim().is_empty()
+            && let Some(runtime) = self.runtime()
+        {
+            let context = native_service_context(&metadata, "", "");
+            let rows = runtime
+                .native_entity_read_for_service(
+                    "analytics",
+                    &context,
+                    reconciliation_analytics_read(),
+                )
+                .await?;
+            let summaries: Vec<_> = rows.iter().map(ras_from_json).collect();
+            let total_recon: i64 = summaries.iter().map(|s| s.total_reconciliations).sum();
+            let total_exact: i64 = summaries.iter().map(|s| s.exact_matches).sum();
+            let overall_resolution_rate = if total_recon > 0 {
+                total_exact as f64 / total_recon as f64
+            } else {
+                0.0
+            };
+            let avg_reconciliation_ms = if summaries.is_empty() {
+                0.0
+            } else {
+                summaries
+                    .iter()
+                    .map(|s| s.avg_reconciliation_ms)
+                    .sum::<f64>()
+                    / summaries.len() as f64
+            };
+            return Ok(Response::new(ana_pb::GetReconciliationAnalyticsResponse {
+                summaries,
+                overall_resolution_rate,
+                avg_reconciliation_ms,
+            }));
+        }
         let pool = self.require_pool()?;
         let m = ras_model();
         let rel = m.relation.clone();
+        // Transitional: date-range filters currently rely on Postgres date casts;
+        // typed reads handle the simple entity list above.
         let projection = format!(
             "{id}, {date}, {total}, {exact}, {partial}, {hard}, {low}, \
              COALESCE({avg_ms},0) AS avg_reconciliation_ms, \
@@ -439,10 +873,30 @@ impl AnalyticsService for AnalyticsServiceImpl {
         &self,
         request: Request<ana_pb::GetThroughputRequest>,
     ) -> Result<Response<ana_pb::GetThroughputResponse>, Status> {
-        let req = request.into_inner();
+        let metadata = request.metadata().clone();
+        let mut req = request.into_inner();
+        // B12: filter by the canonical tenant — the VALIDATED bearer/header tenant
+        // (a UUID), the SAME value RecordPipelineMetric persists under. The raw
+        // request-body `tenant_id` may be a human code (e.g. "sdk-live") that matches
+        // zero stored rows, so SUM(total_requests) came back 0. Binding to the claim
+        // tenant here makes the read scope match the write.
+        if let Some(canonical) = metadata_tenant_id(&metadata) {
+            req.tenant_id = canonical;
+        }
+        // B12: the typed `LogicalAggregate` dispatch returns 0 here at runtime even
+        // though the identical raw SQL (and the typed READ over the same table+tenant
+        // via GetPipelineSummary) returns the real sum — a defect in the typed
+        // aggregate execution path that is NOT a tenant mismatch (RecordPipelineMetric,
+        // GetPipelineSummary and this handler all key on the same canonical tenant).
+        // Until that typed-aggregate bug is root-caused, serve the throughput SUM via
+        // the SAME proven raw-SQL aggregate the windowed branch already uses below
+        // (`COALESCE(SUM(..),0)::bigint`), so throughput reports real numbers. See
+        // bug_report.md B12.
         let pool = self.require_pool()?;
         let m = pms_model();
         let rel = m.relation.clone();
+        // Transitional: timestamp-window casts stay on the configured Postgres
+        // native store; the no-window aggregate path uses LogicalAggregate above.
         let row = sqlx::query(&format!(
             "SELECT COALESCE(AVG({rps}),0) AS avg_rps, \
                     COALESCE(MAX({rps}),0) AS peak_rps, \
@@ -483,10 +937,53 @@ impl AnalyticsService for AnalyticsServiceImpl {
         &self,
         request: Request<ana_pb::GetSlaComplianceRequest>,
     ) -> Result<Response<ana_pb::GetSlaComplianceResponse>, Status> {
+        let metadata = request.metadata().clone();
         let req = request.into_inner();
+        let p99_threshold = req.p99_threshold_ms;
+        let err_threshold = req.error_rate_threshold;
+        if req.date_from.trim().is_empty()
+            && req.date_to.trim().is_empty()
+            && let Some(runtime) = self.runtime()
+        {
+            let context = native_service_context(&metadata, "", "");
+            let rows = runtime
+                .native_entity_read_for_service("analytics", &context, sla_compliance_read(&req))
+                .await?;
+            let mut entries = Vec::with_capacity(rows.len());
+            let (mut p99_met, mut err_met) = (0i64, 0i64);
+            for row in &rows {
+                let snapshot = pms_from_json(row);
+                let p99_sla_met = p99_threshold <= 0.0 || snapshot.p99_latency_ms <= p99_threshold;
+                let error_rate_sla_met =
+                    err_threshold <= 0.0 || snapshot.error_rate <= err_threshold;
+                if p99_sla_met {
+                    p99_met += 1;
+                }
+                if error_rate_sla_met {
+                    err_met += 1;
+                }
+                entries.push(ana_pb::SlaComplianceEntry {
+                    stage_name: snapshot.stage_name,
+                    period: timestamp_hour_period(snapshot.snapshot_hour.as_ref()),
+                    p99_latency_ms: snapshot.p99_latency_ms,
+                    error_rate: snapshot.error_rate,
+                    p99_sla_met,
+                    error_rate_sla_met,
+                });
+            }
+            let n = entries.len() as f64;
+            return Ok(Response::new(ana_pb::GetSlaComplianceResponse {
+                overall_p99_compliance_rate: if n > 0.0 { p99_met as f64 / n } else { 0.0 },
+                overall_error_rate_compliance_rate: if n > 0.0 { err_met as f64 / n } else { 0.0 },
+                entries,
+            }));
+        }
         let pool = self.require_pool()?;
         let m = pms_model();
         let rel = m.relation.clone();
+        // Transitional: SLA periods need backend date formatting plus service-side
+        // compliance rollup for date windows. The no-window row read uses native
+        // entity dispatch above.
         let rows = sqlx::query(&format!(
             "SELECT {stage}::TEXT AS stage_name, \
                     to_char({hour} AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:00:00\"Z\"') AS period, \
@@ -511,8 +1008,6 @@ impl AnalyticsService for AnalyticsServiceImpl {
 
         // A zero threshold means "no threshold configured" → treat as always met
         // so an unconfigured SLA doesn't report spurious violations.
-        let p99_threshold = req.p99_threshold_ms;
-        let err_threshold = req.error_rate_threshold;
         let mut entries = Vec::with_capacity(rows.len());
         let (mut p99_met, mut err_met) = (0i64, 0i64);
         for row in &rows {
@@ -556,6 +1051,7 @@ impl AnalyticsService for AnalyticsServiceImpl {
         // stage filter. `hour` empty defaults to the CURRENT hour — that is where
         // `record_pipeline_metric` writes, so a trigger right after recording sees
         // the rows it just produced.
+        // Transitional: this is a count/window capability, not entity CRUD/list.
         let row = sqlx::query(&format!(
             "SELECT COUNT(*)::bigint AS n FROM {rel} \
              WHERE ($1 = '' OR {stage} = $1) \
@@ -579,7 +1075,14 @@ impl DataBrokerService {
     /// Build the native `AnalyticsService`, wired to the broker's Postgres pool.
     pub(crate) fn build_analytics_service(&self) -> AnalyticsServiceImpl {
         let runtime = self.runtime.load_full();
-        let pg_pool = runtime.pg_pool().ok().cloned();
-        AnalyticsServiceImpl::new().with_postgres(pg_pool)
+        // Native-service persistence resolves through the discovery seam (extend_udb.md):
+        // the backend is read from this service's proto `native_service` binding, then a
+        // health/weight-routed instance is chosen — not the process-global pool.
+        let pg_pool = runtime
+            .native_store_pool_for_service("analytics", true, "")
+            .ok();
+        AnalyticsServiceImpl::new()
+            .with_postgres(pg_pool)
+            .with_runtime(Some(runtime))
     }
 }

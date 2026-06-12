@@ -607,6 +607,11 @@ pub fn build_native_compliance_envelope(
         "subject": target,
         "datacontenttype": "application/json",
         "time": now,
+        // CDC routing + tenant-scope validation: emit the top-level `tenant_id`/
+        // `project_id` the CDC `EventEnvelope` decodes, else every `udb.*` event
+        // is rejected as TenantScopeMissing and never published.
+        "tenant_id": tenant_id,
+        "project_id": project_id,
         "actor": actor,
         "actor_tenant": tenant_id,
         "actor_project": if env.actor_project.is_empty() { project_id } else { env.actor_project.as_str() },
@@ -753,6 +758,13 @@ impl OutboxAuthEventSink {
             "correlation_id": event.correlation_id,
             "document_id": event.document_id,
             "payload": payload,
+            // CDC routing + tenant-scope validation: the envelope MUST carry the
+            // top-level `tenant_id` the CDC `EventEnvelope` decodes. Without it
+            // every `udb.*` (tenant-scoped) event deserializes with an empty
+            // tenant and is rejected by `validate_topic_tenant_scope` as
+            // TenantScopeMissing — DLQ'd, never published.
+            "tenant_id": event.tenant_id,
+            "project_id": env.actor_project,
             // ── Phase L1 compliance envelope ──────────────────────────────────
             // CloudEvents-compatible core attributes.
             "specversion": "1.0",
@@ -819,19 +831,18 @@ impl OutboxAuthEventSink {
         }
         let event_id = Uuid::new_v4();
         let envelope = Self::envelope(&event_id, event);
-        let sql = format!(
-            "INSERT INTO {rel} (event_id, topic, partition_key, payload, created_at) \
-             VALUES ($1::UUID, $2, $3, $4::JSONB, NOW())",
-            rel = self.outbox_relation
-        );
-        sqlx::query(&sql)
-            .bind(event_id)
-            .bind(event.topic)
-            .bind(&event.document_id)
-            .bind(envelope.to_string())
-            .execute(executor)
-            .await
-            .map_err(|e| format!("auth outbox enqueue failed for topic {}: {e}", event.topic))?;
+        // ONE shared insert path — EVERY outbox writer uses this same function, so the
+        // SQL + bind types can never drift again (§4).
+        crate::runtime::cdc::insert_outbox_row(
+            executor,
+            &self.outbox_relation,
+            event_id,
+            event.topic,
+            &event.document_id,
+            &envelope,
+        )
+        .await
+        .map_err(|e| format!("auth outbox enqueue failed for topic {}: {e}", event.topic))?;
         Ok(envelope)
     }
 
@@ -888,11 +899,19 @@ impl AuthEventSink for OutboxAuthEventSink {
         conn: &mut sqlx::PgConnection,
         event: AuthEvent,
     ) -> Result<(), String> {
-        // Atomic path: persist the durable outbox row on the caller's transaction
-        // connection so it commits with the mutation. Export-sink fan-out is
-        // skipped here (post-durability; the CDC relay forwards the committed row).
+        // Atomic path: persist ONLY the durable outbox row on the caller's
+        // transaction connection so it commits with the mutation. Export-sink
+        // fan-out is skipped here (post-durability; the CDC relay forwards the
+        // committed row).
+        //
+        // The lag-metric sample is DELIBERATELY NOT run on this connection: it is
+        // a best-effort observability query, and ANY failure of it on the tx
+        // connection (a schema/shape mismatch, a transient error) aborts the
+        // caller's transaction in Postgres — silently turning the subsequent
+        // commit into a rollback that drops the mutation AND this outbox row while
+        // the handler still returns Ok. Lag is sampled off-tx by the `emit` path
+        // and the background poller instead.
         self.write_outbox_row(&mut *conn, &event).await?;
-        self.record_auth_outbox_lag(&mut *conn).await;
         Ok(())
     }
 }

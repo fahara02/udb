@@ -13,6 +13,7 @@ import "udb/entity/v1/stores.proto";
 import "udb/entity/v1/tx.proto";
 import "udb/entity/v1/vector.proto";
 import "udb/events/v1/udb_events.proto";
+import "udb/core/common/v1/security.proto";
 
 option csharp_namespace = "Udb.Services.V1";
 option go_package = "github.com/udb-project/udb/gen/go/udb/services/v1;servicesv1";
@@ -24,157 +25,309 @@ option php_namespace = "Udb\\Services\\V1";
 // schema input; they do not need to contain or import this service contract.
 service DataBroker {
   // ── Relational ─────────────────────────────────────────────────────────────
-  rpc Select(udb.entity.v1.SelectRequest) returns (udb.entity.v1.RecordSet) {}
-  rpc BatchSelect(stream udb.entity.v1.SelectRequest) returns (stream udb.entity.v1.RecordSet) {}
+  rpc Select(udb.entity.v1.SelectRequest) returns (udb.entity.v1.RecordSet) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+  }
+  rpc BatchSelect(stream udb.entity.v1.SelectRequest) returns (stream udb.entity.v1.RecordSet) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+  }
   // Additive typed columnar read. Reuses SelectRequest; streams RecordBatchV2.
   // Clients use this only when ProtocolSupport.encodings advertises
   // "record_batch_v2" and otherwise fall back to Select/RecordSet.
-  rpc SelectV2(udb.entity.v1.SelectRequest) returns (stream udb.entity.v1.RecordBatchV2) {}
-  rpc Upsert(udb.entity.v1.UpsertRequest) returns (udb.entity.v1.MutationResponse) {}
-  rpc BatchUpsert(stream udb.entity.v1.UpsertRequest) returns (stream udb.entity.v1.MutationResponse) {}
+  rpc SelectV2(udb.entity.v1.SelectRequest) returns (stream udb.entity.v1.RecordBatchV2) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+  }
+  rpc Upsert(udb.entity.v1.UpsertRequest) returns (udb.entity.v1.MutationResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+  }
+  rpc BatchUpsert(stream udb.entity.v1.UpsertRequest) returns (stream udb.entity.v1.MutationResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+  }
   // Delete rows without raw SQL.
-  rpc Delete(udb.entity.v1.DeleteRequest) returns (udb.entity.v1.MutationResponse) {}
+  rpc Delete(udb.entity.v1.DeleteRequest) returns (udb.entity.v1.MutationResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+  }
 
   // ── Vector ──────────────────────────────────────────────────────────────────
-  rpc VectorSearch(udb.entity.v1.VectorSearchRequest) returns (udb.entity.v1.VectorSet) {}
-  rpc VectorHybridSearch(udb.entity.v1.VectorHybridSearchRequest) returns (udb.entity.v1.VectorSet) {}
-  rpc VectorUpsert(udb.entity.v1.VectorUpsertRequest) returns (udb.entity.v1.MutationResponse) {}
-  rpc VectorBatchUpsert(stream udb.entity.v1.VectorUpsertRequest) returns (stream udb.entity.v1.MutationResponse) {}
+  rpc VectorSearch(udb.entity.v1.VectorSearchRequest) returns (udb.entity.v1.VectorSet) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+  }
+  rpc VectorHybridSearch(udb.entity.v1.VectorHybridSearchRequest) returns (udb.entity.v1.VectorSet) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+  }
+  rpc VectorUpsert(udb.entity.v1.VectorUpsertRequest) returns (udb.entity.v1.MutationResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+  }
+  rpc VectorBatchUpsert(stream udb.entity.v1.VectorUpsertRequest) returns (stream udb.entity.v1.MutationResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+  }
 
   // ── Blob ───────────────────────────────────────────────────────────────────
-  rpc PutObject(stream udb.entity.v1.Chunk) returns (udb.entity.v1.MutationResponse) {}
-  rpc GetObject(udb.entity.v1.ObjectRequest) returns (stream udb.entity.v1.Chunk) {}
-  rpc GeneratePresignedUrl(udb.entity.v1.UrlRequest) returns (udb.entity.v1.UrlResponse) {}
-  rpc InitiateMultipartUpload(udb.entity.v1.MultipartUploadRequest) returns (udb.entity.v1.MultipartUploadResponse) {}
+  rpc PutObject(stream udb.entity.v1.Chunk) returns (udb.entity.v1.MutationResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+  }
+  rpc GetObject(udb.entity.v1.ObjectRequest) returns (stream udb.entity.v1.Chunk) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+  }
+  rpc GeneratePresignedUrl(udb.entity.v1.UrlRequest) returns (udb.entity.v1.UrlResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+  }
+  rpc InitiateMultipartUpload(udb.entity.v1.MultipartUploadRequest) returns (udb.entity.v1.MultipartUploadResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+  }
 
   // ── Cache / KV ─────────────────────────────────────────────────────────────
-  rpc CacheGet(udb.entity.v1.CacheGetRequest) returns (udb.entity.v1.CacheGetResponse) {}
-  rpc CacheSet(udb.entity.v1.CacheSetRequest) returns (udb.entity.v1.MutationResponse) {}
-  rpc CacheDelete(udb.entity.v1.CacheDeleteRequest) returns (udb.entity.v1.MutationResponse) {}
-  rpc CacheScan(udb.entity.v1.CacheScanRequest) returns (udb.entity.v1.CacheScanResponse) {}
+  rpc CacheGet(udb.entity.v1.CacheGetRequest) returns (udb.entity.v1.CacheGetResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+  }
+  rpc CacheSet(udb.entity.v1.CacheSetRequest) returns (udb.entity.v1.MutationResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+  }
+  rpc CacheDelete(udb.entity.v1.CacheDeleteRequest) returns (udb.entity.v1.MutationResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+  }
+  rpc CacheScan(udb.entity.v1.CacheScanRequest) returns (udb.entity.v1.CacheScanResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+  }
 
   // ── Document / Graph / Time-Series / Analytical Stores ────────────────────
-  rpc DocumentGet(udb.entity.v1.DocumentGetRequest) returns (udb.entity.v1.DocumentSet) {}
-  rpc DocumentFind(udb.entity.v1.DocumentFindRequest) returns (udb.entity.v1.DocumentSet) {}
-  rpc DocumentUpsert(udb.entity.v1.DocumentUpsertRequest) returns (udb.entity.v1.MutationResponse) {}
-  rpc DocumentDelete(udb.entity.v1.DocumentDeleteRequest) returns (udb.entity.v1.MutationResponse) {}
-  rpc GraphQuery(udb.entity.v1.GraphQueryRequest) returns (udb.entity.v1.GraphResultSet) {}
-  rpc GraphMutate(udb.entity.v1.GraphMutationRequest) returns (udb.entity.v1.MutationResponse) {}
-  rpc TimeSeriesWrite(udb.entity.v1.TimeSeriesWriteRequest) returns (udb.entity.v1.MutationResponse) {}
-  rpc TimeSeriesQuery(udb.entity.v1.TimeSeriesQueryRequest) returns (udb.entity.v1.TimeSeriesQueryResponse) {}
-  rpc AnalyticalQuery(udb.entity.v1.AnalyticalQueryRequest) returns (udb.entity.v1.AnalyticalQueryResponse) {}
+  rpc DocumentGet(udb.entity.v1.DocumentGetRequest) returns (udb.entity.v1.DocumentSet) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+  }
+  rpc DocumentFind(udb.entity.v1.DocumentFindRequest) returns (udb.entity.v1.DocumentSet) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+  }
+  rpc DocumentUpsert(udb.entity.v1.DocumentUpsertRequest) returns (udb.entity.v1.MutationResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+  }
+  rpc DocumentDelete(udb.entity.v1.DocumentDeleteRequest) returns (udb.entity.v1.MutationResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+  }
+  rpc GraphQuery(udb.entity.v1.GraphQueryRequest) returns (udb.entity.v1.GraphResultSet) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+  }
+  rpc GraphMutate(udb.entity.v1.GraphMutationRequest) returns (udb.entity.v1.MutationResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+  }
+  rpc TimeSeriesWrite(udb.entity.v1.TimeSeriesWriteRequest) returns (udb.entity.v1.MutationResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+  }
+  rpc TimeSeriesQuery(udb.entity.v1.TimeSeriesQueryRequest) returns (udb.entity.v1.TimeSeriesQueryResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+  }
+  rpc AnalyticalQuery(udb.entity.v1.AnalyticalQueryRequest) returns (udb.entity.v1.AnalyticalQueryResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+  }
 
   // ── Tx / CDC ───────────────────────────────────────────────────────────────
-  rpc BeginTx(stream udb.entity.v1.Mutation) returns (stream udb.entity.v1.TxStatus) {}
-  rpc PublishCDC(udb.entity.v1.CDCSubscriptionRequest) returns (stream udb.events.v1.CDCEnvelope) {}
-  rpc CreateMaterializedView(udb.entity.v1.ViewDefinition) returns (udb.entity.v1.MutationResponse) {}
+  rpc BeginTx(stream udb.entity.v1.Mutation) returns (stream udb.entity.v1.TxStatus) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+  }
+  rpc PublishCDC(udb.entity.v1.CDCSubscriptionRequest) returns (stream udb.events.v1.CDCEnvelope) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+  }
+  rpc CreateMaterializedView(udb.entity.v1.ViewDefinition) returns (udb.entity.v1.MutationResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+  }
 
   // ── First-Class Event API ─────────────────────────────────────────────────
-  rpc EnqueueOutboxEvent(udb.entity.v1.EnqueueOutboxEventRequest) returns (udb.entity.v1.EnqueueOutboxEventResponse) {}
+  rpc EnqueueOutboxEvent(udb.entity.v1.EnqueueOutboxEventRequest) returns (udb.entity.v1.EnqueueOutboxEventResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+  }
 
   // Generic resource administration.
   // Dispatch a lifecycle operation to any configured backend executor.
   // Requires scope: udb:dispatch
-  rpc GenericDispatch(udb.entity.v1.GenericDispatchRequest) returns (udb.entity.v1.GenericDispatchResponse) {}
+  rpc GenericDispatch(udb.entity.v1.GenericDispatchRequest) returns (udb.entity.v1.GenericDispatchResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+  }
   // Ensure a named resource exists on the target backend.
   // Requires scope: udb:admin
-  rpc EnsureResource(udb.entity.v1.ResourceAdminRequest) returns (udb.entity.v1.MutationResponse) {}
+  rpc EnsureResource(udb.entity.v1.ResourceAdminRequest) returns (udb.entity.v1.MutationResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+  }
   // Drop a named resource on the target backend.
   // Requires scope: udb:admin
-  rpc DropResource(udb.entity.v1.ResourceAdminRequest) returns (udb.entity.v1.MutationResponse) {}
+  rpc DropResource(udb.entity.v1.ResourceAdminRequest) returns (udb.entity.v1.MutationResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
+  }
   // List all resources managed by the target backend.
   // Requires scope: udb:admin
-  rpc ListResources(udb.entity.v1.ResourceAdminRequest) returns (udb.entity.v1.ResourceListResponse) {}
+  rpc ListResources(udb.entity.v1.ResourceAdminRequest) returns (udb.entity.v1.ResourceListResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+  }
 
   // Catalog administration.
   // Stage a new catalog manifest version (validate + store as STAGED).
   // Requires scope: udb:admin
-  rpc StageCatalog(udb.entity.v1.StageCatalogRequest) returns (udb.entity.v1.CatalogVersionResponse) {}
+  rpc StageCatalog(udb.entity.v1.StageCatalogRequest) returns (udb.entity.v1.CatalogVersionResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
+  }
   // Activate a STAGED catalog version.
   // Requires scope: udb:admin
-  rpc ActivateCatalog(udb.entity.v1.CatalogVersionRequest) returns (udb.entity.v1.CatalogVersionResponse) {}
+  rpc ActivateCatalog(udb.entity.v1.CatalogVersionRequest) returns (udb.entity.v1.CatalogVersionResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
+  }
   // Roll back to the previous ACTIVE catalog version.
   // Requires scope: udb:admin
-  rpc RollbackCatalog(udb.entity.v1.CatalogVersionRequest) returns (udb.entity.v1.CatalogVersionResponse) {}
+  rpc RollbackCatalog(udb.entity.v1.CatalogVersionRequest) returns (udb.entity.v1.CatalogVersionResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
+  }
   // Validate a catalog manifest JSON without storing it.
   // Requires scope: udb:admin
-  rpc ValidateCatalog(udb.entity.v1.StageCatalogRequest) returns (udb.entity.v1.CatalogValidationResponse) {}
+  rpc ValidateCatalog(udb.entity.v1.StageCatalogRequest) returns (udb.entity.v1.CatalogValidationResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
+  }
   // Return the list of known catalog versions.
   // Requires scope: udb:admin
-  rpc GetCatalogVersions(udb.entity.v1.CatalogManifestRequest) returns (udb.entity.v1.CatalogVersionListResponse) {}
+  rpc GetCatalogVersions(udb.entity.v1.CatalogManifestRequest) returns (udb.entity.v1.CatalogVersionListResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+  }
   // Return one catalog version by catalog_id/version, or active version when empty.
   // Requires scope: udb:admin
-  rpc GetCatalogVersion(udb.entity.v1.CatalogVersionRequest) returns (udb.entity.v1.CatalogVersionResponse) {}
+  rpc GetCatalogVersion(udb.entity.v1.CatalogVersionRequest) returns (udb.entity.v1.CatalogVersionResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+  }
 
   // Migration planning and apply.
   // Plan a migration against the active catalog without executing it.
   // Requires scope: udb:admin
-  rpc PlanMigration(udb.entity.v1.MigrationPlanRequest) returns (udb.entity.v1.MigrationPlanResponse) {}
+  rpc PlanMigration(udb.entity.v1.MigrationPlanRequest) returns (udb.entity.v1.MigrationPlanResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+  }
   // Apply a previously planned (and optionally approved) migration.
   // Requires scope: udb:admin
-  rpc ApplyMigration(udb.entity.v1.MigrationApplyRequest) returns (udb.entity.v1.MigrationStatusResponse) {}
+  rpc ApplyMigration(udb.entity.v1.MigrationApplyRequest) returns (udb.entity.v1.MigrationStatusResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+  }
   // Return the status of a migration run.
   // Requires scope: udb:admin
-  rpc GetMigrationStatus(udb.entity.v1.MigrationRunRequest) returns (udb.entity.v1.MigrationStatusResponse) {}
+  rpc GetMigrationStatus(udb.entity.v1.MigrationRunRequest) returns (udb.entity.v1.MigrationStatusResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+  }
   // Return migration runs for an admin console page.
   // Requires scope: udb:admin, udb:admin:viewer, or legacy udb:portal:viewer.
-  rpc ListMigrationRuns(udb.entity.v1.MigrationRunListRequest) returns (udb.entity.v1.MigrationRunListResponse) {}
+  rpc ListMigrationRuns(udb.entity.v1.MigrationRunListRequest) returns (udb.entity.v1.MigrationRunListResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+  }
   // Approve a migration plan that requires review.
   // Requires scope: udb:admin
-  rpc ApproveMigrationPlan(udb.entity.v1.MigrationRunRequest) returns (udb.entity.v1.MigrationStatusResponse) {}
+  rpc ApproveMigrationPlan(udb.entity.v1.MigrationRunRequest) returns (udb.entity.v1.MigrationStatusResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+  }
 
   // DLQ management.
-  rpc ListDlqEvents(udb.entity.v1.DlqListRequest) returns (udb.entity.v1.DlqListResponse) {}
-  rpc GetDlqEvent(udb.entity.v1.DlqEventRequest) returns (udb.entity.v1.DlqEventResponse) {}
-  rpc ReplayDlqEvent(udb.entity.v1.DlqActionRequest) returns (udb.entity.v1.MutationResponse) {}
-  rpc DismissDlqEvent(udb.entity.v1.DlqActionRequest) returns (udb.entity.v1.MutationResponse) {}
-  rpc QuarantineDlqEvent(udb.entity.v1.DlqActionRequest) returns (udb.entity.v1.MutationResponse) {}
+  rpc ListDlqEvents(udb.entity.v1.DlqListRequest) returns (udb.entity.v1.DlqListResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+  }
+  rpc GetDlqEvent(udb.entity.v1.DlqEventRequest) returns (udb.entity.v1.DlqEventResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+  }
+  rpc ReplayDlqEvent(udb.entity.v1.DlqActionRequest) returns (udb.entity.v1.MutationResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+  }
+  rpc DismissDlqEvent(udb.entity.v1.DlqActionRequest) returns (udb.entity.v1.MutationResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+  }
+  rpc QuarantineDlqEvent(udb.entity.v1.DlqActionRequest) returns (udb.entity.v1.MutationResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+  }
 
   // CDC control plane.
-  rpc GetCdcStatus(udb.entity.v1.CdcControlRequest) returns (udb.entity.v1.CdcStatusResponse) {}
-  rpc PauseCdc(udb.entity.v1.CdcControlRequest) returns (udb.entity.v1.CdcStatusResponse) {}
-  rpc ResumeCdc(udb.entity.v1.CdcControlRequest) returns (udb.entity.v1.CdcStatusResponse) {}
-  rpc StepDownCdcLeader(udb.entity.v1.CdcControlRequest) returns (udb.entity.v1.CdcStatusResponse) {}
-  rpc PreviewCdcRedaction(udb.entity.v1.CdcRedactionPreviewRequest) returns (udb.entity.v1.CdcRedactionPreviewResponse) {}
-  rpc ScanProjectionDrift(udb.entity.v1.ProjectionDriftScanRequest) returns (udb.entity.v1.ProjectionDriftScanResponse) {}
+  rpc GetCdcStatus(udb.entity.v1.CdcControlRequest) returns (udb.entity.v1.CdcStatusResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+  }
+  rpc PauseCdc(udb.entity.v1.CdcControlRequest) returns (udb.entity.v1.CdcStatusResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+  }
+  rpc ResumeCdc(udb.entity.v1.CdcControlRequest) returns (udb.entity.v1.CdcStatusResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+  }
+  rpc StepDownCdcLeader(udb.entity.v1.CdcControlRequest) returns (udb.entity.v1.CdcStatusResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+  }
+  rpc PreviewCdcRedaction(udb.entity.v1.CdcRedactionPreviewRequest) returns (udb.entity.v1.CdcRedactionPreviewResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+  }
+  rpc ScanProjectionDrift(udb.entity.v1.ProjectionDriftScanRequest) returns (udb.entity.v1.ProjectionDriftScanResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+  }
 
   // Saga administration.
-  rpc ListSagas(udb.entity.v1.SagaListRequest) returns (udb.entity.v1.SagaListResponse) {}
-  rpc GetSaga(udb.entity.v1.SagaRequest) returns (udb.entity.v1.SagaResponse) {}
-  rpc RetrySagaCompensation(udb.entity.v1.SagaRequest) returns (udb.entity.v1.SagaResponse) {}
-  rpc MarkSagaReviewed(udb.entity.v1.SagaRequest) returns (udb.entity.v1.SagaResponse) {}
+  rpc ListSagas(udb.entity.v1.SagaListRequest) returns (udb.entity.v1.SagaListResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+  }
+  rpc GetSaga(udb.entity.v1.SagaRequest) returns (udb.entity.v1.SagaResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+  }
+  rpc RetrySagaCompensation(udb.entity.v1.SagaRequest) returns (udb.entity.v1.SagaResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+  }
+  rpc MarkSagaReviewed(udb.entity.v1.SagaRequest) returns (udb.entity.v1.SagaResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+  }
 
   // Policy administration.
-  rpc ListPolicies(udb.entity.v1.PolicyListRequest) returns (udb.entity.v1.PolicyListResponse) {}
-  rpc PutPolicy(udb.entity.v1.PutPolicyRequest) returns (udb.entity.v1.MutationResponse) {}
-  rpc DeletePolicy(udb.entity.v1.PolicyRequest) returns (udb.entity.v1.MutationResponse) {}
-  rpc ReloadPolicies(udb.entity.v1.CapabilitiesRequest) returns (udb.entity.v1.MutationResponse) {}
-  rpc LintPolicies(udb.entity.v1.CapabilitiesRequest) returns (udb.entity.v1.PolicyLintResponse) {}
+  rpc ListPolicies(udb.entity.v1.PolicyListRequest) returns (udb.entity.v1.PolicyListResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+  }
+  rpc PutPolicy(udb.entity.v1.PutPolicyRequest) returns (udb.entity.v1.MutationResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
+  }
+  rpc DeletePolicy(udb.entity.v1.PolicyRequest) returns (udb.entity.v1.MutationResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+  }
+  rpc ReloadPolicies(udb.entity.v1.CapabilitiesRequest) returns (udb.entity.v1.MutationResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
+  }
+  rpc LintPolicies(udb.entity.v1.CapabilitiesRequest) returns (udb.entity.v1.PolicyLintResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+  }
 
   // ── Admin API ─────────────────────────────────────────────────────────────
-  rpc GetCapabilities(udb.entity.v1.CapabilitiesRequest) returns (udb.entity.v1.CapabilitiesResponse) {}
-  rpc GetCatalogManifest(udb.entity.v1.CatalogManifestRequest) returns (udb.entity.v1.CatalogManifestResponse) {}
+  rpc GetCapabilities(udb.entity.v1.CapabilitiesRequest) returns (udb.entity.v1.CapabilitiesResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+  }
+  rpc GetCatalogManifest(udb.entity.v1.CatalogManifestRequest) returns (udb.entity.v1.CatalogManifestResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+  }
   // Runtime schema lookup for SDK/data operation compatibility negotiation.
-  rpc LookupMessageSchema(udb.entity.v1.MessageSchemaLookupRequest) returns (udb.entity.v1.MessageSchemaLookupResponse) {}
-  rpc ListMessageSchemas(udb.entity.v1.MessageSchemaListRequest) returns (udb.entity.v1.MessageSchemaListResponse) {}
-  rpc GetHealthReport(udb.entity.v1.HealthReportRequest) returns (udb.entity.v1.HealthReportResponse) {}
+  rpc LookupMessageSchema(udb.entity.v1.MessageSchemaLookupRequest) returns (udb.entity.v1.MessageSchemaLookupResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+  }
+  rpc ListMessageSchemas(udb.entity.v1.MessageSchemaListRequest) returns (udb.entity.v1.MessageSchemaListResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+  }
+  rpc GetHealthReport(udb.entity.v1.HealthReportRequest) returns (udb.entity.v1.HealthReportResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+  }
 
   // Multi-project registry.
   // Ensure a project namespace exists (idempotent).
   // Requires scope: udb:admin
-  rpc EnsureProject(udb.entity.v1.EnsureProjectRequest) returns (udb.entity.v1.MutationResponse) {}
+  rpc EnsureProject(udb.entity.v1.EnsureProjectRequest) returns (udb.entity.v1.MutationResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+  }
   // List all registered project namespaces.
   // Requires scope: udb:admin
-  rpc ListProjects(udb.entity.v1.ProjectListRequest) returns (udb.entity.v1.ProjectListResponse) {}
+  rpc ListProjects(udb.entity.v1.ProjectListRequest) returns (udb.entity.v1.ProjectListResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+  }
 
   // ── Unified Admin Surface ────────────────────────────────────────────────
   // Returns a single snapshot covering catalog, CDC, saga, backend, and policy
   // state for the admin console. Requires scope: udb:admin.
-  rpc GetAdminSummary(udb.entity.v1.AdminSummaryRequest) returns (udb.entity.v1.AdminSummaryResponse) {}
+  rpc GetAdminSummary(udb.entity.v1.AdminSummaryRequest) returns (udb.entity.v1.AdminSummaryResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+  }
   // Paginated admin audit log view for the admin console.
   // Requires scope: udb:admin, udb:admin:viewer, or legacy udb:portal:viewer.
-  rpc ListAdminAuditLogs(udb.entity.v1.AdminAuditLogRequest) returns (udb.entity.v1.AdminAuditLogResponse) {}
+  rpc ListAdminAuditLogs(udb.entity.v1.AdminAuditLogRequest) returns (udb.entity.v1.AdminAuditLogResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+  }
   // Verifies the admin audit log hash chain and reports the first broken link.
   // Requires scope: udb:admin, udb:admin:viewer, or legacy udb:portal:viewer.
-  rpc VerifyAdminAuditLog(udb.entity.v1.AdminAuditVerifyRequest) returns (udb.entity.v1.AdminAuditVerifyResponse) {}
+  rpc VerifyAdminAuditLog(udb.entity.v1.AdminAuditVerifyRequest) returns (udb.entity.v1.AdminAuditVerifyResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+  }
 }

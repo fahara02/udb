@@ -206,37 +206,45 @@ fn vec_to_json_array(items: &[String]) -> String {
 
 fn kind_to_pb(kind: &str) -> i32 {
     use idp_entity_pb::IdpKind as K;
+    // Accept BOTH the canonical SHORT stored token (e.g. "OIDC") and the legacy
+    // proto-prefixed form ("IDP_KIND_OIDC") so rows written before the §2 fix still
+    // read back correctly.
     (match kind {
-        "IDP_KIND_NATIVE" => K::Native,
-        "IDP_KIND_OIDC" => K::Oidc,
-        "IDP_KIND_SAML" => K::Saml,
-        "IDP_KIND_LDAP" => K::Ldap,
-        "IDP_KIND_CUSTOM_JWT" => K::CustomJwt,
-        "IDP_KIND_EXTERNAL_SESSION" => K::ExternalSession,
+        "NATIVE" | "IDP_KIND_NATIVE" => K::Native,
+        "OIDC" | "IDP_KIND_OIDC" => K::Oidc,
+        "SAML" | "IDP_KIND_SAML" => K::Saml,
+        "LDAP" | "IDP_KIND_LDAP" => K::Ldap,
+        "CUSTOM_JWT" | "IDP_KIND_CUSTOM_JWT" => K::CustomJwt,
+        "EXTERNAL_SESSION" | "IDP_KIND_EXTERNAL_SESSION" => K::ExternalSession,
         _ => K::Unspecified,
     }) as i32
 }
 
 fn kind_to_db(kind: i32) -> String {
     use idp_entity_pb::IdpKind as K;
+    // §2 fix: store the SHORT canonical token, NOT the verbose "IDP_KIND_*" name —
+    // "IDP_KIND_EXTERNAL_SESSION" (25 chars) overflowed the `kind` VARCHAR(24) column
+    // and failed every CreateProvider. The short form fits comfortably and mirrors
+    // the tenant-service convention (`tenant_type_to_db` stores "ORGANIZATION").
     match idp_entity_pb::IdpKind::try_from(kind).unwrap_or(K::Unspecified) {
-        K::Native => "IDP_KIND_NATIVE",
-        K::Oidc => "IDP_KIND_OIDC",
-        K::Saml => "IDP_KIND_SAML",
-        K::Ldap => "IDP_KIND_LDAP",
-        K::CustomJwt => "IDP_KIND_CUSTOM_JWT",
-        K::ExternalSession => "IDP_KIND_EXTERNAL_SESSION",
-        K::Unspecified => "IDP_KIND_UNSPECIFIED",
+        K::Native => "NATIVE",
+        K::Oidc => "OIDC",
+        K::Saml => "SAML",
+        K::Ldap => "LDAP",
+        K::CustomJwt => "CUSTOM_JWT",
+        K::ExternalSession => "EXTERNAL_SESSION",
+        K::Unspecified => "UNSPECIFIED",
     }
     .to_string()
 }
 
 fn health_to_pb(health: &str) -> i32 {
     use idp_entity_pb::ProviderHealth as H;
+    // Accept BOTH the short token and the legacy "PROVIDER_HEALTH_*" form.
     (match health {
-        "PROVIDER_HEALTH_HEALTHY" => H::Healthy,
-        "PROVIDER_HEALTH_DEGRADED" => H::Degraded,
-        "PROVIDER_HEALTH_UNREACHABLE" => H::Unreachable,
+        "HEALTHY" | "PROVIDER_HEALTH_HEALTHY" => H::Healthy,
+        "DEGRADED" | "PROVIDER_HEALTH_DEGRADED" => H::Degraded,
+        "UNREACHABLE" | "PROVIDER_HEALTH_UNREACHABLE" => H::Unreachable,
         _ => H::Unspecified,
     }) as i32
 }
@@ -587,7 +595,7 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
             Ok(res) if res.from_cache || res.jwks_json.trim().is_empty() => (
                 false,
                 res.kids.clone(),
-                "PROVIDER_HEALTH_DEGRADED",
+                "DEGRADED",
                 if res.from_cache {
                     "forced refresh served stale cache (live JWKS fetch did not occur)".to_string()
                 } else {
@@ -597,14 +605,14 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
             Ok(res) => (
                 true,
                 res.kids.clone(),
-                "PROVIDER_HEALTH_HEALTHY",
+                "HEALTHY",
                 format!(
                     "refreshed {} key(s) ({} bytes)",
                     res.kids.len(),
                     res.jwks_json.len()
                 ),
             ),
-            Err(err) => (false, Vec::new(), "PROVIDER_HEALTH_DEGRADED", err.clone()),
+            Err(err) => (false, Vec::new(), "DEGRADED", err.clone()),
         };
         // Phase L3 task6: count discovery/JWKS refresh failures so operators can
         // alert on a degraded federation edge.
@@ -1710,7 +1718,10 @@ impl DataBrokerService {
     /// pool and the shared auth outbox event sink (when a pool exists).
     pub(crate) fn build_identity_provider_service(&self) -> IdentityProviderServiceImpl {
         let runtime = self.runtime.load_full();
-        let pg_pool = runtime.pg_pool().ok().cloned();
+        // Native-service persistence resolves through the discovery seam (extend_udb.md):
+        // the backend is read from this service's proto `native_service` binding, then a
+        // health/weight-routed instance is chosen — not the process-global pool.
+        let pg_pool = runtime.native_store_pool_for_service("idp", true, "").ok();
         let event_sink: Arc<dyn AuthEventSink> = match pg_pool.clone() {
             Some(pool) => Arc::new(
                 super::events::OutboxAuthEventSink::new(

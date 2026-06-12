@@ -34,7 +34,6 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
-	"strings"
 	"time"
 
 	"google.golang.org/grpc"
@@ -439,18 +438,20 @@ const (
 
 // RPCInfo describes a single RPC.
 type RPCInfo struct {
-	Service    string  // e.g. DataBroker
-	ServicePkg string  // e.g. udb.services.v1
-	FullMethod string  // e.g. /udb.services.v1.DataBroker/Select
-	Name       string  // e.g. Select
-	Kind       RPCKind // streaming shape
-	ReadOnly   bool    // true when DEADLINE_EXCEEDED/read-only retry is safe
+	Service       string  // e.g. DataBroker
+	ServicePkg    string  // e.g. udb.services.v1
+	FullMethod    string  // e.g. /udb.services.v1.DataBroker/Select
+	Name          string  // e.g. Select
+	Kind          RPCKind // streaming shape
+	ReadOnly      bool    // proto EndpointSecurity.operation_kind == READ_ONLY; the
+	                      // authoritative retry-safety flag (never guessed from the name)
+	OperationKind string  // "read_only" | "mutation" | "destructive"
 }
 
 // AllRPCs lists every RPC across every UDB service in this build.
 var AllRPCs = []RPCInfo{
 	// @@UDB_RPC_BEGIN
-	{Service: "{{SERVICE_NAME}}", ServicePkg: "{{SERVICE_PKG}}", FullMethod: "{{RPC_PATH}}", Name: "{{RPC_NAME}}", Kind: RPCKind("{{RPC_KIND}}"), ReadOnly: isReadOnlyRPCName("{{RPC_NAME}}")},
+	{Service: "{{SERVICE_NAME}}", ServicePkg: "{{SERVICE_PKG}}", FullMethod: "{{RPC_PATH}}", Name: "{{RPC_NAME}}", Kind: RPCKind("{{RPC_KIND}}"), ReadOnly: {{RPC_READ_ONLY}}, OperationKind: "{{RPC_OPERATION_KIND}}"},
 	// @@UDB_RPC_END
 }
 
@@ -477,26 +478,15 @@ func LookupRPC(nameOrPath string) (RPCInfo, bool) {
 	return r, ok
 }
 
+// isReadOnlyUnaryRPC reports whether a unary RPC is safe to auto-retry. It reads
+// the proto-derived `ReadOnly` flag (EndpointSecurity.operation_kind) — the single
+// source of truth — and never inspects the method name.
 func isReadOnlyUnaryRPC(method string) bool {
 	r, ok := LookupRPC(method)
 	if !ok {
 		return false
 	}
-	return r.Kind == KindUnary && (r.ReadOnly || isReadOnlyRPCName(r.Name))
-}
-
-func isReadOnlyRPCName(name string) bool {
-	for _, prefix := range []string{
-		"Get", "List", "Check", "Validate", "Introspect", "Authorize",
-		"BatchCheck", "Preview", "Resolve", "Explain", "Diff", "Lint",
-		"Test", "Select", "AnalyticalQuery", "VectorSearch", "GraphQuery",
-		"CacheGet", "CacheScan", "DocumentGet", "DocumentFind",
-	} {
-		if strings.HasPrefix(name, prefix) {
-			return true
-		}
-	}
-	return false
+	return r.Kind == KindUnary && r.ReadOnly
 }
 
 func init() {

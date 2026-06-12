@@ -193,31 +193,39 @@ pub(crate) fn native_services_enabled() -> bool {
     current_native_services_settings().enabled
 }
 
-/// Distinct schema names owned by native services, derived from the proto
-/// manifest (e.g. `udb_authn`, `udb_authz`). Used to bootstrap the namespaces
-/// before the migration engine creates the tables — proto stays the source of
-/// truth for the schema set.
-pub(crate) fn native_schema_names() -> Vec<String> {
-    native_schema_names_for_settings(&current_native_services_settings())
-}
-
-pub(crate) fn native_schema_names_for_settings(settings: &NativeServicesSettings) -> Vec<String> {
-    let config = crate::runtime::config::UdbConfig {
-        native_services: settings.clone(),
-        ..crate::runtime::config::UdbConfig::default()
-    };
-    let enabled_ids =
-        crate::runtime::service::native_registry::migration_enabled_service_ids(&config);
-    let mut names: Vec<String> = native_manifest()
+/// Distinct, sorted schema names declared by every table in a [`CatalogManifest`].
+///
+/// The SINGLE source of truth for schema enumeration across BOTH planes — the
+/// native plane ([`native_manifest`]) and the user plane (a user-built
+/// `CatalogManifest`). Schema CREATION (`native_service_catalog_ddl` and the
+/// migration engine, which both build from a manifest) and schema ENUMERATION
+/// (namespace pre-create, teardown) now derive from this ONE function, so they
+/// cannot drift — the bug that previously hid `udb_control`/`udb_system` from
+/// enumeration while the DDL still created them.
+pub(crate) fn manifest_schema_names(manifest: &CatalogManifest) -> Vec<String> {
+    let mut names: Vec<String> = manifest
         .tables
         .iter()
-        .filter(|table| native_table_migration_enabled(table, &enabled_ids))
         .map(|table| table.schema.clone())
         .filter(|schema| !schema.trim().is_empty())
         .collect();
     names.sort();
     names.dedup();
     names
+}
+
+/// Distinct schema names the native plane owns, derived from the SAME embedded
+/// proto manifest `native_service_catalog_ddl()` generates its DDL from — so
+/// namespace pre-create / teardown can never drift from creation.
+///
+/// Deliberately NOT filtered by `migration_enabled`: that filter (which lives in
+/// `merge_native_with_settings`, governing what the diff/apply engine migrates)
+/// silently dropped always-present core schemas like `udb_control`/`udb_system`/
+/// `udb_idp`/`udb_sdk_live` whose tables the bootstrap DDL still creates. The
+/// per-service enable toggle is enforced at the migration layer, not by hiding
+/// schemas from enumeration.
+pub(crate) fn native_schema_names() -> Vec<String> {
+    manifest_schema_names(native_manifest())
 }
 
 /// Merge the native-service entity schemas into a user schema set and rebuild a
@@ -287,13 +295,6 @@ fn native_schema_migration_enabled(
     enabled_ids.contains(native_service_id_for_proto_schema(schema))
 }
 
-fn native_table_migration_enabled(
-    table: &ManifestTable,
-    enabled_ids: &std::collections::BTreeSet<String>,
-) -> bool {
-    enabled_ids.contains(native_service_id_for_manifest_table(table))
-}
-
 fn native_service_id_for_proto_schema(schema: &ProtoSchema) -> &str {
     native_service_id_for_parts(
         &schema.proto_package,
@@ -301,10 +302,6 @@ fn native_service_id_for_proto_schema(schema: &ProtoSchema) -> &str {
         &schema.schema_name,
         &schema.table_name,
     )
-}
-
-fn native_service_id_for_manifest_table(table: &ManifestTable) -> &str {
-    native_service_id_for_parts("", &table.message_name, &table.schema, &table.table)
 }
 
 fn native_service_id_for_parts(

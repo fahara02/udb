@@ -237,29 +237,8 @@ public final class GeneratedClientSupport {
     }
   }
 
-  public static boolean isReadOnlyRpcName(String name) {
-    return name.startsWith("Get")
-        || name.startsWith("List")
-        || name.startsWith("Check")
-        || name.startsWith("Validate")
-        || name.startsWith("Introspect")
-        || name.startsWith("Authorize")
-        || name.startsWith("BatchCheck")
-        || name.startsWith("Preview")
-        || name.startsWith("Resolve")
-        || name.startsWith("Explain")
-        || name.startsWith("Diff")
-        || name.startsWith("Lint")
-        || name.startsWith("Test")
-        || name.startsWith("Select")
-        || name.startsWith("AnalyticalQuery")
-        || name.startsWith("VectorSearch")
-        || name.startsWith("GraphQuery")
-        || name.startsWith("CacheGet")
-        || name.startsWith("CacheScan")
-        || name.startsWith("DocumentGet")
-        || name.startsWith("DocumentFind");
-  }
+  // Retry safety is read from the proto-derived operation_kind per RPC (each
+  // wrapper passes operation_kind.equals("read_only")) — never guessed from the name.
 
   private static boolean isRetryable(Status.Code code, boolean readOnly) {
     return code == Status.Code.DEADLINE_EXCEEDED ? readOnly : RETRYABLE_CODES.contains(code);

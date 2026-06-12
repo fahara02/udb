@@ -57,6 +57,7 @@ service AuthzService {
   };
 
   rpc Authorize(AuthzRequest) returns (AuthzResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authz:authorize"
@@ -114,6 +115,7 @@ service AuthzService {
   }
 
   rpc CheckAccess(CheckAccessRequest) returns (CheckAccessResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authz:check-access"
@@ -171,6 +173,7 @@ service AuthzService {
   }
 
   rpc CreateRole(CreateRoleRequest) returns (CreateRoleResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authz:create-role"
@@ -228,6 +231,7 @@ service AuthzService {
   }
 
   rpc AssignRole(AssignRoleRequest) returns (AssignRoleResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authz:assign-role"
@@ -285,6 +289,7 @@ service AuthzService {
   }
 
   rpc CreatePolicyRule(CreatePolicyRuleRequest) returns (CreatePolicyRuleResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authz:create-policy-rule"
@@ -342,6 +347,7 @@ service AuthzService {
   }
 
   rpc ListUserPermissions(ListUserPermissionsRequest) returns (ListUserPermissionsResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authz:list-user-permissions"
@@ -396,6 +402,7 @@ service AuthzService {
   }
 
   rpc ListAccessDecisionAudits(ListAccessDecisionAuditsRequest) returns (ListAccessDecisionAuditsResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authz:list-access-decision-audits"
@@ -451,6 +458,7 @@ service AuthzService {
 
   // Revoke a role from a user.
   rpc RevokeRole(RevokeRoleRequest) returns (RevokeRoleResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authz:revoke-role"
@@ -509,6 +517,7 @@ service AuthzService {
 
   // List all role assignments for a user.
   rpc ListUserRoles(ListUserRolesRequest) returns (ListUserRolesResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authz:list-user-roles"
@@ -564,6 +573,7 @@ service AuthzService {
 
   // Get a role by ID.
   rpc GetRole(GetRoleRequest) returns (GetRoleResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authz:get-role"
@@ -619,6 +629,7 @@ service AuthzService {
 
   // List all roles for a domain/tenant.
   rpc ListRoles(ListRolesRequest) returns (ListRolesResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authz:list-roles"
@@ -674,6 +685,7 @@ service AuthzService {
 
   // Batch check multiple permissions at once.
   rpc BatchCheckPermissions(BatchCheckPermissionsRequest) returns (BatchCheckPermissionsResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authz:batch-check-permissions"
@@ -732,6 +744,7 @@ service AuthzService {
 
   // Update a role's name, description, or active status.
   rpc UpdateRole(UpdateRoleRequest) returns (UpdateRoleResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authz:update-role"
@@ -790,6 +803,7 @@ service AuthzService {
 
   // Delete a role (soft-delete; existing assignments are revoked).
   rpc DeleteRole(DeleteRoleRequest) returns (DeleteRoleResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authz:delete-role"
@@ -845,6 +859,7 @@ service AuthzService {
 
   // Get a single policy rule by ID.
   rpc GetPolicyRule(GetPolicyRuleRequest) returns (GetPolicyRuleResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authz:get-policy-rule"
@@ -900,6 +915,7 @@ service AuthzService {
 
   // List policy rules with optional domain/subject/object filters.
   rpc ListPolicyRules(ListPolicyRulesRequest) returns (ListPolicyRulesResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authz:list-policy-rules"
@@ -955,6 +971,7 @@ service AuthzService {
 
   // Delete a policy rule.
   rpc DeletePolicyRule(DeletePolicyRuleRequest) returns (DeletePolicyRuleResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authz:delete-policy-rule"
@@ -1009,6 +1026,7 @@ service AuthzService {
   }
 
   rpc PutRoleBinding(PutRoleBindingRequest) returns (AuthMutationResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authz:put-role-binding"
@@ -1066,6 +1084,7 @@ service AuthzService {
   }
 
   rpc PutRelationship(PutRelationshipRequest) returns (AuthMutationResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authz:put-relationship"
@@ -1123,6 +1142,7 @@ service AuthzService {
   }
 
   rpc PutAuthzPolicy(PutAuthzPolicyRequest) returns (AuthMutationResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authz:put-authz-policy"
@@ -1180,6 +1200,7 @@ service AuthzService {
   }
 
   rpc LintAuthzPolicies(LintAuthzPoliciesRequest) returns (LintAuthzPoliciesResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authz:lint-authz-policies"
@@ -1239,6 +1260,7 @@ service AuthzService {
   // Stage 2: authorize and, when allowed, mint a short-lived native-access
   // contract (restricted role + scoped DSN + RLS session variables).
   rpc GetNativeAccess(NativeAccessRequest) returns (NativeAccessResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authz:get-native-access"
@@ -1297,6 +1319,7 @@ service AuthzService {
 
   // Stage 2: return a signed policy bundle for local SDK authorization caches.
   rpc GetPolicyBundle(PolicyBundleRequest) returns (PolicyBundleResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authz:get-policy-bundle"
@@ -1361,6 +1384,7 @@ service AuthzService {
   // live authorization snapshot; only ActivatePolicyVersion / RollbackPolicyVersion do.
 
   rpc CreatePolicyDraft(CreatePolicyDraftRequest) returns (PolicyDraftResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authz:policy:write"
@@ -1381,6 +1405,7 @@ service AuthzService {
   }
 
   rpc UpdatePolicyDraft(UpdatePolicyDraftRequest) returns (PolicyDraftResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authz:policy:write"
@@ -1401,6 +1426,7 @@ service AuthzService {
   }
 
   rpc DiffPolicyDraft(DiffPolicyDraftRequest) returns (DiffPolicyDraftResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authz:policy:read"
@@ -1421,6 +1447,7 @@ service AuthzService {
   }
 
   rpc SubmitPolicyDraft(SubmitPolicyDraftRequest) returns (PolicyDraftResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authz:policy:write"
@@ -1441,6 +1468,7 @@ service AuthzService {
   }
 
   rpc ApprovePolicyDraft(ApprovePolicyDraftRequest) returns (PolicyApprovalResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authz:policy:approve"
@@ -1461,6 +1489,7 @@ service AuthzService {
   }
 
   rpc RejectPolicyDraft(RejectPolicyDraftRequest) returns (PolicyApprovalResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authz:policy:approve"
@@ -1481,6 +1510,7 @@ service AuthzService {
   }
 
   rpc ActivatePolicyVersion(ActivatePolicyVersionRequest) returns (ActivationResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authz:admin"
@@ -1501,6 +1531,7 @@ service AuthzService {
   }
 
   rpc RollbackPolicyVersion(RollbackPolicyVersionRequest) returns (ActivationResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authz:admin"
@@ -1523,6 +1554,7 @@ service AuthzService {
   // Activate a policy version to a canary scope (subset of the fleet) before
   // fleet-wide. A metric-based evaluator then auto-rolls back on breach.
   rpc ActivateCanary(ActivateCanaryRequest) returns (CanaryResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authz:admin"
@@ -1544,6 +1576,7 @@ service AuthzService {
 
   // Promote a baked, within-threshold canary to fleet-wide enforcement.
   rpc PromoteCanary(PromoteCanaryRequest) returns (CanaryResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authz:admin"
@@ -1565,6 +1598,7 @@ service AuthzService {
 
   // Read a canary's current state + promote-eligibility.
   rpc GetCanaryStatus(GetCanaryStatusRequest) returns (GetCanaryStatusResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authz:policy:read"
@@ -1585,6 +1619,7 @@ service AuthzService {
   }
 
   rpc ListPolicyVersions(ListPolicyVersionsRequest) returns (ListPolicyVersionsResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authz:policy:read"
@@ -1605,6 +1640,7 @@ service AuthzService {
   }
 
   rpc SimulatePolicy(SimulatePolicyRequest) returns (SimulatePolicyResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authz:policy:read"
@@ -1625,6 +1661,7 @@ service AuthzService {
   }
 
   rpc ExplainPolicy(ExplainPolicyRequest) returns (ExplainPolicyResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authz:policy:read"
@@ -1645,6 +1682,7 @@ service AuthzService {
   }
 
   rpc GetAuthzRevision(GetAuthzRevisionRequest) returns (GetAuthzRevisionResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authz:policy:read"
@@ -1665,6 +1703,7 @@ service AuthzService {
   }
 
   rpc InvalidatePolicyBundles(InvalidatePolicyBundlesRequest) returns (InvalidatePolicyBundlesResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authz:admin"
@@ -1685,6 +1724,7 @@ service AuthzService {
   }
 
   rpc SeedBuiltinRoles(SeedBuiltinRolesRequest) returns (SeedBuiltinRolesResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authz:admin"
@@ -1705,6 +1745,7 @@ service AuthzService {
   }
 
   rpc MigrateLegacyPolicies(MigrateLegacyPoliciesRequest) returns (MigrateLegacyPoliciesResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:authz:admin"

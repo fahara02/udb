@@ -317,10 +317,14 @@ impl AuthnServiceImpl {
                     active: true,
                 }))
             }
-            None => Ok(Response::new(authn_pb::RefreshSessionResponse {
-                expires_at_unix: 0,
-                active: false,
-            })),
+            // A revoked / expired / unknown session cannot be refreshed. Return an
+            // ERROR (not `Ok { active: false }`): a logged-out session must FAIL to
+            // refresh, and `authn::refresh_session` already returned `None` without
+            // extending it. Returning a success envelope let a caller treat the RPC
+            // as "session still works" after logout (bug_report #3).
+            None => Err(Status::unauthenticated(
+                "session is not active (revoked, expired, or unknown)",
+            )),
         }
     }
 
@@ -560,6 +564,10 @@ impl AuthnServiceImpl {
                     "context.principal_id is required for all_sessions logout",
                 ));
             }
+            // Kill every refresh-token family for the principal too — otherwise a
+            // refresh token survives the all-sessions logout and keeps minting
+            // access tokens.
+            self.revoke_families_for_principal(&principal_id).await?;
             self.sessions
                 .revoke_all_for_principal(&principal_id, now)
                 .await
@@ -586,6 +594,11 @@ impl AuthnServiceImpl {
                     crate::runtime::service::method_security::current_claim_context().tenant_id;
                 self.revoke_token_jti(&req.session_id, "session", &claim_tenant, 0, "", "logout")
                     .await?;
+                // The refresh-token family bound to this session must die with it,
+                // or the logged-out session's refresh token could still mint access
+                // tokens via `RefreshToken` (the family path only checks the user is
+                // active, not whether the session was revoked).
+                self.revoke_families_for_session(&req.session_id).await?;
             }
             i32::from(revoked)
         };

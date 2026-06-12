@@ -120,7 +120,7 @@ message IdentityProvider {
   string saml_sso_url = 19 [(udb.core.common.v1.pg_column) = { column_name: "saml_sso_url" sql_type: "VARCHAR(512)" comment: "SAML IdP SSO endpoint URL" }];
 
   // ── Provider health (J2.1) ────────────────────────────────────────────────
-  ProviderHealth health = 20 [(udb.core.common.v1.pg_column) = { column_name: "health" sql_type: "VARCHAR(24)" not_null: true default_value: "'PROVIDER_HEALTH_UNSPECIFIED'" }];
+  ProviderHealth health = 20 [(udb.core.common.v1.pg_column) = { column_name: "health" sql_type: "VARCHAR(27)" not_null: true default_value: "'PROVIDER_HEALTH_UNSPECIFIED'" }];
 
   google.protobuf.Timestamp last_jwks_refresh_at = 21 [(udb.core.common.v1.pg_column) = { column_name: "last_jwks_refresh_at" sql_type: "TIMESTAMPTZ" comment: "Last successful JWKS/discovery refresh" }];
 

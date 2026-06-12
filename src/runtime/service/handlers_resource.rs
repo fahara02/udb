@@ -39,10 +39,12 @@ impl DataBrokerService {
             Ok(resolved) => resolved,
             Err(err) => return self.record_grpc("EnsureResource", started, Err(err)),
         };
+        let resolved_targets = targets.clone();
         // Phase 8 (§9): observe scatter-gather fan-out width per backend kind.
         self.metrics
             .inc_backend_fanout(&req.backend, targets.len() as u64);
         let resource_name = req.resource_name.clone();
+        let dispatch_resource_name = resource_name.clone();
         let spec_json = req.spec_json.clone();
         let result = self
             .execute_with_channel_scoped(
@@ -55,7 +57,7 @@ impl DataBrokerService {
                             .ensure_resource_backend_target(
                                 &target.backend,
                                 target.instance.as_deref(),
-                                &resource_name,
+                                &dispatch_resource_name,
                                 &spec_json,
                             )
                             .await?;
@@ -65,6 +67,21 @@ impl DataBrokerService {
             )
             .await;
         if result.is_ok() {
+            for target in &resolved_targets {
+                if crate::backend::BackendKind::from_store_kind("", &target.backend).is_some_and(
+                    |kind| {
+                        let cap = kind.capabilities();
+                        cap.supports_vector_search || cap.supports_hybrid_search
+                    },
+                ) {
+                    self.runtime_snapshot().record_vector_resource_backend(
+                        &metadata_context.project_id,
+                        &resource_name,
+                        &target.backend,
+                        target.instance.as_deref(),
+                    );
+                }
+            }
             let _ = self
                 .runtime_snapshot()
                 .write_audit_log(

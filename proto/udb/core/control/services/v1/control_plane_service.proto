@@ -58,6 +58,7 @@ service ControlPlaneService {
 
   // ── Aggregated state-of-the-world (ADS) ───────────────────────────────────
   rpc StreamResources(stream DiscoveryRequest) returns (stream DiscoveryResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:control:stream-resources"
@@ -71,6 +72,7 @@ service ControlPlaneService {
 
   // ── Incremental / delta discovery ─────────────────────────────────────────
   rpc DeltaResources(stream DeltaDiscoveryRequest) returns (stream DeltaDiscoveryResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:control:delta-resources"
@@ -84,6 +86,7 @@ service ControlPlaneService {
 
   // ── On-demand fetch (incl. by tenant) ─────────────────────────────────────
   rpc GetResources(GetResourcesRequest) returns (GetResourcesResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:control:get-resources"
@@ -98,6 +101,7 @@ service ControlPlaneService {
 
   // ── Admin visibility ──────────────────────────────────────────────────────
   rpc ListNodeStates(ListNodeStatesRequest) returns (ListNodeStatesResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:control:list-node-states"
@@ -111,6 +115,7 @@ service ControlPlaneService {
   }
 
   rpc AckStatus(AckStatusRequest) returns (AckStatusResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:control:ack-status"

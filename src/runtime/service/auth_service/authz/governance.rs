@@ -460,7 +460,6 @@ impl AuthzServiceImpl {
         content_hash: &str,
         changed_by: &str,
     ) -> Result<(i64, i64), Status> {
-        let pool = self.require_pool()?;
         let (cur_policy, cur_rel, _) = self.current_authz_revision(tenant, project).await?;
         let bumps_relationship = matches!(
             change_type,
@@ -476,31 +475,57 @@ impl AuthzServiceImpl {
         } else {
             cur_rel
         };
-        let m = self.authz_revisions_model();
-        let rel = m.relation.clone();
-        sqlx::query(&format!(
-            "INSERT INTO {rel} \
-             ({revision_id}, {tenant_id}, {project_id}, {policy_revision}, {relationship_revision}, {content_hash}, {changed_by}, {change_type}) \
-             VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7)",
-            revision_id = m.q("revision_id"),
-            tenant_id = m.q("tenant_id"),
-            project_id = m.q("project_id"),
-            policy_revision = m.q("policy_revision"),
-            relationship_revision = m.q("relationship_revision"),
-            content_hash = m.q("content_hash"),
-            changed_by = m.q("changed_by"),
-            change_type = m.q("change_type"),
-        ))
-        .bind(tenant)
-        .bind(project)
-        .bind(new_policy)
-        .bind(new_rel)
-        .bind(content_hash)
-        .bind(changed_by)
-        .bind(change_type_to_db(change_type))
-        .execute(pool)
-        .await
-        .map_err(|err| Status::internal(format!("bump authz revision failed: {err}")))?;
+        let runtime = self.runtime.as_ref().ok_or_else(|| {
+            Status::failed_precondition("native authz requires runtime-backed revision persistence")
+        })?;
+        // P6.10 Wave 0: revision append via the typed native write (no raw SQL).
+        // `revision_id` is server-generated in Rust (was `gen_random_uuid()`);
+        // `ConflictStrategy::Error` preserves the immutable append-only contract.
+        let mut record = LogicalRecord::new();
+        record.insert(
+            "revision_id".to_string(),
+            LogicalValue::String(Uuid::new_v4().to_string()),
+        );
+        record.insert(
+            "tenant_id".to_string(),
+            LogicalValue::String(tenant.to_string()),
+        );
+        record.insert(
+            "project_id".to_string(),
+            LogicalValue::String(project.to_string()),
+        );
+        record.insert("policy_revision".to_string(), LogicalValue::Int(new_policy));
+        record.insert(
+            "relationship_revision".to_string(),
+            LogicalValue::Int(new_rel),
+        );
+        record.insert(
+            "content_hash".to_string(),
+            LogicalValue::String(content_hash.to_string()),
+        );
+        record.insert(
+            "changed_by".to_string(),
+            LogicalValue::String(changed_by.to_string()),
+        );
+        record.insert(
+            "change_type".to_string(),
+            LogicalValue::String(change_type_to_db(change_type).to_string()),
+        );
+        let context = crate::RequestContext {
+            tenant_id: tenant.to_string(),
+            project_id: project.to_string(),
+            ..crate::RequestContext::default()
+        };
+        runtime
+            .native_entity_write_for_service(
+                "authz",
+                &context,
+                "udb.core.authz.entity.v1.AuthzRevision",
+                record,
+                ConflictStrategy::Error,
+            )
+            .await
+            .map_err(|err| Status::internal(format!("bump authz revision failed: {err}")))?;
         Ok((new_policy, new_rel))
     }
 

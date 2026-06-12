@@ -69,15 +69,19 @@ async fn run_auth_command_async(command: AuthCommand) -> Result<serde_json::Valu
                 .map_err(|_| {
                     "set UDB_PG_DSN (or DATABASE_URL) to the target Postgres".to_string()
                 })?;
-            let user_id = udb::runtime::service::bootstrap_admin_user(
+            let admin = udb::runtime::service::bootstrap_admin_user(
                 &dsn, &username, &email, &password, &tenant, &project,
             )
             .await?;
             Ok(json!({
                 "bootstrapped": true,
-                "user_id": user_id,
+                "user_id": admin.user_id,
                 "username": username,
+                // `tenant` is the human code/input; `tenant_id` is the CANONICAL
+                // UUID the principal was bound to (and that the Login JWT claim
+                // carries). Clients/tests MUST send this UUID in request bodies.
                 "tenant": tenant,
+                "tenant_id": admin.tenant_id,
                 "project": project,
                 "note": "user is ACTIVE; clients can now Authenticate with these credentials",
             }))

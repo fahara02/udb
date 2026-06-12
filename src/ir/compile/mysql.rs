@@ -252,8 +252,12 @@ impl Compiler for MysqlCompiler {
                         ),
                     });
                 }
+                // `conflict_on` is intentionally ignored here: MySQL's
+                // `ON DUPLICATE KEY UPDATE` arbitrates on ANY unique/primary key
+                // automatically, so an alternate-unique target (e.g. `key_hash`)
+                // already triggers the upsert without naming it.
                 let target_cols: Vec<&str> = match &op.conflict {
-                    ConflictStrategy::Update { fields } => fields
+                    ConflictStrategy::Update { fields, .. } => fields
                         .iter()
                         .map(|f| My::column_for(table, f, &op.message_type))
                         .collect::<Result<Vec<_>, _>>()?,
@@ -749,9 +753,7 @@ mod tests {
         let write = LogicalWrite {
             message_type: "acme.billing.v1.Customer".into(),
             records: vec![rec],
-            conflict: ConflictStrategy::Update {
-                fields: vec!["name".into()],
-            },
+            conflict: ConflictStrategy::update(vec!["name".into()]),
             return_fields: vec![],
         };
         let (statement, _) = sql(MysqlCompiler.compile_write(&write, &ctx).unwrap());

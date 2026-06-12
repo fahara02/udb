@@ -64,6 +64,7 @@ service NotificationService {
 
   // Send a notification (or enqueue it for async delivery).
   rpc SendNotification(SendNotificationRequest) returns (SendNotificationResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:notification:send-notification"
@@ -124,6 +125,7 @@ service NotificationService {
 
   // Get delivery status for a specific log entry.
   rpc GetNotification(GetNotificationRequest) returns (GetNotificationResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:notification:get-notification"
@@ -180,6 +182,7 @@ service NotificationService {
 
   // List notification logs with rich filters.
   rpc ListNotifications(ListNotificationsRequest) returns (ListNotificationsResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:notification:list-notifications"
@@ -236,6 +239,7 @@ service NotificationService {
 
   // Retry a failed notification.
   rpc RetryNotification(RetryNotificationRequest) returns (RetryNotificationResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:notification:retry-notification"
@@ -297,6 +301,7 @@ service NotificationService {
 
   // Upsert a notification template.
   rpc UpsertTemplate(UpsertTemplateRequest) returns (UpsertTemplateResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:notification:upsert-template"
@@ -356,6 +361,7 @@ service NotificationService {
 
   // Get a template by event_type + channel + locale.
   rpc GetTemplate(GetTemplateRequest) returns (GetTemplateResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:notification:get-template"
@@ -412,6 +418,7 @@ service NotificationService {
 
   // List all templates.
   rpc ListTemplates(ListTemplatesRequest) returns (ListTemplatesResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:notification:list-templates"
@@ -468,6 +475,7 @@ service NotificationService {
 
   // Get delivery statistics.
   rpc GetDeliveryStats(GetDeliveryStatsRequest) returns (GetDeliveryStatsResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:notification:get-delivery-stats"
@@ -526,6 +534,7 @@ service NotificationService {
 
   // Set (upsert) a per-user channel/event opt-out preference.
   rpc SetPreference(SetPreferenceRequest) returns (SetPreferenceResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:notification:set-preference"
@@ -585,6 +594,7 @@ service NotificationService {
 
   // Get a single preference entry.
   rpc GetPreference(GetPreferenceRequest) returns (GetPreferenceResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:notification:get-preference"
@@ -641,6 +651,7 @@ service NotificationService {
 
   // List all preferences for a user.
   rpc ListPreferences(ListPreferencesRequest) returns (ListPreferencesResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:notification:list-preferences"

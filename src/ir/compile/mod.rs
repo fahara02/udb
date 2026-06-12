@@ -15,7 +15,8 @@
 use serde::Serialize;
 
 use super::operations::{
-    LogicalAggregate, LogicalDelete, LogicalRead, LogicalResourceOp, LogicalSearch, LogicalWrite,
+    LogicalAggregate, LogicalDelete, LogicalRead, LogicalResourceOp, LogicalSearch, LogicalUpdate,
+    LogicalWrite,
 };
 use super::value::LogicalValue;
 use crate::backend::BackendKind;
@@ -105,6 +106,14 @@ pub trait Compiler: Send + Sync {
         Err(CompileError::operation_unsupported(self.kind(), "write"))
     }
 
+    fn compile_update(
+        &self,
+        _op: &LogicalUpdate,
+        _ctx: &CompileContext<'_>,
+    ) -> Result<CompiledRendering, CompileError> {
+        Err(CompileError::operation_unsupported(self.kind(), "update"))
+    }
+
     fn compile_delete(
         &self,
         _op: &LogicalDelete,
@@ -155,6 +164,7 @@ pub trait Compiler: Send + Sync {
 pub enum CompileOperation<'a> {
     Read(&'a LogicalRead),
     Write(&'a LogicalWrite),
+    Update(&'a LogicalUpdate),
     Delete(&'a LogicalDelete),
     Search(&'a LogicalSearch),
     ResourceOp(&'a LogicalResourceOp),
@@ -166,6 +176,7 @@ impl<'a> CompileOperation<'a> {
         match self {
             Self::Read(_) => "read",
             Self::Write(_) => "write",
+            Self::Update(_) => "update",
             Self::Delete(_) => "delete",
             Self::Search(_) => "search",
             Self::ResourceOp(_) => "resource_op",
@@ -182,6 +193,7 @@ fn compile_with<C: Compiler>(
     match op {
         CompileOperation::Read(op) => compiler.compile_read(op, ctx),
         CompileOperation::Write(op) => compiler.compile_write(op, ctx),
+        CompileOperation::Update(op) => compiler.compile_update(op, ctx),
         CompileOperation::Delete(op) => compiler.compile_delete(op, ctx),
         CompileOperation::Search(op) => compiler.compile_search(op, ctx),
         CompileOperation::ResourceOp(op) => compiler.compile_resource_op(op, ctx),

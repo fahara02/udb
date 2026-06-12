@@ -46,8 +46,9 @@ mod cross_backend_tests;
 
 pub use filter::{ComparisonOp, LogicalFilter};
 pub use operations::{
-    AggregateExpr, AggregateFunc, ConflictStrategy, LogicalAggregate, LogicalDelete, LogicalRead,
-    LogicalRecord, LogicalResourceOp, LogicalSearch, LogicalWrite, ResourceKind, ResourceOpKind,
+    AggregateExpr, AggregateFunc, ConflictStrategy, LogicalAggregate, LogicalAssignment,
+    LogicalDelete, LogicalRead, LogicalRecord, LogicalResourceOp, LogicalSearch, LogicalUpdate,
+    LogicalWrite, ResourceKind, ResourceOpKind,
 };
 pub use projection::{LogicalPagination, LogicalProjection, LogicalSort, NullOrder, SortDirection};
 pub use value::LogicalValue;

@@ -189,6 +189,8 @@ processTriple("sdk-readme generated code comment", "sdk/README.md", C.udb.versio
   /(crate\/package version `)(\d+\.\d+\.\d+)(`;)/);
 processTriple("ops bench label", "docs/operations.md", C.udb.version,
   /(bench_snapshot\.py --label "release-)(\d+\.\d+\.\d+)(")/);
+processAll("versioning release refs", "VERSIONING.md", C.udb.version,
+  /(^|[^0-9]v?)(0\.\d+\.\d+)([^0-9]|$)/gm);
 
 // ── README.md install table ───────────────────────────────────────────────────
 processTriple("readme install go", "README.md", C["sdk-go"].version,
@@ -247,10 +249,54 @@ processTriple("ts generated client comment", "sdk/typescript/generatedClient.ts"
   /(\/\/ UDB v)(\d+\.\d+\.\d+)( · protocol v[\d.]+ · \d+ service\(s\))/);
 processTriple("ts generated client version", "sdk/typescript/generatedClient.ts", C["sdk-typescript"].version,
   /(export const UDB_SDK_VERSION = ")(\d+\.\d+\.\d+)(")/);
+processTriple("ts dist generated client comment", "sdk/typescript/dist/generatedClient.js", C["sdk-typescript"].version,
+  /(\/\/ UDB v)(\d+\.\d+\.\d+)( · protocol v[\d.]+ · \d+ service\(s\))/);
+processTriple("ts dist generated client version", "sdk/typescript/dist/generatedClient.js", C["sdk-typescript"].version,
+  /(exports\.UDB_SDK_VERSION = ")(\d+\.\d+\.\d+)(")/);
+processTriple("ts dist generated declarations", "sdk/typescript/dist/generatedClient.d.ts", C["sdk-typescript"].version,
+  /(UDB_SDK_VERSION = ")(\d+\.\d+\.\d+)(")/);
+processTriple("ts dist-test generated client comment", "sdk/typescript/dist-test/generatedClient.js", C["sdk-typescript"].version,
+  /(\/\/ UDB v)(\d+\.\d+\.\d+)( · protocol v[\d.]+ · \d+ service\(s\))/);
+processTriple("ts dist-test generated client version", "sdk/typescript/dist-test/generatedClient.js", C["sdk-typescript"].version,
+  /(exports\.UDB_SDK_VERSION = ")(\d+\.\d+\.\d+)(")/);
 processTriple("ts bin launcher comment", "sdk/typescript/bin/udb.js", C["sdk-typescript"].version,
   /(bundled with @udb_plus\/sdk v)(\d+\.\d+\.\d+)(\.)/);
 processTriple("ts bin udb version", "sdk/typescript/bin/udb.js", C["sdk-typescript"].version,
   /(const UDB_VERSION = ")(\d+\.\d+\.\d+)(")/);
+processAll("ts bin launcher refs", "sdk/typescript/bin/udb.js", C["sdk-typescript"].version,
+  /(^|[^0-9]v?)(0\.\d+\.\d+)([^0-9]|$)/gm);
+processTriple("go generated client comment", "sdk/go/udbclient/generated_client.go", C["sdk-go"].version,
+  /(\/\/ \(UDB v)(\d+\.\d+\.\d+)(, wire protocol [\d.]+\)\.)/);
+processTriple("go generated client version", "sdk/go/udbclient/generated_client.go", C["sdk-go"].version,
+  /(const SDKVersion = ")(\d+\.\d+\.\d+)(")/);
+processAll("go cli launcher refs", "sdk/go/cmd/udb/main.go", C["sdk-go"].version,
+  /(^|[^0-9]v?)(0\.\d+\.\d+)([^0-9]|$)/gm);
+processTriple("python generated client version", "sdk/python/udb_client/generated_client.py", C["sdk-python"].version,
+  /(UDB version:\s+)(\d+\.\d+\.\d+)(\n)/);
+processAll("python cli launcher refs", "sdk/python/udb_client/_cli.py", C["sdk-python"].version,
+  /(^|[^0-9]v?)(0\.\d+\.\d+)([^0-9]|$)/gm);
+processTriple("python package metadata version", "sdk/python/udb_client.egg-info/PKG-INFO", C["sdk-python"].version,
+  /(^Version: )(\d+\.\d+\.\d+)(\r?\n)/m);
+processTriple("python package metadata header", "sdk/python/udb_client.egg-info/PKG-INFO", C["sdk-python"].version,
+  /(crate v)(\d+\.\d+\.\d+)( \| protocol v[\d.]+<\/sub>)/);
+processTriple("python package metadata install", "sdk/python/udb_client.egg-info/PKG-INFO", C["sdk-python"].version,
+  /(pip install udb-client==)(\d+\.\d+\.\d+)(\r?\n)/);
+processTriple("python package metadata pydantic install", "sdk/python/udb_client.egg-info/PKG-INFO", C["sdk-python"].version,
+  /(pip install "udb-client\[pydantic\]==)(\d+\.\d+\.\d+)(")/);
+processTriple("csharp generated client version", "sdk/csharp/Udb.Client/GeneratedClient.cs", C["sdk-csharp"].version,
+  /(\/\/   UDB version:\s+)(\d+\.\d+\.\d+)(\n)/);
+processAll("csharp cli launcher refs", "sdk/csharp/Udb.Cli/UdbCli.cs", C["sdk-csharp"].version,
+  /(^|[^0-9]v?)(0\.\d+\.\d+)([^0-9]|$)/gm);
+processAll("csharp cli manifest refs", "sdk/csharp/Udb.Cli/Udb.Cli.csproj", C["sdk-csharp"].version,
+  /(^|[^0-9]v?)(0\.\d+\.\d+)([^0-9]|$)/gm);
+processTriple("java generated client version", "sdk/java/src/main/java/dev/udb/client/generated/GeneratedUdbClient.java", C["sdk-java"].version,
+  /(\/\/ udb )(\d+\.\d+\.\d+)( · protocol [\d.]+ · \d+ services)/);
+processAll("java cli launcher refs", "sdk/java/src/main/java/dev/udb/cli/Launcher.java", C["sdk-java"].version,
+  /(^|[^0-9]v?)(0\.\d+\.\d+)([^0-9]|$)/gm);
+processTriple("php generated client version", "sdk/php/src/Generated/GeneratedClient.php", C["sdk-php"].version,
+  /(UDB version \...... )(\d+\.\d+\.\d+)(\n)/);
+processAll("php cli launcher refs", "sdk/php/bin/udb", C["sdk-php"].version,
+  /(^|[^0-9]v?)(0\.\d+\.\d+)([^0-9]|$)/gm);
 // package-lock.json has two "version" entries for @udb_plus/sdk – update both.
 processAll("ts package-lock", "sdk/typescript/package-lock.json", C["sdk-typescript"].version,
   /("name": "@udb_plus\/sdk",\n\s*"version": ")(\d+\.\d+\.\d+)(")/);

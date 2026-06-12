@@ -37,6 +37,24 @@ pub(crate) fn descriptor_lint_findings(
 
     for service in &manifest.services {
         for rpc in &service.methods {
+            // operation_kind_unspecified (error): EVERY RPC — including the
+            // DataBroker data-plane RPCs that carry no endpoint_security — MUST
+            // declare its state-change class. This is the authoritative source for
+            // SDK retry safety and conformance probing, so an unset value is a hard
+            // error: new RPCs are classified explicitly, never guessed by name.
+            if rpc.operation_kind == 0 {
+                findings.push(serde_json::json!({
+                    "severity": "error",
+                    "code": "operation_kind_unspecified",
+                    "path": rpc.grpc_path(),
+                    "message": format!(
+                        "RPC {} does not declare the operation_kind method option",
+                        rpc.grpc_path()
+                    ),
+                    "hint": "set option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY | _MUTATION | _DESTRUCTIVE;",
+                }));
+            }
+
             let Some(security) = rpc.endpoint_security.as_ref() else {
                 // `endpoint_security_missing` is already emitted upstream; the
                 // F13 lints below all presuppose a present contract.
@@ -259,6 +277,7 @@ mod tests {
             event_contract: None,
             emits: Vec::new(),
             dependency_contract: None,
+            operation_kind: 1,
         }
     }
 

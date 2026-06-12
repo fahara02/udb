@@ -52,7 +52,7 @@ use crate::generation::{CatalogManifest, GeneratedArtifact, ManifestStore, Manif
 use crate::proto::{
     Chunk, MultipartUploadRequest, MultipartUploadResponse, Mutation, MutationResponse, RecordSet,
     Row as ProtoRow, SelectRequest, TxStatus, UpsertRequest, UrlRequest, UrlResponse,
-    VectorHybridSearchRequest, VectorPointMutation, VectorSearchRequest, VectorSet,
+    VectorHybridSearchRequest, VectorPoint, VectorPointMutation, VectorSearchRequest, VectorSet,
     VectorUpsertRequest, ViewDefinition,
 };
 use crate::security::{AbacPolicy, PolicyEffect};
@@ -222,6 +222,10 @@ pub struct DataBrokerRuntime {
     qdrant: Option<QdrantHttpClient>,
     #[cfg(feature = "qdrant")]
     qdrant_instances: HashMap<String, QdrantHttpClient>,
+    /// Ad-hoc vector collections created through `EnsureResource` do not exist in
+    /// the active catalog manifest yet. Remember their serving backend so typed
+    /// VectorUpsert/VectorSearch do not silently fall back to Qdrant.
+    vector_resource_routes: Arc<Mutex<HashMap<String, ResolvedBackendSelector>>>,
     /// C9: Elasticsearch primary client (`UDB_ELASTIC_DSN` deployment).
     #[cfg(feature = "elasticsearch")]
     pub(crate) elasticsearch:
@@ -530,6 +534,7 @@ pub(crate) use helpers::*;
 mod accessors;
 mod catalog_admin;
 mod catalog_sql;
+mod native_store;
 pub use catalog_sql::ManifestDrift;
 mod probe_dispatch;
 mod reload;
@@ -1444,6 +1449,45 @@ mod outbox_envelope_tests {
                 .executor_registry()
                 .get("qdrant", Some("vector_a"))
                 .is_some()
+        );
+    }
+
+    #[test]
+    fn dispatch_reconciliation_disconnects_unbuildable_factory() {
+        let mut instances = vec![RuntimeBackendInstance {
+            name: "primary".to_string(),
+            backend: "postgres".to_string(),
+            role: "read_write".to_string(),
+            enabled: true,
+            configured: true,
+            connected: true,
+            read_weight: 1,
+            write_weight: 1,
+            dsn_env: None,
+            labels: HashMap::new(),
+            capabilities: Vec::new(),
+            healthy: true,
+            circuit_open: false,
+        }];
+        let runtime = DataBrokerRuntime::default();
+        let mut warnings = Vec::new();
+
+        reconcile_dispatch_factories(&mut instances, &runtime, &mut warnings);
+
+        assert!(!instances[0].connected);
+        assert!(!instances[0].healthy);
+        assert!(
+            warnings
+                .iter()
+                .any(|warning| warning.contains("postgres:primary")
+                    && warning.contains("could not build executor")),
+            "warnings: {warnings:?}"
+        );
+        let registry = build_executor_registry(&instances);
+        assert!(
+            registry
+                .get("postgres", Some("primary"))
+                .is_some_and(|registration| !registration.connected)
         );
     }
 

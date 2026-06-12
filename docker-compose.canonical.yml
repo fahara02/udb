@@ -70,6 +70,16 @@ services:
     environment:
       CASSANDRA_DC: dc1
       CASSANDRA_ENDPOINT_SNITCH: GossipingPropertyFileSnitch
+      # Cap the heap: cassandra:5 auto-sizes to ~1/4 host RAM (~3.8 GB here),
+      # and with the rest of the local stack + cargo builds running it OOMs and
+      # gets `kill -9`'d (XX:OnOutOfMemoryError). A 1.5 GB heap is plenty for a
+      # single-node dev keyspace and lets it coexist with the other backends.
+      MAX_HEAP_SIZE: "1024M"
+      HEAP_NEWSIZE: "256M"
+    # The container limit must cover the 1 GB heap PLUS cassandra's off-heap
+    # (direct memory ~heap/2, file cache, native) — 2.2 GB OOM-killed it
+    # (ExitCode 137) right after "Startup complete". 3 GB leaves headroom.
+    mem_limit: 3g
     ports:
       - "59042:9042"
     healthcheck:

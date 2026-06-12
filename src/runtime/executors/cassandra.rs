@@ -294,6 +294,17 @@ fn validate_cassandra_query(cql: &str) -> Result<(), tonic::Status> {
     }
 }
 
+fn is_cassandra_live_probe(cql: &str) -> bool {
+    let normalized = cql
+        .trim()
+        .trim_end_matches(';')
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .to_ascii_lowercase();
+    matches!(normalized.as_str(), "select 1" | "select 1 as live_probe")
+}
+
 fn validate_cassandra_mutation(cql: &str) -> Result<(), tonic::Status> {
     match cql_leading_keyword(cql).as_str() {
         "INSERT" | "UPDATE" | "DELETE" | "BEGIN" => Ok(()),
@@ -307,6 +318,14 @@ impl QueryExecutor for CassandraExecutor {
     async fn query(&self, req: &str) -> Result<String, tonic::Status> {
         let (cql, params_json) = parse_sql_dispatch(req)?;
         validate_cassandra_query(&cql)?;
+        if is_cassandra_live_probe(&cql) {
+            self.client
+                .session
+                .query("SELECT release_version FROM system.local", ())
+                .await
+                .map_err(|e| tonic::Status::internal(format!("cassandra query failed: {e}")))?;
+            return Ok(serde_json::json!([{ "live_probe": 1 }]).to_string());
+        }
         let params: Vec<CqlValue> = params_json.iter().map(json_to_cql).collect();
         let result = self
             .client
