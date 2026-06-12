@@ -757,12 +757,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          docker run -d --name udb-sdk-live-kafka \
+          docker run -d --name udb-sdk-live-kafka --hostname kafka \
             -p 59192:59192 \
             -e KAFKA_NODE_ID=1 \
             -e KAFKA_PROCESS_ROLES=broker,controller \
-            -e KAFKA_CONTROLLER_QUORUM_VOTERS=1@localhost:9093 \
-            -e KAFKA_LISTENERS=INTERNAL://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,EXTERNAL://0.0.0.0:59192 \
+            -e KAFKA_CONTROLLER_QUORUM_VOTERS=1@kafka:9093 \
+            -e KAFKA_LISTENERS=INTERNAL://0.0.0.0:9092,CONTROLLER://kafka:9093,EXTERNAL://0.0.0.0:59192 \
             -e KAFKA_ADVERTISED_LISTENERS=INTERNAL://localhost:9092,EXTERNAL://localhost:59192 \
             -e KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT \
             -e KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER \
