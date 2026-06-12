@@ -1464,6 +1464,7 @@ mod tests {
                 Some(service_identity.to_string())
             },
             project_id: Some("project-1".to_string()),
+            exp: None,
             sub: Some("subject-1".to_string()),
             iss: None,
             jti: Some("token-1".to_string()),

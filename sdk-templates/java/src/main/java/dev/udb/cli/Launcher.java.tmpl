@@ -123,30 +123,45 @@ public final class Launcher {
   }
 
   /**
-   * The per-OS/arch release asset name. Mirrors the GitHub release naming for
-   * github.com/fahara02/udb (e.g. {@code udb-v0.3.5-x86_64-unknown-linux-gnu}).
+   * The per-OS/arch release asset name, matching the canonical scheme published
+   * by {@code .github/workflows/release-binaries.yml}, which attaches RAW
+   * executables to the {@code v<version>} GitHub release:
+   *
+   * <pre>udb-&lt;os&gt;-&lt;arch&gt;[-&lt;variant&gt;]&lt;ext&gt;</pre>
+   *
+   * where {@code <os>} is {@code linux|darwin|windows}, {@code <arch>} is
+   * {@code amd64|arm64}, the optional {@code <variant>} comes from the
+   * {@code UDB_BIN_VARIANT} env var (omitted when unset/empty/"portable"), and
+   * {@code <ext>} is {@code .exe} on Windows else empty. There is NO version,
+   * NO Rust target triple, and NO archive suffix in the name.
+   *
+   * <p>Examples: {@code udb-linux-amd64}, {@code udb-windows-amd64.exe},
+   * {@code udb-darwin-arm64}, {@code udb-linux-amd64-full}.
    */
   static String assetName() {
-    String os = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
-    String arch = System.getProperty("os.arch", "").toLowerCase(Locale.ROOT);
+    String osProp = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
+    String archProp = System.getProperty("os.arch", "").toLowerCase(Locale.ROOT);
 
-    String archTriple;
-    if (arch.contains("aarch64") || arch.contains("arm64")) {
-      archTriple = "aarch64";
+    String os;
+    if (osProp.contains("win")) {
+      os = "windows";
+    } else if (osProp.contains("mac") || osProp.contains("darwin")) {
+      os = "darwin";
     } else {
-      archTriple = "x86_64";
+      os = "linux";
     }
 
-    String target;
-    if (os.contains("win")) {
-      target = archTriple + "-pc-windows-msvc";
-      return "udb-v" + UDB_VERSION + "-" + target + ".exe";
-    } else if (os.contains("mac") || os.contains("darwin")) {
-      target = archTriple + "-apple-darwin";
-    } else {
-      target = archTriple + "-unknown-linux-gnu";
+    String arch =
+        (archProp.contains("aarch64") || archProp.contains("arm64")) ? "arm64" : "amd64";
+
+    String variant = "";
+    String variantEnv = System.getenv("UDB_BIN_VARIANT");
+    if (variantEnv != null && !variantEnv.isBlank() && !variantEnv.equals("portable")) {
+      variant = "-" + variantEnv;
     }
-    return "udb-v" + UDB_VERSION + "-" + target;
+
+    String ext = "windows".equals(os) ? ".exe" : "";
+    return "udb-" + os + "-" + arch + variant + ext;
   }
 
   private static Path download(Path dest) throws IOException, InterruptedException {
@@ -167,6 +182,7 @@ public final class Launcher {
     try (InputStream in = resp.body()) {
       Files.copy(in, tmp, StandardCopyOption.REPLACE_EXISTING);
     }
+    verifyChecksum(http, url, tmp);
     if (!isWindows()) {
       Set<PosixFilePermission> perms =
           Set.of(
@@ -185,6 +201,58 @@ public final class Launcher {
     }
     Files.move(tmp, dest, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
     return dest;
+  }
+
+  /**
+   * Best-effort SHA-256 verification of the downloaded binary against the
+   * published {@code <asset>.sha256} sidecar. The sidecar holds the hex digest
+   * (optionally followed by whitespace + filename, GNU coreutils style). A
+   * missing/unreachable sidecar is non-fatal; a present-but-mismatched digest
+   * aborts the install.
+   */
+  private static void verifyChecksum(HttpClient http, String assetUrl, Path file)
+      throws IOException, InterruptedException {
+    String expected;
+    try {
+      HttpRequest req = HttpRequest.newBuilder(URI.create(assetUrl + ".sha256")).GET().build();
+      HttpResponse<String> resp = http.send(req, HttpResponse.BodyHandlers.ofString());
+      if (resp.statusCode() != 200) {
+        return; // No sidecar published; skip verification.
+      }
+      String body = resp.body().trim();
+      if (body.isEmpty()) {
+        return;
+      }
+      expected = body.split("\\s+", 2)[0].toLowerCase(Locale.ROOT);
+    } catch (IOException e) {
+      return; // Sidecar unreachable; non-fatal.
+    }
+
+    String actual;
+    try {
+      java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
+      byte[] digest = md.digest(Files.readAllBytes(file));
+      StringBuilder sb = new StringBuilder(digest.length * 2);
+      for (byte b : digest) {
+        sb.append(Character.forDigit((b >> 4) & 0xF, 16));
+        sb.append(Character.forDigit(b & 0xF, 16));
+      }
+      actual = sb.toString();
+    } catch (java.security.NoSuchAlgorithmException e) {
+      return; // SHA-256 unavailable on this JRE (unexpected); skip rather than fail.
+    }
+
+    if (!actual.equals(expected)) {
+      Files.deleteIfExists(file);
+      throw new IOException(
+          "udb: checksum mismatch for "
+              + assetUrl
+              + " (expected "
+              + expected
+              + ", got "
+              + actual
+              + ")");
+    }
   }
 
   private static int exec(Path bin, String[] args) throws IOException, InterruptedException {

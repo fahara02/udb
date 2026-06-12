@@ -13,7 +13,7 @@ async fn live_postgres_authz_admin_crud_and_audit_lifecycle() {
     let pool = live_pg_pool().await;
     migrate_native_auth_db(&pool).await;
     let authn = authn_service(pool.clone());
-    let authz = authz_service(pool.clone());
+    let authz = authz_service(pool.clone()).await;
     let user = create_verified_user(&authn, "authz_admin", "CorrectHorse1!").await;
     let suffix = Uuid::new_v4().simple().to_string();
     let role_code = format!("auditor_{suffix}");
@@ -278,7 +278,7 @@ async fn live_postgres_authz_role_binding_authorize_and_lint() {
     let pool = live_pg_pool().await;
     migrate_native_auth_db(&pool).await;
     let authn = authn_service(pool.clone());
-    let authz = authz_service(pool.clone());
+    let authz = authz_service(pool.clone()).await;
     let user = create_verified_user(&authn, "rolebind", "CorrectHorse1!").await;
     let suffix = Uuid::new_v4().simple().to_string();
     let role_code = format!("binder_{suffix}");

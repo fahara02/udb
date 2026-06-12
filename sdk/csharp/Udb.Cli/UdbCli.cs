@@ -23,6 +23,7 @@
 using System.Diagnostics;
 using System.Net.Http;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 
 namespace Udb.Cli;
 
@@ -127,28 +128,50 @@ internal static class UdbCli
 
     private static string CachedBinaryPath() => Path.Combine(CacheDir(), ExeName);
 
-    /// <summary>Map the current OS/arch to the published release asset name.</summary>
+    /// <summary>
+    /// Map the current OS/arch to the published release asset name.
+    /// Canonical scheme (see .github/workflows/release-binaries.yml):
+    ///   udb-&lt;os&gt;-&lt;arch&gt;[-&lt;variant&gt;]&lt;ext&gt;
+    ///   os   = linux | darwin | windows
+    ///   arch = amd64 | arm64
+    ///   variant = UDB_BIN_VARIANT (omitted when unset/empty/"portable")
+    ///   ext  = ".exe" on Windows, otherwise empty
+    /// e.g. udb-linux-amd64, udb-windows-amd64.exe, udb-darwin-arm64, udb-linux-amd64-full
+    /// </summary>
     private static string AssetName()
     {
         string os =
             RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "windows" :
-            RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? "macos" :
+            RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? "darwin" :
             "linux";
         string arch = RuntimeInformation.OSArchitecture switch
         {
-            Architecture.X64 => "x86_64",
-            Architecture.Arm64 => "aarch64",
+            Architecture.X64 => "amd64",
+            Architecture.Arm64 => "arm64",
             var other => other.ToString().ToLowerInvariant(),
         };
+        string variant = string.Empty;
+        var variantEnv = Environment.GetEnvironmentVariable("UDB_BIN_VARIANT");
+        if (!string.IsNullOrEmpty(variantEnv) &&
+            !string.Equals(variantEnv, "portable", StringComparison.Ordinal))
+        {
+            variant = "-" + variantEnv;
+        }
         string ext = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ".exe" : string.Empty;
-        // e.g. udb-linux-x86_64, udb-windows-x86_64.exe, udb-macos-aarch64
-        return $"udb-{os}-{arch}{ext}";
+        return $"udb-{os}-{arch}{variant}{ext}";
     }
 
+    /// <summary>
+    /// Download the RAW release executable to <paramref name="destination"/>.
+    /// The published asset is a raw binary (NOT an archive), so the response
+    /// bytes are written straight to disk. On non-Windows the file is marked
+    /// executable (0755). The `&lt;asset&gt;.sha256` sidecar is verified best-effort.
+    /// </summary>
     private static async Task<string> DownloadAsync(string destination)
     {
         var asset = AssetName();
-        var url = $"https://github.com/{Repo}/releases/download/v{Version}/{asset}";
+        var baseUrl = $"https://github.com/{Repo}/releases/download/v{Version}";
+        var url = $"{baseUrl}/{asset}";
         await Console.Error.WriteLineAsync($"udb-launcher: downloading {url}").ConfigureAwait(false);
 
         using var http = new HttpClient();
@@ -156,22 +179,73 @@ internal static class UdbCli
         using var resp = await http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
         resp.EnsureSuccessStatusCode();
 
+        // The asset is a raw executable: stream the response bytes directly to a
+        // temp file (no zip/tar extraction).
         var tmp = destination + ".partial";
         await using (var fs = File.Create(tmp))
         {
             await resp.Content.CopyToAsync(fs).ConfigureAwait(false);
         }
 
+        // Best-effort integrity check against the `<asset>.sha256` sidecar.
+        await VerifyChecksumAsync(http, $"{url}.sha256", tmp, asset).ConfigureAwait(false);
+
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            // chmod 0755
-            var psi = new ProcessStartInfo("chmod", $"755 \"{tmp}\"") { UseShellExecute = false };
-            using var p = Process.Start(psi);
-            p?.WaitForExit(5000);
+            // Mark the raw binary executable (rwxr-xr-x / 0755).
+            File.SetUnixFileMode(
+                tmp,
+                UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
+                UnixFileMode.GroupRead | UnixFileMode.GroupExecute |
+                UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
         }
 
         File.Move(tmp, destination, overwrite: true);
         return destination;
+    }
+
+    /// <summary>
+    /// Verify the downloaded file against its `<paramref name="asset"/>.sha256`
+    /// sidecar (sha256sum format: "&lt;hex&gt;  &lt;filename&gt;"). Best-effort: a missing
+    /// sidecar is non-fatal; a present-but-mismatching one throws.
+    /// </summary>
+    private static async Task VerifyChecksumAsync(HttpClient http, string sumUrl, string filePath, string asset)
+    {
+        string? expected;
+        try
+        {
+            using var resp = await http.GetAsync(sumUrl).ConfigureAwait(false);
+            if (!resp.IsSuccessStatusCode)
+            {
+                return; // sidecar absent -> skip (non-fatal)
+            }
+            var body = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
+            // First whitespace-delimited token is the hex digest.
+            expected = body.Split(new[] { ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                           .FirstOrDefault();
+        }
+        catch
+        {
+            return; // network/parse failure on the sidecar -> skip (non-fatal)
+        }
+
+        if (string.IsNullOrEmpty(expected))
+        {
+            return;
+        }
+
+        string actual;
+        await using (var fs = File.OpenRead(filePath))
+        {
+            var hash = await SHA256.HashDataAsync(fs).ConfigureAwait(false);
+            actual = Convert.ToHexString(hash).ToLowerInvariant();
+        }
+
+        if (!string.Equals(actual, expected.Trim().ToLowerInvariant(), StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"checksum mismatch for {asset}: expected {expected.Trim()}, got {actual}");
+        }
     }
 
     /// <summary>Exec the resolved binary, forwarding args and the exit code.</summary>

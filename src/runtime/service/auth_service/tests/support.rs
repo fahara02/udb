@@ -5,9 +5,11 @@ use crate::proto::udb::core::authn::services::v1::authn_service_server::AuthnSer
 use crate::runtime::authn::{
     AuthnConfig, PostgresApiKeyStore, PostgresSessionStore, PostgresUserStore, SessionStore,
 };
-use crate::runtime::authz::AuthzSnapshot;
+use crate::runtime::config::{DbConfig, UdbConfig};
 use crate::runtime::security::SecurityConfig;
+use crate::runtime::service::DataBrokerService;
 use crate::runtime::service::analytics_service::AnalyticsServiceImpl;
+use crate::runtime::{DataBrokerRuntime, native_catalog};
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 use tonic::Request;
@@ -211,35 +213,50 @@ pub(super) fn api_key_service(pool: sqlx::PgPool) -> ApiKeyServiceImpl {
         .with_postgres(Some(pool))
 }
 
-pub(super) fn authz_service(pool: sqlx::PgPool) -> AuthzServiceImpl {
-    AuthzServiceImpl::new(AuthzSnapshot::default()).with_postgres(Some(pool))
+async fn native_broker_service() -> DataBrokerService {
+    let config = UdbConfig {
+        primary: DbConfig {
+            direct_dsn: live_pg_dsn(),
+            ..DbConfig::default()
+        },
+        ..UdbConfig::default()
+    };
+    DataBrokerService::with_runtime(
+        native_catalog::native_manifest().clone(),
+        DataBrokerRuntime::from_config(config).await,
+    )
+}
+
+pub(super) async fn authz_service(_pool: sqlx::PgPool) -> AuthzServiceImpl {
+    let (_, authz, _) = native_broker_service().await.build_auth_services();
+    authz
 }
 
 pub(super) fn analytics_service(pool: sqlx::PgPool) -> AnalyticsServiceImpl {
     AnalyticsServiceImpl::new().with_postgres(Some(pool))
 }
 
-pub(super) fn tenant_service(
+pub(super) async fn tenant_service(
     pool: sqlx::PgPool,
 ) -> super::super::super::tenant_service::TenantServiceImpl {
-    super::super::super::tenant_service::TenantServiceImpl::new().with_postgres(Some(pool))
+    let _ = pool;
+    native_broker_service().await.build_tenant_service()
 }
 
-pub(super) fn notification_service(
+pub(super) async fn notification_service(
     pool: sqlx::PgPool,
 ) -> super::super::super::notification_service::NotificationServiceImpl {
-    super::super::super::notification_service::NotificationServiceImpl::new()
-        .with_postgres(Some(pool))
+    let _ = pool;
+    native_broker_service().await.build_notification_service()
 }
 
 /// Notification service wired to the shared outbox so `SendNotification`
 /// publishes to `udb_system.outbox_events` (→ CDC → Kafka).
-pub(super) fn notification_service_with_outbox(
+pub(super) async fn notification_service_with_outbox(
     pool: sqlx::PgPool,
 ) -> super::super::super::notification_service::NotificationServiceImpl {
-    super::super::super::notification_service::NotificationServiceImpl::new()
-        .with_postgres(Some(pool))
-        .with_outbox(Some("udb_system.outbox_events".to_string()))
+    let _ = pool;
+    native_broker_service().await.build_notification_service()
 }
 
 /// Create the shared transactional-outbox table the CDC engine tails (same shape
@@ -271,7 +288,7 @@ pub(super) async fn ensure_outbox_table(pool: &sqlx::PgPool) {
 pub(super) async fn seed_default_tenant(pool: &sqlx::PgPool) -> String {
     use crate::proto::udb::core::tenant::services::v1 as tenant_pb;
     use crate::proto::udb::core::tenant::services::v1::tenant_service_server::TenantService;
-    let svc = tenant_service(pool.clone());
+    let svc = tenant_service(pool.clone()).await;
     let created = svc
         .create_tenant(Request::new(tenant_pb::CreateTenantRequest {
             code: format!("acme_{}", Uuid::new_v4().simple()),
@@ -297,7 +314,7 @@ pub(super) async fn seed_notification_subscriptions(
     use crate::proto::udb::core::notification::entity::v1::NotificationChannel as Channel;
     use crate::proto::udb::core::notification::services::v1 as notif_pb;
     use crate::proto::udb::core::notification::services::v1::notification_service_server::NotificationService;
-    let svc = notification_service(pool.clone());
+    let svc = notification_service(pool.clone()).await;
     for channel in [
         Channel::Email,
         Channel::Sms,

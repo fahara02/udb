@@ -11,7 +11,7 @@ async fn live_postgres_authz_relationship_tuple_roundtrip() {
     let pool = live_pg_pool().await;
     migrate_native_auth_db(&pool).await;
     let authn = authn_service(pool.clone());
-    let authz = authz_service(pool.clone());
+    let authz = authz_service(pool.clone()).await;
     let user = create_verified_user(&authn, "rebac", "CorrectHorse1!").await;
     let object = format!("invoice:{}", Uuid::new_v4().simple());
     let policy_id = Uuid::new_v4().to_string();

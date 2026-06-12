@@ -15,15 +15,18 @@
 //     github.com/fahara02/udb (tag v{{UDB_VERSION}}) for the current GOOS/GOARCH
 //     into a per-user cache dir, then exec it. Subsequent runs reuse the cache.
 //
+// The release assets are RAW executables named udb-<os>-<arch>[-<variant>][.exe]
+// (e.g. udb-linux-amd64, udb-windows-amd64.exe, udb-darwin-arm64). Set
+// UDB_BIN_VARIANT to pick a non-default build (e.g. "full" -> udb-linux-amd64-full);
+// "portable" or empty selects the default unsuffixed asset.
+//
 // This keeps the CLI and SDK versions locked together: `go install ...@vX`
 // always launches udb vX.
 package main
 
 import (
-	"archive/tar"
-	"archive/zip"
-	"bytes"
-	"compress/gzip"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -161,30 +164,46 @@ func cachedBinaryPath() string {
 	return filepath.Join(cacheDir(), exeName("udb"))
 }
 
-// assetName builds the per-OS/arch release asset filename. It mirrors the UDB
-// release convention: udb-<version>-<os>-<arch>.<ext>.
+// assetName builds the per-OS/arch release asset filename, matching the published
+// release scheme: udb-<os>-<arch>[-<variant>][.exe], a RAW executable with NO
+// version in the name and NO archive extension.
 //
-//	linux/darwin -> .tar.gz, windows -> .zip
-func assetName() (name, ext string) {
+//   - <os>:   runtime.GOOS verbatim (linux | darwin | windows).
+//   - <arch>: runtime.GOARCH (amd64 | arm64 preferred; others pass through).
+//   - <variant>: UDB_BIN_VARIANT; unset/empty/"portable" omits the suffix,
+//     any other value is appended as "-<value>" (e.g. "full" -> "-full").
+//   - <ext>:  ".exe" on Windows, otherwise empty.
+//
+// Examples: udb-linux-amd64, udb-windows-amd64.exe, udb-darwin-arm64,
+// udb-linux-amd64-full.
+func assetName() string {
 	goos := runtime.GOOS
 	goarch := runtime.GOARCH
-	if goos == "windows" {
-		ext = "zip"
-	} else {
-		ext = "tar.gz"
+
+	variant := ""
+	if v := strings.TrimSpace(os.Getenv("UDB_BIN_VARIANT")); v != "" && v != "portable" {
+		variant = "-" + v
 	}
-	name = fmt.Sprintf("udb-v%s-%s-%s.%s", udbVersion, goos, goarch, ext)
-	return name, ext
+
+	ext := ""
+	if goos == "windows" {
+		ext = ".exe"
+	}
+
+	return fmt.Sprintf("udb-%s-%s%s%s", goos, goarch, variant, ext)
 }
 
 func releaseURL() string {
-	name, _ := assetName()
 	return fmt.Sprintf(
 		"https://github.com/%s/%s/releases/download/v%s/%s",
-		githubOwner, githubRepo, udbVersion, name)
+		githubOwner, githubRepo, udbVersion, assetName())
 }
 
-// downloadRelease fetches and extracts the udb binary into dest.
+// downloadRelease fetches the raw udb executable and installs it at dest. The
+// asset is a plain binary (no archive), so the bytes are written directly to a
+// temp file, made executable on non-Windows, then atomically renamed into place.
+// A best-effort sha256 check against the `<asset>.sha256` sidecar guards against
+// truncated/corrupted downloads; a missing sidecar is not fatal.
 func downloadRelease(dest string) error {
 	if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
 		return err
@@ -193,23 +212,17 @@ func downloadRelease(dest string) error {
 	fmt.Fprintf(os.Stderr, "udb-launcher: fetching %s\n", url)
 
 	client := &http.Client{Timeout: 5 * time.Minute}
-	resp, err := client.Get(url)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("unexpected status %s fetching %s", resp.Status, url)
-	}
-
-	body, err := io.ReadAll(resp.Body)
+	body, err := fetch(client, url)
 	if err != nil {
 		return err
 	}
 
-	_, ext := assetName()
+	if err := verifyChecksum(client, url, body); err != nil {
+		return err
+	}
+
 	tmp := dest + ".tmp"
-	if err := extractBinary(body, ext, tmp); err != nil {
+	if err := os.WriteFile(tmp, body, 0o755); err != nil {
 		return err
 	}
 	if runtime.GOOS != "windows" {
@@ -218,68 +231,60 @@ func downloadRelease(dest string) error {
 	return os.Rename(tmp, dest)
 }
 
-// extractBinary pulls the udb executable out of an archive and writes it to out.
-func extractBinary(archive []byte, ext, out string) error {
-	switch ext {
-	case "zip":
-		return extractZip(archive, out)
-	case "tar.gz":
-		return extractTarGz(archive, out)
-	default:
-		return fmt.Errorf("unsupported archive extension %q", ext)
+// fetch GETs url and returns its body, erroring on any non-200 status.
+func fetch(client *http.Client, url string) ([]byte, error) {
+	resp, err := client.Get(url)
+	if err != nil {
+		return nil, err
 	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status %s fetching %s", resp.Status, url)
+	}
+	return io.ReadAll(resp.Body)
 }
 
-func extractZip(archive []byte, out string) error {
-	zr, err := zip.NewReader(bytes.NewReader(archive), int64(len(archive)))
+// verifyChecksum does a best-effort sha256 verification of body against the
+// `<url>.sha256` sidecar. A 404 (no sidecar published) is treated as success;
+// a present-but-mismatched checksum is a hard error.
+func verifyChecksum(client *http.Client, url string, body []byte) error {
+	resp, err := client.Get(url + ".sha256")
 	if err != nil {
-		return err
+		// Network hiccup on the sidecar alone shouldn't block a good download.
+		return nil
 	}
-	want := exeName("udb")
-	for _, f := range zr.File {
-		if filepath.Base(f.Name) != want {
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound {
+		return nil
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil
+	}
+	raw, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil
+	}
+	want := parseSha256(string(raw))
+	if want == "" {
+		return nil
+	}
+	got := sha256.Sum256(body)
+	if !strings.EqualFold(want, hex.EncodeToString(got[:])) {
+		return fmt.Errorf("checksum mismatch for %s: got %s, want %s",
+			url, hex.EncodeToString(got[:]), want)
+	}
+	return nil
+}
+
+// parseSha256 extracts the hex digest from a sha256sum-style sidecar line
+// ("<hex>  <filename>"); it also tolerates a bare digest.
+func parseSha256(s string) string {
+	for _, line := range strings.Split(s, "\n") {
+		fields := strings.Fields(line)
+		if len(fields) == 0 {
 			continue
 		}
-		rc, err := f.Open()
-		if err != nil {
-			return err
-		}
-		defer rc.Close()
-		return writeFile(out, rc)
+		return fields[0]
 	}
-	return fmt.Errorf("%q not found in zip archive", want)
-}
-
-func extractTarGz(archive []byte, out string) error {
-	gz, err := gzip.NewReader(bytes.NewReader(archive))
-	if err != nil {
-		return err
-	}
-	defer gz.Close()
-	tr := tar.NewReader(gz)
-	want := exeName("udb")
-	for {
-		hdr, err := tr.Next()
-		if errors.Is(err, io.EOF) {
-			break
-		}
-		if err != nil {
-			return err
-		}
-		if filepath.Base(hdr.Name) != want {
-			continue
-		}
-		return writeFile(out, tr)
-	}
-	return fmt.Errorf("%q not found in tar.gz archive", want)
-}
-
-func writeFile(path string, r io.Reader) error {
-	f, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	_, err = io.Copy(f, r)
-	return err
+	return ""
 }

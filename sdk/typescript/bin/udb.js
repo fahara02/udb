@@ -6,9 +6,9 @@
 // Resolution order:
 //   1. $UDB_BIN, if set and executable, is used verbatim.
 //   2. A `udb` already on PATH whose `--version` matches v0.3.5 is used.
-//   3. Otherwise the matching release binary is downloaded once from
-//      github.com/fahara02/udb (tag v0.3.5, per-OS/arch asset) into a
-//      per-user cache dir and executed thereafter.
+//   3. Otherwise the matching raw release binary is downloaded once from
+//      github.com/fahara02/udb (tag v0.3.5, asset `udb-<os>-<arch>[-<variant>][.exe]`)
+//      into a per-user cache dir and executed thereafter.
 //
 // The downloaded binary is cached at:
 //   $UDB_CACHE_DIR || <os-cache>/udb/v0.3.5/udb[.exe]
@@ -19,6 +19,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const https = require("https");
+const crypto = require("crypto");
 
 const UDB_VERSION = "0.3.5";
 const REPO = "fahara02/udb";
@@ -28,16 +29,27 @@ function logErr(msg) {
 }
 
 // ── Per-OS / arch release asset name ────────────────────────────────────────────
+// Canonical published scheme (see .github/workflows/release-binaries.yml — RAW
+// executables attached to the GitHub release tag v<version>):
+//   udb-<os>-<arch>[-<variant>][.exe]
+//   <os>:      linux | darwin | windows
+//   <arch>:    amd64 | arm64
+//   <variant>: $UDB_BIN_VARIANT, omitted when unset/empty/"portable"
+//   <ext>:     ".exe" on win32, else none
+// No version in the name, no .tar.gz/.zip — the asset is a raw binary.
+// Examples: udb-linux-amd64 ; udb-windows-amd64.exe ; udb-darwin-arm64 ; udb-linux-amd64-full
 function assetName() {
-  const platform = process.platform; // 'linux' | 'darwin' | 'win32'
-  const arch = process.arch; // 'x64' | 'arm64'
-  const archMap = { x64: "x86_64", arm64: "aarch64" };
-  const a = archMap[arch];
-  if (!a) throw new Error(`unsupported arch: ${arch}`);
-  if (platform === "linux") return `udb-v${UDB_VERSION}-${a}-unknown-linux-gnu.tar.gz`;
-  if (platform === "darwin") return `udb-v${UDB_VERSION}-${a}-apple-darwin.tar.gz`;
-  if (platform === "win32") return `udb-v${UDB_VERSION}-${a}-pc-windows-msvc.zip`;
-  throw new Error(`unsupported platform: ${platform}`);
+  const osMap = { linux: "linux", darwin: "darwin", win32: "windows" };
+  const archMap = { x64: "amd64", arm64: "arm64" };
+  const o = osMap[process.platform];
+  if (!o) throw new Error(`unsupported platform: ${process.platform}`);
+  const a = archMap[process.arch];
+  if (!a) throw new Error(`unsupported arch: ${process.arch}`);
+
+  const variant = (process.env.UDB_BIN_VARIANT || "").trim();
+  const variantSuffix = variant && variant !== "portable" ? `-${variant}` : "";
+  const ext = process.platform === "win32" ? ".exe" : "";
+  return `udb-${o}-${a}${variantSuffix}${ext}`;
 }
 
 function binName() {
@@ -79,7 +91,7 @@ function findOnPath() {
   return null;
 }
 
-// ── Download + extract on cache miss ────────────────────────────────────────────
+// ── Download (raw binary) on cache miss ─────────────────────────────────────────
 function httpsGet(url, dest) {
   return new Promise((resolve, reject) => {
     const req = https.get(url, { headers: { "User-Agent": "udb-sdk-launcher" } }, (res) => {
@@ -100,34 +112,54 @@ function httpsGet(url, dest) {
   });
 }
 
-function extract(archive, intoDir) {
-  if (archive.endsWith(".zip")) {
-    if (process.platform === "win32") {
-      execFileSync("powershell", [
-        "-NoProfile",
-        "-Command",
-        `Expand-Archive -Force -LiteralPath '${archive}' -DestinationPath '${intoDir}'`,
-      ]);
-    } else {
-      execFileSync("unzip", ["-o", archive, "-d", intoDir]);
-    }
-  } else {
-    execFileSync("tar", ["-xzf", archive, "-C", intoDir]);
-  }
+// Fetch a small text body (the `.sha256` sidecar) into memory, following
+// redirects. Resolves null on any non-200 so checksum verification stays
+// best-effort and non-fatal when the sidecar is absent.
+function httpsGetText(url) {
+  return new Promise((resolve) => {
+    const req = https.get(url, { headers: { "User-Agent": "udb-sdk-launcher" } }, (res) => {
+      if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        res.resume();
+        return httpsGetText(res.headers.location).then(resolve);
+      }
+      if (res.statusCode !== 200) {
+        res.resume();
+        return resolve(null);
+      }
+      const chunks = [];
+      res.on("data", (c) => chunks.push(c));
+      res.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
+      res.on("error", () => resolve(null));
+    });
+    req.on("error", () => resolve(null));
+  });
 }
 
-function findExtractedBin(dir) {
-  const target = binName();
-  const stack = [dir];
-  while (stack.length) {
-    const d = stack.pop();
-    for (const entry of fs.readdirSync(d, { withFileTypes: true })) {
-      const full = path.join(d, entry.name);
-      if (entry.isDirectory()) stack.push(full);
-      else if (entry.name === target) return full;
-    }
+function sha256File(file) {
+  const hash = crypto.createHash("sha256");
+  hash.update(fs.readFileSync(file));
+  return hash.digest("hex");
+}
+
+// Best-effort checksum check against `<asset>.sha256`. Non-fatal if the sidecar
+// is missing/unreadable; throws only on an actual hash mismatch.
+async function verifyChecksum(file, asset) {
+  const sidecarUrl = `https://github.com/${REPO}/releases/download/v${UDB_VERSION}/${asset}.sha256`;
+  const body = await httpsGetText(sidecarUrl);
+  if (!body) {
+    logErr(`checksum sidecar ${asset}.sha256 unavailable — skipping verification`);
+    return;
   }
-  return null;
+  // Accept either a bare hash or the `<hash>  <filename>` (sha256sum) layout.
+  const expected = (body.trim().split(/\s+/)[0] || "").toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(expected)) {
+    logErr(`checksum sidecar ${asset}.sha256 malformed — skipping verification`);
+    return;
+  }
+  const actual = sha256File(file).toLowerCase();
+  if (actual !== expected) {
+    throw new Error(`checksum mismatch for ${asset}: expected ${expected}, got ${actual}`);
+  }
 }
 
 async function ensureBinary() {
@@ -135,24 +167,30 @@ async function ensureBinary() {
   const cached = path.join(dir, binName());
   if (fs.existsSync(cached) && versionMatches(cached)) return cached;
 
+  if (process.env.UDB_NO_DOWNLOAD || process.env.UDB_SKIP_DOWNLOAD) {
+    throw new Error(`udb v${UDB_VERSION} not cached and downloads are disabled (UDB_NO_DOWNLOAD)`);
+  }
+
   fs.mkdirSync(dir, { recursive: true });
   const asset = assetName();
   const url = `https://github.com/${REPO}/releases/download/v${UDB_VERSION}/${asset}`;
-  const archive = path.join(dir, asset);
+  // The published asset is a RAW executable — download bytes straight to a temp
+  // path, verify, then atomically rename into place. No archive extraction.
+  const tmp = path.join(dir, `${binName()}.download`);
   logErr(`downloading ${asset} (udb v${UDB_VERSION}) …`);
-  await httpsGet(url, archive);
-  extract(archive, dir);
+  await httpsGet(url, tmp);
   try {
-    fs.unlinkSync(archive);
-  } catch {
-    /* best-effort */
+    await verifyChecksum(tmp, asset);
+  } catch (e) {
+    try {
+      fs.unlinkSync(tmp);
+    } catch {
+      /* best-effort cleanup */
+    }
+    throw e;
   }
-  const found = findExtractedBin(dir);
-  if (!found) throw new Error(`extracted archive did not contain '${binName()}'`);
-  if (found !== cached) {
-    fs.copyFileSync(found, cached);
-  }
-  if (process.platform !== "win32") fs.chmodSync(cached, 0o755);
+  if (process.platform !== "win32") fs.chmodSync(tmp, 0o755);
+  fs.renameSync(tmp, cached);
   return cached;
 }
 

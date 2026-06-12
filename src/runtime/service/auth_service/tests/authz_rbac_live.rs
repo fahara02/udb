@@ -13,7 +13,7 @@ async fn live_postgres_authz_role_policy_roundtrip() {
     let pool = live_pg_pool().await;
     migrate_native_auth_db(&pool).await;
     let authn = authn_service(pool.clone());
-    let authz = authz_service(pool.clone());
+    let authz = authz_service(pool.clone()).await;
     let suffix = Uuid::new_v4().simple().to_string();
 
     let created = authn

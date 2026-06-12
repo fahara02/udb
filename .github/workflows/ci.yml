@@ -18,7 +18,7 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
   RELEASE_BINARY_FEATURES: >-
-    postgres,mysql,sqlite,qdrant,s3,mongodb,neo4j,clickhouse,redis,elasticsearch,weaviate,pinecone,azureblob,gcs,otel,runtime-logging,http-client,oidc,webauthn
+    postgres,mysql,sqlite,qdrant,s3,mongodb-native,neo4j,clickhouse,redis,elasticsearch,weaviate,pinecone,azureblob,gcs,otel,runtime-logging,http-client,oidc,webauthn
 
 jobs:
   # ── Rust build + test + clippy across OSes ────────────────────────
@@ -694,6 +694,7 @@ jobs:
       UDB_MINIO_ENDPOINT: http://localhost:9000
       UDB_MINIO_ACCESS_KEY: minio
       UDB_MINIO_SECRET_KEY: minio123
+      UDB_KAFKA_BROKERS: localhost:59192
       UDB_GRPC_ADDR: 127.0.0.1:50051
       UDB_GRPC_TARGET: 127.0.0.1:50051
       UDB_AUTH_GRPC_ADDR: 127.0.0.1:50061
@@ -752,6 +753,45 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Build UDB broker
         run: cargo build --locked --bin udb --no-default-features --features "postgres,mongodb-native,s3,runtime-logging"
+      - name: Start Kafka
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run -d --name udb-sdk-live-kafka \
+            -p 59192:59192 \
+            -e KAFKA_NODE_ID=1 \
+            -e KAFKA_PROCESS_ROLES=broker,controller \
+            -e KAFKA_CONTROLLER_QUORUM_VOTERS=1@localhost:9093 \
+            -e KAFKA_LISTENERS=INTERNAL://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,EXTERNAL://0.0.0.0:59192 \
+            -e KAFKA_ADVERTISED_LISTENERS=INTERNAL://localhost:9092,EXTERNAL://localhost:59192 \
+            -e KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT \
+            -e KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER \
+            -e KAFKA_INTER_BROKER_LISTENER_NAME=INTERNAL \
+            -e KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1 \
+            -e KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1 \
+            -e KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1 \
+            -e KAFKA_AUTO_CREATE_TOPICS_ENABLE=true \
+            -e KAFKA_COMPRESSION_TYPE=lz4 \
+            apache/kafka:3.9.0
+          for attempt in {1..60}; do
+            if docker exec udb-sdk-live-kafka \
+              /opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1; then
+              for topic in udb.authn.user.registered.v1 udb.notification.sent.v1; do
+                docker exec udb-sdk-live-kafka \
+                  /opt/kafka/bin/kafka-topics.sh --create --if-not-exists \
+                  --bootstrap-server localhost:9092 \
+                  --topic "$topic" --partitions 1 --replication-factor 1
+              done
+              exit 0
+            fi
+            docker ps --filter name=udb-sdk-live-kafka --filter status=running --quiet | grep -q . || {
+              docker logs udb-sdk-live-kafka
+              exit 1
+            }
+            sleep 2
+          done
+          docker logs udb-sdk-live-kafka
+          exit 1
       - name: Create live-sdk MinIO bucket
         shell: bash
         run: |
@@ -803,6 +843,7 @@ jobs:
             kill "$(cat /tmp/udb-sdk-live.pid)" 2>/dev/null || true
           fi
           docker rm -f udb-sdk-live-minio 2>/dev/null || true
+          docker rm -f udb-sdk-live-kafka 2>/dev/null || true
 
   # ── Version consistency: every manifest + protocol constant matches ──
   # versions.json (the single source of truth). Fails the PR on drift so a

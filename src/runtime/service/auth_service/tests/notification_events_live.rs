@@ -46,7 +46,7 @@ async fn notification_event_outbox_to_cdc_to_kafka_end_to_end() {
     let authn = authn_service(pool.clone());
     let user = create_verified_user(&authn, "notify_evt", "CorrectHorse1!").await;
     seed_notification_subscriptions(&pool, &user.user_id, &tenant_id).await;
-    let svc = notification_service_with_outbox(pool.clone());
+    let svc = notification_service_with_outbox(pool.clone()).await;
 
     svc.upsert_template(Request::new(notif_pb::UpsertTemplateRequest {
         event_type: "invoice.created".to_string(),

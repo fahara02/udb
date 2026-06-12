@@ -83,7 +83,7 @@ async fn live_postgres_notification_service_crud_roundtrip() {
     let pool = live_pg_pool().await;
     migrate_native_auth_db(&pool).await;
     let authn = authn_service(pool.clone());
-    let svc = notification_service(pool.clone());
+    let svc = notification_service(pool.clone()).await;
 
     // Default tenant seed + a real user, then seed subscriptions for every channel.
     let tenant_id = seed_default_tenant(&pool).await;

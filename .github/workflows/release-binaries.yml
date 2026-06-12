@@ -33,7 +33,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   PORTABLE_FEATURES: >-
-    postgres,mysql,sqlite,qdrant,s3,mongodb,neo4j,clickhouse,redis,elasticsearch,weaviate,pinecone,azureblob,gcs,otel,runtime-logging,http-client,oidc,webauthn
+    postgres,mysql,sqlite,qdrant,s3,mongodb-native,neo4j,clickhouse,redis,elasticsearch,weaviate,pinecone,azureblob,gcs,otel,runtime-logging,http-client,oidc,webauthn
 
 permissions:
   contents: write

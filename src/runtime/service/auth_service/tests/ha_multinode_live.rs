@@ -132,8 +132,8 @@ async fn live_postgres_ha_authz_revision_invalidation() {
     migrate_native_auth_db(&pool).await;
 
     let authn = authn_service(pool.clone());
-    let node1 = authz_service(pool.clone());
-    let node2 = authz_service(pool.clone());
+    let node1 = authz_service(pool.clone()).await;
+    let node2 = authz_service(pool.clone()).await;
 
     let (user_id, role_code) =
         seed_authorized_principal(&authn, &node1, "ha-authz", "invoice", "data.update").await;
@@ -234,8 +234,8 @@ async fn live_postgres_ha_policy_bundle_revocation() {
     migrate_native_auth_db(&pool).await;
 
     let authn = authn_service(pool.clone());
-    let node1 = authz_service(pool.clone());
-    let node2 = authz_service(pool.clone());
+    let node1 = authz_service(pool.clone()).await;
+    let node2 = authz_service(pool.clone()).await;
 
     // A policy must exist so a revision row exists to bump.
     seed_authorized_principal(&authn, &node1, "ha-bundle", "report", "data.export").await;

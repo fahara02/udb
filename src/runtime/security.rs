@@ -621,7 +621,7 @@ pub struct LogSafeSecurityContext {
 use jsonwebtoken::jwk::JwkSet;
 use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct SecurityClaims {
     pub tenant_id: Option<String>,
     pub purpose: Option<String>,
@@ -632,8 +632,13 @@ pub struct SecurityClaims {
     pub scope: Option<String>,
     pub service_identity: Option<String>,
     pub project_id: Option<String>,
-    // Registered/UDB claims parsed for mapping. `exp`, `nbf`, `aud`, and `iss`
-    // are validated by `jsonwebtoken`'s `Validation` (not mapped here) — adding
+    /// Expiry (unix seconds). `jsonwebtoken` validates `exp` during decode; we ALSO
+    /// map it (a numeric claim — safe, unlike `aud`) so the data-plane validation
+    /// cache can refuse to serve a cached hit past the token's own expiry.
+    #[serde(default)]
+    pub exp: Option<i64>,
+    // Registered/UDB claims parsed for mapping. `nbf`, `aud`, and `iss` are
+    // validated by `jsonwebtoken`'s `Validation` (not mapped here) — adding
     // `aud` here as a String would break tokens whose `aud` is an array.
     #[serde(default)]
     pub sub: Option<String>,
@@ -1080,6 +1085,83 @@ pub fn validate_bearer_token(
         .map_err(|e| format!("invalid JWT token: {e}"))
 }
 
+// ── Data-plane token-validation cache ─────────────────────────────────────────
+// The data plane re-validates the SAME bearer on every request (e.g. a PHP-FPM
+// app reusing one admin/user token), so the broker was doing PEM-parse + RSA
+// signature verification — asymmetric crypto — on EVERY call. This short-TTL cache
+// turns the repeated case into a map lookup, which is the latency a high-volume
+// client (PHP especially) actually feels.
+//
+// SAFETY (this is the auth hot path, so the invariants are explicit):
+//   * Keyed by the FULL token string — never a hash — so no collision can swap one
+//     token's claims for another's.
+//   * A hit is served ONLY while BOTH the TTL window is open AND the token's own
+//     `exp` has not passed; a cached entry can never outlive the token.
+//   * The TTL (default 5s) bounds how long a *revoked* token could still be served
+//     under the optional hardened-revocation posture; `UDB_TOKEN_VALIDATION_CACHE_TTL_SECS=0`
+//     disables the cache entirely.
+//   * Fail-safe: a poisoned lock or any miss falls through to full validation.
+//   * `validate_bearer_token` itself stays UNCACHED — the AuthnService RPCs
+//     (Authenticate / ValidateToken / refresh) always perform a fresh verify.
+const TOKEN_CACHE_CAPACITY: usize = 4096;
+
+fn token_validation_cache_ttl() -> std::time::Duration {
+    static TTL: OnceLock<std::time::Duration> = OnceLock::new();
+    *TTL.get_or_init(|| {
+        let secs = std::env::var("UDB_TOKEN_VALIDATION_CACHE_TTL_SECS")
+            .ok()
+            .and_then(|v| v.trim().parse::<u64>().ok())
+            .unwrap_or(5);
+        std::time::Duration::from_secs(secs)
+    })
+}
+
+#[allow(clippy::type_complexity)]
+fn token_validation_cache()
+-> &'static Mutex<HashMap<String, (SecurityClaims, Option<i64>, std::time::Instant)>> {
+    static CACHE: OnceLock<Mutex<HashMap<String, (SecurityClaims, Option<i64>, std::time::Instant)>>> =
+        OnceLock::new();
+    CACHE.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+/// Data-plane bearer validation with a short-TTL result cache (see the notes
+/// above). Semantically identical to [`validate_bearer_token`] on a miss; used by
+/// [`security_from_request`] so the high-volume data plane does not pay RSA
+/// verification on every repeat of the same token.
+pub fn validate_bearer_token_cached(
+    config: &SecurityConfig,
+    token: &str,
+) -> Result<SecurityClaims, String> {
+    let ttl = token_validation_cache_ttl();
+    if ttl.is_zero() {
+        return validate_bearer_token(config, token);
+    }
+    let now = std::time::Instant::now();
+    let now_unix = unix_now() as i64;
+    if let Ok(cache) = token_validation_cache().lock() {
+        if let Some((claims, exp, cached_at)) = cache.get(token) {
+            let fresh = now.duration_since(*cached_at) < ttl;
+            let unexpired = exp.map(|e| now_unix < e).unwrap_or(true);
+            if fresh && unexpired {
+                return Ok(claims.clone());
+            }
+        }
+    }
+    let claims = validate_bearer_token(config, token)?;
+    let exp = claims.exp;
+    if let Ok(mut cache) = token_validation_cache().lock() {
+        // Bounded memory: drop stale entries first, then hard-clear if still full.
+        if cache.len() >= TOKEN_CACHE_CAPACITY {
+            cache.retain(|_, (_, _, at)| now.duration_since(*at) < ttl);
+            if cache.len() >= TOKEN_CACHE_CAPACITY {
+                cache.clear();
+            }
+        }
+        cache.insert(token.to_string(), (claims.clone(), exp, now));
+    }
+    Ok(claims)
+}
+
 pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext, Status> {
     let config = SecurityConfig::current();
     let metadata = request.metadata();
@@ -1128,10 +1210,12 @@ pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext,
             Status::unauthenticated("missing or invalid authorization header (JWT required)")
         })?;
 
-        // Single JWT validation path: reuse `validate_bearer_token` (also used by
-        // the AuthnService `Authenticate` RPC) instead of duplicating the
-        // key-parse + decode here.
-        let claims = validate_bearer_token(&config, token).map_err(Status::unauthenticated)?;
+        // Single JWT validation path: reuse the CACHED validator (the data plane
+        // re-checks the same token on every request; the AuthnService RPCs still
+        // call the uncached `validate_bearer_token`). Semantically identical to a
+        // fresh verify on a cache miss.
+        let claims =
+            validate_bearer_token_cached(&config, token).map_err(Status::unauthenticated)?;
 
         // `sub` is the canonical principal id; fall back to it when the
         // x-user-id header is absent.

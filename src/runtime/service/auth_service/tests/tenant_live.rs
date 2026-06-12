@@ -53,7 +53,7 @@ async fn live_postgres_tenant_service_crud_roundtrip() {
     let _guard = live_auth_db_lock().lock().await;
     let pool = live_pg_pool().await;
     migrate_native_auth_db(&pool).await;
-    let svc = tenant_service(pool.clone());
+    let svc = tenant_service(pool.clone()).await;
 
     // Default tenant seed (create_tenant under the hood).
     let tenant_id = seed_default_tenant(&pool).await;
