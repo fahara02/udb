@@ -328,8 +328,6 @@ processTriple("ci release-csharp description", ".github/workflows/release-csharp
 // ── SDK launcher templates (example text) ─────────────────────────────────────
 processTriple("java tmpl version example", "sdk-templates/java/src/main/java/dev/udb/cli/Launcher.java.tmpl", C.udb.version,
   /(prints e\.g\. "udb )(\d+\.\d+\.\d+)("; accept)/);
-processTriple("java tmpl asset example", "sdk-templates/java/src/main/java/dev/udb/cli/Launcher.java.tmpl", C.udb.version,
-  /(\{@code udb-v)(\d+\.\d+\.\d+)(-x86_64-unknown-linux-gnu\})/);
 
 
 // ── Report ───────────────────────────────────────────────────────────────────

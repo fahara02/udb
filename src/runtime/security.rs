@@ -1119,8 +1119,9 @@ fn token_validation_cache_ttl() -> std::time::Duration {
 #[allow(clippy::type_complexity)]
 fn token_validation_cache()
 -> &'static Mutex<HashMap<String, (SecurityClaims, Option<i64>, std::time::Instant)>> {
-    static CACHE: OnceLock<Mutex<HashMap<String, (SecurityClaims, Option<i64>, std::time::Instant)>>> =
-        OnceLock::new();
+    static CACHE: OnceLock<
+        Mutex<HashMap<String, (SecurityClaims, Option<i64>, std::time::Instant)>>,
+    > = OnceLock::new();
     CACHE.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
