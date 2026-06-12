@@ -28,7 +28,7 @@ public final class IdentityProviderProto extends com.google.protobuf.GeneratedFi
   }
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_idp_entity_v1_IdentityProvider_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_idp_entity_v1_IdentityProvider_fieldAccessorTable;
 
@@ -105,7 +105,7 @@ public final class IdentityProviderProto extends com.google.protobuf.GeneratedFi
       "url\022\014VARCHAR(512)Z\031SAML IdP SSO endpoint" +
       " URLR\nsamlSsoUrl\022z\n\006health\030\024 \001(\0162&.udb.c" +
       "ore.idp.entity.v1.ProviderHealthB:\202\267\0306\n\006" +
-      "health\022\013VARCHAR(24)\030\001:\035\'PROVIDER_HEALTH_" +
+      "health\022\013VARCHAR(27)\030\001:\035\'PROVIDER_HEALTH_" +
       "UNSPECIFIED\'R\006health\022\234\001\n\024last_jwks_refre" +
       "sh_at\030\025 \001(\0132\032.google.protobuf.TimestampB" +
       "O\202\267\030K\n\024last_jwks_refresh_at\022\013TIMESTAMPTZ" +

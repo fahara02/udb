@@ -99,4 +99,3 @@ class MuteTrackResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -332,4 +332,3 @@ class StorageFieldOptions extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -256,4 +256,3 @@ class NativeAccessGrantIssuedEvent extends \Google\Protobuf\Internal\Message
     }
 
 }
-

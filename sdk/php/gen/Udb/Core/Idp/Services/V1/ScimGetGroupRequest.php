@@ -110,4 +110,3 @@ class ScimGetGroupRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

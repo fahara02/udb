@@ -13,7 +13,7 @@ public interface RecordBatchV2OrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.ColumnBatch columns = 1 [json_name = "columns"];</code>
    */
-  java.util.List<com.udb.entity.v1.ColumnBatch> 
+  java.util.List<com.udb.entity.v1.ColumnBatch>
       getColumnsList();
   /**
    * <code>repeated .udb.entity.v1.ColumnBatch columns = 1 [json_name = "columns"];</code>
@@ -26,7 +26,7 @@ public interface RecordBatchV2OrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.ColumnBatch columns = 1 [json_name = "columns"];</code>
    */
-  java.util.List<? extends com.udb.entity.v1.ColumnBatchOrBuilder> 
+  java.util.List<? extends com.udb.entity.v1.ColumnBatchOrBuilder>
       getColumnsOrBuilderList();
   /**
    * <code>repeated .udb.entity.v1.ColumnBatch columns = 1 [json_name = "columns"];</code>

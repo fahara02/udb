@@ -93,7 +93,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       tenantId_ = s;
@@ -109,7 +109,7 @@ private static final long serialVersionUID = 0L;
       getTenantIdBytes() {
     java.lang.Object ref = tenantId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       tenantId_ = b;
@@ -132,7 +132,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       projectId_ = s;
@@ -148,7 +148,7 @@ private static final long serialVersionUID = 0L;
       getProjectIdBytes() {
     java.lang.Object ref = projectId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       projectId_ = b;
@@ -171,7 +171,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       policySetName_ = s;
@@ -187,7 +187,7 @@ private static final long serialVersionUID = 0L;
       getPolicySetNameBytes() {
     java.lang.Object ref = policySetName_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       policySetName_ = b;
@@ -210,7 +210,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       title_ = s;
@@ -226,7 +226,7 @@ private static final long serialVersionUID = 0L;
       getTitleBytes() {
     java.lang.Object ref = title_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       title_ = b;
@@ -249,7 +249,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       changeReason_ = s;
@@ -265,7 +265,7 @@ private static final long serialVersionUID = 0L;
       getChangeReasonBytes() {
     java.lang.Object ref = changeReason_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       changeReason_ = b;
@@ -968,7 +968,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.authz.services.v1.GovernanceActor actor = 1 [json_name = "actor"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.authz.services.v1.GovernanceActor, com.udb.core.authz.services.v1.GovernanceActor.Builder, com.udb.core.authz.services.v1.GovernanceActorOrBuilder> 
+        com.udb.core.authz.services.v1.GovernanceActor, com.udb.core.authz.services.v1.GovernanceActor.Builder, com.udb.core.authz.services.v1.GovernanceActorOrBuilder>
         internalGetActorFieldBuilder() {
       if (actorBuilder_ == null) {
         actorBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1006,7 +1006,7 @@ private static final long serialVersionUID = 0L;
         getTenantIdBytes() {
       java.lang.Object ref = tenantId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         tenantId_ = b;
@@ -1078,7 +1078,7 @@ private static final long serialVersionUID = 0L;
         getProjectIdBytes() {
       java.lang.Object ref = projectId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         projectId_ = b;
@@ -1150,7 +1150,7 @@ private static final long serialVersionUID = 0L;
         getPolicySetNameBytes() {
       java.lang.Object ref = policySetName_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         policySetName_ = b;
@@ -1222,7 +1222,7 @@ private static final long serialVersionUID = 0L;
         getTitleBytes() {
       java.lang.Object ref = title_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         title_ = b;
@@ -1294,7 +1294,7 @@ private static final long serialVersionUID = 0L;
         getChangeReasonBytes() {
       java.lang.Object ref = changeReason_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         changeReason_ = b;
@@ -1517,7 +1517,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.authz.services.v1.PolicyDocument document = 8 [json_name = "document"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.authz.services.v1.PolicyDocument, com.udb.core.authz.services.v1.PolicyDocument.Builder, com.udb.core.authz.services.v1.PolicyDocumentOrBuilder> 
+        com.udb.core.authz.services.v1.PolicyDocument, com.udb.core.authz.services.v1.PolicyDocument.Builder, com.udb.core.authz.services.v1.PolicyDocumentOrBuilder>
         internalGetDocumentFieldBuilder() {
       if (documentBuilder_ == null) {
         documentBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1612,4 +1612,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

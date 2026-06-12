@@ -124,7 +124,7 @@ public enum AuditMode
   }
   public static com.google.protobuf.Descriptors.EnumDescriptor
       getDescriptor() {
-    return com.udb.core.common.v1.SecurityProto.getDescriptor().getEnumType(2);
+    return com.udb.core.common.v1.SecurityProto.getDescriptor().getEnumType(3);
   }
 
   private static final AuditMode[] VALUES = values();
@@ -149,4 +149,3 @@ public enum AuditMode
 
   // @@protoc_insertion_point(enum_scope:udb.core.common.v1.AuditMode)
 }
-

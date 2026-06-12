@@ -62,4 +62,3 @@ class ScimDeleteUserResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

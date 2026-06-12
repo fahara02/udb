@@ -63,4 +63,3 @@ class BatchCheckPermissionsResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -13,7 +13,7 @@ public interface GetSlaComplianceResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.analytics.services.v1.SlaComplianceEntry entries = 1 [json_name = "entries"];</code>
    */
-  java.util.List<com.udb.core.analytics.services.v1.SlaComplianceEntry> 
+  java.util.List<com.udb.core.analytics.services.v1.SlaComplianceEntry>
       getEntriesList();
   /**
    * <code>repeated .udb.core.analytics.services.v1.SlaComplianceEntry entries = 1 [json_name = "entries"];</code>
@@ -26,7 +26,7 @@ public interface GetSlaComplianceResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.analytics.services.v1.SlaComplianceEntry entries = 1 [json_name = "entries"];</code>
    */
-  java.util.List<? extends com.udb.core.analytics.services.v1.SlaComplianceEntryOrBuilder> 
+  java.util.List<? extends com.udb.core.analytics.services.v1.SlaComplianceEntryOrBuilder>
       getEntriesOrBuilderList();
   /**
    * <code>repeated .udb.core.analytics.services.v1.SlaComplianceEntry entries = 1 [json_name = "entries"];</code>

@@ -67,7 +67,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       addressLine1_ = s;
@@ -83,7 +83,7 @@ private static final long serialVersionUID = 0L;
       getAddressLine1Bytes() {
     java.lang.Object ref = addressLine1_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       addressLine1_ = b;
@@ -106,7 +106,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       addressLine2_ = s;
@@ -122,7 +122,7 @@ private static final long serialVersionUID = 0L;
       getAddressLine2Bytes() {
     java.lang.Object ref = addressLine2_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       addressLine2_ = b;
@@ -145,7 +145,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       locality_ = s;
@@ -161,7 +161,7 @@ private static final long serialVersionUID = 0L;
       getLocalityBytes() {
     java.lang.Object ref = locality_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       locality_ = b;
@@ -184,7 +184,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       region_ = s;
@@ -200,7 +200,7 @@ private static final long serialVersionUID = 0L;
       getRegionBytes() {
     java.lang.Object ref = region_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       region_ = b;
@@ -223,7 +223,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       postalCode_ = s;
@@ -239,7 +239,7 @@ private static final long serialVersionUID = 0L;
       getPostalCodeBytes() {
     java.lang.Object ref = postalCode_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       postalCode_ = b;
@@ -262,7 +262,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       countryCode_ = s;
@@ -278,7 +278,7 @@ private static final long serialVersionUID = 0L;
       getCountryCodeBytes() {
     java.lang.Object ref = countryCode_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       countryCode_ = b;
@@ -803,7 +803,7 @@ private static final long serialVersionUID = 0L;
         getAddressLine1Bytes() {
       java.lang.Object ref = addressLine1_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         addressLine1_ = b;
@@ -875,7 +875,7 @@ private static final long serialVersionUID = 0L;
         getAddressLine2Bytes() {
       java.lang.Object ref = addressLine2_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         addressLine2_ = b;
@@ -947,7 +947,7 @@ private static final long serialVersionUID = 0L;
         getLocalityBytes() {
       java.lang.Object ref = locality_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         locality_ = b;
@@ -1019,7 +1019,7 @@ private static final long serialVersionUID = 0L;
         getRegionBytes() {
       java.lang.Object ref = region_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         region_ = b;
@@ -1091,7 +1091,7 @@ private static final long serialVersionUID = 0L;
         getPostalCodeBytes() {
       java.lang.Object ref = postalCode_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         postalCode_ = b;
@@ -1163,7 +1163,7 @@ private static final long serialVersionUID = 0L;
         getCountryCodeBytes() {
       java.lang.Object ref = countryCode_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         countryCode_ = b;
@@ -1324,4 +1324,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

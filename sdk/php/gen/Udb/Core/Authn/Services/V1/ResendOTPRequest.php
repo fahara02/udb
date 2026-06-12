@@ -90,4 +90,3 @@ class ResendOTPRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -502,7 +502,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.notification.entity.v1.NotificationPreference preference = 1 [json_name = "preference"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.notification.entity.v1.NotificationPreference, com.udb.core.notification.entity.v1.NotificationPreference.Builder, com.udb.core.notification.entity.v1.NotificationPreferenceOrBuilder> 
+        com.udb.core.notification.entity.v1.NotificationPreference, com.udb.core.notification.entity.v1.NotificationPreference.Builder, com.udb.core.notification.entity.v1.NotificationPreferenceOrBuilder>
         internalGetPreferenceFieldBuilder() {
       if (preferenceBuilder_ == null) {
         preferenceBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -565,4 +565,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

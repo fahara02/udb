@@ -13,7 +13,7 @@ public interface ProjectListResponseOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.ProjectRecord projects = 1 [json_name = "projects"];</code>
    */
-  java.util.List<com.udb.entity.v1.ProjectRecord> 
+  java.util.List<com.udb.entity.v1.ProjectRecord>
       getProjectsList();
   /**
    * <code>repeated .udb.entity.v1.ProjectRecord projects = 1 [json_name = "projects"];</code>
@@ -26,7 +26,7 @@ public interface ProjectListResponseOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.ProjectRecord projects = 1 [json_name = "projects"];</code>
    */
-  java.util.List<? extends com.udb.entity.v1.ProjectRecordOrBuilder> 
+  java.util.List<? extends com.udb.entity.v1.ProjectRecordOrBuilder>
       getProjectsOrBuilderList();
   /**
    * <code>repeated .udb.entity.v1.ProjectRecord projects = 1 [json_name = "projects"];</code>

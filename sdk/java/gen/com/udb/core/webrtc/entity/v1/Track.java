@@ -79,7 +79,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       trackId_ = s;
@@ -99,7 +99,7 @@ private static final long serialVersionUID = 0L;
       getTrackIdBytes() {
     java.lang.Object ref = trackId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       trackId_ = b;
@@ -126,7 +126,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       roomId_ = s;
@@ -146,7 +146,7 @@ private static final long serialVersionUID = 0L;
       getRoomIdBytes() {
     java.lang.Object ref = roomId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       roomId_ = b;
@@ -173,7 +173,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       peerId_ = s;
@@ -193,7 +193,7 @@ private static final long serialVersionUID = 0L;
       getPeerIdBytes() {
     java.lang.Object ref = peerId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       peerId_ = b;
@@ -220,7 +220,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       tenantId_ = s;
@@ -240,7 +240,7 @@ private static final long serialVersionUID = 0L;
       getTenantIdBytes() {
     java.lang.Object ref = tenantId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       tenantId_ = b;
@@ -293,7 +293,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       label_ = s;
@@ -313,7 +313,7 @@ private static final long serialVersionUID = 0L;
       getLabelBytes() {
     java.lang.Object ref = label_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       label_ = b;
@@ -366,7 +366,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       settings_ = s;
@@ -386,7 +386,7 @@ private static final long serialVersionUID = 0L;
       getSettingsBytes() {
     java.lang.Object ref = settings_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       settings_ = b;
@@ -413,7 +413,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       metadata_ = s;
@@ -433,7 +433,7 @@ private static final long serialVersionUID = 0L;
       getMetadataBytes() {
     java.lang.Object ref = metadata_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       metadata_ = b;
@@ -1049,7 +1049,7 @@ private static final long serialVersionUID = 0L;
         getTrackIdBytes() {
       java.lang.Object ref = trackId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         trackId_ = b;
@@ -1141,7 +1141,7 @@ private static final long serialVersionUID = 0L;
         getRoomIdBytes() {
       java.lang.Object ref = roomId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         roomId_ = b;
@@ -1233,7 +1233,7 @@ private static final long serialVersionUID = 0L;
         getPeerIdBytes() {
       java.lang.Object ref = peerId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         peerId_ = b;
@@ -1325,7 +1325,7 @@ private static final long serialVersionUID = 0L;
         getTenantIdBytes() {
       java.lang.Object ref = tenantId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         tenantId_ = b;
@@ -1489,7 +1489,7 @@ private static final long serialVersionUID = 0L;
         getLabelBytes() {
       java.lang.Object ref = label_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         label_ = b;
@@ -1653,7 +1653,7 @@ private static final long serialVersionUID = 0L;
         getSettingsBytes() {
       java.lang.Object ref = settings_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         settings_ = b;
@@ -1745,7 +1745,7 @@ private static final long serialVersionUID = 0L;
         getMetadataBytes() {
       java.lang.Object ref = metadata_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         metadata_ = b;
@@ -1948,7 +1948,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.AuditInfo audit_info = 10 [json_name = "auditInfo", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.AuditInfo, com.udb.core.common.v1.AuditInfo.Builder, com.udb.core.common.v1.AuditInfoOrBuilder> 
+        com.udb.core.common.v1.AuditInfo, com.udb.core.common.v1.AuditInfo.Builder, com.udb.core.common.v1.AuditInfoOrBuilder>
         internalGetAuditInfoFieldBuilder() {
       if (auditInfoBuilder_ == null) {
         auditInfoBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -2011,4 +2011,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

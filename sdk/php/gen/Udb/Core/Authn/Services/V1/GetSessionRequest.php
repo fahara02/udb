@@ -56,4 +56,3 @@ class GetSessionRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

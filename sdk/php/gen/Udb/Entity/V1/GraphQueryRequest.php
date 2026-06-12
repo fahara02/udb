@@ -244,4 +244,3 @@ class GraphQueryRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

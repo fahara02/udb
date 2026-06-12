@@ -13,7 +13,7 @@ public interface ListTenantsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.tenant.entity.v1.Tenant tenants = 1 [json_name = "tenants"];</code>
    */
-  java.util.List<com.udb.core.tenant.entity.v1.Tenant> 
+  java.util.List<com.udb.core.tenant.entity.v1.Tenant>
       getTenantsList();
   /**
    * <code>repeated .udb.core.tenant.entity.v1.Tenant tenants = 1 [json_name = "tenants"];</code>
@@ -26,7 +26,7 @@ public interface ListTenantsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.tenant.entity.v1.Tenant tenants = 1 [json_name = "tenants"];</code>
    */
-  java.util.List<? extends com.udb.core.tenant.entity.v1.TenantOrBuilder> 
+  java.util.List<? extends com.udb.core.tenant.entity.v1.TenantOrBuilder>
       getTenantsOrBuilderList();
   /**
    * <code>repeated .udb.core.tenant.entity.v1.Tenant tenants = 1 [json_name = "tenants"];</code>

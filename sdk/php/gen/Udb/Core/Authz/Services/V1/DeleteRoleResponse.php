@@ -55,4 +55,3 @@ class DeleteRoleResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

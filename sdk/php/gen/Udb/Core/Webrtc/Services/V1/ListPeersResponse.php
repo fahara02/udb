@@ -99,4 +99,3 @@ class ListPeersResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -80,7 +80,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       mutationId_ = s;
@@ -96,7 +96,7 @@ private static final long serialVersionUID = 0L;
       getMutationIdBytes() {
     java.lang.Object ref = mutationId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       mutationId_ = b;
@@ -119,7 +119,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       resourceUri_ = s;
@@ -135,7 +135,7 @@ private static final long serialVersionUID = 0L;
       getResourceUriBytes() {
     java.lang.Object ref = resourceUri_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       resourceUri_ = b;
@@ -158,7 +158,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       checksumSha256_ = s;
@@ -174,7 +174,7 @@ private static final long serialVersionUID = 0L;
       getChecksumSha256Bytes() {
     java.lang.Object ref = checksumSha256_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       checksumSha256_ = b;
@@ -234,7 +234,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       writeReceiptJson_ = s;
@@ -254,7 +254,7 @@ private static final long serialVersionUID = 0L;
       getWriteReceiptJsonBytes() {
     java.lang.Object ref = writeReceiptJson_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       writeReceiptJson_ = b;
@@ -277,7 +277,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       resourceVersion_ = s;
@@ -293,7 +293,7 @@ private static final long serialVersionUID = 0L;
       getResourceVersionBytes() {
     java.lang.Object ref = resourceVersion_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       resourceVersion_ = b;
@@ -309,7 +309,7 @@ private static final long serialVersionUID = 0L;
         java.lang.String, java.lang.String> defaultEntry =
             com.google.protobuf.MapEntry
             .<java.lang.String, java.lang.String>newDefaultInstance(
-                com.udb.entity.v1.MutationProto.internal_static_udb_entity_v1_MutationResponse_MetadataEntry_descriptor, 
+                com.udb.entity.v1.MutationProto.internal_static_udb_entity_v1_MutationResponse_MetadataEntry_descriptor,
                 com.google.protobuf.WireFormat.FieldType.STRING,
                 "",
                 com.google.protobuf.WireFormat.FieldType.STRING,
@@ -396,7 +396,7 @@ java.lang.String defaultValue) {
    * <code>repeated .udb.entity.v1.OperationWarning warnings = 10 [json_name = "warnings"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.entity.v1.OperationWarningOrBuilder> 
+  public java.util.List<? extends com.udb.entity.v1.OperationWarningOrBuilder>
       getWarningsOrBuilderList() {
     return warnings_;
   }
@@ -913,7 +913,7 @@ java.lang.String defaultValue) {
             warningsBuilder_ = null;
             warnings_ = other.warnings_;
             bitField0_ = (bitField0_ & ~0x00000200);
-            warningsBuilder_ = 
+            warningsBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetWarningsFieldBuilder() : null;
           } else {
@@ -1051,7 +1051,7 @@ java.lang.String defaultValue) {
         getMutationIdBytes() {
       java.lang.Object ref = mutationId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         mutationId_ = b;
@@ -1123,7 +1123,7 @@ java.lang.String defaultValue) {
         getResourceUriBytes() {
       java.lang.Object ref = resourceUri_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         resourceUri_ = b;
@@ -1195,7 +1195,7 @@ java.lang.String defaultValue) {
         getChecksumSha256Bytes() {
       java.lang.Object ref = checksumSha256_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         checksumSha256_ = b;
@@ -1371,7 +1371,7 @@ java.lang.String defaultValue) {
         getWriteReceiptJsonBytes() {
       java.lang.Object ref = writeReceiptJson_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         writeReceiptJson_ = b;
@@ -1455,7 +1455,7 @@ java.lang.String defaultValue) {
         getResourceVersionBytes() {
       java.lang.Object ref = resourceVersion_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         resourceVersion_ = b;
@@ -1824,7 +1824,7 @@ java.lang.String defaultValue) {
     /**
      * <code>repeated .udb.entity.v1.OperationWarning warnings = 10 [json_name = "warnings"];</code>
      */
-    public java.util.List<? extends com.udb.entity.v1.OperationWarningOrBuilder> 
+    public java.util.List<? extends com.udb.entity.v1.OperationWarningOrBuilder>
          getWarningsOrBuilderList() {
       if (warningsBuilder_ != null) {
         return warningsBuilder_.getMessageOrBuilderList();
@@ -1850,12 +1850,12 @@ java.lang.String defaultValue) {
     /**
      * <code>repeated .udb.entity.v1.OperationWarning warnings = 10 [json_name = "warnings"];</code>
      */
-    public java.util.List<com.udb.entity.v1.OperationWarning.Builder> 
+    public java.util.List<com.udb.entity.v1.OperationWarning.Builder>
          getWarningsBuilderList() {
       return internalGetWarningsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.entity.v1.OperationWarning, com.udb.entity.v1.OperationWarning.Builder, com.udb.entity.v1.OperationWarningOrBuilder> 
+        com.udb.entity.v1.OperationWarning, com.udb.entity.v1.OperationWarning.Builder, com.udb.entity.v1.OperationWarningOrBuilder>
         internalGetWarningsFieldBuilder() {
       if (warningsBuilder_ == null) {
         warningsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -1919,4 +1919,3 @@ java.lang.String defaultValue) {
   }
 
 }
-

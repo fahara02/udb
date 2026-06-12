@@ -23,4 +23,3 @@ class Blob
         static::$is_initialized = true;
     }
 }
-

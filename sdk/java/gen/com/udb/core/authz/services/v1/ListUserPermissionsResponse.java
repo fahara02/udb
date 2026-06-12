@@ -63,7 +63,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.authz.services.v1.EffectivePermission permissions = 1 [json_name = "permissions"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.authz.services.v1.EffectivePermissionOrBuilder> 
+  public java.util.List<? extends com.udb.core.authz.services.v1.EffectivePermissionOrBuilder>
       getPermissionsOrBuilderList() {
     return permissions_;
   }
@@ -377,7 +377,7 @@ private static final long serialVersionUID = 0L;
             permissionsBuilder_ = null;
             permissions_ = other.permissions_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            permissionsBuilder_ = 
+            permissionsBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetPermissionsFieldBuilder() : null;
           } else {
@@ -636,7 +636,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.authz.services.v1.EffectivePermission permissions = 1 [json_name = "permissions"];</code>
      */
-    public java.util.List<? extends com.udb.core.authz.services.v1.EffectivePermissionOrBuilder> 
+    public java.util.List<? extends com.udb.core.authz.services.v1.EffectivePermissionOrBuilder>
          getPermissionsOrBuilderList() {
       if (permissionsBuilder_ != null) {
         return permissionsBuilder_.getMessageOrBuilderList();
@@ -662,12 +662,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.authz.services.v1.EffectivePermission permissions = 1 [json_name = "permissions"];</code>
      */
-    public java.util.List<com.udb.core.authz.services.v1.EffectivePermission.Builder> 
+    public java.util.List<com.udb.core.authz.services.v1.EffectivePermission.Builder>
          getPermissionsBuilderList() {
       return internalGetPermissionsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.authz.services.v1.EffectivePermission, com.udb.core.authz.services.v1.EffectivePermission.Builder, com.udb.core.authz.services.v1.EffectivePermissionOrBuilder> 
+        com.udb.core.authz.services.v1.EffectivePermission, com.udb.core.authz.services.v1.EffectivePermission.Builder, com.udb.core.authz.services.v1.EffectivePermissionOrBuilder>
         internalGetPermissionsFieldBuilder() {
       if (permissionsBuilder_ == null) {
         permissionsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -731,4 +731,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

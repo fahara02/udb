@@ -26,4 +26,3 @@ class MfaChallenge
         static::$is_initialized = true;
     }
 }
-

@@ -150,4 +150,3 @@ class StartSamlLoginResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

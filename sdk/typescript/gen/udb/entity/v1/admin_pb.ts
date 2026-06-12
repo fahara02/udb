@@ -3069,4 +3069,3 @@ export type AdminSummaryResponse = Message<"udb.entity.v1.AdminSummaryResponse">
  */
 export const AdminSummaryResponseSchema: GenMessage<AdminSummaryResponse> = /*@__PURE__*/
   messageDesc(file_udb_entity_v1_admin, 71);
-

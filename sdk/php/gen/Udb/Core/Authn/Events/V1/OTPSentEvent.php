@@ -283,4 +283,3 @@ class OTPSentEvent extends \Google\Protobuf\Internal\Message
     }
 
 }
-

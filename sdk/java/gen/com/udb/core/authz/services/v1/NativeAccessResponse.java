@@ -566,7 +566,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.authz.services.v1.Decision decision = 1 [json_name = "decision"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.authz.services.v1.Decision, com.udb.core.authz.services.v1.Decision.Builder, com.udb.core.authz.services.v1.DecisionOrBuilder> 
+        com.udb.core.authz.services.v1.Decision, com.udb.core.authz.services.v1.Decision.Builder, com.udb.core.authz.services.v1.DecisionOrBuilder>
         internalGetDecisionFieldBuilder() {
       if (decisionBuilder_ == null) {
         decisionBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -687,7 +687,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.authz.services.v1.NativeAccessGrant grant = 2 [json_name = "grant"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.authz.services.v1.NativeAccessGrant, com.udb.core.authz.services.v1.NativeAccessGrant.Builder, com.udb.core.authz.services.v1.NativeAccessGrantOrBuilder> 
+        com.udb.core.authz.services.v1.NativeAccessGrant, com.udb.core.authz.services.v1.NativeAccessGrant.Builder, com.udb.core.authz.services.v1.NativeAccessGrantOrBuilder>
         internalGetGrantFieldBuilder() {
       if (grantBuilder_ == null) {
         grantBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -750,4 +750,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

@@ -68,7 +68,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       projectId_ = s;
@@ -84,7 +84,7 @@ private static final long serialVersionUID = 0L;
       getProjectIdBytes() {
     java.lang.Object ref = projectId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       projectId_ = b;
@@ -107,7 +107,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       messageType_ = s;
@@ -123,7 +123,7 @@ private static final long serialVersionUID = 0L;
       getMessageTypeBytes() {
     java.lang.Object ref = messageType_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       messageType_ = b;
@@ -146,7 +146,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       scanMode_ = s;
@@ -162,7 +162,7 @@ private static final long serialVersionUID = 0L;
       getScanModeBytes() {
     java.lang.Object ref = scanMode_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       scanMode_ = b;
@@ -197,7 +197,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.entity.v1.ProjectionDriftTargetReport reports = 5 [json_name = "reports"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.entity.v1.ProjectionDriftTargetReportOrBuilder> 
+  public java.util.List<? extends com.udb.entity.v1.ProjectionDriftTargetReportOrBuilder>
       getReportsOrBuilderList() {
     return reports_;
   }
@@ -672,7 +672,7 @@ private static final long serialVersionUID = 0L;
             reportsBuilder_ = null;
             reports_ = other.reports_;
             bitField0_ = (bitField0_ & ~0x00000010);
-            reportsBuilder_ = 
+            reportsBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetReportsFieldBuilder() : null;
           } else {
@@ -804,7 +804,7 @@ private static final long serialVersionUID = 0L;
         getProjectIdBytes() {
       java.lang.Object ref = projectId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         projectId_ = b;
@@ -876,7 +876,7 @@ private static final long serialVersionUID = 0L;
         getMessageTypeBytes() {
       java.lang.Object ref = messageType_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         messageType_ = b;
@@ -948,7 +948,7 @@ private static final long serialVersionUID = 0L;
         getScanModeBytes() {
       java.lang.Object ref = scanMode_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         scanMode_ = b;
@@ -1222,7 +1222,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.entity.v1.ProjectionDriftTargetReport reports = 5 [json_name = "reports"];</code>
      */
-    public java.util.List<? extends com.udb.entity.v1.ProjectionDriftTargetReportOrBuilder> 
+    public java.util.List<? extends com.udb.entity.v1.ProjectionDriftTargetReportOrBuilder>
          getReportsOrBuilderList() {
       if (reportsBuilder_ != null) {
         return reportsBuilder_.getMessageOrBuilderList();
@@ -1248,12 +1248,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.entity.v1.ProjectionDriftTargetReport reports = 5 [json_name = "reports"];</code>
      */
-    public java.util.List<com.udb.entity.v1.ProjectionDriftTargetReport.Builder> 
+    public java.util.List<com.udb.entity.v1.ProjectionDriftTargetReport.Builder>
          getReportsBuilderList() {
       return internalGetReportsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.entity.v1.ProjectionDriftTargetReport, com.udb.entity.v1.ProjectionDriftTargetReport.Builder, com.udb.entity.v1.ProjectionDriftTargetReportOrBuilder> 
+        com.udb.entity.v1.ProjectionDriftTargetReport, com.udb.entity.v1.ProjectionDriftTargetReport.Builder, com.udb.entity.v1.ProjectionDriftTargetReportOrBuilder>
         internalGetReportsFieldBuilder() {
       if (reportsBuilder_ == null) {
         reportsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -1460,4 +1460,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

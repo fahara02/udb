@@ -39,179 +39,182 @@ public final class IdentityProviderServiceProto extends com.google.protobuf.Gene
       "ider_service.proto\022\030udb.core.idp.service" +
       "s.v1\032\034google/api/annotations.proto\032#udb/" +
       "core/idp/services/v1/core.proto\032!udb/cor" +
-      "e/common/v1/security.proto2\2763\n\027IdentityP" +
-      "roviderService\022\315\001\n\016CreateProvider\022/.udb." +
+      "e/common/v1/security.proto2\2524\n\027IdentityP" +
+      "roviderService\022\321\001\n\016CreateProvider\022/.udb." +
       "core.idp.services.v1.CreateProviderReque" +
       "st\0320.udb.core.idp.services.v1.CreateProv" +
-      "iderResponse\"X\312\363\0308\010\002\032\027udb:idp:create-pro" +
-      "vider \001J\002\001\002j\022idp.CreateProvider\220\001\001\202\323\344\223\002\026" +
-      "\"\021/v1/idp/providers:\001*\022\333\001\n\016UpdateProvide" +
-      "r\022/.udb.core.idp.services.v1.UpdateProvi" +
-      "derRequest\0320.udb.core.idp.services.v1.Up" +
-      "dateProviderResponse\"f\312\363\0308\010\002\032\027udb:idp:up" +
-      "date-provider \001J\002\001\002j\022idp.UpdateProvider\220" +
-      "\001\001\202\323\344\223\002$2\037/v1/idp/providers/{provider_id" +
-      "}:\001*\022\350\001\n\017DisableProvider\0220.udb.core.idp." +
-      "services.v1.DisableProviderRequest\0321.udb" +
-      ".core.idp.services.v1.DisableProviderRes" +
-      "ponse\"p\312\363\030:\010\002\032\030udb:idp:disable-provider " +
-      "\001J\002\001\002j\023idp.DisableProvider\220\001\001\202\323\344\223\002,\"\'/v1" +
-      "/idp/providers/{provider_id}:disable:\001*\022" +
-      "\311\001\n\013GetProvider\022,.udb.core.idp.services." +
-      "v1.GetProviderRequest\032-.udb.core.idp.ser" +
-      "vices.v1.GetProviderResponse\"]\312\363\0302\010\002\032\024ud" +
-      "b:idp:get-provider \001J\002\001\002j\017idp.GetProvide" +
-      "r\220\001\001\202\323\344\223\002!\022\037/v1/idp/providers/{provider_" +
-      "id}\022\305\001\n\rListProviders\022..udb.core.idp.ser" +
-      "vices.v1.ListProvidersRequest\032/.udb.core" +
-      ".idp.services.v1.ListProvidersResponse\"S" +
-      "\312\363\0306\010\002\032\026udb:idp:list-providers \001J\002\001\002j\021id" +
-      "p.ListProviders\220\001\001\202\323\344\223\002\023\022\021/v1/idp/provid" +
-      "ers\022\217\002\n\025TestProviderDiscovery\0226.udb.core" +
-      ".idp.services.v1.TestProviderDiscoveryRe" +
-      "quest\0327.udb.core.idp.services.v1.TestPro" +
-      "viderDiscoveryResponse\"\204\001\312\363\030G\010\002\032\037udb:idp" +
-      ":test-provider-discovery \001J\002\001\002j\031idp.Test" +
-      "ProviderDiscovery\220\001\001\202\323\344\223\0023\"./v1/idp/prov" +
-      "iders/{provider_id}:test-discovery:\001*\022\363\001" +
-      "\n\020ForceJwksRefresh\0221.udb.core.idp.servic" +
-      "es.v1.ForceJwksRefreshRequest\0322.udb.core" +
-      ".idp.services.v1.ForceJwksRefreshRespons" +
-      "e\"x\312\363\030=\010\002\032\032udb:idp:force-jwks-refresh \001J" +
-      "\002\001\002j\024idp.ForceJwksRefresh\220\001\001\202\323\344\223\0021\",/v1/" +
-      "idp/providers/{provider_id}:refresh-jwks" +
-      ":\001*\022\214\002\n\023PreviewClaimMapping\0224.udb.core.i" +
-      "dp.services.v1.PreviewClaimMappingReques" +
-      "t\0325.udb.core.idp.services.v1.PreviewClai" +
-      "mMappingResponse\"\207\001\312\363\030C\010\002\032\035udb:idp:previ" +
-      "ew-claim-mapping \001J\002\001\002j\027idp.PreviewClaim" +
-      "Mapping\220\001\001\202\323\344\223\002:\"5/v1/idp/providers/{pro" +
-      "vider_id}:preview-claim-mapping:\001*\022\214\002\n\023P" +
-      "reviewGroupMapping\0224.udb.core.idp.servic" +
-      "es.v1.PreviewGroupMappingRequest\0325.udb.c" +
-      "ore.idp.services.v1.PreviewGroupMappingR" +
-      "esponse\"\207\001\312\363\030C\010\002\032\035udb:idp:preview-group-" +
-      "mapping \001J\002\001\002j\027idp.PreviewGroupMapping\220\001" +
-      "\001\202\323\344\223\002:\"5/v1/idp/providers/{provider_id}" +
-      ":preview-group-mapping:\001*\022\375\001\n\026ListExtern" +
-      "alIdentities\0227.udb.core.idp.services.v1." +
-      "ListExternalIdentitiesRequest\0328.udb.core" +
-      ".idp.services.v1.ListExternalIdentitiesR" +
-      "esponse\"p\312\363\030I\010\002\032 udb:idp:list-external-i" +
-      "dentities \001J\002\001\002j\032idp.ListExternalIdentit" +
-      "ies\220\001\001\202\323\344\223\002\035\022\033/v1/idp/external-identitie" +
-      "s\022\322\001\n\014LinkIdentity\022-.udb.core.idp.servic" +
+      "iderResponse\"\\\312\363\0308\010\002\032\027udb:idp:create-pro" +
+      "vider \001J\002\001\002j\022idp.CreateProvider\220\001\001\370\363\030\002\202\323" +
+      "\344\223\002\026\"\021/v1/idp/providers:\001*\022\337\001\n\016UpdatePro" +
+      "vider\022/.udb.core.idp.services.v1.UpdateP" +
+      "roviderRequest\0320.udb.core.idp.services.v" +
+      "1.UpdateProviderResponse\"j\312\363\0308\010\002\032\027udb:id" +
+      "p:update-provider \001J\002\001\002j\022idp.UpdateProvi" +
+      "der\220\001\001\370\363\030\002\202\323\344\223\002$2\037/v1/idp/providers/{pro" +
+      "vider_id}:\001*\022\354\001\n\017DisableProvider\0220.udb.c" +
+      "ore.idp.services.v1.DisableProviderReque" +
+      "st\0321.udb.core.idp.services.v1.DisablePro" +
+      "viderResponse\"t\312\363\030:\010\002\032\030udb:idp:disable-p" +
+      "rovider \001J\002\001\002j\023idp.DisableProvider\220\001\001\370\363\030" +
+      "\002\202\323\344\223\002,\"\'/v1/idp/providers/{provider_id}" +
+      ":disable:\001*\022\315\001\n\013GetProvider\022,.udb.core.i" +
+      "dp.services.v1.GetProviderRequest\032-.udb." +
+      "core.idp.services.v1.GetProviderResponse" +
+      "\"a\312\363\0302\010\002\032\024udb:idp:get-provider \001J\002\001\002j\017id" +
+      "p.GetProvider\220\001\001\370\363\030\001\202\323\344\223\002!\022\037/v1/idp/prov" +
+      "iders/{provider_id}\022\311\001\n\rListProviders\022.." +
+      "udb.core.idp.services.v1.ListProvidersRe" +
+      "quest\032/.udb.core.idp.services.v1.ListPro" +
+      "vidersResponse\"W\312\363\0306\010\002\032\026udb:idp:list-pro" +
+      "viders \001J\002\001\002j\021idp.ListProviders\220\001\001\370\363\030\001\202\323" +
+      "\344\223\002\023\022\021/v1/idp/providers\022\223\002\n\025TestProvider" +
+      "Discovery\0226.udb.core.idp.services.v1.Tes" +
+      "tProviderDiscoveryRequest\0327.udb.core.idp" +
+      ".services.v1.TestProviderDiscoveryRespon" +
+      "se\"\210\001\312\363\030G\010\002\032\037udb:idp:test-provider-disco" +
+      "very \001J\002\001\002j\031idp.TestProviderDiscovery\220\001\001" +
+      "\370\363\030\001\202\323\344\223\0023\"./v1/idp/providers/{provider_" +
+      "id}:test-discovery:\001*\022\367\001\n\020ForceJwksRefre" +
+      "sh\0221.udb.core.idp.services.v1.ForceJwksR" +
+      "efreshRequest\0322.udb.core.idp.services.v1" +
+      ".ForceJwksRefreshResponse\"|\312\363\030=\010\002\032\032udb:i" +
+      "dp:force-jwks-refresh \001J\002\001\002j\024idp.ForceJw" +
+      "ksRefresh\220\001\001\370\363\030\002\202\323\344\223\0021\",/v1/idp/provider" +
+      "s/{provider_id}:refresh-jwks:\001*\022\220\002\n\023Prev" +
+      "iewClaimMapping\0224.udb.core.idp.services." +
+      "v1.PreviewClaimMappingRequest\0325.udb.core" +
+      ".idp.services.v1.PreviewClaimMappingResp" +
+      "onse\"\213\001\312\363\030C\010\002\032\035udb:idp:preview-claim-map" +
+      "ping \001J\002\001\002j\027idp.PreviewClaimMapping\220\001\001\370\363" +
+      "\030\001\202\323\344\223\002:\"5/v1/idp/providers/{provider_id" +
+      "}:preview-claim-mapping:\001*\022\220\002\n\023PreviewGr" +
+      "oupMapping\0224.udb.core.idp.services.v1.Pr" +
+      "eviewGroupMappingRequest\0325.udb.core.idp." +
+      "services.v1.PreviewGroupMappingResponse\"" +
+      "\213\001\312\363\030C\010\002\032\035udb:idp:preview-group-mapping " +
+      "\001J\002\001\002j\027idp.PreviewGroupMapping\220\001\001\370\363\030\001\202\323\344" +
+      "\223\002:\"5/v1/idp/providers/{provider_id}:pre" +
+      "view-group-mapping:\001*\022\201\002\n\026ListExternalId" +
+      "entities\0227.udb.core.idp.services.v1.List" +
+      "ExternalIdentitiesRequest\0328.udb.core.idp" +
+      ".services.v1.ListExternalIdentitiesRespo" +
+      "nse\"t\312\363\030I\010\002\032 udb:idp:list-external-ident" +
+      "ities \001J\002\001\002j\032idp.ListExternalIdentities\220" +
+      "\001\001\370\363\030\001\202\323\344\223\002\035\022\033/v1/idp/external-identitie" +
+      "s\022\326\001\n\014LinkIdentity\022-.udb.core.idp.servic" +
       "es.v1.LinkIdentityRequest\032..udb.core.idp" +
-      ".services.v1.LinkIdentityResponse\"c\312\363\0304\010" +
+      ".services.v1.LinkIdentityResponse\"g\312\363\0304\010" +
       "\002\032\025udb:idp:link-identity \001J\002\001\002j\020idp.Link" +
-      "Identity\220\001\001\202\323\344\223\002%\" /v1/idp/external-iden" +
-      "tities:link:\001*\022\366\001\n\016UnlinkIdentity\022/.udb." +
-      "core.idp.services.v1.UnlinkIdentityReque" +
-      "st\0320.udb.core.idp.services.v1.UnlinkIden" +
-      "tityResponse\"\200\001\312\363\0308\010\002\032\027udb:idp:unlink-id" +
-      "entity \001J\002\001\002j\022idp.UnlinkIdentity\220\001\001\202\323\344\223\002" +
-      ">\"9/v1/idp/external-identities/{external" +
-      "_identity_id}:unlink:\001*\022\206\002\n\022ImportSamlMe" +
-      "tadata\0223.udb.core.idp.services.v1.Import" +
-      "SamlMetadataRequest\0324.udb.core.idp.servi" +
-      "ces.v1.ImportSamlMetadataResponse\"\204\001\312\363\030A" +
-      "\010\002\032\034udb:idp:import-saml-metadata \001J\002\001\002j\026" +
-      "idp.ImportSamlMetadata\220\001\001\202\323\344\223\0029\"4/v1/idp" +
-      "/providers/{provider_id}:import-saml-met" +
-      "adata:\001*\022\355\001\n\016StartSamlLogin\022/.udb.core.i" +
-      "dp.services.v1.StartSamlLoginRequest\0320.u" +
-      "db.core.idp.services.v1.StartSamlLoginRe" +
-      "sponse\"x\312\363\0309\010\002\032\030udb:idp:start-saml-login" +
-      " \001J\002\001\002j\022idp.StartSamlLogin\220\001\001\202\323\344\223\0025\"0/v1" +
-      "/idp/providers/{provider_id}:start-saml-" +
-      "login:\001*\022\301\001\n\007SamlAcs\022(.udb.core.idp.serv" +
-      "ices.v1.SamlAcsRequest\032).udb.core.idp.se" +
-      "rvices.v1.SamlAcsResponse\"a\312\363\030*\010\002\032\020udb:i" +
-      "dp:saml-acs \001J\002\001\002j\013idp.SamlAcs\220\001\001\202\323\344\223\002-\"" +
-      "(/v1/idp/providers/{provider_id}:saml-ac" +
-      "s:\001*\022\233\002\n\027ResolveExternalIdentity\0228.udb.c" +
-      "ore.idp.services.v1.ResolveExternalIdent" +
-      "ityRequest\0329.udb.core.idp.services.v1.Re" +
-      "solveExternalIdentityResponse\"\212\001\312\363\030K\010\002\032!" +
-      "udb:idp:resolve-external-identity \001J\002\001\002j" +
-      "\033idp.ResolveExternalIdentity\220\001\001\202\323\344\223\0025\"0/" +
-      "v1/idp/providers/{provider_id}:resolve-i" +
-      "dentity:\001*\022\335\001\n\016ScimCreateUser\022/.udb.core" +
-      ".idp.services.v1.ScimCreateUserRequest\0320" +
-      ".udb.core.idp.services.v1.ScimCreateUser" +
-      "Response\"h\312\363\0309\010\002\032\030udb:idp:scim-create-us" +
-      "er \001J\002\001\002j\022idp.ScimCreateUser\220\001\001\202\323\344\223\002%\" /" +
-      "v1/idp/scim/{provider_id}/Users:\001*\022\332\001\n\013S" +
-      "cimGetUser\022,.udb.core.idp.services.v1.Sc" +
-      "imGetUserRequest\032-.udb.core.idp.services" +
-      ".v1.ScimGetUserResponse\"n\312\363\0303\010\002\032\025udb:idp" +
-      ":scim-get-user \001J\002\001\002j\017idp.ScimGetUser\220\001\001" +
-      "\202\323\344\223\0021\022//v1/idp/scim/{provider_id}/Users" +
-      "/{scim_user_id}\022\325\001\n\rScimListUsers\022..udb." +
-      "core.idp.services.v1.ScimListUsersReques" +
-      "t\032/.udb.core.idp.services.v1.ScimListUse" +
-      "rsResponse\"c\312\363\0307\010\002\032\027udb:idp:scim-list-us" +
-      "ers \001J\002\001\002j\021idp.ScimListUsers\220\001\001\202\323\344\223\002\"\022 /" +
-      "v1/idp/scim/{provider_id}/Users\022\361\001\n\017Scim" +
-      "ReplaceUser\0220.udb.core.idp.services.v1.S" +
-      "cimReplaceUserRequest\0321.udb.core.idp.ser" +
-      "vices.v1.ScimReplaceUserResponse\"y\312\363\030;\010\002" +
-      "\032\031udb:idp:scim-replace-user \001J\002\001\002j\023idp.S" +
-      "cimReplaceUser\220\001\001\202\323\344\223\0024\032//v1/idp/scim/{p" +
-      "rovider_id}/Users/{scim_user_id}:\001*\022\347\001\n\r" +
+      "Identity\220\001\001\370\363\030\002\202\323\344\223\002%\" /v1/idp/external-" +
+      "identities:link:\001*\022\372\001\n\016UnlinkIdentity\022/." +
+      "udb.core.idp.services.v1.UnlinkIdentityR" +
+      "equest\0320.udb.core.idp.services.v1.Unlink" +
+      "IdentityResponse\"\204\001\312\363\0308\010\002\032\027udb:idp:unlin" +
+      "k-identity \001J\002\001\002j\022idp.UnlinkIdentity\220\001\001\370" +
+      "\363\030\002\202\323\344\223\002>\"9/v1/idp/external-identities/{" +
+      "external_identity_id}:unlink:\001*\022\212\002\n\022Impo" +
+      "rtSamlMetadata\0223.udb.core.idp.services.v" +
+      "1.ImportSamlMetadataRequest\0324.udb.core.i" +
+      "dp.services.v1.ImportSamlMetadataRespons" +
+      "e\"\210\001\312\363\030A\010\002\032\034udb:idp:import-saml-metadata" +
+      " \001J\002\001\002j\026idp.ImportSamlMetadata\220\001\001\370\363\030\002\202\323\344" +
+      "\223\0029\"4/v1/idp/providers/{provider_id}:imp" +
+      "ort-saml-metadata:\001*\022\361\001\n\016StartSamlLogin\022" +
+      "/.udb.core.idp.services.v1.StartSamlLogi" +
+      "nRequest\0320.udb.core.idp.services.v1.Star" +
+      "tSamlLoginResponse\"|\312\363\0309\010\002\032\030udb:idp:star" +
+      "t-saml-login \001J\002\001\002j\022idp.StartSamlLogin\220\001" +
+      "\001\370\363\030\002\202\323\344\223\0025\"0/v1/idp/providers/{provider" +
+      "_id}:start-saml-login:\001*\022\305\001\n\007SamlAcs\022(.u" +
+      "db.core.idp.services.v1.SamlAcsRequest\032)" +
+      ".udb.core.idp.services.v1.SamlAcsRespons" +
+      "e\"e\312\363\030*\010\002\032\020udb:idp:saml-acs \001J\002\001\002j\013idp.S" +
+      "amlAcs\220\001\001\370\363\030\002\202\323\344\223\002-\"(/v1/idp/providers/{" +
+      "provider_id}:saml-acs:\001*\022\237\002\n\027ResolveExte" +
+      "rnalIdentity\0228.udb.core.idp.services.v1." +
+      "ResolveExternalIdentityRequest\0329.udb.cor" +
+      "e.idp.services.v1.ResolveExternalIdentit" +
+      "yResponse\"\216\001\312\363\030K\010\002\032!udb:idp:resolve-exte" +
+      "rnal-identity \001J\002\001\002j\033idp.ResolveExternal" +
+      "Identity\220\001\001\370\363\030\002\202\323\344\223\0025\"0/v1/idp/providers" +
+      "/{provider_id}:resolve-identity:\001*\022\341\001\n\016S" +
+      "cimCreateUser\022/.udb.core.idp.services.v1" +
+      ".ScimCreateUserRequest\0320.udb.core.idp.se" +
+      "rvices.v1.ScimCreateUserResponse\"l\312\363\0309\010\002" +
+      "\032\030udb:idp:scim-create-user \001J\002\001\002j\022idp.Sc" +
+      "imCreateUser\220\001\001\370\363\030\002\202\323\344\223\002%\" /v1/idp/scim/" +
+      "{provider_id}/Users:\001*\022\336\001\n\013ScimGetUser\022," +
+      ".udb.core.idp.services.v1.ScimGetUserReq" +
+      "uest\032-.udb.core.idp.services.v1.ScimGetU" +
+      "serResponse\"r\312\363\0303\010\002\032\025udb:idp:scim-get-us" +
+      "er \001J\002\001\002j\017idp.ScimGetUser\220\001\001\370\363\030\002\202\323\344\223\0021\022/" +
+      "/v1/idp/scim/{provider_id}/Users/{scim_u" +
+      "ser_id}\022\331\001\n\rScimListUsers\022..udb.core.idp" +
+      ".services.v1.ScimListUsersRequest\032/.udb." +
+      "core.idp.services.v1.ScimListUsersRespon" +
+      "se\"g\312\363\0307\010\002\032\027udb:idp:scim-list-users \001J\002\001" +
+      "\002j\021idp.ScimListUsers\220\001\001\370\363\030\002\202\323\344\223\002\"\022 /v1/i" +
+      "dp/scim/{provider_id}/Users\022\365\001\n\017ScimRepl" +
+      "aceUser\0220.udb.core.idp.services.v1.ScimR" +
+      "eplaceUserRequest\0321.udb.core.idp.service" +
+      "s.v1.ScimReplaceUserResponse\"}\312\363\030;\010\002\032\031ud" +
+      "b:idp:scim-replace-user \001J\002\001\002j\023idp.ScimR" +
+      "eplaceUser\220\001\001\370\363\030\002\202\323\344\223\0024\032//v1/idp/scim/{p" +
+      "rovider_id}/Users/{scim_user_id}:\001*\022\353\001\n\r" +
       "ScimPatchUser\022..udb.core.idp.services.v1" +
       ".ScimPatchUserRequest\032/.udb.core.idp.ser" +
-      "vices.v1.ScimPatchUserResponse\"u\312\363\0307\010\002\032\027" +
+      "vices.v1.ScimPatchUserResponse\"y\312\363\0307\010\002\032\027" +
       "udb:idp:scim-patch-user \001J\002\001\002j\021idp.ScimP" +
-      "atchUser\220\001\001\202\323\344\223\00242//v1/idp/scim/{provide" +
-      "r_id}/Users/{scim_user_id}:\001*\022\351\001\n\016ScimDe" +
-      "leteUser\022/.udb.core.idp.services.v1.Scim" +
-      "DeleteUserRequest\0320.udb.core.idp.service" +
-      "s.v1.ScimDeleteUserResponse\"t\312\363\0309\010\002\032\030udb" +
-      ":idp:scim-delete-user \001J\002\001\002j\022idp.ScimDel" +
-      "eteUser\220\001\001\202\323\344\223\0021*//v1/idp/scim/{provider" +
-      "_id}/Users/{scim_user_id}\022\343\001\n\017ScimCreate" +
-      "Group\0220.udb.core.idp.services.v1.ScimCre" +
-      "ateGroupRequest\0321.udb.core.idp.services." +
-      "v1.ScimCreateGroupResponse\"k\312\363\030;\010\002\032\031udb:" +
-      "idp:scim-create-group \001J\002\001\002j\023idp.ScimCre" +
-      "ateGroup\220\001\001\202\323\344\223\002&\"!/v1/idp/scim/{provide" +
-      "r_id}/Groups:\001*\022\341\001\n\014ScimGetGroup\022-.udb.c" +
-      "ore.idp.services.v1.ScimGetGroupRequest\032" +
-      "..udb.core.idp.services.v1.ScimGetGroupR" +
-      "esponse\"r\312\363\0305\010\002\032\026udb:idp:scim-get-group " +
-      "\001J\002\001\002j\020idp.ScimGetGroup\220\001\001\202\323\344\223\0023\0221/v1/id" +
-      "p/scim/{provider_id}/Groups/{scim_group_" +
-      "id}\022\333\001\n\016ScimListGroups\022/.udb.core.idp.se" +
-      "rvices.v1.ScimListGroupsRequest\0320.udb.co" +
-      "re.idp.services.v1.ScimListGroupsRespons" +
-      "e\"f\312\363\0309\010\002\032\030udb:idp:scim-list-groups \001J\002\001" +
-      "\002j\022idp.ScimListGroups\220\001\001\202\323\344\223\002#\022!/v1/idp/" +
-      "scim/{provider_id}/Groups\022\356\001\n\016ScimPatchG" +
-      "roup\022/.udb.core.idp.services.v1.ScimPatc" +
-      "hGroupRequest\0320.udb.core.idp.services.v1" +
-      ".ScimPatchGroupResponse\"y\312\363\0309\010\002\032\030udb:idp" +
-      ":scim-patch-group \001J\002\001\002j\022idp.ScimPatchGr" +
-      "oup\220\001\001\202\323\344\223\002621/v1/idp/scim/{provider_id}" +
-      "/Groups/{scim_group_id}:\001*\022\360\001\n\017ScimDelet" +
-      "eGroup\0220.udb.core.idp.services.v1.ScimDe" +
-      "leteGroupRequest\0321.udb.core.idp.services" +
-      ".v1.ScimDeleteGroupResponse\"x\312\363\030;\010\002\032\031udb" +
-      ":idp:scim-delete-group \001J\002\001\002j\023idp.ScimDe" +
-      "leteGroup\220\001\001\202\323\344\223\0023*1/v1/idp/scim/{provid" +
-      "er_id}/Groups/{scim_group_id}\032\273\001\312\360\031\\\n\003id" +
-      "p\022\003idp\032\003idp\"\022Identity Providers*\004auth0\0018" +
-      "\001h\001z\021identityProviders\202\001\004auth\212\001\003idp\222\001\nna" +
-      "tive.idp\322\360\031\026\010\001\032\003udb(\260\352\0010\003@\001J\003idpP\001\342\360\031=\n\003" +
-      "idp\032\010postgres2\033UDB_NATIVE_SERVICES_ENABL" +
-      "ED2\017UDB_GRPC_TARGETB\211\002\n\034com.udb.core.idp" +
-      ".services.v1B\034IdentityProviderServicePro" +
-      "toP\001ZFgithub.com/fahara02/udb/sdk/go/gen" +
-      "/udb/core/idp/services/v1;servicesv1\242\002\004U" +
-      "CIS\252\002\030udb.core.Idp.Services.V1\312\002\030Udb\\Cor" +
-      "e\\Idp\\Services\\V1\342\002$Udb\\GPBMetadata\\Core" +
-      "\\Idp\\Services\\V1\352\002\034Udb::Core::Idp::Servi" +
-      "ces::V1b\006proto3"
+      "atchUser\220\001\001\370\363\030\002\202\323\344\223\00242//v1/idp/scim/{pro" +
+      "vider_id}/Users/{scim_user_id}:\001*\022\355\001\n\016Sc" +
+      "imDeleteUser\022/.udb.core.idp.services.v1." +
+      "ScimDeleteUserRequest\0320.udb.core.idp.ser" +
+      "vices.v1.ScimDeleteUserResponse\"x\312\363\0309\010\002\032" +
+      "\030udb:idp:scim-delete-user \001J\002\001\002j\022idp.Sci" +
+      "mDeleteUser\220\001\001\370\363\030\002\202\323\344\223\0021*//v1/idp/scim/{" +
+      "provider_id}/Users/{scim_user_id}\022\347\001\n\017Sc" +
+      "imCreateGroup\0220.udb.core.idp.services.v1" +
+      ".ScimCreateGroupRequest\0321.udb.core.idp.s" +
+      "ervices.v1.ScimCreateGroupResponse\"o\312\363\030;" +
+      "\010\002\032\031udb:idp:scim-create-group \001J\002\001\002j\023idp" +
+      ".ScimCreateGroup\220\001\001\370\363\030\002\202\323\344\223\002&\"!/v1/idp/s" +
+      "cim/{provider_id}/Groups:\001*\022\345\001\n\014ScimGetG" +
+      "roup\022-.udb.core.idp.services.v1.ScimGetG" +
+      "roupRequest\032..udb.core.idp.services.v1.S" +
+      "cimGetGroupResponse\"v\312\363\0305\010\002\032\026udb:idp:sci" +
+      "m-get-group \001J\002\001\002j\020idp.ScimGetGroup\220\001\001\370\363" +
+      "\030\002\202\323\344\223\0023\0221/v1/idp/scim/{provider_id}/Gro" +
+      "ups/{scim_group_id}\022\337\001\n\016ScimListGroups\022/" +
+      ".udb.core.idp.services.v1.ScimListGroups" +
+      "Request\0320.udb.core.idp.services.v1.ScimL" +
+      "istGroupsResponse\"j\312\363\0309\010\002\032\030udb:idp:scim-" +
+      "list-groups \001J\002\001\002j\022idp.ScimListGroups\220\001\001" +
+      "\370\363\030\002\202\323\344\223\002#\022!/v1/idp/scim/{provider_id}/G" +
+      "roups\022\362\001\n\016ScimPatchGroup\022/.udb.core.idp." +
+      "services.v1.ScimPatchGroupRequest\0320.udb." +
+      "core.idp.services.v1.ScimPatchGroupRespo" +
+      "nse\"}\312\363\0309\010\002\032\030udb:idp:scim-patch-group \001J" +
+      "\002\001\002j\022idp.ScimPatchGroup\220\001\001\370\363\030\002\202\323\344\223\002621/v" +
+      "1/idp/scim/{provider_id}/Groups/{scim_gr" +
+      "oup_id}:\001*\022\364\001\n\017ScimDeleteGroup\0220.udb.cor" +
+      "e.idp.services.v1.ScimDeleteGroupRequest" +
+      "\0321.udb.core.idp.services.v1.ScimDeleteGr" +
+      "oupResponse\"|\312\363\030;\010\002\032\031udb:idp:scim-delete" +
+      "-group \001J\002\001\002j\023idp.ScimDeleteGroup\220\001\001\370\363\030\002" +
+      "\202\323\344\223\0023*1/v1/idp/scim/{provider_id}/Group" +
+      "s/{scim_group_id}\032\273\001\312\360\031\\\n\003idp\022\003idp\032\003idp\"" +
+      "\022Identity Providers*\004auth0\0018\001h\001z\021identit" +
+      "yProviders\202\001\004auth\212\001\003idp\222\001\nnative.idp\322\360\031\026" +
+      "\010\001\032\003udb(\260\352\0010\003@\001J\003idpP\001\342\360\031=\n\003idp\032\010postgre" +
+      "s2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC" +
+      "_TARGETB\211\002\n\034com.udb.core.idp.services.v1" +
+      "B\034IdentityProviderServiceProtoP\001ZFgithub" +
+      ".com/fahara02/udb/sdk/go/gen/udb/core/id" +
+      "p/services/v1;servicesv1\242\002\004UCIS\252\002\030udb.co" +
+      "re.Idp.Services.V1\312\002\030Udb\\Core\\Idp\\Servic" +
+      "es\\V1\342\002$Udb\\GPBMetadata\\Core\\Idp\\Service" +
+      "s\\V1\352\002\034Udb::Core::Idp::Services::V1b\006pro" +
+      "to3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -229,6 +232,7 @@ public final class IdentityProviderServiceProto extends com.google.protobuf.Gene
     registry.add(com.google.api.AnnotationsProto.http);
     registry.add(com.udb.core.common.v1.SecurityProto.endpointSecurity);
     registry.add(com.udb.core.common.v1.SecurityProto.nativeService);
+    registry.add(com.udb.core.common.v1.SecurityProto.operationKind);
     registry.add(com.udb.core.common.v1.SecurityProto.serviceDependencyContract);
     registry.add(com.udb.core.common.v1.SecurityProto.serviceSdkSurface);
     com.google.protobuf.Descriptors.FileDescriptor

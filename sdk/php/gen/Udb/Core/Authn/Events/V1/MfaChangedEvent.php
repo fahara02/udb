@@ -263,4 +263,3 @@ class MfaChangedEvent extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -22,4 +22,3 @@ class FieldBehavior
         static::$is_initialized = true;
     }
 }
-

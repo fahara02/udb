@@ -86,4 +86,3 @@ class CredentialType
         return constant($const);
     }
 }
-

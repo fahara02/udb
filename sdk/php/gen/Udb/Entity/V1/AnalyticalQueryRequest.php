@@ -244,4 +244,3 @@ class AnalyticalQueryRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -75,7 +75,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.entity.v1.AdminCatalogSummary catalog = 1 [json_name = "catalog"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.entity.v1.AdminCatalogSummaryOrBuilder> 
+  public java.util.List<? extends com.udb.entity.v1.AdminCatalogSummaryOrBuilder>
       getCatalogOrBuilderList() {
     return catalog_;
   }
@@ -212,7 +212,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.entity.v1.AdminBackendSummary backends = 4 [json_name = "backends"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.entity.v1.AdminBackendSummaryOrBuilder> 
+  public java.util.List<? extends com.udb.entity.v1.AdminBackendSummaryOrBuilder>
       getBackendsOrBuilderList() {
     return backends_;
   }
@@ -758,7 +758,7 @@ private static final long serialVersionUID = 0L;
             catalogBuilder_ = null;
             catalog_ = other.catalog_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            catalogBuilder_ = 
+            catalogBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetCatalogFieldBuilder() : null;
           } else {
@@ -790,7 +790,7 @@ private static final long serialVersionUID = 0L;
             backendsBuilder_ = null;
             backends_ = other.backends_;
             bitField0_ = (bitField0_ & ~0x00000008);
-            backendsBuilder_ = 
+            backendsBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetBackendsFieldBuilder() : null;
           } else {
@@ -1167,7 +1167,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .udb.entity.v1.AdminCatalogSummary catalog = 1 [json_name = "catalog"];</code>
      */
-    public java.util.List<? extends com.udb.entity.v1.AdminCatalogSummaryOrBuilder> 
+    public java.util.List<? extends com.udb.entity.v1.AdminCatalogSummaryOrBuilder>
          getCatalogOrBuilderList() {
       if (catalogBuilder_ != null) {
         return catalogBuilder_.getMessageOrBuilderList();
@@ -1205,12 +1205,12 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .udb.entity.v1.AdminCatalogSummary catalog = 1 [json_name = "catalog"];</code>
      */
-    public java.util.List<com.udb.entity.v1.AdminCatalogSummary.Builder> 
+    public java.util.List<com.udb.entity.v1.AdminCatalogSummary.Builder>
          getCatalogBuilderList() {
       return internalGetCatalogFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.entity.v1.AdminCatalogSummary, com.udb.entity.v1.AdminCatalogSummary.Builder, com.udb.entity.v1.AdminCatalogSummaryOrBuilder> 
+        com.udb.entity.v1.AdminCatalogSummary, com.udb.entity.v1.AdminCatalogSummary.Builder, com.udb.entity.v1.AdminCatalogSummaryOrBuilder>
         internalGetCatalogFieldBuilder() {
       if (catalogBuilder_ == null) {
         catalogBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -1368,7 +1368,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.entity.v1.AdminCdcSummary cdc = 2 [json_name = "cdc"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.entity.v1.AdminCdcSummary, com.udb.entity.v1.AdminCdcSummary.Builder, com.udb.entity.v1.AdminCdcSummaryOrBuilder> 
+        com.udb.entity.v1.AdminCdcSummary, com.udb.entity.v1.AdminCdcSummary.Builder, com.udb.entity.v1.AdminCdcSummaryOrBuilder>
         internalGetCdcFieldBuilder() {
       if (cdcBuilder_ == null) {
         cdcBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1525,7 +1525,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.entity.v1.AdminSagaSummary sagas = 3 [json_name = "sagas"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.entity.v1.AdminSagaSummary, com.udb.entity.v1.AdminSagaSummary.Builder, com.udb.entity.v1.AdminSagaSummaryOrBuilder> 
+        com.udb.entity.v1.AdminSagaSummary, com.udb.entity.v1.AdminSagaSummary.Builder, com.udb.entity.v1.AdminSagaSummaryOrBuilder>
         internalGetSagasFieldBuilder() {
       if (sagasBuilder_ == null) {
         sagasBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1793,7 +1793,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .udb.entity.v1.AdminBackendSummary backends = 4 [json_name = "backends"];</code>
      */
-    public java.util.List<? extends com.udb.entity.v1.AdminBackendSummaryOrBuilder> 
+    public java.util.List<? extends com.udb.entity.v1.AdminBackendSummaryOrBuilder>
          getBackendsOrBuilderList() {
       if (backendsBuilder_ != null) {
         return backendsBuilder_.getMessageOrBuilderList();
@@ -1831,12 +1831,12 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .udb.entity.v1.AdminBackendSummary backends = 4 [json_name = "backends"];</code>
      */
-    public java.util.List<com.udb.entity.v1.AdminBackendSummary.Builder> 
+    public java.util.List<com.udb.entity.v1.AdminBackendSummary.Builder>
          getBackendsBuilderList() {
       return internalGetBackendsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.entity.v1.AdminBackendSummary, com.udb.entity.v1.AdminBackendSummary.Builder, com.udb.entity.v1.AdminBackendSummaryOrBuilder> 
+        com.udb.entity.v1.AdminBackendSummary, com.udb.entity.v1.AdminBackendSummary.Builder, com.udb.entity.v1.AdminBackendSummaryOrBuilder>
         internalGetBackendsFieldBuilder() {
       if (backendsBuilder_ == null) {
         backendsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -2099,4 +2099,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

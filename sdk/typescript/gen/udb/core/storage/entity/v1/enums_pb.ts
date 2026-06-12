@@ -92,4 +92,3 @@ export enum FileStatus {
  */
 export const FileStatusSchema: GenEnum<FileStatus> = /*@__PURE__*/
   enumDesc(file_udb_core_storage_entity_v1_enums, 1);
-

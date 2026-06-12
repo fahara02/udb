@@ -28,7 +28,7 @@ public interface JoinRoomResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.webrtc.entity.v1.Peer existing_peers = 2 [json_name = "existingPeers"];</code>
    */
-  java.util.List<com.udb.core.webrtc.entity.v1.Peer> 
+  java.util.List<com.udb.core.webrtc.entity.v1.Peer>
       getExistingPeersList();
   /**
    * <code>repeated .udb.core.webrtc.entity.v1.Peer existing_peers = 2 [json_name = "existingPeers"];</code>
@@ -41,7 +41,7 @@ public interface JoinRoomResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.webrtc.entity.v1.Peer existing_peers = 2 [json_name = "existingPeers"];</code>
    */
-  java.util.List<? extends com.udb.core.webrtc.entity.v1.PeerOrBuilder> 
+  java.util.List<? extends com.udb.core.webrtc.entity.v1.PeerOrBuilder>
       getExistingPeersOrBuilderList();
   /**
    * <code>repeated .udb.core.webrtc.entity.v1.Peer existing_peers = 2 [json_name = "existingPeers"];</code>

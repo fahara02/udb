@@ -178,4 +178,3 @@ class CompleteStepRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

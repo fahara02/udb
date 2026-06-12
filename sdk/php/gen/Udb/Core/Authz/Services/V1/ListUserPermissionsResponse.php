@@ -56,4 +56,3 @@ class ListUserPermissionsResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

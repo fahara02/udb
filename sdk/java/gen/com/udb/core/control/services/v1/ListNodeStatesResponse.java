@@ -64,7 +64,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.control.services.v1.NodeAckState node_states = 1 [json_name = "nodeStates"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.control.services.v1.NodeAckStateOrBuilder> 
+  public java.util.List<? extends com.udb.core.control.services.v1.NodeAckStateOrBuilder>
       getNodeStatesOrBuilderList() {
     return nodeStates_;
   }
@@ -440,7 +440,7 @@ private static final long serialVersionUID = 0L;
             nodeStatesBuilder_ = null;
             nodeStates_ = other.nodeStates_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            nodeStatesBuilder_ = 
+            nodeStatesBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetNodeStatesFieldBuilder() : null;
           } else {
@@ -709,7 +709,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.control.services.v1.NodeAckState node_states = 1 [json_name = "nodeStates"];</code>
      */
-    public java.util.List<? extends com.udb.core.control.services.v1.NodeAckStateOrBuilder> 
+    public java.util.List<? extends com.udb.core.control.services.v1.NodeAckStateOrBuilder>
          getNodeStatesOrBuilderList() {
       if (nodeStatesBuilder_ != null) {
         return nodeStatesBuilder_.getMessageOrBuilderList();
@@ -735,12 +735,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.control.services.v1.NodeAckState node_states = 1 [json_name = "nodeStates"];</code>
      */
-    public java.util.List<com.udb.core.control.services.v1.NodeAckState.Builder> 
+    public java.util.List<com.udb.core.control.services.v1.NodeAckState.Builder>
          getNodeStatesBuilderList() {
       return internalGetNodeStatesFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.control.services.v1.NodeAckState, com.udb.core.control.services.v1.NodeAckState.Builder, com.udb.core.control.services.v1.NodeAckStateOrBuilder> 
+        com.udb.core.control.services.v1.NodeAckState, com.udb.core.control.services.v1.NodeAckState.Builder, com.udb.core.control.services.v1.NodeAckStateOrBuilder>
         internalGetNodeStatesFieldBuilder() {
       if (nodeStatesBuilder_ == null) {
         nodeStatesBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -862,7 +862,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.PageResponse page = 2 [json_name = "page"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.PageResponse, com.udb.core.common.v1.PageResponse.Builder, com.udb.core.common.v1.PageResponseOrBuilder> 
+        com.udb.core.common.v1.PageResponse, com.udb.core.common.v1.PageResponse.Builder, com.udb.core.common.v1.PageResponseOrBuilder>
         internalGetPageFieldBuilder() {
       if (pageBuilder_ == null) {
         pageBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -925,4 +925,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

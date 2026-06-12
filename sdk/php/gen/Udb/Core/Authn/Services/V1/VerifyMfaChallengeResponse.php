@@ -82,4 +82,3 @@ class VerifyMfaChallengeResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

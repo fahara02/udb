@@ -229,4 +229,3 @@ class PolicyBundleIssuedEvent extends \Google\Protobuf\Internal\Message
     }
 
 }
-

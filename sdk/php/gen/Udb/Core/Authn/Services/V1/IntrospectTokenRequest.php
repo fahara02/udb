@@ -92,4 +92,3 @@ class IntrospectTokenRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -92,4 +92,3 @@ class ListNotificationsResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

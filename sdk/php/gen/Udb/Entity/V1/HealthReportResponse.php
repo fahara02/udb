@@ -335,4 +335,3 @@ class HealthReportResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

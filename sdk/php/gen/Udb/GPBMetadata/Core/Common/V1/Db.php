@@ -22,4 +22,3 @@ class Db
         static::$is_initialized = true;
     }
 }
-

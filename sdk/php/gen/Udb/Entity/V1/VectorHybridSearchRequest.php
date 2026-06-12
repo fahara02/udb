@@ -262,4 +262,3 @@ class VectorHybridSearchRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

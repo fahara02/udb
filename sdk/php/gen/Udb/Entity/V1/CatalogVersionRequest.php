@@ -180,4 +180,3 @@ class CatalogVersionRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

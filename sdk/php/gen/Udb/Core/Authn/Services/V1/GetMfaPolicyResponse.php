@@ -82,4 +82,3 @@ class GetMfaPolicyResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

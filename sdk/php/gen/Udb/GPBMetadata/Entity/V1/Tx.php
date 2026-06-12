@@ -25,4 +25,3 @@ class Tx
         static::$is_initialized = true;
     }
 }
-

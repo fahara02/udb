@@ -247,4 +247,3 @@ class RelationshipTuple extends \Google\Protobuf\Internal\Message
     }
 
 }
-

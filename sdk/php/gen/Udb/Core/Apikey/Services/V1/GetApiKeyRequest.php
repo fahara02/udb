@@ -56,4 +56,3 @@ class GetApiKeyRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

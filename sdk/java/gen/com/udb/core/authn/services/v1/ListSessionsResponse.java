@@ -64,7 +64,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.authn.entity.v1.Session sessions = 1 [json_name = "sessions"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.authn.entity.v1.SessionOrBuilder> 
+  public java.util.List<? extends com.udb.core.authn.entity.v1.SessionOrBuilder>
       getSessionsOrBuilderList() {
     return sessions_;
   }
@@ -440,7 +440,7 @@ private static final long serialVersionUID = 0L;
             sessionsBuilder_ = null;
             sessions_ = other.sessions_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            sessionsBuilder_ = 
+            sessionsBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetSessionsFieldBuilder() : null;
           } else {
@@ -709,7 +709,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.authn.entity.v1.Session sessions = 1 [json_name = "sessions"];</code>
      */
-    public java.util.List<? extends com.udb.core.authn.entity.v1.SessionOrBuilder> 
+    public java.util.List<? extends com.udb.core.authn.entity.v1.SessionOrBuilder>
          getSessionsOrBuilderList() {
       if (sessionsBuilder_ != null) {
         return sessionsBuilder_.getMessageOrBuilderList();
@@ -735,12 +735,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.authn.entity.v1.Session sessions = 1 [json_name = "sessions"];</code>
      */
-    public java.util.List<com.udb.core.authn.entity.v1.Session.Builder> 
+    public java.util.List<com.udb.core.authn.entity.v1.Session.Builder>
          getSessionsBuilderList() {
       return internalGetSessionsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.authn.entity.v1.Session, com.udb.core.authn.entity.v1.Session.Builder, com.udb.core.authn.entity.v1.SessionOrBuilder> 
+        com.udb.core.authn.entity.v1.Session, com.udb.core.authn.entity.v1.Session.Builder, com.udb.core.authn.entity.v1.SessionOrBuilder>
         internalGetSessionsFieldBuilder() {
       if (sessionsBuilder_ == null) {
         sessionsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -862,7 +862,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.PageResponse page = 2 [json_name = "page"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.PageResponse, com.udb.core.common.v1.PageResponse.Builder, com.udb.core.common.v1.PageResponseOrBuilder> 
+        com.udb.core.common.v1.PageResponse, com.udb.core.common.v1.PageResponse.Builder, com.udb.core.common.v1.PageResponseOrBuilder>
         internalGetPageFieldBuilder() {
       if (pageBuilder_ == null) {
         pageBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -925,4 +925,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

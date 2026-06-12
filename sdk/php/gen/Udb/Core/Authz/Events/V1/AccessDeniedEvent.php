@@ -229,4 +229,3 @@ class AccessDeniedEvent extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -245,4 +245,3 @@ class CatalogVersionResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -133,7 +133,7 @@ public enum RedactionStrategy
   }
   public static com.google.protobuf.Descriptors.EnumDescriptor
       getDescriptor() {
-    return com.udb.core.common.v1.SecurityProto.getDescriptor().getEnumType(5);
+    return com.udb.core.common.v1.SecurityProto.getDescriptor().getEnumType(6);
   }
 
   private static final RedactionStrategy[] VALUES = values();
@@ -158,4 +158,3 @@ public enum RedactionStrategy
 
   // @@protoc_insertion_point(enum_scope:udb.core.common.v1.RedactionStrategy)
 }
-

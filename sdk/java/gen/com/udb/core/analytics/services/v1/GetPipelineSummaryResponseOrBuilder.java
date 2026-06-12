@@ -13,7 +13,7 @@ public interface GetPipelineSummaryResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.analytics.entity.v1.PipelineMetricSnapshot snapshots = 1 [json_name = "snapshots"];</code>
    */
-  java.util.List<com.udb.core.analytics.entity.v1.PipelineMetricSnapshot> 
+  java.util.List<com.udb.core.analytics.entity.v1.PipelineMetricSnapshot>
       getSnapshotsList();
   /**
    * <code>repeated .udb.core.analytics.entity.v1.PipelineMetricSnapshot snapshots = 1 [json_name = "snapshots"];</code>
@@ -26,7 +26,7 @@ public interface GetPipelineSummaryResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.analytics.entity.v1.PipelineMetricSnapshot snapshots = 1 [json_name = "snapshots"];</code>
    */
-  java.util.List<? extends com.udb.core.analytics.entity.v1.PipelineMetricSnapshotOrBuilder> 
+  java.util.List<? extends com.udb.core.analytics.entity.v1.PipelineMetricSnapshotOrBuilder>
       getSnapshotsOrBuilderList();
   /**
    * <code>repeated .udb.core.analytics.entity.v1.PipelineMetricSnapshot snapshots = 1 [json_name = "snapshots"];</code>

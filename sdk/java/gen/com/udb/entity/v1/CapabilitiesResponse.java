@@ -80,7 +80,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       schemaChecksum_ = s;
@@ -100,7 +100,7 @@ private static final long serialVersionUID = 0L;
       getSchemaChecksumBytes() {
     java.lang.Object ref = schemaChecksum_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       schemaChecksum_ = b;
@@ -127,7 +127,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       protocolVersion_ = s;
@@ -147,7 +147,7 @@ private static final long serialVersionUID = 0L;
       getProtocolVersionBytes() {
     java.lang.Object ref = protocolVersion_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       protocolVersion_ = b;
@@ -391,7 +391,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.entity.v1.BackendInstanceStatus backend_instances = 7 [json_name = "backendInstances"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.entity.v1.BackendInstanceStatusOrBuilder> 
+  public java.util.List<? extends com.udb.entity.v1.BackendInstanceStatusOrBuilder>
       getBackendInstancesOrBuilderList() {
     return backendInstances_;
   }
@@ -452,7 +452,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.entity.v1.BackendCapabilityDescriptor backend_capabilities = 8 [json_name = "backendCapabilities"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.entity.v1.BackendCapabilityDescriptorOrBuilder> 
+  public java.util.List<? extends com.udb.entity.v1.BackendCapabilityDescriptorOrBuilder>
       getBackendCapabilitiesOrBuilderList() {
     return backendCapabilities_;
   }
@@ -564,7 +564,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.entity.v1.BackendProtocolSupport backend_protocol_support = 10 [json_name = "backendProtocolSupport"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.entity.v1.BackendProtocolSupportOrBuilder> 
+  public java.util.List<? extends com.udb.entity.v1.BackendProtocolSupportOrBuilder>
       getBackendProtocolSupportOrBuilderList() {
     return backendProtocolSupport_;
   }
@@ -623,7 +623,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.entity.v1.NativeServiceStatusOrBuilder> 
+  public java.util.List<? extends com.udb.entity.v1.NativeServiceStatusOrBuilder>
       getNativeServicesOrBuilderList() {
     return nativeServices_;
   }
@@ -1248,7 +1248,7 @@ private static final long serialVersionUID = 0L;
             backendInstancesBuilder_ = null;
             backendInstances_ = other.backendInstances_;
             bitField0_ = (bitField0_ & ~0x00000040);
-            backendInstancesBuilder_ = 
+            backendInstancesBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetBackendInstancesFieldBuilder() : null;
           } else {
@@ -1274,7 +1274,7 @@ private static final long serialVersionUID = 0L;
             backendCapabilitiesBuilder_ = null;
             backendCapabilities_ = other.backendCapabilities_;
             bitField0_ = (bitField0_ & ~0x00000080);
-            backendCapabilitiesBuilder_ = 
+            backendCapabilitiesBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetBackendCapabilitiesFieldBuilder() : null;
           } else {
@@ -1303,7 +1303,7 @@ private static final long serialVersionUID = 0L;
             backendProtocolSupportBuilder_ = null;
             backendProtocolSupport_ = other.backendProtocolSupport_;
             bitField0_ = (bitField0_ & ~0x00000200);
-            backendProtocolSupportBuilder_ = 
+            backendProtocolSupportBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetBackendProtocolSupportFieldBuilder() : null;
           } else {
@@ -1329,7 +1329,7 @@ private static final long serialVersionUID = 0L;
             nativeServicesBuilder_ = null;
             nativeServices_ = other.nativeServices_;
             bitField0_ = (bitField0_ & ~0x00000400);
-            nativeServicesBuilder_ = 
+            nativeServicesBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetNativeServicesFieldBuilder() : null;
           } else {
@@ -1502,7 +1502,7 @@ private static final long serialVersionUID = 0L;
         getSchemaChecksumBytes() {
       java.lang.Object ref = schemaChecksum_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         schemaChecksum_ = b;
@@ -1594,7 +1594,7 @@ private static final long serialVersionUID = 0L;
         getProtocolVersionBytes() {
       java.lang.Object ref = protocolVersion_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         protocolVersion_ = b;
@@ -2496,7 +2496,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .udb.entity.v1.BackendInstanceStatus backend_instances = 7 [json_name = "backendInstances"];</code>
      */
-    public java.util.List<? extends com.udb.entity.v1.BackendInstanceStatusOrBuilder> 
+    public java.util.List<? extends com.udb.entity.v1.BackendInstanceStatusOrBuilder>
          getBackendInstancesOrBuilderList() {
       if (backendInstancesBuilder_ != null) {
         return backendInstancesBuilder_.getMessageOrBuilderList();
@@ -2534,12 +2534,12 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .udb.entity.v1.BackendInstanceStatus backend_instances = 7 [json_name = "backendInstances"];</code>
      */
-    public java.util.List<com.udb.entity.v1.BackendInstanceStatus.Builder> 
+    public java.util.List<com.udb.entity.v1.BackendInstanceStatus.Builder>
          getBackendInstancesBuilderList() {
       return internalGetBackendInstancesFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.entity.v1.BackendInstanceStatus, com.udb.entity.v1.BackendInstanceStatus.Builder, com.udb.entity.v1.BackendInstanceStatusOrBuilder> 
+        com.udb.entity.v1.BackendInstanceStatus, com.udb.entity.v1.BackendInstanceStatus.Builder, com.udb.entity.v1.BackendInstanceStatusOrBuilder>
         internalGetBackendInstancesFieldBuilder() {
       if (backendInstancesBuilder_ == null) {
         backendInstancesBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -2808,7 +2808,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .udb.entity.v1.BackendCapabilityDescriptor backend_capabilities = 8 [json_name = "backendCapabilities"];</code>
      */
-    public java.util.List<? extends com.udb.entity.v1.BackendCapabilityDescriptorOrBuilder> 
+    public java.util.List<? extends com.udb.entity.v1.BackendCapabilityDescriptorOrBuilder>
          getBackendCapabilitiesOrBuilderList() {
       if (backendCapabilitiesBuilder_ != null) {
         return backendCapabilitiesBuilder_.getMessageOrBuilderList();
@@ -2846,12 +2846,12 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .udb.entity.v1.BackendCapabilityDescriptor backend_capabilities = 8 [json_name = "backendCapabilities"];</code>
      */
-    public java.util.List<com.udb.entity.v1.BackendCapabilityDescriptor.Builder> 
+    public java.util.List<com.udb.entity.v1.BackendCapabilityDescriptor.Builder>
          getBackendCapabilitiesBuilderList() {
       return internalGetBackendCapabilitiesFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.entity.v1.BackendCapabilityDescriptor, com.udb.entity.v1.BackendCapabilityDescriptor.Builder, com.udb.entity.v1.BackendCapabilityDescriptorOrBuilder> 
+        com.udb.entity.v1.BackendCapabilityDescriptor, com.udb.entity.v1.BackendCapabilityDescriptor.Builder, com.udb.entity.v1.BackendCapabilityDescriptorOrBuilder>
         internalGetBackendCapabilitiesFieldBuilder() {
       if (backendCapabilitiesBuilder_ == null) {
         backendCapabilitiesBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -3036,7 +3036,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.entity.v1.ProtocolSupport protocol_support = 9 [json_name = "protocolSupport"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.entity.v1.ProtocolSupport, com.udb.entity.v1.ProtocolSupport.Builder, com.udb.entity.v1.ProtocolSupportOrBuilder> 
+        com.udb.entity.v1.ProtocolSupport, com.udb.entity.v1.ProtocolSupport.Builder, com.udb.entity.v1.ProtocolSupportOrBuilder>
         internalGetProtocolSupportFieldBuilder() {
       if (protocolSupportBuilder_ == null) {
         protocolSupportBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -3334,7 +3334,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .udb.entity.v1.BackendProtocolSupport backend_protocol_support = 10 [json_name = "backendProtocolSupport"];</code>
      */
-    public java.util.List<? extends com.udb.entity.v1.BackendProtocolSupportOrBuilder> 
+    public java.util.List<? extends com.udb.entity.v1.BackendProtocolSupportOrBuilder>
          getBackendProtocolSupportOrBuilderList() {
       if (backendProtocolSupportBuilder_ != null) {
         return backendProtocolSupportBuilder_.getMessageOrBuilderList();
@@ -3378,12 +3378,12 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .udb.entity.v1.BackendProtocolSupport backend_protocol_support = 10 [json_name = "backendProtocolSupport"];</code>
      */
-    public java.util.List<com.udb.entity.v1.BackendProtocolSupport.Builder> 
+    public java.util.List<com.udb.entity.v1.BackendProtocolSupport.Builder>
          getBackendProtocolSupportBuilderList() {
       return internalGetBackendProtocolSupportFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.entity.v1.BackendProtocolSupport, com.udb.entity.v1.BackendProtocolSupport.Builder, com.udb.entity.v1.BackendProtocolSupportOrBuilder> 
+        com.udb.entity.v1.BackendProtocolSupport, com.udb.entity.v1.BackendProtocolSupport.Builder, com.udb.entity.v1.BackendProtocolSupportOrBuilder>
         internalGetBackendProtocolSupportFieldBuilder() {
       if (backendProtocolSupportBuilder_ == null) {
         backendProtocolSupportBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -3592,7 +3592,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
      */
-    public java.util.List<? extends com.udb.entity.v1.NativeServiceStatusOrBuilder> 
+    public java.util.List<? extends com.udb.entity.v1.NativeServiceStatusOrBuilder>
          getNativeServicesOrBuilderList() {
       if (nativeServicesBuilder_ != null) {
         return nativeServicesBuilder_.getMessageOrBuilderList();
@@ -3618,12 +3618,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
      */
-    public java.util.List<com.udb.entity.v1.NativeServiceStatus.Builder> 
+    public java.util.List<com.udb.entity.v1.NativeServiceStatus.Builder>
          getNativeServicesBuilderList() {
       return internalGetNativeServicesFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.entity.v1.NativeServiceStatus, com.udb.entity.v1.NativeServiceStatus.Builder, com.udb.entity.v1.NativeServiceStatusOrBuilder> 
+        com.udb.entity.v1.NativeServiceStatus, com.udb.entity.v1.NativeServiceStatus.Builder, com.udb.entity.v1.NativeServiceStatusOrBuilder>
         internalGetNativeServicesFieldBuilder() {
       if (nativeServicesBuilder_ == null) {
         nativeServicesBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -3687,4 +3687,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

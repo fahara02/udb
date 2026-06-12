@@ -85,4 +85,3 @@ class ErrorDetail extends \Google\Protobuf\Internal\Message
     }
 
 }
-

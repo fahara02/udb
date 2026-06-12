@@ -74,4 +74,3 @@ class Portal
         return constant($const);
     }
 }
-

@@ -84,4 +84,3 @@ class ResourceType
         return constant($const);
     }
 }
-

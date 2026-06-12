@@ -64,7 +64,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.entity.v1.MigrationStatusResponse runs = 1 [json_name = "runs"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.entity.v1.MigrationStatusResponseOrBuilder> 
+  public java.util.List<? extends com.udb.entity.v1.MigrationStatusResponseOrBuilder>
       getRunsOrBuilderList() {
     return runs_;
   }
@@ -104,7 +104,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       nextPageToken_ = s;
@@ -120,7 +120,7 @@ private static final long serialVersionUID = 0L;
       getNextPageTokenBytes() {
     java.lang.Object ref = nextPageToken_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       nextPageToken_ = b;
@@ -457,7 +457,7 @@ private static final long serialVersionUID = 0L;
             runsBuilder_ = null;
             runs_ = other.runs_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            runsBuilder_ = 
+            runsBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetRunsFieldBuilder() : null;
           } else {
@@ -734,7 +734,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.entity.v1.MigrationStatusResponse runs = 1 [json_name = "runs"];</code>
      */
-    public java.util.List<? extends com.udb.entity.v1.MigrationStatusResponseOrBuilder> 
+    public java.util.List<? extends com.udb.entity.v1.MigrationStatusResponseOrBuilder>
          getRunsOrBuilderList() {
       if (runsBuilder_ != null) {
         return runsBuilder_.getMessageOrBuilderList();
@@ -760,12 +760,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.entity.v1.MigrationStatusResponse runs = 1 [json_name = "runs"];</code>
      */
-    public java.util.List<com.udb.entity.v1.MigrationStatusResponse.Builder> 
+    public java.util.List<com.udb.entity.v1.MigrationStatusResponse.Builder>
          getRunsBuilderList() {
       return internalGetRunsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.entity.v1.MigrationStatusResponse, com.udb.entity.v1.MigrationStatusResponse.Builder, com.udb.entity.v1.MigrationStatusResponseOrBuilder> 
+        com.udb.entity.v1.MigrationStatusResponse, com.udb.entity.v1.MigrationStatusResponse.Builder, com.udb.entity.v1.MigrationStatusResponseOrBuilder>
         internalGetRunsFieldBuilder() {
       if (runsBuilder_ == null) {
         runsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -804,7 +804,7 @@ private static final long serialVersionUID = 0L;
         getNextPageTokenBytes() {
       java.lang.Object ref = nextPageToken_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         nextPageToken_ = b;
@@ -933,4 +933,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

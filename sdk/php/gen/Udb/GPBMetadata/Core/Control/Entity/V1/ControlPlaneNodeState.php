@@ -26,4 +26,3 @@ class ControlPlaneNodeState
         static::$is_initialized = true;
     }
 }
-

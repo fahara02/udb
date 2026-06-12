@@ -85,4 +85,3 @@ export type AuthzRevision = Message<"udb.core.authz.entity.v1.AuthzRevision"> & 
  */
 export const AuthzRevisionSchema: GenMessage<AuthzRevision> = /*@__PURE__*/
   messageDesc(file_udb_core_authz_entity_v1_authz_revision, 0);
-

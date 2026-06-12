@@ -71,4 +71,3 @@ class OutputView
         return constant($const);
     }
 }
-

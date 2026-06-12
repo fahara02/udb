@@ -28,7 +28,7 @@ public final class TrackProto extends com.google.protobuf.GeneratedFile {
   }
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_webrtc_entity_v1_Track_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_webrtc_entity_v1_Track_fieldAccessorTable;
 

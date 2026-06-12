@@ -103,4 +103,3 @@ class CapabilitiesRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

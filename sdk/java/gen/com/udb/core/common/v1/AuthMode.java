@@ -124,7 +124,7 @@ public enum AuthMode
   }
   public static com.google.protobuf.Descriptors.EnumDescriptor
       getDescriptor() {
-    return com.udb.core.common.v1.SecurityProto.getDescriptor().getEnumType(0);
+    return com.udb.core.common.v1.SecurityProto.getDescriptor().getEnumType(1);
   }
 
   private static final AuthMode[] VALUES = values();
@@ -149,4 +149,3 @@ public enum AuthMode
 
   // @@protoc_insertion_point(enum_scope:udb.core.common.v1.AuthMode)
 }
-

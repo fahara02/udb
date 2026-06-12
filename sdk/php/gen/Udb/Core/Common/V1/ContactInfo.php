@@ -137,4 +137,3 @@ class ContactInfo extends \Google\Protobuf\Internal\Message
     }
 
 }
-

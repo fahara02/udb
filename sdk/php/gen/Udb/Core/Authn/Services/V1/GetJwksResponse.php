@@ -63,4 +63,3 @@ class GetJwksResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

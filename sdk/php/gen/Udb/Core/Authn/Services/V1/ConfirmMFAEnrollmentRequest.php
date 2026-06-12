@@ -153,4 +153,3 @@ class ConfirmMFAEnrollmentRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -578,7 +578,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.webrtc.entity.v1.Peer peer = 1 [json_name = "peer"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.webrtc.entity.v1.Peer, com.udb.core.webrtc.entity.v1.Peer.Builder, com.udb.core.webrtc.entity.v1.PeerOrBuilder> 
+        com.udb.core.webrtc.entity.v1.Peer, com.udb.core.webrtc.entity.v1.Peer.Builder, com.udb.core.webrtc.entity.v1.PeerOrBuilder>
         internalGetPeerFieldBuilder() {
       if (peerBuilder_ == null) {
         peerBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -735,7 +735,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.ApiError error = 2 [json_name = "error"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder> 
+        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder>
         internalGetErrorFieldBuilder() {
       if (errorBuilder_ == null) {
         errorBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -798,4 +798,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

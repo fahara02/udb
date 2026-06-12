@@ -433,4 +433,3 @@ class Device extends \Google\Protobuf\Internal\Message
     }
 
 }
-

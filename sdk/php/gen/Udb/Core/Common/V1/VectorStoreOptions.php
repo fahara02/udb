@@ -354,4 +354,3 @@ class VectorStoreOptions extends \Google\Protobuf\Internal\Message
     }
 
 }
-

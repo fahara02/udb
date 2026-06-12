@@ -55,4 +55,3 @@ class RenamePasskeyResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

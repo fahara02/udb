@@ -229,7 +229,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.entity.v1.BackendInstanceStatus backend_instances = 10 [json_name = "backendInstances"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.entity.v1.BackendInstanceStatusOrBuilder> 
+  public java.util.List<? extends com.udb.entity.v1.BackendInstanceStatusOrBuilder>
       getBackendInstancesOrBuilderList() {
     return backendInstances_;
   }
@@ -270,7 +270,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.entity.v1.NativeServiceStatusOrBuilder> 
+  public java.util.List<? extends com.udb.entity.v1.NativeServiceStatusOrBuilder>
       getNativeServicesOrBuilderList() {
     return nativeServices_;
   }
@@ -815,7 +815,7 @@ private static final long serialVersionUID = 0L;
             backendInstancesBuilder_ = null;
             backendInstances_ = other.backendInstances_;
             bitField0_ = (bitField0_ & ~0x00000200);
-            backendInstancesBuilder_ = 
+            backendInstancesBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetBackendInstancesFieldBuilder() : null;
           } else {
@@ -841,7 +841,7 @@ private static final long serialVersionUID = 0L;
             nativeServicesBuilder_ = null;
             nativeServices_ = other.nativeServices_;
             bitField0_ = (bitField0_ & ~0x00000400);
-            nativeServicesBuilder_ = 
+            nativeServicesBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetNativeServicesFieldBuilder() : null;
           } else {
@@ -1628,7 +1628,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.entity.v1.BackendInstanceStatus backend_instances = 10 [json_name = "backendInstances"];</code>
      */
-    public java.util.List<? extends com.udb.entity.v1.BackendInstanceStatusOrBuilder> 
+    public java.util.List<? extends com.udb.entity.v1.BackendInstanceStatusOrBuilder>
          getBackendInstancesOrBuilderList() {
       if (backendInstancesBuilder_ != null) {
         return backendInstancesBuilder_.getMessageOrBuilderList();
@@ -1654,12 +1654,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.entity.v1.BackendInstanceStatus backend_instances = 10 [json_name = "backendInstances"];</code>
      */
-    public java.util.List<com.udb.entity.v1.BackendInstanceStatus.Builder> 
+    public java.util.List<com.udb.entity.v1.BackendInstanceStatus.Builder>
          getBackendInstancesBuilderList() {
       return internalGetBackendInstancesFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.entity.v1.BackendInstanceStatus, com.udb.entity.v1.BackendInstanceStatus.Builder, com.udb.entity.v1.BackendInstanceStatusOrBuilder> 
+        com.udb.entity.v1.BackendInstanceStatus, com.udb.entity.v1.BackendInstanceStatus.Builder, com.udb.entity.v1.BackendInstanceStatusOrBuilder>
         internalGetBackendInstancesFieldBuilder() {
       if (backendInstancesBuilder_ == null) {
         backendInstancesBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -1868,7 +1868,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
      */
-    public java.util.List<? extends com.udb.entity.v1.NativeServiceStatusOrBuilder> 
+    public java.util.List<? extends com.udb.entity.v1.NativeServiceStatusOrBuilder>
          getNativeServicesOrBuilderList() {
       if (nativeServicesBuilder_ != null) {
         return nativeServicesBuilder_.getMessageOrBuilderList();
@@ -1894,12 +1894,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
      */
-    public java.util.List<com.udb.entity.v1.NativeServiceStatus.Builder> 
+    public java.util.List<com.udb.entity.v1.NativeServiceStatus.Builder>
          getNativeServicesBuilderList() {
       return internalGetNativeServicesFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.entity.v1.NativeServiceStatus, com.udb.entity.v1.NativeServiceStatus.Builder, com.udb.entity.v1.NativeServiceStatusOrBuilder> 
+        com.udb.entity.v1.NativeServiceStatus, com.udb.entity.v1.NativeServiceStatus.Builder, com.udb.entity.v1.NativeServiceStatusOrBuilder>
         internalGetNativeServicesFieldBuilder() {
       if (nativeServicesBuilder_ == null) {
         nativeServicesBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -1963,4 +1963,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

@@ -271,4 +271,3 @@ class ProjectionDriftTargetReport extends \Google\Protobuf\Internal\Message
     }
 
 }
-

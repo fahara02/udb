@@ -82,4 +82,3 @@ class PutMfaPolicyResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

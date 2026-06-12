@@ -107,7 +107,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.notification.services.v1.ChannelStats by_channel = 5 [json_name = "byChannel"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.notification.services.v1.ChannelStatsOrBuilder> 
+  public java.util.List<? extends com.udb.core.notification.services.v1.ChannelStatsOrBuilder>
       getByChannelOrBuilderList() {
     return byChannel_;
   }
@@ -498,7 +498,7 @@ private static final long serialVersionUID = 0L;
             byChannelBuilder_ = null;
             byChannel_ = other.byChannel_;
             bitField0_ = (bitField0_ & ~0x00000010);
-            byChannelBuilder_ = 
+            byChannelBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetByChannelFieldBuilder() : null;
           } else {
@@ -905,7 +905,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.notification.services.v1.ChannelStats by_channel = 5 [json_name = "byChannel"];</code>
      */
-    public java.util.List<? extends com.udb.core.notification.services.v1.ChannelStatsOrBuilder> 
+    public java.util.List<? extends com.udb.core.notification.services.v1.ChannelStatsOrBuilder>
          getByChannelOrBuilderList() {
       if (byChannelBuilder_ != null) {
         return byChannelBuilder_.getMessageOrBuilderList();
@@ -931,12 +931,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.notification.services.v1.ChannelStats by_channel = 5 [json_name = "byChannel"];</code>
      */
-    public java.util.List<com.udb.core.notification.services.v1.ChannelStats.Builder> 
+    public java.util.List<com.udb.core.notification.services.v1.ChannelStats.Builder>
          getByChannelBuilderList() {
       return internalGetByChannelFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.notification.services.v1.ChannelStats, com.udb.core.notification.services.v1.ChannelStats.Builder, com.udb.core.notification.services.v1.ChannelStatsOrBuilder> 
+        com.udb.core.notification.services.v1.ChannelStats, com.udb.core.notification.services.v1.ChannelStats.Builder, com.udb.core.notification.services.v1.ChannelStatsOrBuilder>
         internalGetByChannelFieldBuilder() {
       if (byChannelBuilder_ == null) {
         byChannelBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -1000,4 +1000,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

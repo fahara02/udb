@@ -62,4 +62,3 @@ class ProviderHealth
         return constant($const);
     }
 }
-

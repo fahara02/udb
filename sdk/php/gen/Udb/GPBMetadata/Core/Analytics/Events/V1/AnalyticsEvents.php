@@ -24,4 +24,3 @@ class AnalyticsEvents
         static::$is_initialized = true;
     }
 }
-

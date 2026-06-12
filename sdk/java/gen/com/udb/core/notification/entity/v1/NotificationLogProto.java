@@ -28,7 +28,7 @@ public final class NotificationLogProto extends com.google.protobuf.GeneratedFil
   }
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_notification_entity_v1_NotificationLog_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_notification_entity_v1_NotificationLog_fieldAccessorTable;
 

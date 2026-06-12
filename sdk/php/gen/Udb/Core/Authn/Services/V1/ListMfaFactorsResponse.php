@@ -56,4 +56,3 @@ class ListMfaFactorsResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

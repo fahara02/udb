@@ -88,4 +88,3 @@ class ApiKeyOwnerType
         return constant($const);
     }
 }
-

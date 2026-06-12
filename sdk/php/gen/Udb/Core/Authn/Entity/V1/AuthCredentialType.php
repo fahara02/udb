@@ -81,4 +81,3 @@ class AuthCredentialType
         return constant($const);
     }
 }
-

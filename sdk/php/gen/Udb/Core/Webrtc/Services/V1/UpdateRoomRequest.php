@@ -171,4 +171,3 @@ class UpdateRoomRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

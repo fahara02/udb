@@ -65,4 +65,3 @@ class AuthzResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

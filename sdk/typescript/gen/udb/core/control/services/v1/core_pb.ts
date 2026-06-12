@@ -544,4 +544,3 @@ export type AckStatusResponse = Message<"udb.core.control.services.v1.AckStatusR
  */
 export const AckStatusResponseSchema: GenMessage<AckStatusResponse> = /*@__PURE__*/
   messageDesc(file_udb_core_control_services_v1_core, 12);
-

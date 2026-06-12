@@ -146,4 +146,3 @@ class VectorUpsertRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -61,4 +61,3 @@ class ConfigType
         return constant($const);
     }
 }
-

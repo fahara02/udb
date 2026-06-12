@@ -92,4 +92,3 @@ class GetCanaryStatusRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

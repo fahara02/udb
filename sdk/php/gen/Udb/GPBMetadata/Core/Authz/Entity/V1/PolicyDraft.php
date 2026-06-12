@@ -25,4 +25,3 @@ class PolicyDraft
         static::$is_initialized = true;
     }
 }
-

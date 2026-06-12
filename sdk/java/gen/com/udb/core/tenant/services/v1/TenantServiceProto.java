@@ -28,62 +28,62 @@ public final class TenantServiceProto extends com.google.protobuf.GeneratedFile 
   }
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_tenant_services_v1_CreateTenantRequest_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_tenant_services_v1_CreateTenantRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_tenant_services_v1_CreateTenantResponse_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_tenant_services_v1_CreateTenantResponse_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_tenant_services_v1_GetTenantRequest_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_tenant_services_v1_GetTenantRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_tenant_services_v1_GetTenantResponse_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_tenant_services_v1_GetTenantResponse_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_tenant_services_v1_ListTenantsRequest_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_tenant_services_v1_ListTenantsRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_tenant_services_v1_ListTenantsResponse_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_tenant_services_v1_ListTenantsResponse_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_tenant_services_v1_UpdateTenantRequest_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_tenant_services_v1_UpdateTenantRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_tenant_services_v1_UpdateTenantResponse_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_tenant_services_v1_UpdateTenantResponse_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_tenant_services_v1_GetTenantConfigRequest_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_tenant_services_v1_GetTenantConfigRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_tenant_services_v1_GetTenantConfigResponse_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_tenant_services_v1_GetTenantConfigResponse_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_tenant_services_v1_UpdateTenantConfigRequest_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_tenant_services_v1_UpdateTenantConfigRequest_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_tenant_services_v1_UpdateTenantConfigResponse_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_tenant_services_v1_UpdateTenantConfigResponse_fieldAccessorTable;
 
@@ -148,10 +148,10 @@ public final class TenantServiceProto extends com.google.protobuf.GeneratedFile 
       "igResponse\022\030\n\007message\030\001 \001(\tR\007message\0222\n\005" +
       "error\030\002 \001(\0132\034.udb.core.common.v1.ApiErro" +
       "rR\005error:\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006tenantP\0012" +
-      "\330\037\n\rTenantService\022\325\004\n\014CreateTenant\0220.udb" +
+      "\360\037\n\rTenantService\022\331\004\n\014CreateTenant\0220.udb" +
       ".core.tenant.services.v1.CreateTenantReq" +
       "uest\0321.udb.core.tenant.services.v1.Creat" +
-      "eTenantResponse\"\337\003\312\363\030:\010\002\032\030udb:tenant:cre" +
+      "eTenantResponse\"\343\003\312\363\030:\010\002\032\030udb:tenant:cre" +
       "ate-tenant \001J\002\001\002j\023tenant.CreateTenant\220\001\001" +
       "\322\363\030\006\010\001\020\001 \001\332\363\030(\010\001\022\rcreate_tenant\032\003udb(\260\352\001" +
       "0\003@\001J\006tenantP\001\342\363\030\270\001\n\006tenant\022\021udb/native/" +
@@ -162,101 +162,102 @@ public final class TenantServiceProto extends com.google.protobuf.GeneratedFile 
       "oke\352\363\030P\n\023tenant.CreateTenant\022\rtenant.eve" +
       "nts\032\ttenant_id\"\010standard*\rat_least_once2" +
       "\006stable\362\363\030@\n\006tenant\032\010postgres2\033UDB_NATIV" +
-      "E_SERVICES_ENABLED2\017UDB_GRPC_TARGET\202\323\344\223\002" +
-      "\020\"\013/v1/tenants:\001*\022\303\004\n\tGetTenant\022-.udb.co" +
-      "re.tenant.services.v1.GetTenantRequest\032." +
-      ".udb.core.tenant.services.v1.GetTenantRe" +
-      "sponse\"\326\003\312\363\0304\010\002\032\025udb:tenant:get-tenant \001" +
-      "J\002\001\002j\020tenant.GetTenant\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030%\010" +
-      "\001\022\nget_tenant\032\003udb(\260\352\0010\003@\001J\006tenantP\001\342\363\030\262" +
+      "E_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202" +
+      "\323\344\223\002\020\"\013/v1/tenants:\001*\022\307\004\n\tGetTenant\022-.ud" +
+      "b.core.tenant.services.v1.GetTenantReque" +
+      "st\032..udb.core.tenant.services.v1.GetTena" +
+      "ntResponse\"\332\003\312\363\0304\010\002\032\025udb:tenant:get-tena" +
+      "nt \001J\002\001\002j\020tenant.GetTenant\220\001\001\322\363\030\006\010\001\020\001 \001\332" +
+      "\363\030%\010\001\022\nget_tenant\032\003udb(\260\352\0010\003@\001J\006tenantP\001" +
+      "\342\363\030\262\001\n\006tenant\022\021udb/native/tenant\032\033UDB_NA" +
+      "TIVE_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"(" +
+      "udb.native.tenant.get_tenant.boilerplate" +
+      "*\nget_tenant2\nudb_tenant:\006tenantJ\013UDB_AP" +
+      "I_KEYZ\020udb native smoke\352\363\030M\n\020tenant.GetT" +
+      "enant\022\rtenant.events\032\ttenant_id\"\010standar" +
+      "d*\rat_least_once2\006stable\362\363\030@\n\006tenant\032\010po" +
+      "stgres2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB" +
+      "_GRPC_TARGET\370\363\030\001\202\323\344\223\002\031\022\027/v1/tenants/{ten" +
+      "ant_id}\022\315\004\n\013ListTenants\022/.udb.core.tenan" +
+      "t.services.v1.ListTenantsRequest\0320.udb.c" +
+      "ore.tenant.services.v1.ListTenantsRespon" +
+      "se\"\332\003\312\363\0308\010\002\032\027udb:tenant:list-tenants \001J\002" +
+      "\001\002j\022tenant.ListTenants\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030\'\010" +
+      "\001\022\014list_tenants\032\003udb(\260\352\0010\003@\001J\006tenantP\001\342\363" +
+      "\030\266\001\n\006tenant\022\021udb/native/tenant\032\033UDB_NATI" +
+      "VE_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"*ud" +
+      "b.native.tenant.list_tenants.boilerplate" +
+      "*\014list_tenants2\nudb_tenant:\006tenantJ\013UDB_" +
+      "API_KEYZ\020udb native smoke\352\363\030O\n\022tenant.Li" +
+      "stTenants\022\rtenant.events\032\ttenant_id\"\010sta" +
+      "ndard*\rat_least_once2\006stable\362\363\030@\n\006tenant" +
+      "\032\010postgres2\033UDB_NATIVE_SERVICES_ENABLED2" +
+      "\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\r\022\013/v1/tenants\022" +
+      "\345\004\n\014UpdateTenant\0220.udb.core.tenant.servi" +
+      "ces.v1.UpdateTenantRequest\0321.udb.core.te" +
+      "nant.services.v1.UpdateTenantResponse\"\357\003" +
+      "\312\363\030:\010\002\032\030udb:tenant:update-tenant \001J\002\001\002j\023" +
+      "tenant.UpdateTenant\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030(\010\001\022\r" +
+      "update_tenant\032\003udb(\260\352\0010\003@\001J\006tenantP\001\342\363\030\270" +
       "\001\n\006tenant\022\021udb/native/tenant\032\033UDB_NATIVE" +
-      "_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"(udb." +
-      "native.tenant.get_tenant.boilerplate*\nge" +
-      "t_tenant2\nudb_tenant:\006tenantJ\013UDB_API_KE" +
-      "YZ\020udb native smoke\352\363\030M\n\020tenant.GetTenan" +
-      "t\022\rtenant.events\032\ttenant_id\"\010standard*\ra" +
-      "t_least_once2\006stable\362\363\030@\n\006tenant\032\010postgr" +
-      "es2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRP" +
-      "C_TARGET\202\323\344\223\002\031\022\027/v1/tenants/{tenant_id}\022" +
-      "\311\004\n\013ListTenants\022/.udb.core.tenant.servic" +
-      "es.v1.ListTenantsRequest\0320.udb.core.tena" +
-      "nt.services.v1.ListTenantsResponse\"\326\003\312\363\030" +
-      "8\010\002\032\027udb:tenant:list-tenants \001J\002\001\002j\022tena" +
-      "nt.ListTenants\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030\'\010\001\022\014list_" +
-      "tenants\032\003udb(\260\352\0010\003@\001J\006tenantP\001\342\363\030\266\001\n\006ten" +
-      "ant\022\021udb/native/tenant\032\033UDB_NATIVE_SERVI" +
-      "CES_ENABLED\032\017UDB_GRPC_TARGET\"*udb.native" +
-      ".tenant.list_tenants.boilerplate*\014list_t" +
-      "enants2\nudb_tenant:\006tenantJ\013UDB_API_KEYZ" +
-      "\020udb native smoke\352\363\030O\n\022tenant.ListTenant" +
-      "s\022\rtenant.events\032\ttenant_id\"\010standard*\ra" +
-      "t_least_once2\006stable\362\363\030@\n\006tenant\032\010postgr" +
-      "es2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRP" +
-      "C_TARGET\202\323\344\223\002\r\022\013/v1/tenants\022\341\004\n\014UpdateTe" +
-      "nant\0220.udb.core.tenant.services.v1.Updat" +
-      "eTenantRequest\0321.udb.core.tenant.service" +
-      "s.v1.UpdateTenantResponse\"\353\003\312\363\030:\010\002\032\030udb:" +
-      "tenant:update-tenant \001J\002\001\002j\023tenant.Updat" +
-      "eTenant\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030(\010\001\022\rupdate_tenan" +
-      "t\032\003udb(\260\352\0010\003@\001J\006tenantP\001\342\363\030\270\001\n\006tenant\022\021u" +
-      "db/native/tenant\032\033UDB_NATIVE_SERVICES_EN" +
-      "ABLED\032\017UDB_GRPC_TARGET\"+udb.native.tenan" +
-      "t.update_tenant.boilerplate*\rupdate_tena" +
-      "nt2\nudb_tenant:\006tenantJ\013UDB_API_KEYZ\020udb" +
-      " native smoke\352\363\030P\n\023tenant.UpdateTenant\022\r" +
-      "tenant.events\032\ttenant_id\"\010standard*\rat_l" +
-      "east_once2\006stable\362\363\030@\n\006tenant\032\010postgres2" +
-      "\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_T" +
-      "ARGET\202\323\344\223\002\0342\027/v1/tenants/{tenant_id}:\001*\022" +
-      "\204\005\n\017GetTenantConfig\0223.udb.core.tenant.se" +
-      "rvices.v1.GetTenantConfigRequest\0324.udb.c" +
-      "ore.tenant.services.v1.GetTenantConfigRe" +
-      "sponse\"\205\004\312\363\030A\010\002\032\034udb:tenant:get-tenant-c" +
-      "onfig \001J\002\001\002j\026tenant.GetTenantConfig\220\001\001\322\363" +
-      "\030\006\010\001\020\001 \001\332\363\030,\010\001\022\021get_tenant_config\032\003udb(\260" +
-      "\352\0010\003@\001J\006tenantP\001\342\363\030\300\001\n\006tenant\022\021udb/nativ" +
-      "e/tenant\032\033UDB_NATIVE_SERVICES_ENABLED\032\017U" +
-      "DB_GRPC_TARGET\"/udb.native.tenant.get_te" +
-      "nant_config.boilerplate*\021get_tenant_conf" +
-      "ig2\nudb_tenant:\006tenantJ\013UDB_API_KEYZ\020udb" +
-      " native smoke\352\363\030S\n\026tenant.GetTenantConfi" +
-      "g\022\rtenant.events\032\ttenant_id\"\010standard*\ra" +
-      "t_least_once2\006stable\362\363\030@\n\006tenant\032\010postgr" +
-      "es2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRP" +
-      "C_TARGET\202\323\344\223\002 \022\036/v1/tenants/{tenant_id}/" +
-      "config\022\242\005\n\022UpdateTenantConfig\0226.udb.core" +
-      ".tenant.services.v1.UpdateTenantConfigRe" +
-      "quest\0327.udb.core.tenant.services.v1.Upda" +
-      "teTenantConfigResponse\"\232\004\312\363\030G\010\002\032\037udb:ten" +
-      "ant:update-tenant-config \001J\002\001\002j\031tenant.U" +
-      "pdateTenantConfig\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030/\010\001\022\024up" +
-      "date_tenant_config\032\003udb(\260\352\0010\003@\001J\006tenantP" +
-      "\001\342\363\030\306\001\n\006tenant\022\021udb/native/tenant\032\033UDB_N" +
-      "ATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"" +
-      "2udb.native.tenant.update_tenant_config." +
-      "boilerplate*\024update_tenant_config2\nudb_t" +
-      "enant:\006tenantJ\013UDB_API_KEYZ\020udb native s" +
-      "moke\352\363\030V\n\031tenant.UpdateTenantConfig\022\rten" +
-      "ant.events\032\ttenant_id\"\010standard*\rat_leas" +
-      "t_once2\006stable\362\363\030@\n\006tenant\032\010postgres2\033UD" +
+      "_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"+udb." +
+      "native.tenant.update_tenant.boilerplate*" +
+      "\rupdate_tenant2\nudb_tenant:\006tenantJ\013UDB_" +
+      "API_KEYZ\020udb native smoke\352\363\030P\n\023tenant.Up" +
+      "dateTenant\022\rtenant.events\032\ttenant_id\"\010st" +
+      "andard*\rat_least_once2\006stable\362\363\030@\n\006tenan" +
+      "t\032\010postgres2\033UDB_NATIVE_SERVICES_ENABLED" +
+      "2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002\0342\027/v1/tenants" +
+      "/{tenant_id}:\001*\022\210\005\n\017GetTenantConfig\0223.ud" +
+      "b.core.tenant.services.v1.GetTenantConfi" +
+      "gRequest\0324.udb.core.tenant.services.v1.G" +
+      "etTenantConfigResponse\"\211\004\312\363\030A\010\002\032\034udb:ten" +
+      "ant:get-tenant-config \001J\002\001\002j\026tenant.GetT" +
+      "enantConfig\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030,\010\001\022\021get_tena" +
+      "nt_config\032\003udb(\260\352\0010\003@\001J\006tenantP\001\342\363\030\300\001\n\006t" +
+      "enant\022\021udb/native/tenant\032\033UDB_NATIVE_SER" +
+      "VICES_ENABLED\032\017UDB_GRPC_TARGET\"/udb.nati" +
+      "ve.tenant.get_tenant_config.boilerplate*" +
+      "\021get_tenant_config2\nudb_tenant:\006tenantJ\013" +
+      "UDB_API_KEYZ\020udb native smoke\352\363\030S\n\026tenan" +
+      "t.GetTenantConfig\022\rtenant.events\032\ttenant" +
+      "_id\"\010standard*\rat_least_once2\006stable\362\363\030@" +
+      "\n\006tenant\032\010postgres2\033UDB_NATIVE_SERVICES_" +
+      "ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002 \022\036/v1/" +
+      "tenants/{tenant_id}/config\022\246\005\n\022UpdateTen" +
+      "antConfig\0226.udb.core.tenant.services.v1." +
+      "UpdateTenantConfigRequest\0327.udb.core.ten" +
+      "ant.services.v1.UpdateTenantConfigRespon" +
+      "se\"\236\004\312\363\030G\010\002\032\037udb:tenant:update-tenant-co" +
+      "nfig \001J\002\001\002j\031tenant.UpdateTenantConfig\220\001\001" +
+      "\322\363\030\006\010\001\020\001 \001\332\363\030/\010\001\022\024update_tenant_config\032\003" +
+      "udb(\260\352\0010\003@\001J\006tenantP\001\342\363\030\306\001\n\006tenant\022\021udb/" +
+      "native/tenant\032\033UDB_NATIVE_SERVICES_ENABL" +
+      "ED\032\017UDB_GRPC_TARGET\"2udb.native.tenant.u" +
+      "pdate_tenant_config.boilerplate*\024update_" +
+      "tenant_config2\nudb_tenant:\006tenantJ\013UDB_A" +
+      "PI_KEYZ\020udb native smoke\352\363\030V\n\031tenant.Upd" +
+      "ateTenantConfig\022\rtenant.events\032\ttenant_i" +
+      "d\"\010standard*\rat_least_once2\006stable\362\363\030@\n\006" +
+      "tenant\032\010postgres2\033UDB_NATIVE_SERVICES_EN" +
+      "ABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002#\032\036/v1/te" +
+      "nants/{tenant_id}/config:\001*\032\314\002\312\360\031Y\n\006tena" +
+      "nt\022\006tenant\032\006tenant\"\007Tenants*\006tenant0\0018\001h" +
+      "\001z\006tenant\202\001\006tenant\212\001\006tenant\222\001\rnative.ten" +
+      "ant\322\360\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006tenantP\001\332\360\031\211\001\n\006t" +
+      "enant\022\021udb/native/tenant\032\033UDB_NATIVE_SER" +
+      "VICES_ENABLED\032\017UDB_GRPC_TARGET\"\030udb.nati" +
+      "ve.tenant.config:\006tenantJ\013UDB_API_KEYZ\017u" +
+      "db native lint\342\360\031@\n\006tenant\032\010postgres2\033UD" +
       "B_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARG" +
-      "ET\202\323\344\223\002#\032\036/v1/tenants/{tenant_id}/config" +
-      ":\001*\032\314\002\312\360\031Y\n\006tenant\022\006tenant\032\006tenant\"\007Tena" +
-      "nts*\006tenant0\0018\001h\001z\006tenant\202\001\006tenant\212\001\006ten" +
-      "ant\222\001\rnative.tenant\322\360\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006" +
-      "tenantP\001\332\360\031\211\001\n\006tenant\022\021udb/native/tenant" +
-      "\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_" +
-      "TARGET\"\030udb.native.tenant.config:\006tenant" +
-      "J\013UDB_API_KEYZ\017udb native lint\342\360\031@\n\006tena" +
-      "nt\032\010postgres2\033UDB_NATIVE_SERVICES_ENABLE" +
-      "D2\017UDB_GRPC_TARGETB\221\002\n\037com.udb.core.tena" +
-      "nt.services.v1B\022TenantServiceProtoP\001ZIgi" +
-      "thub.com/fahara02/udb/sdk/go/gen/udb/cor" +
-      "e/tenant/services/v1;servicesv1\242\002\004UCTS\252\002" +
-      "\033udb.core.Tenant.Services.V1\312\002\033Udb\\Core\\" +
-      "Tenant\\Services\\V1\342\002\'Udb\\GPBMetadata\\Cor" +
-      "e\\Tenant\\Services\\V1\352\002\037Udb::Core::Tenant" +
-      "::Services::V1b\006proto3"
+      "ETB\221\002\n\037com.udb.core.tenant.services.v1B\022" +
+      "TenantServiceProtoP\001ZIgithub.com/fahara0" +
+      "2/udb/sdk/go/gen/udb/core/tenant/service" +
+      "s/v1;servicesv1\242\002\004UCTS\252\002\033udb.core.Tenant" +
+      ".Services.V1\312\002\033Udb\\Core\\Tenant\\Services\\" +
+      "V1\342\002\'Udb\\GPBMetadata\\Core\\Tenant\\Service" +
+      "s\\V1\352\002\037Udb::Core::Tenant::Services::V1b\006" +
+      "proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -354,6 +355,7 @@ public final class TenantServiceProto extends com.google.protobuf.GeneratedFile 
     registry.add(com.udb.core.common.v1.SecurityProto.methodDependencyContract);
     registry.add(com.udb.core.common.v1.SecurityProto.methodEventContract);
     registry.add(com.udb.core.common.v1.SecurityProto.nativeService);
+    registry.add(com.udb.core.common.v1.SecurityProto.operationKind);
     registry.add(com.udb.core.common.v1.SecurityProto.restContract);
     registry.add(com.udb.core.common.v1.SecurityProto.sdkSurface);
     registry.add(com.udb.core.common.v1.SecurityProto.serviceCliScaffold);

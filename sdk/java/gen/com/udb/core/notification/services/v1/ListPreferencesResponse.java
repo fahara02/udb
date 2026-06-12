@@ -64,7 +64,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.notification.entity.v1.NotificationPreference preferences = 1 [json_name = "preferences"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.notification.entity.v1.NotificationPreferenceOrBuilder> 
+  public java.util.List<? extends com.udb.core.notification.entity.v1.NotificationPreferenceOrBuilder>
       getPreferencesOrBuilderList() {
     return preferences_;
   }
@@ -440,7 +440,7 @@ private static final long serialVersionUID = 0L;
             preferencesBuilder_ = null;
             preferences_ = other.preferences_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            preferencesBuilder_ = 
+            preferencesBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetPreferencesFieldBuilder() : null;
           } else {
@@ -709,7 +709,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.notification.entity.v1.NotificationPreference preferences = 1 [json_name = "preferences"];</code>
      */
-    public java.util.List<? extends com.udb.core.notification.entity.v1.NotificationPreferenceOrBuilder> 
+    public java.util.List<? extends com.udb.core.notification.entity.v1.NotificationPreferenceOrBuilder>
          getPreferencesOrBuilderList() {
       if (preferencesBuilder_ != null) {
         return preferencesBuilder_.getMessageOrBuilderList();
@@ -735,12 +735,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.notification.entity.v1.NotificationPreference preferences = 1 [json_name = "preferences"];</code>
      */
-    public java.util.List<com.udb.core.notification.entity.v1.NotificationPreference.Builder> 
+    public java.util.List<com.udb.core.notification.entity.v1.NotificationPreference.Builder>
          getPreferencesBuilderList() {
       return internalGetPreferencesFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.notification.entity.v1.NotificationPreference, com.udb.core.notification.entity.v1.NotificationPreference.Builder, com.udb.core.notification.entity.v1.NotificationPreferenceOrBuilder> 
+        com.udb.core.notification.entity.v1.NotificationPreference, com.udb.core.notification.entity.v1.NotificationPreference.Builder, com.udb.core.notification.entity.v1.NotificationPreferenceOrBuilder>
         internalGetPreferencesFieldBuilder() {
       if (preferencesBuilder_ == null) {
         preferencesBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -862,7 +862,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.PageResponse page = 2 [json_name = "page"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.PageResponse, com.udb.core.common.v1.PageResponse.Builder, com.udb.core.common.v1.PageResponseOrBuilder> 
+        com.udb.core.common.v1.PageResponse, com.udb.core.common.v1.PageResponse.Builder, com.udb.core.common.v1.PageResponseOrBuilder>
         internalGetPageFieldBuilder() {
       if (pageBuilder_ == null) {
         pageBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -925,4 +925,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

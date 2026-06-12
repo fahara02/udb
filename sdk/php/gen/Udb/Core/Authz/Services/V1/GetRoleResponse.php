@@ -65,4 +65,3 @@ class GetRoleResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

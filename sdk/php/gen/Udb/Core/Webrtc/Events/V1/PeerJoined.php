@@ -175,4 +175,3 @@ class PeerJoined extends \Google\Protobuf\Internal\Message
     }
 
 }
-

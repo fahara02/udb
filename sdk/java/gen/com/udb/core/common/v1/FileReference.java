@@ -66,7 +66,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       fileId_ = s;
@@ -82,7 +82,7 @@ private static final long serialVersionUID = 0L;
       getFileIdBytes() {
     java.lang.Object ref = fileId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       fileId_ = b;
@@ -105,7 +105,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       fileName_ = s;
@@ -121,7 +121,7 @@ private static final long serialVersionUID = 0L;
       getFileNameBytes() {
     java.lang.Object ref = fileName_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       fileName_ = b;
@@ -144,7 +144,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       storageUri_ = s;
@@ -160,7 +160,7 @@ private static final long serialVersionUID = 0L;
       getStorageUriBytes() {
     java.lang.Object ref = storageUri_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       storageUri_ = b;
@@ -183,7 +183,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       mimeType_ = s;
@@ -199,7 +199,7 @@ private static final long serialVersionUID = 0L;
       getMimeTypeBytes() {
     java.lang.Object ref = mimeType_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       mimeType_ = b;
@@ -233,7 +233,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       checksum_ = s;
@@ -249,7 +249,7 @@ private static final long serialVersionUID = 0L;
       getChecksumBytes() {
     java.lang.Object ref = checksum_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       checksum_ = b;
@@ -702,7 +702,7 @@ private static final long serialVersionUID = 0L;
         getFileIdBytes() {
       java.lang.Object ref = fileId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         fileId_ = b;
@@ -774,7 +774,7 @@ private static final long serialVersionUID = 0L;
         getFileNameBytes() {
       java.lang.Object ref = fileName_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         fileName_ = b;
@@ -846,7 +846,7 @@ private static final long serialVersionUID = 0L;
         getStorageUriBytes() {
       java.lang.Object ref = storageUri_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         storageUri_ = b;
@@ -918,7 +918,7 @@ private static final long serialVersionUID = 0L;
         getMimeTypeBytes() {
       java.lang.Object ref = mimeType_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         mimeType_ = b;
@@ -1022,7 +1022,7 @@ private static final long serialVersionUID = 0L;
         getChecksumBytes() {
       java.lang.Object ref = checksum_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         checksum_ = b;
@@ -1119,4 +1119,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

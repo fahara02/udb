@@ -25,4 +25,3 @@ class PolicyApproval
         static::$is_initialized = true;
     }
 }
-

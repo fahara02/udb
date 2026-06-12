@@ -217,4 +217,3 @@ class SamlReplayEntry extends \Google\Protobuf\Internal\Message
     }
 
 }
-

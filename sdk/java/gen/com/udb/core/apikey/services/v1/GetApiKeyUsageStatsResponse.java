@@ -63,7 +63,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.apikey.services.v1.ApiKeyDailyStat stats = 1 [json_name = "stats"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.apikey.services.v1.ApiKeyDailyStatOrBuilder> 
+  public java.util.List<? extends com.udb.core.apikey.services.v1.ApiKeyDailyStatOrBuilder>
       getStatsOrBuilderList() {
     return stats_;
   }
@@ -404,7 +404,7 @@ private static final long serialVersionUID = 0L;
             statsBuilder_ = null;
             stats_ = other.stats_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            statsBuilder_ = 
+            statsBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetStatsFieldBuilder() : null;
           } else {
@@ -671,7 +671,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.apikey.services.v1.ApiKeyDailyStat stats = 1 [json_name = "stats"];</code>
      */
-    public java.util.List<? extends com.udb.core.apikey.services.v1.ApiKeyDailyStatOrBuilder> 
+    public java.util.List<? extends com.udb.core.apikey.services.v1.ApiKeyDailyStatOrBuilder>
          getStatsOrBuilderList() {
       if (statsBuilder_ != null) {
         return statsBuilder_.getMessageOrBuilderList();
@@ -697,12 +697,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.apikey.services.v1.ApiKeyDailyStat stats = 1 [json_name = "stats"];</code>
      */
-    public java.util.List<com.udb.core.apikey.services.v1.ApiKeyDailyStat.Builder> 
+    public java.util.List<com.udb.core.apikey.services.v1.ApiKeyDailyStat.Builder>
          getStatsBuilderList() {
       return internalGetStatsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.apikey.services.v1.ApiKeyDailyStat, com.udb.core.apikey.services.v1.ApiKeyDailyStat.Builder, com.udb.core.apikey.services.v1.ApiKeyDailyStatOrBuilder> 
+        com.udb.core.apikey.services.v1.ApiKeyDailyStat, com.udb.core.apikey.services.v1.ApiKeyDailyStat.Builder, com.udb.core.apikey.services.v1.ApiKeyDailyStatOrBuilder>
         internalGetStatsFieldBuilder() {
       if (statsBuilder_ == null) {
         statsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -798,4 +798,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

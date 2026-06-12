@@ -108,4 +108,3 @@ class GetAssetResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

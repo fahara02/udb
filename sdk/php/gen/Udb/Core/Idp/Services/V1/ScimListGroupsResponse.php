@@ -92,4 +92,3 @@ class ScimListGroupsResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

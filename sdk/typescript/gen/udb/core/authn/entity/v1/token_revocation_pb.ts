@@ -80,4 +80,3 @@ export type TokenRevocation = Message<"udb.core.authn.entity.v1.TokenRevocation"
  */
 export const TokenRevocationSchema: GenMessage<TokenRevocation> = /*@__PURE__*/
   messageDesc(file_udb_core_authn_entity_v1_token_revocation, 0);
-

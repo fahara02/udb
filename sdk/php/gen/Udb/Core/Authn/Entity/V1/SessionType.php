@@ -70,4 +70,3 @@ class SessionType
         return constant($const);
     }
 }
-

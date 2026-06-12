@@ -155,4 +155,3 @@ class TimeSeriesPoint extends \Google\Protobuf\Internal\Message
     }
 
 }
-

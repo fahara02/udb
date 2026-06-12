@@ -119,4 +119,3 @@ export type CdcStatusResponse = Message<"udb.entity.v1.CdcStatusResponse"> & {
  */
 export const CdcStatusResponseSchema: GenMessage<CdcStatusResponse> = /*@__PURE__*/
   messageDesc(file_udb_entity_v1_cdc, 2);
-

@@ -91,4 +91,3 @@ class ErrorKind
         return constant($const);
     }
 }
-

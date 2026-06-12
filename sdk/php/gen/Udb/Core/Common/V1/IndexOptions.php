@@ -377,4 +377,3 @@ class IndexOptions extends \Google\Protobuf\Internal\Message
     }
 
 }
-

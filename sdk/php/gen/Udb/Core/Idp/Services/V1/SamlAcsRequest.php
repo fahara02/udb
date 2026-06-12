@@ -182,4 +182,3 @@ class SamlAcsRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

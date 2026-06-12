@@ -99,4 +99,3 @@ class CreateUserResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

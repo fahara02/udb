@@ -1097,44 +1097,44 @@ const file_udb_core_storage_services_v1_storage_service_proto_rawDesc = "" +
 	"\x05files\x18\x01 \x03(\v2 .udb.core.storage.entity.v1.FileR\x05files\x12\x1f\n" +
 	"\vtotal_count\x18\x02 \x01(\x05R\n" +
 	"totalCount\x122\n" +
-	"\x05error\x18\x03 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1e\x9a\xb2\x19\x1a\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x012\x8f(\n" +
-	"\x0eStorageService\x12\xd6\x05\n" +
-	"\x0eRegisterUpload\x123.udb.core.storage.services.v1.RegisterUploadRequest\x1a4.udb.core.storage.services.v1.RegisterUploadResponse\"\xd8\x04\xca\xf3\x18@\b\x02\x1a\x1budb:storage:register-upload \x01J\x02\x01\x02j\x16storage.RegisterUpload\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18+\b\x01\x12\x0fregister_upload\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\xe2\xf3\x18\xc1\x01\n" +
+	"\x05error\x18\x03 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1e\x9a\xb2\x19\x1a\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x012\xab(\n" +
+	"\x0eStorageService\x12\xda\x05\n" +
+	"\x0eRegisterUpload\x123.udb.core.storage.services.v1.RegisterUploadRequest\x1a4.udb.core.storage.services.v1.RegisterUploadResponse\"\xdc\x04\xca\xf3\x18@\b\x02\x1a\x1budb:storage:register-upload \x01J\x02\x01\x02j\x16storage.RegisterUpload\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18+\b\x01\x12\x0fregister_upload\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\xe2\xf3\x18\xc1\x01\n" +
 	"\astorage\x12\x12udb/native/storage\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\".udb.native.storage.register_upload.boilerplate*\x0fregister_upload2\vudb_storage:\astorageJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18\x9f\x01\n" +
 	"\x16storage.RegisterUpload\x12\x0estorage.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable:I\n" +
 	"%udb.storage.file.upload_url_issued.v1\x12\afile_id\x1a\rat_least_once\"\bstandard\xf2\xf3\x18O\n" +
-	"\astorage\x1a\bpostgres\x1a\fobject_store2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02\x18:\x01*\"\x13/v1/storage/uploads\x12\xe3\x05\n" +
-	"\x0eFinalizeUpload\x123.udb.core.storage.services.v1.FinalizeUploadRequest\x1a4.udb.core.storage.services.v1.FinalizeUploadResponse\"\xe5\x04\xca\xf3\x18@\b\x02\x1a\x1budb:storage:finalize-upload \x01J\x02\x01\x02j\x16storage.FinalizeUpload\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18+\b\x01\x12\x0ffinalize_upload\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\xe2\xf3\x18\xc1\x01\n" +
+	"\astorage\x1a\bpostgres\x1a\fobject_store2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02\x18:\x01*\"\x13/v1/storage/uploads\x12\xe7\x05\n" +
+	"\x0eFinalizeUpload\x123.udb.core.storage.services.v1.FinalizeUploadRequest\x1a4.udb.core.storage.services.v1.FinalizeUploadResponse\"\xe9\x04\xca\xf3\x18@\b\x02\x1a\x1budb:storage:finalize-upload \x01J\x02\x01\x02j\x16storage.FinalizeUpload\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18+\b\x01\x12\x0ffinalize_upload\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\xe2\xf3\x18\xc1\x01\n" +
 	"\astorage\x12\x12udb/native/storage\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\".udb.native.storage.finalize_upload.boilerplate*\x0ffinalize_upload2\vudb_storage:\astorageJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18\x99\x01\n" +
 	"\x16storage.FinalizeUpload\x12\x0estorage.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable:C\n" +
 	"\x1dudb.storage.file.finalized.v1\x12\afile_id\x1a\rat_least_once\"\bstandard(\x01\xf2\xf3\x18O\n" +
-	"\astorage\x1a\bpostgres\x1a\fobject_store2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02+:\x01*\"&/v1/storage/uploads/{file_id}/finalize\x12\xa0\x05\n" +
-	"\x0eGetDownloadUrl\x123.udb.core.storage.services.v1.GetDownloadUrlRequest\x1a4.udb.core.storage.services.v1.GetDownloadUrlResponse\"\xa2\x04\xca\xf3\x18A\b\x02\x1a\x1cudb:storage:get-download-url \x01J\x02\x01\x02j\x16storage.GetDownloadUrl\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18,\b\x01\x12\x10get_download_url\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\xe2\xf3\x18\xc3\x01\n" +
+	"\astorage\x1a\bpostgres\x1a\fobject_store2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02+:\x01*\"&/v1/storage/uploads/{file_id}/finalize\x12\xa4\x05\n" +
+	"\x0eGetDownloadUrl\x123.udb.core.storage.services.v1.GetDownloadUrlRequest\x1a4.udb.core.storage.services.v1.GetDownloadUrlResponse\"\xa6\x04\xca\xf3\x18A\b\x02\x1a\x1cudb:storage:get-download-url \x01J\x02\x01\x02j\x16storage.GetDownloadUrl\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18,\b\x01\x12\x10get_download_url\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\xe2\xf3\x18\xc3\x01\n" +
 	"\astorage\x12\x12udb/native/storage\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"/udb.native.storage.get_download_url.boilerplate*\x10get_download_url2\vudb_storage:\astorageJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18T\n" +
 	"\x16storage.GetDownloadUrl\x12\x0estorage.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18O\n" +
-	"\astorage\x1a\bpostgres\x1a\fobject_store2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02*\x12(/v1/storage/files/{file_id}/download-url\x12\xd0\x04\n" +
-	"\aGetFile\x12,.udb.core.storage.services.v1.GetFileRequest\x1a-.udb.core.storage.services.v1.GetFileResponse\"\xe7\x03\xca\xf3\x182\b\x02\x1a\x14udb:storage:get-file \x01J\x02\x01\x02j\x0fstorage.GetFile\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18$\b\x01\x12\bget_file\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\xe2\xf3\x18\xb3\x01\n" +
+	"\astorage\x1a\bpostgres\x1a\fobject_store2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02*\x12(/v1/storage/files/{file_id}/download-url\x12\xd4\x04\n" +
+	"\aGetFile\x12,.udb.core.storage.services.v1.GetFileRequest\x1a-.udb.core.storage.services.v1.GetFileResponse\"\xeb\x03\xca\xf3\x182\b\x02\x1a\x14udb:storage:get-file \x01J\x02\x01\x02j\x0fstorage.GetFile\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18$\b\x01\x12\bget_file\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\xe2\xf3\x18\xb3\x01\n" +
 	"\astorage\x12\x12udb/native/storage\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"'udb.native.storage.get_file.boilerplate*\bget_file2\vudb_storage:\astorageJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18M\n" +
 	"\x0fstorage.GetFile\x12\x0estorage.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18O\n" +
-	"\astorage\x1a\bpostgres\x1a\fobject_store2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02\x1d\x12\x1b/v1/storage/files/{file_id}\x12\xb9\x05\n" +
+	"\astorage\x1a\bpostgres\x1a\fobject_store2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02\x1d\x12\x1b/v1/storage/files/{file_id}\x12\xbd\x05\n" +
 	"\n" +
-	"UpdateFile\x12/.udb.core.storage.services.v1.UpdateFileRequest\x1a0.udb.core.storage.services.v1.UpdateFileResponse\"\xc7\x04\xca\xf3\x188\b\x02\x1a\x17udb:storage:update-file \x01J\x02\x01\x02j\x12storage.UpdateFile\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18'\b\x01\x12\vupdate_file\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\xe2\xf3\x18\xb9\x01\n" +
+	"UpdateFile\x12/.udb.core.storage.services.v1.UpdateFileRequest\x1a0.udb.core.storage.services.v1.UpdateFileResponse\"\xcb\x04\xca\xf3\x188\b\x02\x1a\x17udb:storage:update-file \x01J\x02\x01\x02j\x12storage.UpdateFile\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18'\b\x01\x12\vupdate_file\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\xe2\xf3\x18\xb9\x01\n" +
 	"\astorage\x12\x12udb/native/storage\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"*udb.native.storage.update_file.boilerplate*\vupdate_file2\vudb_storage:\astorageJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18\x9a\x01\n" +
 	"\x12storage.UpdateFile\x12\x0estorage.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable:H\n" +
 	"$udb.storage.file.metadata_updated.v1\x12\afile_id\x1a\rat_least_once\"\bstandard\xf2\xf3\x18O\n" +
-	"\astorage\x1a\bpostgres\x1a\fobject_store2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02 :\x01*2\x1b/v1/storage/files/{file_id}\x12\xad\x05\n" +
+	"\astorage\x1a\bpostgres\x1a\fobject_store2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02 :\x01*2\x1b/v1/storage/files/{file_id}\x12\xb1\x05\n" +
 	"\n" +
-	"DeleteFile\x12/.udb.core.storage.services.v1.DeleteFileRequest\x1a0.udb.core.storage.services.v1.DeleteFileResponse\"\xbb\x04\xca\xf3\x188\b\x02\x1a\x17udb:storage:delete-file \x01J\x02\x01\x02j\x12storage.DeleteFile\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18'\b\x01\x12\vdelete_file\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\xe2\xf3\x18\xb9\x01\n" +
+	"DeleteFile\x12/.udb.core.storage.services.v1.DeleteFileRequest\x1a0.udb.core.storage.services.v1.DeleteFileResponse\"\xbf\x04\xca\xf3\x188\b\x02\x1a\x17udb:storage:delete-file \x01J\x02\x01\x02j\x12storage.DeleteFile\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18'\b\x01\x12\vdelete_file\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\xe2\xf3\x18\xb9\x01\n" +
 	"\astorage\x12\x12udb/native/storage\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"*udb.native.storage.delete_file.boilerplate*\vdelete_file2\vudb_storage:\astorageJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18\x91\x01\n" +
 	"\x12storage.DeleteFile\x12\x0estorage.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable:?\n" +
 	"\x1budb.storage.file.deleted.v1\x12\afile_id\x1a\rat_least_once\"\bstandard\xf2\xf3\x18O\n" +
-	"\astorage\x1a\bpostgres\x1a\fobject_store2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02\x1d*\x1b/v1/storage/files/{file_id}\x12\xd8\x04\n" +
-	"\tListFiles\x12..udb.core.storage.services.v1.ListFilesRequest\x1a/.udb.core.storage.services.v1.ListFilesResponse\"\xe9\x03\xca\xf3\x186\b\x02\x1a\x16udb:storage:list-files \x01J\x02\x01\x02j\x11storage.ListFiles\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18&\b\x01\x12\n" +
+	"\astorage\x1a\bpostgres\x1a\fobject_store2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02\x1d*\x1b/v1/storage/files/{file_id}\x12\xdc\x04\n" +
+	"\tListFiles\x12..udb.core.storage.services.v1.ListFilesRequest\x1a/.udb.core.storage.services.v1.ListFilesResponse\"\xed\x03\xca\xf3\x186\b\x02\x1a\x16udb:storage:list-files \x01J\x02\x01\x02j\x11storage.ListFiles\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18&\b\x01\x12\n" +
 	"list_files\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\xe2\xf3\x18\xb7\x01\n" +
 	"\astorage\x12\x12udb/native/storage\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\")udb.native.storage.list_files.boilerplate*\n" +
 	"list_files2\vudb_storage:\astorageJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18O\n" +
 	"\x11storage.ListFiles\x12\x0estorage.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18O\n" +
-	"\astorage\x1a\bpostgres\x1a\fobject_store2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02\x13\x12\x11/v1/storage/files\x1a\x80\x03\xca\xf0\x19f\n" +
+	"\astorage\x1a\bpostgres\x1a\fobject_store2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02\x13\x12\x11/v1/storage/files\x1a\x80\x03\xca\xf0\x19f\n" +
 	"\astorage\x12\astorage\x1a\astorage\"\aStorage*\astorage0\x018\x01H\x01h\x01z\astorage\x82\x01\astorage\x8a\x01\astorage\x92\x01\x0enative.storage\x98\x01\x01\xd2\xf0\x19\x1a\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\xda\xf0\x19\x92\x01\n" +
 	"\astorage\x12\x12udb/native/storage\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"\x1eudb.native.storage.config.json:\astorageJ\vUDB_API_KEYZ\x0fudb native lint\xe2\xf0\x19]\n" +
 	"\astorage\x1a\bpostgres\x1a\fobject_store2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET:\fobject_storeB\x98\x02\n" +

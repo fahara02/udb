@@ -64,7 +64,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.webrtc.entity.v1.Room rooms = 1 [json_name = "rooms"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.webrtc.entity.v1.RoomOrBuilder> 
+  public java.util.List<? extends com.udb.core.webrtc.entity.v1.RoomOrBuilder>
       getRoomsOrBuilderList() {
     return rooms_;
   }
@@ -478,7 +478,7 @@ private static final long serialVersionUID = 0L;
             roomsBuilder_ = null;
             rooms_ = other.rooms_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            roomsBuilder_ = 
+            roomsBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetRoomsFieldBuilder() : null;
           } else {
@@ -755,7 +755,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.webrtc.entity.v1.Room rooms = 1 [json_name = "rooms"];</code>
      */
-    public java.util.List<? extends com.udb.core.webrtc.entity.v1.RoomOrBuilder> 
+    public java.util.List<? extends com.udb.core.webrtc.entity.v1.RoomOrBuilder>
          getRoomsOrBuilderList() {
       if (roomsBuilder_ != null) {
         return roomsBuilder_.getMessageOrBuilderList();
@@ -781,12 +781,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.webrtc.entity.v1.Room rooms = 1 [json_name = "rooms"];</code>
      */
-    public java.util.List<com.udb.core.webrtc.entity.v1.Room.Builder> 
+    public java.util.List<com.udb.core.webrtc.entity.v1.Room.Builder>
          getRoomsBuilderList() {
       return internalGetRoomsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.webrtc.entity.v1.Room, com.udb.core.webrtc.entity.v1.Room.Builder, com.udb.core.webrtc.entity.v1.RoomOrBuilder> 
+        com.udb.core.webrtc.entity.v1.Room, com.udb.core.webrtc.entity.v1.Room.Builder, com.udb.core.webrtc.entity.v1.RoomOrBuilder>
         internalGetRoomsFieldBuilder() {
       if (roomsBuilder_ == null) {
         roomsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -976,7 +976,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.ApiError error = 3 [json_name = "error"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder> 
+        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder>
         internalGetErrorFieldBuilder() {
       if (errorBuilder_ == null) {
         errorBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1039,4 +1039,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

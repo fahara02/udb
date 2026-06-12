@@ -295,4 +295,3 @@ class SdkSurfaceOptions extends \Google\Protobuf\Internal\Message
     }
 
 }
-

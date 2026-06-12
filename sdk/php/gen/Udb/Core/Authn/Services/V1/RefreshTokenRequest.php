@@ -83,4 +83,3 @@ class RefreshTokenRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

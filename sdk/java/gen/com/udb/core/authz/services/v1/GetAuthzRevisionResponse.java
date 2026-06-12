@@ -85,7 +85,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       contentHash_ = s;
@@ -101,7 +101,7 @@ private static final long serialVersionUID = 0L;
       getContentHashBytes() {
     java.lang.Object ref = contentHash_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       contentHash_ = b;
@@ -617,7 +617,7 @@ private static final long serialVersionUID = 0L;
         getContentHashBytes() {
       java.lang.Object ref = contentHash_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         contentHash_ = b;
@@ -772,7 +772,7 @@ private static final long serialVersionUID = 0L;
      * <code>.google.protobuf.Timestamp changed_at = 4 [json_name = "changedAt"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> 
+        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder>
         internalGetChangedAtFieldBuilder() {
       if (changedAtBuilder_ == null) {
         changedAtBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -835,4 +835,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

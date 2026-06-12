@@ -122,4 +122,3 @@ export type ControlPlaneNodeState = Message<"udb.core.control.entity.v1.ControlP
  */
 export const ControlPlaneNodeStateSchema: GenMessage<ControlPlaneNodeState> = /*@__PURE__*/
   messageDesc(file_udb_core_control_entity_v1_control_plane_node_state, 0);
-

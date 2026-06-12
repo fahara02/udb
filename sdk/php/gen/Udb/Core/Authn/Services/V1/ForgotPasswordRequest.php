@@ -99,4 +99,3 @@ class ForgotPasswordRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

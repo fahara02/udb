@@ -121,4 +121,3 @@ export type PolicyRule = Message<"udb.core.authz.entity.v1.PolicyRule"> & {
  */
 export const PolicyRuleSchema: GenMessage<PolicyRule> = /*@__PURE__*/
   messageDesc(file_udb_core_authz_entity_v1_policy_rule, 0);
-

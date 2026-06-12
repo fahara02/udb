@@ -119,4 +119,3 @@ class AckStatusRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -56,4 +56,3 @@ class VectorSet extends \Google\Protobuf\Internal\Message
     }
 
 }
-

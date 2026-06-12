@@ -110,4 +110,3 @@ class SagaListResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

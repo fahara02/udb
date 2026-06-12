@@ -65,4 +65,3 @@ class PolicyBundleResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

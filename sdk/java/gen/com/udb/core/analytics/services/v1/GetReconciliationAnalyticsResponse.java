@@ -63,7 +63,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.analytics.entity.v1.ReconciliationAnalyticsSummary summaries = 1 [json_name = "summaries"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.analytics.entity.v1.ReconciliationAnalyticsSummaryOrBuilder> 
+  public java.util.List<? extends com.udb.core.analytics.entity.v1.ReconciliationAnalyticsSummaryOrBuilder>
       getSummariesOrBuilderList() {
     return summaries_;
   }
@@ -433,7 +433,7 @@ private static final long serialVersionUID = 0L;
             summariesBuilder_ = null;
             summaries_ = other.summaries_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            summariesBuilder_ = 
+            summariesBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetSummariesFieldBuilder() : null;
           } else {
@@ -708,7 +708,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.analytics.entity.v1.ReconciliationAnalyticsSummary summaries = 1 [json_name = "summaries"];</code>
      */
-    public java.util.List<? extends com.udb.core.analytics.entity.v1.ReconciliationAnalyticsSummaryOrBuilder> 
+    public java.util.List<? extends com.udb.core.analytics.entity.v1.ReconciliationAnalyticsSummaryOrBuilder>
          getSummariesOrBuilderList() {
       if (summariesBuilder_ != null) {
         return summariesBuilder_.getMessageOrBuilderList();
@@ -734,12 +734,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.analytics.entity.v1.ReconciliationAnalyticsSummary summaries = 1 [json_name = "summaries"];</code>
      */
-    public java.util.List<com.udb.core.analytics.entity.v1.ReconciliationAnalyticsSummary.Builder> 
+    public java.util.List<com.udb.core.analytics.entity.v1.ReconciliationAnalyticsSummary.Builder>
          getSummariesBuilderList() {
       return internalGetSummariesFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.analytics.entity.v1.ReconciliationAnalyticsSummary, com.udb.core.analytics.entity.v1.ReconciliationAnalyticsSummary.Builder, com.udb.core.analytics.entity.v1.ReconciliationAnalyticsSummaryOrBuilder> 
+        com.udb.core.analytics.entity.v1.ReconciliationAnalyticsSummary, com.udb.core.analytics.entity.v1.ReconciliationAnalyticsSummary.Builder, com.udb.core.analytics.entity.v1.ReconciliationAnalyticsSummaryOrBuilder>
         internalGetSummariesFieldBuilder() {
       if (summariesBuilder_ == null) {
         summariesBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -867,4 +867,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

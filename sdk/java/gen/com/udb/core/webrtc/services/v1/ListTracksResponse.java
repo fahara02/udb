@@ -64,7 +64,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.webrtc.entity.v1.Track tracks = 1 [json_name = "tracks"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.webrtc.entity.v1.TrackOrBuilder> 
+  public java.util.List<? extends com.udb.core.webrtc.entity.v1.TrackOrBuilder>
       getTracksOrBuilderList() {
     return tracks_;
   }
@@ -452,7 +452,7 @@ private static final long serialVersionUID = 0L;
             tracksBuilder_ = null;
             tracks_ = other.tracks_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            tracksBuilder_ = 
+            tracksBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetTracksFieldBuilder() : null;
           } else {
@@ -721,7 +721,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.webrtc.entity.v1.Track tracks = 1 [json_name = "tracks"];</code>
      */
-    public java.util.List<? extends com.udb.core.webrtc.entity.v1.TrackOrBuilder> 
+    public java.util.List<? extends com.udb.core.webrtc.entity.v1.TrackOrBuilder>
          getTracksOrBuilderList() {
       if (tracksBuilder_ != null) {
         return tracksBuilder_.getMessageOrBuilderList();
@@ -747,12 +747,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.webrtc.entity.v1.Track tracks = 1 [json_name = "tracks"];</code>
      */
-    public java.util.List<com.udb.core.webrtc.entity.v1.Track.Builder> 
+    public java.util.List<com.udb.core.webrtc.entity.v1.Track.Builder>
          getTracksBuilderList() {
       return internalGetTracksFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.webrtc.entity.v1.Track, com.udb.core.webrtc.entity.v1.Track.Builder, com.udb.core.webrtc.entity.v1.TrackOrBuilder> 
+        com.udb.core.webrtc.entity.v1.Track, com.udb.core.webrtc.entity.v1.Track.Builder, com.udb.core.webrtc.entity.v1.TrackOrBuilder>
         internalGetTracksFieldBuilder() {
       if (tracksBuilder_ == null) {
         tracksBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -910,7 +910,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.ApiError error = 2 [json_name = "error"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder> 
+        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder>
         internalGetErrorFieldBuilder() {
       if (errorBuilder_ == null) {
         errorBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -973,4 +973,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

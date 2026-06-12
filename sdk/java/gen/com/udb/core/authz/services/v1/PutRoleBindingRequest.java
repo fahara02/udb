@@ -502,7 +502,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.authz.services.v1.RoleBinding binding = 1 [json_name = "binding"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.authz.services.v1.RoleBinding, com.udb.core.authz.services.v1.RoleBinding.Builder, com.udb.core.authz.services.v1.RoleBindingOrBuilder> 
+        com.udb.core.authz.services.v1.RoleBinding, com.udb.core.authz.services.v1.RoleBinding.Builder, com.udb.core.authz.services.v1.RoleBindingOrBuilder>
         internalGetBindingFieldBuilder() {
       if (bindingBuilder_ == null) {
         bindingBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -565,4 +565,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

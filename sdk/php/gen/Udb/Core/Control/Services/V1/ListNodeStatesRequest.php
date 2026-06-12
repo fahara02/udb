@@ -169,4 +169,3 @@ class ListNodeStatesRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

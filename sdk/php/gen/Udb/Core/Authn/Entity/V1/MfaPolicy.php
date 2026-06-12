@@ -188,4 +188,3 @@ class MfaPolicy extends \Google\Protobuf\Internal\Message
     }
 
 }
-

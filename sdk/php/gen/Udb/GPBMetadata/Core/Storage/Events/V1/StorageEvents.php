@@ -24,4 +24,3 @@ class StorageEvents
         static::$is_initialized = true;
     }
 }
-

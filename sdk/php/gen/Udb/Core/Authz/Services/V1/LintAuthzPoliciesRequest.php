@@ -29,4 +29,3 @@ class LintAuthzPoliciesRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

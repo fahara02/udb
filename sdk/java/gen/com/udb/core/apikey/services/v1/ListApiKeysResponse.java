@@ -64,7 +64,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.apikey.entity.v1.ApiKey keys = 1 [json_name = "keys"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.apikey.entity.v1.ApiKeyOrBuilder> 
+  public java.util.List<? extends com.udb.core.apikey.entity.v1.ApiKeyOrBuilder>
       getKeysOrBuilderList() {
     return keys_;
   }
@@ -440,7 +440,7 @@ private static final long serialVersionUID = 0L;
             keysBuilder_ = null;
             keys_ = other.keys_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            keysBuilder_ = 
+            keysBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetKeysFieldBuilder() : null;
           } else {
@@ -709,7 +709,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.apikey.entity.v1.ApiKey keys = 1 [json_name = "keys"];</code>
      */
-    public java.util.List<? extends com.udb.core.apikey.entity.v1.ApiKeyOrBuilder> 
+    public java.util.List<? extends com.udb.core.apikey.entity.v1.ApiKeyOrBuilder>
          getKeysOrBuilderList() {
       if (keysBuilder_ != null) {
         return keysBuilder_.getMessageOrBuilderList();
@@ -735,12 +735,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.apikey.entity.v1.ApiKey keys = 1 [json_name = "keys"];</code>
      */
-    public java.util.List<com.udb.core.apikey.entity.v1.ApiKey.Builder> 
+    public java.util.List<com.udb.core.apikey.entity.v1.ApiKey.Builder>
          getKeysBuilderList() {
       return internalGetKeysFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.apikey.entity.v1.ApiKey, com.udb.core.apikey.entity.v1.ApiKey.Builder, com.udb.core.apikey.entity.v1.ApiKeyOrBuilder> 
+        com.udb.core.apikey.entity.v1.ApiKey, com.udb.core.apikey.entity.v1.ApiKey.Builder, com.udb.core.apikey.entity.v1.ApiKeyOrBuilder>
         internalGetKeysFieldBuilder() {
       if (keysBuilder_ == null) {
         keysBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -862,7 +862,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.PageResponse page = 2 [json_name = "page"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.PageResponse, com.udb.core.common.v1.PageResponse.Builder, com.udb.core.common.v1.PageResponseOrBuilder> 
+        com.udb.core.common.v1.PageResponse, com.udb.core.common.v1.PageResponse.Builder, com.udb.core.common.v1.PageResponseOrBuilder>
         internalGetPageFieldBuilder() {
       if (pageBuilder_ == null) {
         pageBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -925,4 +925,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

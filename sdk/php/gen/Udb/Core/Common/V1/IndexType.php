@@ -92,4 +92,3 @@ class IndexType
         return constant($const);
     }
 }
-

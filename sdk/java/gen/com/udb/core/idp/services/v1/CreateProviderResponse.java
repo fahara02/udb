@@ -502,7 +502,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.idp.entity.v1.IdentityProvider provider = 1 [json_name = "provider"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.idp.entity.v1.IdentityProvider, com.udb.core.idp.entity.v1.IdentityProvider.Builder, com.udb.core.idp.entity.v1.IdentityProviderOrBuilder> 
+        com.udb.core.idp.entity.v1.IdentityProvider, com.udb.core.idp.entity.v1.IdentityProvider.Builder, com.udb.core.idp.entity.v1.IdentityProviderOrBuilder>
         internalGetProviderFieldBuilder() {
       if (providerBuilder_ == null) {
         providerBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -565,4 +565,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

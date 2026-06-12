@@ -64,7 +64,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.idp.entity.v1.IdentityProvider providers = 1 [json_name = "providers"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.idp.entity.v1.IdentityProviderOrBuilder> 
+  public java.util.List<? extends com.udb.core.idp.entity.v1.IdentityProviderOrBuilder>
       getProvidersOrBuilderList() {
     return providers_;
   }
@@ -440,7 +440,7 @@ private static final long serialVersionUID = 0L;
             providersBuilder_ = null;
             providers_ = other.providers_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            providersBuilder_ = 
+            providersBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetProvidersFieldBuilder() : null;
           } else {
@@ -709,7 +709,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.idp.entity.v1.IdentityProvider providers = 1 [json_name = "providers"];</code>
      */
-    public java.util.List<? extends com.udb.core.idp.entity.v1.IdentityProviderOrBuilder> 
+    public java.util.List<? extends com.udb.core.idp.entity.v1.IdentityProviderOrBuilder>
          getProvidersOrBuilderList() {
       if (providersBuilder_ != null) {
         return providersBuilder_.getMessageOrBuilderList();
@@ -735,12 +735,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.idp.entity.v1.IdentityProvider providers = 1 [json_name = "providers"];</code>
      */
-    public java.util.List<com.udb.core.idp.entity.v1.IdentityProvider.Builder> 
+    public java.util.List<com.udb.core.idp.entity.v1.IdentityProvider.Builder>
          getProvidersBuilderList() {
       return internalGetProvidersFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.idp.entity.v1.IdentityProvider, com.udb.core.idp.entity.v1.IdentityProvider.Builder, com.udb.core.idp.entity.v1.IdentityProviderOrBuilder> 
+        com.udb.core.idp.entity.v1.IdentityProvider, com.udb.core.idp.entity.v1.IdentityProvider.Builder, com.udb.core.idp.entity.v1.IdentityProviderOrBuilder>
         internalGetProvidersFieldBuilder() {
       if (providersBuilder_ == null) {
         providersBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -862,7 +862,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.PageResponse page = 2 [json_name = "page"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.PageResponse, com.udb.core.common.v1.PageResponse.Builder, com.udb.core.common.v1.PageResponseOrBuilder> 
+        com.udb.core.common.v1.PageResponse, com.udb.core.common.v1.PageResponse.Builder, com.udb.core.common.v1.PageResponseOrBuilder>
         internalGetPageFieldBuilder() {
       if (pageBuilder_ == null) {
         pageBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -925,4 +925,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

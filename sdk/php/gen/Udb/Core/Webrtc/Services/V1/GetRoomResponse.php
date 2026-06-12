@@ -108,4 +108,3 @@ class GetRoomResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

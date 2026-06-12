@@ -68,7 +68,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       totpSecret_ = s;
@@ -88,7 +88,7 @@ private static final long serialVersionUID = 0L;
       getTotpSecretBytes() {
     java.lang.Object ref = totpSecret_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       totpSecret_ = b;
@@ -115,7 +115,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       totpQrUri_ = s;
@@ -135,7 +135,7 @@ private static final long serialVersionUID = 0L;
       getTotpQrUriBytes() {
     java.lang.Object ref = totpQrUri_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       totpQrUri_ = b;
@@ -162,7 +162,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       verifyOtpId_ = s;
@@ -182,7 +182,7 @@ private static final long serialVersionUID = 0L;
       getVerifyOtpIdBytes() {
     java.lang.Object ref = verifyOtpId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       verifyOtpId_ = b;
@@ -571,7 +571,7 @@ private static final long serialVersionUID = 0L;
         getTotpSecretBytes() {
       java.lang.Object ref = totpSecret_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         totpSecret_ = b;
@@ -663,7 +663,7 @@ private static final long serialVersionUID = 0L;
         getTotpQrUriBytes() {
       java.lang.Object ref = totpQrUri_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         totpQrUri_ = b;
@@ -755,7 +755,7 @@ private static final long serialVersionUID = 0L;
         getVerifyOtpIdBytes() {
       java.lang.Object ref = verifyOtpId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         verifyOtpId_ = b;
@@ -864,4 +864,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

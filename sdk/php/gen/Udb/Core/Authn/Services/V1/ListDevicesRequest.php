@@ -128,4 +128,3 @@ class ListDevicesRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -244,4 +244,3 @@ class DocumentUpsertRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

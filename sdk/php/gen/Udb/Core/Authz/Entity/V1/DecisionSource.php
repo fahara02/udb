@@ -56,4 +56,3 @@ class DecisionSource
         return constant($const);
     }
 }
-

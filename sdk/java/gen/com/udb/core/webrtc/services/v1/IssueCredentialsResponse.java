@@ -67,7 +67,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.webrtc.services.v1.IceServer ice_servers = 1 [json_name = "iceServers"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.webrtc.services.v1.IceServerOrBuilder> 
+  public java.util.List<? extends com.udb.core.webrtc.services.v1.IceServerOrBuilder>
       getIceServersOrBuilderList() {
     return iceServers_;
   }
@@ -107,7 +107,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       username_ = s;
@@ -123,7 +123,7 @@ private static final long serialVersionUID = 0L;
       getUsernameBytes() {
     java.lang.Object ref = username_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       username_ = b;
@@ -146,7 +146,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       credential_ = s;
@@ -162,7 +162,7 @@ private static final long serialVersionUID = 0L;
       getCredentialBytes() {
     java.lang.Object ref = credential_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       credential_ = b;
@@ -265,7 +265,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       allowedAction_ = s;
@@ -286,7 +286,7 @@ private static final long serialVersionUID = 0L;
       getAllowedActionBytes() {
     java.lang.Object ref = allowedAction_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       allowedAction_ = b;
@@ -704,7 +704,7 @@ private static final long serialVersionUID = 0L;
             iceServersBuilder_ = null;
             iceServers_ = other.iceServers_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            iceServersBuilder_ = 
+            iceServersBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetIceServersFieldBuilder() : null;
           } else {
@@ -1021,7 +1021,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.webrtc.services.v1.IceServer ice_servers = 1 [json_name = "iceServers"];</code>
      */
-    public java.util.List<? extends com.udb.core.webrtc.services.v1.IceServerOrBuilder> 
+    public java.util.List<? extends com.udb.core.webrtc.services.v1.IceServerOrBuilder>
          getIceServersOrBuilderList() {
       if (iceServersBuilder_ != null) {
         return iceServersBuilder_.getMessageOrBuilderList();
@@ -1047,12 +1047,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.webrtc.services.v1.IceServer ice_servers = 1 [json_name = "iceServers"];</code>
      */
-    public java.util.List<com.udb.core.webrtc.services.v1.IceServer.Builder> 
+    public java.util.List<com.udb.core.webrtc.services.v1.IceServer.Builder>
          getIceServersBuilderList() {
       return internalGetIceServersFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.webrtc.services.v1.IceServer, com.udb.core.webrtc.services.v1.IceServer.Builder, com.udb.core.webrtc.services.v1.IceServerOrBuilder> 
+        com.udb.core.webrtc.services.v1.IceServer, com.udb.core.webrtc.services.v1.IceServer.Builder, com.udb.core.webrtc.services.v1.IceServerOrBuilder>
         internalGetIceServersFieldBuilder() {
       if (iceServersBuilder_ == null) {
         iceServersBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -1091,7 +1091,7 @@ private static final long serialVersionUID = 0L;
         getUsernameBytes() {
       java.lang.Object ref = username_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         username_ = b;
@@ -1163,7 +1163,7 @@ private static final long serialVersionUID = 0L;
         getCredentialBytes() {
       java.lang.Object ref = credential_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         credential_ = b;
@@ -1350,7 +1350,7 @@ private static final long serialVersionUID = 0L;
      * <code>.google.protobuf.Timestamp expires_at = 5 [json_name = "expiresAt"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> 
+        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder>
         internalGetExpiresAtFieldBuilder() {
       if (expiresAtBuilder_ == null) {
         expiresAtBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1507,7 +1507,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.ApiError error = 6 [json_name = "error"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder> 
+        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder>
         internalGetErrorFieldBuilder() {
       if (errorBuilder_ == null) {
         errorBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1555,7 +1555,7 @@ private static final long serialVersionUID = 0L;
         getAllowedActionBytes() {
       java.lang.Object ref = allowedAction_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         allowedAction_ = b;
@@ -1667,4 +1667,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

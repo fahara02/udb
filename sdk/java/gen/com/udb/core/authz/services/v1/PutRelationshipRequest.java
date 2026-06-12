@@ -502,7 +502,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.authz.services.v1.RelationshipTuple tuple = 1 [json_name = "tuple"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.authz.services.v1.RelationshipTuple, com.udb.core.authz.services.v1.RelationshipTuple.Builder, com.udb.core.authz.services.v1.RelationshipTupleOrBuilder> 
+        com.udb.core.authz.services.v1.RelationshipTuple, com.udb.core.authz.services.v1.RelationshipTuple.Builder, com.udb.core.authz.services.v1.RelationshipTupleOrBuilder>
         internalGetTupleFieldBuilder() {
       if (tupleBuilder_ == null) {
         tupleBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -565,4 +565,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

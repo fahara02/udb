@@ -175,4 +175,3 @@ class StepCompleted extends \Google\Protobuf\Internal\Message
     }
 
 }
-

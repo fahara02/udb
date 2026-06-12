@@ -126,4 +126,3 @@ class ListRoomsResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

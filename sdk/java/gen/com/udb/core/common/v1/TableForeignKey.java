@@ -107,7 +107,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       referencesTable_ = s;
@@ -123,7 +123,7 @@ private static final long serialVersionUID = 0L;
       getReferencesTableBytes() {
     java.lang.Object ref = referencesTable_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       referencesTable_ = b;
@@ -183,7 +183,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       referencesSchema_ = s;
@@ -199,7 +199,7 @@ private static final long serialVersionUID = 0L;
       getReferencesSchemaBytes() {
     java.lang.Object ref = referencesSchema_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       referencesSchema_ = b;
@@ -258,7 +258,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       constraintName_ = s;
@@ -274,7 +274,7 @@ private static final long serialVersionUID = 0L;
       getConstraintNameBytes() {
     java.lang.Object ref = constraintName_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       constraintName_ = b;
@@ -991,7 +991,7 @@ private static final long serialVersionUID = 0L;
         getReferencesTableBytes() {
       java.lang.Object ref = referencesTable_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         referencesTable_ = b;
@@ -1174,7 +1174,7 @@ private static final long serialVersionUID = 0L;
         getReferencesSchemaBytes() {
       java.lang.Object ref = referencesSchema_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         referencesSchema_ = b;
@@ -1350,7 +1350,7 @@ private static final long serialVersionUID = 0L;
         getConstraintNameBytes() {
       java.lang.Object ref = constraintName_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         constraintName_ = b;
@@ -1543,4 +1543,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

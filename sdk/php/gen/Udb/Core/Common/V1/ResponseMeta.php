@@ -121,4 +121,3 @@ class ResponseMeta extends \Google\Protobuf\Internal\Message
     }
 
 }
-

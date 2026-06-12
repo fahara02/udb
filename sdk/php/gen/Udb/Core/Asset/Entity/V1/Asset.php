@@ -409,4 +409,3 @@ class Asset extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -359,4 +359,3 @@ class PolicySet extends \Google\Protobuf\Internal\Message
     }
 
 }
-

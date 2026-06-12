@@ -356,7 +356,7 @@ const file_udb_core_idp_entity_v1_identity_provider_proto_rawDesc = "" +
 	"\fsaml_sso_url\x12\fVARCHAR(512)Z\x19SAML IdP SSO endpoint URLR\n" +
 	"samlSsoUrl\x12z\n" +
 	"\x06health\x18\x14 \x01(\x0e2&.udb.core.idp.entity.v1.ProviderHealthB:\x82\xb7\x186\n" +
-	"\x06health\x12\vVARCHAR(24)\x18\x01:\x1d'PROVIDER_HEALTH_UNSPECIFIED'R\x06health\x12\x9c\x01\n" +
+	"\x06health\x12\vVARCHAR(27)\x18\x01:\x1d'PROVIDER_HEALTH_UNSPECIFIED'R\x06health\x12\x9c\x01\n" +
 	"\x14last_jwks_refresh_at\x18\x15 \x01(\v2\x1a.google.protobuf.TimestampBO\x82\xb7\x18K\n" +
 	"\x14last_jwks_refresh_at\x12\vTIMESTAMPTZZ&Last successful JWKS/discovery refreshR\x11lastJwksRefreshAt\x12\x96\x01\n" +
 	"\x18last_jwks_refresh_status\x18\x16 \x01(\tB]\x82\xb7\x18Y\n" +

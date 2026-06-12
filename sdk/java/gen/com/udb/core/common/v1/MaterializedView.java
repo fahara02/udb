@@ -64,7 +64,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       viewName_ = s;
@@ -80,7 +80,7 @@ private static final long serialVersionUID = 0L;
       getViewNameBytes() {
     java.lang.Object ref = viewName_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       viewName_ = b;
@@ -103,7 +103,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       schemaName_ = s;
@@ -119,7 +119,7 @@ private static final long serialVersionUID = 0L;
       getSchemaNameBytes() {
     java.lang.Object ref = schemaName_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       schemaName_ = b;
@@ -142,7 +142,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       query_ = s;
@@ -158,7 +158,7 @@ private static final long serialVersionUID = 0L;
       getQueryBytes() {
     java.lang.Object ref = query_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       query_ = b;
@@ -574,7 +574,7 @@ private static final long serialVersionUID = 0L;
         getViewNameBytes() {
       java.lang.Object ref = viewName_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         viewName_ = b;
@@ -646,7 +646,7 @@ private static final long serialVersionUID = 0L;
         getSchemaNameBytes() {
       java.lang.Object ref = schemaName_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         schemaName_ = b;
@@ -718,7 +718,7 @@ private static final long serialVersionUID = 0L;
         getQueryBytes() {
       java.lang.Object ref = query_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         query_ = b;
@@ -847,4 +847,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

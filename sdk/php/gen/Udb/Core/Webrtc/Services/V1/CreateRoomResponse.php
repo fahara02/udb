@@ -126,4 +126,3 @@ class CreateRoomResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

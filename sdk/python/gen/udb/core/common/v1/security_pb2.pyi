@@ -8,6 +8,13 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
+class OperationKind(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    OPERATION_KIND_UNSPECIFIED: _ClassVar[OperationKind]
+    OPERATION_KIND_READ_ONLY: _ClassVar[OperationKind]
+    OPERATION_KIND_MUTATION: _ClassVar[OperationKind]
+    OPERATION_KIND_DESTRUCTIVE: _ClassVar[OperationKind]
+
 class AuthMode(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
     AUTH_MODE_UNSPECIFIED: _ClassVar[AuthMode]
@@ -87,6 +94,10 @@ class DataCategory(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     DATA_CATEGORY_IDENTITY: _ClassVar[DataCategory]
     DATA_CATEGORY_OPERATIONAL: _ClassVar[DataCategory]
     DATA_CATEGORY_SYSTEM: _ClassVar[DataCategory]
+OPERATION_KIND_UNSPECIFIED: OperationKind
+OPERATION_KIND_READ_ONLY: OperationKind
+OPERATION_KIND_MUTATION: OperationKind
+OPERATION_KIND_DESTRUCTIVE: OperationKind
 AUTH_MODE_UNSPECIFIED: AuthMode
 AUTH_MODE_PUBLIC: AuthMode
 AUTH_MODE_BEARER: AuthMode
@@ -179,6 +190,8 @@ METHOD_EVENT_CONTRACT_FIELD_NUMBER: _ClassVar[int]
 method_event_contract: _descriptor.FieldDescriptor
 METHOD_DEPENDENCY_CONTRACT_FIELD_NUMBER: _ClassVar[int]
 method_dependency_contract: _descriptor.FieldDescriptor
+OPERATION_KIND_FIELD_NUMBER: _ClassVar[int]
+operation_kind: _descriptor.FieldDescriptor
 DB_TABLE_SECURITY_FIELD_NUMBER: _ClassVar[int]
 db_table_security: _descriptor.FieldDescriptor
 MESSAGE_EVENT_CONTRACT_FIELD_NUMBER: _ClassVar[int]

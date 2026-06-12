@@ -112,4 +112,3 @@ class StartSamlLoginRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

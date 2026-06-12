@@ -564,4 +564,3 @@ export enum MfaChallengePurpose {
  */
 export const MfaChallengePurposeSchema: GenEnum<MfaChallengePurpose> = /*@__PURE__*/
   enumDesc(file_udb_core_authn_entity_v1_enums, 11);
-

@@ -112,7 +112,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.authz.services.v1.PolicyDiffEntry diff = 2 [json_name = "diff"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.authz.services.v1.PolicyDiffEntryOrBuilder> 
+  public java.util.List<? extends com.udb.core.authz.services.v1.PolicyDiffEntryOrBuilder>
       getDiffOrBuilderList() {
     return diff_;
   }
@@ -173,7 +173,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.authz.services.v1.SimulationResult simulation = 3 [json_name = "simulation"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.authz.services.v1.SimulationResultOrBuilder> 
+  public java.util.List<? extends com.udb.core.authz.services.v1.SimulationResultOrBuilder>
       getSimulationOrBuilderList() {
     return simulation_;
   }
@@ -225,7 +225,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       reportJson_ = s;
@@ -241,7 +241,7 @@ private static final long serialVersionUID = 0L;
       getReportJsonBytes() {
     java.lang.Object ref = reportJson_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       reportJson_ = b;
@@ -626,7 +626,7 @@ private static final long serialVersionUID = 0L;
             diffBuilder_ = null;
             diff_ = other.diff_;
             bitField0_ = (bitField0_ & ~0x00000002);
-            diffBuilder_ = 
+            diffBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetDiffFieldBuilder() : null;
           } else {
@@ -652,7 +652,7 @@ private static final long serialVersionUID = 0L;
             simulationBuilder_ = null;
             simulation_ = other.simulation_;
             bitField0_ = (bitField0_ & ~0x00000004);
-            simulationBuilder_ = 
+            simulationBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetSimulationFieldBuilder() : null;
           } else {
@@ -890,7 +890,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.authz.entity.v1.PolicyDraft draft = 1 [json_name = "draft"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.authz.entity.v1.PolicyDraft, com.udb.core.authz.entity.v1.PolicyDraft.Builder, com.udb.core.authz.entity.v1.PolicyDraftOrBuilder> 
+        com.udb.core.authz.entity.v1.PolicyDraft, com.udb.core.authz.entity.v1.PolicyDraft.Builder, com.udb.core.authz.entity.v1.PolicyDraftOrBuilder>
         internalGetDraftFieldBuilder() {
       if (draftBuilder_ == null) {
         draftBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1158,7 +1158,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .udb.core.authz.services.v1.PolicyDiffEntry diff = 2 [json_name = "diff"];</code>
      */
-    public java.util.List<? extends com.udb.core.authz.services.v1.PolicyDiffEntryOrBuilder> 
+    public java.util.List<? extends com.udb.core.authz.services.v1.PolicyDiffEntryOrBuilder>
          getDiffOrBuilderList() {
       if (diffBuilder_ != null) {
         return diffBuilder_.getMessageOrBuilderList();
@@ -1196,12 +1196,12 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .udb.core.authz.services.v1.PolicyDiffEntry diff = 2 [json_name = "diff"];</code>
      */
-    public java.util.List<com.udb.core.authz.services.v1.PolicyDiffEntry.Builder> 
+    public java.util.List<com.udb.core.authz.services.v1.PolicyDiffEntry.Builder>
          getDiffBuilderList() {
       return internalGetDiffFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.authz.services.v1.PolicyDiffEntry, com.udb.core.authz.services.v1.PolicyDiffEntry.Builder, com.udb.core.authz.services.v1.PolicyDiffEntryOrBuilder> 
+        com.udb.core.authz.services.v1.PolicyDiffEntry, com.udb.core.authz.services.v1.PolicyDiffEntry.Builder, com.udb.core.authz.services.v1.PolicyDiffEntryOrBuilder>
         internalGetDiffFieldBuilder() {
       if (diffBuilder_ == null) {
         diffBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -1470,7 +1470,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .udb.core.authz.services.v1.SimulationResult simulation = 3 [json_name = "simulation"];</code>
      */
-    public java.util.List<? extends com.udb.core.authz.services.v1.SimulationResultOrBuilder> 
+    public java.util.List<? extends com.udb.core.authz.services.v1.SimulationResultOrBuilder>
          getSimulationOrBuilderList() {
       if (simulationBuilder_ != null) {
         return simulationBuilder_.getMessageOrBuilderList();
@@ -1508,12 +1508,12 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .udb.core.authz.services.v1.SimulationResult simulation = 3 [json_name = "simulation"];</code>
      */
-    public java.util.List<com.udb.core.authz.services.v1.SimulationResult.Builder> 
+    public java.util.List<com.udb.core.authz.services.v1.SimulationResult.Builder>
          getSimulationBuilderList() {
       return internalGetSimulationFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.authz.services.v1.SimulationResult, com.udb.core.authz.services.v1.SimulationResult.Builder, com.udb.core.authz.services.v1.SimulationResultOrBuilder> 
+        com.udb.core.authz.services.v1.SimulationResult, com.udb.core.authz.services.v1.SimulationResult.Builder, com.udb.core.authz.services.v1.SimulationResultOrBuilder>
         internalGetSimulationFieldBuilder() {
       if (simulationBuilder_ == null) {
         simulationBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -1552,7 +1552,7 @@ private static final long serialVersionUID = 0L;
         getReportJsonBytes() {
       java.lang.Object ref = reportJson_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         reportJson_ = b;
@@ -1649,4 +1649,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

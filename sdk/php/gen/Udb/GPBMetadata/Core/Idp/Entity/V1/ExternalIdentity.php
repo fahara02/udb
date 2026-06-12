@@ -25,4 +25,3 @@ class ExternalIdentity
         static::$is_initialized = true;
     }
 }
-

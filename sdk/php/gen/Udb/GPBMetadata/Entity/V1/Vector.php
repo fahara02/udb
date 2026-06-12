@@ -24,4 +24,3 @@ class Vector
         static::$is_initialized = true;
     }
 }
-

@@ -55,4 +55,3 @@ class DeletePolicyRuleResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

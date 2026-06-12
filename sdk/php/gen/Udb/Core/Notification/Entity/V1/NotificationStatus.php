@@ -68,4 +68,3 @@ class NotificationStatus
         return constant($const);
     }
 }
-

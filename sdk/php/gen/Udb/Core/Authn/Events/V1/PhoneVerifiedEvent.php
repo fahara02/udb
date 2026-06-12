@@ -202,4 +202,3 @@ class PhoneVerifiedEvent extends \Google\Protobuf\Internal\Message
     }
 
 }
-

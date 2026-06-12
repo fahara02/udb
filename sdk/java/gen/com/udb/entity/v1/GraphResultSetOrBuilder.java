@@ -13,7 +13,7 @@ public interface GraphResultSetOrBuilder extends
   /**
    * <code>repeated .google.protobuf.Struct records = 1 [json_name = "records"];</code>
    */
-  java.util.List<com.google.protobuf.Struct> 
+  java.util.List<com.google.protobuf.Struct>
       getRecordsList();
   /**
    * <code>repeated .google.protobuf.Struct records = 1 [json_name = "records"];</code>
@@ -26,7 +26,7 @@ public interface GraphResultSetOrBuilder extends
   /**
    * <code>repeated .google.protobuf.Struct records = 1 [json_name = "records"];</code>
    */
-  java.util.List<? extends com.google.protobuf.StructOrBuilder> 
+  java.util.List<? extends com.google.protobuf.StructOrBuilder>
       getRecordsOrBuilderList();
   /**
    * <code>repeated .google.protobuf.Struct records = 1 [json_name = "records"];</code>

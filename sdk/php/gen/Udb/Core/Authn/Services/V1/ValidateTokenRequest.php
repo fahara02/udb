@@ -90,4 +90,3 @@ class ValidateTokenRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

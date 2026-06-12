@@ -99,4 +99,3 @@ class AdminAuditVerifyRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

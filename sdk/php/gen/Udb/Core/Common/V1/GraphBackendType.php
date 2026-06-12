@@ -56,4 +56,3 @@ class GraphBackendType
         return constant($const);
     }
 }
-

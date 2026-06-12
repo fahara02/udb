@@ -432,4 +432,3 @@ class PipelineInstance extends \Google\Protobuf\Internal\Message
     }
 
 }
-

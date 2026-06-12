@@ -13,7 +13,7 @@ public interface GetTenantConfigResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.tenant.entity.v1.TenantConfig configs = 1 [json_name = "configs"];</code>
    */
-  java.util.List<com.udb.core.tenant.entity.v1.TenantConfig> 
+  java.util.List<com.udb.core.tenant.entity.v1.TenantConfig>
       getConfigsList();
   /**
    * <code>repeated .udb.core.tenant.entity.v1.TenantConfig configs = 1 [json_name = "configs"];</code>
@@ -26,7 +26,7 @@ public interface GetTenantConfigResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.tenant.entity.v1.TenantConfig configs = 1 [json_name = "configs"];</code>
    */
-  java.util.List<? extends com.udb.core.tenant.entity.v1.TenantConfigOrBuilder> 
+  java.util.List<? extends com.udb.core.tenant.entity.v1.TenantConfigOrBuilder>
       getConfigsOrBuilderList();
   /**
    * <code>repeated .udb.core.tenant.entity.v1.TenantConfig configs = 1 [json_name = "configs"];</code>

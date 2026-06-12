@@ -81,4 +81,3 @@ class GeoPoint extends \Google\Protobuf\Internal\Message
     }
 
 }
-

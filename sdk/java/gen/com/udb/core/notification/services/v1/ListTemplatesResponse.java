@@ -64,7 +64,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.notification.entity.v1.NotificationTemplate templates = 1 [json_name = "templates"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.notification.entity.v1.NotificationTemplateOrBuilder> 
+  public java.util.List<? extends com.udb.core.notification.entity.v1.NotificationTemplateOrBuilder>
       getTemplatesOrBuilderList() {
     return templates_;
   }
@@ -440,7 +440,7 @@ private static final long serialVersionUID = 0L;
             templatesBuilder_ = null;
             templates_ = other.templates_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            templatesBuilder_ = 
+            templatesBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetTemplatesFieldBuilder() : null;
           } else {
@@ -709,7 +709,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.notification.entity.v1.NotificationTemplate templates = 1 [json_name = "templates"];</code>
      */
-    public java.util.List<? extends com.udb.core.notification.entity.v1.NotificationTemplateOrBuilder> 
+    public java.util.List<? extends com.udb.core.notification.entity.v1.NotificationTemplateOrBuilder>
          getTemplatesOrBuilderList() {
       if (templatesBuilder_ != null) {
         return templatesBuilder_.getMessageOrBuilderList();
@@ -735,12 +735,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.notification.entity.v1.NotificationTemplate templates = 1 [json_name = "templates"];</code>
      */
-    public java.util.List<com.udb.core.notification.entity.v1.NotificationTemplate.Builder> 
+    public java.util.List<com.udb.core.notification.entity.v1.NotificationTemplate.Builder>
          getTemplatesBuilderList() {
       return internalGetTemplatesFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.notification.entity.v1.NotificationTemplate, com.udb.core.notification.entity.v1.NotificationTemplate.Builder, com.udb.core.notification.entity.v1.NotificationTemplateOrBuilder> 
+        com.udb.core.notification.entity.v1.NotificationTemplate, com.udb.core.notification.entity.v1.NotificationTemplate.Builder, com.udb.core.notification.entity.v1.NotificationTemplateOrBuilder>
         internalGetTemplatesFieldBuilder() {
       if (templatesBuilder_ == null) {
         templatesBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -862,7 +862,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.PageResponse page = 2 [json_name = "page"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.PageResponse, com.udb.core.common.v1.PageResponse.Builder, com.udb.core.common.v1.PageResponseOrBuilder> 
+        com.udb.core.common.v1.PageResponse, com.udb.core.common.v1.PageResponse.Builder, com.udb.core.common.v1.PageResponseOrBuilder>
         internalGetPageFieldBuilder() {
       if (pageBuilder_ == null) {
         pageBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -925,4 +925,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

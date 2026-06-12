@@ -158,4 +158,3 @@ public enum ExportFormat
 
   // @@protoc_insertion_point(enum_scope:udb.core.common.v1.ExportFormat)
 }
-

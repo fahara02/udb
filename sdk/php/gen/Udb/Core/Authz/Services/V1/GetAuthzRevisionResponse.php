@@ -146,4 +146,3 @@ class GetAuthzRevisionResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

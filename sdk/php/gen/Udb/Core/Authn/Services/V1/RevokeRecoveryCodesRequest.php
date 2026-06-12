@@ -92,4 +92,3 @@ class RevokeRecoveryCodesRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

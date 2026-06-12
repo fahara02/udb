@@ -169,7 +169,7 @@ public enum CredentialType
   }
   public static com.google.protobuf.Descriptors.EnumDescriptor
       getDescriptor() {
-    return com.udb.core.common.v1.SecurityProto.getDescriptor().getEnumType(1);
+    return com.udb.core.common.v1.SecurityProto.getDescriptor().getEnumType(2);
   }
 
   private static final CredentialType[] VALUES = values();
@@ -194,4 +194,3 @@ public enum CredentialType
 
   // @@protoc_insertion_point(enum_scope:udb.core.common.v1.CredentialType)
 }
-

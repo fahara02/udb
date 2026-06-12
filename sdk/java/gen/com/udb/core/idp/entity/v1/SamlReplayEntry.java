@@ -77,7 +77,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       samlReplayEntryId_ = s;
@@ -93,7 +93,7 @@ private static final long serialVersionUID = 0L;
       getSamlReplayEntryIdBytes() {
     java.lang.Object ref = samlReplayEntryId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       samlReplayEntryId_ = b;
@@ -116,7 +116,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       tenantId_ = s;
@@ -132,7 +132,7 @@ private static final long serialVersionUID = 0L;
       getTenantIdBytes() {
     java.lang.Object ref = tenantId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       tenantId_ = b;
@@ -155,7 +155,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       providerId_ = s;
@@ -171,7 +171,7 @@ private static final long serialVersionUID = 0L;
       getProviderIdBytes() {
     java.lang.Object ref = providerId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       providerId_ = b;
@@ -194,7 +194,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       assertionId_ = s;
@@ -210,7 +210,7 @@ private static final long serialVersionUID = 0L;
       getAssertionIdBytes() {
     java.lang.Object ref = assertionId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       assertionId_ = b;
@@ -761,7 +761,7 @@ private static final long serialVersionUID = 0L;
         getSamlReplayEntryIdBytes() {
       java.lang.Object ref = samlReplayEntryId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         samlReplayEntryId_ = b;
@@ -833,7 +833,7 @@ private static final long serialVersionUID = 0L;
         getTenantIdBytes() {
       java.lang.Object ref = tenantId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         tenantId_ = b;
@@ -905,7 +905,7 @@ private static final long serialVersionUID = 0L;
         getProviderIdBytes() {
       java.lang.Object ref = providerId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         providerId_ = b;
@@ -977,7 +977,7 @@ private static final long serialVersionUID = 0L;
         getAssertionIdBytes() {
       java.lang.Object ref = assertionId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         assertionId_ = b;
@@ -1132,7 +1132,7 @@ private static final long serialVersionUID = 0L;
      * <code>.google.protobuf.Timestamp not_on_or_after = 5 [json_name = "notOnOrAfter", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> 
+        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder>
         internalGetNotOnOrAfterFieldBuilder() {
       if (notOnOrAfterBuilder_ == null) {
         notOnOrAfterBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1253,7 +1253,7 @@ private static final long serialVersionUID = 0L;
      * <code>.google.protobuf.Timestamp consumed_at = 6 [json_name = "consumedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> 
+        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder>
         internalGetConsumedAtFieldBuilder() {
       if (consumedAtBuilder_ == null) {
         consumedAtBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1316,4 +1316,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

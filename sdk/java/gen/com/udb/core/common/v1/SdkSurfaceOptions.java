@@ -77,7 +77,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       methodAlias_ = s;
@@ -93,7 +93,7 @@ private static final long serialVersionUID = 0L;
       getMethodAliasBytes() {
     java.lang.Object ref = methodAlias_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       methodAlias_ = b;
@@ -116,7 +116,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       requiredCredentialProvider_ = s;
@@ -132,7 +132,7 @@ private static final long serialVersionUID = 0L;
       getRequiredCredentialProviderBytes() {
     java.lang.Object ref = requiredCredentialProvider_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       requiredCredentialProvider_ = b;
@@ -155,7 +155,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       streamingHelperType_ = s;
@@ -171,7 +171,7 @@ private static final long serialVersionUID = 0L;
       getStreamingHelperTypeBytes() {
     java.lang.Object ref = streamingHelperType_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       streamingHelperType_ = b;
@@ -856,7 +856,7 @@ private static final long serialVersionUID = 0L;
         getMethodAliasBytes() {
       java.lang.Object ref = methodAlias_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         methodAlias_ = b;
@@ -928,7 +928,7 @@ private static final long serialVersionUID = 0L;
         getRequiredCredentialProviderBytes() {
       java.lang.Object ref = requiredCredentialProvider_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         requiredCredentialProvider_ = b;
@@ -1000,7 +1000,7 @@ private static final long serialVersionUID = 0L;
         getStreamingHelperTypeBytes() {
       java.lang.Object ref = streamingHelperType_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         streamingHelperType_ = b;
@@ -1368,4 +1368,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

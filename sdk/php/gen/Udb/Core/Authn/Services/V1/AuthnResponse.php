@@ -200,4 +200,3 @@ class AuthnResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

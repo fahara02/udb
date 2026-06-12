@@ -157,4 +157,3 @@ class RawJsonResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

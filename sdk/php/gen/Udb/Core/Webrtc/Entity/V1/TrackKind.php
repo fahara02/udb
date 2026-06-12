@@ -61,4 +61,3 @@ class TrackKind
         return constant($const);
     }
 }
-

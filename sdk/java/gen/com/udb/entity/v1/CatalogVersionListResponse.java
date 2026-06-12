@@ -64,7 +64,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       projectId_ = s;
@@ -80,7 +80,7 @@ private static final long serialVersionUID = 0L;
       getProjectIdBytes() {
     java.lang.Object ref = projectId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       projectId_ = b;
@@ -104,7 +104,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.entity.v1.CatalogVersionResponse versions = 2 [json_name = "versions"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.entity.v1.CatalogVersionResponseOrBuilder> 
+  public java.util.List<? extends com.udb.entity.v1.CatalogVersionResponseOrBuilder>
       getVersionsOrBuilderList() {
     return versions_;
   }
@@ -144,7 +144,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       activeVersion_ = s;
@@ -160,7 +160,7 @@ private static final long serialVersionUID = 0L;
       getActiveVersionBytes() {
     java.lang.Object ref = activeVersion_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       activeVersion_ = b;
@@ -490,7 +490,7 @@ private static final long serialVersionUID = 0L;
             versionsBuilder_ = null;
             versions_ = other.versions_;
             bitField0_ = (bitField0_ & ~0x00000002);
-            versionsBuilder_ = 
+            versionsBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetVersionsFieldBuilder() : null;
           } else {
@@ -594,7 +594,7 @@ private static final long serialVersionUID = 0L;
         getProjectIdBytes() {
       java.lang.Object ref = projectId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         projectId_ = b;
@@ -836,7 +836,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.entity.v1.CatalogVersionResponse versions = 2 [json_name = "versions"];</code>
      */
-    public java.util.List<? extends com.udb.entity.v1.CatalogVersionResponseOrBuilder> 
+    public java.util.List<? extends com.udb.entity.v1.CatalogVersionResponseOrBuilder>
          getVersionsOrBuilderList() {
       if (versionsBuilder_ != null) {
         return versionsBuilder_.getMessageOrBuilderList();
@@ -862,12 +862,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.entity.v1.CatalogVersionResponse versions = 2 [json_name = "versions"];</code>
      */
-    public java.util.List<com.udb.entity.v1.CatalogVersionResponse.Builder> 
+    public java.util.List<com.udb.entity.v1.CatalogVersionResponse.Builder>
          getVersionsBuilderList() {
       return internalGetVersionsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.entity.v1.CatalogVersionResponse, com.udb.entity.v1.CatalogVersionResponse.Builder, com.udb.entity.v1.CatalogVersionResponseOrBuilder> 
+        com.udb.entity.v1.CatalogVersionResponse, com.udb.entity.v1.CatalogVersionResponse.Builder, com.udb.entity.v1.CatalogVersionResponseOrBuilder>
         internalGetVersionsFieldBuilder() {
       if (versionsBuilder_ == null) {
         versionsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -906,7 +906,7 @@ private static final long serialVersionUID = 0L;
         getActiveVersionBytes() {
       java.lang.Object ref = activeVersion_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         activeVersion_ = b;
@@ -1003,4 +1003,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

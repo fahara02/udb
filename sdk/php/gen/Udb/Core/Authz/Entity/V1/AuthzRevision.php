@@ -291,4 +291,3 @@ class AuthzRevision extends \Google\Protobuf\Internal\Message
     }
 
 }
-

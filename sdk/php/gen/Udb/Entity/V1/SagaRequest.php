@@ -146,4 +146,3 @@ class SagaRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

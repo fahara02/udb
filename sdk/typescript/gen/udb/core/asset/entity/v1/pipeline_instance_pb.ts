@@ -110,4 +110,3 @@ export type PipelineInstance = Message<"udb.core.asset.entity.v1.PipelineInstanc
  */
 export const PipelineInstanceSchema: GenMessage<PipelineInstance> = /*@__PURE__*/
   messageDesc(file_udb_core_asset_entity_v1_pipeline_instance, 0);
-

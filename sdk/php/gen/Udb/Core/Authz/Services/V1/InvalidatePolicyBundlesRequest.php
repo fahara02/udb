@@ -146,4 +146,3 @@ class InvalidatePolicyBundlesRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

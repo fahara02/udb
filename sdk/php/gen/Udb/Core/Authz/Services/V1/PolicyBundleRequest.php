@@ -117,4 +117,3 @@ class PolicyBundleRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

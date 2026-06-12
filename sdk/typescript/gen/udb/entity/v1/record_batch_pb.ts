@@ -191,4 +191,3 @@ export enum ColumnType {
  */
 export const ColumnTypeSchema: GenEnum<ColumnType> = /*@__PURE__*/
   enumDesc(file_udb_entity_v1_record_batch, 0);
-

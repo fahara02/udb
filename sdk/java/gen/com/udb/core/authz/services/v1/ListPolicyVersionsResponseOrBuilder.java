@@ -13,7 +13,7 @@ public interface ListPolicyVersionsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.authz.entity.v1.PolicyVersion versions = 1 [json_name = "versions"];</code>
    */
-  java.util.List<com.udb.core.authz.entity.v1.PolicyVersion> 
+  java.util.List<com.udb.core.authz.entity.v1.PolicyVersion>
       getVersionsList();
   /**
    * <code>repeated .udb.core.authz.entity.v1.PolicyVersion versions = 1 [json_name = "versions"];</code>
@@ -26,7 +26,7 @@ public interface ListPolicyVersionsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.authz.entity.v1.PolicyVersion versions = 1 [json_name = "versions"];</code>
    */
-  java.util.List<? extends com.udb.core.authz.entity.v1.PolicyVersionOrBuilder> 
+  java.util.List<? extends com.udb.core.authz.entity.v1.PolicyVersionOrBuilder>
       getVersionsOrBuilderList();
   /**
    * <code>repeated .udb.core.authz.entity.v1.PolicyVersion versions = 1 [json_name = "versions"];</code>

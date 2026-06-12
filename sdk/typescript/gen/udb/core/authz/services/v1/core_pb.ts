@@ -1641,7 +1641,7 @@ export const LintAuthzPoliciesResponseSchema: GenMessage<LintAuthzPoliciesRespon
 
 /**
  * ── Stage 2: native database fast-path access ──────────────────────────────
- * 
+ *
  * `GetNativeAccess` runs the same `Authorize` decision and, when allowed,
  * mints a short-lived contract for the caller to talk to the backend
  * directly: a restricted role, a scoped DSN, and the exact set of
@@ -1803,7 +1803,7 @@ export const NativeAccessResponseSchema: GenMessage<NativeAccessResponse> = /*@_
 
 /**
  * ── Stage 2: signed policy bundles for local SDK authorization caches ───────
- * 
+ *
  * `GetPolicyBundle` serializes the live authorization snapshot (policies,
  * role bindings, relationship tuples) and signs it so an SDK can cache it
  * and answer `can()` locally without a round-trip, while still being able
@@ -1916,4 +1916,3 @@ export type PolicyBundleResponse = Message<"udb.core.authz.services.v1.PolicyBun
  */
 export const PolicyBundleResponseSchema: GenMessage<PolicyBundleResponse> = /*@__PURE__*/
   messageDesc(file_udb_core_authz_services_v1_core, 54);
-

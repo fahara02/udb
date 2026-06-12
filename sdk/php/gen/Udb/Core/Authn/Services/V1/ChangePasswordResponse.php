@@ -119,4 +119,3 @@ class ChangePasswordResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

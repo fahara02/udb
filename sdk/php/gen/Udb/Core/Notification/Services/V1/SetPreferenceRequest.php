@@ -206,4 +206,3 @@ class SetPreferenceRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

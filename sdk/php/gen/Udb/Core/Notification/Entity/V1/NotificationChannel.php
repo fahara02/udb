@@ -72,4 +72,3 @@ class NotificationChannel
         return constant($const);
     }
 }
-

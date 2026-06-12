@@ -64,7 +64,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       label_ = s;
@@ -80,7 +80,7 @@ private static final long serialVersionUID = 0L;
       getLabelBytes() {
     java.lang.Object ref = label_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       label_ = b;
@@ -170,7 +170,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       diffJson_ = s;
@@ -186,7 +186,7 @@ private static final long serialVersionUID = 0L;
       getDiffJsonBytes() {
     java.lang.Object ref = diffJson_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       diffJson_ = b;
@@ -650,7 +650,7 @@ private static final long serialVersionUID = 0L;
         getLabelBytes() {
       java.lang.Object ref = label_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         label_ = b;
@@ -805,7 +805,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.authz.services.v1.Decision active_decision = 2 [json_name = "activeDecision"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.authz.services.v1.Decision, com.udb.core.authz.services.v1.Decision.Builder, com.udb.core.authz.services.v1.DecisionOrBuilder> 
+        com.udb.core.authz.services.v1.Decision, com.udb.core.authz.services.v1.Decision.Builder, com.udb.core.authz.services.v1.DecisionOrBuilder>
         internalGetActiveDecisionFieldBuilder() {
       if (activeDecisionBuilder_ == null) {
         activeDecisionBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -926,7 +926,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.authz.services.v1.Decision draft_decision = 3 [json_name = "draftDecision"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.authz.services.v1.Decision, com.udb.core.authz.services.v1.Decision.Builder, com.udb.core.authz.services.v1.DecisionOrBuilder> 
+        com.udb.core.authz.services.v1.Decision, com.udb.core.authz.services.v1.Decision.Builder, com.udb.core.authz.services.v1.DecisionOrBuilder>
         internalGetDraftDecisionFieldBuilder() {
       if (draftDecisionBuilder_ == null) {
         draftDecisionBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1008,7 +1008,7 @@ private static final long serialVersionUID = 0L;
         getDiffJsonBytes() {
       java.lang.Object ref = diffJson_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         diffJson_ = b;
@@ -1105,4 +1105,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

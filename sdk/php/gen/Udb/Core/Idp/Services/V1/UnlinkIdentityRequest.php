@@ -119,4 +119,3 @@ class UnlinkIdentityRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

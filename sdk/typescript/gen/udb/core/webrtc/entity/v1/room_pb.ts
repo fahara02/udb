@@ -106,4 +106,3 @@ export type Room = Message<"udb.core.webrtc.entity.v1.Room"> & {
  */
 export const RoomSchema: GenMessage<Room> = /*@__PURE__*/
   messageDesc(file_udb_core_webrtc_entity_v1_room, 0);
-

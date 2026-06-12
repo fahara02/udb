@@ -23,4 +23,3 @@ class UdbEvents
         static::$is_initialized = true;
     }
 }
-

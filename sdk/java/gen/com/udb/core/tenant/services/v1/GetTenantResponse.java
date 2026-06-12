@@ -578,7 +578,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.tenant.entity.v1.Tenant tenant = 1 [json_name = "tenant"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.tenant.entity.v1.Tenant, com.udb.core.tenant.entity.v1.Tenant.Builder, com.udb.core.tenant.entity.v1.TenantOrBuilder> 
+        com.udb.core.tenant.entity.v1.Tenant, com.udb.core.tenant.entity.v1.Tenant.Builder, com.udb.core.tenant.entity.v1.TenantOrBuilder>
         internalGetTenantFieldBuilder() {
       if (tenantBuilder_ == null) {
         tenantBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -735,7 +735,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.ApiError error = 2 [json_name = "error"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder> 
+        com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder>
         internalGetErrorFieldBuilder() {
       if (errorBuilder_ == null) {
         errorBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -798,4 +798,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

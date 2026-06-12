@@ -291,4 +291,3 @@ export type ViewDefinition = Message<"udb.entity.v1.ViewDefinition"> & {
  */
 export const ViewDefinitionSchema: GenMessage<ViewDefinition> = /*@__PURE__*/
   messageDesc(file_udb_entity_v1_relational, 7);
-

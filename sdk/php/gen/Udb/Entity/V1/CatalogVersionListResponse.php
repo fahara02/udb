@@ -110,4 +110,3 @@ class CatalogVersionListResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

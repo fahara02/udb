@@ -115,4 +115,3 @@ export type ControlPlaneResource = Message<"udb.core.control.entity.v1.ControlPl
  */
 export const ControlPlaneResourceSchema: GenMessage<ControlPlaneResource> = /*@__PURE__*/
   messageDesc(file_udb_core_control_entity_v1_control_plane_resource, 0);
-

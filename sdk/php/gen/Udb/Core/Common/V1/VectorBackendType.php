@@ -75,4 +75,3 @@ class VectorBackendType
         return constant($const);
     }
 }
-

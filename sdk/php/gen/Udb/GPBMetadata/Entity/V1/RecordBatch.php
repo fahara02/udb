@@ -22,4 +22,3 @@ class RecordBatch
         static::$is_initialized = true;
     }
 }
-

@@ -65,4 +65,3 @@ class UpdateUserResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

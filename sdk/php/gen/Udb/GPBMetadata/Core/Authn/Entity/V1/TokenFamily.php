@@ -25,4 +25,3 @@ class TokenFamily
         static::$is_initialized = true;
     }
 }
-

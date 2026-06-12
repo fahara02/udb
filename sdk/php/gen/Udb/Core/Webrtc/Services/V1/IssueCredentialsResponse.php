@@ -254,4 +254,3 @@ class IssueCredentialsResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

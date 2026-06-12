@@ -322,4 +322,3 @@ public enum FieldBehavior
 
   // @@protoc_insertion_point(enum_scope:google.api.FieldBehavior)
 }
-

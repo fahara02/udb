@@ -126,4 +126,3 @@ class SendPhoneVerificationRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

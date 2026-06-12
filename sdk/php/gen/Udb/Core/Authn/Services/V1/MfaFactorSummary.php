@@ -109,4 +109,3 @@ class MfaFactorSummary extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -144,4 +144,3 @@ class PolicyDraftResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

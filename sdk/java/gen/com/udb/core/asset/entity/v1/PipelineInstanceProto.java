@@ -28,7 +28,7 @@ public final class PipelineInstanceProto extends com.google.protobuf.GeneratedFi
   }
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_asset_entity_v1_PipelineInstance_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_asset_entity_v1_PipelineInstance_fieldAccessorTable;
 

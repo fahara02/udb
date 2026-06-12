@@ -65,4 +65,3 @@ class CreateRoleResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -180,4 +180,3 @@ class MigrationApplyRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

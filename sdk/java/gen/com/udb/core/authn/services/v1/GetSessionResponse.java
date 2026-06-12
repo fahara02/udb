@@ -502,7 +502,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.authn.entity.v1.Session session = 1 [json_name = "session"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.authn.entity.v1.Session, com.udb.core.authn.entity.v1.Session.Builder, com.udb.core.authn.entity.v1.SessionOrBuilder> 
+        com.udb.core.authn.entity.v1.Session, com.udb.core.authn.entity.v1.Session.Builder, com.udb.core.authn.entity.v1.SessionOrBuilder>
         internalGetSessionFieldBuilder() {
       if (sessionBuilder_ == null) {
         sessionBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -565,4 +565,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

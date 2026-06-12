@@ -83,4 +83,3 @@ class TagSet extends \Google\Protobuf\Internal\Message
     }
 
 }
-

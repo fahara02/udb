@@ -56,4 +56,3 @@ class SendNotificationResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

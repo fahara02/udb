@@ -82,4 +82,3 @@ class Sort extends \Google\Protobuf\Internal\Message
     }
 
 }
-

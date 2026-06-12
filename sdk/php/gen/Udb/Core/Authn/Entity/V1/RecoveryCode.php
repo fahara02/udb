@@ -231,4 +231,3 @@ class RecoveryCode extends \Google\Protobuf\Internal\Message
     }
 
 }
-

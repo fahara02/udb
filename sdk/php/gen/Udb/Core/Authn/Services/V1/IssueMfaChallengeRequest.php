@@ -200,4 +200,3 @@ class IssueMfaChallengeRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -119,4 +119,3 @@ class SubmitPolicyDraftRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

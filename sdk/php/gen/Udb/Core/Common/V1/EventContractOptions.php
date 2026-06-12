@@ -237,4 +237,3 @@ class EventContractOptions extends \Google\Protobuf\Internal\Message
     }
 
 }
-

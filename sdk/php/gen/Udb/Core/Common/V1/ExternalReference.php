@@ -137,4 +137,3 @@ class ExternalReference extends \Google\Protobuf\Internal\Message
     }
 
 }
-

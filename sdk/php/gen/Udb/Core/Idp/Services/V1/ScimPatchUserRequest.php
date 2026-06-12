@@ -173,4 +173,3 @@ class ScimPatchUserRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

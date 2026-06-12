@@ -202,4 +202,3 @@ class RecoveryCodeUsedEvent extends \Google\Protobuf\Internal\Message
     }
 
 }
-

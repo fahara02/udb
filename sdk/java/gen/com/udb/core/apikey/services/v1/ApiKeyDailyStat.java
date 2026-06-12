@@ -78,7 +78,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       date_ = s;
@@ -98,7 +98,7 @@ private static final long serialVersionUID = 0L;
       getDateBytes() {
     java.lang.Object ref = date_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       date_ = b;
@@ -147,7 +147,7 @@ private static final long serialVersionUID = 0L;
         java.lang.String, java.lang.Long> defaultEntry =
             com.google.protobuf.MapEntry
             .<java.lang.String, java.lang.Long>newDefaultInstance(
-                com.udb.core.apikey.services.v1.CoreProto.internal_static_udb_core_apikey_services_v1_ApiKeyDailyStat_StatusCountsEntry_descriptor, 
+                com.udb.core.apikey.services.v1.CoreProto.internal_static_udb_core_apikey_services_v1_ApiKeyDailyStat_StatusCountsEntry_descriptor,
                 com.google.protobuf.WireFormat.FieldType.STRING,
                 "",
                 com.google.protobuf.WireFormat.FieldType.INT64,
@@ -699,7 +699,7 @@ private static final long serialVersionUID = 0L;
         getDateBytes() {
       java.lang.Object ref = date_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         date_ = b;
@@ -1057,4 +1057,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

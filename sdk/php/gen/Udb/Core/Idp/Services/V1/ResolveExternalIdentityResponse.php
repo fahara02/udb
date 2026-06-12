@@ -257,4 +257,3 @@ class ResolveExternalIdentityResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

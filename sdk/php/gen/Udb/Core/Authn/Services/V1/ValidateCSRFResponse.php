@@ -55,4 +55,3 @@ class ValidateCSRFResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

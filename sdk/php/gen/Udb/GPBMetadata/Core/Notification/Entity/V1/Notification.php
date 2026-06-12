@@ -26,4 +26,3 @@ class Notification
         static::$is_initialized = true;
     }
 }
-

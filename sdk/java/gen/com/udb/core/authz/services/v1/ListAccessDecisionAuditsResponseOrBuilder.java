@@ -13,7 +13,7 @@ public interface ListAccessDecisionAuditsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.authz.entity.v1.AccessDecisionAudit audits = 1 [json_name = "audits"];</code>
    */
-  java.util.List<com.udb.core.authz.entity.v1.AccessDecisionAudit> 
+  java.util.List<com.udb.core.authz.entity.v1.AccessDecisionAudit>
       getAuditsList();
   /**
    * <code>repeated .udb.core.authz.entity.v1.AccessDecisionAudit audits = 1 [json_name = "audits"];</code>
@@ -26,7 +26,7 @@ public interface ListAccessDecisionAuditsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.authz.entity.v1.AccessDecisionAudit audits = 1 [json_name = "audits"];</code>
    */
-  java.util.List<? extends com.udb.core.authz.entity.v1.AccessDecisionAuditOrBuilder> 
+  java.util.List<? extends com.udb.core.authz.entity.v1.AccessDecisionAuditOrBuilder>
       getAuditsOrBuilderList();
   /**
    * <code>repeated .udb.core.authz.entity.v1.AccessDecisionAudit audits = 1 [json_name = "audits"];</code>

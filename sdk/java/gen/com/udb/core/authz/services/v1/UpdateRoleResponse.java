@@ -502,7 +502,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.authz.entity.v1.Role role = 1 [json_name = "role"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.authz.entity.v1.Role, com.udb.core.authz.entity.v1.Role.Builder, com.udb.core.authz.entity.v1.RoleOrBuilder> 
+        com.udb.core.authz.entity.v1.Role, com.udb.core.authz.entity.v1.Role.Builder, com.udb.core.authz.entity.v1.RoleOrBuilder>
         internalGetRoleFieldBuilder() {
       if (roleBuilder_ == null) {
         roleBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -565,4 +565,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

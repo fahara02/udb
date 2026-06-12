@@ -502,7 +502,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.notification.entity.v1.NotificationTemplate template = 1 [json_name = "template"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.notification.entity.v1.NotificationTemplate, com.udb.core.notification.entity.v1.NotificationTemplate.Builder, com.udb.core.notification.entity.v1.NotificationTemplateOrBuilder> 
+        com.udb.core.notification.entity.v1.NotificationTemplate, com.udb.core.notification.entity.v1.NotificationTemplate.Builder, com.udb.core.notification.entity.v1.NotificationTemplateOrBuilder>
         internalGetTemplateFieldBuilder() {
       if (templateBuilder_ == null) {
         templateBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -565,4 +565,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

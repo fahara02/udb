@@ -28,7 +28,7 @@ public final class ScimDirectoryStateProto extends com.google.protobuf.Generated
   }
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_idp_entity_v1_ScimDirectoryState_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_idp_entity_v1_ScimDirectoryState_fieldAccessorTable;
 

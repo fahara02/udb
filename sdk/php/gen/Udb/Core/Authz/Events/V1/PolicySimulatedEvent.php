@@ -256,4 +256,3 @@ class PolicySimulatedEvent extends \Google\Protobuf\Internal\Message
     }
 
 }
-

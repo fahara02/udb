@@ -55,7 +55,7 @@ public interface ProjectionDriftTargetReportOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.ProjectionDriftDivergentRow divergent_rows = 5 [json_name = "divergentRows"];</code>
    */
-  java.util.List<com.udb.entity.v1.ProjectionDriftDivergentRow> 
+  java.util.List<com.udb.entity.v1.ProjectionDriftDivergentRow>
       getDivergentRowsList();
   /**
    * <code>repeated .udb.entity.v1.ProjectionDriftDivergentRow divergent_rows = 5 [json_name = "divergentRows"];</code>
@@ -68,7 +68,7 @@ public interface ProjectionDriftTargetReportOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.ProjectionDriftDivergentRow divergent_rows = 5 [json_name = "divergentRows"];</code>
    */
-  java.util.List<? extends com.udb.entity.v1.ProjectionDriftDivergentRowOrBuilder> 
+  java.util.List<? extends com.udb.entity.v1.ProjectionDriftDivergentRowOrBuilder>
       getDivergentRowsOrBuilderList();
   /**
    * <code>repeated .udb.entity.v1.ProjectionDriftDivergentRow divergent_rows = 5 [json_name = "divergentRows"];</code>

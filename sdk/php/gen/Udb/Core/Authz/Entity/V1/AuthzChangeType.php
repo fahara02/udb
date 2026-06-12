@@ -75,4 +75,3 @@ class AuthzChangeType
         return constant($const);
     }
 }
-

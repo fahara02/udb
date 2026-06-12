@@ -92,4 +92,3 @@ class ListWebAuthnCredentialsRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

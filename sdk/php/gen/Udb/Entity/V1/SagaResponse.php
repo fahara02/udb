@@ -92,4 +92,3 @@ class SagaResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

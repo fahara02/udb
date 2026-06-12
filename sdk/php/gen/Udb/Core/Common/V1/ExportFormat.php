@@ -66,4 +66,3 @@ class ExportFormat
         return constant($const);
     }
 }
-

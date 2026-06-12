@@ -65,4 +65,3 @@ class CreateProviderResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

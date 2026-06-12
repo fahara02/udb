@@ -56,4 +56,3 @@ class GetNotificationRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

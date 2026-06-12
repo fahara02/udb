@@ -82,4 +82,3 @@ class ConfidenceScore extends \Google\Protobuf\Internal\Message
     }
 
 }
-

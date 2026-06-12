@@ -259,4 +259,3 @@ class SqlArtifact extends \Google\Protobuf\Internal\Message
     }
 
 }
-

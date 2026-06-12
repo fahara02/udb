@@ -424,4 +424,3 @@ class SendNotificationRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

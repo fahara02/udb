@@ -119,4 +119,3 @@ class CacheScanResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

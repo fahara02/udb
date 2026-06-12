@@ -216,4 +216,3 @@ export type VectorSet = Message<"udb.entity.v1.VectorSet"> & {
  */
 export const VectorSetSchema: GenMessage<VectorSet> = /*@__PURE__*/
   messageDesc(file_udb_entity_v1_vector, 5);
-

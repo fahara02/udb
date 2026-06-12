@@ -22,6 +22,67 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// State-change semantics of an RPC, set via the standalone `operation_kind`
+// method option (NOT nested in endpoint_security, so it never affects the
+// auth/method-security path — it is pure metadata). SINGLE source of truth for
+// (a) client retry safety — only READ_ONLY is safe to auto-retry on a transient
+// failure (retrying a MUTATION risks duplicate side effects), and (b) SDK
+// conformance probing — READ_ONLY/MUTATION requests may be field-populated,
+// DESTRUCTIVE requests must not be (populating them could corrupt shared/global
+// state). Every facade RPC MUST set it; the generation lint rejects UNSPECIFIED,
+// so new RPCs are classified explicitly, never guessed from the method name.
+type OperationKind int32
+
+const (
+	OperationKind_OPERATION_KIND_UNSPECIFIED OperationKind = 0 // not set — rejected by the generation lint
+	OperationKind_OPERATION_KIND_READ_ONLY   OperationKind = 1 // no state change; retry-safe
+	OperationKind_OPERATION_KIND_MUTATION    OperationKind = 2 // tenant/resource-scoped state change; not retry-safe
+	OperationKind_OPERATION_KIND_DESTRUCTIVE OperationKind = 3 // irreversible or cluster-global blast radius
+)
+
+// Enum value maps for OperationKind.
+var (
+	OperationKind_name = map[int32]string{
+		0: "OPERATION_KIND_UNSPECIFIED",
+		1: "OPERATION_KIND_READ_ONLY",
+		2: "OPERATION_KIND_MUTATION",
+		3: "OPERATION_KIND_DESTRUCTIVE",
+	}
+	OperationKind_value = map[string]int32{
+		"OPERATION_KIND_UNSPECIFIED": 0,
+		"OPERATION_KIND_READ_ONLY":   1,
+		"OPERATION_KIND_MUTATION":    2,
+		"OPERATION_KIND_DESTRUCTIVE": 3,
+	}
+)
+
+func (x OperationKind) Enum() *OperationKind {
+	p := new(OperationKind)
+	*p = x
+	return p
+}
+
+func (x OperationKind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (OperationKind) Descriptor() protoreflect.EnumDescriptor {
+	return file_udb_core_common_v1_security_proto_enumTypes[0].Descriptor()
+}
+
+func (OperationKind) Type() protoreflect.EnumType {
+	return &file_udb_core_common_v1_security_proto_enumTypes[0]
+}
+
+func (x OperationKind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use OperationKind.Descriptor instead.
+func (OperationKind) EnumDescriptor() ([]byte, []int) {
+	return file_udb_core_common_v1_security_proto_rawDescGZIP(), []int{0}
+}
+
 type AuthMode int32
 
 const (
@@ -61,11 +122,11 @@ func (x AuthMode) String() string {
 }
 
 func (AuthMode) Descriptor() protoreflect.EnumDescriptor {
-	return file_udb_core_common_v1_security_proto_enumTypes[0].Descriptor()
+	return file_udb_core_common_v1_security_proto_enumTypes[1].Descriptor()
 }
 
 func (AuthMode) Type() protoreflect.EnumType {
-	return &file_udb_core_common_v1_security_proto_enumTypes[0]
+	return &file_udb_core_common_v1_security_proto_enumTypes[1]
 }
 
 func (x AuthMode) Number() protoreflect.EnumNumber {
@@ -74,7 +135,7 @@ func (x AuthMode) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use AuthMode.Descriptor instead.
 func (AuthMode) EnumDescriptor() ([]byte, []int) {
-	return file_udb_core_common_v1_security_proto_rawDescGZIP(), []int{0}
+	return file_udb_core_common_v1_security_proto_rawDescGZIP(), []int{1}
 }
 
 type CredentialType int32
@@ -131,11 +192,11 @@ func (x CredentialType) String() string {
 }
 
 func (CredentialType) Descriptor() protoreflect.EnumDescriptor {
-	return file_udb_core_common_v1_security_proto_enumTypes[1].Descriptor()
+	return file_udb_core_common_v1_security_proto_enumTypes[2].Descriptor()
 }
 
 func (CredentialType) Type() protoreflect.EnumType {
-	return &file_udb_core_common_v1_security_proto_enumTypes[1]
+	return &file_udb_core_common_v1_security_proto_enumTypes[2]
 }
 
 func (x CredentialType) Number() protoreflect.EnumNumber {
@@ -144,7 +205,7 @@ func (x CredentialType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use CredentialType.Descriptor instead.
 func (CredentialType) EnumDescriptor() ([]byte, []int) {
-	return file_udb_core_common_v1_security_proto_rawDescGZIP(), []int{1}
+	return file_udb_core_common_v1_security_proto_rawDescGZIP(), []int{2}
 }
 
 type AuditMode int32
@@ -186,11 +247,11 @@ func (x AuditMode) String() string {
 }
 
 func (AuditMode) Descriptor() protoreflect.EnumDescriptor {
-	return file_udb_core_common_v1_security_proto_enumTypes[2].Descriptor()
+	return file_udb_core_common_v1_security_proto_enumTypes[3].Descriptor()
 }
 
 func (AuditMode) Type() protoreflect.EnumType {
-	return &file_udb_core_common_v1_security_proto_enumTypes[2]
+	return &file_udb_core_common_v1_security_proto_enumTypes[3]
 }
 
 func (x AuditMode) Number() protoreflect.EnumNumber {
@@ -199,7 +260,7 @@ func (x AuditMode) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use AuditMode.Descriptor instead.
 func (AuditMode) EnumDescriptor() ([]byte, []int) {
-	return file_udb_core_common_v1_security_proto_rawDescGZIP(), []int{2}
+	return file_udb_core_common_v1_security_proto_rawDescGZIP(), []int{3}
 }
 
 type SecretClassification int32
@@ -261,11 +322,11 @@ func (x SecretClassification) String() string {
 }
 
 func (SecretClassification) Descriptor() protoreflect.EnumDescriptor {
-	return file_udb_core_common_v1_security_proto_enumTypes[3].Descriptor()
+	return file_udb_core_common_v1_security_proto_enumTypes[4].Descriptor()
 }
 
 func (SecretClassification) Type() protoreflect.EnumType {
-	return &file_udb_core_common_v1_security_proto_enumTypes[3]
+	return &file_udb_core_common_v1_security_proto_enumTypes[4]
 }
 
 func (x SecretClassification) Number() protoreflect.EnumNumber {
@@ -274,7 +335,7 @@ func (x SecretClassification) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use SecretClassification.Descriptor instead.
 func (SecretClassification) EnumDescriptor() ([]byte, []int) {
-	return file_udb_core_common_v1_security_proto_rawDescGZIP(), []int{3}
+	return file_udb_core_common_v1_security_proto_rawDescGZIP(), []int{4}
 }
 
 type OutputView int32
@@ -322,11 +383,11 @@ func (x OutputView) String() string {
 }
 
 func (OutputView) Descriptor() protoreflect.EnumDescriptor {
-	return file_udb_core_common_v1_security_proto_enumTypes[4].Descriptor()
+	return file_udb_core_common_v1_security_proto_enumTypes[5].Descriptor()
 }
 
 func (OutputView) Type() protoreflect.EnumType {
-	return &file_udb_core_common_v1_security_proto_enumTypes[4]
+	return &file_udb_core_common_v1_security_proto_enumTypes[5]
 }
 
 func (x OutputView) Number() protoreflect.EnumNumber {
@@ -335,7 +396,7 @@ func (x OutputView) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use OutputView.Descriptor instead.
 func (OutputView) EnumDescriptor() ([]byte, []int) {
-	return file_udb_core_common_v1_security_proto_rawDescGZIP(), []int{4}
+	return file_udb_core_common_v1_security_proto_rawDescGZIP(), []int{5}
 }
 
 type RedactionStrategy int32
@@ -380,11 +441,11 @@ func (x RedactionStrategy) String() string {
 }
 
 func (RedactionStrategy) Descriptor() protoreflect.EnumDescriptor {
-	return file_udb_core_common_v1_security_proto_enumTypes[5].Descriptor()
+	return file_udb_core_common_v1_security_proto_enumTypes[6].Descriptor()
 }
 
 func (RedactionStrategy) Type() protoreflect.EnumType {
-	return &file_udb_core_common_v1_security_proto_enumTypes[5]
+	return &file_udb_core_common_v1_security_proto_enumTypes[6]
 }
 
 func (x RedactionStrategy) Number() protoreflect.EnumNumber {
@@ -393,7 +454,7 @@ func (x RedactionStrategy) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use RedactionStrategy.Descriptor instead.
 func (RedactionStrategy) EnumDescriptor() ([]byte, []int) {
-	return file_udb_core_common_v1_security_proto_rawDescGZIP(), []int{5}
+	return file_udb_core_common_v1_security_proto_rawDescGZIP(), []int{6}
 }
 
 type SecurityClassification int32
@@ -435,11 +496,11 @@ func (x SecurityClassification) String() string {
 }
 
 func (SecurityClassification) Descriptor() protoreflect.EnumDescriptor {
-	return file_udb_core_common_v1_security_proto_enumTypes[6].Descriptor()
+	return file_udb_core_common_v1_security_proto_enumTypes[7].Descriptor()
 }
 
 func (SecurityClassification) Type() protoreflect.EnumType {
-	return &file_udb_core_common_v1_security_proto_enumTypes[6]
+	return &file_udb_core_common_v1_security_proto_enumTypes[7]
 }
 
 func (x SecurityClassification) Number() protoreflect.EnumNumber {
@@ -448,7 +509,7 @@ func (x SecurityClassification) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use SecurityClassification.Descriptor instead.
 func (SecurityClassification) EnumDescriptor() ([]byte, []int) {
-	return file_udb_core_common_v1_security_proto_rawDescGZIP(), []int{6}
+	return file_udb_core_common_v1_security_proto_rawDescGZIP(), []int{7}
 }
 
 type DataCategory int32
@@ -496,11 +557,11 @@ func (x DataCategory) String() string {
 }
 
 func (DataCategory) Descriptor() protoreflect.EnumDescriptor {
-	return file_udb_core_common_v1_security_proto_enumTypes[7].Descriptor()
+	return file_udb_core_common_v1_security_proto_enumTypes[8].Descriptor()
 }
 
 func (DataCategory) Type() protoreflect.EnumType {
-	return &file_udb_core_common_v1_security_proto_enumTypes[7]
+	return &file_udb_core_common_v1_security_proto_enumTypes[8]
 }
 
 func (x DataCategory) Number() protoreflect.EnumNumber {
@@ -509,7 +570,7 @@ func (x DataCategory) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use DataCategory.Descriptor instead.
 func (DataCategory) EnumDescriptor() ([]byte, []int) {
-	return file_udb_core_common_v1_security_proto_rawDescGZIP(), []int{7}
+	return file_udb_core_common_v1_security_proto_rawDescGZIP(), []int{8}
 }
 
 type EndpointSecurity struct {
@@ -1883,6 +1944,14 @@ var file_udb_core_common_v1_security_proto_extTypes = []protoimpl.ExtensionInfo{
 		Filename:      "udb/core/common/v1/security.proto",
 	},
 	{
+		ExtendedType:  (*descriptorpb.MethodOptions)(nil),
+		ExtensionType: (*OperationKind)(nil),
+		Field:         51007,
+		Name:          "udb.core.common.v1.operation_kind",
+		Tag:           "varint,51007,opt,name=operation_kind,enum=udb.core.common.v1.OperationKind",
+		Filename:      "udb/core/common/v1/security.proto",
+	},
+	{
 		ExtendedType:  (*descriptorpb.MessageOptions)(nil),
 		ExtensionType: (*DbTableSecurityOptions)(nil),
 		Field:         52001,
@@ -1993,30 +2062,36 @@ var (
 	E_MethodEventContract = &file_udb_core_common_v1_security_proto_extTypes[16]
 	// optional udb.core.common.v1.DependencyContractOptions method_dependency_contract = 51006;
 	E_MethodDependencyContract = &file_udb_core_common_v1_security_proto_extTypes[17]
+	// Authoritative state-change classification — see the OperationKind enum.
+	// Standalone (not in endpoint_security) so it is decoupled from auth and every
+	// RPC can carry it, including the DataBroker data-plane RPCs.
+	//
+	// optional udb.core.common.v1.OperationKind operation_kind = 51007;
+	E_OperationKind = &file_udb_core_common_v1_security_proto_extTypes[18]
 )
 
 // Extension fields to descriptorpb.MessageOptions.
 var (
 	// optional udb.core.common.v1.DbTableSecurityOptions db_table_security = 52001;
-	E_DbTableSecurity = &file_udb_core_common_v1_security_proto_extTypes[18]
+	E_DbTableSecurity = &file_udb_core_common_v1_security_proto_extTypes[19]
 	// optional udb.core.common.v1.EventContractOptions message_event_contract = 52002;
-	E_MessageEventContract = &file_udb_core_common_v1_security_proto_extTypes[19]
+	E_MessageEventContract = &file_udb_core_common_v1_security_proto_extTypes[20]
 	// optional udb.core.common.v1.SdkSurfaceOptions message_sdk_surface = 52003;
-	E_MessageSdkSurface = &file_udb_core_common_v1_security_proto_extTypes[20]
+	E_MessageSdkSurface = &file_udb_core_common_v1_security_proto_extTypes[21]
 	// optional udb.core.common.v1.DependencyContractOptions message_dependency_contract = 52004;
-	E_MessageDependencyContract = &file_udb_core_common_v1_security_proto_extTypes[21]
+	E_MessageDependencyContract = &file_udb_core_common_v1_security_proto_extTypes[22]
 )
 
 // Extension fields to descriptorpb.ServiceOptions.
 var (
 	// optional udb.core.common.v1.NativeServiceOptions native_service = 53001;
-	E_NativeService = &file_udb_core_common_v1_security_proto_extTypes[22]
+	E_NativeService = &file_udb_core_common_v1_security_proto_extTypes[23]
 	// optional udb.core.common.v1.SdkSurfaceOptions service_sdk_surface = 53002;
-	E_ServiceSdkSurface = &file_udb_core_common_v1_security_proto_extTypes[23]
+	E_ServiceSdkSurface = &file_udb_core_common_v1_security_proto_extTypes[24]
 	// optional udb.core.common.v1.CliScaffoldOptions service_cli_scaffold = 53003;
-	E_ServiceCliScaffold = &file_udb_core_common_v1_security_proto_extTypes[24]
+	E_ServiceCliScaffold = &file_udb_core_common_v1_security_proto_extTypes[25]
 	// optional udb.core.common.v1.DependencyContractOptions service_dependency_contract = 53004;
-	E_ServiceDependencyContract = &file_udb_core_common_v1_security_proto_extTypes[25]
+	E_ServiceDependencyContract = &file_udb_core_common_v1_security_proto_extTypes[26]
 )
 
 var File_udb_core_common_v1_security_proto protoreflect.FileDescriptor
@@ -2157,7 +2232,12 @@ const file_udb_core_common_v1_security_proto_rawDesc = "" +
 	"\x11optional_backends\x18\x04 \x03(\tR\x10optionalBackends\x12+\n" +
 	"\x11required_features\x18\x05 \x03(\tR\x10requiredFeatures\x12!\n" +
 	"\frequired_env\x18\x06 \x03(\tR\vrequiredEnv\x122\n" +
-	"\x15degraded_when_missing\x18\a \x03(\tR\x13degradedWhenMissing*\x87\x01\n" +
+	"\x15degraded_when_missing\x18\a \x03(\tR\x13degradedWhenMissing*\x8a\x01\n" +
+	"\rOperationKind\x12\x1e\n" +
+	"\x1aOPERATION_KIND_UNSPECIFIED\x10\x00\x12\x1c\n" +
+	"\x18OPERATION_KIND_READ_ONLY\x10\x01\x12\x1b\n" +
+	"\x17OPERATION_KIND_MUTATION\x10\x02\x12\x1e\n" +
+	"\x1aOPERATION_KIND_DESTRUCTIVE\x10\x03*\x87\x01\n" +
 	"\bAuthMode\x12\x19\n" +
 	"\x15AUTH_MODE_UNSPECIFIED\x10\x00\x12\x14\n" +
 	"\x10AUTH_MODE_PUBLIC\x10\x01\x12\x14\n" +
@@ -2243,7 +2323,8 @@ const file_udb_core_common_v1_security_proto_rawDesc = "" +
 	"sdkSurface:x\n" +
 	"\x13method_cli_scaffold\x12\x1e.google.protobuf.MethodOptions\x18\xbc\x8e\x03 \x01(\v2&.udb.core.common.v1.CliScaffoldOptionsR\x11methodCliScaffold:~\n" +
 	"\x15method_event_contract\x12\x1e.google.protobuf.MethodOptions\x18\xbd\x8e\x03 \x01(\v2(.udb.core.common.v1.EventContractOptionsR\x13methodEventContract:\x8d\x01\n" +
-	"\x1amethod_dependency_contract\x12\x1e.google.protobuf.MethodOptions\x18\xbe\x8e\x03 \x01(\v2-.udb.core.common.v1.DependencyContractOptionsR\x18methodDependencyContract:y\n" +
+	"\x1amethod_dependency_contract\x12\x1e.google.protobuf.MethodOptions\x18\xbe\x8e\x03 \x01(\v2-.udb.core.common.v1.DependencyContractOptionsR\x18methodDependencyContract:j\n" +
+	"\x0eoperation_kind\x12\x1e.google.protobuf.MethodOptions\x18\xbf\x8e\x03 \x01(\x0e2!.udb.core.common.v1.OperationKindR\roperationKind:y\n" +
 	"\x11db_table_security\x12\x1f.google.protobuf.MessageOptions\x18\xa1\x96\x03 \x01(\v2*.udb.core.common.v1.DbTableSecurityOptionsR\x0fdbTableSecurity:\x81\x01\n" +
 	"\x16message_event_contract\x12\x1f.google.protobuf.MessageOptions\x18\xa2\x96\x03 \x01(\v2(.udb.core.common.v1.EventContractOptionsR\x14messageEventContract:x\n" +
 	"\x13message_sdk_surface\x12\x1f.google.protobuf.MessageOptions\x18\xa3\x96\x03 \x01(\v2%.udb.core.common.v1.SdkSurfaceOptionsR\x11messageSdkSurface:\x90\x01\n" +
@@ -2266,87 +2347,90 @@ func file_udb_core_common_v1_security_proto_rawDescGZIP() []byte {
 	return file_udb_core_common_v1_security_proto_rawDescData
 }
 
-var file_udb_core_common_v1_security_proto_enumTypes = make([]protoimpl.EnumInfo, 8)
+var file_udb_core_common_v1_security_proto_enumTypes = make([]protoimpl.EnumInfo, 9)
 var file_udb_core_common_v1_security_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_udb_core_common_v1_security_proto_goTypes = []any{
-	(AuthMode)(0),                             // 0: udb.core.common.v1.AuthMode
-	(CredentialType)(0),                       // 1: udb.core.common.v1.CredentialType
-	(AuditMode)(0),                            // 2: udb.core.common.v1.AuditMode
-	(SecretClassification)(0),                 // 3: udb.core.common.v1.SecretClassification
-	(OutputView)(0),                           // 4: udb.core.common.v1.OutputView
-	(RedactionStrategy)(0),                    // 5: udb.core.common.v1.RedactionStrategy
-	(SecurityClassification)(0),               // 6: udb.core.common.v1.SecurityClassification
-	(DataCategory)(0),                         // 7: udb.core.common.v1.DataCategory
-	(*EndpointSecurity)(nil),                  // 8: udb.core.common.v1.EndpointSecurity
-	(*RestContract)(nil),                      // 9: udb.core.common.v1.RestContract
-	(*NativeServiceOptions)(nil),              // 10: udb.core.common.v1.NativeServiceOptions
-	(*DbTableSecurityOptions)(nil),            // 11: udb.core.common.v1.DbTableSecurityOptions
-	(*DbColumnSecurityOptions)(nil),           // 12: udb.core.common.v1.DbColumnSecurityOptions
-	(*SdkSurfaceOptions)(nil),                 // 13: udb.core.common.v1.SdkSurfaceOptions
-	(*CliScaffoldOptions)(nil),                // 14: udb.core.common.v1.CliScaffoldOptions
-	(*EventContractOptions)(nil),              // 15: udb.core.common.v1.EventContractOptions
-	(*DependencyContractOptions)(nil),         // 16: udb.core.common.v1.DependencyContractOptions
-	(*EventContractOptions_EmittedEvent)(nil), // 17: udb.core.common.v1.EventContractOptions.EmittedEvent
-	(*descriptorpb.FieldOptions)(nil),         // 18: google.protobuf.FieldOptions
-	(*descriptorpb.MethodOptions)(nil),        // 19: google.protobuf.MethodOptions
-	(*descriptorpb.MessageOptions)(nil),       // 20: google.protobuf.MessageOptions
-	(*descriptorpb.ServiceOptions)(nil),       // 21: google.protobuf.ServiceOptions
+	(OperationKind)(0),                        // 0: udb.core.common.v1.OperationKind
+	(AuthMode)(0),                             // 1: udb.core.common.v1.AuthMode
+	(CredentialType)(0),                       // 2: udb.core.common.v1.CredentialType
+	(AuditMode)(0),                            // 3: udb.core.common.v1.AuditMode
+	(SecretClassification)(0),                 // 4: udb.core.common.v1.SecretClassification
+	(OutputView)(0),                           // 5: udb.core.common.v1.OutputView
+	(RedactionStrategy)(0),                    // 6: udb.core.common.v1.RedactionStrategy
+	(SecurityClassification)(0),               // 7: udb.core.common.v1.SecurityClassification
+	(DataCategory)(0),                         // 8: udb.core.common.v1.DataCategory
+	(*EndpointSecurity)(nil),                  // 9: udb.core.common.v1.EndpointSecurity
+	(*RestContract)(nil),                      // 10: udb.core.common.v1.RestContract
+	(*NativeServiceOptions)(nil),              // 11: udb.core.common.v1.NativeServiceOptions
+	(*DbTableSecurityOptions)(nil),            // 12: udb.core.common.v1.DbTableSecurityOptions
+	(*DbColumnSecurityOptions)(nil),           // 13: udb.core.common.v1.DbColumnSecurityOptions
+	(*SdkSurfaceOptions)(nil),                 // 14: udb.core.common.v1.SdkSurfaceOptions
+	(*CliScaffoldOptions)(nil),                // 15: udb.core.common.v1.CliScaffoldOptions
+	(*EventContractOptions)(nil),              // 16: udb.core.common.v1.EventContractOptions
+	(*DependencyContractOptions)(nil),         // 17: udb.core.common.v1.DependencyContractOptions
+	(*EventContractOptions_EmittedEvent)(nil), // 18: udb.core.common.v1.EventContractOptions.EmittedEvent
+	(*descriptorpb.FieldOptions)(nil),         // 19: google.protobuf.FieldOptions
+	(*descriptorpb.MethodOptions)(nil),        // 20: google.protobuf.MethodOptions
+	(*descriptorpb.MessageOptions)(nil),       // 21: google.protobuf.MessageOptions
+	(*descriptorpb.ServiceOptions)(nil),       // 22: google.protobuf.ServiceOptions
 }
 var file_udb_core_common_v1_security_proto_depIdxs = []int32{
-	0,  // 0: udb.core.common.v1.EndpointSecurity.mode:type_name -> udb.core.common.v1.AuthMode
-	1,  // 1: udb.core.common.v1.EndpointSecurity.allowed_credential_types:type_name -> udb.core.common.v1.CredentialType
-	2,  // 2: udb.core.common.v1.DbTableSecurityOptions.audit_mode:type_name -> udb.core.common.v1.AuditMode
-	3,  // 3: udb.core.common.v1.DbColumnSecurityOptions.secret_classification:type_name -> udb.core.common.v1.SecretClassification
-	4,  // 4: udb.core.common.v1.DbColumnSecurityOptions.output_view:type_name -> udb.core.common.v1.OutputView
-	5,  // 5: udb.core.common.v1.DbColumnSecurityOptions.redaction_strategy:type_name -> udb.core.common.v1.RedactionStrategy
-	17, // 6: udb.core.common.v1.EventContractOptions.emits:type_name -> udb.core.common.v1.EventContractOptions.EmittedEvent
-	18, // 7: udb.core.common.v1.pii:extendee -> google.protobuf.FieldOptions
-	18, // 8: udb.core.common.v1.encrypted_security:extendee -> google.protobuf.FieldOptions
-	18, // 9: udb.core.common.v1.log_masked:extendee -> google.protobuf.FieldOptions
-	18, // 10: udb.core.common.v1.log_redacted:extendee -> google.protobuf.FieldOptions
-	18, // 11: udb.core.common.v1.sensitive:extendee -> google.protobuf.FieldOptions
-	18, // 12: udb.core.common.v1.requires_consent:extendee -> google.protobuf.FieldOptions
-	18, // 13: udb.core.common.v1.data_purpose:extendee -> google.protobuf.FieldOptions
-	18, // 14: udb.core.common.v1.retention_days:extendee -> google.protobuf.FieldOptions
-	18, // 15: udb.core.common.v1.tokenized:extendee -> google.protobuf.FieldOptions
-	18, // 16: udb.core.common.v1.security_classification:extendee -> google.protobuf.FieldOptions
-	18, // 17: udb.core.common.v1.data_category:extendee -> google.protobuf.FieldOptions
-	18, // 18: udb.core.common.v1.db_column_security:extendee -> google.protobuf.FieldOptions
-	19, // 19: udb.core.common.v1.endpoint_security:extendee -> google.protobuf.MethodOptions
-	19, // 20: udb.core.common.v1.rest_contract:extendee -> google.protobuf.MethodOptions
-	19, // 21: udb.core.common.v1.sdk_surface:extendee -> google.protobuf.MethodOptions
-	19, // 22: udb.core.common.v1.method_cli_scaffold:extendee -> google.protobuf.MethodOptions
-	19, // 23: udb.core.common.v1.method_event_contract:extendee -> google.protobuf.MethodOptions
-	19, // 24: udb.core.common.v1.method_dependency_contract:extendee -> google.protobuf.MethodOptions
-	20, // 25: udb.core.common.v1.db_table_security:extendee -> google.protobuf.MessageOptions
-	20, // 26: udb.core.common.v1.message_event_contract:extendee -> google.protobuf.MessageOptions
-	20, // 27: udb.core.common.v1.message_sdk_surface:extendee -> google.protobuf.MessageOptions
-	20, // 28: udb.core.common.v1.message_dependency_contract:extendee -> google.protobuf.MessageOptions
-	21, // 29: udb.core.common.v1.native_service:extendee -> google.protobuf.ServiceOptions
-	21, // 30: udb.core.common.v1.service_sdk_surface:extendee -> google.protobuf.ServiceOptions
-	21, // 31: udb.core.common.v1.service_cli_scaffold:extendee -> google.protobuf.ServiceOptions
-	21, // 32: udb.core.common.v1.service_dependency_contract:extendee -> google.protobuf.ServiceOptions
-	6,  // 33: udb.core.common.v1.security_classification:type_name -> udb.core.common.v1.SecurityClassification
-	7,  // 34: udb.core.common.v1.data_category:type_name -> udb.core.common.v1.DataCategory
-	12, // 35: udb.core.common.v1.db_column_security:type_name -> udb.core.common.v1.DbColumnSecurityOptions
-	8,  // 36: udb.core.common.v1.endpoint_security:type_name -> udb.core.common.v1.EndpointSecurity
-	9,  // 37: udb.core.common.v1.rest_contract:type_name -> udb.core.common.v1.RestContract
-	13, // 38: udb.core.common.v1.sdk_surface:type_name -> udb.core.common.v1.SdkSurfaceOptions
-	14, // 39: udb.core.common.v1.method_cli_scaffold:type_name -> udb.core.common.v1.CliScaffoldOptions
-	15, // 40: udb.core.common.v1.method_event_contract:type_name -> udb.core.common.v1.EventContractOptions
-	16, // 41: udb.core.common.v1.method_dependency_contract:type_name -> udb.core.common.v1.DependencyContractOptions
-	11, // 42: udb.core.common.v1.db_table_security:type_name -> udb.core.common.v1.DbTableSecurityOptions
-	15, // 43: udb.core.common.v1.message_event_contract:type_name -> udb.core.common.v1.EventContractOptions
-	13, // 44: udb.core.common.v1.message_sdk_surface:type_name -> udb.core.common.v1.SdkSurfaceOptions
-	16, // 45: udb.core.common.v1.message_dependency_contract:type_name -> udb.core.common.v1.DependencyContractOptions
-	10, // 46: udb.core.common.v1.native_service:type_name -> udb.core.common.v1.NativeServiceOptions
-	13, // 47: udb.core.common.v1.service_sdk_surface:type_name -> udb.core.common.v1.SdkSurfaceOptions
-	14, // 48: udb.core.common.v1.service_cli_scaffold:type_name -> udb.core.common.v1.CliScaffoldOptions
-	16, // 49: udb.core.common.v1.service_dependency_contract:type_name -> udb.core.common.v1.DependencyContractOptions
-	50, // [50:50] is the sub-list for method output_type
-	50, // [50:50] is the sub-list for method input_type
-	33, // [33:50] is the sub-list for extension type_name
-	7,  // [7:33] is the sub-list for extension extendee
+	1,  // 0: udb.core.common.v1.EndpointSecurity.mode:type_name -> udb.core.common.v1.AuthMode
+	2,  // 1: udb.core.common.v1.EndpointSecurity.allowed_credential_types:type_name -> udb.core.common.v1.CredentialType
+	3,  // 2: udb.core.common.v1.DbTableSecurityOptions.audit_mode:type_name -> udb.core.common.v1.AuditMode
+	4,  // 3: udb.core.common.v1.DbColumnSecurityOptions.secret_classification:type_name -> udb.core.common.v1.SecretClassification
+	5,  // 4: udb.core.common.v1.DbColumnSecurityOptions.output_view:type_name -> udb.core.common.v1.OutputView
+	6,  // 5: udb.core.common.v1.DbColumnSecurityOptions.redaction_strategy:type_name -> udb.core.common.v1.RedactionStrategy
+	18, // 6: udb.core.common.v1.EventContractOptions.emits:type_name -> udb.core.common.v1.EventContractOptions.EmittedEvent
+	19, // 7: udb.core.common.v1.pii:extendee -> google.protobuf.FieldOptions
+	19, // 8: udb.core.common.v1.encrypted_security:extendee -> google.protobuf.FieldOptions
+	19, // 9: udb.core.common.v1.log_masked:extendee -> google.protobuf.FieldOptions
+	19, // 10: udb.core.common.v1.log_redacted:extendee -> google.protobuf.FieldOptions
+	19, // 11: udb.core.common.v1.sensitive:extendee -> google.protobuf.FieldOptions
+	19, // 12: udb.core.common.v1.requires_consent:extendee -> google.protobuf.FieldOptions
+	19, // 13: udb.core.common.v1.data_purpose:extendee -> google.protobuf.FieldOptions
+	19, // 14: udb.core.common.v1.retention_days:extendee -> google.protobuf.FieldOptions
+	19, // 15: udb.core.common.v1.tokenized:extendee -> google.protobuf.FieldOptions
+	19, // 16: udb.core.common.v1.security_classification:extendee -> google.protobuf.FieldOptions
+	19, // 17: udb.core.common.v1.data_category:extendee -> google.protobuf.FieldOptions
+	19, // 18: udb.core.common.v1.db_column_security:extendee -> google.protobuf.FieldOptions
+	20, // 19: udb.core.common.v1.endpoint_security:extendee -> google.protobuf.MethodOptions
+	20, // 20: udb.core.common.v1.rest_contract:extendee -> google.protobuf.MethodOptions
+	20, // 21: udb.core.common.v1.sdk_surface:extendee -> google.protobuf.MethodOptions
+	20, // 22: udb.core.common.v1.method_cli_scaffold:extendee -> google.protobuf.MethodOptions
+	20, // 23: udb.core.common.v1.method_event_contract:extendee -> google.protobuf.MethodOptions
+	20, // 24: udb.core.common.v1.method_dependency_contract:extendee -> google.protobuf.MethodOptions
+	20, // 25: udb.core.common.v1.operation_kind:extendee -> google.protobuf.MethodOptions
+	21, // 26: udb.core.common.v1.db_table_security:extendee -> google.protobuf.MessageOptions
+	21, // 27: udb.core.common.v1.message_event_contract:extendee -> google.protobuf.MessageOptions
+	21, // 28: udb.core.common.v1.message_sdk_surface:extendee -> google.protobuf.MessageOptions
+	21, // 29: udb.core.common.v1.message_dependency_contract:extendee -> google.protobuf.MessageOptions
+	22, // 30: udb.core.common.v1.native_service:extendee -> google.protobuf.ServiceOptions
+	22, // 31: udb.core.common.v1.service_sdk_surface:extendee -> google.protobuf.ServiceOptions
+	22, // 32: udb.core.common.v1.service_cli_scaffold:extendee -> google.protobuf.ServiceOptions
+	22, // 33: udb.core.common.v1.service_dependency_contract:extendee -> google.protobuf.ServiceOptions
+	7,  // 34: udb.core.common.v1.security_classification:type_name -> udb.core.common.v1.SecurityClassification
+	8,  // 35: udb.core.common.v1.data_category:type_name -> udb.core.common.v1.DataCategory
+	13, // 36: udb.core.common.v1.db_column_security:type_name -> udb.core.common.v1.DbColumnSecurityOptions
+	9,  // 37: udb.core.common.v1.endpoint_security:type_name -> udb.core.common.v1.EndpointSecurity
+	10, // 38: udb.core.common.v1.rest_contract:type_name -> udb.core.common.v1.RestContract
+	14, // 39: udb.core.common.v1.sdk_surface:type_name -> udb.core.common.v1.SdkSurfaceOptions
+	15, // 40: udb.core.common.v1.method_cli_scaffold:type_name -> udb.core.common.v1.CliScaffoldOptions
+	16, // 41: udb.core.common.v1.method_event_contract:type_name -> udb.core.common.v1.EventContractOptions
+	17, // 42: udb.core.common.v1.method_dependency_contract:type_name -> udb.core.common.v1.DependencyContractOptions
+	0,  // 43: udb.core.common.v1.operation_kind:type_name -> udb.core.common.v1.OperationKind
+	12, // 44: udb.core.common.v1.db_table_security:type_name -> udb.core.common.v1.DbTableSecurityOptions
+	16, // 45: udb.core.common.v1.message_event_contract:type_name -> udb.core.common.v1.EventContractOptions
+	14, // 46: udb.core.common.v1.message_sdk_surface:type_name -> udb.core.common.v1.SdkSurfaceOptions
+	17, // 47: udb.core.common.v1.message_dependency_contract:type_name -> udb.core.common.v1.DependencyContractOptions
+	11, // 48: udb.core.common.v1.native_service:type_name -> udb.core.common.v1.NativeServiceOptions
+	14, // 49: udb.core.common.v1.service_sdk_surface:type_name -> udb.core.common.v1.SdkSurfaceOptions
+	15, // 50: udb.core.common.v1.service_cli_scaffold:type_name -> udb.core.common.v1.CliScaffoldOptions
+	17, // 51: udb.core.common.v1.service_dependency_contract:type_name -> udb.core.common.v1.DependencyContractOptions
+	52, // [52:52] is the sub-list for method output_type
+	52, // [52:52] is the sub-list for method input_type
+	34, // [34:52] is the sub-list for extension type_name
+	7,  // [7:34] is the sub-list for extension extendee
 	0,  // [0:7] is the sub-list for field type_name
 }
 
@@ -2360,9 +2444,9 @@ func file_udb_core_common_v1_security_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_udb_core_common_v1_security_proto_rawDesc), len(file_udb_core_common_v1_security_proto_rawDesc)),
-			NumEnums:      8,
+			NumEnums:      9,
 			NumMessages:   10,
-			NumExtensions: 26,
+			NumExtensions: 27,
 			NumServices:   0,
 		},
 		GoTypes:           file_udb_core_common_v1_security_proto_goTypes,

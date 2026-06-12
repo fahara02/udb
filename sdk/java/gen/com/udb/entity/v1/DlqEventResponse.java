@@ -502,7 +502,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.entity.v1.DlqEventRecord event = 1 [json_name = "event"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.entity.v1.DlqEventRecord, com.udb.entity.v1.DlqEventRecord.Builder, com.udb.entity.v1.DlqEventRecordOrBuilder> 
+        com.udb.entity.v1.DlqEventRecord, com.udb.entity.v1.DlqEventRecord.Builder, com.udb.entity.v1.DlqEventRecordOrBuilder>
         internalGetEventFieldBuilder() {
       if (eventBuilder_ == null) {
         eventBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -565,4 +565,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

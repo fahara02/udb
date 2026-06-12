@@ -65,4 +65,3 @@ class MfaChallengePurpose
         return constant($const);
     }
 }
-

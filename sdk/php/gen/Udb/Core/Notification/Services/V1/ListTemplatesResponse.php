@@ -92,4 +92,3 @@ class ListTemplatesResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

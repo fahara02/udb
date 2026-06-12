@@ -202,4 +202,3 @@ class RoleCreatedEvent extends \Google\Protobuf\Internal\Message
     }
 
 }
-

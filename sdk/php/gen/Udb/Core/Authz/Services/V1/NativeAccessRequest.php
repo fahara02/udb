@@ -369,4 +369,3 @@ class NativeAccessRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

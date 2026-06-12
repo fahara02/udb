@@ -219,4 +219,3 @@ class RecordBatchV2 extends \Google\Protobuf\Internal\Message
     }
 
 }
-

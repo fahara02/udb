@@ -142,7 +142,7 @@ public enum OutputView
   }
   public static com.google.protobuf.Descriptors.EnumDescriptor
       getDescriptor() {
-    return com.udb.core.common.v1.SecurityProto.getDescriptor().getEnumType(4);
+    return com.udb.core.common.v1.SecurityProto.getDescriptor().getEnumType(5);
   }
 
   private static final OutputView[] VALUES = values();
@@ -167,4 +167,3 @@ public enum OutputView
 
   // @@protoc_insertion_point(enum_scope:udb.core.common.v1.OutputView)
 }
-

@@ -13,4 +13,3 @@ import { file_udb_entity_v1_relational } from "./relational_pb";
  */
 export const file_udb_entity_v1_common: GenFile = /*@__PURE__*/
   fileDesc("Chp1ZGIvZW50aXR5L3YxL2NvbW1vbi5wcm90bxINdWRiLmVudGl0eS52MUKxAQoRY29tLnVkYi5lbnRpdHkudjFCC0NvbW1vblByb3RvUAFaOWdpdGh1Yi5jb20vZmFoYXJhMDIvdWRiL3Nkay9nby9nZW4vdWRiL2VudGl0eS92MTtlbnRpdHl2MaICA1VFWKoCDVVkYi5FbnRpdHkuVjHKAg1VZGJcRW50aXR5XFYx4gIZVWRiXEdQQk1ldGFkYXRhXEVudGl0eVxWMeoCD1VkYjo6RW50aXR5OjpWMVAAUAFQAmIGcHJvdG8z", [file_udb_entity_v1_context, file_udb_entity_v1_mutation, file_udb_entity_v1_relational]);
-

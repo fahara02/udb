@@ -124,4 +124,3 @@ export type NotificationLog = Message<"udb.core.notification.entity.v1.Notificat
  */
 export const NotificationLogSchema: GenMessage<NotificationLog> = /*@__PURE__*/
   messageDesc(file_udb_core_notification_entity_v1_notification_log, 0);
-

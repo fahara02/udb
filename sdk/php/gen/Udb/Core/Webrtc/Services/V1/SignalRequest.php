@@ -230,4 +230,3 @@ class SignalRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -718,4 +718,3 @@ export type PolicySimulatedEvent = Message<"udb.core.authz.events.v1.PolicySimul
  */
 export const PolicySimulatedEventSchema: GenMessage<PolicySimulatedEvent> = /*@__PURE__*/
   messageDesc(file_udb_core_authz_events_v1_authz_events, 12);
-

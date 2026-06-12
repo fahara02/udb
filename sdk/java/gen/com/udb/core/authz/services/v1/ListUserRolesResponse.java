@@ -63,7 +63,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.authz.entity.v1.UserRole user_roles = 1 [json_name = "userRoles"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.authz.entity.v1.UserRoleOrBuilder> 
+  public java.util.List<? extends com.udb.core.authz.entity.v1.UserRoleOrBuilder>
       getUserRolesOrBuilderList() {
     return userRoles_;
   }
@@ -377,7 +377,7 @@ private static final long serialVersionUID = 0L;
             userRolesBuilder_ = null;
             userRoles_ = other.userRoles_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            userRolesBuilder_ = 
+            userRolesBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetUserRolesFieldBuilder() : null;
           } else {
@@ -636,7 +636,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.authz.entity.v1.UserRole user_roles = 1 [json_name = "userRoles"];</code>
      */
-    public java.util.List<? extends com.udb.core.authz.entity.v1.UserRoleOrBuilder> 
+    public java.util.List<? extends com.udb.core.authz.entity.v1.UserRoleOrBuilder>
          getUserRolesOrBuilderList() {
       if (userRolesBuilder_ != null) {
         return userRolesBuilder_.getMessageOrBuilderList();
@@ -662,12 +662,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.authz.entity.v1.UserRole user_roles = 1 [json_name = "userRoles"];</code>
      */
-    public java.util.List<com.udb.core.authz.entity.v1.UserRole.Builder> 
+    public java.util.List<com.udb.core.authz.entity.v1.UserRole.Builder>
          getUserRolesBuilderList() {
       return internalGetUserRolesFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.authz.entity.v1.UserRole, com.udb.core.authz.entity.v1.UserRole.Builder, com.udb.core.authz.entity.v1.UserRoleOrBuilder> 
+        com.udb.core.authz.entity.v1.UserRole, com.udb.core.authz.entity.v1.UserRole.Builder, com.udb.core.authz.entity.v1.UserRoleOrBuilder>
         internalGetUserRolesFieldBuilder() {
       if (userRolesBuilder_ == null) {
         userRolesBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -731,4 +731,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

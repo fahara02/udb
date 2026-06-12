@@ -131,4 +131,3 @@ class GetUserRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

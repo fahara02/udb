@@ -75,4 +75,3 @@ class CanaryState
         return constant($const);
     }
 }
-

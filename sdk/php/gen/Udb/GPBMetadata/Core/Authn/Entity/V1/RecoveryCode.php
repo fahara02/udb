@@ -25,4 +25,3 @@ class RecoveryCode
         static::$is_initialized = true;
     }
 }
-

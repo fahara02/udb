@@ -870,4 +870,3 @@ class User extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -13,7 +13,7 @@ public interface SagaListResponseOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.SagaRecord sagas = 1 [json_name = "sagas"];</code>
    */
-  java.util.List<com.udb.entity.v1.SagaRecord> 
+  java.util.List<com.udb.entity.v1.SagaRecord>
       getSagasList();
   /**
    * <code>repeated .udb.entity.v1.SagaRecord sagas = 1 [json_name = "sagas"];</code>
@@ -26,7 +26,7 @@ public interface SagaListResponseOrBuilder extends
   /**
    * <code>repeated .udb.entity.v1.SagaRecord sagas = 1 [json_name = "sagas"];</code>
    */
-  java.util.List<? extends com.udb.entity.v1.SagaRecordOrBuilder> 
+  java.util.List<? extends com.udb.entity.v1.SagaRecordOrBuilder>
       getSagasOrBuilderList();
   /**
    * <code>repeated .udb.entity.v1.SagaRecord sagas = 1 [json_name = "sagas"];</code>

@@ -187,4 +187,3 @@ class DiscoveryResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

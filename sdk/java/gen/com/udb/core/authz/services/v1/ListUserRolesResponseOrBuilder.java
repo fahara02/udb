@@ -13,7 +13,7 @@ public interface ListUserRolesResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.authz.entity.v1.UserRole user_roles = 1 [json_name = "userRoles"];</code>
    */
-  java.util.List<com.udb.core.authz.entity.v1.UserRole> 
+  java.util.List<com.udb.core.authz.entity.v1.UserRole>
       getUserRolesList();
   /**
    * <code>repeated .udb.core.authz.entity.v1.UserRole user_roles = 1 [json_name = "userRoles"];</code>
@@ -26,7 +26,7 @@ public interface ListUserRolesResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.authz.entity.v1.UserRole user_roles = 1 [json_name = "userRoles"];</code>
    */
-  java.util.List<? extends com.udb.core.authz.entity.v1.UserRoleOrBuilder> 
+  java.util.List<? extends com.udb.core.authz.entity.v1.UserRoleOrBuilder>
       getUserRolesOrBuilderList();
   /**
    * <code>repeated .udb.core.authz.entity.v1.UserRole user_roles = 1 [json_name = "userRoles"];</code>

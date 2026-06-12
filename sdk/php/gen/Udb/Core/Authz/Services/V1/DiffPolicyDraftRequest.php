@@ -126,4 +126,3 @@ class DiffPolicyDraftRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

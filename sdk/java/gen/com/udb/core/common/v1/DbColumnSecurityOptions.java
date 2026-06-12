@@ -123,7 +123,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       tokenizationStrategy_ = s;
@@ -139,7 +139,7 @@ private static final long serialVersionUID = 0L;
       getTokenizationStrategyBytes() {
     java.lang.Object ref = tokenizationStrategy_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       tokenizationStrategy_ = b;
@@ -162,7 +162,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       hashingStrategy_ = s;
@@ -178,7 +178,7 @@ private static final long serialVersionUID = 0L;
       getHashingStrategyBytes() {
     java.lang.Object ref = hashingStrategy_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       hashingStrategy_ = b;
@@ -201,7 +201,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       hashingAlgorithm_ = s;
@@ -217,7 +217,7 @@ private static final long serialVersionUID = 0L;
       getHashingAlgorithmBytes() {
     java.lang.Object ref = hashingAlgorithm_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       hashingAlgorithm_ = b;
@@ -240,7 +240,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       encryptionKeyClass_ = s;
@@ -256,7 +256,7 @@ private static final long serialVersionUID = 0L;
       getEncryptionKeyClassBytes() {
     java.lang.Object ref = encryptionKeyClass_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       encryptionKeyClass_ = b;
@@ -290,7 +290,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       uniquenessScope_ = s;
@@ -306,7 +306,7 @@ private static final long serialVersionUID = 0L;
       getUniquenessScopeBytes() {
     java.lang.Object ref = uniquenessScope_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       uniquenessScope_ = b;
@@ -1086,7 +1086,7 @@ private static final long serialVersionUID = 0L;
         getTokenizationStrategyBytes() {
       java.lang.Object ref = tokenizationStrategy_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         tokenizationStrategy_ = b;
@@ -1158,7 +1158,7 @@ private static final long serialVersionUID = 0L;
         getHashingStrategyBytes() {
       java.lang.Object ref = hashingStrategy_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         hashingStrategy_ = b;
@@ -1230,7 +1230,7 @@ private static final long serialVersionUID = 0L;
         getHashingAlgorithmBytes() {
       java.lang.Object ref = hashingAlgorithm_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         hashingAlgorithm_ = b;
@@ -1302,7 +1302,7 @@ private static final long serialVersionUID = 0L;
         getEncryptionKeyClassBytes() {
       java.lang.Object ref = encryptionKeyClass_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         encryptionKeyClass_ = b;
@@ -1406,7 +1406,7 @@ private static final long serialVersionUID = 0L;
         getUniquenessScopeBytes() {
       java.lang.Object ref = uniquenessScope_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         uniquenessScope_ = b;
@@ -1599,4 +1599,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

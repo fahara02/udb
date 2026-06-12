@@ -176,4 +176,3 @@ export enum TxStatus_State {
  */
 export const TxStatus_StateSchema: GenEnum<TxStatus_State> = /*@__PURE__*/
   enumDesc(file_udb_entity_v1_tx, 1, 0);
-

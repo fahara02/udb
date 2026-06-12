@@ -28,27 +28,27 @@ public final class ApikeyEventsProto extends com.google.protobuf.GeneratedFile {
   }
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_apikey_events_v1_ApiKeyCreatedEvent_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_apikey_events_v1_ApiKeyCreatedEvent_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_apikey_events_v1_ApiKeyRevokedEvent_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_apikey_events_v1_ApiKeyRevokedEvent_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_apikey_events_v1_ApiKeyRateLimitedEvent_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_apikey_events_v1_ApiKeyRateLimitedEvent_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_apikey_events_v1_ApiKeyValidateFailedEvent_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_apikey_events_v1_ApiKeyValidateFailedEvent_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_apikey_events_v1_ApiKeyAnomalousUseEvent_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_apikey_events_v1_ApiKeyAnomalousUseEvent_fieldAccessorTable;
 

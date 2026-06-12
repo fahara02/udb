@@ -355,4 +355,3 @@ class SamlAcsResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

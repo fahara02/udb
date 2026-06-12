@@ -28,7 +28,7 @@ public final class FileProto extends com.google.protobuf.GeneratedFile {
   }
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_storage_entity_v1_File_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_storage_entity_v1_File_fieldAccessorTable;
 

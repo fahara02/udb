@@ -92,4 +92,3 @@ class ListRolesResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

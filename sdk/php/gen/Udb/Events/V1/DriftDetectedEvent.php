@@ -202,4 +202,3 @@ class DriftDetectedEvent extends \Google\Protobuf\Internal\Message
     }
 
 }
-

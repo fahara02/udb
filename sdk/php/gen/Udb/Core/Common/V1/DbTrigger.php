@@ -223,4 +223,3 @@ class DbTrigger extends \Google\Protobuf\Internal\Message
     }
 
 }
-

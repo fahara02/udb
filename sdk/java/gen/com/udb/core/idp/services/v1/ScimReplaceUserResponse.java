@@ -502,7 +502,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.idp.services.v1.ScimUser user = 1 [json_name = "user"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.idp.services.v1.ScimUser, com.udb.core.idp.services.v1.ScimUser.Builder, com.udb.core.idp.services.v1.ScimUserOrBuilder> 
+        com.udb.core.idp.services.v1.ScimUser, com.udb.core.idp.services.v1.ScimUser.Builder, com.udb.core.idp.services.v1.ScimUserOrBuilder>
         internalGetUserFieldBuilder() {
       if (userBuilder_ == null) {
         userBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -565,4 +565,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

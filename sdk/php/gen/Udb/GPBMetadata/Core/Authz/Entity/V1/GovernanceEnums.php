@@ -22,4 +22,3 @@ class GovernanceEnums
         static::$is_initialized = true;
     }
 }
-

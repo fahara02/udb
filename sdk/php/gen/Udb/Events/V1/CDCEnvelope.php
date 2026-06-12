@@ -175,4 +175,3 @@ class CDCEnvelope extends \Google\Protobuf\Internal\Message
     }
 
 }
-

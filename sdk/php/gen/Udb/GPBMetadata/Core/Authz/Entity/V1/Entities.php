@@ -36,4 +36,3 @@ class Entities
         static::$is_initialized = true;
     }
 }
-

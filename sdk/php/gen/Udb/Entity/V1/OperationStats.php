@@ -218,4 +218,3 @@ class OperationStats extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -85,4 +85,3 @@ export type ReconciliationAnalyticsSummary = Message<"udb.core.analytics.entity.
  */
 export const ReconciliationAnalyticsSummarySchema: GenMessage<ReconciliationAnalyticsSummary> = /*@__PURE__*/
   messageDesc(file_udb_core_analytics_entity_v1_reconciliation_analytics_summary, 0);
-

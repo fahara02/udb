@@ -61,4 +61,3 @@ class AuditMode
         return constant($const);
     }
 }
-

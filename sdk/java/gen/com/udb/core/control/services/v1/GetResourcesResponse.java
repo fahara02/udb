@@ -65,7 +65,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.control.services.v1.Resource resources = 1 [json_name = "resources"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.control.services.v1.ResourceOrBuilder> 
+  public java.util.List<? extends com.udb.core.control.services.v1.ResourceOrBuilder>
       getResourcesOrBuilderList() {
     return resources_;
   }
@@ -109,7 +109,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       versionInfo_ = s;
@@ -129,7 +129,7 @@ private static final long serialVersionUID = 0L;
       getVersionInfoBytes() {
     java.lang.Object ref = versionInfo_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       versionInfo_ = b;
@@ -502,7 +502,7 @@ private static final long serialVersionUID = 0L;
             resourcesBuilder_ = null;
             resources_ = other.resources_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            resourcesBuilder_ = 
+            resourcesBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetResourcesFieldBuilder() : null;
           } else {
@@ -781,7 +781,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.control.services.v1.Resource resources = 1 [json_name = "resources"];</code>
      */
-    public java.util.List<? extends com.udb.core.control.services.v1.ResourceOrBuilder> 
+    public java.util.List<? extends com.udb.core.control.services.v1.ResourceOrBuilder>
          getResourcesOrBuilderList() {
       if (resourcesBuilder_ != null) {
         return resourcesBuilder_.getMessageOrBuilderList();
@@ -807,12 +807,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.control.services.v1.Resource resources = 1 [json_name = "resources"];</code>
      */
-    public java.util.List<com.udb.core.control.services.v1.Resource.Builder> 
+    public java.util.List<com.udb.core.control.services.v1.Resource.Builder>
          getResourcesBuilderList() {
       return internalGetResourcesFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.control.services.v1.Resource, com.udb.core.control.services.v1.Resource.Builder, com.udb.core.control.services.v1.ResourceOrBuilder> 
+        com.udb.core.control.services.v1.Resource, com.udb.core.control.services.v1.Resource.Builder, com.udb.core.control.services.v1.ResourceOrBuilder>
         internalGetResourcesFieldBuilder() {
       if (resourcesBuilder_ == null) {
         resourcesBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -859,7 +859,7 @@ private static final long serialVersionUID = 0L;
         getVersionInfoBytes() {
       java.lang.Object ref = versionInfo_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         versionInfo_ = b;
@@ -1026,7 +1026,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.PageResponse page = 3 [json_name = "page"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.common.v1.PageResponse, com.udb.core.common.v1.PageResponse.Builder, com.udb.core.common.v1.PageResponseOrBuilder> 
+        com.udb.core.common.v1.PageResponse, com.udb.core.common.v1.PageResponse.Builder, com.udb.core.common.v1.PageResponseOrBuilder>
         internalGetPageFieldBuilder() {
       if (pageBuilder_ == null) {
         pageBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1089,4 +1089,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

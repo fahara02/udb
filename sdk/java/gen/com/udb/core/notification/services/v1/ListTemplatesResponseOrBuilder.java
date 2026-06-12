@@ -13,7 +13,7 @@ public interface ListTemplatesResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.notification.entity.v1.NotificationTemplate templates = 1 [json_name = "templates"];</code>
    */
-  java.util.List<com.udb.core.notification.entity.v1.NotificationTemplate> 
+  java.util.List<com.udb.core.notification.entity.v1.NotificationTemplate>
       getTemplatesList();
   /**
    * <code>repeated .udb.core.notification.entity.v1.NotificationTemplate templates = 1 [json_name = "templates"];</code>
@@ -26,7 +26,7 @@ public interface ListTemplatesResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.notification.entity.v1.NotificationTemplate templates = 1 [json_name = "templates"];</code>
    */
-  java.util.List<? extends com.udb.core.notification.entity.v1.NotificationTemplateOrBuilder> 
+  java.util.List<? extends com.udb.core.notification.entity.v1.NotificationTemplateOrBuilder>
       getTemplatesOrBuilderList();
   /**
    * <code>repeated .udb.core.notification.entity.v1.NotificationTemplate templates = 1 [json_name = "templates"];</code>

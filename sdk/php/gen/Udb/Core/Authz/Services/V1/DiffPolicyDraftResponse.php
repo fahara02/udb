@@ -90,4 +90,3 @@ class DiffPolicyDraftResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

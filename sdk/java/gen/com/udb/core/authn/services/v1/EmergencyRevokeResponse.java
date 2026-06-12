@@ -95,7 +95,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       operationId_ = s;
@@ -111,7 +111,7 @@ private static final long serialVersionUID = 0L;
       getOperationIdBytes() {
     java.lang.Object ref = operationId_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       operationId_ = b;
@@ -612,7 +612,7 @@ private static final long serialVersionUID = 0L;
         getOperationIdBytes() {
       java.lang.Object ref = operationId_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         operationId_ = b;
@@ -709,4 +709,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

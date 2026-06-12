@@ -82,4 +82,3 @@ class RefreshSessionResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

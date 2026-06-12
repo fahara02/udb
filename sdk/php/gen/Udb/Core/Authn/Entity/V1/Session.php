@@ -784,4 +784,3 @@ class Session extends \Google\Protobuf\Internal\Message
     }
 
 }
-

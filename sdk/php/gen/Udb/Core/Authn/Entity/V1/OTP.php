@@ -470,4 +470,3 @@ class OTP extends \Google\Protobuf\Internal\Message
     }
 
 }
-

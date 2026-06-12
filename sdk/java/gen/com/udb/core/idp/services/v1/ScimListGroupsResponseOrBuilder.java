@@ -13,7 +13,7 @@ public interface ScimListGroupsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.idp.services.v1.ScimGroup groups = 1 [json_name = "groups"];</code>
    */
-  java.util.List<com.udb.core.idp.services.v1.ScimGroup> 
+  java.util.List<com.udb.core.idp.services.v1.ScimGroup>
       getGroupsList();
   /**
    * <code>repeated .udb.core.idp.services.v1.ScimGroup groups = 1 [json_name = "groups"];</code>
@@ -26,7 +26,7 @@ public interface ScimListGroupsResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.idp.services.v1.ScimGroup groups = 1 [json_name = "groups"];</code>
    */
-  java.util.List<? extends com.udb.core.idp.services.v1.ScimGroupOrBuilder> 
+  java.util.List<? extends com.udb.core.idp.services.v1.ScimGroupOrBuilder>
       getGroupsOrBuilderList();
   /**
    * <code>repeated .udb.core.idp.services.v1.ScimGroup groups = 1 [json_name = "groups"];</code>

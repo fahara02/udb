@@ -13,7 +13,7 @@ public interface ListPreferencesResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.notification.entity.v1.NotificationPreference preferences = 1 [json_name = "preferences"];</code>
    */
-  java.util.List<com.udb.core.notification.entity.v1.NotificationPreference> 
+  java.util.List<com.udb.core.notification.entity.v1.NotificationPreference>
       getPreferencesList();
   /**
    * <code>repeated .udb.core.notification.entity.v1.NotificationPreference preferences = 1 [json_name = "preferences"];</code>
@@ -26,7 +26,7 @@ public interface ListPreferencesResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.notification.entity.v1.NotificationPreference preferences = 1 [json_name = "preferences"];</code>
    */
-  java.util.List<? extends com.udb.core.notification.entity.v1.NotificationPreferenceOrBuilder> 
+  java.util.List<? extends com.udb.core.notification.entity.v1.NotificationPreferenceOrBuilder>
       getPreferencesOrBuilderList();
   /**
    * <code>repeated .udb.core.notification.entity.v1.NotificationPreference preferences = 1 [json_name = "preferences"];</code>

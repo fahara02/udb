@@ -28,32 +28,32 @@ public final class NotificationEventsProto extends com.google.protobuf.Generated
   }
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_notification_events_v1_NotificationSentEvent_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_notification_events_v1_NotificationSentEvent_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_notification_events_v1_NotificationFailedEvent_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_notification_events_v1_NotificationFailedEvent_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_notification_events_v1_NotificationSuppressedEvent_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_notification_events_v1_NotificationSuppressedEvent_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_notification_events_v1_NotificationDeliveredEvent_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_notification_events_v1_NotificationDeliveredEvent_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_notification_events_v1_NotificationTemplateChangedEvent_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_notification_events_v1_NotificationTemplateChangedEvent_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_notification_events_v1_ResourceIngestStatusEvent_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_notification_events_v1_ResourceIngestStatusEvent_fieldAccessorTable;
 

@@ -72,7 +72,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.authz.services.v1.AuthzPolicyRecord policies = 1 [json_name = "policies"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.authz.services.v1.AuthzPolicyRecordOrBuilder> 
+  public java.util.List<? extends com.udb.core.authz.services.v1.AuthzPolicyRecordOrBuilder>
       getPoliciesOrBuilderList() {
     return policies_;
   }
@@ -113,7 +113,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.authz.services.v1.RoleBinding role_bindings = 2 [json_name = "roleBindings"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.authz.services.v1.RoleBindingOrBuilder> 
+  public java.util.List<? extends com.udb.core.authz.services.v1.RoleBindingOrBuilder>
       getRoleBindingsOrBuilderList() {
     return roleBindings_;
   }
@@ -154,7 +154,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.core.authz.services.v1.RelationshipTuple relationship_tuples = 3 [json_name = "relationshipTuples"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.core.authz.services.v1.RelationshipTupleOrBuilder> 
+  public java.util.List<? extends com.udb.core.authz.services.v1.RelationshipTupleOrBuilder>
       getRelationshipTuplesOrBuilderList() {
     return relationshipTuples_;
   }
@@ -543,7 +543,7 @@ private static final long serialVersionUID = 0L;
             policiesBuilder_ = null;
             policies_ = other.policies_;
             bitField0_ = (bitField0_ & ~0x00000001);
-            policiesBuilder_ = 
+            policiesBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetPoliciesFieldBuilder() : null;
           } else {
@@ -569,7 +569,7 @@ private static final long serialVersionUID = 0L;
             roleBindingsBuilder_ = null;
             roleBindings_ = other.roleBindings_;
             bitField0_ = (bitField0_ & ~0x00000002);
-            roleBindingsBuilder_ = 
+            roleBindingsBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetRoleBindingsFieldBuilder() : null;
           } else {
@@ -595,7 +595,7 @@ private static final long serialVersionUID = 0L;
             relationshipTuplesBuilder_ = null;
             relationshipTuples_ = other.relationshipTuples_;
             bitField0_ = (bitField0_ & ~0x00000004);
-            relationshipTuplesBuilder_ = 
+            relationshipTuplesBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetRelationshipTuplesFieldBuilder() : null;
           } else {
@@ -880,7 +880,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.authz.services.v1.AuthzPolicyRecord policies = 1 [json_name = "policies"];</code>
      */
-    public java.util.List<? extends com.udb.core.authz.services.v1.AuthzPolicyRecordOrBuilder> 
+    public java.util.List<? extends com.udb.core.authz.services.v1.AuthzPolicyRecordOrBuilder>
          getPoliciesOrBuilderList() {
       if (policiesBuilder_ != null) {
         return policiesBuilder_.getMessageOrBuilderList();
@@ -906,12 +906,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.authz.services.v1.AuthzPolicyRecord policies = 1 [json_name = "policies"];</code>
      */
-    public java.util.List<com.udb.core.authz.services.v1.AuthzPolicyRecord.Builder> 
+    public java.util.List<com.udb.core.authz.services.v1.AuthzPolicyRecord.Builder>
          getPoliciesBuilderList() {
       return internalGetPoliciesFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.authz.services.v1.AuthzPolicyRecord, com.udb.core.authz.services.v1.AuthzPolicyRecord.Builder, com.udb.core.authz.services.v1.AuthzPolicyRecordOrBuilder> 
+        com.udb.core.authz.services.v1.AuthzPolicyRecord, com.udb.core.authz.services.v1.AuthzPolicyRecord.Builder, com.udb.core.authz.services.v1.AuthzPolicyRecordOrBuilder>
         internalGetPoliciesFieldBuilder() {
       if (policiesBuilder_ == null) {
         policiesBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -1120,7 +1120,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.authz.services.v1.RoleBinding role_bindings = 2 [json_name = "roleBindings"];</code>
      */
-    public java.util.List<? extends com.udb.core.authz.services.v1.RoleBindingOrBuilder> 
+    public java.util.List<? extends com.udb.core.authz.services.v1.RoleBindingOrBuilder>
          getRoleBindingsOrBuilderList() {
       if (roleBindingsBuilder_ != null) {
         return roleBindingsBuilder_.getMessageOrBuilderList();
@@ -1146,12 +1146,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.authz.services.v1.RoleBinding role_bindings = 2 [json_name = "roleBindings"];</code>
      */
-    public java.util.List<com.udb.core.authz.services.v1.RoleBinding.Builder> 
+    public java.util.List<com.udb.core.authz.services.v1.RoleBinding.Builder>
          getRoleBindingsBuilderList() {
       return internalGetRoleBindingsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.authz.services.v1.RoleBinding, com.udb.core.authz.services.v1.RoleBinding.Builder, com.udb.core.authz.services.v1.RoleBindingOrBuilder> 
+        com.udb.core.authz.services.v1.RoleBinding, com.udb.core.authz.services.v1.RoleBinding.Builder, com.udb.core.authz.services.v1.RoleBindingOrBuilder>
         internalGetRoleBindingsFieldBuilder() {
       if (roleBindingsBuilder_ == null) {
         roleBindingsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -1360,7 +1360,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.authz.services.v1.RelationshipTuple relationship_tuples = 3 [json_name = "relationshipTuples"];</code>
      */
-    public java.util.List<? extends com.udb.core.authz.services.v1.RelationshipTupleOrBuilder> 
+    public java.util.List<? extends com.udb.core.authz.services.v1.RelationshipTupleOrBuilder>
          getRelationshipTuplesOrBuilderList() {
       if (relationshipTuplesBuilder_ != null) {
         return relationshipTuplesBuilder_.getMessageOrBuilderList();
@@ -1386,12 +1386,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.core.authz.services.v1.RelationshipTuple relationship_tuples = 3 [json_name = "relationshipTuples"];</code>
      */
-    public java.util.List<com.udb.core.authz.services.v1.RelationshipTuple.Builder> 
+    public java.util.List<com.udb.core.authz.services.v1.RelationshipTuple.Builder>
          getRelationshipTuplesBuilderList() {
       return internalGetRelationshipTuplesFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.core.authz.services.v1.RelationshipTuple, com.udb.core.authz.services.v1.RelationshipTuple.Builder, com.udb.core.authz.services.v1.RelationshipTupleOrBuilder> 
+        com.udb.core.authz.services.v1.RelationshipTuple, com.udb.core.authz.services.v1.RelationshipTuple.Builder, com.udb.core.authz.services.v1.RelationshipTupleOrBuilder>
         internalGetRelationshipTuplesFieldBuilder() {
       if (relationshipTuplesBuilder_ == null) {
         relationshipTuplesBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -1455,4 +1455,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

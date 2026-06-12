@@ -193,4 +193,3 @@ class RoleBinding extends \Google\Protobuf\Internal\Message
     }
 
 }
-

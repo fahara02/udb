@@ -69,7 +69,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       executorIdentity_ = s;
@@ -89,7 +89,7 @@ private static final long serialVersionUID = 0L;
       getExecutorIdentityBytes() {
     java.lang.Object ref = executorIdentity_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       executorIdentity_ = b;
@@ -112,7 +112,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       workloadKind_ = s;
@@ -128,7 +128,7 @@ private static final long serialVersionUID = 0L;
       getWorkloadKindBytes() {
     java.lang.Object ref = workloadKind_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       workloadKind_ = b;
@@ -151,7 +151,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       dateFrom_ = s;
@@ -167,7 +167,7 @@ private static final long serialVersionUID = 0L;
       getDateFromBytes() {
     java.lang.Object ref = dateFrom_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       dateFrom_ = b;
@@ -190,7 +190,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       dateTo_ = s;
@@ -206,7 +206,7 @@ private static final long serialVersionUID = 0L;
       getDateToBytes() {
     java.lang.Object ref = dateTo_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       dateTo_ = b;
@@ -619,7 +619,7 @@ private static final long serialVersionUID = 0L;
         getExecutorIdentityBytes() {
       java.lang.Object ref = executorIdentity_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         executorIdentity_ = b;
@@ -703,7 +703,7 @@ private static final long serialVersionUID = 0L;
         getWorkloadKindBytes() {
       java.lang.Object ref = workloadKind_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         workloadKind_ = b;
@@ -775,7 +775,7 @@ private static final long serialVersionUID = 0L;
         getDateFromBytes() {
       java.lang.Object ref = dateFrom_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         dateFrom_ = b;
@@ -847,7 +847,7 @@ private static final long serialVersionUID = 0L;
         getDateToBytes() {
       java.lang.Object ref = dateTo_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         dateTo_ = b;
@@ -944,4 +944,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

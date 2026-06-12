@@ -61,7 +61,7 @@ public interface ApiErrorOrBuilder extends
   /**
    * <code>repeated .udb.core.common.v1.FieldViolation field_violations = 6 [json_name = "fieldViolations"];</code>
    */
-  java.util.List<com.udb.core.common.v1.FieldViolation> 
+  java.util.List<com.udb.core.common.v1.FieldViolation>
       getFieldViolationsList();
   /**
    * <code>repeated .udb.core.common.v1.FieldViolation field_violations = 6 [json_name = "fieldViolations"];</code>
@@ -74,7 +74,7 @@ public interface ApiErrorOrBuilder extends
   /**
    * <code>repeated .udb.core.common.v1.FieldViolation field_violations = 6 [json_name = "fieldViolations"];</code>
    */
-  java.util.List<? extends com.udb.core.common.v1.FieldViolationOrBuilder> 
+  java.util.List<? extends com.udb.core.common.v1.FieldViolationOrBuilder>
       getFieldViolationsOrBuilderList();
   /**
    * <code>repeated .udb.core.common.v1.FieldViolation field_violations = 6 [json_name = "fieldViolations"];</code>

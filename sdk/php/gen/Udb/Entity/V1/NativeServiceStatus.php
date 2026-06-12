@@ -535,4 +535,3 @@ class NativeServiceStatus extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -105,7 +105,7 @@ public interface SimulatePolicyRequestOrBuilder extends
    *
    * <code>repeated .udb.core.authz.services.v1.SimulationCase cases = 6 [json_name = "cases"];</code>
    */
-  java.util.List<com.udb.core.authz.services.v1.SimulationCase> 
+  java.util.List<com.udb.core.authz.services.v1.SimulationCase>
       getCasesList();
   /**
    * <pre>
@@ -130,7 +130,7 @@ public interface SimulatePolicyRequestOrBuilder extends
    *
    * <code>repeated .udb.core.authz.services.v1.SimulationCase cases = 6 [json_name = "cases"];</code>
    */
-  java.util.List<? extends com.udb.core.authz.services.v1.SimulationCaseOrBuilder> 
+  java.util.List<? extends com.udb.core.authz.services.v1.SimulationCaseOrBuilder>
       getCasesOrBuilderList();
   /**
    * <pre>

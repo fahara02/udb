@@ -65,4 +65,3 @@ class DisableProviderResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

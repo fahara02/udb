@@ -209,4 +209,3 @@ public enum ResourceType
 
   // @@protoc_insertion_point(enum_scope:udb.core.control.entity.v1.ResourceType)
 }
-

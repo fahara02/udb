@@ -215,4 +215,3 @@ class AdminCdcSummary extends \Google\Protobuf\Internal\Message
     }
 
 }
-

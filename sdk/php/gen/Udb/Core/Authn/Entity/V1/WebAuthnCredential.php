@@ -299,4 +299,3 @@ class WebAuthnCredential extends \Google\Protobuf\Internal\Message
     }
 
 }
-

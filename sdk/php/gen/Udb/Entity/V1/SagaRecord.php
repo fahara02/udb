@@ -326,4 +326,3 @@ class SagaRecord extends \Google\Protobuf\Internal\Message
     }
 
 }
-

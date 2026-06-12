@@ -65,4 +65,3 @@ class GetProviderResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

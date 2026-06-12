@@ -454,4 +454,3 @@ export type TriggerSnapshotResponse = Message<"udb.core.analytics.services.v1.Tr
  */
 export const TriggerSnapshotResponseSchema: GenMessage<TriggerSnapshotResponse> = /*@__PURE__*/
   messageDesc(file_udb_core_analytics_services_v1_core, 14);
-

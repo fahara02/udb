@@ -202,4 +202,3 @@ class EmailVerifiedEvent extends \Google\Protobuf\Internal\Message
     }
 
 }
-

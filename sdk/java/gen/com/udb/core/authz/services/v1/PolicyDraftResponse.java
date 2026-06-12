@@ -642,7 +642,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.authz.entity.v1.PolicyDraft draft = 1 [json_name = "draft"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.authz.entity.v1.PolicyDraft, com.udb.core.authz.entity.v1.PolicyDraft.Builder, com.udb.core.authz.entity.v1.PolicyDraftOrBuilder> 
+        com.udb.core.authz.entity.v1.PolicyDraft, com.udb.core.authz.entity.v1.PolicyDraft.Builder, com.udb.core.authz.entity.v1.PolicyDraftOrBuilder>
         internalGetDraftFieldBuilder() {
       if (draftBuilder_ == null) {
         draftBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -763,7 +763,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.authz.entity.v1.PolicySet policy_set = 2 [json_name = "policySet"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.authz.entity.v1.PolicySet, com.udb.core.authz.entity.v1.PolicySet.Builder, com.udb.core.authz.entity.v1.PolicySetOrBuilder> 
+        com.udb.core.authz.entity.v1.PolicySet, com.udb.core.authz.entity.v1.PolicySet.Builder, com.udb.core.authz.entity.v1.PolicySetOrBuilder>
         internalGetPolicySetFieldBuilder() {
       if (policySetBuilder_ == null) {
         policySetBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -920,7 +920,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.authz.services.v1.PolicyDocument document = 3 [json_name = "document"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.core.authz.services.v1.PolicyDocument, com.udb.core.authz.services.v1.PolicyDocument.Builder, com.udb.core.authz.services.v1.PolicyDocumentOrBuilder> 
+        com.udb.core.authz.services.v1.PolicyDocument, com.udb.core.authz.services.v1.PolicyDocument.Builder, com.udb.core.authz.services.v1.PolicyDocumentOrBuilder>
         internalGetDocumentFieldBuilder() {
       if (documentBuilder_ == null) {
         documentBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -983,4 +983,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

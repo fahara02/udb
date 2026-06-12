@@ -191,4 +191,3 @@ class ForeignKey extends \Google\Protobuf\Internal\Message
     }
 
 }
-

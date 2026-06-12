@@ -175,4 +175,3 @@ class PipelineFailed extends \Google\Protobuf\Internal\Message
     }
 
 }
-

@@ -28,7 +28,7 @@ public final class PipelineMetricSnapshotProto extends com.google.protobuf.Gener
   }
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_analytics_entity_v1_PipelineMetricSnapshot_descriptor;
-  static final 
+  static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_analytics_entity_v1_PipelineMetricSnapshot_fieldAccessorTable;
 

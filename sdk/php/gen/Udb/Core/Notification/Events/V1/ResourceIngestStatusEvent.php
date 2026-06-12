@@ -454,4 +454,3 @@ class ResourceIngestStatusEvent extends \Google\Protobuf\Internal\Message
     }
 
 }
-

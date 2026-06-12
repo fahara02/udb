@@ -81,7 +81,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       minProtocolVersion_ = s;
@@ -102,7 +102,7 @@ private static final long serialVersionUID = 0L;
       getMinProtocolVersionBytes() {
     java.lang.Object ref = minProtocolVersion_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       minProtocolVersion_ = b;
@@ -129,7 +129,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       maxProtocolVersion_ = s;
@@ -149,7 +149,7 @@ private static final long serialVersionUID = 0L;
       getMaxProtocolVersionBytes() {
     java.lang.Object ref = maxProtocolVersion_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       maxProtocolVersion_ = b;
@@ -970,7 +970,7 @@ private static final long serialVersionUID = 0L;
         getMinProtocolVersionBytes() {
       java.lang.Object ref = minProtocolVersion_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         minProtocolVersion_ = b;
@@ -1065,7 +1065,7 @@ private static final long serialVersionUID = 0L;
         getMaxProtocolVersionBytes() {
       java.lang.Object ref = maxProtocolVersion_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         maxProtocolVersion_ = b;
@@ -1833,4 +1833,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

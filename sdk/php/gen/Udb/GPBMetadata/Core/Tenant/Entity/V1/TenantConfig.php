@@ -26,4 +26,3 @@ class TenantConfig
         static::$is_initialized = true;
     }
 }
-

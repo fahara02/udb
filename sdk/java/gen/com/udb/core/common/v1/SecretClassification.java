@@ -188,7 +188,7 @@ public enum SecretClassification
   }
   public static com.google.protobuf.Descriptors.EnumDescriptor
       getDescriptor() {
-    return com.udb.core.common.v1.SecurityProto.getDescriptor().getEnumType(3);
+    return com.udb.core.common.v1.SecurityProto.getDescriptor().getEnumType(4);
   }
 
   private static final SecretClassification[] VALUES = values();
@@ -213,4 +213,3 @@ public enum SecretClassification
 
   // @@protoc_insertion_point(enum_scope:udb.core.common.v1.SecretClassification)
 }
-

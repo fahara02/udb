@@ -131,4 +131,3 @@ class EnrollMFAResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

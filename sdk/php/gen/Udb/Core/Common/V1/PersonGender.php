@@ -61,4 +61,3 @@ class PersonGender
         return constant($const);
     }
 }
-

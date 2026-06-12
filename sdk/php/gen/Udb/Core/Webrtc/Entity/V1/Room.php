@@ -409,4 +409,3 @@ class Room extends \Google\Protobuf\Internal\Message
     }
 
 }
-

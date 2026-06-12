@@ -513,4 +513,3 @@ class Role extends \Google\Protobuf\Internal\Message
     }
 
 }
-

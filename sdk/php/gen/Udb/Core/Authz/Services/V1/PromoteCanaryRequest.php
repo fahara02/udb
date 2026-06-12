@@ -124,4 +124,3 @@ class PromoteCanaryRequest extends \Google\Protobuf\Internal\Message
     }
 
 }
-

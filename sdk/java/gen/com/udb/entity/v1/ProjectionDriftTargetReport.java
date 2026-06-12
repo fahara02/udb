@@ -67,7 +67,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       targetBackend_ = s;
@@ -83,7 +83,7 @@ private static final long serialVersionUID = 0L;
       getTargetBackendBytes() {
     java.lang.Object ref = targetBackend_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       targetBackend_ = b;
@@ -106,7 +106,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       targetInstance_ = s;
@@ -122,7 +122,7 @@ private static final long serialVersionUID = 0L;
       getTargetInstanceBytes() {
     java.lang.Object ref = targetInstance_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       targetInstance_ = b;
@@ -145,7 +145,7 @@ private static final long serialVersionUID = 0L;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
-      com.google.protobuf.ByteString bs = 
+      com.google.protobuf.ByteString bs =
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
       targetResource_ = s;
@@ -161,7 +161,7 @@ private static final long serialVersionUID = 0L;
       getTargetResourceBytes() {
     java.lang.Object ref = targetResource_;
     if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
+      com.google.protobuf.ByteString b =
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       targetResource_ = b;
@@ -196,7 +196,7 @@ private static final long serialVersionUID = 0L;
    * <code>repeated .udb.entity.v1.ProjectionDriftDivergentRow divergent_rows = 5 [json_name = "divergentRows"];</code>
    */
   @java.lang.Override
-  public java.util.List<? extends com.udb.entity.v1.ProjectionDriftDivergentRowOrBuilder> 
+  public java.util.List<? extends com.udb.entity.v1.ProjectionDriftDivergentRowOrBuilder>
       getDivergentRowsOrBuilderList() {
     return divergentRows_;
   }
@@ -726,7 +726,7 @@ private static final long serialVersionUID = 0L;
             divergentRowsBuilder_ = null;
             divergentRows_ = other.divergentRows_;
             bitField0_ = (bitField0_ & ~0x00000010);
-            divergentRowsBuilder_ = 
+            divergentRowsBuilder_ =
               com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                  internalGetDivergentRowsFieldBuilder() : null;
           } else {
@@ -874,7 +874,7 @@ private static final long serialVersionUID = 0L;
         getTargetBackendBytes() {
       java.lang.Object ref = targetBackend_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         targetBackend_ = b;
@@ -946,7 +946,7 @@ private static final long serialVersionUID = 0L;
         getTargetInstanceBytes() {
       java.lang.Object ref = targetInstance_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         targetInstance_ = b;
@@ -1018,7 +1018,7 @@ private static final long serialVersionUID = 0L;
         getTargetResourceBytes() {
       java.lang.Object ref = targetResource_;
       if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
+        com.google.protobuf.ByteString b =
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         targetResource_ = b;
@@ -1292,7 +1292,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.entity.v1.ProjectionDriftDivergentRow divergent_rows = 5 [json_name = "divergentRows"];</code>
      */
-    public java.util.List<? extends com.udb.entity.v1.ProjectionDriftDivergentRowOrBuilder> 
+    public java.util.List<? extends com.udb.entity.v1.ProjectionDriftDivergentRowOrBuilder>
          getDivergentRowsOrBuilderList() {
       if (divergentRowsBuilder_ != null) {
         return divergentRowsBuilder_.getMessageOrBuilderList();
@@ -1318,12 +1318,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <code>repeated .udb.entity.v1.ProjectionDriftDivergentRow divergent_rows = 5 [json_name = "divergentRows"];</code>
      */
-    public java.util.List<com.udb.entity.v1.ProjectionDriftDivergentRow.Builder> 
+    public java.util.List<com.udb.entity.v1.ProjectionDriftDivergentRow.Builder>
          getDivergentRowsBuilderList() {
       return internalGetDivergentRowsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        com.udb.entity.v1.ProjectionDriftDivergentRow, com.udb.entity.v1.ProjectionDriftDivergentRow.Builder, com.udb.entity.v1.ProjectionDriftDivergentRowOrBuilder> 
+        com.udb.entity.v1.ProjectionDriftDivergentRow, com.udb.entity.v1.ProjectionDriftDivergentRow.Builder, com.udb.entity.v1.ProjectionDriftDivergentRowOrBuilder>
         internalGetDivergentRowsFieldBuilder() {
       if (divergentRowsBuilder_ == null) {
         divergentRowsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -1594,4 +1594,3 @@ private static final long serialVersionUID = 0L;
   }
 
 }
-

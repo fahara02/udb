@@ -110,4 +110,3 @@ class IssueMfaChallengeResponse extends \Google\Protobuf\Internal\Message
     }
 
 }
-

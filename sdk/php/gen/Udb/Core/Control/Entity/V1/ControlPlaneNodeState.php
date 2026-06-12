@@ -420,4 +420,3 @@ class ControlPlaneNodeState extends \Google\Protobuf\Internal\Message
     }
 
 }
-

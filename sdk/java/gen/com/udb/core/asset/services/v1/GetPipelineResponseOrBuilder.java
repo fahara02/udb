@@ -28,7 +28,7 @@ public interface GetPipelineResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.asset.entity.v1.PipelineStep steps = 2 [json_name = "steps"];</code>
    */
-  java.util.List<com.udb.core.asset.entity.v1.PipelineStep> 
+  java.util.List<com.udb.core.asset.entity.v1.PipelineStep>
       getStepsList();
   /**
    * <code>repeated .udb.core.asset.entity.v1.PipelineStep steps = 2 [json_name = "steps"];</code>
@@ -41,7 +41,7 @@ public interface GetPipelineResponseOrBuilder extends
   /**
    * <code>repeated .udb.core.asset.entity.v1.PipelineStep steps = 2 [json_name = "steps"];</code>
    */
-  java.util.List<? extends com.udb.core.asset.entity.v1.PipelineStepOrBuilder> 
+  java.util.List<? extends com.udb.core.asset.entity.v1.PipelineStepOrBuilder>
       getStepsOrBuilderList();
   /**
    * <code>repeated .udb.core.asset.entity.v1.PipelineStep steps = 2 [json_name = "steps"];</code>

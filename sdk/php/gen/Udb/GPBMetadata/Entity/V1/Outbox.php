@@ -24,4 +24,3 @@ class Outbox
         static::$is_initialized = true;
     }
 }
-

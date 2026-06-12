@@ -39,12 +39,12 @@ public final class AnalyticsServiceProto extends com.google.protobuf.GeneratedFi
       "cs_service.proto\022\036udb.core.analytics.ser" +
       "vices.v1\032\034google/api/annotations.proto\032)" +
       "udb/core/analytics/services/v1/core.prot" +
-      "o\032!udb/core/common/v1/security.proto2\266*\n" +
-      "\020AnalyticsService\022\333\005\n\024RecordPipelineMetr" +
+      "o\032!udb/core/common/v1/security.proto2\322*\n" +
+      "\020AnalyticsService\022\337\005\n\024RecordPipelineMetr" +
       "ic\022;.udb.core.analytics.services.v1.Reco" +
       "rdPipelineMetricRequest\032<.udb.core.analy" +
       "tics.services.v1.RecordPipelineMetricRes" +
-      "ponse\"\307\004\312\363\030Q\010\002\032$udb:analytics:record-pip" +
+      "ponse\"\313\004\312\363\030Q\010\002\032$udb:analytics:record-pip" +
       "eline-metric \001J\002\001\002j\036analytics.RecordPipe" +
       "lineMetric\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0304\010\001\022\026record_pi" +
       "peline_metric\032\003udb(\260\352\0010\003@\001J\tanalyticsP\001\342" +
@@ -57,133 +57,134 @@ public final class AnalyticsServiceProto extends com.google.protobuf.GeneratedFi
       "ordPipelineMetric\022\020analytics.events\032\tten" +
       "ant_id\"\010standard*\rat_least_once2\006stable\362" +
       "\363\030C\n\tanalytics\032\010postgres2\033UDB_NATIVE_SER" +
-      "VICES_ENABLED2\017UDB_GRPC_TARGET\202\323\344\223\002#\"\036/v" +
-      "1/analytics/pipeline_metrics:\001*\022\310\005\n\022GetP" +
-      "ipelineSummary\0229.udb.core.analytics.serv" +
-      "ices.v1.GetPipelineSummaryRequest\032:.udb." +
-      "core.analytics.services.v1.GetPipelineSu" +
-      "mmaryResponse\"\272\004\312\363\030M\010\002\032\"udb:analytics:ge" +
-      "t-pipeline-summary \001J\002\001\002j\034analytics.GetP" +
-      "ipelineSummary\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0302\010\001\022\024get_p" +
-      "ipeline_summary\032\003udb(\260\352\0010\003@\001J\tanalyticsP" +
-      "\001\342\363\030\325\001\n\tanalytics\022\024udb/native/analytics\032" +
-      "\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_T" +
-      "ARGET\"5udb.native.analytics.get_pipeline" +
-      "_summary.boilerplate*\024get_pipeline_summa" +
-      "ry2\rudb_analytics:\tanalyticsJ\013UDB_API_KE" +
-      "YZ\020udb native smoke\352\363\030\\\n\034analytics.GetPi" +
-      "pelineSummary\022\020analytics.events\032\ttenant_" +
-      "id\"\010standard*\rat_least_once2\006stable\362\363\030C\n" +
-      "\tanalytics\032\010postgres2\033UDB_NATIVE_SERVICE" +
-      "S_ENABLED2\017UDB_GRPC_TARGET\202\323\344\223\002\"\022 /v1/an" +
-      "alytics/pipeline_summaries\022\356\005\n\026GetExecut" +
-      "orPerformance\022=.udb.core.analytics.servi" +
-      "ces.v1.GetExecutorPerformanceRequest\032>.u" +
-      "db.core.analytics.services.v1.GetExecuto" +
-      "rPerformanceResponse\"\324\004\312\363\030U\010\002\032&udb:analy" +
-      "tics:get-executor-performance \001J\002\001\002j ana" +
-      "lytics.GetExecutorPerformance\220\001\001\322\363\030\006\010\001\020\001" +
-      " \001\332\363\0306\010\001\022\030get_executor_performance\032\003udb(" +
-      "\260\352\0010\003@\001J\tanalyticsP\001\342\363\030\335\001\n\tanalytics\022\024ud" +
-      "b/native/analytics\032\033UDB_NATIVE_SERVICES_" +
-      "ENABLED\032\017UDB_GRPC_TARGET\"9udb.native.ana" +
-      "lytics.get_executor_performance.boilerpl" +
-      "ate*\030get_executor_performance2\rudb_analy" +
-      "tics:\tanalyticsJ\013UDB_API_KEYZ\020udb native" +
-      " smoke\352\363\030`\n analytics.GetExecutorPerform" +
-      "ance\022\020analytics.events\032\ttenant_id\"\010stand" +
-      "ard*\rat_least_once2\006stable\362\363\030C\n\tanalytic" +
+      "VICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002#" +
+      "\"\036/v1/analytics/pipeline_metrics:\001*\022\314\005\n\022" +
+      "GetPipelineSummary\0229.udb.core.analytics." +
+      "services.v1.GetPipelineSummaryRequest\032:." +
+      "udb.core.analytics.services.v1.GetPipeli" +
+      "neSummaryResponse\"\276\004\312\363\030M\010\002\032\"udb:analytic" +
+      "s:get-pipeline-summary \001J\002\001\002j\034analytics." +
+      "GetPipelineSummary\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0302\010\001\022\024g" +
+      "et_pipeline_summary\032\003udb(\260\352\0010\003@\001J\tanalyt" +
+      "icsP\001\342\363\030\325\001\n\tanalytics\022\024udb/native/analyt" +
+      "ics\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GR" +
+      "PC_TARGET\"5udb.native.analytics.get_pipe" +
+      "line_summary.boilerplate*\024get_pipeline_s" +
+      "ummary2\rudb_analytics:\tanalyticsJ\013UDB_AP" +
+      "I_KEYZ\020udb native smoke\352\363\030\\\n\034analytics.G" +
+      "etPipelineSummary\022\020analytics.events\032\tten" +
+      "ant_id\"\010standard*\rat_least_once2\006stable\362" +
+      "\363\030C\n\tanalytics\032\010postgres2\033UDB_NATIVE_SER" +
+      "VICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\"" +
+      "\022 /v1/analytics/pipeline_summaries\022\362\005\n\026G" +
+      "etExecutorPerformance\022=.udb.core.analyti" +
+      "cs.services.v1.GetExecutorPerformanceReq" +
+      "uest\032>.udb.core.analytics.services.v1.Ge" +
+      "tExecutorPerformanceResponse\"\330\004\312\363\030U\010\002\032&u" +
+      "db:analytics:get-executor-performance \001J" +
+      "\002\001\002j analytics.GetExecutorPerformance\220\001\001" +
+      "\322\363\030\006\010\001\020\001 \001\332\363\0306\010\001\022\030get_executor_performan" +
+      "ce\032\003udb(\260\352\0010\003@\001J\tanalyticsP\001\342\363\030\335\001\n\tanaly" +
+      "tics\022\024udb/native/analytics\032\033UDB_NATIVE_S" +
+      "ERVICES_ENABLED\032\017UDB_GRPC_TARGET\"9udb.na" +
+      "tive.analytics.get_executor_performance." +
+      "boilerplate*\030get_executor_performance2\ru" +
+      "db_analytics:\tanalyticsJ\013UDB_API_KEYZ\020ud" +
+      "b native smoke\352\363\030`\n analytics.GetExecuto" +
+      "rPerformance\022\020analytics.events\032\ttenant_i" +
+      "d\"\010standard*\rat_least_once2\006stable\362\363\030C\n\t" +
+      "analytics\032\010postgres2\033UDB_NATIVE_SERVICES" +
+      "_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002$\022\"/v1" +
+      "/analytics/executor_performance\022\226\006\n\032GetR" +
+      "econciliationAnalytics\022A.udb.core.analyt" +
+      "ics.services.v1.GetReconciliationAnalyti" +
+      "csRequest\032B.udb.core.analytics.services." +
+      "v1.GetReconciliationAnalyticsResponse\"\360\004" +
+      "\312\363\030]\010\002\032*udb:analytics:get-reconciliation" +
+      "-analytics \001J\002\001\002j$analytics.GetReconcili" +
+      "ationAnalytics\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030:\010\001\022\034get_r" +
+      "econciliation_analytics\032\003udb(\260\352\0010\003@\001J\tan" +
+      "alyticsP\001\342\363\030\345\001\n\tanalytics\022\024udb/native/an" +
+      "alytics\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UD" +
+      "B_GRPC_TARGET\"=udb.native.analytics.get_" +
+      "reconciliation_analytics.boilerplate*\034ge" +
+      "t_reconciliation_analytics2\rudb_analytic" +
+      "s:\tanalyticsJ\013UDB_API_KEYZ\020udb native sm" +
+      "oke\352\363\030d\n$analytics.GetReconciliationAnal" +
+      "ytics\022\020analytics.events\032\ttenant_id\"\010stan" +
+      "dard*\rat_least_once2\006stable\362\363\030C\n\tanalyti" +
+      "cs\032\010postgres2\033UDB_NATIVE_SERVICES_ENABLE" +
+      "D2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002$\022\"/v1/analyt" +
+      "ics/reconciliation_stats\022\223\005\n\rGetThroughp" +
+      "ut\0224.udb.core.analytics.services.v1.GetT" +
+      "hroughputRequest\0325.udb.core.analytics.se" +
+      "rvices.v1.GetThroughputResponse\"\224\004\312\363\030B\010\002" +
+      "\032\034udb:analytics:get-throughput \001J\002\001\002j\027an" +
+      "alytics.GetThroughput\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030,\010\001" +
+      "\022\016get_throughput\032\003udb(\260\352\0010\003@\001J\tanalytics" +
+      "P\001\342\363\030\311\001\n\tanalytics\022\024udb/native/analytics" +
+      "\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_" +
+      "TARGET\"/udb.native.analytics.get_through" +
+      "put.boilerplate*\016get_throughput2\rudb_ana" +
+      "lytics:\tanalyticsJ\013UDB_API_KEYZ\020udb nati" +
+      "ve smoke\352\363\030W\n\027analytics.GetThroughput\022\020a" +
+      "nalytics.events\032\ttenant_id\"\010standard*\rat" +
+      "_least_once2\006stable\362\363\030C\n\tanalytics\032\010post" +
+      "gres2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_G" +
+      "RPC_TARGET\370\363\030\001\202\323\344\223\002\032\022\030/v1/analytics/thro" +
+      "ughput\022\266\005\n\020GetSlaCompliance\0227.udb.core.a" +
+      "nalytics.services.v1.GetSlaComplianceReq" +
+      "uest\0328.udb.core.analytics.services.v1.Ge" +
+      "tSlaComplianceResponse\"\256\004\312\363\030I\010\002\032 udb:ana" +
+      "lytics:get-sla-compliance \001J\002\001\002j\032analyti" +
+      "cs.GetSlaCompliance\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0300\010\001\022\022" +
+      "get_sla_compliance\032\003udb(\260\352\0010\003@\001J\tanalyti" +
+      "csP\001\342\363\030\321\001\n\tanalytics\022\024udb/native/analyti" +
+      "cs\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GRP" +
+      "C_TARGET\"3udb.native.analytics.get_sla_c" +
+      "ompliance.boilerplate*\022get_sla_complianc" +
+      "e2\rudb_analytics:\tanalyticsJ\013UDB_API_KEY" +
+      "Z\020udb native smoke\352\363\030Z\n\032analytics.GetSla" +
+      "Compliance\022\020analytics.events\032\ttenant_id\"" +
+      "\010standard*\rat_least_once2\006stable\362\363\030C\n\tan" +
+      "alytics\032\010postgres2\033UDB_NATIVE_SERVICES_E" +
+      "NABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\036\022\034/v1/a" +
+      "nalytics/sla_compliance\022\257\005\n\017TriggerSnaps" +
+      "hot\0226.udb.core.analytics.services.v1.Tri" +
+      "ggerSnapshotRequest\0327.udb.core.analytics" +
+      ".services.v1.TriggerSnapshotResponse\"\252\004\312" +
+      "\363\030F\010\002\032\036udb:analytics:trigger-snapshot \001J" +
+      "\002\001\002j\031analytics.TriggerSnapshot\220\001\001\322\363\030\006\010\001\020" +
+      "\001 \001\332\363\030.\010\001\022\020trigger_snapshot\032\003udb(\260\352\0010\003@\001" +
+      "J\tanalyticsP\001\342\363\030\315\001\n\tanalytics\022\024udb/nativ" +
+      "e/analytics\032\033UDB_NATIVE_SERVICES_ENABLED" +
+      "\032\017UDB_GRPC_TARGET\"1udb.native.analytics." +
+      "trigger_snapshot.boilerplate*\020trigger_sn" +
+      "apshot2\rudb_analytics:\tanalyticsJ\013UDB_AP" +
+      "I_KEYZ\020udb native smoke\352\363\030Y\n\031analytics.T" +
+      "riggerSnapshot\022\020analytics.events\032\ttenant" +
+      "_id\"\010standard*\rat_least_once2\006stable\362\363\030C" +
+      "\n\tanalytics\032\010postgres2\033UDB_NATIVE_SERVIC" +
+      "ES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002$\"\037/" +
+      "v1/analytics/snapshots:trigger:\001*\032\375\002\312\360\031s" +
+      "\n\tanalytics\022\tanalytics\032\tanalytics\"\tAnaly" +
+      "tics*\tanalytics0\0018\001h\001z\tanalytics\202\001\tanaly" +
+      "tics\212\001\tanalytics\222\001\020native.analytics\322\360\031\034\010" +
+      "\001\032\003udb(\260\352\0010\003@\001J\tanalyticsP\001\332\360\031\232\001\n\tanalyt" +
+      "ics\022\024udb/native/analytics\032\033UDB_NATIVE_SE" +
+      "RVICES_ENABLED\032\017UDB_GRPC_TARGET\" udb.nat" +
+      "ive.analytics.config.json:\tanalyticsJ\013UD" +
+      "B_API_KEYZ\017udb native lint\342\360\031C\n\tanalytic" +
       "s\032\010postgres2\033UDB_NATIVE_SERVICES_ENABLED" +
-      "2\017UDB_GRPC_TARGET\202\323\344\223\002$\022\"/v1/analytics/e" +
-      "xecutor_performance\022\222\006\n\032GetReconciliatio" +
-      "nAnalytics\022A.udb.core.analytics.services" +
-      ".v1.GetReconciliationAnalyticsRequest\032B." +
-      "udb.core.analytics.services.v1.GetReconc" +
-      "iliationAnalyticsResponse\"\354\004\312\363\030]\010\002\032*udb:" +
-      "analytics:get-reconciliation-analytics \001" +
-      "J\002\001\002j$analytics.GetReconciliationAnalyti" +
-      "cs\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030:\010\001\022\034get_reconciliatio" +
-      "n_analytics\032\003udb(\260\352\0010\003@\001J\tanalyticsP\001\342\363\030" +
-      "\345\001\n\tanalytics\022\024udb/native/analytics\032\033UDB" +
-      "_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TARGE" +
-      "T\"=udb.native.analytics.get_reconciliati" +
-      "on_analytics.boilerplate*\034get_reconcilia" +
-      "tion_analytics2\rudb_analytics:\tanalytics" +
-      "J\013UDB_API_KEYZ\020udb native smoke\352\363\030d\n$ana" +
-      "lytics.GetReconciliationAnalytics\022\020analy" +
-      "tics.events\032\ttenant_id\"\010standard*\rat_lea" +
-      "st_once2\006stable\362\363\030C\n\tanalytics\032\010postgres" +
-      "2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_" +
-      "TARGET\202\323\344\223\002$\022\"/v1/analytics/reconciliati" +
-      "on_stats\022\217\005\n\rGetThroughput\0224.udb.core.an" +
-      "alytics.services.v1.GetThroughputRequest" +
-      "\0325.udb.core.analytics.services.v1.GetThr" +
-      "oughputResponse\"\220\004\312\363\030B\010\002\032\034udb:analytics:" +
-      "get-throughput \001J\002\001\002j\027analytics.GetThrou" +
-      "ghput\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030,\010\001\022\016get_throughput" +
-      "\032\003udb(\260\352\0010\003@\001J\tanalyticsP\001\342\363\030\311\001\n\tanalyti" +
-      "cs\022\024udb/native/analytics\032\033UDB_NATIVE_SER" +
-      "VICES_ENABLED\032\017UDB_GRPC_TARGET\"/udb.nati" +
-      "ve.analytics.get_throughput.boilerplate*" +
-      "\016get_throughput2\rudb_analytics:\tanalytic" +
-      "sJ\013UDB_API_KEYZ\020udb native smoke\352\363\030W\n\027an" +
-      "alytics.GetThroughput\022\020analytics.events\032" +
-      "\ttenant_id\"\010standard*\rat_least_once2\006sta" +
-      "ble\362\363\030C\n\tanalytics\032\010postgres2\033UDB_NATIVE" +
-      "_SERVICES_ENABLED2\017UDB_GRPC_TARGET\202\323\344\223\002\032" +
-      "\022\030/v1/analytics/throughput\022\262\005\n\020GetSlaCom" +
-      "pliance\0227.udb.core.analytics.services.v1" +
-      ".GetSlaComplianceRequest\0328.udb.core.anal" +
-      "ytics.services.v1.GetSlaComplianceRespon" +
-      "se\"\252\004\312\363\030I\010\002\032 udb:analytics:get-sla-compl" +
-      "iance \001J\002\001\002j\032analytics.GetSlaCompliance\220" +
-      "\001\001\322\363\030\006\010\001\020\001 \001\332\363\0300\010\001\022\022get_sla_compliance\032\003" +
-      "udb(\260\352\0010\003@\001J\tanalyticsP\001\342\363\030\321\001\n\tanalytics" +
-      "\022\024udb/native/analytics\032\033UDB_NATIVE_SERVI" +
-      "CES_ENABLED\032\017UDB_GRPC_TARGET\"3udb.native" +
-      ".analytics.get_sla_compliance.boilerplat" +
-      "e*\022get_sla_compliance2\rudb_analytics:\tan" +
-      "alyticsJ\013UDB_API_KEYZ\020udb native smoke\352\363" +
-      "\030Z\n\032analytics.GetSlaCompliance\022\020analytic" +
-      "s.events\032\ttenant_id\"\010standard*\rat_least_" +
-      "once2\006stable\362\363\030C\n\tanalytics\032\010postgres2\033U" +
-      "DB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TAR" +
-      "GET\202\323\344\223\002\036\022\034/v1/analytics/sla_compliance\022" +
-      "\253\005\n\017TriggerSnapshot\0226.udb.core.analytics" +
-      ".services.v1.TriggerSnapshotRequest\0327.ud" +
-      "b.core.analytics.services.v1.TriggerSnap" +
-      "shotResponse\"\246\004\312\363\030F\010\002\032\036udb:analytics:tri" +
-      "gger-snapshot \001J\002\001\002j\031analytics.TriggerSn" +
-      "apshot\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030.\010\001\022\020trigger_snaps" +
-      "hot\032\003udb(\260\352\0010\003@\001J\tanalyticsP\001\342\363\030\315\001\n\tanal" +
-      "ytics\022\024udb/native/analytics\032\033UDB_NATIVE_" +
-      "SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"1udb.n" +
-      "ative.analytics.trigger_snapshot.boilerp" +
-      "late*\020trigger_snapshot2\rudb_analytics:\ta" +
-      "nalyticsJ\013UDB_API_KEYZ\020udb native smoke\352" +
-      "\363\030Y\n\031analytics.TriggerSnapshot\022\020analytic" +
-      "s.events\032\ttenant_id\"\010standard*\rat_least_" +
-      "once2\006stable\362\363\030C\n\tanalytics\032\010postgres2\033U" +
-      "DB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TAR" +
-      "GET\202\323\344\223\002$\"\037/v1/analytics/snapshots:trigg" +
-      "er:\001*\032\375\002\312\360\031s\n\tanalytics\022\tanalytics\032\tanal" +
-      "ytics\"\tAnalytics*\tanalytics0\0018\001h\001z\tanaly" +
-      "tics\202\001\tanalytics\212\001\tanalytics\222\001\020native.an" +
-      "alytics\322\360\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tanalyticsP\001\332" +
-      "\360\031\232\001\n\tanalytics\022\024udb/native/analytics\032\033U" +
-      "DB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TAR" +
-      "GET\" udb.native.analytics.config.json:\ta" +
-      "nalyticsJ\013UDB_API_KEYZ\017udb native lint\342\360" +
-      "\031C\n\tanalytics\032\010postgres2\033UDB_NATIVE_SERV" +
-      "ICES_ENABLED2\017UDB_GRPC_TARGETB\246\002\n\"com.ud" +
-      "b.core.analytics.services.v1B\025AnalyticsS" +
-      "erviceProtoP\001ZLgithub.com/fahara02/udb/s" +
-      "dk/go/gen/udb/core/analytics/services/v1" +
-      ";servicesv1\242\002\004UCAS\252\002\036udb.core.Analytics." +
-      "Services.V1\312\002\036Udb\\Core\\Analytics\\Service" +
-      "s\\V1\342\002*Udb\\GPBMetadata\\Core\\Analytics\\Se" +
-      "rvices\\V1\352\002\"Udb::Core::Analytics::Servic" +
-      "es::V1b\006proto3"
+      "2\017UDB_GRPC_TARGETB\246\002\n\"com.udb.core.analy" +
+      "tics.services.v1B\025AnalyticsServiceProtoP" +
+      "\001ZLgithub.com/fahara02/udb/sdk/go/gen/ud" +
+      "b/core/analytics/services/v1;servicesv1\242" +
+      "\002\004UCAS\252\002\036udb.core.Analytics.Services.V1\312" +
+      "\002\036Udb\\Core\\Analytics\\Services\\V1\342\002*Udb\\G" +
+      "PBMetadata\\Core\\Analytics\\Services\\V1\352\002\"" +
+      "Udb::Core::Analytics::Services::V1b\006prot" +
+      "o3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -204,6 +205,7 @@ public final class AnalyticsServiceProto extends com.google.protobuf.GeneratedFi
     registry.add(com.udb.core.common.v1.SecurityProto.methodDependencyContract);
     registry.add(com.udb.core.common.v1.SecurityProto.methodEventContract);
     registry.add(com.udb.core.common.v1.SecurityProto.nativeService);
+    registry.add(com.udb.core.common.v1.SecurityProto.operationKind);
     registry.add(com.udb.core.common.v1.SecurityProto.restContract);
     registry.add(com.udb.core.common.v1.SecurityProto.sdkSurface);
     registry.add(com.udb.core.common.v1.SecurityProto.serviceCliScaffold);

@@ -236,4 +236,3 @@ class DailySummaryGeneratedEvent extends \Google\Protobuf\Internal\Message
     }
 
 }
-

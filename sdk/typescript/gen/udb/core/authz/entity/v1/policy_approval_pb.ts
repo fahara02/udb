@@ -77,4 +77,3 @@ export type PolicyApproval = Message<"udb.core.authz.entity.v1.PolicyApproval"> 
  */
 export const PolicyApprovalSchema: GenMessage<PolicyApproval> = /*@__PURE__*/
   messageDesc(file_udb_core_authz_entity_v1_policy_approval, 0);
-

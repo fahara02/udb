@@ -56,4 +56,3 @@ class AssetStatus
         return constant($const);
     }
 }
-

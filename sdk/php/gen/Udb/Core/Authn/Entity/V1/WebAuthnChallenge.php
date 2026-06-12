@@ -299,4 +299,3 @@ class WebAuthnChallenge extends \Google\Protobuf\Internal\Message
     }
 
 }
-

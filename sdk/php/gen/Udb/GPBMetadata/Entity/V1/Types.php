@@ -34,4 +34,3 @@ class Types
         static::$is_initialized = true;
     }
 }
-
