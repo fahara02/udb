@@ -1198,25 +1198,16 @@ it('measures per-RPC latency', function () {
 
     $itersFor = fn (string $kind) => $kind === 'destructive' ? 1 : ($kind === 'mutation' ? 5 : 25);
 
-    $timeOne = function ($stub, ReflectionMethod $method, $hasRequest, $probeRequest) use ($authedMeta): float {
+    $invoke = fn ($stub, ReflectionMethod $method, $hasRequest, $probeRequest) => $hasRequest
+        ? $method->invoke($stub, $probeRequest, $authedMeta->toGrpcMetadata(), ['timeout' => 20_000_000])
+        : $method->invoke($stub, $authedMeta->toGrpcMetadata(), ['timeout' => 20_000_000]);
+
+    // Unary-only timer: invoke + wait() is a single request->response round-trip.
+    $timeUnary = function ($stub, ReflectionMethod $method, $hasRequest, $probeRequest) use ($invoke): float {
         $start = microtime(true);
         try {
-            $call = $hasRequest
-                ? $method->invoke($stub, $probeRequest, $authedMeta->toGrpcMetadata(), ['timeout' => 20_000_000])
-                : $method->invoke($stub, $authedMeta->toGrpcMetadata(), ['timeout' => 20_000_000]);
-            if (method_exists($call, 'responses')) {
-                foreach ($call->responses() as $_) {
-                    break;
-                }
-                if (method_exists($call, 'getStatus')) {
-                    $call->getStatus();
-                }
-            } elseif (method_exists($call, 'writesDone')) {
-                $call->writesDone();
-                if (method_exists($call, 'read')) {
-                    $call->read();
-                }
-            } elseif (method_exists($call, 'wait')) {
+            $call = $invoke($stub, $method, $hasRequest, $probeRequest);
+            if (method_exists($call, 'wait')) {
                 $call->wait();
             }
         } catch (\Throwable $e) {
@@ -1226,6 +1217,10 @@ it('measures per-RPC latency', function () {
         return (microtime(true) - $start) * 1000.0;
     };
 
+    // All RPCs are measured. Unary = full round-trip. Streaming = STREAM-OPEN latency
+    // (initiate the call, then cancel WITHOUT draining): a subscription/upload stream
+    // emits a first message only on an event, so draining it in a passive run would
+    // just hit the deadline — that 20 s drain is what produced the bogus 272 ms.
     $samples = [];
     foreach (stubAccessors($s['data'], $s['authGenerated']) as $stubName => $stub) {
         $svc = preg_replace('/Stub$/', '', $stubName);
@@ -1246,10 +1241,39 @@ it('measures per-RPC latency', function () {
                     $kind = 'destructive';
                 }
             }
-            $timeOne($stub, $method, $hasRequest, $probeRequest); // warm-up
+            // Classify with one probe invoke — invoke() does not block; only
+            // responses()/wait() do. Streaming = a server-streaming (responses) or
+            // bidi (writesDone) call, no unary wait(), OR an invoke that throws because
+            // the method's streaming signature rejects the unary arg shape. Either way
+            // the RPC is MEASURED as stream-open latency (never dropped).
+            $openStart = microtime(true);
+            $isStreaming = false;
+            try {
+                $probe = $invoke($stub, $method, $hasRequest, $probeRequest);
+                $isStreaming = method_exists($probe, 'responses') || method_exists($probe, 'writesDone') || ! method_exists($probe, 'wait');
+                if (method_exists($probe, 'cancel')) {
+                    try {
+                        $probe->cancel();
+                    } catch (\Throwable $e) {
+                    }
+                }
+            } catch (\Throwable $e) {
+                $isStreaming = true;
+            }
+            if ($isStreaming) {
+                // Stream-open latency (initiate + cancel, no response drain).
+                $openMs = (microtime(true) - $openStart) * 1000.0;
+                $samples[] = [
+                    'service' => $svc, 'rpc' => $name, 'kind' => 'stream_open',
+                    'p50' => $openMs, 'p99' => $openMs, 'mean' => $openMs,
+                ];
+
+                continue;
+            }
+            $timeUnary($stub, $method, $hasRequest, $probeRequest); // warm-up
             $durs = [];
             for ($i = 0; $i < $itersFor($kind); $i++) {
-                $durs[] = $timeOne($stub, $method, $hasRequest, $probeRequest);
+                $durs[] = $timeUnary($stub, $method, $hasRequest, $probeRequest);
             }
             sort($durs);
             $pct = fn (int $p) => $durs[min(count($durs) - 1, intdiv($p * (count($durs) - 1), 100))];
@@ -1269,7 +1293,10 @@ it('measures per-RPC latency', function () {
         $svcMean[$svc] = array_sum($means) / count($means);
     }
     arsort($svcMean);
-    $lines = ['# UDB SDK Live Perf — PHP (Docker → host)', '', 'RPCs measured: '.count($samples), '',
+    $lines = ['# UDB SDK Live Perf — PHP (Docker → host)', '',
+        'RPCs measured: '.count($samples), '',
+        'Unary = full request/response round-trip. Streaming rows (kind=stream_open) report '
+            .'stream-open latency (initiate + cancel, no response drain), NOT first-message latency.', '',
         '## Per-service mean latency', '', '| Service | RPCs | mean ms |', '|---|--:|--:|'];
     foreach ($svcMean as $svc => $mean) {
         $lines[] = sprintf('| %s | %d | %.2f |', $svc, count($bySvc[$svc]), $mean);

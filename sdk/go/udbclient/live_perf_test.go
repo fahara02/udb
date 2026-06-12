@@ -96,11 +96,28 @@ func TestLivePerf(t *testing.T) {
 		errCode string
 	}
 
+	// timeOne measures one call. Unary RPCs are a full request→response round-trip.
+	// Streaming RPCs measure STREAM-OPEN latency (initiate + send request + CloseSend),
+	// NOT first-message latency: a subscription stream (PublishCDC, StreamResources, …)
+	// delivers its first message only when an event arrives, which never happens in a
+	// passive perf run — draining it would just time out at the deadline (this is the
+	// bug that produced the bogus 272 ms DataBroker mean). Stream-open is the real,
+	// data-independent latency a client pays to establish the stream, and it is labeled
+	// as such in the report so it is never mistaken for a unary round-trip.
 	timeOne := func(gen *GeneratedClient, rpc RPCInfo) (time.Duration, error) {
-		callCtx, c := context.WithTimeout(ctx, 20*time.Second)
+		d := 20 * time.Second
+		if rpc.Kind != KindUnary {
+			d = 5 * time.Second
+		}
+		callCtx, c := context.WithTimeout(ctx, d)
 		defer c()
 		start := time.Now()
-		err := probeLiveRPC(callCtx, gen, rpc, tenant, project)
+		var err error
+		if rpc.Kind == KindUnary {
+			err = probeLiveRPC(callCtx, gen, rpc, tenant, project)
+		} else {
+			err = openLiveStream(callCtx, gen, rpc, tenant, project)
+		}
 		return time.Since(start), err
 	}
 
@@ -117,25 +134,16 @@ func TestLivePerf(t *testing.T) {
 		}
 	}
 
-	// Streaming RPCs are EXCLUDED from the latency aggregate: a server-streaming
-	// subscription (PublishCDC, SelectV2, GetObject, …) or a client-streaming
-	// upload has no well-defined single request→response latency — draining it to
-	// the deadline would inject a 20 s "timeout" into the mean and make the
-	// per-service number a lie (this is exactly what inflated DataBroker to 272 ms).
-	// We measure only unary RPCs, where round-trip latency is meaningful, and list
-	// the excluded streaming RPCs explicitly so the omission is honest, not hidden.
-	streamingExcluded := make([]string, 0, 12)
 	samples := make([]sample, 0, len(AllRPCs))
 	for _, rpc := range AllRPCs {
-		if rpc.Kind != KindUnary {
-			streamingExcluded = append(streamingExcluded, fmt.Sprintf("%s/%s (%s)", rpc.Service, rpc.Name, rpc.Kind))
-			continue
-		}
 		gen := authGen
 		if rpc.Service == "DataBroker" {
 			gen = brokerGen
 		}
 		iters, note := iterFor(rpc.OperationKind)
+		if rpc.Kind != KindUnary {
+			note = "stream-open (" + string(rpc.Kind) + "; not a unary round-trip)"
+		}
 		// Warm-up (channel/HTTP2 + server caches) — excluded from the numbers.
 		_, _ = timeOne(gen, rpc)
 		durs := make([]time.Duration, 0, iters)
@@ -176,9 +184,11 @@ func TestLivePerf(t *testing.T) {
 	// Render report.
 	var out strings.Builder
 	out.WriteString("# UDB SDK Live Perf — Go (localhost)\n\n")
-	out.WriteString(fmt.Sprintf("Unary RPCs measured: %d   tenant=%s\n\n", len(samples), tenant))
-	out.WriteString(fmt.Sprintf("Streaming RPCs excluded from latency (no well-defined request/response latency — a subscription/upload stream stays open): %d — %s\n\n",
-		len(streamingExcluded), strings.Join(streamingExcluded, ", ")))
+	out.WriteString(fmt.Sprintf("RPCs measured: %d   tenant=%s\n\n", len(samples), tenant))
+	out.WriteString("Unary RPCs = full request→response round-trip. Streaming RPCs (server/client/bidi) " +
+		"report STREAM-OPEN latency (initiate + send request + CloseSend), NOT first-message latency: " +
+		"a subscription stream's first message arrives only on an event, so draining it in a passive run " +
+		"would just hit the deadline. Streaming rows are marked in the note column.\n\n")
 	out.WriteString("## Per-service mean latency (mean of per-RPC means)\n\n")
 	out.WriteString("| Service | RPCs | mean |\n|---|---:|---:|\n")
 	svcNames := make([]string, 0, len(svcMean))
@@ -226,8 +236,44 @@ func TestLivePerf(t *testing.T) {
 		t.Logf("could not write perf_report_go.md: %v", err)
 	}
 	t.Logf("\n%s", report)
-	t.Logf("Go perf: %d unary RPCs measured (%d streaming excluded), grand mean per-RPC = %s; report → sdk/go/perf_report_go.md",
-		len(samples), len(streamingExcluded), (grand / time.Duration(len(samples))).Round(time.Microsecond))
+	t.Logf("Go perf: %d RPCs measured (streaming rows = stream-open latency), grand mean per-RPC = %s; report → sdk/go/perf_report_go.md",
+		len(samples), (grand / time.Duration(len(samples))).Round(time.Microsecond))
+}
+
+// openLiveStream establishes a streaming RPC and returns as soon as the stream is
+// open (request sent, send-side closed) WITHOUT waiting for a server response. This
+// is the data-independent latency a client pays to start the stream — unlike
+// probeLiveRPC's RecvMsg, it does not block waiting for a first message that a
+// passive subscription never emits. The caller's deferred context-cancel tears the
+// stream down.
+func openLiveStream(ctx context.Context, gen *GeneratedClient, rpc RPCInfo, tenant, project string) error {
+	in, _ := buildProbeMessages(rpc.FullMethod, tenant, project)
+	switch rpc.Kind {
+	case KindServerStreaming:
+		// NewServerStream sends the request as part of opening the stream.
+		_, err := gen.NewServerStream(ctx, rpc.FullMethod, &grpc.StreamDesc{ServerStreams: true}, in)
+		return err
+	case KindClientStreaming:
+		stream, err := gen.NewClientStream(ctx, rpc.FullMethod, &grpc.StreamDesc{ClientStreams: true})
+		if err != nil {
+			return err
+		}
+		if err := stream.SendMsg(in); err != nil {
+			return err
+		}
+		return stream.CloseSend()
+	case KindBidi:
+		stream, err := gen.NewClientStream(ctx, rpc.FullMethod, &grpc.StreamDesc{ClientStreams: true, ServerStreams: true})
+		if err != nil {
+			return err
+		}
+		if err := stream.SendMsg(in); err != nil {
+			return err
+		}
+		return stream.CloseSend()
+	default:
+		return nil
+	}
 }
 
 // pct returns the index into a sorted slice of length n for the p-th percentile.

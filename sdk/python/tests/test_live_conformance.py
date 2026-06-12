@@ -1411,33 +1411,34 @@ def test_live_perf():
     def time_one(client, method):
         request = default_request(method, authed_meta)
         rpc_callable = getattr(client.stub, method.name)
+        streaming = method.client_streaming or method.server_streaming
         start = time.perf_counter()
         try:
             if method.client_streaming:
-                it = rpc_callable(iter([request]), metadata=authed_meta.to_grpc_metadata(), timeout=20.0)
-                if method.server_streaming:
-                    drain_stream(method.name, it)
+                # Open the client/bidi stream and push one message, then cancel WITHOUT
+                # reading responses: a subscription/upload stream has no first-message
+                # latency in a passive run — draining it would just hit the deadline.
+                call = rpc_callable(iter([request]), metadata=authed_meta.to_grpc_metadata(), timeout=5.0)
+                call.cancel()
             elif method.server_streaming:
-                drain_stream(method.name, rpc_callable(request, metadata=authed_meta.to_grpc_metadata(), timeout=20.0))
+                # Open the server stream, do NOT drain (PublishCDC etc. emit only on events).
+                call = rpc_callable(request, metadata=authed_meta.to_grpc_metadata(), timeout=5.0)
+                call.cancel()
             else:
                 rpc_callable(request, metadata=authed_meta.to_grpc_metadata(), timeout=20.0)
         except grpc.RpcError:
             pass
-        return (time.perf_counter() - start) * 1000.0  # ms
+        return (time.perf_counter() - start) * 1000.0  # ms; streaming rows = stream-open
 
-    # Streaming RPCs are EXCLUDED from the latency aggregate: a subscription/upload
-    # stream has no well-defined single request->response latency, and draining it to
-    # the deadline would inject a 20 s "timeout" into the mean (that is what inflated
-    # DataBroker to 272 ms). Only unary RPCs are timed; the excluded ones are listed.
+    # All 262 RPCs are measured. Unary = full round-trip; streaming = stream-open
+    # latency (initiate + push request, no response drain), so a passive subscription
+    # never blocks to the deadline (that 20 s drain is what produced the bogus 272 ms).
     samples = []
-    streaming_excluded = []
     for client_cls, method in ALL_RPCS:
-        if method.client_streaming or method.server_streaming:
-            streaming_excluded.append(f"{client_cls._SERVICE_FULL.split('.')[-1]}/{method.name}")
-            continue
         client = clients[client_cls]
-        kind = RPC_OPERATION_KIND.get(rpc_path(method), "read_only")
-        n = iters_for(kind)
+        streaming = method.client_streaming or method.server_streaming
+        kind = "stream_open" if streaming else RPC_OPERATION_KIND.get(rpc_path(method), "read_only")
+        n = 1 if streaming else iters_for(kind)
         time_one(client, method)  # warm-up
         durs = sorted(time_one(client, method) for _ in range(n))
         def pct(p):
@@ -1454,9 +1455,10 @@ def test_live_perf():
     for s in samples:
         svc.setdefault(s["service"], []).append(s["mean"])
     lines = ["# UDB SDK Live Perf — Python (localhost)", "",
-             f"Unary RPCs measured: {len(samples)}", "",
-             f"Streaming RPCs excluded from latency (no well-defined request/response latency): "
-             f"{len(streaming_excluded)} — {', '.join(streaming_excluded)}", "",
+             f"RPCs measured: {len(samples)}", "",
+             "Unary = full request/response round-trip. Streaming rows (kind=stream_open) report "
+             "stream-open latency (initiate + push request, no response drain), NOT first-message "
+             "latency — a subscription stream emits only on events.", "",
              "## Per-service mean latency", "", "| Service | RPCs | mean ms |", "|---|--:|--:|"]
     for name in sorted(svc, key=lambda k: -sum(svc[k]) / len(svc[k])):
         lines.append(f"| {name} | {len(svc[name])} | {sum(svc[name]) / len(svc[name]):.2f} |")

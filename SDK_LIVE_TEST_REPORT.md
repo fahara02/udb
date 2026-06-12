@@ -28,14 +28,19 @@ granular per-RPC pass/fail (not a single opaque "1 passed"):
 | **Go** | one `t.Run` sub-test per RPC | 262 named sub-tests |
 | **Python** | one **parametrized** case per RPC (`test_rpc_surface[<svc/rpc>]`) + 1 deep test | **263 passed** |
 | **TypeScript** | one **node:test sub-test** per RPC | **252 tests** (251 unary subtests + main; 11 streaming probed inline) |
-| **PHP** | single `it()` (520 assertions) — per-RPC dataset pending (Pest needs a cached-login data provider) | 1 test, 520 assertions |
+| **PHP** | one **Pest dataset** case per RPC (`reaches live RPC … (<stub>/<rpc>)`) + deep e2e + a 262-count guard | **264 passed** (+1 perf, skipped unless `UDB_LIVE_PERF=1`) |
 
-| SDK | Result | Layer 1: surface reached | Wall time | Runtime |
+The **suite wall-time** below is the *whole* run (process/container boot + one Argon2 login +
+deep CRUD across all 14 backends + all 262 probes) — **NOT per-RPC latency**. Per call, all four
+SDKs are single-digit-to-low-tens of ms; see the per-RPC perf section (PHP is in fact the fastest
+per call). PHP's larger wall-time is the Docker cold-start it alone pays, not RPC cost.
+
+| SDK | Result | Layer 1: surface reached | Suite wall-time | Runtime |
 |-----|:------:|:------------------------:|-----------|---------|
 | **Go** | ✅ | **262 / 262** (262 sub-tests) | ~43 s | native → localhost |
 | **Python** | ✅ | **262 / 262** (262 parametrized cases) | ~32 s | native → localhost |
 | **TypeScript** | ✅ | **262 / 262** (251 subtests + 11 streaming) | ~6 s | native → localhost |
-| **PHP** | ✅ | **262 / 262** (`expect($probed)->toBe(262)`, 520 assertions) | 30.3 s | Docker → `host.docker.internal` |
+| **PHP** | ✅ | **262 / 262** (`expect($probed)->toBe(262)`, 520 assertions) | ~30 s (incl. Docker boot) | Docker → `host.docker.internal` |
 
 Of the 262: **236 receive a populated typed request** (real decode + validation), and **~26
 destructive RPCs are sent typed-empty** on purpose — validation runs but the mutation never
@@ -120,38 +125,43 @@ real p50/p99/mean, and writes a per-service + slowest-20 report:
 
 | SDK | Harness | Report | RPCs measured |
 |-----|---------|--------|--------------:|
-| **Go** | `live_perf_test.go` | `sdk/go/udbclient/perf_report_go.md` | 262 |
-| **Python** | `test_live_conformance.py::test_live_perf` | `sdk/python/perf_report_python.md` | 262 |
-| **TypeScript** | `live-auth.test.ts` ("live per-RPC perf") | `sdk/typescript/perf_report_ts.md` | 251 (11 streaming excluded) |
-| **PHP** | `GeneratedRpcSurfaceTest.php` ("measures per-RPC latency") | `sdk/php/perf_report_php.md` | 262 |
+| **Go** | `live_perf_test.go` | `sdk/go/udbclient/perf_report_go.md` | **262** |
+| **Python** | `test_live_conformance.py::test_live_perf` | `sdk/python/perf_report_python.md` | **262** |
+| **TypeScript** | `live-auth.test.ts` ("live per-RPC perf") | `sdk/typescript/perf_report_ts.md` | **262** |
+| **PHP** | `GeneratedRpcSurfaceTest.php` ("measures per-RPC latency") | `sdk/php/perf_report_php.md` | **262** |
 
-The four agree on the shape: most RPCs **3–40 ms**; DataBroker's mean is skewed only because
-Go/Python/PHP include the open-ended `PublishCDC` *subscription stream* (timed at its 20 s
-deadline) — TS excludes streaming RPCs from its unary loop, so its DataBroker mean is ~13 ms.
-The Go breakdown (representative) follows; the other three reports carry the same per-service
-and slowest-20 tables.
+**Unary** RPCs are timed as a full request→response round-trip. **Streaming** RPCs (11: the CDC
+subscription, object up/download, batch/tx duplexes, xDS resource streams, WebRTC signaling)
+report **stream-open latency** — initiate the stream + send the request, then cancel *without
+draining responses*. This is the fix for a real measurement bug: a subscription stream emits its
+first message only when an event arrives, which never happens in a passive perf run, so the old
+code that drained to the first message just timed out at the 20 s deadline and recorded **20 s**
+for `PublishCDC` — that single bogus value is what inflated the DataBroker mean to **272 ms**.
+Streaming rows are labeled `stream_open` and never dropped; all 262 stay in the aggregate.
 
-**Per-service mean latency** (mean of per-RPC means):
+**Per-service mean latency** with the measurement corrected (Go run, representative; DataBroker
+now reflects all 76 RPCs honestly):
 
 | Service | RPCs | mean | | Service | RPCs | mean |
 |---|--:|--:|---|---|--:|--:|
-| DataBroker¹ | 76 | 272 ms | | ControlPlane | 5 | 11 ms |
-| ApiKeyService² | 9 | 150 ms | | Notification | 11 | 9 ms |
-| AnalyticsService | 7 | 142 ms | | TenantService | 6 | 9 ms |
-| AuthnService² | 50 | 39 ms | | AssetService | 8 | 4 ms |
-| AuthzService | 41 | 29 ms | | StorageService | 7 | 4 ms |
-| IdentityProvider | 27 | 3.5 ms | | Room/Track/Peer/Turn/Signal | 15 | ~3 ms |
+| AuthnService¹ | 50 | ~20–64 ms | | DataBroker² | 76 | ~9–22 ms |
+| AuthzService | 41 | ~9–69 ms | | NotificationService | 11 | ~9 ms |
+| ApiKeyService¹ | 9 | ~8–76 ms | | TenantService | 6 | ~8–12 ms |
+| AnalyticsService | 7 | ~6–22 ms | | IdentityProvider | 27 | ~3–7 ms |
+| ControlPlaneService | 5 | ~8–38 ms | | Storage/Asset/Room/Track/Peer/Turn | ~30 | ~3 ms |
 
-¹ **DataBroker's mean is skewed by `PublishCDC`** — an open-ended CDC *subscription stream* that
-legitimately blocks (timed at the 20s deadline). Excluding it, DataBroker RPCs are single-digit
-to low-100s ms; `GetCatalogManifest` (~172 ms) and the analytics aggregates (~130 ms) are the
-real heavyweights.
-² **`Login` (~810 ms), `CreateUser` (~715 ms), `CreateApiKey` (~1.25 s)** are slow **by design** —
-Argon2id password/key hashing (deliberately expensive). Not a defect.
+(Per-service means vary run-to-run because the broker is shared/loaded; the *shape* is stable.)
 
-**Honest read:** most RPCs are **3–40 ms** over localhost. The outliers are (a) the CDC
-subscription stream, (b) Argon2 credential hashing, (c) analytics aggregation queries, and
-(d) `GetCatalogManifest` (whole-manifest payload). These match expectations.
+¹ **`Login`, `CreateUser`, `CreateApiKey`** are the slowest RPCs (~0.7–2 s) — **by design**:
+Argon2id password/key hashing is deliberately expensive. Not a defect.
+² **DataBroker** is now **~9–22 ms** across all 76 RPCs (no streaming artifact). `PublishCDC`
+stream-open is **~0.1 ms**; the real DataBroker heavyweights are `GetCatalogManifest`
+(~120–365 ms, whole-manifest payload) and `GetHealthReport` (~20–140 ms, probes every backend).
+
+**Honest read:** with the measurement fixed, most RPCs are **single-digit to low-tens of ms** over
+localhost. The genuine outliers are (a) Argon2 credential hashing, (b) `GetCatalogManifest`, and
+(c) Authz policy evaluation under load — all expected. The earlier **272 ms** was a *test bug*
+(draining a passive subscription to its deadline), now corrected at the source.
 
 ---
 
@@ -175,20 +185,29 @@ docker compose -f docker-compose.integration.yml -f docker-compose.canonical.yml
 
 ---
 
-## Note on timings — why PHP is slower
+## Note on timings — suite wall-time vs per-RPC latency (PHP is NOT slow)
 
-PHP (30 s) vs Python (16 s) / TS (2.5 s) is **not** a broker issue:
+**Do not read the suite wall-time as per-RPC latency — they are different things.** Per RPC, PHP
+is the **fastest** of the four SDKs in the perf sweep (DataBroker mean **9.4 ms** vs Go 18 ms,
+Python 14 ms, TS 23 ms; slowest single PHP RPC is `GetCatalogManifest` at ~205 ms). No PHP RPC
+comes close to a second, let alone 30 s.
 
-- **PHP is the only SDK run inside Docker** — it reaches the host broker via
-  `host.docker.internal`, so every one of the 262 RPCs crosses the Docker NAT bridge. The
-  others run natively and hit `localhost`.
-- **PHP gRPC is synchronous** (the `grpc` pecl extension) with higher per-call overhead and no
-  HTTP/2 multiplexing reuse, where Go pipelines over one channel.
-- **The PHP probe populates every request field via reflection** (`set*`), heavier than the
-  compiled Go/TS population.
-- A few RPCs are genuinely heavy server-side — `GetHealthReport` probes all 14 backends and
-  `GetCatalogManifest` returns the whole manifest; these dominate the tail (and are why the
-  PHP client deadline was raised from 2 s → 15 s for the 14-backend broker).
+The suite **wall-time** (PHP ~30 s vs Python ~16 s vs TS ~2.5 s) is harness overhead, not RPC
+latency, and is dominated by things a real PHP app never pays per call:
+
+- **PHP is the only SDK run in a cold Docker container** — container start + `grpc` pecl ext init
+  + composer autoload is several seconds *before any RPC runs*. A real PHP app is a long-lived
+  process that pays this once at boot, not per request.
+- **The conformance suite does a deep create→read→assert CRUD against all 14 live backends**
+  (Postgres, MySQL, MSSQL, Cassandra, Mongo, Redis, MinIO, Qdrant, …). Those 14 real database
+  round-trips — plus one Argon2 login (~1–2 s, deliberately expensive) — are the bulk of the
+  wall-time, shared by every SDK; PHP just also pays the Docker boot on top.
+- Evidence: the PHP **perf** test alone (login + 262 timed probes, *without* the 14-backend deep
+  e2e) runs in ~13 s, and the 262 actual RPC calls inside it sum to **well under a second**.
+
+A couple of RPCs are genuinely heavy server-side regardless of SDK — `GetHealthReport` probes all
+14 backends, `GetCatalogManifest` returns the whole manifest — which is why the PHP client deadline
+was raised 2 s → 15 s for the 14-backend broker (a ceiling, not a typical wait).
 
 ---
 

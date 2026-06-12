@@ -2,48 +2,50 @@
 
 RPCs measured: 262
 
+Unary = full request/response round-trip. Streaming rows (kind=stream_open) report stream-open latency (initiate + cancel, no response drain), NOT first-message latency.
+
 ## Per-service mean latency
 
 | Service | RPCs | mean ms |
 |---|--:|--:|
-| DataBroker | 76 | 274.01 |
-| AnalyticsService | 7 | 15.92 |
-| ControlPlaneService | 5 | 12.45 |
-| RoomService | 5 | 11.54 |
-| NotificationService | 11 | 8.23 |
-| SignalingService | 1 | 7.83 |
-| TurnService | 1 | 6.77 |
-| TrackService | 4 | 5.87 |
-| AuthzService | 41 | 4.68 |
-| TenantService | 6 | 4.35 |
-| ApiKeyService | 9 | 4.00 |
-| AuthnService | 50 | 3.86 |
-| IdentityProviderService | 27 | 3.65 |
-| PeerService | 4 | 3.25 |
-| StorageService | 7 | 3.01 |
-| AssetService | 8 | 2.45 |
+| AnalyticsService | 7 | 21.78 |
+| ControlPlaneService | 5 | 11.94 |
+| ApiKeyService | 9 | 9.75 |
+| NotificationService | 11 | 9.46 |
+| DataBroker | 76 | 9.39 |
+| AuthnService | 50 | 7.34 |
+| AuthzService | 41 | 5.94 |
+| TenantService | 6 | 4.26 |
+| IdentityProviderService | 27 | 4.07 |
+| TurnService | 1 | 3.72 |
+| AssetService | 8 | 3.43 |
+| PeerService | 4 | 3.43 |
+| RoomService | 5 | 3.24 |
+| TrackService | 4 | 2.94 |
+| StorageService | 7 | 2.76 |
+| SignalingService | 1 | 0.16 |
 
 ## Slowest 20 by p99
 
 | RPC | kind | p50 ms | p99 ms | mean ms |
 |---|---|--:|--:|--:|
-| DataBroker/PublishCDC | mutation | 20002.33 | 20003.02 | 20001.90 |
-| DataBroker/GetCatalogManifest | mutation | 115.91 | 125.51 | 121.75 |
-| DataBroker/ResumeCdc | mutation | 25.54 | 54.97 | 38.17 |
-| ControlPlaneService/ListNodeStates | mutation | 42.51 | 43.02 | 43.44 |
-| AnalyticsService/GetPipelineSummary | mutation | 41.94 | 42.43 | 42.98 |
-| NotificationService/ListTemplates | mutation | 36.51 | 42.27 | 39.09 |
-| DataBroker/DeletePolicy | mutation | 27.64 | 41.16 | 30.51 |
-| AuthzService/ListAccessDecisionAudits | mutation | 38.62 | 38.79 | 36.99 |
-| DataBroker/StepDownCdcLeader | mutation | 34.72 | 34.87 | 32.68 |
-| NotificationService/GetTemplate | mutation | 17.59 | 31.11 | 21.98 |
-| DataBroker/PlanMigration | mutation | 21.83 | 30.87 | 26.44 |
-| DataBroker/GetAdminSummary | mutation | 22.96 | 27.68 | 24.93 |
-| AuthzService/Authorize | mutation | 24.73 | 25.03 | 24.48 |
-| DataBroker/ReloadPolicies | destructive | 22.29 | 22.29 | 22.29 |
-| DataBroker/BatchUpsert | read_only | 7.70 | 21.96 | 11.34 |
-| DataBroker/GetHealthReport | mutation | 19.95 | 20.86 | 19.31 |
-| DataBroker/ListMigrationRuns | mutation | 19.87 | 20.84 | 19.89 |
-| AnalyticsService/GetReconciliationAnalytics | mutation | 19.58 | 20.17 | 19.25 |
-| AnalyticsService/GetExecutorPerformance | mutation | 18.14 | 19.11 | 17.59 |
-| DataBroker/GenericDispatch | mutation | 8.20 | 18.02 | 14.24 |
+| DataBroker/GetCatalogManifest | mutation | 202.68 | 211.26 | 204.91 |
+| AnalyticsService/GetPipelineSummary | mutation | 56.97 | 67.43 | 59.26 |
+| AuthzService/ListAccessDecisionAudits | mutation | 53.68 | 56.57 | 51.59 |
+| NotificationService/ListTemplates | mutation | 40.40 | 43.61 | 40.27 |
+| AuthzService/Authorize | mutation | 42.79 | 43.08 | 43.49 |
+| ControlPlaneService/ListNodeStates | mutation | 39.97 | 40.61 | 49.80 |
+| ApiKeyService/ValidateApiKey | mutation | 18.82 | 35.90 | 24.46 |
+| DataBroker/ListAdminAuditLogs | mutation | 26.37 | 28.39 | 29.04 |
+| DataBroker/GetHealthReport | mutation | 22.88 | 27.96 | 37.99 |
+| AnalyticsService/GetSlaCompliance | mutation | 23.31 | 27.20 | 24.74 |
+| DataBroker/GetAdminSummary | mutation | 23.60 | 26.61 | 24.04 |
+| AuthnService/ListUsers | mutation | 24.04 | 25.43 | 23.34 |
+| AnalyticsService/GetExecutorPerformance | mutation | 22.70 | 23.98 | 22.25 |
+| DataBroker/PlanMigration | mutation | 22.29 | 23.44 | 31.65 |
+| DataBroker/VerifyAdminAuditLog | mutation | 20.42 | 21.89 | 20.29 |
+| NotificationService/GetTemplate | mutation | 20.21 | 21.79 | 20.48 |
+| AnalyticsService/GetReconciliationAnalytics | mutation | 20.44 | 21.68 | 20.45 |
+| DataBroker/PauseCdc | mutation | 19.31 | 20.16 | 20.20 |
+| DataBroker/StepDownCdcLeader | mutation | 16.60 | 19.22 | 18.05 |
+| DataBroker/ListMigrationRuns | mutation | 15.35 | 16.75 | 15.42 |

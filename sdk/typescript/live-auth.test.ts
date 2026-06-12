@@ -1180,6 +1180,22 @@ test("live per-RPC perf", {
       return performance.now() - start;
     };
 
+    // Stream-open timer: create the streaming call and tear it down WITHOUT draining
+    // responses. A subscription/upload stream emits a first message only on an event,
+    // so draining it in a passive run would just hit the deadline. This measures the
+    // client-side latency to establish the stream.
+    const timeStreamOpen = (fn: any, request: any): number => {
+      const start = performance.now();
+      try {
+        const r = (fn as any)(request, { deadlineMs: 1_500, noRetry: true });
+        const s = r?.stream ?? r;
+        if (s && typeof s.cancel === "function") s.cancel();
+        else if (s && typeof s.destroy === "function") s.destroy();
+        if (r?.response && typeof r.response.catch === "function") r.response.catch(() => {});
+      } catch { /* setup latency still counts */ }
+      return performance.now() - start;
+    };
+
     const surfaces: Array<[string, any, readonly string[]]> = [
       ["authTarget", authGenerated, NATIVE_SERVICE_APIS],
       ["target", project.generated, ["DataBroker"]],
@@ -1189,8 +1205,14 @@ test("live per-RPC perf", {
         const api = generated[serviceName];
         if (!api) continue;
         for (const [methodName, fn] of Object.entries(api)) {
-          if (methodName === "serviceFull" || NON_UNARY_METHODS.has(methodName)) continue;
+          if (methodName === "serviceFull") continue;
           if (typeof fn !== "function") continue;
+          if (NON_UNARY_METHODS.has(methodName)) {
+            // Measured, not dropped — streaming reports stream-open latency.
+            const d = timeStreamOpen(fn, surfaceProbeRequest(tenantId, projectId));
+            samples.push({ service: serviceName, rpc: methodName, kind: "stream_open", p50: d, p99: d, mean: d });
+            continue;
+          }
           const kind = operationKindOf((api as any).serviceFull, methodName) || "read_only";
           const request = kind !== "destructive" ? surfaceProbeRequest(tenantId, projectId) : {};
           await timeMethod(fn, request); // warm-up
@@ -1209,7 +1231,10 @@ test("live per-RPC perf", {
     const svc = new Map<string, number[]>();
     for (const s of samples) { (svc.get(s.service) ?? svc.set(s.service, []).get(s.service)!).push(s.mean); }
     const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
-    const lines = ["# UDB SDK Live Perf — TypeScript (localhost)", "", `RPCs measured: ${samples.length}`, "",
+    const lines = ["# UDB SDK Live Perf — TypeScript (localhost)", "",
+      `RPCs measured: ${samples.length}`, "",
+      "Unary = full request/response round-trip. Streaming rows (kind=stream_open) report "
+      + "stream-open latency (establish the stream, no response drain), NOT first-message latency.", "",
       "## Per-service mean latency", "", "| Service | RPCs | mean ms |", "|---|--:|--:|"];
     for (const name of [...svc.keys()].sort((a, b) => mean(svc.get(b)!) - mean(svc.get(a)!))) {
       lines.push(`| ${name} | ${svc.get(name)!.length} | ${mean(svc.get(name)!).toFixed(2)} |`);
@@ -1219,7 +1244,7 @@ test("live per-RPC perf", {
       lines.push(`| ${s.service}/${s.rpc} | ${s.kind} | ${s.p50.toFixed(2)} | ${s.p99.toFixed(2)} | ${s.mean.toFixed(2)} |`);
     }
     writeFileSync("perf_report_ts.md", lines.join("\n") + "\n");
-    assert.ok(samples.length >= 200, `perf measured only ${samples.length} unary RPCs`);
+    assert.ok(samples.length >= 260, `perf measured only ${samples.length} RPCs (want all 262)`);
     console.log(`\nTS perf: ${samples.length} RPCs measured → sdk/typescript/perf_report_ts.md`);
   } finally {
     project.close();
