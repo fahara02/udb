@@ -6,7 +6,7 @@ use crate::runtime::service::native_helpers::DEFAULT_OBJECT_BUCKET;
 use crate::runtime::service::storage_service::StorageServiceImpl;
 use crate::runtime::service::webrtc_service::WebrtcServiceImpl;
 use crate::runtime::{DataBrokerRuntime, native_catalog};
-use std::sync::OnceLock;
+use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 pub(super) fn live_pg_dsn() -> String {
@@ -95,6 +95,10 @@ pub(super) async fn migrate_native_service_db(pool: &sqlx::PgPool) {
             .await
             .unwrap_or_else(|err| panic!("native service DDL failed: {err}\nSQL:\n{stmt}"));
     }
+}
+
+pub(super) async fn live_runtime() -> Arc<DataBrokerRuntime> {
+    Arc::new(DataBrokerRuntime::from_config(live_native_config()).await)
 }
 
 async fn native_broker_service() -> DataBrokerService {
