@@ -7,8 +7,6 @@
 use super::support::*;
 use crate::proto::udb::core::asset::services::v1 as asset_pb;
 use crate::proto::udb::core::asset::services::v1::asset_service_server::AssetService;
-use crate::runtime::DataBrokerRuntime;
-use std::sync::Arc;
 use tonic::Request;
 use uuid::Uuid;
 
@@ -25,11 +23,11 @@ async fn live_qdrant_embed_pipeline_upserts_vector() {
     let pool = live_pg_pool().await;
     migrate_native_service_db(&pool).await;
 
-    let runtime = Arc::new(DataBrokerRuntime::from_env().await);
     let collection = "udb_asset_embeddings_it";
-    let svc = crate::runtime::service::asset_service::AssetServiceImpl::new()
-        .with_postgres(Some(pool.clone()))
-        .with_vector(Some(runtime), collection.to_string());
+    unsafe {
+        std::env::set_var("UDB_ASSET_VECTOR_COLLECTION", collection);
+    }
+    let svc = asset_service(pool.clone()).await;
 
     let tenant_id = Uuid::new_v4().to_string();
 

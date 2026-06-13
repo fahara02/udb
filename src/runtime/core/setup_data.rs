@@ -1372,14 +1372,14 @@ impl DataBrokerRuntime {
     /// metadata ACTIVE. S3/MinIO only; metadata-only deployments skip the check.
     pub async fn object_exists_backend_target(
         &self,
-        instance: &str,
+        backend_target: &str,
         project_id: &str,
         bucket: &str,
         object_key: &str,
     ) -> Result<bool, tonic::Status> {
         #[cfg(not(feature = "s3"))]
         {
-            let _ = (instance, project_id, bucket, object_key);
+            let _ = (backend_target, project_id, bucket, object_key);
             Err(tonic::Status::failed_precondition(
                 "s3/object-store feature is not enabled",
             ))
@@ -1392,7 +1392,13 @@ impl DataBrokerRuntime {
             } else {
                 project
             };
-            let s3 = self.s3_for_instance_for_project(Some(instance), project)?;
+            let target = backend_target.trim().to_ascii_lowercase();
+            let target_instance = match target.as_str() {
+                "" | "minio" => self.choose_instance_name_for_project("minio", false, project),
+                "s3" => self.choose_instance_name_for_project("s3", false, project),
+                instance => Some(instance),
+            };
+            let s3 = self.s3_for_instance_for_project(target_instance, project)?;
             match s3.head_object().bucket(bucket).key(object_key).send().await {
                 Ok(_) => Ok(true),
                 Err(err) => {

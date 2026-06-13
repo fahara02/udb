@@ -43,7 +43,7 @@ async fn live_postgres_webrtc_room_roundtrip() {
     let _guard = live_native_service_db_lock().lock().await;
     let pool = live_pg_pool().await;
     migrate_native_service_db(&pool).await;
-    let svc = webrtc_service(pool.clone());
+    let svc = webrtc_service(pool.clone()).await;
     let tenant_id = Uuid::new_v4().to_string();
 
     // create a room
@@ -182,7 +182,7 @@ async fn live_postgres_webrtc_rejects_signal_publish_after_close() {
     let _guard = live_native_service_db_lock().lock().await;
     let pool = live_pg_pool().await;
     migrate_native_service_db(&pool).await;
-    let svc = webrtc_service(pool.clone());
+    let svc = webrtc_service(pool.clone()).await;
     let tenant_id = Uuid::new_v4().to_string();
 
     let room = RoomService::create_room(

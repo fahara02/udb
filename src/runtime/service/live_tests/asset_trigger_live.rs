@@ -22,11 +22,8 @@ async fn live_pg_storage_to_asset_trigger() {
     let pool = live_pg_pool().await;
     migrate_native_service_db(&pool).await;
 
-    // Storage + asset services, Postgres-only (no runtime → no presign/object/vector).
-    let storage = crate::runtime::service::storage_service::StorageServiceImpl::new()
-        .with_postgres(Some(pool.clone()));
-    let asset = crate::runtime::service::asset_service::AssetServiceImpl::new()
-        .with_postgres(Some(pool.clone()));
+    let storage = storage_service(pool.clone()).await;
+    let asset = asset_service(pool.clone()).await;
     let tenant_id = Uuid::new_v4().to_string();
 
     // A finalized-ish storage file with a text content type → media_type "text".
@@ -41,6 +38,17 @@ async fn live_pg_storage_to_asset_trigger() {
         .await
         .expect("register_upload")
         .into_inner();
+    put_storage_object(&reg.object_key, "text/plain", b"hello from udb").await;
+    storage
+        .finalize_upload(Request::new(storage_pb::FinalizeUploadRequest {
+            tenant_id: tenant_id.clone(),
+            file_id: reg.file_id.clone(),
+            content_type: "text/plain".to_string(),
+            size_bytes: 14,
+            ..Default::default()
+        }))
+        .await
+        .expect("finalize text upload");
 
     // A matching active pipeline definition (EXTRACT only → no object/vector deps).
     asset
@@ -107,6 +115,17 @@ async fn live_pg_storage_to_asset_trigger() {
         .await
         .expect("register_upload (video)")
         .into_inner();
+    put_storage_object(&other.object_key, "video/mp4", b"fake-video").await;
+    storage
+        .finalize_upload(Request::new(storage_pb::FinalizeUploadRequest {
+            tenant_id: tenant_id.clone(),
+            file_id: other.file_id.clone(),
+            content_type: "video/mp4".to_string(),
+            size_bytes: 10,
+            ..Default::default()
+        }))
+        .await
+        .expect("finalize video upload");
     let none = asset
         .handle_storage_finalized(&other.file_id, &tenant_id)
         .await

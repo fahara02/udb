@@ -78,7 +78,9 @@ async fn live_storage_finalize_emits_declared_topic() {
     ensure_outbox_table(&pool).await;
     let tenant_id = Uuid::new_v4().to_string();
 
-    let svc = storage_service(pool.clone()).with_outbox(Some(OUTBOX_RELATION.to_string()));
+    let svc = storage_service(pool.clone())
+        .await
+        .with_outbox(Some(OUTBOX_RELATION.to_string()));
     let reg = svc
         .register_upload(Request::new(storage_pb::RegisterUploadRequest {
             tenant_id: tenant_id.clone(),
@@ -90,6 +92,7 @@ async fn live_storage_finalize_emits_declared_topic() {
         .await
         .expect("register_upload")
         .into_inner();
+    put_storage_object(&reg.object_key, "application/pdf", b"%PDF-udb-event").await;
     svc.finalize_upload(Request::new(storage_pb::FinalizeUploadRequest {
         tenant_id: tenant_id.clone(),
         file_id: reg.file_id.clone(),
@@ -117,7 +120,9 @@ async fn live_asset_register_emits_declared_topic() {
     let tenant_id = Uuid::new_v4().to_string();
     let file_id = seed_storage_file(&pool, &tenant_id).await;
 
-    let svc = asset_service(pool.clone()).with_outbox(Some(OUTBOX_RELATION.to_string()));
+    let svc = asset_service(pool.clone())
+        .await
+        .with_outbox(Some(OUTBOX_RELATION.to_string()));
     svc.register_asset(Request::new(asset_pb::RegisterAssetRequest {
         tenant_id: tenant_id.clone(),
         file_id,
@@ -141,7 +146,9 @@ async fn live_webrtc_create_room_emits_declared_topic() {
     ensure_outbox_table(&pool).await;
     let tenant_id = Uuid::new_v4().to_string();
 
-    let svc = webrtc_service(pool.clone()).with_outbox(Some(OUTBOX_RELATION.to_string()));
+    let svc = webrtc_service(pool.clone())
+        .await
+        .with_outbox(Some(OUTBOX_RELATION.to_string()));
     let room = RoomService::create_room(
         &svc,
         Request::new(webrtc_pb::CreateRoomRequest {

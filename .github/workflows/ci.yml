@@ -708,6 +708,7 @@ jobs:
       UDB_STARTUP_FORCE_SYNC: "true"
       UDB_STARTUP_DRY_RUN: "false"
       UDB_AUDIT_SINK_URL: file:///tmp/udb-audit.jsonl
+      UDB_ENCRYPTION_KEY: QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=
       UDB_JWT_PRIVATE_KEY: src/runtime/testdata/jwt_rs256_private.pem
       UDB_JWT_PUBLIC_KEY: src/runtime/testdata/jwt_rs256_public.pem
       UDB_SESSION_ENABLED: "true"
@@ -929,6 +930,7 @@ jobs:
           UDB_MINIO_ACCESS_KEY: minio
           UDB_MINIO_SECRET_KEY: minio123
           UDB_QDRANT_URL: http://localhost:56333
+          UDB_ENCRYPTION_KEY: QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=
         run: cargo test --locked --lib -- --ignored --nocapture --test-threads=1
 
       - name: Canonical store live conformance

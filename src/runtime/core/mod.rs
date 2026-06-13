@@ -390,6 +390,16 @@ impl DataBrokerRuntime {
     /// Decrypt JSON payloads produced by [`Self::encrypt_native_json_state_at_rest`].
     /// Plain JSON objects/arrays and legacy plaintext pass through unchanged.
     pub fn decrypt_native_json_state_at_rest(&self, stored_json: &str) -> Result<String, String> {
+        let trimmed = stored_json.trim();
+        if trimmed.starts_with("udb-aead:") {
+            let Some(enc) = self.encryption.as_ref() else {
+                return Err(
+                    "native/object state is encrypted but no UDB encryption key is configured"
+                        .into(),
+                );
+            };
+            return Ok(enc.decrypt_json_value(trimmed)?.to_string());
+        }
         let value = parse_native_state_json(stored_json)?;
         let serde_json::Value::String(ciphertext) = value else {
             return Ok(value.to_string());

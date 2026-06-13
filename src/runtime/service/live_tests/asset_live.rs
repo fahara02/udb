@@ -48,7 +48,7 @@ async fn live_postgres_asset_pipeline_roundtrip() {
     let _guard = live_native_service_db_lock().lock().await;
     let pool = live_pg_pool().await;
     migrate_native_service_db(&pool).await;
-    let svc = asset_service(pool.clone());
+    let svc = asset_service(pool.clone()).await;
     let tenant_id = Uuid::new_v4().to_string();
 
     // a definition with two steps that auto-complete in-process (EXTRACT + EMBED

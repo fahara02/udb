@@ -1,6 +1,11 @@
+use crate::runtime::config::UdbConfig;
+use crate::runtime::core::setup_data::object_request_json;
+use crate::runtime::service::DataBrokerService;
 use crate::runtime::service::asset_service::AssetServiceImpl;
+use crate::runtime::service::native_helpers::DEFAULT_OBJECT_BUCKET;
 use crate::runtime::service::storage_service::StorageServiceImpl;
 use crate::runtime::service::webrtc_service::WebrtcServiceImpl;
+use crate::runtime::{DataBrokerRuntime, native_catalog};
 use std::sync::OnceLock;
 use std::time::Duration;
 
@@ -92,16 +97,45 @@ pub(super) async fn migrate_native_service_db(pool: &sqlx::PgPool) {
     }
 }
 
-pub(super) fn storage_service(pool: sqlx::PgPool) -> StorageServiceImpl {
-    StorageServiceImpl::new().with_postgres(Some(pool))
+async fn native_broker_service() -> DataBrokerService {
+    let config = live_native_config();
+    DataBrokerService::with_runtime(
+        native_catalog::native_manifest().clone(),
+        DataBrokerRuntime::from_config(config).await,
+    )
 }
 
-pub(super) fn asset_service(pool: sqlx::PgPool) -> AssetServiceImpl {
-    AssetServiceImpl::new().with_postgres(Some(pool))
+fn live_native_config() -> UdbConfig {
+    let mut config = UdbConfig::from_env();
+    config.primary.direct_dsn = live_pg_dsn();
+    if config.kafka_brokers.is_none()
+        && let Ok(brokers) = std::env::var("UDB_INTEGRATION_KAFKA_BROKERS")
+        && !brokers.trim().is_empty()
+    {
+        config.kafka_brokers = Some(brokers);
+    }
+    config
 }
 
-pub(super) fn webrtc_service(pool: sqlx::PgPool) -> WebrtcServiceImpl {
-    WebrtcServiceImpl::new().with_postgres(Some(pool))
+pub(super) async fn storage_service(_pool: sqlx::PgPool) -> StorageServiceImpl {
+    native_broker_service().await.build_storage_service()
+}
+
+pub(super) async fn asset_service(_pool: sqlx::PgPool) -> AssetServiceImpl {
+    native_broker_service().await.build_asset_service()
+}
+
+pub(super) async fn webrtc_service(_pool: sqlx::PgPool) -> WebrtcServiceImpl {
+    native_broker_service().await.build_webrtc_service()
+}
+
+pub(super) async fn put_storage_object(object_key: &str, content_type: &str, bytes: &[u8]) {
+    let runtime = DataBrokerRuntime::from_config(live_native_config()).await;
+    let request = object_request_json("put", DEFAULT_OBJECT_BUCKET, object_key, content_type);
+    runtime
+        .put_object_backend_target("minio", None, &request, bytes.to_vec())
+        .await
+        .expect("put storage object bytes");
 }
 
 /// Register a PENDING storage file for `tenant_id` and return its `file_id`.
@@ -110,6 +144,7 @@ pub(super) async fn seed_storage_file(pool: &sqlx::PgPool, tenant_id: &str) -> S
     use crate::proto::udb::core::storage::services::v1::storage_service_server::StorageService;
 
     storage_service(pool.clone())
+        .await
         .register_upload(tonic::Request::new(storage_pb::RegisterUploadRequest {
             tenant_id: tenant_id.to_string(),
             filename: "seed.txt".to_string(),

@@ -105,6 +105,7 @@ docs/generated/*
 !docs/generated/udb-native-contract.json
 !docs/generated/authn-authz-rpc-inventory.md
 !docs/generated/authn-authz-sensitive-fields.md
+!docs/generated/codebase-map.md
 # Phase 3: committed contract baseline (breaking-change gate) + descriptor-generated native-service docs.
 !docs/generated/contract-baseline.bin
 !docs/generated/native-services.md

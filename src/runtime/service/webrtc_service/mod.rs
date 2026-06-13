@@ -2562,7 +2562,13 @@ mod tenant_scope_tests {
                 .await
                 .unwrap_or_else(|err| panic!("native service DDL failed: {err}\nSQL:\n{stmt}"));
         }
-        let svc = WebrtcServiceImpl::new().with_postgres(Some(pool.clone()));
+        let mut config = crate::runtime::config::UdbConfig::from_env();
+        config.primary.direct_dsn = dsn;
+        let svc = DataBrokerService::with_runtime(
+            crate::runtime::native_catalog::native_manifest().clone(),
+            DataBrokerRuntime::from_config(config).await,
+        )
+        .build_webrtc_service();
         let tenant_id = Uuid::new_v4().to_string();
 
         let room = svc

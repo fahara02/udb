@@ -37,7 +37,7 @@ async fn live_postgres_storage_crud_roundtrip() {
     let _guard = live_native_service_db_lock().lock().await;
     let pool = live_pg_pool().await;
     migrate_native_service_db(&pool).await;
-    let svc = storage_service(pool.clone());
+    let svc = storage_service(pool.clone()).await;
     let tenant_id = Uuid::new_v4().to_string();
 
     // register → PENDING record + allocated object_key
@@ -55,6 +55,7 @@ async fn live_postgres_storage_crud_roundtrip() {
         .into_inner();
     assert!(!reg.file_id.is_empty());
     assert!(reg.object_key.contains(&reg.file_id));
+    put_storage_object(&reg.object_key, "application/pdf", b"%PDF-udb-live").await;
 
     // finalize → ACTIVE, returns the row
     let fin = svc
