@@ -29,6 +29,19 @@ name: Release · binaries
 
 on:
   push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/release-binaries.yml'
+      - 'scripts/gen-release-manifest.mjs'
+      - 'scripts/check-launcher-assets.mjs'
+      - 'sdk/go/cmd/udb/main.go'
+      - 'sdk/python/udb_client/_cli.py'
+      - 'sdk/typescript/bin/udb.js'
+      - 'sdk/java/src/main/java/dev/udb/cli/Launcher.java'
+      - 'sdk/csharp/Udb.Cli/UdbCli.cs'
+      - 'sdk/php/bin/udb'
+      - 'sdk-templates/**'
     tags:
       - 'v*.*.*'
   workflow_dispatch:
