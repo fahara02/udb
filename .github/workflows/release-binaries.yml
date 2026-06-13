@@ -9,19 +9,21 @@ name: Release · binaries
 #   udb-linux-amd64
 #   udb-windows-amd64.exe
 #   udb-darwin-arm64
+#   udb-darwin-amd64
+#   udb-linux-amd64-full
 #
 # (os ∈ linux|windows|darwin, arch ∈ amd64|arm64; NOT archived, so the scripts'
 # `-notmatch "\.(zip|tar\.gz)$"` asset filter selects them.)
 #
-# Feature set: a PORTABLE subset of `default` plus the full auth surface. It
-# drops native-C backends that are
-# painful on Windows/macOS runners (kafka/rdkafka, cassandra/scylla,
-# mssql/tiberius, memcached) while keeping the common surface
-# (postgres, qdrant, s3, redis, mongodb-native [rustls, pure-Rust — local mongod
-# dev], the REST backends, otel) and ships real OIDC +
-# WebAuthn support in the CLI/broker binaries. The Linux Docker image still
-# ships full default features plus auth. A disabled backend's RPCs return
-# FailedPrecondition rather than disappearing.
+# Feature set:
+#   - unsuffixed assets are the PORTABLE subset of `default` plus the full auth
+#     surface. They drop native-C backends that are painful on Windows/macOS
+#     runners (kafka/rdkafka, cassandra/scylla, mssql/tiberius, memcached) while
+#     keeping the common surface (postgres, qdrant, s3, redis, mongodb-native
+#     [rustls, pure-Rust — local mongod dev], the REST backends, otel).
+#   - `-full` currently ships for Linux amd64 only and keeps default features
+#     plus OIDC/WebAuthn. SDK launchers can select it with UDB_BIN_VARIANT=full.
+# A disabled backend's RPCs return FailedPrecondition rather than disappearing.
 #
 # Trigger: a pushed `v*.*.*` tag, or manual dispatch for a build-only dry run.
 
@@ -35,6 +37,8 @@ env:
   CARGO_TERM_COLOR: always
   PORTABLE_FEATURES: >-
     postgres,mysql,sqlite,qdrant,s3,mongodb-native,neo4j,clickhouse,redis,elasticsearch,weaviate,pinecone,azureblob,gcs,otel,runtime-logging,http-client,oidc,webauthn
+  FULL_FEATURES: >-
+    oidc,webauthn
 
 permissions:
   contents: write
@@ -85,16 +89,19 @@ jobs:
             asset: udb-linux-amd64
             ext: ''
             target_cpu: x86-64-v2
+            variant: portable
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             asset: udb-windows-amd64.exe
             ext: '.exe'
             target_cpu: x86-64-v2
+            variant: portable
           - os: macos-14
             target: aarch64-apple-darwin
             asset: udb-darwin-arm64
             ext: ''
             target_cpu: apple-m1
+            variant: portable
           # Intel macOS (x86_64). macos-13 is retired; macos-15-intel is the
           # standard GitHub-hosted Intel label while x64 macOS remains available.
           - os: macos-15-intel
@@ -102,6 +109,16 @@ jobs:
             asset: udb-darwin-amd64
             ext: ''
             target_cpu: x86-64-v2
+            variant: portable
+          # Full-feature Linux build. This intentionally stays Linux-only for now:
+          # the native-C backend set is what makes full Windows/macOS release
+          # binaries brittle, while Docker already covers full Linux deployments.
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            asset: udb-linux-amd64-full
+            ext: ''
+            target_cpu: x86-64-v2
+            variant: full
 
     steps:
       - uses: actions/checkout@v4
@@ -150,9 +167,15 @@ jobs:
           # Tune the SHIPPED artifact to this target's safe micro-arch floor (applies to
           # the whole dep graph). `dist` profile = fat LTO + 1 codegen unit + symbol strip.
           export RUSTFLAGS="-C target-cpu=${{ matrix.target_cpu }} ${RUSTFLAGS:-}"
-          cargo build --profile dist --locked --target ${{ matrix.target }} \
-            --bin udb \
-            --no-default-features --features "${PORTABLE_FEATURES}"
+          if [ "${{ matrix.variant }}" = "full" ]; then
+            cargo build --profile dist --locked --target ${{ matrix.target }} \
+              --bin udb \
+              --features "${FULL_FEATURES}"
+          else
+            cargo build --profile dist --locked --target ${{ matrix.target }} \
+              --bin udb \
+              --no-default-features --features "${PORTABLE_FEATURES}"
+          fi
 
       - name: Stage asset + checksum
         id: stage
