@@ -76,6 +76,20 @@ processTriple("sdk-typescript", "sdk/typescript/package.json", C["sdk-typescript
 processTriple("sdk-csharp", "sdk/csharp/Udb.Client/Udb.Client.csproj", C["sdk-csharp"].version, /(<Version>)([^<]*)(<\/Version>)/);
 processTriple("sdk-java", "sdk/java/pom.xml", C["sdk-java"].version, /(<version>)([^<]*)(<\/version>)/, { snapshotOk: true });
 processTriple(
+  "example native java",
+  "examples/native-services/java/pom.xml",
+  C["sdk-java"].version,
+  /(<artifactId>udb-native-services-java<\/artifactId>\s*\n\s*<version>)([^<]*)(<\/version>)/,
+  { snapshotOk: true },
+);
+processTriple(
+  "example native java sdk",
+  "examples/native-services/java/pom.xml",
+  C["sdk-java"].version,
+  /(<artifactId>udb-java-client<\/artifactId>\s*\n\s*<version>)([^<]*)(<\/version>)/,
+  { snapshotOk: true },
+);
+processTriple(
   "openapi",
   "api/udb-broker.swagger.json",
   C.udb.version,

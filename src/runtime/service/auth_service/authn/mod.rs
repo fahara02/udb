@@ -390,7 +390,7 @@ impl AuthnServiceImpl {
         grpc_path: &str,
         action: &str,
     ) -> Result<String, Status> {
-        use crate::runtime::authz::{Authorizer, AuthzQuery, ResourceRef};
+        use crate::runtime::authz::{AuthzQuery, ResourceRef};
 
         // No engine wired, or not an over-the-wire request → skip (the action-scope
         // gate already ran). Return a fresh id so the envelope still links a value.
@@ -428,10 +428,11 @@ impl AuthnServiceImpl {
             purpose: "",
             attributes: &attributes,
         };
-        // Synchronous v2 snapshot decision (policy/role/relationship match) — the
-        // same engine the AuthzService `check_access` path uses; no Casbin model
-        // round-trip needed for the structured snapshot decision.
-        let decision = snapshot.load().authorize(&query);
+        // Casbin decision (policy/role/relationship match) — the same engine the
+        // data plane and the AuthzService `check_access` path use. Casbin-only:
+        // there is no legacy snapshot `authorize`; deny-by-default holds and an
+        // engine error fails closed inside `casbin_authorize` (deny).
+        let decision = snapshot.load().casbin_authorize(&query).await;
         if decision.allowed {
             return Ok(decision.decision_id);
         }

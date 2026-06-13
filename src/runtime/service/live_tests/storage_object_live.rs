@@ -7,7 +7,7 @@
 //!   UDB_LIVE_OBJECT_TESTS=1 cargo test --lib \
 //!     live_minio_storage_object_delete_roundtrip -- --ignored --nocapture
 
-use crate::runtime::DataBrokerRuntime;
+use super::support::live_runtime;
 use crate::runtime::core::setup_data::object_request_json;
 use uuid::Uuid;
 
@@ -36,7 +36,7 @@ async fn live_minio_storage_object_delete_roundtrip() {
         std::env::set_var("UDB_ALLOW_DEGRADED_BACKENDS", "true");
     }
 
-    let runtime = DataBrokerRuntime::from_env().await;
+    let runtime = live_runtime().await;
     let bucket = std::env::var("UDB_STORAGE_BUCKET").unwrap_or_else(|_| "udb-storage".to_string());
     let key = format!("ittest/{}.txt", Uuid::new_v4());
 
@@ -97,7 +97,7 @@ async fn live_minio_presign_put_get_roundtrip() {
         std::env::set_var("UDB_ALLOW_DEGRADED_BACKENDS", "true");
     }
 
-    let runtime = DataBrokerRuntime::from_env().await;
+    let runtime = live_runtime().await;
     let bucket = std::env::var("UDB_STORAGE_BUCKET").unwrap_or_else(|_| "udb-storage".to_string());
     let key = format!("presign/{}.txt", Uuid::new_v4());
     let http = reqwest::Client::new();

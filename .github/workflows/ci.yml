@@ -860,6 +860,12 @@ jobs:
         with:
           node-version: '20'
       - run: node scripts/check-versions.mjs
+      - name: Launcher asset-name conformance
+        # Every SDK launcher (+ template) must build the canonical published
+        # asset name udb-<os>-<arch>[-<variant>][.exe]; no Rust triple / version
+        # in name / archive / `macos`. Guards against the silent drift that broke
+        # all six launchers' auto-download. See scripts/check-launcher-assets.mjs.
+        run: node scripts/check-launcher-assets.mjs
 
   docs-links:
     name: Markdown local links + readiness artifacts

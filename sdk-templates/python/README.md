@@ -82,7 +82,8 @@ Installing the wheel makes a version-matched `udb` binary available via the
    (`%LOCALAPPDATA%\udb\bin\<version>` / `$XDG_CACHE_HOME/udb/bin/<version>`);
 4. the matching GitHub release asset
    (`https://github.com/fahara02/udb/releases/tag/v{{UDB_VERSION}}`,
-   `udb-v{{UDB_VERSION}}-<os>-<arch>[.exe]`), downloaded + cached.
+   `udb-<os>-<arch>[-<variant>][.exe]`, a raw binary — `<arch>`∈amd64|arm64,
+   `<variant>` from `$UDB_BIN_VARIANT`), downloaded + cached.
 
 Set `UDB_SKIP_DOWNLOAD=1` to forbid network fetches (PATH/cache only). The
 `{{UDB_VERSION}}` placeholder is baked in at generation time so the CLI always

@@ -485,11 +485,9 @@ fn external_jwt_provider_maps_configured_claims() {
     assert_eq!(p.auth_method, "external");
 }
 
-#[test]
-fn external_roles_alone_do_not_bypass_udb_policy() {
-    use crate::runtime::authz::{
-        Authorizer, AuthzPolicy, AuthzQuery, AuthzSnapshot, Effect, ResourceRef,
-    };
+#[tokio::test]
+async fn external_roles_alone_do_not_bypass_udb_policy() {
+    use crate::runtime::authz::{AuthzPolicy, AuthzQuery, AuthzSnapshot, Effect, ResourceRef};
     use std::collections::BTreeMap;
 
     let provider = ExternalJwtProvider::new(ExternalProviderConfig::default());
@@ -512,7 +510,7 @@ fn external_roles_alone_do_not_bypass_udb_policy() {
         ..Default::default()
     };
     assert!(
-        !empty.authorize(&q).allowed,
+        !empty.casbin_authorize(&q).await.allowed,
         "external roles must not bypass UDB authorization"
     );
 
@@ -528,5 +526,5 @@ fn external_roles_alone_do_not_bypass_udb_policy() {
         }],
         ..Default::default()
     };
-    assert!(snap.authorize(&q).allowed);
+    assert!(snap.casbin_authorize(&q).await.allowed);
 }

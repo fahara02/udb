@@ -1316,21 +1316,21 @@ fn portal_permissions_distinguish_viewer_and_operator() {
     );
 }
 
-// ── Broker v2 authz gate (UDB_AUTHZ_V2) — items 124-131 ──────────────────
-// These drive `DataBrokerService::authorize()` with the v2 decision engine
-// forced on per-instance (`set_authz_v2_override`), so the broker-level
-// allow/deny path is exercised deterministically — no live Postgres, no gRPC
-// server. The env flag `UDB_AUTHZ_V2` is a cached `OnceLock` and cannot vary
-// per test, which is exactly why the per-instance override exists. The broker
+// ── Broker authz gate (Casbin) — items 124-131 ──────────────────────────
+// These drive `DataBrokerService::authorize()` through the Casbin decision
+// engine (the ONLY broker authz path), so the broker-level allow/deny is
+// exercised deterministically — no live Postgres, no gRPC server. The broker
 // passes the raw RPC name (`Select`/`Upsert`/`PutPolicy`) as the operation, so
 // a matching policy carries the same operation string.
 
 fn v2_service(policies: Vec<crate::runtime::security::AbacPolicy>) -> DataBrokerService {
-    let mut svc = ready_service(); // abac_default_allow = false
+    let svc = ready_service(); // abac_default_allow = false
     if let Ok(mut p) = svc.abac_policies.write() {
         *p = policies;
     }
-    svc.set_authz_v2_override(true);
+    // Casbin is the only authz engine; refresh the snapshot so the new policies
+    // take effect (the gate reads the cached `Arc<AuthzSnapshot>`).
+    svc.refresh_abac_snapshot();
     svc
 }
 
@@ -1473,11 +1473,12 @@ async fn broker_v2_policy_reload_updates_decisions() {
 }
 
 #[tokio::test]
-async fn broker_v2_matches_legacy_abac_decisions() {
-    // 132 gate: the v2 decision engine must agree with the legacy `evaluate_abac`
-    // path on allow/deny for the same inputs, so flipping the broker default to
-    // v2 is safe. We run an identical matrix through both paths (toggled by the
-    // per-instance override) and assert the outcomes match.
+async fn broker_casbin_enforces_legacy_policy_semantics() {
+    // 132 gate (Casbin-only): the broker authz engine must produce the expected
+    // deny-by-default outcomes for the canonical allow / missing-scope / explicit-
+    // deny / no-match matrix. (Formerly compared a v2 path against the deleted
+    // legacy `evaluate_abac`; Casbin is now the only engine, so we assert the
+    // outcomes directly.)
     let policies = vec![
         allow_policy("Select", "udb:read"),
         crate::runtime::security::AbacPolicy {
@@ -1490,23 +1491,19 @@ async fn broker_v2_matches_legacy_abac_decisions() {
             required_scope: String::new(),
         },
     ];
+    // (ctx, message_type, operation, expected_allow)
     let cases = [
-        (billing_ctx(&["udb:read"]), "Payment", "Select"), // matching allow
-        (billing_ctx(&[]), "Payment", "Select"),           // missing required scope
-        (billing_ctx(&["udb:read"]), "Payment", "Delete"), // explicit deny wins
-        (billing_ctx(&["udb:write"]), "Payment", "Upsert"), // no matching policy
+        (billing_ctx(&["udb:read"]), "Payment", "Select", true), // matching allow
+        (billing_ctx(&[]), "Payment", "Select", false),          // missing required scope
+        (billing_ctx(&["udb:read"]), "Payment", "Delete", false), // explicit deny wins
+        (billing_ctx(&["udb:write"]), "Payment", "Upsert", false), // no matching policy
     ];
-    for (ctx, msg, op) in cases {
-        let mut legacy = v2_service(policies.clone());
-        legacy.set_authz_v2_override(false);
-        let legacy_ok = legacy.authorize(&ctx, msg, op).await.is_ok();
-
-        let v2 = v2_service(policies.clone()); // override = true
-        let v2_ok = v2.authorize(&ctx, msg, op).await.is_ok();
-
+    for (ctx, msg, op, expected) in cases {
+        let svc = v2_service(policies.clone());
+        let allowed = svc.authorize(&ctx, msg, op).await.is_ok();
         assert_eq!(
-            legacy_ok, v2_ok,
-            "v2 and legacy ABAC disagree for {msg}/{op} (legacy={legacy_ok}, v2={v2_ok})"
+            allowed, expected,
+            "Casbin decision for {msg}/{op} was {allowed}, expected {expected}"
         );
     }
 }

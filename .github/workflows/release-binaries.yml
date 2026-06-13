@@ -16,8 +16,9 @@ name: Release · binaries
 # Feature set: a PORTABLE subset of `default` plus the full auth surface. It
 # drops native-C backends that are
 # painful on Windows/macOS runners (kafka/rdkafka, cassandra/scylla,
-# mssql/tiberius, memcached, mongodb-native) while keeping the common surface
-# (postgres, qdrant, s3, redis, the REST backends, otel) and ships real OIDC +
+# mssql/tiberius, memcached) while keeping the common surface
+# (postgres, qdrant, s3, redis, mongodb-native [rustls, pure-Rust — local mongod
+# dev], the REST backends, otel) and ships real OIDC +
 # WebAuthn support in the CLI/broker binaries. The Linux Docker image still
 # ships full default features plus auth. A disabled backend's RPCs return
 # FailedPrecondition rather than disappearing.
@@ -182,4 +183,37 @@ jobs:
           files: |
             dist/${{ matrix.asset }}
             dist/${{ matrix.asset }}.sha256
+          fail_on_unmatched_files: true
+
+  # ── Per-release manifest.json: the single asset contract (name/os/arch/tier/
+  #    sha256/size) that the SDK launchers + the conformance gate resolve from,
+  #    instead of each of the six SDKs reconstructing asset names by hand (which
+  #    is exactly what silently drifted into three broken schemes). Runs after
+  #    every platform's binary is attached.
+  manifest:
+    name: Release manifest
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Download the published binaries + checksums
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download "${GITHUB_REF_NAME}" --dir dist --pattern 'udb-*'
+      - name: Generate manifest.json
+        run: |
+          node scripts/gen-release-manifest.mjs dist > dist/manifest.json
+          ( cd dist && sha256sum manifest.json > manifest.json.sha256 )
+          echo "── manifest.json ──"; cat dist/manifest.json
+      - name: Attach manifest to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/manifest.json
+            dist/manifest.json.sha256
           fail_on_unmatched_files: true

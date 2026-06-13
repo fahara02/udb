@@ -45,9 +45,9 @@ use crate::proto::{
     VectorUpsertRequest, ViewDefinition,
 };
 use crate::runtime::DataBrokerRuntime;
-use crate::runtime::authz::{Authorizer, AuthzQuery, AuthzSnapshot, Principal, ResourceRef};
+use crate::runtime::authz::{AuthzQuery, AuthzSnapshot, Principal, ResourceRef};
 use crate::security::{
-    AbacPolicy, SecurityConfig, SecurityContext, enforce_select_export_controls, evaluate_abac,
+    AbacPolicy, SecurityConfig, SecurityContext, enforce_select_export_controls,
     ip_matches_allow_entry, security_from_request, validate_bearer_token,
 };
 
@@ -89,20 +89,6 @@ fn build_abac_snapshot(
     let mut snapshot = AuthzSnapshot::from_abac_policies(version, policies);
     snapshot.default_allow = default_allow;
     Arc::new(snapshot)
-}
-
-/// Whether the v2 authz decision engine is enabled for broker authorization.
-/// Read once (`UDB_AUTHZ_V2`). Default ON as of item 132 — parity with the
-/// legacy `evaluate_abac` path is asserted by `broker_v2_matches_legacy_abac_decisions`.
-/// Set `UDB_AUTHZ_V2=0|false|no|off` to fall back to the legacy path.
-fn authz_v2_enabled() -> bool {
-    use std::sync::OnceLock;
-    static FLAG: OnceLock<bool> = OnceLock::new();
-    *FLAG.get_or_init(|| {
-        std::env::var("UDB_AUTHZ_V2")
-            .map(|v| !matches!(v.as_str(), "0" | "false" | "no" | "off"))
-            .unwrap_or(true)
-    })
 }
 
 fn startup_bool_env(key: &str) -> bool {
@@ -160,12 +146,6 @@ pub struct DataBrokerService {
     #[cfg(feature = "redis")]
     rate_limit_redis: Arc<tokio::sync::Mutex<Option<redis::aio::MultiplexedConnection>>>,
     abac_default_allow: bool,
-    /// Per-instance override for the v2 authz decision engine. `None` falls back
-    /// to the process-wide `UDB_AUTHZ_V2` env flag (`authz_v2_enabled`); `Some(b)`
-    /// forces v2 on/off for this instance. Lets tests exercise the v2 broker gate
-    /// deterministically without racing on the global `OnceLock`, and is the seam
-    /// the staged rollout (item 132) flips once parity is proven.
-    abac_v2_override: Option<bool>,
 }
 
 pub(crate) const UDB_PROTOCOL_VERSION: &str = "1.0.0";
@@ -267,7 +247,6 @@ impl DataBrokerService {
             #[cfg(feature = "redis")]
             rate_limit_redis: Arc::new(tokio::sync::Mutex::new(None)),
             abac_default_allow: false,
-            abac_v2_override: None,
         }
     }
 
@@ -288,7 +267,6 @@ impl DataBrokerService {
             #[cfg(feature = "redis")]
             rate_limit_redis: Arc::new(tokio::sync::Mutex::new(None)),
             abac_default_allow: false,
-            abac_v2_override: None,
         }
     }
 
@@ -321,18 +299,7 @@ impl DataBrokerService {
             #[cfg(feature = "redis")]
             rate_limit_redis: Arc::new(tokio::sync::Mutex::new(None)),
             abac_default_allow,
-            abac_v2_override: None,
         }
-    }
-
-    /// Force the v2 authz decision engine on/off for this instance, overriding
-    /// the process-wide `UDB_AUTHZ_V2` env flag. Used by broker authz tests to
-    /// exercise the v2 gate deterministically (the env flag is a cached
-    /// `OnceLock`, so it cannot vary per test).
-    #[cfg(test)]
-    pub(crate) fn set_authz_v2_override(&mut self, on: bool) {
-        self.abac_v2_override = Some(on);
-        self.refresh_abac_snapshot();
     }
 
     fn replace_abac_policies(&self, fresh: Vec<AbacPolicy>) {
@@ -539,53 +506,42 @@ impl DataBrokerService {
         }
     }
 
-    /// #112: per-item ABAC authorization usable from inside a `'static` batch
-    /// stream. `authorize` itself borrows `&self` (catalog-compat + rate-limit
-    /// prologue) and can't be moved into the streaming closure, but its ABAC
-    /// decision core only needs cloneable inputs — the cached `Arc<AuthzSnapshot>`
-    /// (v2) or the `Arc<RwLock<Vec<AbacPolicy>>>` (legacy) — which the batch
-    /// handlers capture once and call this with per streamed item. Mirrors the
-    /// v2/legacy branch in `authorize` and returns the per-item `decision_id`.
-    #[allow(clippy::too_many_arguments)]
-    pub(crate) fn authorize_message_item(
-        abac_v2: bool,
+    /// #112: per-item authorization usable from inside a `'static` batch stream.
+    /// `authorize` itself borrows `&self` (catalog-compat + rate-limit prologue)
+    /// and can't be moved into the streaming closure, but the decision core only
+    /// needs the cloneable cached `Arc<AuthzSnapshot>`, which the batch handlers
+    /// capture once and call this with per streamed item. Casbin-only: it runs the
+    /// EXACT same `casbin_authorize` path the single-item gate uses (deny-by-
+    /// default; a Casbin engine error fails closed to deny inside `casbin_authorize`).
+    /// Returns the per-item `decision_id` on allow.
+    pub(crate) async fn authorize_message_item(
         snapshot: &AuthzSnapshot,
-        policies: &RwLock<Vec<AbacPolicy>>,
-        default_allow: bool,
         security: &SecurityContext,
         message_type: &str,
         operation: &str,
     ) -> Result<String, Status> {
-        if abac_v2 {
-            if security.tenant_id.trim().is_empty() {
-                return Err(Status::unauthenticated("tenant_id is required"));
-            }
-            if security.purpose.trim().is_empty() {
-                return Err(Status::permission_denied("purpose is required"));
-            }
-            let principal = Principal::from_security_context(security, Vec::new());
-            let resource = ResourceRef::message(message_type);
-            let attributes = std::collections::BTreeMap::new();
-            let decision = snapshot.authorize(&AuthzQuery {
+        if security.tenant_id.trim().is_empty() {
+            return Err(Status::unauthenticated("tenant_id is required"));
+        }
+        if security.purpose.trim().is_empty() {
+            return Err(Status::permission_denied("purpose is required"));
+        }
+        let principal = Principal::from_security_context(security, Vec::new());
+        let resource = ResourceRef::message(message_type);
+        let attributes = std::collections::BTreeMap::new();
+        let decision = snapshot
+            .casbin_authorize(&AuthzQuery {
                 principal: &principal,
                 resource: &resource,
                 action: operation,
                 purpose: &security.purpose,
                 attributes: &attributes,
-            });
-            if decision.allowed {
-                Ok(decision.decision_id)
-            } else {
-                Err(Status::permission_denied(decision.deny_reason))
-            }
+            })
+            .await;
+        if decision.allowed {
+            Ok(decision.decision_id)
         } else {
-            let result = match policies.read() {
-                Ok(guard) => {
-                    evaluate_abac(&guard, security, message_type, operation, default_allow)
-                }
-                Err(_) => evaluate_abac(&[], security, message_type, operation, default_allow),
-            };
-            result.map(|()| Uuid::new_v4().to_string())
+            Err(Status::permission_denied(decision.deny_reason))
         }
     }
 

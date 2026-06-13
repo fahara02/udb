@@ -45,20 +45,30 @@ def _exe_suffix() -> str:
 def _asset_name() -> str:
     """GitHub release asset name for this platform.
 
-    Convention: ``udb-v<version>-<os>-<arch><ext>`` (e.g.
-    ``udb-v{{UDB_VERSION}}-linux-x86_64``, ``udb-v{{UDB_VERSION}}-windows-x86_64.exe``).
+    Convention: ``udb-<os>-<arch>[-<variant>]<ext>`` (e.g.
+    ``udb-linux-amd64``, ``udb-windows-amd64.exe``, ``udb-darwin-arm64``).
+
+    The published release attaches RAW binaries (no version in the name, no
+    archive). ``<os>`` is linux|darwin|windows, ``<arch>`` is amd64|arm64.
+    ``UDB_BIN_VARIANT`` appends ``-<variant>`` unless unset/empty/``portable``
+    (e.g. ``full`` -> ``udb-linux-amd64-full``). ``<ext>`` is ``.exe`` on
+    Windows, empty elsewhere.
     """
 
     system = platform.system().lower()
-    os_tag = {"linux": "linux", "darwin": "macos", "windows": "windows"}.get(system, system)
+    os_tag = {"linux": "linux", "darwin": "darwin", "windows": "windows"}.get(system, system)
     machine = platform.machine().lower()
     arch = {
-        "x86_64": "x86_64",
-        "amd64": "x86_64",
-        "aarch64": "aarch64",
-        "arm64": "aarch64",
+        "x86_64": "amd64",
+        "amd64": "amd64",
+        "aarch64": "arm64",
+        "arm64": "arm64",
     }.get(machine, machine)
-    return f"udb-v{UDB_VERSION}-{os_tag}-{arch}{_exe_suffix()}"
+    variant = ""
+    raw_variant = (os.environ.get("UDB_BIN_VARIANT") or "").strip()
+    if raw_variant and raw_variant.lower() != "portable":
+        variant = f"-{raw_variant}"
+    return f"udb-{os_tag}-{arch}{variant}{_exe_suffix()}"
 
 
 def _cache_dir() -> Path:

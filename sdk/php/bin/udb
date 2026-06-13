@@ -147,20 +147,30 @@ function releaseAssetName(): ?string
     $machine = strtolower(php_uname('m')); // x86_64 | amd64 | arm64 | aarch64 ...
 
     $arch = match (true) {
-        str_contains($machine, 'arm64'), str_contains($machine, 'aarch64') => 'aarch64',
-        str_contains($machine, '64') => 'x86_64',
+        str_contains($machine, 'arm64'), str_contains($machine, 'aarch64') => 'arm64',
+        str_contains($machine, '64') => 'amd64',
         default => null,
     };
-    if ($arch === null) {
+    $osTag = match ($os) {
+        'windows' => 'windows',
+        'darwin'  => 'darwin',
+        'linux'   => 'linux',
+        default   => null,
+    };
+    if ($arch === null || $osTag === null) {
         return null;
     }
 
-    return match ($os) {
-        'windows' => "udb-{$arch}-pc-windows-msvc.exe",
-        'darwin'  => "udb-{$arch}-apple-darwin",
-        'linux'   => "udb-{$arch}-unknown-linux-gnu",
-        default   => null,
-    };
+    // Canonical published scheme: udb-<os>-<arch>[-<variant>][.exe] (RAW binary,
+    // no version/triple/archive). <variant> comes from $UDB_BIN_VARIANT.
+    $variant = '';
+    $raw = trim((string) (getenv('UDB_BIN_VARIANT') ?: ''));
+    if ($raw !== '' && strtolower($raw) !== 'portable') {
+        $variant = '-' . $raw;
+    }
+    $ext = ($osTag === 'windows') ? '.exe' : '';
+
+    return "udb-{$osTag}-{$arch}{$variant}{$ext}";
 }
 
 /** Minimal HTTP GET that follows redirects (GitHub release assets 302). */

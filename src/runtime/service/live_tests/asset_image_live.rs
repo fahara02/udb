@@ -12,9 +12,7 @@ use crate::proto::udb::core::asset::services::v1 as asset_pb;
 use crate::proto::udb::core::asset::services::v1::asset_service_server::AssetService;
 use crate::proto::udb::core::storage::services::v1 as storage_pb;
 use crate::proto::udb::core::storage::services::v1::storage_service_server::StorageService;
-use crate::runtime::DataBrokerRuntime;
 use crate::runtime::core::setup_data::object_request_json;
-use std::sync::Arc;
 use tonic::Request;
 use uuid::Uuid;
 
@@ -46,7 +44,7 @@ async fn live_minio_asset_thumbnail_pipeline() {
     }
     let pool = live_pg_pool().await;
     migrate_native_service_db(&pool).await;
-    let runtime = Arc::new(DataBrokerRuntime::from_env().await);
+    let runtime = live_runtime().await;
 
     let storage = crate::runtime::service::storage_service::StorageServiceImpl::new()
         .with_postgres(Some(pool.clone()))

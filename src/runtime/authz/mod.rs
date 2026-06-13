@@ -1,17 +1,18 @@
-//! Stage 1 UDB-owned authorization engine.
+//! UDB-owned authorization model + Casbin enforcement.
 //!
-//! This is the library-free core of the auth plan (no external policy engine):
-//! runtime `Principal` / `ResourceRef` / `Decision` types and an `Authorizer`
-//! that evaluates an immutable policy snapshot supporting RBAC (roles + role
-//! bindings), ABAC (attribute conditions), and simple ReBAC (relationship
-//! tuples), with explicit-deny and priority ordering.
+//! Runtime `Principal` / `ResourceRef` / `Decision` types over an immutable
+//! [`AuthzSnapshot`] supporting RBAC (roles + role bindings), ABAC (attribute
+//! conditions), simple ReBAC (relationship tuples), explicit-deny and required
+//! scopes. The single decision path is [`AuthzSnapshot::casbin_authorize`]
+//! (see [`casbin_engine`]): a real Casbin PERM model drives subject/role/
+//! resource/action/domain matching, with the non-Casbin gates (scopes,
+//! conditions, relationships, purpose) pre-filtering which policies enter the
+//! enforcer and an explicit Deny short-circuiting before enforcement.
 //!
 //! It is intentionally decoupled from gRPC: callers map a `Decision` to a
-//! `tonic::Status` only at the service boundary (Milestone 7). The existing
-//! `AbacPolicy` is consumable via [`AuthzPolicy::from_abac`] so current policies
-//! keep working while the v2 model is populated.
+//! `tonic::Status` only at the service boundary. The existing `AbacPolicy` is
+//! consumable via [`AuthzPolicy::from_abac`] so legacy policies keep working.
 
-use std::cmp::Reverse;
 use std::collections::BTreeMap;
 
 use sha2::{Digest, Sha256};
@@ -50,34 +51,6 @@ pub fn rpc_action(rpc_name: &str) -> &'static str {
     }
 }
 
-/// Evaluate a broker request against the current legacy `AbacPolicy` set using
-/// the v2 engine, returning a structured `Decision`. This is the bridge the
-/// broker uses when `UDB_AUTHZ_V2` is enabled — it consumes the *same* loaded
-/// ABAC policies so behavior matches `evaluate_abac` (deny-wins, default-allow
-/// only when no policy is present) while producing a `decision_id`, matched
-/// policy ids, and a deny reason. The gRPC status mapping stays at the service
-/// boundary.
-pub fn decision_for_abac(
-    policies: &[AbacPolicy],
-    principal: &Principal,
-    message_type: &str,
-    operation: &str,
-    purpose: &str,
-    default_allow: bool,
-) -> Decision {
-    let mut snapshot = AuthzSnapshot::from_abac_policies("live-abac", policies);
-    snapshot.default_allow = default_allow;
-    let resource = ResourceRef::message(message_type);
-    let attributes = BTreeMap::new();
-    snapshot.authorize(&AuthzQuery {
-        principal,
-        resource: &resource,
-        action: operation,
-        purpose,
-        attributes: &attributes,
-    })
-}
-
 /// Back-compat wrapper for older call sites. Native authz DDL is generated from
 /// `proto/udb/core/authz/entity/**` through the normal UDB proto migration path.
 pub fn authz_catalog_ddl(_schema: &str) -> Vec<String> {
@@ -100,13 +73,6 @@ impl Effect {
         match self {
             Effect::Allow => "allow",
             Effect::Deny => "deny",
-        }
-    }
-    /// Deny sorts before Allow so that, at equal priority, an explicit deny wins.
-    fn rank(&self) -> u8 {
-        match self {
-            Effect::Deny => 0,
-            Effect::Allow => 1,
         }
     }
 }
@@ -334,11 +300,6 @@ pub struct Decision {
     pub via_role: bool,
 }
 
-/// What authorization decisions are made against.
-pub trait Authorizer: Send + Sync {
-    fn authorize(&self, req: &AuthzQuery<'_>) -> Decision;
-}
-
 /// A single authorization question.
 #[derive(Debug, Clone)]
 pub struct AuthzQuery<'a> {
@@ -437,79 +398,6 @@ impl AuthzSnapshot {
                 .iter()
                 .all(|scope| p.has_scope(scope)),
             Effect::Deny => true,
-        }
-    }
-}
-
-impl Authorizer for AuthzSnapshot {
-    fn authorize(&self, req: &AuthzQuery<'_>) -> Decision {
-        let roles = self.effective_roles(req.principal);
-
-        // Collect matching, enabled policies and order by (priority desc, then
-        // deny-before-allow at equal priority, then id) so the first decides.
-        let mut matched: Vec<&AuthzPolicy> = self
-            .policies
-            .iter()
-            .filter(|p| p.enabled && self.policy_matches(p, &roles, req))
-            .collect();
-        matched.sort_by_key(|p| (Reverse(p.priority), p.effect.rank(), p.id.clone()));
-
-        let decision_id = self.decision_id(req);
-        let matched_ids: Vec<String> = matched.iter().map(|p| p.id.clone()).collect();
-
-        // Deny-override: an explicit matched Deny wins unconditionally, even
-        // over a higher-priority Allow — matching the Casbin engine's
-        // deny-override so the two authz engines never disagree. Among denies
-        // the highest-priority one is reported (the vec is already sorted); if
-        // no Deny matched, the highest-priority Allow decides.
-        let chosen = matched
-            .iter()
-            .find(|p| p.effect == Effect::Deny)
-            .copied()
-            .or_else(|| matched.first().copied());
-
-        match chosen {
-            Some(policy) => {
-                let allowed = policy.effect == Effect::Allow;
-                Decision {
-                    decision_id,
-                    allowed,
-                    effect: policy.effect,
-                    deny_reason: if allowed {
-                        String::new()
-                    } else {
-                        format!("denied by policy {}", policy.id)
-                    },
-                    matched_policy_ids: matched_ids,
-                    required_scopes: policy.required_scopes.clone(),
-                    policy_version: self.version.clone(),
-                    relationship_version: self.relationship_version.clone(),
-                    cache_ttl_seconds: 0,
-                    audit_required: !allowed,
-                    via_role: allowed && !policy.role.trim().is_empty(),
-                }
-            }
-            None => {
-                // No policy matched → default deny (unless dev default_allow).
-                let allowed = self.policies.is_empty() && self.default_allow;
-                Decision {
-                    decision_id,
-                    allowed,
-                    effect: if allowed { Effect::Allow } else { Effect::Deny },
-                    deny_reason: if allowed {
-                        String::new()
-                    } else {
-                        "no authz policy matched request (default deny)".to_string()
-                    },
-                    matched_policy_ids: Vec::new(),
-                    required_scopes: Vec::new(),
-                    policy_version: self.version.clone(),
-                    relationship_version: self.relationship_version.clone(),
-                    cache_ttl_seconds: 0,
-                    audit_required: !allowed,
-                    via_role: false,
-                }
-            }
         }
     }
 }

@@ -144,12 +144,11 @@ impl DataBrokerService {
         // #112: capture the (cloneable) ABAC authz inputs so each streamed item's
         // own `message_type` is authorized inside the stream — the batch RPC's
         // `authorized_call!` only authorized `BatchSelect`, not the per-item types.
-        let abac_v2 = self
-            .abac_v2_override
-            .unwrap_or_else(super::authz_v2_enabled);
+        // Casbin-only per-item authz: capture the cloneable `Arc<AuthzSnapshot>`
+        // so each streamed item is decided through the SAME `casbin_authorize`
+        // path as the single-item gate — deny-by-default, no legacy `evaluate_abac`,
+        // no v2 flag. The stream body is async, so it `.await`s the decision.
         let abac_snapshot = self.current_abac_snapshot();
-        let abac_policies = self.abac_policies.clone();
-        let abac_default_allow = self.abac_default_allow;
         // #155: batch items are admitted and executed ONE AT A TIME on purpose.
         // The fair-admission permit is acquired PER ITEM (it drops at the end of
         // each loop iteration, not held across the whole batch) so every item
@@ -163,14 +162,12 @@ impl DataBrokerService {
                 // #112: authorize THIS item's message_type and stamp its own
                 // decision id (the batch-level grant covered only "BatchSelect").
                 let item_decision_id = DataBrokerService::authorize_message_item(
-                    abac_v2,
                     &abac_snapshot,
-                    &abac_policies,
-                    abac_default_allow,
                     &security_for_stream,
                     &item.message_type,
                     "Select",
-                )?;
+                )
+                .await?;
                 let item_context =
                     security_for_stream.request_context_with_decision(&item_decision_id);
                 // FIX-77: admission + inflight gauge + per-item deadline +
@@ -262,12 +259,9 @@ impl DataBrokerService {
         let security_for_stream = security.clone();
         // #112: capture ABAC authz inputs so each streamed item's own
         // `message_type` is authorized (batch grant covered only "BatchUpsert").
-        let abac_v2 = self
-            .abac_v2_override
-            .unwrap_or_else(super::authz_v2_enabled);
+        // Casbin-only per-item authz (see batch_select_inner): capture the
+        // cloneable snapshot and decide each item via `casbin_authorize`.
         let abac_snapshot = self.current_abac_snapshot();
-        let abac_policies = self.abac_policies.clone();
-        let abac_default_allow = self.abac_default_allow;
         // #155: per-item fair-admission permit (dropped each iteration) + per-item
         // timeout below — intentional bounded-concurrency admission for the
         // streaming RPC, not a permit-held-across-batch serialization bug.
@@ -275,14 +269,12 @@ impl DataBrokerService {
             while let Some(item) = stream.message().await? {
                 // #112: authorize THIS item's message_type + stamp its decision id.
                 let item_decision_id = DataBrokerService::authorize_message_item(
-                    abac_v2,
                     &abac_snapshot,
-                    &abac_policies,
-                    abac_default_allow,
                     &security_for_stream,
                     &item.message_type,
                     "Upsert",
-                )?;
+                )
+                .await?;
                 let item_context =
                     security_for_stream.request_context_with_decision(&item_decision_id);
                 // FIX-77: admission + inflight gauge + per-item deadline +

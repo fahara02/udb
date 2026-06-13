@@ -47,7 +47,7 @@ path = "src/main.rs"
 # code/deps are compiled out, and any gRPC-contract RPC it owns (e.g. VectorSearch
 # for qdrant, the object RPCs for s3) stays present but returns FailedPrecondition.
 # Postgres is the always-on core (sqlx is never gated).
-default = ["postgres", "mysql", "sqlite", "qdrant", "s3", "mongodb", "neo4j", "clickhouse", "redis", "elasticsearch", "memcached", "mssql", "weaviate", "pinecone", "cassandra", "azureblob", "gcs", "kafka", "otel", "runtime-logging", "http-client", "simd-codecs", "simd-checksum"]
+default = ["postgres", "mysql", "sqlite", "qdrant", "s3", "mongodb-native", "neo4j", "clickhouse", "redis", "elasticsearch", "memcached", "mssql", "weaviate", "pinecone", "cassandra", "azureblob", "gcs", "kafka", "otel", "runtime-logging", "http-client", "simd-codecs", "simd-checksum"]
 # D.2: exposes `udb::bench_internals` — `#[doc(hidden)]` pub wrappers over hot
 # `pub(crate)` functions so Criterion micro-benches (`benches/hotpath_bench.rs`)
 # can measure them without widening the public API. NOT a stable API; off by

@@ -1349,51 +1349,6 @@ pub fn service_identity_from_der(der: &[u8]) -> Option<String> {
         .map(ToString::to_string)
 }
 
-pub fn evaluate_abac(
-    policies: &[AbacPolicy],
-    context: &SecurityContext,
-    message_type: &str,
-    operation: &str,
-    default_allow: bool,
-) -> Result<(), Status> {
-    if context.tenant_id.trim().is_empty() {
-        return Err(Status::unauthenticated("x-tenant-id is required"));
-    }
-    if context.purpose.trim().is_empty() {
-        return Err(Status::permission_denied("x-purpose is required"));
-    }
-
-    let mut matched_allow = false;
-    for policy in policies {
-        if !matches_policy(policy, context, message_type, operation) {
-            continue;
-        }
-        if !policy.required_scope.trim().is_empty() && !context.has_scope(&policy.required_scope) {
-            continue;
-        }
-        match policy.effect {
-            PolicyEffect::Deny => {
-                return Err(Status::permission_denied("ABAC policy denied request"));
-            }
-            PolicyEffect::Allow => matched_allow = true,
-        }
-    }
-
-    if policies.is_empty() {
-        if default_allow {
-            Ok(())
-        } else {
-            Err(Status::permission_denied("no ABAC policies are loaded"))
-        }
-    } else if matched_allow {
-        Ok(())
-    } else {
-        Err(Status::permission_denied(
-            "no ABAC allow policy matched request",
-        ))
-    }
-}
-
 pub fn enforce_select_export_controls(
     manifest: &CatalogManifest,
     context: &SecurityContext,
@@ -1458,23 +1413,6 @@ pub fn enforce_select_export_controls(
     } else {
         Ok(())
     }
-}
-
-fn matches_policy(
-    policy: &AbacPolicy,
-    context: &SecurityContext,
-    message_type: &str,
-    operation: &str,
-) -> bool {
-    wildcard(&policy.service_identity, &context.service_identity)
-        && wildcard(&policy.tenant_id, &context.tenant_id)
-        && wildcard(&policy.purpose, &context.purpose)
-        && wildcard(&policy.message_type, message_type)
-        && wildcard(&policy.operation, operation)
-}
-
-fn wildcard(pattern: &str, value: &str) -> bool {
-    pattern.trim().is_empty() || pattern == "*" || pattern == value
 }
 
 fn is_aead_or_pii_column(column: &ManifestColumn) -> bool {
@@ -2148,36 +2086,6 @@ mod tests {
     }
 
     #[test]
-    fn abac_denies_empty_tenant() {
-        let context = SecurityContext {
-            purpose: "read".to_string(),
-            ..SecurityContext::default()
-        };
-        assert!(evaluate_abac(&[], &context, "M", "Select", true).is_err());
-    }
-
-    #[test]
-    fn abac_allows_matching_policy() {
-        let context = SecurityContext {
-            tenant_id: "t1".to_string(),
-            purpose: "verification".to_string(),
-            service_identity: "svc:go-orchestrator".to_string(),
-            scopes: vec!["udb:read".to_string()],
-            ..SecurityContext::default()
-        };
-        let policies = vec![AbacPolicy {
-            effect: PolicyEffect::Allow,
-            service_identity: "svc:go-orchestrator".to_string(),
-            tenant_id: "*".to_string(),
-            purpose: "verification".to_string(),
-            message_type: "*".to_string(),
-            operation: "Select".to_string(),
-            required_scope: "udb:read".to_string(),
-        }];
-        assert!(evaluate_abac(&policies, &context, "Any", "Select", true).is_ok());
-    }
-
-    #[test]
     fn lint_policies_empty_gives_deny_by_default_warning() {
         let findings = lint_policies(&[]);
         assert_eq!(findings.len(), 1);
@@ -2216,53 +2124,6 @@ mod tests {
     }
 
     // ── Phase 12: ABAC service policy checks ─────────────────────────────────
-
-    #[test]
-    fn abac_denies_wrong_scope() {
-        let ctx = make_context("tenant-1", "ocr", "example.ocr.python", &["udb:read"]);
-        let policies = vec![make_allow_policy(
-            "example.ocr.python",
-            "ocr",
-            "Upsert",
-            "udb:write",
-        )];
-        // Has read scope but policy requires write — should be denied
-        let result = evaluate_abac(&policies, &ctx, "DocumentExtraction", "Upsert", false);
-        assert!(
-            result.is_err(),
-            "Should deny when required scope is not in caller's scopes"
-        );
-    }
-
-    #[test]
-    fn abac_denies_wrong_purpose() {
-        let ctx = make_context("tenant-1", "reporting", "example.ocr.python", &["udb:read"]);
-        let policies = vec![make_allow_policy(
-            "example.ocr.python",
-            "ocr",
-            "Select",
-            "udb:read",
-        )];
-        // Policy only allows purpose=ocr, caller has purpose=reporting
-        let result = evaluate_abac(&policies, &ctx, "DocumentExtraction", "Select", false);
-        assert!(
-            result.is_err(),
-            "Should deny when purpose does not match policy"
-        );
-    }
-
-    #[test]
-    fn abac_default_allow_bypasses_empty_policies() {
-        let ctx = make_context("tenant-1", "ocr", "example.ocr.python", &["udb:read"]);
-        // With default_allow=true and no policies, should pass
-        let result = evaluate_abac(&[], &ctx, "DocumentExtraction", "Select", true);
-        // Note: empty tenant check happens first — this will still fail due to non-empty tenant
-        // This tests that with a valid tenant + default_allow + no policies, we pass.
-        assert!(
-            result.is_ok(),
-            "default_allow=true with no policies should permit calls with valid tenant"
-        );
-    }
 
     #[test]
     fn abac_deny_policy_overrides_allow() {

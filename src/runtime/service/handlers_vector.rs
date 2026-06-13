@@ -175,25 +175,20 @@ impl DataBrokerService {
         let security_for_stream = security.clone();
         // #112: per-item authorization — the batch grant covered only
         // "VectorBatchUpsert", not each streamed item's target collection.
-        let abac_v2 = self
-            .abac_v2_override
-            .unwrap_or_else(super::authz_v2_enabled);
+        // Casbin-only per-item authz (see batch_select_inner): capture the
+        // cloneable snapshot and decide each item via `casbin_authorize`.
         let abac_snapshot = self.current_abac_snapshot();
-        let abac_policies = self.abac_policies.clone();
-        let abac_default_allow = self.abac_default_allow;
         let out = async_stream::try_stream! {
             while let Some(item) = stream.message().await? {
                 metrics.inc_vector_op(&item.collection, "batch_upsert");
                 // #112: authorize THIS item's collection + stamp its decision id.
                 let item_decision_id = DataBrokerService::authorize_message_item(
-                    abac_v2,
                     &abac_snapshot,
-                    &abac_policies,
-                    abac_default_allow,
                     &security_for_stream,
                     &item.collection,
                     "VectorUpsert",
-                )?;
+                )
+                .await?;
                 let item_context =
                     security_for_stream.request_context_with_decision(&item_decision_id);
                 // FIX-77: admission + inflight gauge + per-item deadline +

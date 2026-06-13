@@ -227,6 +227,35 @@ impl AuthzSnapshot {
             Ok(model) => model,
             Err(err) => return self.casbin_error(decision_id, &err),
         };
+        let enforcer = match cached_enforcer(model, model_text, &applicable).await {
+            Ok(enforcer) => enforcer,
+            Err(err) => return self.casbin_error(decision_id, &err),
+        };
+
+        // The remainder is fully synchronous once the enforcer is in hand; it is
+        // shared with any other caller that has already resolved an `Enforcer`
+        // (DRY: one enforce/Decision implementation, never duplicated).
+        self.enforce_decision(decision_id, &enforcer, &applicable, &roles, req)
+    }
+
+    /// Synchronous Casbin enforce + `Decision` construction over a *pre-built*
+    /// enforcer. This is the single, shared enforce tail: subject/identity/role
+    /// candidate expansion, per-selector enforce, granting-policy resolution and
+    /// `Decision` assembly. [`casbin_authorize_with_model`] is its only caller in
+    /// the default path; factoring it out keeps the enforce logic in ONE place so
+    /// no second authorization path can drift from (or fail open relative to) it.
+    ///
+    /// Fail-closed: `enforce()` errors collapse to `false` (deny) per candidate;
+    /// a request that matches no Allow line denies with the Casbin PERM reason.
+    fn enforce_decision(
+        &self,
+        decision_id: String,
+        enforcer: &Enforcer,
+        applicable: &[&AuthzPolicy],
+        roles: &[String],
+        req: &AuthzQuery<'_>,
+    ) -> Decision {
+        let principal = req.principal;
         let subject = if principal.subject.trim().is_empty() {
             principal.principal_id.clone()
         } else {
@@ -247,16 +276,12 @@ impl AuthzSnapshot {
                 request_subjects.push(id.to_string());
             }
         }
-        for role in &roles {
+        for role in roles {
             let role = role.trim();
             if !role.is_empty() && !request_subjects.iter().any(|s| s == role) {
                 request_subjects.push(role.to_string());
             }
         }
-        let enforcer = match cached_enforcer(model, model_text, &applicable).await {
-            Ok(enforcer) => enforcer,
-            Err(err) => return self.casbin_error(decision_id, &err),
-        };
 
         let dom = slot(&principal.tenant_id);
         // Match AuthzSnapshot::resource_match, which tests the policy resource
@@ -299,7 +324,7 @@ impl AuthzSnapshot {
             let mut grantors: Vec<&AuthzPolicy> = applicable
                 .iter()
                 .copied()
-                .filter(|p| p.effect == Effect::Allow && self.policy_matches(p, &roles, req))
+                .filter(|p| p.effect == Effect::Allow && self.policy_matches(p, roles, req))
                 .collect();
             grantors.sort_by_key(|p| std::cmp::Reverse(p.priority));
             grantors.first().copied()

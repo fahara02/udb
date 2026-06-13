@@ -100,7 +100,8 @@ generation time):
 3. A `udb` already on `$PATH` whose `--version` matches (excluding the launcher).
 4. Otherwise download the per-OS/arch release asset from
    `github.com/fahara02/udb` (tag `v{{UDB_VERSION}}`,
-   `udb-v{{UDB_VERSION}}-<goos>-<goarch>.{tar.gz|zip}`) into the cache and exec it.
+   `udb-<os>-<arch>[-<variant>][.exe]`, a raw binary — `<os>`∈linux|darwin|windows,
+   `<arch>`∈amd64|arm64, `<variant>` from `$UDB_BIN_VARIANT`) into the cache and exec it.
 
 Set `UDB_NO_DOWNLOAD=1` to forbid the network fallback. All args, stdio, and the
 exit code are forwarded. Because the version is pinned by the install tag, the
