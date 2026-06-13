@@ -15,14 +15,15 @@ use redis::AsyncCommands;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use super::dialect::projection_retry_delay_secs;
 use super::system_store::{
     AdminAuditChainReport, AdminAuditInsert, AdminAuditListFilter, AdminAuditRow,
     CompensationStatus, DeadLetterGroup, MigrationAuditStore, MigrationOpInsert, MigrationOpRow,
-    MigrationRunInsert, MigrationRunRow, MigrationRunState, MigrationRunsFilter, PendingTaskMetric,
-    ProjectionClaimFilter, ProjectionTaskInsert, ProjectionTaskRow, ProjectionTaskStatus,
-    ProjectionTaskStore, ProjectionTaskSummary, SagaInsert, SagaListFilter, SagaRow, SagaStatus,
-    SagaStore, SagaSummary, SystemStoreError, SystemStoreResult, compute_admin_audit_hash,
-    verify_admin_audit_chain_step,
+    MigrationRunInsert, MigrationRunRow, MigrationRunState, MigrationRunsFilter, OpLedgerStatus,
+    PendingTaskMetric, ProjectionClaimFilter, ProjectionTaskInsert, ProjectionTaskRow,
+    ProjectionTaskStatus, ProjectionTaskStore, ProjectionTaskSummary, SagaInsert, SagaListFilter,
+    SagaRow, SagaStatus, SagaStore, SagaSummary, SystemStoreError, SystemStoreResult,
+    compute_admin_audit_hash, verify_admin_audit_chain_step,
 };
 use super::{CanonicalStore, DurabilityToken};
 
@@ -168,19 +169,6 @@ impl RedisCanonicalStore {
             .zrem(self.key("projection:claimable"), task_id.to_string())
             .await
             .map_err(|err| SystemStoreError::query("redis", "ZREM projection:claimable", err))?;
-        Ok(removed > 0)
-    }
-
-    async fn remove_projection_member(&self, task_id: Uuid) -> SystemStoreResult<bool> {
-        let row_key = self.projection_task_key(task_id);
-        let mut conn = self
-            .connection()
-            .await
-            .map_err(|err| SystemStoreError::io("redis", err))?;
-        let removed: i64 = conn
-            .srem(self.key("projection:all"), row_key)
-            .await
-            .map_err(|err| SystemStoreError::query("redis", "SREM projection:all", err))?;
         Ok(removed > 0)
     }
 
@@ -351,16 +339,24 @@ impl CanonicalStore for RedisCanonicalStore {
         ttl: Duration,
     ) -> Result<bool, String> {
         let key = self.key(&format!("lease:{lease_name}"));
-        let ttl_ms = ttl.as_millis().max(1) as u64;
+        let ttl_ms = ttl.as_millis() as u64;
         let mut conn = self.connection().await?;
         redis::Script::new(
             "local current = redis.call('GET', KEYS[1]); \
              if not current then \
-               redis.call('SET', KEYS[1], ARGV[1], 'PX', ARGV[2]); \
+               if tonumber(ARGV[2]) <= 0 then \
+                 redis.call('DEL', KEYS[1]); \
+               else \
+                 redis.call('SET', KEYS[1], ARGV[1], 'PX', ARGV[2]); \
+               end; \
                return 1; \
              end; \
              if current == ARGV[1] then \
-               redis.call('PEXPIRE', KEYS[1], ARGV[2]); \
+               if tonumber(ARGV[2]) <= 0 then \
+                 redis.call('DEL', KEYS[1]); \
+               else \
+                 redis.call('PEXPIRE', KEYS[1], ARGV[2]); \
+               end; \
                return 1; \
              end; \
              return 0",
@@ -557,7 +553,6 @@ impl ProjectionTaskStore for RedisCanonicalStore {
         row.next_retry_at = None;
         self.set_json(&row_key, &row).await?;
         let _ = self.remove_claimable(task_id).await?;
-        let _ = self.remove_projection_member(task_id).await?;
         Ok(())
     }
 
@@ -568,6 +563,15 @@ impl ProjectionTaskStore for RedisCanonicalStore {
         new_status: ProjectionTaskStatus,
         error: &str,
     ) -> SystemStoreResult<()> {
+        if !matches!(
+            new_status,
+            ProjectionTaskStatus::Failed | ProjectionTaskStatus::DeadLetter
+        ) {
+            return Err(SystemStoreError::InvalidInput(format!(
+                "mark_projection_task_failed only accepts FAILED or DEAD_LETTER, got {}",
+                new_status.as_str()
+            )));
+        }
         let row_key = self.projection_task_key(task_id);
         let Some(mut row) = self.get_json::<ProjectionTaskRow>(&row_key).await? else {
             return Ok(());
@@ -576,15 +580,15 @@ impl ProjectionTaskStore for RedisCanonicalStore {
         row.retry_count = new_retry_count;
         row.last_error = error.to_string();
         row.updated_at = Utc::now();
-        row.next_retry_at = (new_status == ProjectionTaskStatus::Failed).then_some(row.updated_at);
+        row.next_retry_at = (new_status == ProjectionTaskStatus::Failed).then(|| {
+            row.updated_at + chrono::Duration::seconds(projection_retry_delay_secs(new_retry_count))
+        });
         self.set_json(&row_key, &row).await?;
         if new_status == ProjectionTaskStatus::Failed {
-            self.add_claimable(task_id, row.updated_at).await?;
+            self.add_claimable(task_id, row.next_retry_at.unwrap_or(row.updated_at))
+                .await?;
         } else {
             let _ = self.remove_claimable(task_id).await?;
-            if new_status == ProjectionTaskStatus::Completed {
-                let _ = self.remove_projection_member(task_id).await?;
-            }
         }
         Ok(())
     }
@@ -878,9 +882,12 @@ impl SagaStore for RedisCanonicalStore {
             SagaStatus::FailedCompensation | SagaStatus::ManualReview
         ) {
             return Err(SystemStoreError::InvalidInput(format!(
-                "saga {saga_id} is not eligible for recompensation"
+                "saga {saga_id} is not in a retryable state (must be failed_compensation or manual_review)"
             )));
         }
+        row.status = SagaStatus::Indeterminate;
+        row.last_error.clear();
+        row.retry_count += 1;
         row.compensation_status = CompensationStatus::RetryRequested;
         row.updated_at = Utc::now();
         self.set_json(&key, &row).await
@@ -1179,7 +1186,7 @@ impl MigrationAuditStore for RedisCanonicalStore {
             status: op.status,
             payload_json: op.payload_json.clone(),
             error: op.error.clone(),
-            applied_at: Some(Utc::now()),
+            applied_at: matches!(op.status, OpLedgerStatus::Applied).then(Utc::now),
         };
         let key = self.migration_op_key(id);
         self.set_json(&key, &row).await?;
@@ -1207,7 +1214,9 @@ impl MigrationAuditStore for RedisCanonicalStore {
     ) -> SystemStoreResult<()> {
         let key = self.migration_run_key(run_id);
         let Some(mut row) = self.get_json::<MigrationRunRow>(&key).await? else {
-            return Ok(());
+            return Err(SystemStoreError::InvalidInput(format!(
+                "migration run {run_id} not found for finish_migration_run"
+            )));
         };
         row.state = new_state;
         row.error = error.to_string();
