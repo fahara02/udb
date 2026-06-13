@@ -753,7 +753,7 @@ jobs:
         working-directory: sdk/typescript
         run: npm ci --no-audit --no-fund
       - name: Build UDB broker
-        run: cargo build --locked --bin udb --no-default-features --features "postgres,mongodb-native,s3,runtime-logging"
+        run: cargo build --locked --bin udb --no-default-features --features "postgres,mongodb-native,s3,kafka,runtime-logging"
       - name: Start Kafka
         shell: bash
         run: |

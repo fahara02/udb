@@ -156,12 +156,28 @@ function describeGrpcError(err: unknown): string {
   return `${codeName}: ${anyErr?.details ?? anyErr?.message ?? String(err)}`;
 }
 
+function reachedUdbHandler(err: unknown): boolean {
+  const anyErr = err as any;
+  const text = String(
+    anyErr?.details ??
+    anyErr?.message ??
+    anyErr?.udb?.details ??
+    anyErr?.udb?.message ??
+    "",
+  );
+  return /\budb\s+[\w.]+\/[A-Za-z0-9_]+:/.test(text) || /\(code=[A-Z_]+\)/.test(text);
+}
+
+function isFatalMountError(err: unknown): boolean {
+  const code = grpcCode(err);
+  return code !== undefined && FATAL_CONNECTIVITY_CODES.has(code) && !reachedUdbHandler(err);
+}
+
 async function expectMounted(label: string, op: () => Promise<unknown>): Promise<void> {
   try {
     await op();
   } catch (err) {
-    const code = grpcCode(err);
-    if (code !== undefined && FATAL_CONNECTIVITY_CODES.has(code)) {
+    if (isFatalMountError(err)) {
       throw new Error(`${label} did not reach an implemented live RPC: ${describeGrpcError(err)}`);
     }
   }
@@ -184,8 +200,7 @@ async function expectStreamMounted(
     };
     const timer = setTimeout(() => finish(), 750);
     stream.once("error", (err: grpc.ServiceError) => {
-      const code = grpcCode(err);
-      if (code !== undefined && FATAL_CONNECTIVITY_CODES.has(code)) {
+      if (isFatalMountError(err)) {
         finish(new Error(`${label} did not reach an implemented live stream RPC: ${describeGrpcError(err)}`));
       } else {
         finish();
