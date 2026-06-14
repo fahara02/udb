@@ -138,6 +138,10 @@ jobs:
           NUGET_API_TOKEN: ${{ secrets.NUGET_API_TOKEN }}
         run: |
           set -euo pipefail
+          if [ -z "${NUGET_API_TOKEN:-}" ]; then
+            echo "::warning::NUGET_API_TOKEN is not configured; skipping Udb.Client publish."
+            exit 0
+          fi
           dotnet nuget push ./nupkg/*.nupkg \
             --api-key "${NUGET_API_TOKEN}" \
             --source https://api.nuget.org/v3/index.json \
@@ -150,6 +154,10 @@ jobs:
           NUGET_API_TOKEN: ${{ secrets.NUGET_API_TOKEN }}
         run: |
           set -euo pipefail
+          if [ -z "${NUGET_API_TOKEN:-}" ]; then
+            echo "::warning::NUGET_API_TOKEN is not configured; skipping Udb.Cli publish."
+            exit 0
+          fi
           dotnet nuget push ./nupkg/*.nupkg \
             --api-key "${NUGET_API_TOKEN}" \
             --source https://api.nuget.org/v3/index.json \
