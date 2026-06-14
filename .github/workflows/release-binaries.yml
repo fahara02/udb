@@ -56,6 +56,10 @@ env:
 permissions:
   contents: write
 
+concurrency:
+  group: release-binaries-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # Gate the whole release on version consistency: the `v<x.y.z>` tag must equal
   # the crate version in Cargo.toml, and every manifest/protocol constant must
@@ -212,6 +216,26 @@ jobs:
             dist/${{ matrix.asset }}
             dist/${{ matrix.asset }}.sha256
 
+      - name: Guard tag still points at this commit
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ref_json="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${GITHUB_REF_NAME}")"
+          ref_type="$(jq -r '.object.type' <<<"${ref_json}")"
+          ref_sha="$(jq -r '.object.sha' <<<"${ref_json}")"
+          if [ "${ref_type}" = "tag" ]; then
+            tag_json="$(gh api "repos/${GITHUB_REPOSITORY}/git/tags/${ref_sha}")"
+            ref_type="$(jq -r '.object.type' <<<"${tag_json}")"
+            ref_sha="$(jq -r '.object.sha' <<<"${tag_json}")"
+          fi
+          if [ "${ref_type}" != "commit" ] || [ "${ref_sha}" != "${GITHUB_SHA}" ]; then
+            echo "::error::${GITHUB_REF_NAME} now points at ${ref_type} ${ref_sha}, not this workflow commit ${GITHUB_SHA}; refusing to publish stale binary asset."
+            exit 1
+          fi
+
       - name: Attach to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
@@ -237,6 +261,24 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+      - name: Guard tag still points at this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ref_json="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${GITHUB_REF_NAME}")"
+          ref_type="$(jq -r '.object.type' <<<"${ref_json}")"
+          ref_sha="$(jq -r '.object.sha' <<<"${ref_json}")"
+          if [ "${ref_type}" = "tag" ]; then
+            tag_json="$(gh api "repos/${GITHUB_REPOSITORY}/git/tags/${ref_sha}")"
+            ref_type="$(jq -r '.object.type' <<<"${tag_json}")"
+            ref_sha="$(jq -r '.object.sha' <<<"${tag_json}")"
+          fi
+          if [ "${ref_type}" != "commit" ] || [ "${ref_sha}" != "${GITHUB_SHA}" ]; then
+            echo "::error::${GITHUB_REF_NAME} now points at ${ref_type} ${ref_sha}, not this workflow commit ${GITHUB_SHA}; refusing to publish stale release manifest."
+            exit 1
+          fi
       - name: Download the published binaries + checksums
         env:
           GH_TOKEN: ${{ github.token }}
