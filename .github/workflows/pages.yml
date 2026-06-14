@@ -47,6 +47,10 @@ jobs:
         run: |
           mkdir -p docs/site/assets
           cp -v docs/assets/*.svg docs/site/assets/
+      - name: Preserve published benchmark results
+        run: |
+          curl -fsSL "https://${GITHUB_REPOSITORY_OWNER}.github.io/udb/bench-results.json" \
+            -o docs/site/bench-results.json || true
       - name: Build UDB's parser to WebAssembly (real udb-portable, not a mock)
         run: |
           rustup target add wasm32-unknown-unknown

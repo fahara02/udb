@@ -70,8 +70,8 @@ header.nav{position:sticky;top:0;z-index:60;backdrop-filter:blur(14px) saturate(
 .brand{display:flex;align-items:center;gap:11px;font-weight:900;letter-spacing:.04em;color:var(--text);font-size:1.05rem}
 .brand:hover{text-decoration:none}
 .brand img{width:32px;height:32px;border-radius:9px;box-shadow:0 6px 18px rgba(0,0,0,.45)}
-.nav-links{margin-left:auto;display:flex;gap:22px;align-items:center}
-.nav-links a{color:var(--muted);font-size:.9rem;font-weight:600;position:relative}
+.nav-links{margin-left:auto;display:flex;gap:18px;align-items:center}
+.nav-links a{color:var(--muted);font-size:.86rem;font-weight:600;position:relative}
 .nav-links a:not(.nav-cta)::after{content:"";position:absolute;left:0;right:100%;bottom:-6px;height:2px;
   background:var(--grad-cool);border-radius:2px;transition:right .25s var(--ease)}
 .nav-links a:not(.nav-cta):hover{color:var(--text);text-decoration:none}
@@ -259,6 +259,32 @@ td.n{text-align:right;font-weight:800;font-variant-numeric:tabular-nums}
 .sdk{background:var(--panel);border:1px solid var(--line-2);border-radius:13px;padding:18px 10px;text-align:center;font-weight:800;color:var(--text);transition:.18s}
 .sdk:hover{border-color:var(--cyan);text-decoration:none;transform:translateY(-3px)}
 .sdk small{display:block;color:var(--muted);font-weight:600;font-size:.72rem;margin-top:4px}
+
+/* ── Benchmarks ── */
+.bench-page{padding-top:34px}
+.bench-hero{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:24px;align-items:end;
+  border:1px solid var(--line-2);border-radius:var(--radius);padding:28px;
+  background:linear-gradient(135deg,rgba(0,134,255,.12),rgba(255,159,28,.08))}
+.bench-kpis{display:grid;grid-template-columns:repeat(2,minmax(120px,1fr));gap:12px}
+.bench-kpi{border:1px solid var(--line-2);border-radius:14px;background:rgba(8,10,13,.55);padding:13px 15px}
+.bench-kpi span{display:block;color:var(--muted);font-size:.73rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+.bench-kpi b{font-size:1.6rem;line-height:1.1;font-variant-numeric:tabular-nums}
+.bench-chart-card{border:1px solid var(--line-2);border-radius:var(--radius);background:linear-gradient(180deg,var(--panel),var(--bg-2));padding:20px;overflow:hidden}
+.bench-chart-head{display:flex;justify-content:space-between;gap:18px;align-items:start;margin-bottom:14px}
+.bench-chart-head h3{margin:0;font-size:1.14rem}.bench-chart-head p{margin:4px 0 0;color:var(--muted)}
+.bench-curve{display:block;width:100%;height:auto;min-height:260px}
+.bench-sdk-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.bench-sdk-card{border:1px solid var(--line-2);border-radius:var(--radius);background:var(--panel);padding:18px;min-height:154px}
+.bench-sdk-card.ok{border-color:rgba(0,229,255,.35)}.bench-sdk-card.fail{border-color:rgba(255,107,107,.45)}.bench-sdk-card.skip{opacity:.78}
+.bench-sdk-top{display:flex;justify-content:space-between;gap:12px;align-items:center}
+.bench-sdk-top b{font-size:1rem}.bench-sdk-top span,.bench-status{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;font-weight:900;border-radius:999px;padding:4px 8px}
+.bench-sdk-top span.ok,.bench-status.ok{background:rgba(34,197,94,.14);color:#86efac}
+.bench-sdk-top span.fail,.bench-status.fail{background:rgba(255,107,107,.14);color:#fca5a5}
+.bench-sdk-top span.skip,.bench-status.skip{background:rgba(154,167,184,.14);color:#cbd5e1}
+.bench-sdk-main{margin-top:18px;font-size:2rem;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;background:var(--grad-text);-webkit-background-clip:text;background-clip:text;color:transparent}
+.bench-sdk-card p{margin:12px 0 0;color:var(--muted);font-size:.9rem}
+@media(max-width:900px){.bench-hero{grid-template-columns:1fr}.bench-kpis,.bench-sdk-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:620px){.bench-kpis,.bench-sdk-grid{grid-template-columns:1fr}.bench-chart-head{display:block}.bench-chart-head .btn{margin-top:12px}}
 
 /* ── CTA band ── */
 .ctaband{position:relative;border:1px solid var(--line-2);border-radius:24px;padding:48px;text-align:center;overflow:hidden;

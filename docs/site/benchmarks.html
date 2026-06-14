@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UDB SDK Benchmarks</title>
+<meta name="description" content="Live UDB SDK benchmark results across Go, Python, TypeScript, PHP, C#, and Java, measured against the published release binary.">
+<meta name="theme-color" content="#121214">
+<link rel="icon" type="image/svg+xml" href="./assets/udb_logo.svg">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="brand" href="./index.html"><img src="./assets/udb_logo.svg" alt="UDB logo">UDB</a>
+    <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="./architecture.html">Architecture</a>
+      <a href="./data-plane.html">Data&nbsp;Plane</a>
+      <a href="./control-plane.html">Control&nbsp;Plane</a>
+      <a href="./security.html">Security</a>
+      <a href="./enterprise.html">Enterprise</a>
+      <a href="./sdks.html">SDKs</a>
+      <a class="active" href="./benchmarks.html">Benchmarks</a>
+      <a href="./playground.html">Playground</a>
+      <a class="nav-cta" href="https://github.com/fahara02/udb">GitHub ↗</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="page-head">
+    <div class="wrap">
+      <div class="eyebrow reveal">Release binary · live SDKs</div>
+      <h1 class="reveal">Benchmark <span class="g">curves</span></h1>
+      <p class="lead reveal d1">CI runs the published UDB release binary and records live SDK latency reports as JSON. The curve tracks mean per-service latency over recent benchmark runs.</p>
+    </div>
+  </section>
+
+  <section class="bench-page">
+    <div class="wrap">
+      <div id="bench-status" class="callout cool">Loading benchmark results...</div>
+
+      <div class="bench-hero mt28">
+        <div>
+          <div class="eyebrow">Current run</div>
+          <h2 id="bench-title">No benchmark JSON loaded</h2>
+          <p id="bench-meta" class="lead"></p>
+        </div>
+        <div class="bench-kpis" id="bench-kpis"></div>
+      </div>
+
+      <div class="bench-chart-card mt28">
+        <div class="bench-chart-head">
+          <div>
+            <h3>SDK latency trend</h3>
+            <p>Mean service latency in milliseconds. Lower is better.</p>
+          </div>
+          <a class="btn ghost" href="./bench-results.json">Raw JSON</a>
+        </div>
+        <svg id="bench-curve" class="bench-curve" viewBox="0 0 980 360" role="img" aria-label="SDK benchmark latency curves"></svg>
+      </div>
+
+      <div id="bench-sdk-grid" class="bench-sdk-grid mt28"></div>
+
+      <div class="tablewrap mt28">
+        <table>
+          <thead>
+            <tr>
+              <th>SDK</th>
+              <th>Status</th>
+              <th>RPCs</th>
+              <th>Services</th>
+              <th>Mean service latency</th>
+              <th>Slowest service mean</th>
+            </tr>
+          </thead>
+          <tbody id="bench-summary-rows"></tbody>
+        </table>
+      </div>
+
+      <div class="tablewrap mt28">
+        <table>
+          <thead>
+            <tr>
+              <th>SDK</th>
+              <th>RPC</th>
+              <th>Kind</th>
+              <th>p50</th>
+              <th>p99</th>
+              <th>Mean</th>
+            </tr>
+          </thead>
+          <tbody id="bench-slowest-rows"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <div><b>UDB</b><br><small>Universal Data Broker</small></div>
+    <div class="foot-links">
+      <a href="./architecture.html">Architecture</a><a href="./sdks.html">SDKs</a><a href="./benchmarks.html">Benchmarks</a><a href="./playground.html">Playground</a><a href="https://github.com/fahara02/udb">GitHub</a>
+    </div>
+  </div>
+</footer>
+
+<script src="./app.js"></script>
+<script src="./benchmarks.js"></script>
+</body>
+</html>
