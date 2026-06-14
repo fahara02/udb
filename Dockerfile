@@ -23,6 +23,8 @@ COPY src ./src
 COPY proto ./proto
 COPY third_party ./third_party
 COPY configs ./configs
+# Rust compile-time includes currently read docs/abac_seed.json.
+COPY docs ./docs
 # `[[bench]] core_bench` resolves to benches/core_bench.rs; cargo needs the file
 # to exist when it parses the manifest, even for a --bin build.
 COPY benches ./benches

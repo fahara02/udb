@@ -82,16 +82,17 @@ jobs:
 
       # ── Restore + test ────────────────────────────────────────────────────
       - name: Restore dependencies
-        working-directory: sdk/csharp
-        run: dotnet restore
+        run: |
+          dotnet restore sdk/csharp/Udb.Client.Tests/Udb.Client.Tests.csproj
+          dotnet restore sdk/csharp/Udb.Cli/Udb.Cli.csproj
 
       - name: Build (Release)
-        working-directory: sdk/csharp
-        run: dotnet build --configuration Release --no-restore
+        run: |
+          dotnet build sdk/csharp/Udb.Client.Tests/Udb.Client.Tests.csproj --configuration Release --no-restore
+          dotnet build sdk/csharp/Udb.Cli/Udb.Cli.csproj --configuration Release --no-restore
 
       - name: Run tests
-        working-directory: sdk/csharp/Udb.Client.Tests
-        run: dotnet test --configuration Release --no-build --verbosity normal
+        run: dotnet test sdk/csharp/Udb.Client.Tests/Udb.Client.Tests.csproj --configuration Release --no-build --verbosity normal
 
       # ── Check NuGet availability ──────────────────────────────────────────
       - name: Check Udb.Client availability on NuGet

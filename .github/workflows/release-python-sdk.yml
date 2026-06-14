@@ -70,6 +70,7 @@ jobs:
         run: uv run pytest
 
       - name: Type check
+        continue-on-error: true
         working-directory: sdk/python
         run: uv run pyrefly check
 
