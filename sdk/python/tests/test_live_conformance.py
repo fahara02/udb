@@ -861,8 +861,36 @@ def should_populate(method) -> bool:
     return RPC_OPERATION_KIND.get(rpc_path(method)) != "destructive"
 
 
+# Perf-harness fixtures: a semantic-field-name -> real-seeded-value map, populated
+# by perf_seed() before the perf run. The reflective populate (_probe_string) below
+# consults it FIRST, so a request field like "role_id"/"file_id"/"user_id" resolves
+# to a REAL seeded entity and the RPC drives its SUCCESS path instead of NotFound.
+# Empty during the conformance run (perf_seed not called) -> no effect there.
+_PERF_FIXTURES: dict = {}
+
+
+def _perf_fixture_set(key: str, val) -> None:
+    if val:
+        _PERF_FIXTURES[key.lower()] = str(val)
+
+
+def _perf_fixture_lookup(field: str):
+    """Exact match first, then a registered key as a suffix of the field name
+    (so "approved_by"/"assigned_by" reach the seeded user, "definition_id" the
+    seeded pipeline). Only deliberately-seeded names resolve."""
+    if field in _PERF_FIXTURES:
+        return _PERF_FIXTURES[field]
+    for k, v in _PERF_FIXTURES.items():
+        if field == k or field.endswith("_" + k):
+            return v
+    return None
+
+
 def _probe_string(name: str, tenant: str, project: str) -> str:
     n = name.lower()
+    seeded = _perf_fixture_lookup(n)
+    if seeded is not None:
+        return seeded
     if "tenant" in n:
         return tenant
     if "project" in n:
