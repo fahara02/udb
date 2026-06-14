@@ -240,6 +240,42 @@ function surfaceProbeRequest(tenantId: string, projectId: string) {
   };
 }
 
+// perfRealBody returns a SEMANTICALLY VALID request for the top data-plane CRUD
+// RPCs so the perf harness measures REAL handler work against the built-in
+// `udb.sdk.live.v1.SdkLiveRecord` schema (always active), not validation-rejection
+// on a generic placeholder. Upsert uses a FIXED record_id so repeated iterations
+// are idempotent (no row accumulation). Returns undefined for RPCs without an
+// override — the caller falls back to surfaceProbeRequest. Only DataBroker exposes
+// select/upsert, so matching on the method name is unambiguous.
+function perfRealBody(serviceName: string, methodName: string, tenantId: string, projectId: string): any | undefined {
+  if (serviceName !== "DataBroker") return undefined;
+  const context = { tenant_id: tenantId, project_id: projectId, purpose: "ts.live.perf" };
+  if (methodName === "upsert") {
+    return {
+      context,
+      message_type: LIVE_MESSAGE_TYPE,
+      record_json: jsonBytes({
+        record_id: `ts-perf-${tenantId}-${projectId}`,
+        tenant_id: tenantId,
+        project_id: projectId,
+        lookup_key: "ts-perf-lk",
+        payload: "ts-perf",
+        revision: 1,
+      }),
+      conflict_fields: ["record_id"],
+    };
+  }
+  if (methodName === "select") {
+    return {
+      context,
+      message_type: LIVE_MESSAGE_TYPE,
+      filter: { tenant_id: tenantId, project_id: projectId },
+      limit: 10,
+    };
+  }
+  return undefined;
+}
+
 async function expectGeneratedUnarySurfaceMounted(
   t: any,
   label: string,
@@ -1302,7 +1338,11 @@ test("live per-RPC perf", {
             continue;
           }
           const kind = operationKindOf((api as any).serviceFull, methodName) || "read_only";
-          const request = kind !== "destructive" ? surfaceProbeRequest(tenantId, projectId) : {};
+          // Top data-plane CRUD RPCs get a real, valid body (real e2e handler work);
+          // everything else falls back to the generic surface probe request.
+          const request = kind === "destructive"
+            ? {}
+            : (perfRealBody(serviceName, methodName, tenantId, projectId) ?? surfaceProbeRequest(tenantId, projectId));
           await timeMethod(fn, request); // warm-up
           const durs: number[] = [];
           let errCode = "OK"; // last observed non-OK status marks the RPC failed

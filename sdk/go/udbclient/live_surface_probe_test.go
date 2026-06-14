@@ -70,19 +70,34 @@ func probeRequestIsPopulated(fullMethod string) bool {
 // logic across the FULL surface. Falls back to Empty when the descriptor can't
 // be resolved.
 func buildProbeMessages(fullMethod, tenant, project string) (proto.Message, proto.Message) {
+	return buildSeededProbeMessages(fullMethod, tenant, project, nil)
+}
+
+// buildSeededProbeMessages is buildProbeMessages with an optional fixture map: a
+// non-nil fix lets populateProbeMessage resolve reference/ID fields (user_id,
+// role, policy_id, file_id, subject, object, …) to REAL seeded identifiers so the
+// request drives the RPC's SUCCESS path instead of failing on a placeholder.
+// fix==nil reproduces the original behavior (generic placeholders) for the
+// reachability-probe callers.
+func buildSeededProbeMessages(fullMethod, tenant, project string, fix *perfFixtures) (proto.Message, proto.Message) {
 	md := resolveMethodDesc(fullMethod)
 	if md == nil {
 		return &emptypb.Empty{}, &emptypb.Empty{}
 	}
 	in := dynamicpb.NewMessage(md.Input())
 	out := dynamicpb.NewMessage(md.Output())
-	if !probeRPCDestructive(fullMethod) {
-		populateProbeMessage(in, tenant, project, 0)
+	// In the seeded (perf) path even destructive RPCs are driven with valid
+	// inputs — the perf harness seeds throwaway entities and targets them, so the
+	// destructive action runs against a real, disposable target rather than being
+	// suppressed with a typed-empty body. fix==nil keeps the conformance-probe
+	// rule of never populating a destructive request.
+	if fix != nil || !probeRPCDestructive(fullMethod) {
+		populateProbeMessage(in, tenant, project, 0, fix)
 	}
 	return in, out
 }
 
-func populateProbeMessage(m protoreflect.Message, tenant, project string, depth int) {
+func populateProbeMessage(m protoreflect.Message, tenant, project string, depth int, fix *perfFixtures) {
 	fields := m.Descriptor().Fields()
 	for i := 0; i < fields.Len(); i++ {
 		f := fields.Get(i)
@@ -91,7 +106,7 @@ func populateProbeMessage(m protoreflect.Message, tenant, project string, depth 
 		}
 		switch f.Kind() {
 		case protoreflect.StringKind:
-			m.Set(f, protoreflect.ValueOfString(probeString(string(f.Name()), tenant, project)))
+			m.Set(f, protoreflect.ValueOfString(probeString(string(f.Name()), tenant, project, fix)))
 		case protoreflect.Int32Kind, protoreflect.Sint32Kind, protoreflect.Sfixed32Kind:
 			m.Set(f, protoreflect.ValueOfInt32(1))
 		case protoreflect.Uint32Kind, protoreflect.Fixed32Kind:
@@ -104,6 +119,12 @@ func populateProbeMessage(m protoreflect.Message, tenant, project string, depth 
 			m.Set(f, protoreflect.ValueOfFloat64(1))
 		case protoreflect.FloatKind:
 			m.Set(f, protoreflect.ValueOfFloat32(1))
+		case protoreflect.EnumKind:
+			// Pick the first non-zero enum value when one exists (a zero enum is
+			// often UNSPECIFIED and rejected by validators); else leave default.
+			if vals := f.Enum().Values(); vals.Len() > 1 {
+				m.Set(f, protoreflect.ValueOfEnum(vals.Get(1).Number()))
+			}
 		case protoreflect.MessageKind, protoreflect.GroupKind:
 			full := string(f.Message().FullName())
 			switch {
@@ -113,7 +134,7 @@ func populateProbeMessage(m protoreflect.Message, tenant, project string, depth 
 				// well-known types (Struct/Timestamp/Any/…): default is valid
 			default:
 				if depth < 1 {
-					populateProbeMessage(m.Mutable(f).Message(), tenant, project, depth+1)
+					populateProbeMessage(m.Mutable(f).Message(), tenant, project, depth+1, fix)
 				}
 			}
 		}
@@ -143,8 +164,17 @@ func populateProbeContext(m protoreflect.Message, full, tenant, project string) 
 	setStr(m, "purpose", "go.live.probe")
 }
 
-func probeString(name, tenant, project string) string {
+func probeString(name, tenant, project string, fix *perfFixtures) string {
 	n := strings.ToLower(name)
+	// Seeded reference/ID/constrained fields resolve to REAL values so the request
+	// drives the RPC's success path. The fixture map is consulted FIRST (by exact
+	// then suffix match), then the constrained-format heuristics, then the generic
+	// scalar fallback.
+	if fix != nil {
+		if v, ok := fix.lookup(n); ok {
+			return v
+		}
+	}
 	switch {
 	case strings.Contains(n, "tenant"):
 		return tenant
@@ -158,6 +188,10 @@ func probeString(name, tenant, project string) string {
 		return "go.live.probe"
 	case strings.Contains(n, "page_token") || strings.Contains(n, "pagetoken"):
 		return ""
+	case strings.Contains(n, "email"):
+		return "sdk-live-probe@example.com"
+	case n == "url" || strings.HasSuffix(n, "_url") || strings.Contains(n, "issuer") || strings.Contains(n, "jwks"):
+		return "https://idp.example/sdk-live"
 	default:
 		return "sdk-live-probe"
 	}

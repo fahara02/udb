@@ -1282,6 +1282,40 @@ it('enumerates exactly 262 live RPCs', function () {
 // Times every RPC over multiple iterations and writes perf_report_php.md — the
 // PHP counterpart of the Go/Python/TS perf harness. read_only RPCs are timed
 // many times; mutations a few; destructive once typed-empty.
+/**
+ * perfRealBodyPhp returns a SEMANTICALLY VALID request for the top data-plane CRUD
+ * RPCs (upsert/select) so the perf harness measures REAL handler work against the
+ * built-in udb.sdk.live.v1.SdkLiveRecord schema (always active), not
+ * validation-rejection on an empty/placeholder request. Upsert uses a FIXED
+ * record_id so repeated iterations are idempotent (no row accumulation). Returns
+ * null for RPCs without an override — the caller falls back to requestFor()+populate.
+ * Only DataBroker exposes upsert/select, so matching on the method name is safe.
+ */
+function perfRealBodyPhp(string $name, string $tenant, string $project): ?object
+{
+    $n = strtolower($name);
+    if ($n !== 'upsert' && $n !== 'select') {
+        return null;
+    }
+    $ctx = (new \Udb\Entity\V1\RequestContext())
+        ->setTenantId($tenant)
+        ->setProjectId($project)
+        ->setPurpose('php.live.perf');
+    if ($n === 'upsert') {
+        return (new \Udb\Entity\V1\UpsertRequest())
+            ->setContext($ctx)
+            ->setMessageType('udb.sdk.live.v1.SdkLiveRecord')
+            ->setRecordJson(liveRecordJson("php-perf-$tenant-$project", $tenant, $project, 'php-perf-lk', 'php-perf', 1))
+            ->setConflictFields(['record_id']);
+    }
+
+    return (new \Udb\Entity\V1\SelectRequest())
+        ->setContext($ctx)
+        ->setMessageType('udb.sdk.live.v1.SdkLiveRecord')
+        ->setFilter(liveStruct(['tenant_id' => $tenant, 'project_id' => $project]))
+        ->setLimit(10);
+}
+
 it('measures per-RPC latency', function () {
     $s = phpLiveSession();
     $authedMeta = $s['authedMeta'];
@@ -1324,11 +1358,17 @@ it('measures per-RPC latency', function () {
             $probeRequest = null;
             $kind = 'read_only';
             if ($hasRequest) {
-                $probeRequest = requestFor($method);
-                if (shouldPopulatePhp($name)) {
+                $real = perfRealBodyPhp($name, $meta->tenantId, $meta->projectId);
+                if ($real !== null) {
+                    // Top data-plane CRUD RPC: real, valid body → real e2e handler work.
+                    $probeRequest = $real;
+                    $kind = 'mutation';
+                } elseif (shouldPopulatePhp($name)) {
+                    $probeRequest = requestFor($method);
                     populateProbeRequest($probeRequest, $meta->tenantId, $meta->projectId);
                     $kind = 'mutation';
                 } else {
+                    $probeRequest = requestFor($method);
                     $kind = 'destructive';
                 }
             }
