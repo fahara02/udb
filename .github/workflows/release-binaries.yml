@@ -223,13 +223,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ref_json="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${GITHUB_REF_NAME}")"
-          ref_type="$(jq -r '.object.type' <<<"${ref_json}")"
-          ref_sha="$(jq -r '.object.sha' <<<"${ref_json}")"
+          ref_type="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${GITHUB_REF_NAME}" --jq '.object.type')"
+          ref_sha="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${GITHUB_REF_NAME}" --jq '.object.sha')"
           if [ "${ref_type}" = "tag" ]; then
-            tag_json="$(gh api "repos/${GITHUB_REPOSITORY}/git/tags/${ref_sha}")"
-            ref_type="$(jq -r '.object.type' <<<"${tag_json}")"
-            ref_sha="$(jq -r '.object.sha' <<<"${tag_json}")"
+            tag_sha="${ref_sha}"
+            ref_type="$(gh api "repos/${GITHUB_REPOSITORY}/git/tags/${tag_sha}" --jq '.object.type')"
+            ref_sha="$(gh api "repos/${GITHUB_REPOSITORY}/git/tags/${tag_sha}" --jq '.object.sha')"
           fi
           if [ "${ref_type}" != "commit" ] || [ "${ref_sha}" != "${GITHUB_SHA}" ]; then
             echo "::error::${GITHUB_REF_NAME} now points at ${ref_type} ${ref_sha}, not this workflow commit ${GITHUB_SHA}; refusing to publish stale binary asset."
@@ -267,13 +266,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ref_json="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${GITHUB_REF_NAME}")"
-          ref_type="$(jq -r '.object.type' <<<"${ref_json}")"
-          ref_sha="$(jq -r '.object.sha' <<<"${ref_json}")"
+          ref_type="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${GITHUB_REF_NAME}" --jq '.object.type')"
+          ref_sha="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${GITHUB_REF_NAME}" --jq '.object.sha')"
           if [ "${ref_type}" = "tag" ]; then
-            tag_json="$(gh api "repos/${GITHUB_REPOSITORY}/git/tags/${ref_sha}")"
-            ref_type="$(jq -r '.object.type' <<<"${tag_json}")"
-            ref_sha="$(jq -r '.object.sha' <<<"${tag_json}")"
+            tag_sha="${ref_sha}"
+            ref_type="$(gh api "repos/${GITHUB_REPOSITORY}/git/tags/${tag_sha}" --jq '.object.type')"
+            ref_sha="$(gh api "repos/${GITHUB_REPOSITORY}/git/tags/${tag_sha}" --jq '.object.sha')"
           fi
           if [ "${ref_type}" != "commit" ] || [ "${ref_sha}" != "${GITHUB_SHA}" ]; then
             echo "::error::${GITHUB_REF_NAME} now points at ${ref_type} ${ref_sha}, not this workflow commit ${GITHUB_SHA}; refusing to publish stale release manifest."
