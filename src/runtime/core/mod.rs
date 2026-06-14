@@ -1029,10 +1029,7 @@ mod rls_conn_leak_tests {
     /// Env-gated on a live PG DSN (the CI live-DB job); a no-op otherwise.
     #[tokio::test]
     async fn rls_session_settings_reset_and_overwrite_no_cross_tenant_leak() {
-        let Some(dsn) = std::env::var("UDB_PG_DSN")
-            .ok()
-            .or_else(|| std::env::var("DATABASE_URL").ok())
-        else {
+        let Some(dsn) = crate::runtime::core::helpers::live_postgres_dsn_for_tests() else {
             eprintln!("skipping B3 RLS leak test: set UDB_PG_DSN / DATABASE_URL");
             return;
         };

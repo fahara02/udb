@@ -985,6 +985,13 @@ pub(crate) fn instance_label_or_env(instance: &BackendInstance, keys: &[&str]) -
     None
 }
 
+#[cfg(test)]
+pub(crate) fn live_postgres_dsn_for_tests() -> Option<String> {
+    env::var("UDB_PG_DSN")
+        .ok()
+        .or_else(|| env::var("DATABASE_URL").ok())
+}
+
 #[cfg(any(feature = "mongodb", feature = "neo4j", feature = "clickhouse"))]
 pub(crate) fn instance_label_bool(instance: &BackendInstance, keys: &[&str]) -> Option<bool> {
     instance_label(instance, keys).map(|value| {
