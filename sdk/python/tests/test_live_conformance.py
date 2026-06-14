@@ -1292,6 +1292,40 @@ def default_request(method, meta: Metadata):
     return request
 
 
+def perf_real_body(method, meta: Metadata):
+    """A SEMANTICALLY VALID body for the top data-plane CRUD RPCs so the perf
+    harness measures REAL handler work (a real Upsert/Select against the built-in
+    ``udb.sdk.live.v1.SdkLiveRecord`` schema, always active) instead of
+    validation-rejection on an empty/placeholder request. Upsert uses a FIXED
+    record_id so repeated iterations are idempotent (no row accumulation). Returns
+    ``None`` for RPCs without an override — the caller falls back to
+    ``default_request``. Only DataBroker exposes Select/Upsert, so matching on the
+    method name is unambiguous.
+    """
+    if method.name == "Upsert":
+        return relational_pb2.UpsertRequest(
+            context=meta.to_request_context(),
+            message_type=LIVE_MESSAGE_TYPE,
+            record_json=live_record_json(
+                f"py-perf-{meta.tenant_id}-{meta.project_id}",
+                meta.tenant_id,
+                meta.project_id,
+                "py-perf-lk",
+                "py-perf",
+                1,
+            ),
+            conflict_fields=["record_id"],
+        )
+    if method.name == "Select":
+        return relational_pb2.SelectRequest(
+            context=meta.to_request_context(),
+            message_type=LIVE_MESSAGE_TYPE,
+            filter=live_struct({"tenant_id": meta.tenant_id, "project_id": meta.project_id}),
+            limit=10,
+        )
+    return None
+
+
 def assert_not_mount_failure(label: str, exc: grpc.RpcError) -> None:
     if exc.code() in FATAL_CODES:
         raise AssertionError(
@@ -1491,7 +1525,9 @@ def test_live_perf():
         # Returns (elapsed_ms, err_code) where err_code is the gRPC status code NAME
         # (e.g. "UNAVAILABLE", "FAILED_PRECONDITION") on a non-OK status, else "OK".
         # A failing RPC must never be reported as a silent latency sample.
-        request = default_request(method, authed_meta)
+        # Top data-plane CRUD RPCs get a real, valid body (real e2e handler work);
+        # everything else falls back to the generic typed request.
+        request = perf_real_body(method, authed_meta) or default_request(method, authed_meta)
         rpc_callable = getattr(client.stub, method.name)
         streaming = method.client_streaming or method.server_streaming
         start = time.perf_counter()
