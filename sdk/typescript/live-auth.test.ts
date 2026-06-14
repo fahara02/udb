@@ -247,33 +247,408 @@ function surfaceProbeRequest(tenantId: string, projectId: string) {
 // are idempotent (no row accumulation). Returns undefined for RPCs without an
 // override — the caller falls back to surfaceProbeRequest. Only DataBroker exposes
 // select/upsert, so matching on the method name is unambiguous.
-function perfRealBody(serviceName: string, methodName: string, tenantId: string, projectId: string): any | undefined {
+function perfRealBody(
+  serviceName: string,
+  methodName: string,
+  tenantId: string,
+  projectId: string,
+  fixtures?: PerfFixtures,
+): any | undefined {
   if (serviceName !== "DataBroker") return undefined;
   const context = { tenant_id: tenantId, project_id: projectId, purpose: "ts.live.perf" };
-  if (methodName === "upsert") {
-    return {
-      context,
-      message_type: LIVE_MESSAGE_TYPE,
-      record_json: jsonBytes({
-        record_id: `ts-perf-${tenantId}-${projectId}`,
-        tenant_id: tenantId,
-        project_id: projectId,
-        lookup_key: "ts-perf-lk",
-        payload: "ts-perf",
-        revision: 1,
-      }),
-      conflict_fields: ["record_id"],
-    };
-  }
-  if (methodName === "select") {
-    return {
-      context,
-      message_type: LIVE_MESSAGE_TYPE,
-      filter: { tenant_id: tenantId, project_id: projectId },
-      limit: 10,
-    };
+  const get = (k: string) => fixtures?.lookup(k) ?? "";
+  const mongo = { backend: "mongodb", resource_name: get("mongo_collection") };
+  switch (methodName) {
+    case "upsert":
+      return {
+        context,
+        message_type: LIVE_MESSAGE_TYPE,
+        record_json: jsonBytes({
+          record_id: `ts-perf-${tenantId}-${projectId}`,
+          tenant_id: tenantId,
+          project_id: projectId,
+          lookup_key: "ts-perf-lk",
+          payload: "ts-perf",
+          revision: 1,
+        }),
+        conflict_fields: ["record_id"],
+      };
+    case "select":
+      return {
+        context,
+        message_type: LIVE_MESSAGE_TYPE,
+        filter: { tenant_id: tenantId, project_id: projectId },
+        limit: 10,
+      };
+    case "delete":
+      // Delete a NON-EXISTENT row so the success path runs without destroying the
+      // seeded record other RPCs read.
+      return {
+        context,
+        message_type: LIVE_MESSAGE_TYPE,
+        filter: { record_id: "ts-perf-delete-noop", tenant_id: tenantId, project_id: projectId },
+      };
+    case "generic_dispatch":
+      return { context, backend: "postgres", operation: "query", spec_json: JSON.stringify({ sql: "SELECT 1 AS live_probe" }) };
+    case "document_upsert":
+      return { context, resource: mongo, document_id: get("document_id"), document: { payload: "perf", revision: 2 } };
+    case "document_get":
+      return { context, resource: mongo, document_id: get("document_id") };
+    case "document_find":
+      return { context, resource: mongo, filter: { _id: get("document_id") }, limit: 1 };
+    case "ensure_resource":
+      return { context, backend: "mongodb", resource_name: get("mongo_collection"), spec_json: JSON.stringify({ collection: get("mongo_collection") }) };
+    case "list_resources":
+      return { context, backend: "mongodb" };
+    case "generate_presigned_url":
+      return { context, bucket: get("bucket"), object_key: get("object_key"), method: "GET", ttl_seconds: 60 };
+    case "cache_set":
+      return { context, resource: { backend: "redis" }, key: "ts-perf-cache", value: Buffer.from("perf", "utf8"), content_type: "text/plain", ttl_seconds: 60 };
+    case "cache_get":
+      return { context, resource: { backend: "redis" }, key: "ts-perf-cache" };
   }
   return undefined;
+}
+
+// ── Perf SEED phase + fixture map (mirrors the Go harness) ─────────────────────
+//
+// The perf run measures REAL successful-call latency for the whole RPC surface. To
+// do that, every reference/ID field in a request must point at an entity that
+// actually exists. seedPerfFixtures creates those entities up front — REUSING the
+// same create flows the conformance suite (runLiveNativeServiceE2E above) already
+// proves succeed — and records their real identifiers into a PerfFixtures map keyed
+// by SEMANTIC field name (user_id, role, policy_id, file_id, room_id, subject, …).
+// populateSeeded consults this map first, so a reflectively-built request for, say,
+// AuthzService/get_role gets the seeded role_id and drives the success path.
+//
+// Seeding runs in DEPENDENCY ORDER (a user before a role assignment before a
+// notification; a file before an asset; a room before a peer before a track),
+// everything namespaced by a per-run suffix, and returns a LIFO cleanup function.
+
+// PerfFixtures maps a semantic field name → a real seeded value. lookup resolves a
+// proto field name (lower-cased) by exact match, then by suffix match (so
+// "user_id", "assigned_by", "created_by" all reach the seeded user UUID when
+// registered under those keys). This keeps resolution explicit — only names we
+// deliberately seeded resolve, everything else falls through to the generic scalar.
+class PerfFixtures {
+  readonly m = new Map<string, string>();
+  recordId = "";
+  set(key: string, val: string | undefined | null): void {
+    if (val) this.m.set(key.toLowerCase(), val);
+  }
+  lookup(field: string): string | undefined {
+    const f = field.toLowerCase();
+    if (this.m.has(f)) return this.m.get(f);
+    for (const [k, v] of this.m) {
+      if (f === k || f.endsWith("_" + k)) return v;
+    }
+    return undefined;
+  }
+}
+
+interface SeedResult {
+  fixtures: PerfFixtures;
+  cleanup: () => Promise<void>;
+}
+
+// seedPerfFixtures creates real, disposable entities across the services the perf
+// run touches and records their identifiers. `gen` is the control-plane generated
+// client (native services), `data` the DataBroker data plane. uuidTenant is the
+// canonical tenant UUID the UUID-strict services (storage/asset/webrtc) require —
+// the bootstrap admin's tenant claim IS that UUID, so one client serves all.
+async function seedPerfFixtures(
+  gen: any,
+  data: any,
+  tenantId: string,
+  projectId: string,
+  uuidTenant: string,
+): Promise<SeedResult> {
+  const fix = new PerfFixtures();
+  const suffix = `${process.pid}${Date.now()}`;
+  const opts = { deadlineMs: 8_000, noRetry: true };
+  const ctx = requestContext(tenantId, projectId, "ts.live.perf.seed");
+  const cleanups: Array<() => Promise<void>> = [];
+  const addCleanup = (fn: () => Promise<void>) => cleanups.push(fn);
+  const tryRun = async (label: string, fn: () => Promise<void>) => {
+    try {
+      await fn();
+    } catch (err) {
+      console.log(`perf seed: ${label} failed (dependent RPCs fall back): ${errText(err)}`);
+    }
+  };
+
+  // Always-known scalars.
+  fix.set("tenant_id", tenantId);
+  fix.set("tenant", tenantId);
+  fix.set("project_id", projectId);
+  fix.set("project", projectId);
+  fix.set("domain", tenantId);
+  fix.set("message_type", LIVE_MESSAGE_TYPE);
+
+  // ── DataBroker: a real SdkLiveRecord row (drives Upsert/Select/Delete + CDC) ──
+  const recordId = `ts-perf-${suffix}`;
+  await tryRun("SdkLiveRecord upsert", async () => {
+    await data.upsert(
+      {
+        context: ctx,
+        message_type: LIVE_MESSAGE_TYPE,
+        record_json: jsonBytes({
+          record_id: recordId,
+          tenant_id: tenantId,
+          project_id: projectId,
+          lookup_key: `ts-perf-lk-${suffix}`,
+          payload: "perf-seed",
+          revision: 1,
+        }),
+        conflict_fields: ["record_id"],
+      },
+      opts,
+    );
+  });
+  fix.set("record_id", recordId);
+  fix.recordId = recordId;
+
+  // A real project for ListProjects / project-scoped reads.
+  const projId = `sdklive_perf_${suffix}`;
+  await tryRun("EnsureProject", async () => {
+    await data.ensure_project({ context: ctx, project_id: projId, name: "SDK Perf Project" }, opts);
+  });
+
+  // A real MinIO bucket + object so GetObject / object RPCs run their success path.
+  const bucket = process.env.UDB_LIVE_S3_BUCKET || "udb-live-sdk";
+  const objectKey = `ts-perf/${suffix}.txt`;
+  await tryRun("EnsureResource minio", async () => {
+    await data.ensure_resource({ context: ctx, backend: "minio", resource_name: bucket, spec_json: "{}" }, opts);
+  });
+  await tryRun("PutObject seed", async () => {
+    const put = data.put_object({ deadlineMs: 10_000, noRetry: true });
+    put.stream.write({ context: ctx, bucket, object_key: objectKey, data: Buffer.from(`ts-perf-object-${suffix}`, "utf8"), content_type: "text/plain", final_chunk: true });
+    put.stream.end();
+    await put.response;
+  });
+  fix.set("bucket", bucket);
+  fix.set("object_key", objectKey);
+
+  // A real Mongo collection + document so the document RPCs resolve a resource.
+  const collection = `sdk_perf_docs_${suffix}`;
+  const documentId = `doc-perf-${suffix}`;
+  await tryRun("EnsureResource mongodb", async () => {
+    await data.ensure_resource({ context: ctx, backend: "mongodb", resource_name: collection, spec_json: JSON.stringify({ collection }) }, opts);
+  });
+  await tryRun("DocumentUpsert seed", async () => {
+    await data.document_upsert({ context: ctx, resource: { backend: "mongodb", resource_name: collection }, document_id: documentId, document: { _id: documentId, payload: "perf", revision: 1 } }, opts);
+  });
+  // NOTE: a single backend/resource fixture cannot serve both the SQL and the
+  // document/cache RPCs (each needs its own backend + resource). The
+  // backend-specific DataBroker RPCs are driven by typed bodies in perfRealBody, so
+  // we deliberately do NOT register a global backend/resource_name fixture.
+  fix.set("collection", collection);
+  fix.set("mongo_collection", collection);
+
+  // ── AuthnService: a real user (id reused everywhere a user_id is needed) ───────
+  const pw = "CorrectHorse1!";
+  const uname = `sdk-perf-${suffix}`;
+  await tryRun("CreateUser", async () => {
+    const created = (await gen.AuthnService.create_user({ username: uname, email: `${uname}@example.com`, password: pw, tenant_id: tenantId, project_id: projectId, full_name: "SDK Perf User" }, opts)).user;
+    const uid = created.user_id;
+    fix.set("user_id", uid);
+    fix.set("recipient_id", uid);
+    fix.set("assigned_by", uid);
+    fix.set("created_by", uid);
+    fix.set("updated_by", uid);
+    fix.set("revoked_by", uid);
+    fix.set("deleted_by", uid);
+    fix.set("approved_by", uid);
+    fix.set("rejected_by", uid);
+    fix.set("subject", `user:${uid}`);
+    // A real login → session id + tokens for session/token RPCs.
+    await tryRun("Login (session/token fixtures)", async () => {
+      const login = await gen.AuthnService.login({ username: uname, password: pw, tenant_hint: tenantId, project_hint: projectId, device_name: "ts-sdk-perf-seed" }, opts);
+      fix.set("session_id", login.session_id);
+      fix.set("token", login.access_token);
+      fix.set("refresh_token", login.refresh_token);
+      fix.set("csrf_token", login.csrf_token);
+    });
+    // Recovery codes (so recovery-style reads have a real code).
+    await tryRun("GenerateRecoveryCodes", async () => {
+      const codes = await gen.AuthnService.generate_recovery_codes({ user_id: uid, count: 8 }, opts);
+      if ((codes.codes ?? []).length > 0) {
+        fix.set("code", codes.codes[0]);
+        fix.set("recovery_code", codes.codes[0]);
+      }
+    });
+  });
+
+  // ── AuthzService: role + assignment + policies + relationship ──────────────────
+  const roleCode = `sdk_perf_reader_${suffix}`;
+  await tryRun("CreateRole", async () => {
+    const role = (await gen.AuthzService.create_role({ name: `SDK Perf Reader ${suffix}`, description: "perf seed role", created_by: liveUuid(), role_code: roleCode, domain: tenantId, tenant_id: tenantId, project_id: projectId }, opts)).role;
+    const rid = role.role_id;
+    fix.set("role_id", rid);
+    fix.set("role", roleCode);
+    fix.set("role_code", roleCode);
+    const uid = fix.lookup("user_id");
+    if (uid) {
+      await tryRun("AssignRole", async () => {
+        const assigned = (await gen.AuthzService.assign_role({ user_id: uid, role_id: rid, domain: tenantId, assigned_by: uid, tenant_id: tenantId, project_id: projectId }, opts)).user_role;
+        fix.set("user_role_id", assigned.user_role_id);
+      });
+    }
+    addCleanup(async () => {
+      try {
+        await gen.AuthzService.delete_role({ role_id: rid, deleted_by: fix.lookup("user_id") ?? liveUuid() }, opts);
+      } catch { /* best-effort */ }
+    });
+  });
+  // ABAC policy + an RBAC policy rule → policy_id for GetPolicyRule/DeletePolicyRule.
+  await tryRun("PutAuthzPolicy", async () => {
+    await gen.AuthzService.put_authz_policy({ policy: { id: liveUuid(), enabled: true, effect: "allow", tenant: tenantId, project: projectId, role: roleCode, action: "data.select", resource: "invoice" } }, opts);
+  });
+  const uidForPolicy = fix.lookup("user_id");
+  if (uidForPolicy) {
+    await tryRun("CreatePolicyRule", async () => {
+      // PolicyEffect enum: 1 = POLICY_EFFECT_ALLOW.
+      const rule = (await gen.AuthzService.create_policy_rule({ subject: roleCode, domain: tenantId, object: "ledger", action: "data.update", effect: 1, description: "perf seed rule", created_by: uidForPolicy, tenant_id: tenantId, project_id: projectId }, opts)).policy;
+      fix.set("policy_id", rule.policy_id);
+    });
+    await tryRun("PutRoleBinding", async () => {
+      await gen.AuthzService.put_role_binding({ binding: { subject: `user:${uidForPolicy}`, role: roleCode, tenant: tenantId, project: projectId, source: "sdk-perf" } }, opts);
+    });
+    await tryRun("PutRelationship", async () => {
+      await gen.AuthzService.put_relationship({ tuple: { subject: `user:${uidForPolicy}`, relation: "member", object: `group:sdk-perf-${suffix}`, tenant: tenantId, project: projectId, source: "sdk-perf" } }, opts);
+    });
+  }
+  fix.set("relation", "member");
+  fix.set("object", `group:sdk-perf-${suffix}`);
+  fix.set("resource", "invoice");
+  fix.set("action", "data.select");
+
+  // ── ApiKeyService: a real key → key_id + plain_key ─────────────────────────────
+  const principal = `sdk-perf-svc-${suffix}`;
+  await tryRun("CreateApiKey", async () => {
+    const key = await gen.ApiKeyService.create_api_key({ name: `sdk-perf-key-${suffix}`, owner_id: principal, scopes: ["data:read"], context: { user_id: principal, tenant: { tenant_id: tenantId, project_id: projectId } } }, opts);
+    fix.set("key_id", key.key.key_id);
+    fix.set("plain_key", key.plain_key);
+    fix.set("owner_id", principal);
+  });
+
+  // ── AnalyticsService: a recorded metric → a stage_name with data ───────────────
+  const stage = `sdk_perf_stage_${suffix}`;
+  await tryRun("RecordPipelineMetric", async () => {
+    await gen.AnalyticsService.record_pipeline_metric({ stage_name: stage, tenant_id: tenantId, latency_ms: 100, is_success: true }, opts);
+  });
+  fix.set("stage_name", stage);
+
+  // ── NotificationService: template + a sent notification → log_id, event_type ───
+  const event = `sdk.perf.${suffix}`;
+  await tryRun("UpsertTemplate", async () => {
+    await gen.NotificationService.upsert_template({ event_type: event, channel: 1, locale: "en", subject_template: "SDK {{n}}", body_template: "sdk-perf-body", is_active: true }, opts);
+  });
+  fix.set("event_type", event);
+  fix.set("locale", "en");
+  const recipientId = fix.lookup("recipient_id");
+  if (recipientId) {
+    await tryRun("SendNotification", async () => {
+      const sent = await gen.NotificationService.send_notification({ event_type: event, recipient_id: recipientId, recipient_address: `sdk+${suffix}@example.com`, tenant_id: tenantId, channels: [1] }, opts);
+      if ((sent.logs ?? []).length > 0) {
+        fix.set("log_id", sent.logs[0].log_id);
+        fix.set("notification_id", sent.logs[0].log_id);
+      }
+    });
+  }
+
+  // ── StorageService (UUID tenant): a registered file → file_id ──────────────────
+  let fileId = "";
+  await tryRun("RegisterUpload", async () => {
+    const reg = await gen.StorageService.register_upload({ tenant_id: uuidTenant, project_id: "", filename: `perf-${suffix}.txt`, content_type: "text/plain", file_type: "DOCUMENT", reference_id: liveUuid(), reference_type: "sdk.perf", size_bytes: 128, expires_in_minutes: 30 }, opts);
+    fileId = reg.file_id;
+    fix.set("file_id", fileId);
+    addCleanup(async () => {
+      try {
+        await gen.StorageService.delete_file({ tenant_id: uuidTenant, file_id: fileId }, opts);
+      } catch { /* best-effort */ }
+    });
+  });
+
+  // ── AssetService: pipeline definition + asset + a started instance ─────────────
+  if (fileId) {
+    await tryRun("CreatePipelineDefinition", async () => {
+      const def = await gen.AssetService.create_pipeline_definition({ tenant_id: uuidTenant, name: `sdk-perf-pipeline-${suffix}`, description: "perf seed", media_type: "application/json", steps: '[{"name":"extract","type":"EXTRACT"}]', version: 1 }, opts);
+      fix.set("definition_id", def.definition_id);
+    });
+    await tryRun("RegisterAsset", async () => {
+      const a = await gen.AssetService.register_asset({ tenant_id: uuidTenant, project_id: "", file_id: fileId, name: `sdk-perf-asset-${suffix}`, media_type: "application/json", metadata: '{"source":"sdk-perf"}' }, opts);
+      fix.set("asset_id", a.asset_id);
+      const did = fix.lookup("definition_id");
+      if (did) {
+        await tryRun("StartPipeline", async () => {
+          const inst = await gen.AssetService.start_pipeline({ tenant_id: uuidTenant, definition_id: did, asset_id: a.asset_id, context: "{}", correlation_id: `sdk-perf-${suffix}` }, opts);
+          fix.set("instance_id", inst.instance_id);
+        });
+      }
+    });
+  }
+
+  // ── WebRTC (UUID tenant): room + peer + track ──────────────────────────────────
+  await tryRun("CreateRoom", async () => {
+    const room = await gen.RoomService.create_room({ tenant_id: uuidTenant, name: `sdk-perf-room-${suffix}`, max_participants: 8, config: "{}", created_by: liveUuid() }, opts);
+    const roomId = room.room_id;
+    fix.set("room_id", roomId);
+    addCleanup(async () => {
+      try {
+        await gen.RoomService.close_room({ tenant_id: uuidTenant, room_id: roomId }, opts);
+      } catch { /* best-effort */ }
+    });
+    await tryRun("JoinRoom", async () => {
+      const joined = await gen.PeerService.join_room({ tenant_id: uuidTenant, room_id: roomId, display_name: "sdk-perf-peer", metadata: "{}", user_agent: "sdk-perf" }, opts);
+      const peerId = joined.peer.peer_id;
+      fix.set("peer_id", peerId);
+      await tryRun("PublishTrack", async () => {
+        const pub = await gen.TrackService.publish_track({ tenant_id: uuidTenant, room_id: roomId, peer_id: peerId, kind: "audio", label: "mic", settings: "{}", metadata: "{}" }, opts);
+        fix.set("track_id", pub.track_id);
+      });
+    });
+  });
+
+  // Convenience free-text scalars commonly required by reflective populate.
+  fix.set("name", `sdk-perf-${suffix}`);
+  fix.set("filename", `sdk-perf-${suffix}.txt`);
+  fix.set("content_type", "text/plain");
+  fix.set("file_type", "DOCUMENT");
+  fix.set("kind", "audio");
+
+  return {
+    fixtures: fix,
+    cleanup: async () => {
+      for (let i = cleanups.length - 1; i >= 0; i--) await cleanups[i]();
+    },
+  };
+}
+
+// populateSeeded deepens surfaceProbeRequest with SEEDED reference/ID values so a
+// reflective request drives the RPC's SUCCESS path. proto-loader drops keys the
+// concrete request type does not declare, so over-supplying is safe: every RPC
+// picks up exactly the fields it has, now resolved to real identifiers (user_id,
+// role_id, file_id, room_id, …). The nested `context` and a one-level-deep
+// sub-message (`resource`, `policy`, `tuple`, `binding`, …) are populated too.
+function populateSeeded(
+  serviceName: string,
+  methodName: string,
+  tenantId: string,
+  projectId: string,
+  fixtures: PerfFixtures,
+): any {
+  const base: Record<string, any> = surfaceProbeRequest(tenantId, projectId);
+  // Spread every seeded semantic key onto the request; proto-loader keeps only the
+  // declared ones. Reference/ID fields thus resolve to real entities.
+  for (const [k, v] of fixtures.m) base[k] = v;
+  // A few common formats the fixtures do not carry.
+  base.email = "sdk-live-probe@example.com";
+  base.url = "https://idp.example/sdk-live";
+  // A one-level sub-message that several reference RPCs require (a store resource).
+  const mongo = fixtures.lookup("mongo_collection");
+  if (mongo) base.resource = { backend: "mongodb", resource_name: mongo };
+  return base;
 }
 
 async function expectGeneratedUnarySurfaceMounted(
@@ -411,7 +786,7 @@ async function runLiveEdgeCases(data: any, tenantId: string, projectId: string):
   try {
     await data.upsert({
       context: ctx, message_type: LIVE_MESSAGE_TYPE,
-      record_json: jsonBytes({ record_id: `edge-nul-${suffix}`, tenant_id: tenantId, project_id: projectId, lookup_key: `edge-nul-lk-${suffix}`, payload: "payload with-nul", revision: 1 }),
+      record_json: jsonBytes({ record_id: `edge-nul-${suffix}`, tenant_id: tenantId, project_id: projectId, lookup_key: `edge-nul-lk-${suffix}`, payload: "payload\0with-nul", revision: 1 }),
       conflict_fields: ["record_id"],
     }, opts);
   } catch (err) { notFault("NUL-byte payload", err); }
@@ -1283,8 +1658,20 @@ test("live per-RPC perf", {
     tenantId = who?.principal?.tenant_id || tenantId;
 
     const authGenerated = (project as any).authGenerated ?? project.generated;
+    const data = project.generated.DataBroker;
+
+    // SEED PHASE (before any measurement): create real, disposable entities and
+    // capture their identifiers so every RPC can be driven down its SUCCESS path
+    // with valid inputs. The bootstrap admin's tenant claim IS the canonical UUID
+    // (resolved above), so one client serves the UUID-strict native services too.
+    const seed = await seedPerfFixtures(authGenerated, data, tenantId, projectId, tenantId);
+    const fixtures = seed.fixtures;
+
+    // Iteration budget per operation_kind. Every RPC is now driven down its SUCCESS
+    // path with seeded inputs, so even destructive RPCs run for real (against a
+    // disposable seeded target) — measured ONCE because the action is not idempotent.
     const itersFor = (kind: string) => (kind === "destructive" ? 1 : kind === "mutation" ? 5 : 25);
-    type Sample = { service: string; rpc: string; kind: string; err: string; p50: number; p99: number; mean: number };
+    type Sample = { service: string; rpc: string; kind: string; err: string; p50: number; p99: number; mean: number; note: string };
     const samples: Sample[] = [];
 
     // gRPC status code NAME for an error (e.g. "UNAVAILABLE", "FAILED_PRECONDITION"),
@@ -1307,7 +1694,9 @@ test("live per-RPC perf", {
     // Stream-open timer: create the streaming call and tear it down WITHOUT draining
     // responses. A subscription/upload stream emits a first message only on an event,
     // so draining it in a passive run would just hit the deadline. This measures the
-    // client-side latency to establish the stream.
+    // client-side latency to establish the stream. Used for the client-streaming /
+    // bidi RPCs (put_object, batch_*, begin_tx, vector_batch_upsert, delta/stream
+    // resources, signal) where a single seeded message cannot drive a real response.
     const timeStreamOpen = (fn: any, request: any): number => {
       const start = performance.now();
       try {
@@ -1318,6 +1707,103 @@ test("live per-RPC perf", {
         if (r?.response && typeof r.response.catch === "function") r.response.catch(() => {});
       } catch { /* setup latency still counts */ }
       return performance.now() - start;
+    };
+
+    // Server-streaming first-response timer: open the stream with a seeded request
+    // and measure up to the FIRST server-delivered message (a real round-trip), not
+    // just stream-open. `end`/`error` before any `data` is treated as a successful
+    // (empty) completion. Used for select_v2 / get_object.
+    const timeServerStreamFirstResponse = async (
+      fn: any,
+      request: any,
+    ): Promise<{ ms: number; err: string }> => {
+      const start = performance.now();
+      return await new Promise((resolve) => {
+        let settled = false;
+        const finish = (err: string) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          if (typeof (stream as any).cancel === "function") (stream as any).cancel();
+          resolve({ ms: performance.now() - start, err });
+        };
+        let stream: grpc.ClientReadableStream<any>;
+        try {
+          stream = fn(request, { deadlineMs: 15_000, noRetry: true }) as grpc.ClientReadableStream<any>;
+        } catch (e) {
+          resolve({ ms: performance.now() - start, err: codeNameOf(e) });
+          return;
+        }
+        const timer = setTimeout(() => finish("DEADLINE_EXCEEDED"), 15_000);
+        stream.once("data", () => finish("OK"));
+        stream.once("end", () => finish("OK"));
+        stream.once("error", (e: unknown) => finish(codeNameOf(e)));
+      });
+    };
+
+    // CDC first-EVENT timer: subscribe to publish_c_d_c, then fire a real Upsert
+    // against the seeded SdkLiveRecord row — that write flows outbox→CDC→Kafka and
+    // is delivered back on the stream. The measured cost is dominated by
+    // produce→deliver, the honest first-event latency a real subscriber sees. A
+    // fresh revision per call guarantees a NEW outbox event each iteration.
+    const timeCdcFirstEvent = async (
+      fn: any,
+      request: any,
+    ): Promise<{ ms: number; err: string }> => {
+      const start = performance.now();
+      return await new Promise((resolve) => {
+        let settled = false;
+        const finish = (err: string) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          if (typeof (stream as any).cancel === "function") (stream as any).cancel();
+          resolve({ ms: performance.now() - start, err });
+        };
+        let stream: grpc.ClientReadableStream<any>;
+        try {
+          stream = fn(request, { deadlineMs: 15_000, noRetry: true }) as grpc.ClientReadableStream<any>;
+        } catch (e) {
+          resolve({ ms: performance.now() - start, err: codeNameOf(e) });
+          return;
+        }
+        const timer = setTimeout(() => finish("DEADLINE_EXCEEDED"), 15_000);
+        stream.once("data", () => finish("OK"));
+        stream.once("error", (e: unknown) => finish(codeNameOf(e)));
+        // Fire a real mutation that produces a CDC event for the seeded row.
+        const rev = Date.now();
+        data
+          .upsert(
+            {
+              context: requestContext(tenantId, projectId, "ts.live.perf.cdc"),
+              message_type: LIVE_MESSAGE_TYPE,
+              record_json: jsonBytes({ record_id: fixtures.recordId, tenant_id: tenantId, project_id: projectId, lookup_key: "ts-perf-cdc", payload: "ts-perf-cdc", revision: rev }),
+              conflict_fields: ["record_id"],
+            },
+            { deadlineMs: 8_000, noRetry: true },
+          )
+          .catch(() => {});
+      });
+    };
+
+    // CDC subscription request: a permissive pattern so the seeded Upsert's event is
+    // delivered regardless of the broker's exact topic naming (the handler treats
+    // "*"/"" as match-all).
+    const cdcRequest = () => ({
+      context: requestContext(tenantId, projectId, "ts.live.perf.cdc"),
+      message_type: LIVE_MESSAGE_TYPE,
+      topic_pattern: "*",
+    });
+    // Server-streaming reads that take a request and deliver a real first response.
+    const SERVER_STREAM_FIRST_RESPONSE = new Set(["select_v2", "get_object"]);
+    const seededStreamRequest = (methodName: string) => {
+      if (methodName === "select_v2") {
+        return { context: requestContext(tenantId, projectId, "ts.live.perf"), message_type: LIVE_MESSAGE_TYPE, filter: { tenant_id: tenantId, project_id: projectId }, limit: 1 };
+      }
+      if (methodName === "get_object") {
+        return { context: requestContext(tenantId, projectId, "ts.live.perf"), bucket: fixtures.lookup("bucket") ?? (process.env.UDB_LIVE_S3_BUCKET || "udb-live-sdk"), object_key: fixtures.lookup("object_key") ?? "" };
+      }
+      return surfaceProbeRequest(tenantId, projectId);
     };
 
     const surfaces: Array<[string, any, readonly string[]]> = [
@@ -1332,17 +1818,52 @@ test("live per-RPC perf", {
           if (methodName === "serviceFull") continue;
           if (typeof fn !== "function") continue;
           if (NON_UNARY_METHODS.has(methodName)) {
-            // Measured, not dropped — streaming reports stream-open latency.
+            // CDC subscription: subscribe → fire a real seeded Upsert → first event.
+            if (serviceName === "DataBroker" && methodName === "publish_c_d_c") {
+              const durs: number[] = [];
+              let errCode = "OK";
+              await timeCdcFirstEvent(fn, cdcRequest()); // warm-up
+              for (let i = 0; i < 3; i++) {
+                const r = await timeCdcFirstEvent(fn, cdcRequest());
+                durs.push(r.ms);
+                if (r.err !== "OK") errCode = r.err;
+              }
+              durs.sort((a, b) => a - b);
+              const pct = (p: number) => durs[Math.min(durs.length - 1, Math.floor((p * (durs.length - 1)) / 100))];
+              samples.push({ service: serviceName, rpc: methodName, kind: "stream", err: errCode, p50: pct(50), p99: pct(99), mean: durs.reduce((s, d) => s + d, 0) / durs.length, note: "cdc: time-to-first-event (real seeded Upsert produced)" });
+              continue;
+            }
+            // Server-streaming reads with a real first response (select_v2, get_object).
+            if (SERVER_STREAM_FIRST_RESPONSE.has(methodName)) {
+              const req = seededStreamRequest(methodName);
+              const durs: number[] = [];
+              let errCode = "OK";
+              await timeServerStreamFirstResponse(fn, req); // warm-up
+              for (let i = 0; i < 5; i++) {
+                const r = await timeServerStreamFirstResponse(fn, req);
+                durs.push(r.ms);
+                if (r.err !== "OK") errCode = r.err;
+              }
+              durs.sort((a, b) => a - b);
+              const pct = (p: number) => durs[Math.min(durs.length - 1, Math.floor((p * (durs.length - 1)) / 100))];
+              samples.push({ service: serviceName, rpc: methodName, kind: "stream", err: errCode, p50: pct(50), p99: pct(99), mean: durs.reduce((s, d) => s + d, 0) / durs.length, note: "streaming: time-to-first-response (seeded)" });
+              continue;
+            }
+            // Client-streaming / bidi: a single seeded message cannot drive a real
+            // response in a passive run — report stream-open latency.
             const d = timeStreamOpen(fn, surfaceProbeRequest(tenantId, projectId));
-            samples.push({ service: serviceName, rpc: methodName, kind: "stream_open", err: "OK", p50: d, p99: d, mean: d });
+            samples.push({ service: serviceName, rpc: methodName, kind: "stream_open", err: "OK", p50: d, p99: d, mean: d, note: "streaming: stream-open latency" });
             continue;
           }
           const kind = operationKindOf((api as any).serviceFull, methodName) || "read_only";
-          // Top data-plane CRUD RPCs get a real, valid body (real e2e handler work);
-          // everything else falls back to the generic surface probe request.
-          const request = kind === "destructive"
-            ? {}
-            : (perfRealBody(serviceName, methodName, tenantId, projectId) ?? surfaceProbeRequest(tenantId, projectId));
+          // Top data-plane CRUD + backend-specific RPCs get a real, valid body (real
+          // handler work); everything else falls back to the SEEDED probe request so
+          // reference/ID fields resolve to real entities and the RPC runs its success
+          // path. Destructive RPCs are now also seeded (run for real against the
+          // disposable seeded target), measured once.
+          const request =
+            perfRealBody(serviceName, methodName, tenantId, projectId, fixtures) ??
+            populateSeeded(serviceName, methodName, tenantId, projectId, fixtures);
           await timeMethod(fn, request); // warm-up
           const durs: number[] = [];
           let errCode = "OK"; // last observed non-OK status marks the RPC failed
@@ -1356,6 +1877,7 @@ test("live per-RPC perf", {
           samples.push({
             service: serviceName, rpc: methodName, kind, err: errCode,
             p50: pct(50), p99: pct(99), mean: durs.reduce((s, d) => s + d, 0) / durs.length,
+            note: kind === "destructive" ? "destructive: 1 real call against a seeded disposable target" : `${kind} (seeded success path)`,
           });
         }
       }
@@ -1364,10 +1886,22 @@ test("live per-RPC perf", {
     const svc = new Map<string, number[]>();
     for (const s of samples) { (svc.get(s.service) ?? svc.set(s.service, []).get(s.service)!).push(s.mean); }
     const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
+    const fkeys = [...fixtures.m.keys()].sort();
     const lines = ["# UDB SDK Live Perf — TypeScript (localhost)", "",
-      `RPCs measured: ${samples.length}`, "",
-      "Unary = full request/response round-trip. Streaming rows (kind=stream_open) report "
-      + "stream-open latency (establish the stream, no response drain), NOT first-message latency.", "",
+      `RPCs measured: ${samples.length}   tenant=${tenantId}`, "",
+      "Every RPC is driven down its SUCCESS path: a SEED phase first creates real, "
+      + "disposable entities (a user, role + assignment + policies, an API key, a notification, a "
+      + "stored file, an asset + pipeline, a WebRTC room/peer/track, an SdkLiveRecord row) and the "
+      + "harness resolves each request's reference/ID fields to those real identifiers. So the numbers "
+      + "reflect real handler work, not validation-rejection latency. Any residual non-OK RPC is listed "
+      + "under Failures for the maintainer to finish.", "",
+      "Unary = full request/response round-trip. Non-CDC server-streaming RPCs (kind=stream) report "
+      + "time-to-FIRST-RESPONSE with seeded inputs; client-streaming/bidi RPCs (kind=stream_open) report "
+      + "stream-open latency. CDC subscription (publish_c_d_c, kind=stream) reports time-to-FIRST-EVENT: "
+      + "the harness subscribes, fires a real seeded Upsert that flows outbox→CDC→Kafka, and times the "
+      + "first delivered event.", "",
+      "## Seeded fixtures", "",
+      `Captured semantic field → seeded value keys used to resolve request fields: ${fkeys.join(", ")}`, "",
       "## Per-service mean latency", "", "| Service | RPCs | mean ms |", "|---|--:|--:|"];
     for (const name of [...svc.keys()].sort((a, b) => mean(svc.get(b)!) - mean(svc.get(a)!))) {
       lines.push(`| ${name} | ${svc.get(name)!.length} | ${mean(svc.get(name)!).toFixed(2)} |`);
@@ -1384,13 +1918,18 @@ test("live per-RPC perf", {
         lines.push(`| ${s.service}/${s.rpc} | ${s.kind} | ${s.err} | ${s.p99.toFixed(2)} | ${s.mean.toFixed(2)} |`);
       }
     }
-    lines.push("", "## Slowest 20 by p99", "", "| RPC | kind | err | p50 ms | p99 ms | mean ms |", "|---|---|---|--:|--:|--:|");
+    lines.push("", "## Slowest 20 by p99", "", "| RPC | kind | err | p50 ms | p99 ms | mean ms | note |", "|---|---|---|--:|--:|--:|---|");
     for (const s of [...samples].sort((a, b) => b.p99 - a.p99).slice(0, 20)) {
-      lines.push(`| ${s.service}/${s.rpc} | ${s.kind} | ${s.err} | ${s.p50.toFixed(2)} | ${s.p99.toFixed(2)} | ${s.mean.toFixed(2)} |`);
+      lines.push(`| ${s.service}/${s.rpc} | ${s.kind} | ${s.err} | ${s.p50.toFixed(2)} | ${s.p99.toFixed(2)} | ${s.mean.toFixed(2)} | ${s.note} |`);
+    }
+    lines.push("", "## Full per-RPC table (sorted by service, then RPC)", "", "| Service | RPC | kind | err | p50 ms | p99 ms | mean ms | note |", "|---|---|---|---|--:|--:|--:|---|");
+    for (const s of [...samples].sort((a, b) => (a.service === b.service ? a.rpc.localeCompare(b.rpc) : a.service.localeCompare(b.service)))) {
+      lines.push(`| ${s.service} | ${s.rpc} | ${s.kind} | ${s.err} | ${s.p50.toFixed(2)} | ${s.p99.toFixed(2)} | ${s.mean.toFixed(2)} | ${s.note} |`);
     }
     writeFileSync("perf_report_ts.md", lines.join("\n") + "\n");
     assert.ok(samples.length >= 260, `perf measured only ${samples.length} RPCs (want all 262)`);
     console.log(`\nTS perf: ${samples.length} RPCs measured, ${failed.length} FAILED (non-OK gRPC status) → sdk/typescript/perf_report_ts.md`);
+    await seed.cleanup();
   } finally {
     project.close();
   }

@@ -16,7 +16,7 @@ from google.protobuf.message_factory import GetMessageClass
 from udb.services.v1 import data_broker_pb2, data_broker_pb2_grpc
 from udb.core.authn.services.v1 import core_pb2 as authn_pb2
 from udb.core.authn.services.v1 import authn_service_pb2_grpc as authn_grpc
-from udb.entity.v1 import admin_pb2, blob_pb2, operation_pb2, relational_pb2, stores_pb2, vector_pb2
+from udb.entity.v1 import admin_pb2, blob_pb2, cdc_pb2, operation_pb2, relational_pb2, stores_pb2, vector_pb2
 
 # Native control-plane service messages + stubs (real CRUD, not just mount probes).
 from udb.core.common.v1 import types_pb2 as common_pb, dto_pb2 as common_dto_pb
@@ -1326,6 +1326,474 @@ def perf_real_body(method, meta: Metadata):
     return None
 
 
+# --------------------------------------------------------------------------------
+# Perf SEED phase + fixture map (Python counterpart of the Go harness in
+# live_perf_seed_test.go / live_surface_probe_test.go). The perf run measures REAL
+# successful-call latency for the whole RPC surface; to do that every reference/ID
+# field in a request must point at an entity that actually exists. perf_seed builds
+# those entities up front — REUSING the same create flows the conformance suite
+# already proves succeed — and records their real identifiers into a PerfFixtures
+# map keyed by SEMANTIC field name. populate_seeded then resolves a reflectively
+# built request's reference/ID/enum/email/url fields from that map so each RPC is
+# driven down its SUCCESS path instead of failing on a placeholder.
+# --------------------------------------------------------------------------------
+
+
+class PerfFixtures:
+    """Maps a semantic field name -> a real seeded value. ``lookup`` resolves a
+    proto field name (lower-cased) against it, preferring an exact match then a
+    ``_``-suffix match (so ``user_id``, ``assigned_by``, ``created_by`` all reach the
+    seeded user UUID when registered under those keys)."""
+
+    def __init__(self) -> None:
+        self.m: dict[str, str] = {}
+
+    def set(self, key: str, val: str) -> None:
+        if val:
+            self.m[key.lower()] = val
+
+    def lookup(self, field: str) -> str | None:
+        if field in self.m:
+            return self.m[field]
+        for k, v in self.m.items():
+            if field == k or field.endswith("_" + k):
+                return v
+        return None
+
+
+# Enum value used for the first non-zero pick in populate_seeded.
+def _first_nonzero_enum(enum_type):
+    for value in enum_type.values:
+        if value.number != 0:
+            return value.number
+    return enum_type.values[0].number if enum_type.values else 0
+
+
+def _seeded_string(name: str, tenant: str, project: str, fix: PerfFixtures) -> str:
+    """Resolve a string field to a REAL seeded value (fixture first, then the
+    constrained-format heuristics, then the generic scalar fallback)."""
+    n = name.lower()
+    hit = fix.lookup(n)
+    if hit is not None:
+        return hit
+    if "tenant" in n:
+        return tenant
+    if "project" in n:
+        return project
+    if n == "message_type" or "messagetype" in n:
+        return LIVE_MESSAGE_TYPE
+    if "domain" in n:
+        return tenant
+    if "purpose" in n:
+        return "python.live.perf"
+    if "page_token" in n or "pagetoken" in n:
+        return ""
+    if "email" in n:
+        return "sdk-live-perf@example.com"
+    if n == "url" or n.endswith("_url") or "issuer" in n or "jwks" in n:
+        return "https://idp.example/sdk-live"
+    return "sdk-live-probe"
+
+
+def populate_seeded(msg, fix: PerfFixtures, tenant: str, project: str, depth: int = 0):
+    """Walk a protobuf message and set reference/ID/enum/email/url/scalar fields from
+    the fixture map so the request drives the RPC's SUCCESS path. Recurses one level
+    into singular sub-messages; the ``context`` field gets the tenant/project; repeated
+    and map fields are skipped (the perf surface's required fields are all singular).
+    Returns ``msg`` so it can be used inline as a fallback for ``default_request``."""
+    for f in msg.DESCRIPTOR.fields:
+        if f.label == _FD.LABEL_REPEATED:
+            continue
+        try:
+            if f.name == "context" and f.type == _FD.TYPE_MESSAGE:
+                full = f.message_type.full_name
+                if full in ("udb.entity.v1.RequestContext", "udb.core.common.v1.RequestContext"):
+                    populate_context(getattr(msg, f.name), full, tenant, project)
+                continue
+            if f.type == _FD.TYPE_STRING:
+                setattr(msg, f.name, _seeded_string(f.name, tenant, project, fix))
+            elif f.type in _INT_FD_TYPES:
+                setattr(msg, f.name, 1)
+            elif f.type in (_FD.TYPE_DOUBLE, _FD.TYPE_FLOAT):
+                setattr(msg, f.name, 1.0)
+            elif f.type == _FD.TYPE_ENUM:
+                # First non-zero value (zero is usually UNSPECIFIED, rejected by validators).
+                setattr(msg, f.name, _first_nonzero_enum(f.enum_type))
+            elif f.type == _FD.TYPE_MESSAGE:
+                full = f.message_type.full_name
+                if full in ("udb.entity.v1.RequestContext", "udb.core.common.v1.RequestContext"):
+                    populate_context(getattr(msg, f.name), full, tenant, project)
+                elif full.startswith("google.protobuf."):
+                    pass  # well-known types (Struct/Timestamp/Any/...): default is valid
+                elif depth < 1:
+                    populate_seeded(getattr(msg, f.name), fix, tenant, project, depth + 1)
+        except (AttributeError, ValueError, TypeError):
+            pass  # best-effort: a populate mismatch must never break the harness
+    return msg
+
+
+def perf_seed(clients: dict, meta: Metadata):
+    """Create real, disposable entities across the services the perf run touches and
+    record their identifiers. Mirrors the Go ``perfSeed``: seeds in DEPENDENCY ORDER
+    (a user before a role assignment before a notification; a file before an asset;
+    a room before a peer before a track), namespaces everything by a per-run suffix,
+    and returns ``(fixtures, record_id, cleanup)``. ``meta.tenant_id`` is the canonical
+    tenant UUID discovered from the principal, so the UUID-strict native services
+    (storage/asset/webrtc) and the free-text services share one bearer (auth_fix.md)."""
+    fix = PerfFixtures()
+    suffix = uuid.uuid4().hex
+    tenant, project = meta.tenant_id, meta.project_id
+    md = meta.to_grpc_metadata()
+    cleanups: list = []
+
+    broker = clients[DataBrokerClient].stub
+    rc = meta.with_purpose("python.live.perf.seed").to_request_context()
+
+    # Always-known scalars.
+    fix.set("tenant_id", tenant)
+    fix.set("tenant", tenant)
+    fix.set("project_id", project)
+    fix.set("project", project)
+    fix.set("domain", tenant)
+    fix.set("message_type", LIVE_MESSAGE_TYPE)
+    fix.set("locale", "en")
+    fix.set("name", f"sdk-perf-{suffix}")
+    fix.set("filename", f"sdk-perf-{suffix}.txt")
+    fix.set("content_type", "text/plain")
+    fix.set("file_type", STORAGE_FILE_TYPE)
+    fix.set("kind", "audio")
+    fix.set("topic_pattern", "*")
+
+    # ── DataBroker: a real SdkLiveRecord row (drives Upsert/Select/Delete + CDC) ──
+    record_id = f"py-perf-{suffix}"
+    try:
+        broker.Upsert(
+            relational_pb2.UpsertRequest(
+                context=rc, message_type=LIVE_MESSAGE_TYPE,
+                record_json=live_record_json(record_id, tenant, project, f"py-perf-lk-{suffix}", "perf-seed", 1),
+                conflict_fields=["record_id"],
+            ),
+            metadata=md, timeout=8.0,
+        )
+    except grpc.RpcError:
+        pass
+    fix.set("record_id", record_id)
+
+    proj_id = f"sdklive_perf_{suffix}"
+    try:
+        broker.EnsureProject(admin_pb2.EnsureProjectRequest(context=rc, project_id=proj_id, name="SDK Perf Project"), metadata=md, timeout=8.0)
+    except grpc.RpcError:
+        pass
+
+    # A real MinIO bucket + object so GetObject and the object RPCs run their success path.
+    bucket = os.getenv("UDB_LIVE_S3_BUCKET", "udb-live-sdk")
+    object_key = f"py-perf/{suffix}.txt"
+    try:
+        broker.EnsureResource(admin_pb2.ResourceAdminRequest(context=rc, backend="minio", resource_name=bucket, spec_json="{}"), metadata=md, timeout=8.0)
+        broker.PutObject(
+            iter([blob_pb2.Chunk(context=rc, bucket=bucket, object_key=object_key, data=f"py-perf-object-{suffix}".encode(), content_type="text/plain", final_chunk=True)]),
+            metadata=md, timeout=8.0,
+        )
+    except grpc.RpcError:
+        pass
+    fix.set("bucket", bucket)
+    fix.set("object_key", object_key)
+
+    # A real Mongo collection + document so the document RPCs resolve a resource.
+    collection = f"sdk_perf_docs_{suffix}"
+    document_id = f"doc-perf-{suffix}"
+    try:
+        broker.EnsureResource(admin_pb2.ResourceAdminRequest(context=rc, backend="mongodb", resource_name=collection, spec_json=json.dumps({"collection": collection})), metadata=md, timeout=8.0)
+        broker.DocumentUpsert(
+            stores_pb2.DocumentUpsertRequest(
+                context=rc, resource=operation_pb2.StoreResource(backend="mongodb", resource_name=collection),
+                document_id=document_id, document=live_struct({"_id": document_id, "payload": "perf", "revision": 1}),
+            ),
+            metadata=md, timeout=8.0,
+        )
+    except grpc.RpcError:
+        pass
+    # NOTE: a single backend/resource_name fixture cannot serve both the SQL and the
+    # document/cache/vector/graph RPCs, so those backend-specific DataBroker RPCs are
+    # driven by typed bodies in perf_real_body, not the generic reflective probe — we
+    # deliberately do NOT register a global backend/resource_name fixture.
+    fix.set("collection", collection)
+    fix.set("mongo_collection", collection)
+    fix.set("document_id", document_id)
+
+    # ── AuthnService: a real user (id reused everywhere a user_id is needed) ──────
+    authn = clients[AuthnServiceClient].stub
+    pw = "CorrectHorse1!"
+    uname = f"sdk-perf-{suffix}"
+    uid = ""
+    try:
+        created = authn.CreateUser(
+            authn_pb2.CreateUserRequest(username=uname, email=f"{uname}@example.com", password=pw, tenant_id=tenant, project_id=project, full_name="SDK Perf User"),
+            metadata=md, timeout=8.0,
+        )
+        uid = created.user.user_id
+    except grpc.RpcError:
+        pass
+    if uid:
+        for key in ("user_id", "recipient_id", "assigned_by", "created_by", "updated_by", "revoked_by", "deleted_by", "approved_by", "rejected_by", "owner_id"):
+            fix.set(key, uid)
+        fix.set("subject", f"user:{uid}")
+        try:
+            login = authn.Login(authn_pb2.LoginRequest(username=uname, password=pw, tenant_hint=tenant, project_hint=project, device_name="python-sdk-perf-seed"), metadata=md, timeout=8.0)
+            fix.set("session_id", login.session_id)
+            fix.set("token", login.access_token)
+            fix.set("access_token", login.access_token)
+            fix.set("refresh_token", login.refresh_token)
+            fix.set("csrf_token", login.csrf_token)
+        except grpc.RpcError:
+            pass
+        try:
+            codes = authn.GenerateRecoveryCodes(authn_pb2.GenerateRecoveryCodesRequest(user_id=uid, count=8), metadata=md, timeout=8.0)
+            if codes.codes:
+                fix.set("code", codes.codes[0])
+                fix.set("recovery_code", codes.codes[0])
+        except (grpc.RpcError, AttributeError):
+            pass
+
+    # ── AuthzService: role + assignment + policies + relationship ─────────────────
+    authz = clients[AuthzServiceClient].stub
+    role_code = f"sdk_perf_reader_{suffix}"
+    try:
+        role = authz.CreateRole(
+            authz_pb.CreateRoleRequest(name=f"SDK Perf Reader {suffix}", description="perf seed role", created_by=str(uuid.uuid4()), role_code=role_code, domain=tenant, tenant_id=tenant, project_id=project),
+            metadata=md, timeout=8.0,
+        ).role
+        rid = role.role_id
+        fix.set("role_id", rid)
+        fix.set("role", role_code)
+        fix.set("role_code", role_code)
+        if uid:
+            try:
+                assigned = authz.AssignRole(authz_pb.AssignRoleRequest(user_id=uid, role_id=rid, domain=tenant, assigned_by=uid, tenant_id=tenant, project_id=project), metadata=md, timeout=8.0).user_role
+                fix.set("user_role_id", assigned.user_role_id)
+            except grpc.RpcError:
+                pass
+        cleanups.append(lambda: authz.DeleteRole(authz_pb.DeleteRoleRequest(role_id=rid, deleted_by=uid), metadata=md, timeout=8.0))
+    except grpc.RpcError:
+        pass
+    # ABAC policy + an RBAC policy rule -> policy_id for GetPolicyRule/DeletePolicyRule.
+    try:
+        authz.PutAuthzPolicy(
+            authz_pb.PutAuthzPolicyRequest(policy=authz_pb.AuthzPolicyRecord(id=str(uuid.uuid4()), enabled=True, effect="allow", tenant=tenant, project=project, role=role_code, action="data.select", resource="invoice")),
+            metadata=md, timeout=8.0,
+        )
+    except grpc.RpcError:
+        pass
+    if uid:
+        try:
+            rule = authz.CreatePolicyRule(
+                authz_pb.CreatePolicyRuleRequest(subject=role_code, domain=tenant, object="ledger", action="data.update", effect=1, description="perf seed rule", created_by=uid, tenant_id=tenant, project_id=project),
+                metadata=md, timeout=8.0,
+            )
+            fix.set("policy_id", rule.policy.policy_id)
+        except (grpc.RpcError, AttributeError, ValueError):
+            pass
+        for fn in (
+            lambda: authz.PutRoleBinding(authz_pb.PutRoleBindingRequest(binding=authz_pb.RoleBinding(subject=f"user:{uid}", role=role_code, tenant=tenant, project=project, source="sdk-perf")), metadata=md, timeout=8.0),
+            lambda: authz.PutRelationship(authz_pb.PutRelationshipRequest(tuple=authz_pb.RelationshipTuple(subject=f"user:{uid}", relation="member", object=f"group:sdk-perf-{suffix}", tenant=tenant, project=project, source="sdk-perf")), metadata=md, timeout=8.0),
+        ):
+            try:
+                fn()
+            except (grpc.RpcError, AttributeError, ValueError):
+                pass
+    fix.set("relation", "member")
+    fix.set("object", f"group:sdk-perf-{suffix}")
+    fix.set("resource", "invoice")
+    fix.set("action", "data.select")
+
+    # ── ApiKeyService: a real key -> key_id + plain_key ───────────────────────────
+    apikey = clients[ApiKeyServiceClient].stub
+    principal = f"sdk-perf-svc-{suffix}"
+    try:
+        key = apikey.CreateApiKey(
+            apikey_pb.CreateApiKeyRequest(name=f"sdk-perf-key-{suffix}", owner_id=principal, scopes=["data:read"], context=common_pb.RequestContext(user_id=principal, tenant=common_pb.TenantContext(tenant_id=tenant, project_id=project))),
+            metadata=md, timeout=8.0,
+        )
+        fix.set("key_id", key.key.key_id)
+        fix.set("plain_key", key.plain_key)
+        fix.set("owner_id", principal)
+    except grpc.RpcError:
+        pass
+
+    # ── AnalyticsService: a recorded metric -> a stage_name with data ─────────────
+    analytics = clients[AnalyticsServiceClient].stub
+    stage = f"sdk_perf_stage_{suffix}"
+    try:
+        analytics.RecordPipelineMetric(analytics_pb.RecordPipelineMetricRequest(stage_name=stage, tenant_id=tenant, latency_ms=100.0, is_success=True), metadata=md, timeout=8.0)
+    except grpc.RpcError:
+        pass
+    fix.set("stage_name", stage)
+
+    # ── NotificationService: template + a sent notification -> log_id, event_type ──
+    notif = clients[NotificationServiceClient].stub
+    event = f"sdk.perf.{suffix}"
+    try:
+        notif.UpsertTemplate(
+            notif_pb.UpsertTemplateRequest(event_type=event, channel=NOTIFICATION_CHANNEL_EMAIL, locale="en", subject_template="SDK {{n}}", body_template="sdk-perf-body", is_active=True),
+            metadata=md, timeout=8.0,
+        )
+    except grpc.RpcError:
+        pass
+    fix.set("event_type", event)
+    if uid:
+        try:
+            sent = notif.SendNotification(
+                notif_pb.SendNotificationRequest(event_type=event, recipient_id=uid, recipient_address=f"sdk+{suffix}@example.com", tenant_id=tenant, channels=[NOTIFICATION_CHANNEL_EMAIL]),
+                metadata=md, timeout=8.0,
+            )
+            if sent.logs:
+                fix.set("log_id", sent.logs[0].log_id)
+                fix.set("notification_id", sent.logs[0].log_id)
+        except grpc.RpcError:
+            pass
+
+    # ── StorageService: a registered file -> file_id ──────────────────────────────
+    storage = clients[StorageServiceClient].stub
+    file_id = ""
+    try:
+        reg = storage.RegisterUpload(
+            storage_pb.RegisterUploadRequest(tenant_id=tenant, project_id="", filename=f"perf-{suffix}.txt", content_type="text/plain", file_type=STORAGE_FILE_TYPE, reference_id=str(uuid.uuid4()), reference_type="sdk.perf", size_bytes=128, expires_in_minutes=30),
+            metadata=md, timeout=8.0,
+        )
+        file_id = reg.file_id
+        fix.set("file_id", file_id)
+        cleanups.append(lambda: storage.DeleteFile(storage_pb.DeleteFileRequest(tenant_id=tenant, file_id=file_id), metadata=md, timeout=8.0))
+    except grpc.RpcError:
+        pass
+
+    # ── AssetService: pipeline definition + asset + a started instance ────────────
+    if file_id:
+        asset = clients[AssetServiceClient].stub
+        definition_id = ""
+        try:
+            d = asset.CreatePipelineDefinition(
+                asset_pb.CreatePipelineDefinitionRequest(tenant_id=tenant, name=f"sdk-perf-pipeline-{suffix}", description="perf seed", media_type="application/json", steps='[{"name":"extract","type":"EXTRACT"}]', version=1),
+                metadata=md, timeout=8.0,
+            )
+            definition_id = d.definition_id
+            fix.set("definition_id", definition_id)
+        except grpc.RpcError:
+            pass
+        try:
+            a = asset.RegisterAsset(
+                asset_pb.RegisterAssetRequest(tenant_id=tenant, project_id="", file_id=file_id, name=f"sdk-perf-asset-{suffix}", media_type="application/json", metadata='{"source":"sdk-perf"}'),
+                metadata=md, timeout=8.0,
+            )
+            fix.set("asset_id", a.asset_id)
+            if definition_id:
+                try:
+                    inst = asset.StartPipeline(
+                        asset_pb.StartPipelineRequest(tenant_id=tenant, definition_id=definition_id, asset_id=a.asset_id, context="{}", correlation_id=f"sdk-perf-{suffix}"),
+                        metadata=md, timeout=8.0,
+                    )
+                    fix.set("instance_id", inst.instance_id)
+                except grpc.RpcError:
+                    pass
+        except grpc.RpcError:
+            pass
+
+    # ── WebRTC: room + peer + track ───────────────────────────────────────────────
+    rooms = clients[RoomServiceClient].stub
+    peers = clients[PeerServiceClient].stub
+    tracks = clients[TrackServiceClient].stub
+    try:
+        room = rooms.CreateRoom(
+            webrtc_pb.CreateRoomRequest(tenant_id=tenant, name=f"sdk-perf-room-{suffix}", max_participants=8, config="{}", created_by=str(uuid.uuid4())),
+            metadata=md, timeout=8.0,
+        )
+        room_id = room.room_id
+        fix.set("room_id", room_id)
+        cleanups.append(lambda: rooms.CloseRoom(webrtc_pb.CloseRoomRequest(tenant_id=tenant, room_id=room_id), metadata=md, timeout=8.0))
+        try:
+            joined = peers.JoinRoom(webrtc_pb.JoinRoomRequest(tenant_id=tenant, room_id=room_id, display_name="sdk-perf-peer", metadata="{}", user_agent="sdk-perf"), metadata=md, timeout=8.0)
+            pid = joined.peer.peer_id
+            fix.set("peer_id", pid)
+            try:
+                pub = tracks.PublishTrack(webrtc_pb.PublishTrackRequest(tenant_id=tenant, room_id=room_id, peer_id=pid, kind="audio", label="mic", settings="{}", metadata="{}"), metadata=md, timeout=8.0)
+                fix.set("track_id", pub.track_id)
+            except grpc.RpcError:
+                pass
+        except grpc.RpcError:
+            pass
+    except grpc.RpcError:
+        pass
+
+    def cleanup() -> None:
+        for fn in reversed(cleanups):
+            try:
+                fn()
+            except grpc.RpcError:
+                pass
+
+    return fix, record_id, cleanup
+
+
+def time_cdc_first_event(broker_stub, method, meta: Metadata, record_id: str, timeout: float = 12.0) -> str:
+    """Event-driven success path for PublishCDC: subscribe, then fire a real Upsert
+    against the seeded SdkLiveRecord row (which flows outbox->CDC->Kafka) and read the
+    FIRST delivered event. Returns "OK" on a delivered event, else the gRPC code name.
+    The first-event latency is timed by the caller around this call."""
+    md = meta.to_grpc_metadata()
+    rc = meta.with_purpose("python.live.perf.cdc").to_request_context()
+    try:
+        stream = broker_stub.PublishCDC(cdc_pb2.CDCSubscriptionRequest(context=rc, topic_pattern="*"), metadata=md, timeout=timeout)
+    except grpc.RpcError as exc:
+        return exc.code().name
+    try:
+        broker_stub.Upsert(
+            relational_pb2.UpsertRequest(
+                context=meta.with_purpose("python.live.perf.cdc").to_request_context(), message_type=LIVE_MESSAGE_TYPE,
+                record_json=live_record_json(record_id, meta.tenant_id, meta.project_id, "py-perf-cdc", "py-perf-cdc", int(time.time_ns())),
+                conflict_fields=["record_id"],
+            ),
+            metadata=md, timeout=timeout,
+        )
+    except grpc.RpcError:
+        pass
+    try:
+        next(iter(stream))  # block on the first delivered event (real produce->deliver round-trip)
+        return "OK"
+    except StopIteration:
+        return "OK"
+    except grpc.RpcError as exc:
+        return exc.code().name
+    finally:
+        try:
+            stream.cancel()
+        except Exception:
+            pass
+
+
+def time_first_recv(rpc_callable, request, meta: Metadata, client_streaming: bool, timeout: float = 12.0) -> str:
+    """Open a non-CDC streaming RPC with a seeded request and read up to the FIRST
+    server response (a real round-trip, not just stream-open). For client/bidi we send
+    one seeded message and close the send side; for server-streaming we send the seeded
+    request. Returns "OK" on first response (or an empty stream), else the gRPC code."""
+    md = meta.to_grpc_metadata()
+    try:
+        if client_streaming:
+            stream = rpc_callable(iter([request]), metadata=md, timeout=timeout)
+        else:
+            stream = rpc_callable(request, metadata=md, timeout=timeout)
+        try:
+            next(iter(stream))
+            return "OK"
+        except StopIteration:
+            return "OK"
+    except grpc.RpcError as exc:
+        return exc.code().name
+    finally:
+        try:
+            stream.cancel()
+        except Exception:
+            pass
+
+
 def assert_not_mount_failure(label: str, exc: grpc.RpcError) -> None:
     if exc.code() in FATAL_CODES:
         raise AssertionError(
@@ -1518,75 +1986,110 @@ def test_live_perf():
         endpoint = target if client_cls is DataBrokerClient else auth_target
         clients[client_cls] = client_cls(endpoint, authed_meta, timeout=20.0)
 
+    # SEED PHASE (runs before any measurement): create real, disposable entities and
+    # capture their identifiers so every RPC can be driven down its SUCCESS path with
+    # valid inputs. ``authed_meta.tenant_id`` is the canonical tenant UUID, so the one
+    # bearer serves the UUID-strict native services (storage/asset/webrtc) too.
+    fixtures, seed_record_id, seed_cleanup = perf_seed(clients, authed_meta)
+
+    broker_stub = clients[DataBrokerClient].stub
+
+    def is_cdc_subscription(client_cls, method) -> bool:
+        return client_cls is DataBrokerClient and method.name == "PublishCDC"
+
     def iters_for(kind):
         return 1 if kind == "destructive" else (5 if kind == "mutation" else 25)
 
-    def time_one(client, method):
+    def time_one(client, client_cls, method):
         # Returns (elapsed_ms, err_code) where err_code is the gRPC status code NAME
         # (e.g. "UNAVAILABLE", "FAILED_PRECONDITION") on a non-OK status, else "OK".
         # A failing RPC must never be reported as a silent latency sample.
-        # Top data-plane CRUD RPCs get a real, valid body (real e2e handler work);
-        # everything else falls back to the generic typed request.
-        request = perf_real_body(method, authed_meta) or default_request(method, authed_meta)
+        #
+        # Every RPC is driven down its SUCCESS path: the top data-plane CRUD RPCs get a
+        # real, valid body (perf_real_body); every OTHER RPC gets a descriptor-built
+        # request whose reference/ID/enum fields are resolved from the seed fixtures
+        # (populate_seeded), so it targets the real entities created in the seed phase.
         rpc_callable = getattr(client.stub, method.name)
-        streaming = method.client_streaming or method.server_streaming
         start = time.perf_counter()
         err_code = "OK"
+        if is_cdc_subscription(client_cls, method):
+            # Event-driven success path: subscribe, fire a real seeded Upsert
+            # (outbox->CDC->Kafka), and time the first delivered event.
+            err_code = time_cdc_first_event(broker_stub, method, authed_meta, seed_record_id)
+            return (time.perf_counter() - start) * 1000.0, err_code
+        request = perf_real_body(method, authed_meta) or populate_seeded(
+            default_request(method, authed_meta), fixtures, authed_meta.tenant_id, authed_meta.project_id
+        )
+        if method.client_streaming or method.server_streaming:
+            # Other streaming RPCs: open with seeded inputs and measure time to the
+            # FIRST server response (a real round-trip), not just stream-open.
+            err_code = time_first_recv(rpc_callable, request, authed_meta, method.client_streaming)
+            return (time.perf_counter() - start) * 1000.0, err_code
         try:
-            if method.client_streaming:
-                # Open the client/bidi stream and push one message, then cancel WITHOUT
-                # reading responses: a subscription/upload stream has no first-message
-                # latency in a passive run — draining it would just hit the deadline.
-                call = rpc_callable(iter([request]), metadata=authed_meta.to_grpc_metadata(), timeout=5.0)
-                call.cancel()
-            elif method.server_streaming:
-                # Open the server stream, do NOT drain (PublishCDC etc. emit only on events).
-                call = rpc_callable(request, metadata=authed_meta.to_grpc_metadata(), timeout=5.0)
-                call.cancel()
-            else:
-                rpc_callable(request, metadata=authed_meta.to_grpc_metadata(), timeout=20.0)
+            rpc_callable(request, metadata=authed_meta.to_grpc_metadata(), timeout=20.0)
         except grpc.RpcError as exc:
             try:
                 err_code = exc.code().name
             except Exception:
                 err_code = "UNKNOWN"
-        return (time.perf_counter() - start) * 1000.0, err_code  # ms; streaming rows = stream-open
+        return (time.perf_counter() - start) * 1000.0, err_code
 
-    # All 262 RPCs are measured. Unary = full round-trip; streaming = stream-open
-    # latency (initiate + push request, no response drain), so a passive subscription
-    # never blocks to the deadline (that 20 s drain is what produced the bogus 272 ms).
+    # All 262 RPCs are measured down their SUCCESS path. Unary = full round-trip;
+    # non-CDC streaming = time-to-first-response (seeded inputs); CDC subscription
+    # (PublishCDC) = time-to-first-event (subscribe, fire a real Upsert, time delivery).
     samples = []
-    for client_cls, method in ALL_RPCS:
-        client = clients[client_cls]
-        streaming = method.client_streaming or method.server_streaming
-        kind = "stream_open" if streaming else RPC_OPERATION_KIND.get(rpc_path(method), "read_only")
-        n = 1 if streaming else iters_for(kind)
-        time_one(client, method)  # warm-up
-        runs = [time_one(client, method) for _ in range(n)]
-        durs = sorted(d for d, _ in runs)
-        # Last observed non-OK status code marks the RPC failed (mirrors Go's lastErrCode).
-        err_code = "OK"
-        for _, code in runs:
-            if code != "OK":
-                err_code = code
-        def pct(p):
-            return durs[min(len(durs) - 1, (p * (len(durs) - 1)) // 100)]
-        samples.append({
-            "service": client_cls._SERVICE_FULL.split(".")[-1],
-            "rpc": method.name, "kind": kind, "iters": n, "err": err_code,
-            "p50": pct(50), "p99": pct(99), "mean": sum(durs) / len(durs),
-        })
-    for c in clients.values():
-        c.close()
+    try:
+        for client_cls, method in ALL_RPCS:
+            client = clients[client_cls]
+            streaming = method.client_streaming or method.server_streaming
+            if is_cdc_subscription(client_cls, method):
+                kind, n = "cdc_first_event", 3
+            elif streaming:
+                kind, n = "stream_first_recv", 3
+            else:
+                kind = RPC_OPERATION_KIND.get(rpc_path(method), "read_only")
+                n = iters_for(kind)
+            time_one(client, client_cls, method)  # warm-up
+            runs = [time_one(client, client_cls, method) for _ in range(n)]
+            durs = sorted(d for d, _ in runs)
+            # Last observed non-OK status code marks the RPC failed (mirrors Go's lastErrCode).
+            err_code = "OK"
+            for _, code in runs:
+                if code != "OK":
+                    err_code = code
+
+            def pct(p, durs=durs):
+                return durs[min(len(durs) - 1, (p * (len(durs) - 1)) // 100)]
+
+            samples.append({
+                "service": client_cls._SERVICE_FULL.split(".")[-1],
+                "rpc": method.name, "kind": kind, "iters": n, "err": err_code,
+                "p50": pct(50), "p99": pct(99), "mean": sum(durs) / len(durs),
+            })
+    finally:
+        seed_cleanup()
+        for c in clients.values():
+            c.close()
 
     svc = {}
     for s in samples:
         svc.setdefault(s["service"], []).append(s["mean"])
     lines = ["# UDB SDK Live Perf — Python (localhost)", "",
-             f"RPCs measured: {len(samples)}", "",
-             "Unary = full request/response round-trip. Streaming rows (kind=stream_open) report "
-             "stream-open latency (initiate + push request, no response drain), NOT first-message "
-             "latency — a subscription stream emits only on events.", "",
+             f"RPCs measured: {len(samples)}   tenant={authed_meta.tenant_id}", "",
+             "Every RPC is driven down its SUCCESS path: a SEED phase first creates real, "
+             "disposable entities (a user, role + assignment + policies, an API key, a notification, "
+             "a stored file, an asset + pipeline, a WebRTC room/peer/track, an SdkLiveRecord row) and "
+             "the harness resolves each request's reference/ID fields to those real identifiers. So "
+             "the numbers reflect real handler work, not validation-rejection latency. The TARGET is "
+             "zero failures; any residual non-OK RPC is listed under Failures for the maintainer to "
+             "finish.", "",
+             "Unary = full request/response round-trip. Non-CDC streaming RPCs (kind=stream_first_recv) "
+             "report time-to-FIRST-RESPONSE with seeded inputs. CDC subscription (kind=cdc_first_event, "
+             "PublishCDC) reports time-to-FIRST-EVENT: the harness subscribes, fires a real Upsert that "
+             "flows outbox->CDC->Kafka, and times the first delivered event.", "",
+             "## Seeded fixtures", "",
+             "Captured semantic field -> seeded value keys used to resolve request fields: "
+             + ", ".join(sorted(fixtures.m)), "",
              "## Per-service mean latency", "", "| Service | RPCs | mean ms |", "|---|--:|--:|"]
     for name in sorted(svc, key=lambda k: -sum(svc[k]) / len(svc[k])):
         lines.append(f"| {name} | {len(svc[name])} | {sum(svc[name]) / len(svc[name]):.2f} |")
