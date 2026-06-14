@@ -1010,9 +1010,7 @@ mod rls_conn_leak_tests {
         }
     }
 
-    async fn current_tenant_guc(
-        conn: &mut sqlx::pool::PoolConnection<sqlx::Postgres>,
-    ) -> String {
+    async fn current_tenant_guc(conn: &mut sqlx::pool::PoolConnection<sqlx::Postgres>) -> String {
         let val: Option<String> =
             sqlx::query_scalar("SELECT current_setting('app.current_tenant_id', true)")
                 .fetch_one(&mut **conn)

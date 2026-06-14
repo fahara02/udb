@@ -911,7 +911,12 @@ mod tests {
         let facts = build_readiness_facts(&init, &[], &[]);
         // postgres is still a required fact and will fail, but the system_store
         // fact itself must be satisfied (not an error).
-        let store_fact = facts.get("system_store").expect("system_store fact present");
-        assert!(store_fact.ok, "system_store should be ok without a relational backend");
+        let store_fact = facts
+            .get("system_store")
+            .expect("system_store fact present");
+        assert!(
+            store_fact.ok,
+            "system_store should be ok without a relational backend"
+        );
     }
 }

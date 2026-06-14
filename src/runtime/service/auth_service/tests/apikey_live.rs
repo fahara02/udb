@@ -163,7 +163,10 @@ async fn live_postgres_apikey_validate_records_usage() {
         .await
         .expect("validate must succeed independent of the detached usage write")
         .into_inner();
-    assert!(valid.valid, "ValidateApiKey returned invalid for a good key");
+    assert!(
+        valid.valid,
+        "ValidateApiKey returned invalid for a good key"
+    );
 
     // The usage write is detached; poll until it lands (proves it persists and
     // is non-fatal — the response already returned).
