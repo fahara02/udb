@@ -42,6 +42,35 @@ This file is the source of truth for those bodies.
 
 ---
 
+## Execution order — the auth route (MANDATORY sequencing)
+
+The bench runs as ONE authenticated principal (the admin) plus a seeded disposable
+user. Auth RPCs that end a session / invalidate a principal MUST run **last**, or they
+kill the session mid-run and everything after fails. Drive the harness in three phases:
+
+### Phase 1 — establish the session (run FIRST, in this order)
+1. `AuthnService/Login` — get `token`, `session_id`, `refresh_token`, `csrf_token` → seed fixtures.
+2. `AuthnService/RefreshToken` — exercise the token-family refresh.
+3. `AuthnService/RefreshSession` — refresh the live session.
+4. `AuthnService/Authenticate` + `ValidateToken` + `IntrospectToken` + `GetJwks` — validate (read-only).
+(Also do the rest of the **seed phase** here: CreateUser→disposable user, Upsert rows, roles/policies/keys/templates/files/etc. — see seed-fixture legend.)
+
+### Phase 2 — measure everything under the live session
+ALL other RPCs across every service, **plus** the non-terminal AuthnService RPCs
+(GetUser, ListUsers, UpdateUser, sessions read, MFA enroll/list, devices list,
+recovery-code generate, WebAuthn start/list, phone/OTP send+verify, GetMfaPolicy,
+ListMfaFactors, RenamePasskey, etc.). Destructive ops here MUST target the **seeded
+disposable user** (`<seed:user_id>`) / its session — never the admin's own.
+
+### Phase 3 — tear the session down (run LAST, after all measurement)
+These end a session / invalidate a principal or credentials — run only at the end,
+preferring the disposable seeded session, and the admin's own session truly last:
+`Logout`, `RevokeSession`, `RevokeDevice`, `DisableMfaFactor`, `RevokeRecoveryCodes`,
+`DeleteWebAuthnCredential`, `ChangePassword`, `ResetPassword`, `AdminResetPassword`,
+`ChangeUserStatus`, `AdminResetMfa`, `AdminRevokeSession`, `AdminRevokeAllUserSessions`,
+`AdminRevokeAllTenantSessions`, `EmergencyRevoke`.
+(In each AuthnService row below, the `seed refs / notes` column marks the phase where it isn't Phase 2.)
+
 <!-- SECTIONS ASSEMBLED BELOW (one per service proto) -->
 
 

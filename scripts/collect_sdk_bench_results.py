@@ -327,7 +327,18 @@ def main() -> int:
     out.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
     print(f"wrote {out.relative_to(ROOT)}")
     print(json.dumps(payload["summary"], indent=2))
-    return 1 if failed else 0
+    # This is a REPORTING step: per-SDK and per-RPC failures are DATA — they are
+    # written to the JSON above and rendered on the dashboard, so they must NOT fail
+    # the CI job. Returning non-zero here froze the GitHub Pages deploy (gated on job
+    # success) and made the workflow_run-gated next benchmark skip, so a single failing
+    # SDK stalled the whole pipeline and the published dashboard went stale. Real infra
+    # failures (broker never started) are already caught upstream at the broker-start
+    # step. Only a TOTAL collection breakdown — no runnable SDK produced any data — is
+    # a genuine error worth failing on.
+    if ok == 0 and skipped < len(sdks):
+        print("ERROR: no SDK produced benchmark data (total collection failure)")
+        return 1
+    return 0
 
 
 if __name__ == "__main__":
