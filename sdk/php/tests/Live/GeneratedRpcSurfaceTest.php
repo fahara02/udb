@@ -1309,10 +1309,12 @@ function perfRealBodyPhp(string $name, string $tenant, string $project): ?object
             ->setConflictFields(['record_id']);
     }
 
+    // Per docs/bench-bodies/data_broker.md: Select targets the seeded record_id
+    // (the row the Upsert above writes), not a tenant/project scan.
     return (new \Udb\Entity\V1\SelectRequest())
         ->setContext($ctx)
         ->setMessageType('udb.sdk.live.v1.SdkLiveRecord')
-        ->setFilter(liveStruct(['tenant_id' => $tenant, 'project_id' => $project]))
+        ->setFilter(liveStruct(['record_id' => "php-perf-$tenant-$project"]))
         ->setLimit(10);
 }
 
