@@ -1,9 +1,9 @@
 name: Publish UDB skill
 
 # Publishes the agent-agnostic "Using UDB" skill on every change.
-#  - Claude  : published by the repo itself — the root `.claude-plugin/marketplace.json`
-#              makes `/plugin marketplace add fahara02/udb` + `/plugin install udb@udb-skills`
-#              work on the merged commit. The `validate` job gates structure; an
+#  - Claude  : published from `udb-skill/.claude-plugin/marketplace.json`
+#              so the plugin metadata lives with the skill source instead of
+#              at repo root. The `validate` job gates structure; an
 #              advisory `smoke` job (gated on ANTHROPIC_API_KEY) headlessly loads the
 #              plugin and checks the skill answers a UDB question.
 #  - Ollama  : `ollama create` + `ollama push` to the registry (uses OLLAMA_API_KEY).
@@ -16,7 +16,6 @@ on:
     branches: [main]
     paths:
       - "udb-skill/**"
-      - ".claude-plugin/**"
       - ".github/workflows/publish-skill.yml"
   release:
     types: [published]
@@ -53,7 +52,6 @@ jobs:
             test -f "$f" || { echo "::error::missing $f"; exit 1; }
           done
           for f in \
-            .claude-plugin/marketplace.json \
             udb-skill/.claude-plugin/marketplace.json \
             udb-skill/plugins/udb/.claude-plugin/plugin.json; do
             python3 -c "import json; json.load(open('$f'))" && echo "json ok: $f"
@@ -63,8 +61,8 @@ jobs:
             grep -q '^description:' "udb-skill/plugins/udb/skills/$s/SKILL.md" \
               || { echo "::error::$s SKILL.md missing description"; exit 1; }
           done
-          # Root marketplace plugin source must resolve to a real plugin dir.
-          python3 -c "import json,os; m=json.load(open('.claude-plugin/marketplace.json')); s=m['plugins'][0]['source']; assert os.path.isfile(os.path.join(s,'.claude-plugin','plugin.json')), s; print('marketplace source ok:', s)"
+          # Skill-local marketplace plugin source must resolve to a real plugin dir.
+          python3 -c "import json,os; root='udb-skill'; m=json.load(open(os.path.join(root,'.claude-plugin','marketplace.json'))); s=m['plugins'][0]['source']; assert os.path.isfile(os.path.join(root,s,'.claude-plugin','plugin.json')), s; print('marketplace source ok:', os.path.join(root,s))"
           echo "skill validation passed"
       - name: Wrapper drift check (advisory, CR-tolerant)
         run: |

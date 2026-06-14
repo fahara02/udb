@@ -192,8 +192,6 @@ Thumbs.db
 /.claude/
 /.claude-plugin/
 /.claude_plugin/
-**/.claude-plugin/
-**/.claude_plugin/
 
 # Brand images are synced into the published site from docs/assets by CI;
 # the canonical source stays in docs/assets (not duplicated in git).

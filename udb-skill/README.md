@@ -20,22 +20,21 @@ The **canonical knowledge** lives in `shared/<skill>.md`
 [`shared/udb-coding.md`](shared/udb-coding.md)); the wrappers embed/reference it
 verbatim. Publishing is **automated** by `.github/workflows/publish-skill.yml`
 on every push that touches the skill — it validates structure + wrapper sync,
-pushes both Ollama models, and syncs both OpenAI Assistants. The Claude skills
-need no publish step: the repo-root `.claude-plugin/marketplace.json` makes the
-plugin installable directly from the repo.
+pushes both Ollama models, and syncs both OpenAI Assistants. The Claude plugin
+metadata lives under `udb-skill/.claude-plugin/` so the repo root stays clean.
 
 ## Quick install
 
 **Claude Code**
 ```
-/plugin marketplace add fahara02/udb
+/plugin marketplace add .                     # from udb-skill/
 /plugin install udb@udb-skills
 ```
 Both skills then auto-activate on matching questions — `using-udb` for "how do I
 call UDB from <language>?", `udb-coding` for "implement this UDB plan item /
 how should UDB code be structured?". Local test without publishing:
 ```
-/plugin marketplace add .                     # from the repo root
+/plugin marketplace add ./udb-skill           # from the repo root
 # or: claude --plugin-dir ./udb-skill/plugins/udb
 ```
 
@@ -117,8 +116,9 @@ udb-skill/
 ├── LICENSE                                    # MIT
 └── README.md
 ```
-Plus, at the **repo root**: `.claude-plugin/marketplace.json` (Claude install
-source) and `.github/workflows/publish-skill.yml` (automated publish).
+Plus, at the **repo root**: `.github/workflows/publish-skill.yml` (automated
+publish). Root-level `.claude-plugin/` is intentionally ignored; keep Claude
+metadata inside `udb-skill/`.
 
 ## Keeping wrappers in sync
 `shared/<skill>.md` is canonical. After editing one, regenerate its wrappers
