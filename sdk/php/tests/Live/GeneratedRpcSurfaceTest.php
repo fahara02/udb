@@ -1278,50 +1278,878 @@ it('enumerates exactly 262 live RPCs', function () {
     expect(count(phpLiveRpcCatalog()))->toBe(262);
 });
 
+// gRPC status code -> NAME (BENCH_RPC_BODIES.md #1/#3: a failing RPC must be recorded
+// as a FAILURE with its code, never a silent latency sample). UdbRpcException->status
+// is the integer gRPC code.
+function grpcStatusNamePhp(int $code): string
+{
+    static $names = [
+        0 => 'OK', 1 => 'CANCELLED', 2 => 'UNKNOWN', 3 => 'INVALID_ARGUMENT',
+        4 => 'DEADLINE_EXCEEDED', 5 => 'NOT_FOUND', 6 => 'ALREADY_EXISTS',
+        7 => 'PERMISSION_DENIED', 8 => 'RESOURCE_EXHAUSTED', 9 => 'FAILED_PRECONDITION',
+        10 => 'ABORTED', 11 => 'OUT_OF_RANGE', 12 => 'UNIMPLEMENTED', 13 => 'INTERNAL',
+        14 => 'UNAVAILABLE', 15 => 'DATA_LOSS', 16 => 'UNAUTHENTICATED',
+    ];
+
+    return $names[$code] ?? "CODE_$code";
+}
+
 // --- Per-RPC performance (gated on UDB_LIVE_PERF=1) ---------------------------
 // Times every RPC over multiple iterations and writes perf_report_php.md — the
 // PHP counterpart of the Go/Python/TS perf harness. read_only RPCs are timed
 // many times; mutations a few; destructive once typed-empty.
 /**
- * perfRealBodyPhp returns a SEMANTICALLY VALID request for the top data-plane CRUD
- * RPCs (upsert/select) so the perf harness measures REAL handler work against the
- * built-in udb.sdk.live.v1.SdkLiveRecord schema (always active), not
- * validation-rejection on an empty/placeholder request. Upsert uses a FIXED
- * record_id so repeated iterations are idempotent (no row accumulation). Returns
- * null for RPCs without an override — the caller falls back to requestFor()+populate.
- * Only DataBroker exposes upsert/select, so matching on the method name is safe.
+ * PerfFixturesPhp: a semantic-field-name -> real-seeded-value map (mirror of the
+ * Go perfFixtures / Python PerfFixtures). lookup() does an exact match first, then
+ * matches a registered key as a suffix of the field name (so "approved_by",
+ * "assigned_by" reach the seeded user; "definition_id" the seeded pipeline).
  */
-function perfRealBodyPhp(string $name, string $tenant, string $project): ?object
+class PerfFixturesPhp
 {
-    $n = strtolower($name);
-    if ($n !== 'upsert' && $n !== 'select') {
-        return null;
-    }
-    $ctx = (new \Udb\Entity\V1\RequestContext())
-        ->setTenantId($tenant)
-        ->setProjectId($project)
-        ->setPurpose('php.live.perf');
-    if ($n === 'upsert') {
-        return (new \Udb\Entity\V1\UpsertRequest())
-            ->setContext($ctx)
-            ->setMessageType('udb.sdk.live.v1.SdkLiveRecord')
-            ->setRecordJson(liveRecordJson("php-perf-$tenant-$project", $tenant, $project, 'php-perf-lk', 'php-perf', 1))
-            ->setConflictFields(['record_id']);
+    private array $m = [];
+
+    public function set(string $key, $val): void
+    {
+        if ($val !== null && $val !== '') {
+            $this->m[strtolower($key)] = (string) $val;
+        }
     }
 
-    // Per docs/bench-bodies/data_broker.md: Select targets the seeded record_id
-    // (the row the Upsert above writes), not a tenant/project scan.
-    return (new \Udb\Entity\V1\SelectRequest())
-        ->setContext($ctx)
-        ->setMessageType('udb.sdk.live.v1.SdkLiveRecord')
-        ->setFilter(liveStruct(['record_id' => "php-perf-$tenant-$project"]))
-        ->setLimit(10);
+    public function lookup(string $field): ?string
+    {
+        if (isset($this->m[$field])) {
+            return $this->m[$field];
+        }
+        foreach ($this->m as $k => $v) {
+            if ($field === $k || str_ends_with($field, '_'.$k)) {
+                return $v;
+            }
+        }
+
+        return null;
+    }
+}
+
+/**
+ * perfBodyPhp returns the DOCUMENTED request body (docs/bench-bodies/<svc>.md) for a
+ * given RPC, with every `<seed:...>` reference resolved from the seed fixtures so the
+ * RPC drives its real SUCCESS path. There is NO generic fallback: an RPC not covered
+ * here returns null and the caller sends the typed-empty request (never a generically
+ * populated one). $name is the snake_case generated method name.
+ */
+function perfBodyPhp(string $name, PerfFixturesPhp $fix, string $tenant, string $project): ?object
+{
+    $g = fn (string $k, string $d = '') => $fix->lookup($k) ?? $d;
+    $sub = $fix->lookup('subject') ?? ('user:'.($fix->lookup('user_id') ?? ''));
+    // data-plane (udb.entity.v1) context
+    $ctxE = fn () => (new \Udb\Entity\V1\RequestContext())->setTenantId($tenant)->setProjectId($project)->setPurpose('php.live.perf');
+    // control-plane (udb.core.common.v1) context with nested tenant
+    $ctxC = fn () => (new \Udb\Core\Common\V1\RequestContext())
+        ->setTenant((new \Udb\Core\Common\V1\TenantContext())->setTenantId($tenant)->setProjectId($project))
+        ->setPurpose('php.live.perf');
+    $A = fn (string $c) => "\\Udb\\Core\\Authn\\Services\\V1\\$c";
+    $Z = fn (string $c) => "\\Udb\\Core\\Authz\\Services\\V1\\$c";
+    $K = fn (string $c) => "\\Udb\\Core\\Apikey\\Services\\V1\\$c";
+    $AN = fn (string $c) => "\\Udb\\Core\\Analytics\\Services\\V1\\$c";
+    $N = fn (string $c) => "\\Udb\\Core\\Notification\\Services\\V1\\$c";
+    $S = fn (string $c) => "\\Udb\\Core\\Storage\\Services\\V1\\$c";
+    $AS = fn (string $c) => "\\Udb\\Core\\Asset\\Services\\V1\\$c";
+    $W = fn (string $c) => "\\Udb\\Core\\Webrtc\\Services\\V1\\$c";
+    $T = fn (string $c) => "\\Udb\\Core\\Tenant\\Services\\V1\\$c";
+    $C = fn (string $c) => "\\Udb\\Core\\Control\\Services\\V1\\$c";
+    $I = fn (string $c) => "\\Udb\\Core\\Idp\\Services\\V1\\$c";
+    $E = fn (string $c) => "\\Udb\\Entity\\V1\\$c";
+    $page = fn (string $cls = '', int $sz = 20) => (new \Udb\Core\Common\V1\PageRequest())->setPage(1)->setPageSize($sz);
+    // Authz nested-message builders (shared across many authz RPCs).
+    $principal = fn () => (new ($Z('Principal'))())->setSubject($sub)->setUserId($g('user_id'))->setTenantId($tenant)->setProjectId($project)->setScopes(['udb:read']);
+    $resourceRef = fn () => (new ($Z('ResourceRef'))())->setResourceType($g('resource', 'invoice'))->setTable('records');
+    $actor = fn (array $sc) => (new ($Z('GovernanceActor'))())->setSubject($sub)->setTenantId($tenant)->setProjectId($project)->setScopes($sc);
+    // DataBroker StoreResource for a given backend.
+    $store = fn (string $backend, string $rn = '') => (new ($E('StoreResource'))())->setBackend($backend)->setResourceName($rn);
+    $ts = fn () => (new \Google\Protobuf\Timestamp())->setSeconds(1748736000);
+
+    // Normalize the generated method name to snake_case so the switch matches
+    // regardless of whether the stub exposes PascalCase (Upsert, CreateUser,
+    // SendOTP -> send_o_t_p) or already-snake names. No-op for snake input.
+    $n = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $name));
+
+    switch ($n) {
+        // ── AuthnService — auth flow first (login / refresh_token), then the rest ──
+        case 'login':
+            return (new ($A('LoginRequest'))())->setUsername(liveEnv('UDB_LIVE_USERNAME'))->setPassword(liveEnv('UDB_LIVE_PASSWORD'))
+                ->setDeviceType(2)->setDeviceName('cli')->setTenantHint($tenant)->setProjectHint($project); // DEVICE_TYPE_API=2
+        case 'refresh_token':
+            return (new ($A('RefreshTokenRequest'))())->setRefreshToken($g('refresh_token'));
+        case 'authenticate':
+            return (new ($A('AuthnRequest'))())->setBearerToken($g('token'))->setCredentialType(1); // BEARER_TOKEN
+        case 'logout':
+            return (new ($A('LogoutRequest'))())->setSessionId($g('session_id'));
+        case 'validate_token':
+            return (new ($A('ValidateTokenRequest'))())->setToken($g('token'))->setTokenType(1); // JWT_ACCESS
+        case 'introspect_token':
+            return (new ($A('IntrospectTokenRequest'))())->setToken($g('token'));
+        case 'get_jwks':
+            return new ($A('GetJwksRequest'))();
+        case 'create_user':
+            return (new ($A('CreateUserRequest'))())->setUsername('alice-'.bin2hex(random_bytes(4)))->setEmail('alice-'.bin2hex(random_bytes(4)).'@acme.test')
+                ->setPassword('Str0ng!Passw0rd')->setTenantId($tenant)->setFullName('Alice A')->setAccountKind(1); // PERSON=1
+        case 'get_user':
+            return (new ($A('GetUserRequest'))())->setUserId($g('user_id'));
+        case 'list_users':
+            return (new ($A('ListUsersRequest'))())->setTenantId($tenant);
+        case 'update_user':
+            return (new ($A('UpdateUserRequest'))())->setUserId($g('user_id'))->setFullName('Alice B')->setEmail('alice2@acme.test')->setTenantId($tenant);
+        case 'change_user_status':
+            return (new ($A('ChangeUserStatusRequest'))())->setUserId($g('user_id'))->setNewStatus(3)->setReason('admin action'); // SUSPENDED=3
+        case 'admin_reset_password':
+            return (new ($A('AdminResetPasswordRequest'))())->setUserId($g('user_id'));
+        case 'send_o_t_p':
+        case 'send_otp':
+            return (new ($A('SendOTPRequest'))())->setUserId($g('user_id'))->setOtpType(1); // EMAIL_VERIFICATION=1
+        case 'verify_o_t_p':
+        case 'verify_otp':
+            return (new ($A('VerifyOTPRequest'))())->setOtpId($g('code'))->setCode('123456');
+        case 'resend_o_t_p':
+        case 'resend_otp':
+            return (new ($A('ResendOTPRequest'))())->setOriginalOtpId($g('code'))->setReason('not_received');
+        case 'change_password':
+            return (new ($A('ChangePasswordRequest'))())->setUserId($g('user_id'))->setCurrentPassword('Str0ng!Passw0rd')->setNewPassword('N3w!Passw0rd9')->setOtpId($g('code'));
+        case 'create_session':
+            return (new ($A('CreateSessionRequest'))())->setPrincipal((new ($A('Principal'))())->setPrincipalId($g('user_id'))->setSubject($sub)->setUserId($g('user_id'))->setTenantId($tenant))->setTtlSeconds(3600);
+        case 'refresh_session':
+            return (new ($A('RefreshSessionRequest'))())->setSessionId($g('session_id'))->setTtlSeconds(3600);
+        case 'get_session':
+            return (new ($A('GetSessionRequest'))())->setSessionId($g('session_id'));
+        case 'list_sessions':
+            return (new ($A('ListSessionsRequest'))())->setUserId($g('user_id'));
+        case 'revoke_session':
+            return (new ($A('RevokeSessionRequest'))())->setSessionId($g('session_id'))->setRevokeReason('user logout');
+        case 'validate_c_s_r_f':
+        case 'validate_csrf':
+            return (new ($A('ValidateCSRFRequest'))())->setSessionId($g('session_id'))->setCsrfToken($g('csrf_token'));
+        case 'enroll_m_f_a':
+        case 'enroll_mfa':
+            return (new ($A('EnrollMFARequest'))())->setUserId($g('user_id'))->setMfaType(1); // TOTP=1
+        case 'confirm_m_f_a_enrollment':
+            return (new ($A('ConfirmMFAEnrollmentRequest'))())->setUserId($g('user_id'))->setOtpId($g('code'))->setCode('123456');
+        case 'generate_recovery_codes':
+            return (new ($A('GenerateRecoveryCodesRequest'))())->setUserId($g('user_id'))->setCount(10);
+        case 'put_mfa_policy':
+            return (new ($A('PutMfaPolicyRequest'))())->setTenantId($tenant)->setRequireMfa(true);
+        case 'get_mfa_policy':
+            return (new ($A('GetMfaPolicyRequest'))())->setTenantId($tenant);
+        case 'forgot_password':
+            return (new ($A('ForgotPasswordRequest'))())->setIdentifier('alice@acme.test');
+        case 'reset_password':
+            return (new ($A('ResetPasswordRequest'))())->setOtpId($g('code'))->setCode('123456')->setNewPassword('N3w!Passw0rd9');
+        case 'send_phone_verification':
+            return (new ($A('SendPhoneVerificationRequest'))())->setUserId($g('user_id'))->setPhone('+15551234567');
+        case 'start_web_authn_registration':
+            return (new ($A('StartWebAuthnRegistrationRequest'))())->setUserId($g('user_id'))->setLabel('yubikey')->setTenantId($tenant);
+        case 'finish_web_authn_registration':
+            return (new ($A('FinishWebAuthnRegistrationRequest'))())->setChallengeId($g('code'))->setPublicKeyCredentialJson('{}')->setLabel('yubikey');
+        case 'start_web_authn_authentication':
+            return (new ($A('StartWebAuthnAuthenticationRequest'))())->setUserId($g('user_id'))->setTenantId($tenant);
+        case 'finish_web_authn_authentication':
+            return (new ($A('FinishWebAuthnAuthenticationRequest'))())->setChallengeId($g('code'))->setPublicKeyCredentialJson('{}');
+        case 'list_devices':
+            return (new ($A('ListDevicesRequest'))())->setUserId($g('user_id'));
+        case 'revoke_device':
+            return (new ($A('RevokeDeviceRequest'))())->setDeviceId($g('record_id'))->setReason('lost device');
+        case 'admin_revoke_session':
+            return (new ($A('AdminRevokeSessionRequest'))())->setUserId($g('user_id'))->setSessionId($g('session_id'))->setReason('compromised');
+        case 'admin_revoke_all_user_sessions':
+            return (new ($A('AdminRevokeAllUserSessionsRequest'))())->setUserId($g('user_id'))->setReason('compromised');
+        case 'admin_revoke_all_tenant_sessions':
+            return (new ($A('AdminRevokeAllTenantSessionsRequest'))())->setTenantId($tenant)->setReason('incident');
+        case 'emergency_revoke':
+            return (new ($A('EmergencyRevokeRequest'))())->setTenantId($tenant)->setReason('incident');
+        case 'issue_mfa_challenge':
+            return (new ($A('IssueMfaChallengeRequest'))())->setUserId($g('user_id'))->setFactorKind(1)->setPurpose(1); // TOTP=1, SENSITIVE_OP=1
+        case 'verify_mfa_challenge':
+            return (new ($A('VerifyMfaChallengeRequest'))())->setChallengeId($g('code'))->setCode('123456');
+        case 'list_mfa_factors':
+            return (new ($A('ListMfaFactorsRequest'))())->setUserId($g('user_id'));
+        case 'disable_mfa_factor':
+            return (new ($A('DisableMfaFactorRequest'))())->setUserId($g('user_id'))->setFactorKind(1);
+        case 'rename_passkey':
+            return (new ($A('RenamePasskeyRequest'))())->setUserId($g('user_id'))->setCredentialId($g('record_id'))->setNewLabel('work key');
+        case 'revoke_recovery_codes':
+            return (new ($A('RevokeRecoveryCodesRequest'))())->setUserId($g('user_id'));
+        case 'admin_reset_mfa':
+            return (new ($A('AdminResetMfaRequest'))())->setUserId($g('user_id'))->setReason('lost device');
+        case 'list_web_authn_credentials':
+            return (new ($A('ListWebAuthnCredentialsRequest'))())->setUserId($g('user_id'));
+        case 'delete_web_authn_credential':
+            return (new ($A('DeleteWebAuthnCredentialRequest'))())->setUserId($g('user_id'))->setCredentialId($g('record_id'));
+
+        // ── ApiKeyService ──
+        case 'create_api_key':
+            return (new ($K('CreateApiKeyRequest'))())->setName('bench-key')->setDescription('bench')->setOwnerType(6)->setOwnerId($g('owner_id'))->setScopes(['resource:read'])->setContext($ctxC()); // SERVICE_ACCOUNT=6
+        case 'get_api_key':
+            return (new ($K('GetApiKeyRequest'))())->setKeyId($g('key_id'));
+        case 'list_api_keys':
+            return (new ($K('ListApiKeysRequest'))())->setOwnerId($g('owner_id'));
+        case 'update_api_key':
+            return (new ($K('UpdateApiKeyRequest'))())->setKeyId($g('key_id'))->setName('bench-key-2')->setDescription('updated')->setScopes(['resource:read'])->setContext($ctxC());
+        case 'revoke_api_key':
+            return (new ($K('RevokeApiKeyRequest'))())->setKeyId($g('key_id'))->setRevokeReason('bench cleanup')->setContext($ctxC());
+        case 'rotate_api_key':
+            return (new ($K('RotateApiKeyRequest'))())->setKeyId($g('key_id'))->setRotationReason('bench rotate')->setContext($ctxC());
+        case 'emergency_revoke_api_keys':
+            return (new ($K('EmergencyRevokeApiKeysRequest'))())->setOwnerId($g('owner_id'))->setReason('bench emergency')->setContext($ctxC());
+        case 'validate_api_key':
+            return (new ($K('ValidateApiKeyRequest'))())->setPlainKey($g('plain_key'))->setEndpoint('/v1/test')->setRequiredScope('resource:read')->setIpAddress('127.0.0.1');
+        case 'get_api_key_usage_stats':
+            return (new ($K('GetApiKeyUsageStatsRequest'))())->setKeyId($g('key_id'));
+
+        // ── AnalyticsService ──
+        case 'record_pipeline_metric':
+            return (new ($AN('RecordPipelineMetricRequest'))())->setStageName($g('stage_name'))->setTenantId($tenant)->setLatencyMs(12.5)->setIsSuccess(true)->setContext($ctxC());
+        case 'get_pipeline_summary':
+            return (new ($AN('GetPipelineSummaryRequest'))())->setStageName($g('stage_name'))->setTenantId($tenant)->setHourFrom('2026-06-01T00')->setHourTo('2026-06-14T23');
+        case 'get_executor_performance':
+            return (new ($AN('GetExecutorPerformanceRequest'))())->setDateFrom('2026-06-01')->setDateTo('2026-06-14');
+        case 'get_reconciliation_analytics':
+            return (new ($AN('GetReconciliationAnalyticsRequest'))())->setDateFrom('2026-06-01')->setDateTo('2026-06-14');
+        case 'get_throughput':
+            return (new ($AN('GetThroughputRequest'))())->setTenantId($tenant)->setHourFrom('2026-06-01T00')->setHourTo('2026-06-14T23');
+        case 'get_sla_compliance':
+            return (new ($AN('GetSlaComplianceRequest'))())->setStageName($g('stage_name'))->setDateFrom('2026-06-01')->setDateTo('2026-06-14')->setP99ThresholdMs(250.0)->setErrorRateThreshold(0.01);
+        case 'trigger_snapshot':
+            return (new ($AN('TriggerSnapshotRequest'))())->setStageName($g('stage_name'))->setHour('2026-06-14T10')->setContext($ctxC());
+
+        // ── NotificationService ──
+        case 'send_notification':
+            return (new ($N('SendNotificationRequest'))())->setEventType($g('event_type'))->setRecipientId($g('user_id'))->setRecipientAddress('user@example.com')->setTenantId($tenant)->setProjectId($project)->setLocale('en')->setChannels([1]);
+        case 'get_notification':
+            return (new ($N('GetNotificationRequest'))())->setLogId($g('log_id'));
+        case 'list_notifications':
+            return (new ($N('ListNotificationsRequest'))())->setTenantId($tenant)->setPage($page($N('PageRequest') ?? '\\Udb\\Core\\Common\\V1\\PageRequest'));
+        case 'retry_notification':
+            return (new ($N('RetryNotificationRequest'))())->setLogId($g('log_id'));
+        case 'upsert_template':
+            return (new ($N('UpsertTemplateRequest'))())->setEventType($g('event_type'))->setChannel(1)->setLocale('en')->setSubjectTemplate('Hello {name}')->setBodyTemplate('Body {name}')->setIsActive(true);
+        case 'get_template':
+            return (new ($N('GetTemplateRequest'))())->setEventType($g('event_type'))->setChannel(1)->setLocale('en');
+        case 'list_templates':
+            return new ($N('ListTemplatesRequest'))();
+        case 'get_delivery_stats':
+            return (new ($N('GetDeliveryStatsRequest'))())->setTenantId($tenant)->setEventType($g('event_type'))->setDateFrom('2026-01-01')->setDateTo('2026-12-31');
+        case 'set_preference':
+            return (new ($N('SetPreferenceRequest'))())->setUserId($g('user_id'))->setTenantId($tenant)->setChannel(1)->setIsOptedOut(true);
+        case 'get_preference':
+            return (new ($N('GetPreferenceRequest'))())->setUserId($g('user_id'))->setTenantId($tenant)->setChannel(1);
+        case 'list_preferences':
+            return (new ($N('ListPreferencesRequest'))())->setUserId($g('user_id'))->setTenantId($tenant);
+
+        // ── StorageService ──
+        case 'register_upload':
+            return (new ($S('RegisterUploadRequest'))())->setTenantId($tenant)->setProjectId($project)->setFilename('report.pdf')->setContentType('application/pdf')->setFileType('document')->setReferenceId($g('file_id'))->setReferenceType('document')->setExpiresInMinutes(15)->setSizeBytes(1024);
+        case 'finalize_upload':
+            return (new ($S('FinalizeUploadRequest'))())->setTenantId($tenant)->setFileId($g('file_id'))->setContentType('application/pdf')->setFileType('document')->setReferenceId($g('file_id'))->setReferenceType('document')->setSizeBytes(1024);
+        case 'get_download_url':
+            return (new ($S('GetDownloadUrlRequest'))())->setTenantId($tenant)->setFileId($g('file_id'))->setExpiresInMinutes(15);
+        case 'get_file':
+            return (new ($S('GetFileRequest'))())->setTenantId($tenant)->setFileId($g('file_id'));
+        case 'update_file':
+            return (new ($S('UpdateFileRequest'))())->setTenantId($tenant)->setFileId($g('file_id'))->setFilename('renamed.pdf')->setContentType('application/pdf')->setFileType('document')->setReferenceId($g('file_id'))->setReferenceType('document');
+        case 'delete_file':
+            return (new ($S('DeleteFileRequest'))())->setTenantId($tenant)->setFileId($g('file_id'));
+        case 'list_files':
+            return (new ($S('ListFilesRequest'))())->setTenantId($tenant)->setPage(1)->setPageSize(20);
+
+        // ── AssetService ──
+        case 'create_pipeline_definition':
+            return (new ($AS('CreatePipelineDefinitionRequest'))())->setTenantId($tenant)->setName('thumbnail-pipeline')->setDescription('Generate thumbnails')->setMediaType('image/png')->setSteps('[{"name":"resize","type":"TRANSFORM"}]')->setVersion(1);
+        case 'get_pipeline_definition':
+            return (new ($AS('GetPipelineDefinitionRequest'))())->setTenantId($tenant)->setDefinitionId($g('definition_id'));
+        case 'register_asset':
+            return (new ($AS('RegisterAssetRequest'))())->setTenantId($tenant)->setProjectId($project)->setFileId($g('file_id'))->setName('logo.png')->setMediaType('image/png')->setMetadata('{"source":"upload"}');
+        case 'start_pipeline':
+            return (new ($AS('StartPipelineRequest'))())->setTenantId($tenant)->setDefinitionId($g('definition_id'))->setAssetId($g('asset_id'))->setContext('{}')->setCorrelationId('run-001');
+        case 'get_pipeline':
+            return (new ($AS('GetPipelineRequest'))())->setTenantId($tenant)->setInstanceId($g('instance_id'));
+        case 'complete_step':
+            return (new ($AS('CompleteStepRequest'))())->setTenantId($tenant)->setStepId($g('step_id'))->setStatus('COMPLETED')->setResult('{}');
+        case 'list_assets':
+            return (new ($AS('ListAssetsRequest'))())->setTenantId($tenant)->setPage(1)->setPageSize(20);
+        case 'get_asset':
+            return (new ($AS('GetAssetRequest'))())->setTenantId($tenant)->setAssetId($g('asset_id'));
+
+        // ── WebRTC (Room/Peer/Track/Turn) ──
+        case 'create_room':
+            return (new ($W('CreateRoomRequest'))())->setTenantId($tenant)->setName('bench-room')->setMaxParticipants(10)->setConfig('{}')->setCreatedBy($g('user_id'));
+        case 'get_room':
+            return (new ($W('GetRoomRequest'))())->setTenantId($tenant)->setRoomId($g('room_id'));
+        case 'update_room':
+            return (new ($W('UpdateRoomRequest'))())->setTenantId($tenant)->setRoomId($g('room_id'))->setName('bench-room-2')->setState('active')->setConfig('{}');
+        case 'close_room':
+            return (new ($W('CloseRoomRequest'))())->setTenantId($tenant)->setRoomId($g('room_id'));
+        case 'list_rooms':
+            return (new ($W('ListRoomsRequest'))())->setTenantId($tenant)->setState('active')->setPage(1)->setPageSize(20);
+        case 'join_room':
+            return (new ($W('JoinRoomRequest'))())->setTenantId($tenant)->setRoomId($g('room_id'))->setDisplayName('Bench User')->setMetadata('{}')->setUserAgent('bench/1.0');
+        case 'leave_room':
+            return (new ($W('LeaveRoomRequest'))())->setTenantId($tenant)->setRoomId($g('room_id'))->setPeerId($g('peer_id'));
+        case 'get_peer':
+            return (new ($W('GetPeerRequest'))())->setTenantId($tenant)->setPeerId($g('peer_id'));
+        case 'list_peers':
+            return (new ($W('ListPeersRequest'))())->setTenantId($tenant)->setRoomId($g('room_id'));
+        case 'publish_track':
+            return (new ($W('PublishTrackRequest'))())->setTenantId($tenant)->setRoomId($g('room_id'))->setPeerId($g('peer_id'))->setKind('audio')->setLabel('mic')->setSettings('{}')->setMetadata('{}');
+        case 'unpublish_track':
+            return (new ($W('UnpublishTrackRequest'))())->setTenantId($tenant)->setTrackId($g('track_id'));
+        case 'mute_track':
+            return (new ($W('MuteTrackRequest'))())->setTenantId($tenant)->setTrackId($g('track_id'))->setMuted(true);
+        case 'list_tracks':
+            return (new ($W('ListTracksRequest'))())->setTenantId($tenant)->setRoomId($g('room_id'));
+        case 'issue_credentials':
+            return (new ($W('IssueCredentialsRequest'))())->setTenantId($tenant)->setRoomId($g('room_id'))->setPeerId($g('peer_id'))->setTtlSeconds(3600);
+
+        // ── TenantService ──
+        case 'create_tenant':
+            return (new ($T('CreateTenantRequest'))())->setCode('acme-bench-'.bin2hex(random_bytes(4)))->setName('Acme Bench')->setType('organization')->setConfig('{}')->setBranding('{}');
+        case 'get_tenant':
+            return (new ($T('GetTenantRequest'))())->setTenantId($tenant);
+        case 'list_tenants':
+            return (new ($T('ListTenantsRequest'))())->setPage(1)->setPageSize(20);
+        case 'update_tenant':
+            return (new ($T('UpdateTenantRequest'))())->setTenantId($tenant)->setName('Acme Bench')->setStatus('active')->setConfig('{}')->setBranding('{}');
+        case 'get_tenant_config':
+            return (new ($T('GetTenantConfigRequest'))())->setTenantId($tenant);
+        case 'update_tenant_config':
+            return (new ($T('UpdateTenantConfigRequest'))())->setTenantId($tenant)->setConfigKey('feature.flag')->setConfigValue('on')->setType('string');
+
+        // ── IdentityProviderService ──
+        case 'create_provider':
+            return (new ($I('CreateProviderRequest'))())->setTenantId($tenant)->setKind(2)->setDisplayName('Acme OIDC '.bin2hex(random_bytes(3)))->setIssuer('https://idp.example.com')->setJwksUrl('https://idp.example.com/jwks')->setClientIds(['client-1'])->setAudiences(['udb'])->setClaimMappingJson('{}')->setGroupMappingJson('{}')->setJitPolicyJson('{}')->setAccountLinkingPolicy('explicit')->setEnabled(true)->setCreatedBy($g('user_id'))->setContext($ctxC()); // OIDC=2
+        case 'update_provider':
+            return (new ($I('UpdateProviderRequest'))())->setProviderId($g('provider_id'))->setTenantId($tenant)->setDisplayName('Acme OIDC v2')->setClaimMappingJson('{}')->setGroupMappingJson('{}')->setJitPolicyJson('{}')->setAccountLinkingPolicy('explicit')->setUpdatedBy($g('user_id'))->setContext($ctxC());
+        case 'disable_provider':
+            return (new ($I('DisableProviderRequest'))())->setProviderId($g('provider_id'))->setTenantId($tenant)->setUpdatedBy($g('user_id'))->setContext($ctxC());
+        case 'get_provider':
+            return (new ($I('GetProviderRequest'))())->setProviderId($g('provider_id'))->setTenantId($tenant);
+        case 'list_providers':
+            return (new ($I('ListProvidersRequest'))())->setTenantId($tenant)->setPage($page($I('PageRequest') ?? '\\Udb\\Core\\Common\\V1\\PageRequest'));
+        case 'test_provider_discovery':
+            return (new ($I('TestProviderDiscoveryRequest'))())->setProviderId($g('provider_id'))->setTenantId($tenant);
+        case 'force_jwks_refresh':
+            return (new ($I('ForceJwksRefreshRequest'))())->setProviderId($g('provider_id'))->setTenantId($tenant);
+        case 'preview_claim_mapping':
+            return (new ($I('PreviewClaimMappingRequest'))())->setProviderId($g('provider_id'))->setTenantId($tenant)->setClaimsJson('{"sub":"abc","email":"a@x.com"}');
+        case 'preview_group_mapping':
+            return (new ($I('PreviewGroupMappingRequest'))())->setProviderId($g('provider_id'))->setTenantId($tenant)->setGroups(['admins']);
+        case 'list_external_identities':
+            return (new ($I('ListExternalIdentitiesRequest'))())->setTenantId($tenant)->setPage($page($I('PageRequest') ?? '\\Udb\\Core\\Common\\V1\\PageRequest'));
+        case 'link_identity':
+            return (new ($I('LinkIdentityRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setSubject('ext-subject-1')->setUserId($g('user_id'))->setEmail('a@x.com')->setEmailVerified(true)->setContext($ctxC());
+        case 'resolve_external_identity':
+            return (new ($I('ResolveExternalIdentityRequest'))())->setProviderId($g('provider_id'))->setTenantId($tenant)->setClaimsJson('{"sub":"abc","email":"a@x.com","email_verified":true}');
+
+        // ── DataBroker (the high-value CRUD; reads/admin) ──
+        case 'upsert':
+            return (new ($E('UpsertRequest'))())->setContext($ctxE())->setMessageType('udb.sdk.live.v1.SdkLiveRecord')
+                ->setRecordJson(liveRecordJson($g('record_id'), $tenant, $project, 'php-perf-lk', 'php-perf', 1))->setConflictFields(['record_id']);
+        case 'select':
+            return (new ($E('SelectRequest'))())->setContext($ctxE())->setMessageType('udb.sdk.live.v1.SdkLiveRecord')->setFilter(liveStruct(['record_id' => $g('record_id')]))->setLimit(10);
+        case 'delete':
+            return (new ($E('DeleteRequest'))())->setContext($ctxE())->setMessageType('udb.sdk.live.v1.SdkLiveRecord')->setFilter(liveStruct(['record_id' => $g('record_id')]));
+        case 'get_capabilities':
+            return (new ($E('CapabilitiesRequest'))())->setContext($ctxE())->setProjectId($project);
+        case 'get_catalog_manifest':
+            return (new ($E('CatalogManifestRequest'))())->setContext($ctxE());
+        case 'get_catalog_versions':
+            return (new ($E('CatalogManifestRequest'))())->setContext($ctxE());
+        case 'list_message_schemas':
+            return (new ($E('MessageSchemaListRequest'))())->setContext($ctxE())->setProjectId($project);
+        case 'lookup_message_schema':
+            return (new ($E('MessageSchemaLookupRequest'))())->setContext($ctxE())->setProjectId($project)->setMessageType('udb.sdk.live.v1.SdkLiveRecord');
+        case 'get_health_report':
+            return (new ($E('HealthReportRequest'))())->setContext($ctxE())->setProjectId($project);
+        case 'get_admin_summary':
+            return (new ($E('AdminSummaryRequest'))())->setContext($ctxE())->setProjectId($project);
+        case 'ensure_project':
+            return (new ($E('EnsureProjectRequest'))())->setContext($ctxE())->setProjectId($project)->setName('My Project')->setCdcTopicPrefix($project.'.');
+        case 'list_projects':
+            return (new ($E('ProjectListRequest'))())->setContext($ctxE())->setLimit(50);
+        case 'list_sagas':
+            return (new ($E('SagaListRequest'))())->setContext($ctxE())->setLimit(50);
+        case 'list_dlq_events':
+            return (new ($E('DlqListRequest'))())->setContext($ctxE())->setLimit(50);
+        case 'list_migration_runs':
+            return (new ($E('MigrationRunListRequest'))())->setContext($ctxE())->setProjectId($project)->setLimit(50);
+        case 'list_admin_audit_logs':
+            return (new ($E('AdminAuditLogRequest'))())->setContext($ctxE())->setLimit(50);
+        case 'verify_admin_audit_log':
+            return (new ($E('AdminAuditVerifyRequest'))())->setContext($ctxE())->setLimit(0);
+        case 'list_policies':
+            return (new ($E('PolicyListRequest'))())->setContext($ctxE())->setLimit(50);
+        case 'generic_dispatch':
+            return (new ($E('GenericDispatchRequest'))())->setContext($ctxE())->setBackend('mongodb')->setOperation('ping');
+        case 'ensure_resource':
+            return (new ($E('ResourceAdminRequest'))())->setContext($ctxE())->setBackend('mongodb')->setResourceName($g('mongo_collection', 'sdk_perf'));
+        case 'list_resources':
+            return (new ($E('ResourceAdminRequest'))())->setContext($ctxE())->setBackend('mongodb');
+
+        // ── AuthzService ──
+        case 'authorize':
+            return (new ($Z('AuthzRequest'))())->setPrincipal($principal())->setTenantId($tenant)->setProjectId($project)->setResource($resourceRef())->setAction($g('action', 'data.select'))->setDomain($tenant)->setRequestedScopes(['udb:read']);
+        case 'check_access':
+            return (new ($Z('CheckAccessRequest'))())->setUserId($g('user_id'))->setDomain($tenant)->setObject($g('object', 'group:sdk'))->setAction($g('action', 'data.select'));
+        case 'create_role':
+            return (new ($Z('CreateRoleRequest'))())->setName('reader')->setCreatedBy($sub)->setRoleCode($g('role_code', 'reader'))->setDomain($tenant)->setTenantId($tenant)->setScopeType(2);
+        case 'assign_role':
+            return (new ($Z('AssignRoleRequest'))())->setUserId($g('user_id'))->setRoleId($g('role_id'))->setDomain($tenant)->setAssignedBy($sub)->setPrincipalKind(1)->setTenantId($tenant);
+        case 'create_policy_rule':
+            return (new ($Z('CreatePolicyRuleRequest'))())->setSubject($sub)->setDomain($tenant)->setObject($g('object', 'group:sdk'))->setAction($g('action', 'data.update'))->setEffect(1)->setCreatedBy($sub)->setTenantId($tenant);
+        case 'list_user_permissions':
+            return (new ($Z('ListUserPermissionsRequest'))())->setUserId($g('user_id'))->setDomain($tenant);
+        case 'list_access_decision_audits':
+            return (new ($Z('ListAccessDecisionAuditsRequest'))())->setUserId($g('user_id'))->setDomain($tenant)->setPage($page());
+        case 'revoke_role':
+            return (new ($Z('RevokeRoleRequest'))())->setUserId($g('user_id'))->setUserRoleId($g('user_role_id'))->setReason('rotation')->setRevokedBy($sub);
+        case 'list_user_roles':
+            return (new ($Z('ListUserRolesRequest'))())->setUserId($g('user_id'))->setDomain($tenant)->setActiveOnly(true);
+        case 'get_role':
+            return (new ($Z('GetRoleRequest'))())->setRoleId($g('role_id'));
+        case 'list_roles':
+            return (new ($Z('ListRolesRequest'))())->setDomain($tenant)->setActiveOnly(true)->setPage($page());
+        case 'batch_check_permissions':
+            return (new ($Z('BatchCheckPermissionsRequest'))())->setUserId($g('user_id'))->setDomain($tenant)->setChecks([(new ($Z('PermissionCheck'))())->setObject($g('object', 'group:sdk'))->setAction($g('action', 'data.select'))]);
+        case 'update_role':
+            return (new ($Z('UpdateRoleRequest'))())->setRoleId($g('role_id'))->setUpdatedBy($sub)->setName('reader-2')->setDescription('x')->setIsActive(true);
+        case 'delete_role':
+            return (new ($Z('DeleteRoleRequest'))())->setRoleId($g('role_id'))->setDeletedBy($sub);
+        case 'get_policy_rule':
+            return (new ($Z('GetPolicyRuleRequest'))())->setPolicyId($g('policy_id'));
+        case 'list_policy_rules':
+            return (new ($Z('ListPolicyRulesRequest'))())->setDomain($tenant)->setActiveOnly(true)->setPage($page());
+        case 'delete_policy_rule':
+            return (new ($Z('DeletePolicyRuleRequest'))())->setPolicyId($g('policy_id'))->setDeletedBy($sub);
+        case 'put_role_binding':
+            return (new ($Z('PutRoleBindingRequest'))())->setBinding((new ($Z('RoleBinding'))())->setSubject($sub)->setRole($g('role', 'reader'))->setTenant($tenant)->setProject($project)->setSource('manual'));
+        case 'put_relationship':
+            return (new ($Z('PutRelationshipRequest'))())->setTuple((new ($Z('RelationshipTuple'))())->setSubject($sub)->setRelation($g('relation', 'member'))->setObject($g('object', 'group:sdk'))->setTenant($tenant)->setProject($project)->setSource('manual'));
+        case 'put_authz_policy':
+            return (new ($Z('PutAuthzPolicyRequest'))())->setPolicy((new ($Z('AuthzPolicyRecord'))())->setId($g('policy_id', 'p1'))->setPriority(100)->setEnabled(true)->setEffect('allow')->setTenant($tenant)->setSubject($sub)->setAction($g('action', 'data.select'))->setResource($g('resource', 'invoice'))->setRequiredScopes(['udb:read']));
+        case 'lint_authz_policies':
+            return new ($Z('LintAuthzPoliciesRequest'))();
+        case 'get_native_access':
+            return (new ($Z('NativeAccessRequest'))())->setPrincipal($principal())->setTenantId($tenant)->setProjectId($project)->setResource($resourceRef())->setAction($g('action', 'data.select'))->setBackend('postgres')->setRequestedScopes(['udb:read']);
+        case 'get_policy_bundle':
+            return (new ($Z('PolicyBundleRequest'))())->setTenantId($tenant)->setProjectId($project)->setDomain($tenant);
+        case 'create_policy_draft':
+            return (new ($Z('CreatePolicyDraftRequest'))())->setActor($actor(['udb:authz:policy:write']))->setTenantId($tenant)->setProjectId($project)->setPolicySetName('default')->setTitle('draft 1')->setChangeReason('init')->setDocument(new ($Z('PolicyDocument'))());
+        case 'update_policy_draft':
+            return (new ($Z('UpdatePolicyDraftRequest'))())->setActor($actor(['udb:authz:policy:write']))->setDraftId($g('policy_draft_id'))->setDocument(new ($Z('PolicyDocument'))())->setChangeReason('edit')->setTitle('draft 1');
+        case 'diff_policy_draft':
+            return (new ($Z('DiffPolicyDraftRequest'))())->setActor($actor(['udb:authz:policy:read']))->setDraftId($g('policy_draft_id'));
+        case 'submit_policy_draft':
+            return (new ($Z('SubmitPolicyDraftRequest'))())->setActor($actor(['udb:authz:policy:write']))->setDraftId($g('policy_draft_id'));
+        case 'approve_policy_draft':
+            return (new ($Z('ApprovePolicyDraftRequest'))())->setActor($actor(['udb:authz:policy:approve']))->setDraftId($g('policy_draft_id'))->setReviewer($sub)->setReason('ok');
+        case 'reject_policy_draft':
+            return (new ($Z('RejectPolicyDraftRequest'))())->setActor($actor(['udb:authz:policy:approve']))->setDraftId($g('policy_draft_id'))->setReviewer($sub)->setReason('nack');
+        case 'activate_policy_version':
+            return (new ($Z('ActivatePolicyVersionRequest'))())->setActor($actor(['udb:authz:admin']))->setPolicyVersionId($g('policy_id'));
+        case 'rollback_policy_version':
+            return (new ($Z('RollbackPolicyVersionRequest'))())->setActor($actor(['udb:authz:admin']))->setPolicySetId($g('policy_id'))->setTargetVersionId($g('policy_id'))->setChangeReason('revert');
+        case 'activate_canary':
+            return (new ($Z('ActivateCanaryRequest'))())->setActor($actor(['udb:authz:admin']))->setPolicyVersionId($g('policy_id'))->setScopeKind(3)->setScopeValues(['10'])->setSuccessWindowSecs(300)->setMetricThreshold(0.99)->setMinSamples(100);
+        case 'promote_canary':
+            return (new ($Z('PromoteCanaryRequest'))())->setActor($actor(['udb:authz:admin']))->setCanaryId($g('policy_id'));
+        case 'get_canary_status':
+            return (new ($Z('GetCanaryStatusRequest'))())->setActor($actor(['udb:authz:policy:read']))->setCanaryId($g('policy_id'));
+        case 'list_policy_versions':
+            return (new ($Z('ListPolicyVersionsRequest'))())->setActor($actor(['udb:authz:policy:read']))->setTenantId($tenant)->setProjectId($project)->setPolicySetId($g('policy_id'))->setState(4)->setPage($page());
+        case 'simulate_policy':
+            return (new ($Z('SimulatePolicyRequest'))())->setActor($actor(['udb:authz:policy:read']))->setTenantId($tenant)->setProjectId($project)->setCases([(new ($Z('SimulationCase'))())->setPrincipal($principal())->setResource($resourceRef())->setAction($g('action', 'data.select'))->setLabel('c1')])->setPersist(false);
+        case 'explain_policy':
+            return (new ($Z('ExplainPolicyRequest'))())->setActor($actor(['udb:authz:policy:read']))->setTenantId($tenant)->setProjectId($project)->setTestCase((new ($Z('SimulationCase'))())->setPrincipal($principal())->setResource($resourceRef())->setAction($g('action', 'data.select')));
+        case 'get_authz_revision':
+            return (new ($Z('GetAuthzRevisionRequest'))())->setTenantId($tenant)->setProjectId($project);
+        case 'invalidate_policy_bundles':
+            return (new ($Z('InvalidatePolicyBundlesRequest'))())->setActor($actor(['udb:authz:admin']))->setTenantId($tenant)->setProjectId($project)->setReason('rotate');
+        case 'seed_builtin_roles':
+            return (new ($Z('SeedBuiltinRolesRequest'))())->setActor($actor(['udb:authz:admin']))->setTenantId($tenant)->setProjectId($project);
+        case 'migrate_legacy_policies':
+            return (new ($Z('MigrateLegacyPoliciesRequest'))())->setActor($actor(['udb:authz:admin']))->setTenantId($tenant)->setProjectId($project)->setApply(false)->setPolicySetName('default');
+
+        // ── DataBroker (vector / object / cache / document / graph / timeseries / tx / cdc / catalog / migration / dlq / saga / policy) ──
+        case 'batch_select':
+        case 'select_v2':
+            return (new ($E('SelectRequest'))())->setContext($ctxE())->setMessageType('udb.sdk.live.v1.SdkLiveRecord')->setFilter(liveStruct(['record_id' => $g('record_id')]))->setLimit(10);
+        case 'batch_upsert':
+            return (new ($E('UpsertRequest'))())->setContext($ctxE())->setMessageType('udb.sdk.live.v1.SdkLiveRecord')->setRecordJson(liveRecordJson($g('record_id'), $tenant, $project, 'php-perf-lk', 'php-perf', 1))->setConflictFields(['record_id']);
+        case 'vector_search':
+            return (new ($E('VectorSearchRequest'))())->setContext($ctxE())->setCollection('udb.sdk.live.v1.SdkLiveRecord')->setVector([0.1, 0.2, 0.3])->setLimit(5)->setWithPayload(true);
+        case 'vector_hybrid_search':
+            return (new ($E('VectorHybridSearchRequest'))())->setContext($ctxE())->setCollection('udb.sdk.live.v1.SdkLiveRecord')->setVector([0.1, 0.2, 0.3])->setTextQuery('hello')->setLimit(5)->setWithPayload(true);
+        case 'vector_upsert':
+        case 'vector_batch_upsert':
+            return (new ($E('VectorUpsertRequest'))())->setContext($ctxE())->setCollection('udb.sdk.live.v1.SdkLiveRecord')->setPoints([(new ($E('VectorPointMutation'))())->setId($g('record_id'))->setVector([0.1, 0.2, 0.3])]);
+        case 'put_object':
+            return (new ($E('Chunk'))())->setContext($ctxE())->setBucket($g('bucket', 'udb-live-sdk'))->setObjectKey($g('object_key', 'perf.txt'))->setData('x')->setContentType('application/octet-stream')->setFinalChunk(true);
+        case 'get_object':
+            return (new ($E('ObjectRequest'))())->setContext($ctxE())->setBucket($g('bucket', 'udb-live-sdk'))->setObjectKey($g('object_key', 'perf.txt'));
+        case 'generate_presigned_url':
+            return (new ($E('UrlRequest'))())->setContext($ctxE())->setBucket($g('bucket', 'udb-live-sdk'))->setObjectKey($g('object_key', 'perf.txt'))->setMethod('GET')->setTtlSeconds(300);
+        case 'initiate_multipart_upload':
+            return (new ($E('MultipartUploadRequest'))())->setContext($ctxE())->setBucket($g('bucket', 'udb-live-sdk'))->setObjectKey($g('object_key', 'perf.txt'))->setContentType('application/octet-stream')->setPartCount(1)->setTtlSeconds(300);
+        case 'cache_get':
+            return (new ($E('CacheGetRequest'))())->setContext($ctxE())->setResource($store('redis'))->setKey($g('object_key', 'perf-key'))->setTouch(false);
+        case 'cache_set':
+            return (new ($E('CacheSetRequest'))())->setContext($ctxE())->setResource($store('redis'))->setKey($g('object_key', 'perf-key'))->setValue('v')->setContentType('text/plain')->setTtlSeconds(60);
+        case 'cache_delete':
+            return (new ($E('CacheDeleteRequest'))())->setContext($ctxE())->setResource($store('redis'))->setKey($g('object_key', 'perf-key'));
+        case 'cache_scan':
+            return (new ($E('CacheScanRequest'))())->setContext($ctxE())->setResource($store('redis'))->setKeyPattern('*')->setLimit(50);
+        case 'document_get':
+            return (new ($E('DocumentGetRequest'))())->setContext($ctxE())->setResource($store('mongodb', $g('mongo_collection', 'sdk_perf')))->setDocumentId($g('document_id', 'doc-1'));
+        case 'document_find':
+            return (new ($E('DocumentFindRequest'))())->setContext($ctxE())->setResource($store('mongodb', $g('mongo_collection', 'sdk_perf')))->setFilter(liveStruct([]))->setLimit(10);
+        case 'document_upsert':
+            return (new ($E('DocumentUpsertRequest'))())->setContext($ctxE())->setResource($store('mongodb', $g('mongo_collection', 'sdk_perf')))->setDocumentId($g('document_id', 'doc-1'))->setDocument(liveStruct(['name' => 'x']));
+        case 'document_delete':
+            return (new ($E('DocumentDeleteRequest'))())->setContext($ctxE())->setResource($store('mongodb', $g('mongo_collection', 'sdk_perf')))->setDocumentId($g('document_id', 'doc-1'));
+        case 'graph_query':
+            return (new ($E('GraphQueryRequest'))())->setContext($ctxE())->setResource($store('neo4j'))->setQuery('MATCH (n) RETURN n LIMIT 1')->setReadOnly(true)->setLimit(10);
+        case 'graph_mutate':
+            return (new ($E('GraphMutationRequest'))())->setContext($ctxE())->setResource($store('neo4j'))->setQuery('CREATE (n:Node {id:$id})')->setParameters(liveStruct(['id' => $g('record_id')]));
+        case 'time_series_write':
+            return (new ($E('TimeSeriesWriteRequest'))())->setContext($ctxE())->setResource($store('clickhouse'))->setPoints([(new ($E('TimeSeriesPoint'))())->setTimestamp($ts())->setTags(['host' => 'a'])->setValues(['cpu' => 0.5])]);
+        case 'time_series_query':
+            return (new ($E('TimeSeriesQueryRequest'))())->setContext($ctxE())->setResource($store('clickhouse'))->setFrom($ts())->setTo($ts())->setLimit(100);
+        case 'analytical_query':
+            return (new ($E('AnalyticalQueryRequest'))())->setContext($ctxE())->setResource($store('clickhouse'))->setQuery('SELECT 1')->setLimit(100);
+        case 'begin_tx':
+            return (new ($E('Mutation'))())->setContext($ctxE())->setOperation('upsert')->setMessageType('udb.sdk.live.v1.SdkLiveRecord')->setPayload(liveStruct(['record_id' => $g('record_id')]));
+        case 'publish_cdc':
+        case 'publish_c_d_c':
+            return (new ($E('CDCSubscriptionRequest'))())->setContext($ctxE())->setTopicPattern($project.'.*');
+        case 'create_materialized_view':
+            return (new ($E('ViewDefinition'))())->setContext($ctxE())->setSchema('public')->setName('mv_test')->setQuery('SELECT 1')->setWithData(true);
+        case 'enqueue_outbox_event':
+            return (new ($E('EnqueueOutboxEventRequest'))())->setContext($ctxE())->setTopic($g('event_type', 'sdk.perf'))->setPartitionKey($g('document_id', 'doc-1'))->setPayload(liveStruct(['event_id' => liveUuidV4(), 'event_type' => $g('event_type', 'sdk.perf'), 'correlation_id' => liveUuidV4(), 'document_id' => $g('document_id', 'doc-1')]));
+        case 'drop_resource':
+            return (new ($E('ResourceAdminRequest'))())->setContext($ctxE())->setBackend('mongodb')->setResourceName($g('mongo_collection', 'sdk_perf'));
+        case 'stage_catalog':
+        case 'validate_catalog':
+            return (new ($E('StageCatalogRequest'))())->setContext($ctxE())->setProjectId($project)->setReason('stage');
+        case 'activate_catalog':
+        case 'rollback_catalog':
+        case 'get_catalog_version':
+            return (new ($E('CatalogVersionRequest'))())->setContext($ctxE())->setProjectId($project);
+        case 'plan_migration':
+            return (new ($E('MigrationPlanRequest'))())->setContext($ctxE())->setProjectId($project)->setDryRun(true);
+        case 'apply_migration':
+            return (new ($E('MigrationApplyRequest'))())->setContext($ctxE())->setRunId($g('migration_id'))->setProjectId($project);
+        case 'get_migration_status':
+        case 'approve_migration_plan':
+            return (new ($E('MigrationRunRequest'))())->setContext($ctxE())->setRunId($g('migration_id'))->setProjectId($project);
+        case 'get_dlq_event':
+            return (new ($E('DlqEventRequest'))())->setContext($ctxE())->setDlqId($g('record_id'));
+        case 'replay_dlq_event':
+            return (new ($E('DlqActionRequest'))())->setContext($ctxE())->setDlqId($g('record_id'))->setPreserveEventId(false);
+        case 'dismiss_dlq_event':
+        case 'quarantine_dlq_event':
+            return (new ($E('DlqActionRequest'))())->setContext($ctxE())->setDlqId($g('record_id'));
+        case 'get_cdc_status':
+            return (new ($E('CdcControlRequest'))())->setContext($ctxE())->setSlotName('udb_cdc');
+        case 'pause_cdc':
+            return (new ($E('CdcControlRequest'))())->setContext($ctxE())->setSlotName('udb_cdc')->setReason('maintenance');
+        case 'resume_cdc':
+            return (new ($E('CdcControlRequest'))())->setContext($ctxE())->setSlotName('udb_cdc')->setReason('resume');
+        case 'step_down_cdc_leader':
+            return (new ($E('CdcControlRequest'))())->setContext($ctxE())->setSlotName('udb_cdc')->setReason('failover');
+        case 'preview_cdc_redaction':
+            return (new ($E('CdcRedactionPreviewRequest'))())->setContext($ctxE())->setMessageType('udb.sdk.live.v1.SdkLiveRecord')->setTopic($g('event_type', 'sdk.perf'))->setPayloadJson('{"record_id":"x"}')->setRedactionMode('mask')->setRedactionVersion(1);
+        case 'scan_projection_drift':
+            return (new ($E('ProjectionDriftScanRequest'))())->setContext($ctxE())->setProjectId($project)->setMessageType('udb.sdk.live.v1.SdkLiveRecord')->setScanMode('sample')->setRowsPerTarget(100)->setLimit(10);
+        case 'get_saga':
+            return (new ($E('SagaRequest'))())->setContext($ctxE())->setSagaId($g('saga_id'));
+        case 'retry_saga_compensation':
+            return (new ($E('SagaRequest'))())->setContext($ctxE())->setSagaId($g('saga_id'))->setReason('retry');
+        case 'mark_saga_reviewed':
+            return (new ($E('SagaRequest'))())->setContext($ctxE())->setSagaId($g('saga_id'))->setReason('reviewed');
+        case 'put_policy':
+            return (new ($E('PutPolicyRequest'))())->setContext($ctxE())->setPolicy((new ($E('PolicyRecord'))())->setEffect('allow')->setServiceIdentity($g('user_id'))->setTenantId($tenant)->setMessageType('udb.sdk.live.v1.SdkLiveRecord')->setOperation('read')->setRequiredScope('udb:read')->setPriority(100)->setEnabled(true));
+        case 'delete_policy':
+            return (new ($E('PolicyRequest'))())->setContext($ctxE())->setPolicyId(1);
+        case 'reload_policies':
+        case 'lint_policies':
+            return (new ($E('CapabilitiesRequest'))())->setContext($ctxE())->setProjectId($project);
+
+        // ── IdentityProviderService — SCIM / SAML / unlink ──
+        case 'unlink_identity':
+            return (new ($I('UnlinkIdentityRequest'))())->setTenantId($tenant)->setExternalIdentityId($g('record_id'))->setContext($ctxC());
+        case 'import_saml_metadata':
+            return (new ($I('ImportSamlMetadataRequest'))())->setProviderId($g('provider_id'))->setTenantId($tenant)->setMetadataXml('<EntityDescriptor></EntityDescriptor>')->setUpdatedBy($g('user_id'))->setContext($ctxC());
+        case 'start_saml_login':
+            return (new ($I('StartSamlLoginRequest'))())->setProviderId($g('provider_id'))->setTenantId($tenant)->setRelayState('state-1');
+        case 'saml_acs':
+            return (new ($I('SamlAcsRequest'))())->setProviderId($g('provider_id'))->setTenantId($tenant)->setSamlResponse('')->setRelayState('state-1')->setContext($ctxC());
+        case 'scim_create_user':
+            return (new ($I('ScimCreateUserRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setScimUserJson('{"userName":"a@x.com","active":true}')->setContext($ctxC());
+        case 'scim_get_user':
+            return (new ($I('ScimGetUserRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setScimUserId($g('record_id'));
+        case 'scim_list_users':
+            return (new ($I('ScimListUsersRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setPage($page());
+        case 'scim_replace_user':
+            return (new ($I('ScimReplaceUserRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setScimUserId($g('record_id'))->setScimUserJson('{"userName":"a@x.com","active":true}')->setContext($ctxC());
+        case 'scim_patch_user':
+            return (new ($I('ScimPatchUserRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setScimUserId($g('record_id'))->setOperations([(new ($I('ScimPatchOp'))())->setOp('replace')->setPath('active')->setValueJson('false')])->setContext($ctxC());
+        case 'scim_delete_user':
+            return (new ($I('ScimDeleteUserRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setScimUserId($g('record_id'))->setContext($ctxC());
+        case 'scim_create_group':
+            return (new ($I('ScimCreateGroupRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setScimGroupJson('{"displayName":"admins"}')->setContext($ctxC());
+        case 'scim_get_group':
+            return (new ($I('ScimGetGroupRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setScimGroupId($g('record_id'));
+        case 'scim_list_groups':
+            return (new ($I('ScimListGroupsRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setPage($page());
+        case 'scim_patch_group':
+            return (new ($I('ScimPatchGroupRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setScimGroupId($g('record_id'))->setOperations([(new ($I('ScimPatchOp'))())->setOp('add')->setPath('members')->setValueJson('["x"]')])->setContext($ctxC());
+        case 'scim_delete_group':
+            return (new ($I('ScimDeleteGroupRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setScimGroupId($g('record_id'))->setContext($ctxC());
+
+        // ── WebRTC SignalingService ──
+        case 'signal':
+            return (new ($W('SignalRequest'))())->setTenantId($tenant)->setRoomId($g('room_id'))->setPeerId($g('peer_id'))->setPing(true);
+
+        // ── ControlPlaneService (xDS-style; context = common.v1, resource_type BACKEND_TARGET_DEFINITION=5) ──
+        case 'stream_resources':
+            return (new ($C('DiscoveryRequest'))())->setNodeId($g('node_id', 'php-perf-node'))->setResourceType(5)->setVersionInfo('')->setResponseNonce('')->setContext($ctxC());
+        case 'delta_resources':
+            return (new ($C('DeltaDiscoveryRequest'))())->setNodeId($g('node_id', 'php-perf-node'))->setResourceType(5)->setResponseNonce('')->setResourceNamesSubscribe([])->setContext($ctxC());
+        case 'get_resources':
+            return (new ($C('GetResourcesRequest'))())->setResourceType(5)->setTenantId($tenant)->setPage($page('', 50))->setContext($ctxC());
+        case 'list_node_states':
+            return (new ($C('ListNodeStatesRequest'))())->setResourceType(0)->setPage($page('', 50))->setContext($ctxC());
+        case 'ack_status':
+            return (new ($C('AckStatusRequest'))())->setNodeId($g('node_id', 'php-perf-node'))->setResourceType(5)->setContext($ctxC());
+
+        default:
+            return null; // not yet covered → caller sends typed-empty (NEVER generic)
+    }
+}
+
+/**
+ * perfSeedPhp: create real, disposable entities across the services the perf run
+ * touches (dependency order, namespaced by a per-run suffix) and record their IDs
+ * into a PerfFixturesPhp — a faithful port of the Go perfSeed / Python perf_seed,
+ * using the exact create-call shapes the conformance suite proves succeed. The
+ * admin's tenant claim IS the canonical UUID, so one client/metadata serves both the
+ * control plane and the UUID-strict native services. Best-effort: a failed create is
+ * logged and skipped, never fatal. Returns [PerfFixturesPhp, recordId, cleanup].
+ */
+function perfSeedPhp(array $s): array
+{
+    $data = $s['data'];
+    $authGen = $s['authGenerated'];
+    $meta = $s['authedMeta'];
+    $tenant = $meta->tenantId;
+    $project = $meta->projectId;
+    $suffix = bin2hex(random_bytes(8));
+    $fix = new PerfFixturesPhp();
+    $cleanups = [];
+
+    foreach ([
+        'tenant_id' => $tenant, 'tenant' => $tenant, 'project_id' => $project, 'project' => $project,
+        'domain' => $tenant, 'message_type' => 'udb.sdk.live.v1.SdkLiveRecord', 'locale' => 'en',
+        'name' => "sdk-perf-$suffix", 'filename' => "sdk-perf-$suffix.txt", 'content_type' => 'text/plain',
+        'file_type' => 'DOCUMENT', 'kind' => 'audio',
+    ] as $k => $v) {
+        $fix->set($k, $v);
+    }
+
+    $try = function (string $label, callable $fn) {
+        try {
+            return $fn();
+        } catch (\Throwable $e) {
+            fwrite(STDERR, "perf seed: $label failed: {$e->getMessage()}\n");
+
+            return null;
+        }
+    };
+
+    // DataBroker: a real SdkLiveRecord row (Select/Delete success path).
+    $recordId = "php-perf-$suffix";
+    $rc = (new \Udb\Entity\V1\RequestContext())->setTenantId($tenant)->setProjectId($project)->setPurpose('php.live.perf.seed');
+    $try('Upsert', fn () => $data->upsert((new \Udb\Entity\V1\UpsertRequest())
+        ->setContext($rc)->setMessageType('udb.sdk.live.v1.SdkLiveRecord')
+        ->setRecordJson(liveRecordJson($recordId, $tenant, $project, "php-perf-lk-$suffix", 'perf-seed', 1))
+        ->setConflictFields(['record_id']), $meta));
+    $fix->set('record_id', $recordId);
+
+    // AuthnService: a real user (reused everywhere a user_id is needed) + login + codes.
+    $uname = "sdk-perf-$suffix";
+    $created = $try('CreateUser', fn () => $authGen->create_user((new \Udb\Core\Authn\Services\V1\CreateUserRequest())
+        ->setUsername($uname)->setEmail("$uname@example.com")->setPassword('CorrectHorse1!')
+        ->setTenantId($tenant)->setProjectId($project)->setFullName('SDK Perf User'), $meta));
+    $uid = $created ? $created->getUser()->getUserId() : '';
+    if ($uid !== '') {
+        foreach (['user_id', 'recipient_id', 'assigned_by', 'created_by', 'updated_by', 'revoked_by', 'deleted_by', 'approved_by', 'rejected_by'] as $k) {
+            $fix->set($k, $uid);
+        }
+        $fix->set('subject', "user:$uid");
+        $login = $try('Login', fn () => $authGen->login((new \Udb\Core\Authn\Services\V1\LoginRequest())
+            ->setUsername($uname)->setPassword('CorrectHorse1!')->setTenantHint($tenant)->setProjectHint($project)
+            ->setDeviceName('php-perf-seed'), $meta));
+        if ($login) {
+            $fix->set('session_id', $login->getSessionId());
+            $fix->set('token', $login->getAccessToken());
+            $fix->set('refresh_token', $login->getRefreshToken());
+            $fix->set('csrf_token', $login->getCsrfToken());
+        }
+        $codes = $try('GenerateRecoveryCodes', fn () => $authGen->generate_recovery_codes((new \Udb\Core\Authn\Services\V1\GenerateRecoveryCodesRequest())
+            ->setUserId($uid)->setCount(8), $meta));
+        if ($codes && count($codes->getCodes()) > 0) {
+            $fix->set('code', $codes->getCodes()[0]);
+            $fix->set('recovery_code', $codes->getCodes()[0]);
+        }
+    }
+
+    // AuthzService: role + assignment + policy rule + relationship.
+    $roleCode = "sdk_perf_reader_$suffix";
+    $role = $try('CreateRole', fn () => $authGen->create_role((new \Udb\Core\Authz\Services\V1\CreateRoleRequest())
+        ->setName("SDK Perf Reader $suffix")->setDescription('perf seed role')->setCreatedBy(liveUuidV4())
+        ->setRoleCode($roleCode)->setDomain($tenant)->setTenantId($tenant)->setProjectId($project), $meta));
+    if ($role) {
+        $rid = $role->getRole()->getRoleId();
+        $fix->set('role_id', $rid);
+        $fix->set('role', $roleCode);
+        $fix->set('role_code', $roleCode);
+        if ($uid !== '' && $rid !== '') {
+            $try('AssignRole', fn () => $authGen->assign_role((new \Udb\Core\Authz\Services\V1\AssignRoleRequest())
+                ->setUserId($uid)->setRoleId($rid)->setDomain($tenant)->setAssignedBy($uid)->setTenantId($tenant)->setProjectId($project), $meta));
+            $cleanups[] = fn () => $try('DeleteRole', fn () => $authGen->delete_role((new \Udb\Core\Authz\Services\V1\DeleteRoleRequest())
+                ->setRoleId($rid)->setDeletedBy($uid), $meta));
+        }
+    }
+    if ($uid !== '') {
+        $rule = $try('CreatePolicyRule', fn () => $authGen->create_policy_rule((new \Udb\Core\Authz\Services\V1\CreatePolicyRuleRequest())
+            ->setSubject($roleCode)->setDomain($tenant)->setObject('ledger')->setAction('data.update')
+            ->setEffect(1)->setDescription('perf seed rule')->setCreatedBy($uid)->setTenantId($tenant)->setProjectId($project), $meta));
+        if ($rule) {
+            $fix->set('policy_id', $rule->getPolicy()->getPolicyId());
+        }
+    }
+    $fix->set('relation', 'member');
+    $fix->set('object', "group:sdk-perf-$suffix");
+    $fix->set('resource', 'invoice');
+    $fix->set('action', 'data.select');
+
+    // ApiKeyService: a real key.
+    $principal = "sdk-perf-svc-$suffix";
+    $keyCtx = (new \Udb\Core\Common\V1\RequestContext())->setUserId($principal)
+        ->setTenant((new \Udb\Core\Common\V1\TenantContext())->setTenantId($tenant)->setProjectId($project));
+    $key = $try('CreateApiKey', fn () => $authGen->create_api_key((new \Udb\Core\Apikey\Services\V1\CreateApiKeyRequest())
+        ->setName("sdk-perf-key-$suffix")->setOwnerId($principal)->setScopes(['data:read'])->setContext($keyCtx), $meta));
+    if ($key) {
+        $fix->set('key_id', $key->getKey()->getKeyId());
+        $fix->set('plain_key', $key->getPlainKey());
+        $fix->set('owner_id', $principal);
+    }
+
+    // AnalyticsService: a recorded metric.
+    $stage = "sdk_perf_stage_$suffix";
+    $try('RecordPipelineMetric', fn () => $authGen->record_pipeline_metric((new \Udb\Core\Analytics\Services\V1\RecordPipelineMetricRequest())
+        ->setStageName($stage)->setTenantId($tenant)->setLatencyMs(100)->setIsSuccess(true), $meta));
+    $fix->set('stage_name', $stage);
+
+    // NotificationService: template + a sent notification.
+    $event = "sdk.perf.$suffix";
+    $try('UpsertTemplate', fn () => $authGen->upsert_template((new \Udb\Core\Notification\Services\V1\UpsertTemplateRequest())
+        ->setEventType($event)->setChannel(1)->setLocale('en')->setSubjectTemplate('SDK {{n}}')->setBodyTemplate('sdk-perf-body')->setIsActive(true), $meta));
+    $fix->set('event_type', $event);
+    if ($uid !== '') {
+        $sent = $try('SendNotification', fn () => $authGen->send_notification((new \Udb\Core\Notification\Services\V1\SendNotificationRequest())
+            ->setEventType($event)->setRecipientId($uid)->setRecipientAddress("sdk+$suffix@example.com")->setTenantId($tenant)->setChannels([1]), $meta));
+        if ($sent && count($sent->getLogs()) > 0) {
+            $fix->set('log_id', $sent->getLogs()[0]->getLogId());
+            $fix->set('notification_id', $sent->getLogs()[0]->getLogId());
+        }
+    }
+
+    // StorageService (UUID tenant): a registered file -> file_id, + Asset pipeline.
+    $reg = $try('RegisterUpload', fn () => $authGen->register_upload((new \Udb\Core\Storage\Services\V1\RegisterUploadRequest())
+        ->setTenantId($tenant)->setProjectId('')->setFilename("perf-$suffix.txt")->setContentType('text/plain')
+        ->setFileType('DOCUMENT')->setReferenceId(liveUuidV4())->setReferenceType('sdk.perf')->setSizeBytes(128)->setExpiresInMinutes(30), $meta));
+    if ($reg) {
+        $fid = $reg->getFileId();
+        $fix->set('file_id', $fid);
+        if ($fid !== '') {
+            $cleanups[] = fn () => $try('DeleteFile', fn () => $authGen->delete_file((new \Udb\Core\Storage\Services\V1\DeleteFileRequest())
+                ->setTenantId($tenant)->setFileId($fid), $meta));
+            $defn = $try('CreatePipelineDefinition', fn () => $authGen->create_pipeline_definition((new \Udb\Core\Asset\Services\V1\CreatePipelineDefinitionRequest())
+                ->setTenantId($tenant)->setName("sdk-perf-pipeline-$suffix")->setDescription('perf seed')
+                ->setMediaType('application/json')->setSteps('[{"name":"extract","type":"EXTRACT"}]')->setVersion(1), $meta));
+            if ($defn) {
+                $fix->set('definition_id', $defn->getDefinitionId());
+            }
+            $asset = $try('RegisterAsset', fn () => $authGen->register_asset((new \Udb\Core\Asset\Services\V1\RegisterAssetRequest())
+                ->setTenantId($tenant)->setProjectId('')->setFileId($fid)->setName("sdk-perf-asset-$suffix")
+                ->setMediaType('application/json')->setMetadata('{"source":"sdk-perf"}'), $meta));
+            if ($asset) {
+                $aid = $asset->getAssetId();
+                $fix->set('asset_id', $aid);
+                $did = $fix->lookup('definition_id');
+                if ($aid !== '' && $did) {
+                    $inst = $try('StartPipeline', fn () => $authGen->start_pipeline((new \Udb\Core\Asset\Services\V1\StartPipelineRequest())
+                        ->setTenantId($tenant)->setDefinitionId($did)->setAssetId($aid)->setContext('{}')->setCorrelationId("sdk-perf-$suffix"), $meta));
+                    if ($inst) {
+                        $fix->set('instance_id', $inst->getInstanceId());
+                    }
+                }
+            }
+        }
+    }
+
+    // WebRTC (UUID tenant): room + peer + track.
+    $room = $try('CreateRoom', fn () => $authGen->create_room((new \Udb\Core\Webrtc\Services\V1\CreateRoomRequest())
+        ->setTenantId($tenant)->setName("sdk-perf-room-$suffix")->setMaxParticipants(8)->setConfig('{}')->setCreatedBy(liveUuidV4()), $meta));
+    if ($room) {
+        $roomId = $room->getRoomId();
+        $fix->set('room_id', $roomId);
+        if ($roomId !== '') {
+            $cleanups[] = fn () => $try('CloseRoom', fn () => $authGen->close_room((new \Udb\Core\Webrtc\Services\V1\CloseRoomRequest())
+                ->setTenantId($tenant)->setRoomId($roomId), $meta));
+            $joined = $try('JoinRoom', fn () => $authGen->join_room((new \Udb\Core\Webrtc\Services\V1\JoinRoomRequest())
+                ->setTenantId($tenant)->setRoomId($roomId)->setDisplayName('sdk-perf-peer')->setMetadata('{}')->setUserAgent('sdk-perf'), $meta));
+            if ($joined) {
+                $pid = $joined->getPeer()->getPeerId();
+                $fix->set('peer_id', $pid);
+                if ($pid !== '') {
+                    $pub = $try('PublishTrack', fn () => $authGen->publish_track((new \Udb\Core\Webrtc\Services\V1\PublishTrackRequest())
+                        ->setTenantId($tenant)->setRoomId($roomId)->setPeerId($pid)->setKind('audio')->setLabel('mic')->setSettings('{}')->setMetadata('{}'), $meta));
+                    if ($pub) {
+                        $fix->set('track_id', $pub->getTrackId());
+                    }
+                }
+            }
+        }
+    }
+
+    $cleanup = function () use ($cleanups) {
+        foreach (array_reverse($cleanups) as $fn) {
+            $fn();
+        }
+    };
+
+    return [$fix, $recordId, $cleanup];
 }
 
 it('measures per-RPC latency', function () {
     $s = phpLiveSession();
     $authedMeta = $s['authedMeta'];
     $meta = $s['meta'];
+
+    // SEED PHASE: create real, disposable entities so every RPC is driven down its
+    // SUCCESS path (Go/Python parity). $authedMeta->tenantId is the canonical tenant
+    // UUID, so one client serves the UUID-strict native services (storage/asset/
+    // webrtc) too. $fix maps every reference/ID field -> a real seeded entity.
+    [$fix, $seedRecordId, $seedCleanup] = perfSeedPhp($s);
 
     $itersFor = fn (string $kind) => $kind === 'destructive' ? 1 : ($kind === 'mutation' ? 5 : 25);
 
@@ -1330,18 +2158,24 @@ it('measures per-RPC latency', function () {
         : $method->invoke($stub, $authedMeta->toGrpcMetadata(), ['timeout' => 20_000_000]);
 
     // Unary-only timer: invoke + wait() is a single request->response round-trip.
-    $timeUnary = function ($stub, ReflectionMethod $method, $hasRequest, $probeRequest) use ($invoke): float {
+    // Returns [elapsed_ms, err] where err is the gRPC status code NAME on a non-OK
+    // status, else "OK" — so a failing RPC is recorded as a FAILURE, never a silent
+    // latency sample (BENCH_RPC_BODIES.md #1/#3).
+    $timeUnary = function ($stub, ReflectionMethod $method, $hasRequest, $probeRequest) use ($invoke): array {
         $start = microtime(true);
+        $err = 'OK';
         try {
             $call = $invoke($stub, $method, $hasRequest, $probeRequest);
             if (method_exists($call, 'wait')) {
                 $call->wait();
             }
+        } catch (\Fahara02\UdbLaravel\Exceptions\UdbRpcException $e) {
+            $err = grpcStatusNamePhp($e->status);
         } catch (\Throwable $e) {
-            // latency still counts
+            $err = 'UNKNOWN';
         }
 
-        return (microtime(true) - $start) * 1000.0;
+        return [(microtime(true) - $start) * 1000.0, $err];
     };
 
     // All RPCs are measured. Unary = full round-trip. Streaming = STREAM-OPEN latency
@@ -1360,19 +2194,12 @@ it('measures per-RPC latency', function () {
             $probeRequest = null;
             $kind = 'read_only';
             if ($hasRequest) {
-                $real = perfRealBodyPhp($name, $meta->tenantId, $meta->projectId);
-                if ($real !== null) {
-                    // Top data-plane CRUD RPC: real, valid body → real e2e handler work.
-                    $probeRequest = $real;
-                    $kind = 'mutation';
-                } elseif (shouldPopulatePhp($name)) {
-                    $probeRequest = requestFor($method);
-                    populateProbeRequest($probeRequest, $meta->tenantId, $meta->projectId);
-                    $kind = 'mutation';
-                } else {
-                    $probeRequest = requestFor($method);
-                    $kind = 'destructive';
-                }
+                // DOCUMENTED body per docs/bench-bodies/<svc>.md, seed refs resolved from
+                // $fix. NO generic population: an RPC not yet covered by perfBodyPhp gets a
+                // typed-empty request (never a generically-populated placeholder).
+                $body = perfBodyPhp($name, $fix, $authedMeta->tenantId, $authedMeta->projectId);
+                $probeRequest = $body ?? requestFor($method);
+                $kind = shouldPopulatePhp($name) ? 'mutation' : 'destructive';
             }
             // Classify with one probe invoke — invoke() does not block; only
             // responses()/wait() do. Streaming = a server-streaming (responses) or
@@ -1397,7 +2224,7 @@ it('measures per-RPC latency', function () {
                 // Stream-open latency (initiate + cancel, no response drain).
                 $openMs = (microtime(true) - $openStart) * 1000.0;
                 $samples[] = [
-                    'service' => $svc, 'rpc' => $name, 'kind' => 'stream_open',
+                    'service' => $svc, 'rpc' => $name, 'kind' => 'stream_open', 'err' => 'OK',
                     'p50' => $openMs, 'p99' => $openMs, 'mean' => $openMs,
                 ];
 
@@ -1405,13 +2232,18 @@ it('measures per-RPC latency', function () {
             }
             $timeUnary($stub, $method, $hasRequest, $probeRequest); // warm-up
             $durs = [];
+            $errCode = 'OK'; // last observed non-OK status marks the RPC failed
             for ($i = 0; $i < $itersFor($kind); $i++) {
-                $durs[] = $timeUnary($stub, $method, $hasRequest, $probeRequest);
+                [$ms, $err] = $timeUnary($stub, $method, $hasRequest, $probeRequest);
+                $durs[] = $ms;
+                if ($err !== 'OK') {
+                    $errCode = $err;
+                }
             }
             sort($durs);
             $pct = fn (int $p) => $durs[min(count($durs) - 1, intdiv($p * (count($durs) - 1), 100))];
             $samples[] = [
-                'service' => $svc, 'rpc' => $name, 'kind' => $kind,
+                'service' => $svc, 'rpc' => $name, 'kind' => $kind, 'err' => $errCode,
                 'p50' => $pct(50), 'p99' => $pct(99), 'mean' => array_sum($durs) / count($durs),
             ];
         }
@@ -1435,10 +2267,27 @@ it('measures per-RPC latency', function () {
         $lines[] = sprintf('| %s | %d | %.2f |', $svc, count($bySvc[$svc]), $mean);
     }
     usort($samples, fn ($a, $b) => $b['p99'] <=> $a['p99']);
-    $lines = array_merge($lines, ['', '## Slowest 20 by p99', '', '| RPC | kind | p50 ms | p99 ms | mean ms |', '|---|---|--:|--:|--:|']);
+    $lines = array_merge($lines, ['', '## Slowest 20 by p99', '', '| RPC | kind | err | p50 ms | p99 ms | mean ms |', '|---|---|---|--:|--:|--:|']);
     foreach (array_slice($samples, 0, 20) as $row) {
-        $lines[] = sprintf('| %s/%s | %s | %.2f | %.2f | %.2f |', $row['service'], $row['rpc'], $row['kind'], $row['p50'], $row['p99'], $row['mean']);
+        $lines[] = sprintf('| %s/%s | %s | %s | %.2f | %.2f | %.2f |', $row['service'], $row['rpc'], $row['kind'], $row['err'] ?? 'OK', $row['p50'], $row['p99'], $row['mean']);
+    }
+    // Failures section (BENCH_RPC_BODIES.md #1/#3): every RPC whose last iteration
+    // returned a non-OK gRPC status is a FAILURE, not a latency sample.
+    $failed = array_values(array_filter($samples, fn ($r) => ($r['err'] ?? 'OK') !== 'OK'));
+    usort($failed, fn ($a, $b) => ($a['service'].'/'.$a['rpc']) <=> ($b['service'].'/'.$b['rpc']));
+    $lines = array_merge($lines, ['', '## Failures ('.count($failed).')', '']);
+    if (count($failed) === 0) {
+        $lines[] = 'No RPC returned a non-OK gRPC status.';
+    } else {
+        $lines[] = 'These RPCs returned a non-OK gRPC status and are FAILURES, not latency samples.';
+        $lines[] = '';
+        $lines[] = '| RPC | kind | err | p99 ms |';
+        $lines[] = '|---|---|---|--:|';
+        foreach ($failed as $row) {
+            $lines[] = sprintf('| %s/%s | %s | %s | %.2f |', $row['service'], $row['rpc'], $row['kind'], $row['err'], $row['p99']);
+        }
     }
     file_put_contents('perf_report_php.md', implode("\n", $lines)."\n");
+    $seedCleanup();
     expect(count($samples))->toBeGreaterThanOrEqual(200);
 })->skip(getenv('UDB_LIVE_PERF') !== '1', 'perf run requires UDB_LIVE_PERF=1');

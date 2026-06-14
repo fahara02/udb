@@ -240,13 +240,22 @@ function surfaceProbeRequest(tenantId: string, projectId: string) {
   };
 }
 
-// perfRealBody returns a SEMANTICALLY VALID request for the top data-plane CRUD
-// RPCs so the perf harness measures REAL handler work against the built-in
-// `udb.sdk.live.v1.SdkLiveRecord` schema (always active), not validation-rejection
-// on a generic placeholder. Upsert uses a FIXED record_id so repeated iterations
-// are idempotent (no row accumulation). Returns undefined for RPCs without an
-// override — the caller falls back to surfaceProbeRequest. Only DataBroker exposes
-// select/upsert, so matching on the method name is unambiguous.
+// perfRealBody returns a SEMANTICALLY VALID request for EVERY RPC the bench
+// measures, grounded one-for-one against BENCH_RPC_BODIES.md (real proto fields,
+// valid non-`*_UNSPECIFIED` enum NAMEs, seeded fixture values for `<seed:KEY>` ID
+// references, valid scalars). The bench then measures REAL handler work down the
+// SUCCESS path, not validation-rejection on a generic placeholder. Returns
+// It covers ALL 262 RPCs (every unary RPC AND every streaming first-message); the
+// perf caller treats a returned undefined as a HARD failure — there is no generic
+// fallback. proto-loader drops keys a request type does not declare, so
+// over-supplying within a body is safe.
+//
+// Governance/admin RPCs carry a `GovernanceActor actor{scopes:[...]}` whose scopes
+// the broker re-checks under `native.authz.governance` — the MD's authz-notes
+// scopes (`udb:authz:admin`, `udb:authz:policy:write|approve|read`) are set on that
+// actor here, per-RPC, since admin AUTHORITY comes from the Login JWT (the broker
+// derives the principal's scopes from the validated bearer; client-asserted login
+// scopes are ignored when a JWT verifier is configured).
 function perfRealBody(
   serviceName: string,
   methodName: string,
@@ -254,58 +263,697 @@ function perfRealBody(
   projectId: string,
   fixtures?: PerfFixtures,
 ): any | undefined {
-  if (serviceName !== "DataBroker") return undefined;
-  const context = { tenant_id: tenantId, project_id: projectId, purpose: "ts.live.perf" };
   const get = (k: string) => fixtures?.lookup(k) ?? "";
+  const ctx = { tenant_id: tenantId, project_id: projectId, purpose: "ts.live.perf" };
+  // RequestContext with a nested TenantContext — the shape the native control-plane
+  // services read tenant from (common.v1.RequestContext.tenant.tenant_id).
+  const tctx = { tenant_id: tenantId, project_id: projectId, purpose: "ts.live.perf", tenant: { tenant_id: tenantId, project_id: projectId } };
+  switch (serviceName) {
+    case "DataBroker":
+      return dataBrokerBody(methodName, tenantId, projectId, ctx, get);
+    case "AuthnService":
+      return authnBody(methodName, tenantId, projectId, get);
+    case "AuthzService":
+      return authzBody(methodName, tenantId, projectId, get);
+    case "ApiKeyService":
+      return apiKeyBody(methodName, tenantId, projectId, tctx, get);
+    case "IdentityProviderService":
+      return idpBody(methodName, tenantId, projectId, tctx, get);
+    case "TenantService":
+      return tenantBody(methodName, get);
+    case "AnalyticsService":
+      return analyticsBody(methodName, tenantId, projectId, tctx, get);
+    case "AssetService":
+      return assetBody(methodName, tenantId, projectId, get);
+    case "StorageService":
+      return storageBody(methodName, tenantId, get);
+    case "NotificationService":
+      return notificationBody(methodName, tenantId, projectId, tctx, get);
+    case "RoomService":
+    case "PeerService":
+    case "TrackService":
+    case "TurnService":
+    case "SignalingService":
+      return webrtcBody(methodName, tenantId, get);
+    case "ControlPlaneService":
+      return controlPlaneBody(methodName, tenantId, get);
+  }
+  return undefined;
+}
+
+// ── DataBroker (services/v1/data_broker.proto) — 76 RPCs ───────────────────────
+function dataBrokerBody(methodName: string, tenantId: string, projectId: string, context: any, get: (k: string) => string): any | undefined {
   const mongo = { backend: "mongodb", resource_name: get("mongo_collection") };
+  const nowIso = () => new Date().toISOString();
   switch (methodName) {
     case "upsert":
-      return {
-        context,
-        message_type: LIVE_MESSAGE_TYPE,
-        record_json: jsonBytes({
-          record_id: `ts-perf-${tenantId}-${projectId}`,
-          tenant_id: tenantId,
-          project_id: projectId,
-          lookup_key: "ts-perf-lk",
-          payload: "ts-perf",
-          revision: 1,
-        }),
-        conflict_fields: ["record_id"],
-      };
+      return { context, message_type: LIVE_MESSAGE_TYPE, return_record: true, record_json: jsonBytes({ record_id: `ts-perf-${tenantId}-${projectId}`, tenant_id: tenantId, project_id: projectId, lookup_key: "ts-perf-lk", payload: "ts-perf", revision: 1 }), conflict_fields: ["record_id"] };
+    case "batch_upsert":
+      return { context, message_type: LIVE_MESSAGE_TYPE, record_json: jsonBytes({ record_id: `ts-perf-${tenantId}-${projectId}`, tenant_id: tenantId, project_id: projectId, lookup_key: "ts-perf-lk", payload: "ts-perf", revision: 1 }), conflict_fields: ["record_id"] };
     case "select":
-      return {
-        context,
-        message_type: LIVE_MESSAGE_TYPE,
-        filter: { tenant_id: tenantId, project_id: projectId },
-        limit: 10,
-      };
+    case "select_v2":
+    case "batch_select":
+      return { context, message_type: LIVE_MESSAGE_TYPE, filter: { record_id: get("record_id"), tenant_id: tenantId, project_id: projectId }, limit: 10 };
     case "delete":
-      // Delete a NON-EXISTENT row so the success path runs without destroying the
-      // seeded record other RPCs read.
-      return {
-        context,
-        message_type: LIVE_MESSAGE_TYPE,
-        filter: { record_id: "ts-perf-delete-noop", tenant_id: tenantId, project_id: projectId },
-      };
-    case "generic_dispatch":
-      return { context, backend: "postgres", operation: "query", spec_json: JSON.stringify({ sql: "SELECT 1 AS live_probe" }) };
-    case "document_upsert":
-      return { context, resource: mongo, document_id: get("document_id"), document: { payload: "perf", revision: 2 } };
+      // A NON-EXISTENT row id so the success path runs without destroying the
+      // seeded record other RPCs read (still a real, valid Delete).
+      return { context, message_type: LIVE_MESSAGE_TYPE, filter: { record_id: "ts-perf-delete-noop", tenant_id: tenantId, project_id: projectId } };
+    case "vector_search":
+      return { context, collection: get("message_type"), vector: [0.1, 0.2, 0.3], limit: 5, with_payload: true };
+    case "vector_hybrid_search":
+      return { context, collection: get("message_type"), vector: [0.1, 0.2, 0.3], text_query: "hello", limit: 5, with_payload: true };
+    case "vector_upsert":
+    case "vector_batch_upsert":
+      return { context, collection: get("message_type"), points: [{ id: get("record_id"), vector: [0.1, 0.2, 0.3], payload: {} }] };
+    case "put_object":
+      // Client-streaming first Chunk (final_chunk so one message is a complete object).
+      return { context, bucket: get("bucket") || "udb-live-sdk", object_key: get("object_key") || "ts-perf.txt", data: Buffer.from("x", "utf8"), content_type: "application/octet-stream", final_chunk: true };
+    case "get_object":
+      return { context, bucket: get("bucket"), object_key: get("object_key") };
+    case "generate_presigned_url":
+      return { context, bucket: get("bucket"), object_key: get("object_key"), method: "GET", ttl_seconds: 300 };
+    case "initiate_multipart_upload":
+      return { context, bucket: get("bucket"), object_key: get("object_key"), content_type: "application/octet-stream", part_count: 1, ttl_seconds: 300 };
+    case "cache_get":
+      return { context, resource: { backend: "redis" }, key: get("object_key") || "ts-perf-cache", touch: false };
+    case "cache_set":
+      return { context, resource: { backend: "redis" }, key: get("object_key") || "ts-perf-cache", value: Buffer.from("perf", "utf8"), content_type: "text/plain", ttl_seconds: 60 };
+    case "cache_delete":
+      return { context, resource: { backend: "redis" }, key: get("object_key") || "ts-perf-cache" };
+    case "cache_scan":
+      return { context, resource: { backend: "redis" }, key_pattern: "*", limit: 50 };
     case "document_get":
       return { context, resource: mongo, document_id: get("document_id") };
     case "document_find":
-      return { context, resource: mongo, filter: { _id: get("document_id") }, limit: 1 };
+      return { context, resource: mongo, filter: {}, limit: 10 };
+    case "document_upsert":
+      return { context, resource: mongo, document_id: get("document_id"), document: { name: "x" } };
+    case "document_delete":
+      return { context, resource: mongo, document_id: "ts-perf-doc-noop" };
+    case "graph_query":
+      return { context, resource: { backend: "neo4j" }, query: "MATCH (n) RETURN n LIMIT 1", read_only: true, limit: 10 };
+    case "graph_mutate":
+      return { context, resource: { backend: "neo4j" }, query: "CREATE (n:Node {id:$id})", parameters: { id: get("record_id") } };
+    case "time_series_write":
+      return { context, resource: { backend: "clickhouse" }, points: [{ timestamp: nowIso(), tags: { host: "a" }, values: { cpu: 0.5 } }] };
+    case "time_series_query":
+      return { context, resource: { backend: "clickhouse" }, from: nowIso(), to: nowIso(), limit: 100 };
+    case "analytical_query":
+      return { context, resource: { backend: "clickhouse" }, query: "SELECT 1", limit: 100 };
+    case "begin_tx":
+      return { context, operation: "upsert", message_type: LIVE_MESSAGE_TYPE, payload: { record_id: get("record_id"), tenant_id: tenantId, project_id: projectId } };
+    case "publish_c_d_c":
+      return { context, topic_pattern: `${projectId}.*` };
+    case "create_materialized_view":
+      return { context, schema: "public", name: "mv_test", query: "SELECT 1", with_data: true };
+    case "enqueue_outbox_event": {
+      const uuid = liveUuid();
+      return { context, topic: get("event_type"), partition_key: get("document_id"), payload: { event_id: uuid, event_type: get("event_type"), correlation_id: liveUuid(), document_id: get("document_id") } };
+    }
+    case "generic_dispatch":
+      return { context: { ...context, scopes: ["udb:dispatch"] }, backend: "postgres", operation: "query", spec_json: JSON.stringify({ sql: "SELECT 1 AS live_probe" }) };
     case "ensure_resource":
-      return { context, backend: "mongodb", resource_name: get("mongo_collection"), spec_json: JSON.stringify({ collection: get("mongo_collection") }) };
+      return { context: { ...context, scopes: ["udb:admin"] }, backend: "mongodb", resource_name: get("mongo_collection") };
+    case "drop_resource":
+      // destructive — target a disposable, non-seeded resource name (never the seeded one).
+      return { context: { ...context, scopes: ["udb:admin"] }, backend: "mongodb", resource_name: `ts_perf_drop_noop_${tenantId}` };
     case "list_resources":
-      return { context, backend: "mongodb" };
-    case "generate_presigned_url":
-      return { context, bucket: get("bucket"), object_key: get("object_key"), method: "GET", ttl_seconds: 60 };
-    case "cache_set":
-      return { context, resource: { backend: "redis" }, key: "ts-perf-cache", value: Buffer.from("perf", "utf8"), content_type: "text/plain", ttl_seconds: 60 };
-    case "cache_get":
-      return { context, resource: { backend: "redis" }, key: "ts-perf-cache" };
+      return { context: { ...context, scopes: ["udb:admin"] }, backend: "mongodb" };
+    case "stage_catalog":
+    case "validate_catalog":
+      // manifest_json is field 1000 (a serialized CatalogManifest JSON). Un-seedable
+      // without a real manifest; send the best valid shape (empty manifest).
+      return { context: { ...context, scopes: ["udb:admin"] }, manifest_json: jsonBytes({}), project_id: projectId, reason: "stage" };
+    case "activate_catalog":
+    case "rollback_catalog":
+      return { context: { ...context, scopes: ["udb:admin"] }, project_id: projectId };
+    case "get_catalog_versions":
+    case "get_catalog_manifest":
+      return { context: { ...context, scopes: ["udb:admin"] }, redact: false };
+    case "get_catalog_version":
+      return { context: { ...context, scopes: ["udb:admin"] }, project_id: projectId, version: "" };
+    case "plan_migration":
+      return { context: { ...context, scopes: ["udb:admin"] }, project_id: projectId, dry_run: true };
+    case "apply_migration":
+      return { context: { ...context, scopes: ["udb:admin"] }, run_id: get("migration_id"), project_id: projectId };
+    case "get_migration_status":
+    case "approve_migration_plan":
+      return { context: { ...context, scopes: ["udb:admin"] }, run_id: get("migration_id"), project_id: projectId };
+    case "list_migration_runs":
+      return { context: { ...context, scopes: ["udb:admin"] }, project_id: projectId, limit: 50 };
+    case "list_dlq_events":
+      return { context, limit: 50 };
+    case "get_dlq_event":
+      return { context, dlq_id: get("record_id") };
+    case "replay_dlq_event":
+      return { context, dlq_id: get("record_id"), preserve_event_id: false };
+    case "dismiss_dlq_event":
+    case "quarantine_dlq_event":
+      return { context, dlq_id: get("record_id") };
+    case "get_cdc_status":
+      return { context, slot_name: "udb_cdc" };
+    case "pause_cdc":
+      return { context, slot_name: "udb_cdc", reason: "maintenance" };
+    case "resume_cdc":
+      return { context, slot_name: "udb_cdc", reason: "resume" };
+    case "step_down_cdc_leader":
+      return { context, slot_name: "udb_cdc", reason: "failover" };
+    case "preview_cdc_redaction":
+      return { context, message_type: get("message_type"), topic: get("event_type"), payload_json: jsonBytes({ sample: true }), redaction_mode: "mask", redaction_version: 1 };
+    case "scan_projection_drift":
+      return { context, project_id: projectId, message_type: get("message_type"), scan_mode: "sample", rows_per_target: 100, limit: 10 };
+    case "list_sagas":
+      return { context, limit: 50 };
+    case "get_saga":
+      return { context, saga_id: get("saga_id") || get("record_id") };
+    case "retry_saga_compensation":
+      return { context, saga_id: get("saga_id") || get("record_id"), reason: "retry" };
+    case "mark_saga_reviewed":
+      return { context, saga_id: get("saga_id") || get("record_id"), reason: "reviewed" };
+    case "list_policies":
+      return { context, include_disabled: false, limit: 50 };
+    case "put_policy":
+      // destructive — an ABAC policy insert flips the data plane to default-deny, so
+      // this is run last (Phase 2 destructive) against a benign read policy.
+      return { context, policy: { effect: "allow", service_identity: get("user_id"), tenant_id: tenantId, message_type: get("message_type"), operation: "read", required_scope: "udb:read", priority: 100, enabled: true } };
+    case "delete_policy":
+      return { context, policy_id: Number(get("policy_id")) || 0 };
+    case "reload_policies":
+    case "lint_policies":
+    case "get_capabilities":
+      return { context, project_id: projectId };
+    case "lookup_message_schema":
+      return { context, project_id: projectId, message_type: get("message_type") };
+    case "list_message_schemas":
+      return { context, project_id: projectId };
+    case "get_health_report":
+      return { context, with_probes: false, project_id: projectId };
+    case "ensure_project":
+      return { context: { ...context, scopes: ["udb:admin"] }, project_id: projectId, name: "My Project", cdc_topic_prefix: `${projectId}.` };
+    case "list_projects":
+      return { context: { ...context, scopes: ["udb:admin"] }, limit: 50 };
+    case "get_admin_summary":
+      return { context: { ...context, scopes: ["udb:admin"] }, project_id: projectId, with_probes: false, redact: false };
+    case "list_admin_audit_logs":
+      return { context: { ...context, scopes: ["udb:admin"] }, limit: 50, redact: false };
+    case "verify_admin_audit_log":
+      return { context: { ...context, scopes: ["udb:admin"] }, limit: 0 };
+  }
+  return undefined;
+}
+
+// ── AuthnService (core/authn/services/v1) — 50 RPCs ────────────────────────────
+// Destructive/session-terminal RPCs are sequenced in Phase 3 by the caller and MUST
+// target the seeded disposable user / its session — never the admin's own. The
+// bodies below already point at <seed:user_id>/<seed:session_id> accordingly.
+function authnBody(methodName: string, tenantId: string, projectId: string, get: (k: string) => string): any | undefined {
+  const u = get("user_id");
+  switch (methodName) {
+    case "create_user":
+      return { username: `bench-${liveUuid().slice(0, 8)}`, email: `bench-${liveUuid().slice(0, 8)}@acme.test`, password: "Str0ng!Passw0rd", tenant_id: tenantId, full_name: "Bench User", account_kind: "ACCOUNT_KIND_PERSON" };
+    case "get_user":
+      return { user_id: u };
+    case "list_users":
+      return { tenant_id: tenantId };
+    case "update_user":
+      return { user_id: u, full_name: "Bench B", tenant_id: tenantId };
+    case "change_user_status":
+      return { user_id: u, new_status: "USER_STATUS_SUSPENDED", reason: "bench action" };
+    case "admin_reset_password":
+      return { user_id: u };
+    case "send_o_t_p":
+      return { user_id: u, otp_type: "OTP_TYPE_EMAIL_VERIFICATION" };
+    case "verify_o_t_p":
+      // un-seedable: a CORRECT code is runtime-issued; best valid body.
+      return { otp_id: get("code"), code: "123456" };
+    case "resend_o_t_p":
+      return { original_otp_id: get("code"), reason: "not_received" };
+    case "authenticate":
+      return { bearer_token: get("token"), credential_type: "AUTH_CREDENTIAL_TYPE_BEARER_TOKEN" };
+    case "login":
+      return { username: get("username") || "bench", password: "Str0ng!Passw0rd", device_type: "DEVICE_TYPE_API", device_name: "cli", tenant_hint: tenantId, project_hint: projectId };
+    case "refresh_token":
+      return { refresh_token: get("refresh_token") };
+    case "logout":
+      return { session_id: get("session_id") };
+    case "change_password":
+      return { user_id: u, current_password: "Str0ng!Passw0rd", new_password: "N3w!Passw0rd9", otp_id: get("code") };
+    case "validate_token":
+      return { token: get("token"), token_type: "TOKEN_TYPE_JWT_ACCESS" };
+    case "create_session":
+      return { principal: { principal_id: u, subject: get("subject"), user_id: u, tenant_id: tenantId }, ttl_seconds: 3600 };
+    case "refresh_session":
+      return { session_id: get("session_id"), ttl_seconds: 3600 };
+    case "get_session":
+      return { session_id: get("session_id") };
+    case "list_sessions":
+      return { user_id: u };
+    case "revoke_session":
+      return { session_id: get("session_id"), revoke_reason: "user logout" };
+    case "validate_c_s_r_f":
+      return { session_id: get("session_id"), csrf_token: get("csrf_token") };
+    case "enroll_m_f_a":
+      return { user_id: u, mfa_type: "AUTH_FACTOR_KIND_TOTP" };
+    case "confirm_m_f_a_enrollment":
+      return { user_id: u, otp_id: get("code"), code: "123456" };
+    case "generate_recovery_codes":
+      return { user_id: u, count: 10 };
+    case "put_mfa_policy":
+      return { tenant_id: tenantId, require_mfa: true };
+    case "get_mfa_policy":
+      return { tenant_id: tenantId };
+    case "forgot_password":
+      return { identifier: `bench-${u}@acme.test` };
+    case "reset_password":
+      return { otp_id: get("code"), code: "123456", new_password: "N3w!Passw0rd9" };
+    case "introspect_token":
+      return { token: get("token") };
+    case "send_phone_verification":
+      return { user_id: u, phone: "+15551234567" };
+    case "get_jwks":
+      return {};
+    case "start_web_authn_registration":
+      return { user_id: u, label: "yubikey", tenant_id: tenantId };
+    case "finish_web_authn_registration":
+      // un-seedable: a valid credential JSON needs a real authenticator.
+      return { challenge_id: get("code"), public_key_credential_json: "{}", label: "yubikey" };
+    case "start_web_authn_authentication":
+      return { user_id: u, tenant_id: tenantId };
+    case "finish_web_authn_authentication":
+      // un-seedable: assertion JSON needs a real authenticator.
+      return { challenge_id: get("code"), public_key_credential_json: "{}" };
+    case "list_devices":
+      return { user_id: u };
+    case "revoke_device":
+      return { device_id: get("record_id"), reason: "lost device" };
+    case "admin_revoke_session":
+      return { user_id: u, session_id: get("session_id"), reason: "compromised" };
+    case "admin_revoke_all_user_sessions":
+      return { user_id: u, reason: "compromised" };
+    case "admin_revoke_all_tenant_sessions":
+      // Targets a NON-seeded throwaway tenant so it never kills the admin's own sessions.
+      return { tenant_id: `bench-throwaway-${liveUuid().slice(0, 8)}`, reason: "incident" };
+    case "emergency_revoke":
+      // Target the seeded disposable principal only — never the live admin tenant.
+      return { principal_id: get("subject"), reason: "incident" };
+    case "issue_mfa_challenge":
+      return { user_id: u, factor_kind: "AUTH_FACTOR_KIND_TOTP", purpose: "MFA_CHALLENGE_PURPOSE_SENSITIVE_OPERATION" };
+    case "verify_mfa_challenge":
+      return { challenge_id: get("code"), code: "123456" };
+    case "list_mfa_factors":
+      return { user_id: u };
+    case "disable_mfa_factor":
+      return { user_id: u, factor_kind: "AUTH_FACTOR_KIND_TOTP" };
+    case "rename_passkey":
+      return { user_id: u, credential_id: get("record_id"), new_label: "work key" };
+    case "revoke_recovery_codes":
+      return { user_id: u };
+    case "admin_reset_mfa":
+      return { user_id: u, reason: "lost device" };
+    case "list_web_authn_credentials":
+      return { user_id: u };
+    case "delete_web_authn_credential":
+      return { user_id: u, credential_id: get("record_id") };
+  }
+  return undefined;
+}
+
+// ── AuthzService (core/authz/services/v1) — 41 RPCs ────────────────────────────
+// Governance RPCs carry a GovernanceActor whose scopes are re-checked under
+// native.authz.governance — set the MD-specified scope on the actor per-RPC.
+function authzBody(methodName: string, tenantId: string, projectId: string, get: (k: string) => string): any | undefined {
+  const subject = get("subject");
+  const actor = (scope: string) => ({ subject, tenant_id: tenantId, project_id: projectId, scopes: [scope] });
+  const principal = { subject, user_id: get("user_id"), tenant_id: tenantId, scopes: [] as string[] };
+  const resource = { resource_type: get("resource") || "invoice", table: "invoice" };
+  switch (methodName) {
+    case "authorize":
+      return { principal, tenant_id: tenantId, project_id: projectId, resource, action: get("action") || "data.select", domain: tenantId, requested_scopes: ["udb:read"] };
+    case "check_access":
+      return { user_id: get("user_id"), domain: tenantId, object: get("object") || "invoice", action: get("action") || "data.select" };
+    case "create_role":
+      return { name: `bench-reader-${liveUuid().slice(0, 8)}`, created_by: subject, role_code: `bench_reader_${liveUuid().slice(0, 8)}`, domain: tenantId, tenant_id: tenantId, scope_type: "ROLE_SCOPE_TYPE_TENANT" };
+    case "assign_role":
+      return { user_id: get("user_id"), role_id: get("role_id"), domain: tenantId, assigned_by: subject, principal_kind: "PRINCIPAL_KIND_USER", tenant_id: tenantId };
+    case "create_policy_rule":
+      return { subject, domain: tenantId, object: get("object") || "ledger", action: get("action") || "data.update", effect: "POLICY_EFFECT_ALLOW", created_by: subject, tenant_id: tenantId };
+    case "list_user_permissions":
+      return { user_id: get("user_id"), domain: tenantId };
+    case "list_access_decision_audits":
+      return { user_id: get("user_id"), domain: tenantId, page: { page_size: 50 } };
+    case "revoke_role":
+      return { user_id: get("user_id"), user_role_id: get("user_role_id"), reason: "rotation", revoked_by: subject };
+    case "list_user_roles":
+      return { user_id: get("user_id"), domain: tenantId, active_only: true };
+    case "get_role":
+      return { role_id: get("role_id") };
+    case "list_roles":
+      return { domain: tenantId, active_only: true, page: { page_size: 50 } };
+    case "batch_check_permissions":
+      return { user_id: get("user_id"), domain: tenantId, checks: [{ object: get("object") || "invoice", action: get("action") || "data.select" }], context: { ip_address: "127.0.0.1" } };
+    case "update_role":
+      return { role_id: get("role_id"), updated_by: subject, name: "reader-2", description: "bench", is_active: true };
+    case "delete_role":
+      // destructive against the seeded disposable role (cleaned up afterward anyway).
+      return { role_id: get("role_id"), deleted_by: subject };
+    case "get_policy_rule":
+      return { policy_id: get("policy_id") };
+    case "list_policy_rules":
+      return { domain: tenantId, subject, object: get("object") || "ledger", active_only: true, page: { page_size: 50 } };
+    case "delete_policy_rule":
+      return { policy_id: get("policy_id"), deleted_by: subject };
+    case "put_role_binding":
+      return { binding: { subject, role: get("role"), tenant: tenantId, project: projectId, source: "bench" } };
+    case "put_relationship":
+      return { tuple: { subject, relation: get("relation") || "member", object: get("object") || "group:bench", tenant: tenantId, project: projectId, source: "bench" } };
+    case "put_authz_policy":
+      return { policy: { id: get("policy_id") || liveUuid(), priority: 100, enabled: true, effect: "allow", tenant: tenantId, subject, action: get("action") || "data.select", resource: get("resource") || "invoice", required_scopes: ["udb:read"] } };
+    case "lint_authz_policies":
+      return {};
+    case "get_native_access":
+      return { principal, tenant_id: tenantId, project_id: projectId, resource, action: get("action") || "data.select", backend: "postgres", requested_scopes: ["udb:read"] };
+    case "get_policy_bundle":
+      return { tenant_id: tenantId, project_id: projectId, domain: tenantId };
+    case "create_policy_draft":
+      return { actor: actor("udb:authz:policy:write"), tenant_id: tenantId, project_id: projectId, policy_set_name: "default", title: "draft 1", change_reason: "init", document: { policies: [] } };
+    case "update_policy_draft":
+      return { actor: actor("udb:authz:policy:write"), draft_id: get("policy_draft_id"), document: {}, change_reason: "edit", title: "draft 1" };
+    case "diff_policy_draft":
+      return { actor: actor("udb:authz:policy:read"), draft_id: get("policy_draft_id") };
+    case "submit_policy_draft":
+      return { actor: actor("udb:authz:policy:write"), draft_id: get("policy_draft_id") };
+    case "approve_policy_draft":
+      return { actor: actor("udb:authz:policy:approve"), draft_id: get("policy_draft_id"), reviewer: subject, reason: "ok" };
+    case "reject_policy_draft":
+      return { actor: actor("udb:authz:policy:approve"), draft_id: get("policy_draft_id"), reviewer: subject, reason: "nack" };
+    case "activate_policy_version":
+      return { actor: actor("udb:authz:admin"), policy_version_id: get("policy_id") };
+    case "rollback_policy_version":
+      return { actor: actor("udb:authz:admin"), policy_set_id: get("policy_id"), target_version_id: get("policy_id"), change_reason: "revert" };
+    case "activate_canary":
+      return { actor: actor("udb:authz:admin"), policy_version_id: get("policy_id"), scope_kind: "CANARY_SCOPE_KIND_PERCENT", scope_values: ["10"], success_window_secs: 300, metric_threshold: 0.99, min_samples: 100 };
+    case "promote_canary":
+      return { actor: actor("udb:authz:admin"), canary_id: get("policy_id") };
+    case "get_canary_status":
+      return { actor: actor("udb:authz:policy:read"), canary_id: get("policy_id") };
+    case "list_policy_versions":
+      return { actor: actor("udb:authz:policy:read"), tenant_id: tenantId, project_id: projectId, policy_set_id: get("policy_id"), state: "POLICY_VERSION_STATE_ACTIVE", page: { page_size: 50 } };
+    case "simulate_policy":
+      return { actor: actor("udb:authz:policy:read"), tenant_id: tenantId, project_id: projectId, draft_id: get("policy_draft_id"), cases: [{ principal: { subject }, resource, action: get("action") || "data.select", label: "c1" }], persist: false };
+    case "explain_policy":
+      return { actor: actor("udb:authz:policy:read"), tenant_id: tenantId, project_id: projectId, test_case: { principal: { subject }, resource, action: get("action") || "data.select" } };
+    case "get_authz_revision":
+      return { tenant_id: tenantId, project_id: projectId };
+    case "invalidate_policy_bundles":
+      return { actor: actor("udb:authz:admin"), tenant_id: tenantId, project_id: projectId, reason: "rotate" };
+    case "seed_builtin_roles":
+      return { actor: actor("udb:authz:admin"), tenant_id: tenantId, project_id: projectId };
+    case "migrate_legacy_policies":
+      return { actor: actor("udb:authz:admin"), tenant_id: tenantId, project_id: projectId, apply: false, policy_set_name: "default" };
+  }
+  return undefined;
+}
+
+// ── ApiKeyService (core/apikey/services/v1) — 9 RPCs ───────────────────────────
+function apiKeyBody(methodName: string, tenantId: string, projectId: string, tctx: any, get: (k: string) => string): any | undefined {
+  const context = { tenant: { tenant_id: tenantId, project_id: projectId }, user_id: get("owner_id") };
+  switch (methodName) {
+    case "create_api_key":
+      return { name: "bench-key", description: "bench", owner_type: "API_KEY_OWNER_TYPE_SERVICE_ACCOUNT", owner_id: get("owner_id"), scopes: ["resource:read"], context };
+    case "get_api_key":
+      return { key_id: get("key_id") };
+    case "list_api_keys":
+      return { owner_id: get("owner_id"), owner_type: "API_KEY_OWNER_TYPE_SERVICE_ACCOUNT", status: "API_KEY_STATUS_ACTIVE", page: { page: 1, page_size: 50 } };
+    case "update_api_key":
+      return { key_id: get("key_id"), name: "bench-key-2", description: "updated", scopes: ["resource:read"], context };
+    case "revoke_api_key":
+      return { key_id: get("key_id"), revoke_reason: "bench cleanup", context };
+    case "rotate_api_key":
+      return { key_id: get("key_id"), rotation_reason: "bench rotate", context };
+    case "emergency_revoke_api_keys":
+      // destructive — scope to the bench owner only so it never revokes other keys.
+      return { owner_id: get("owner_id"), tenant_id: tenantId, reason: "bench emergency", context };
+    case "validate_api_key":
+      return { plain_key: get("plain_key"), endpoint: "/v1/test", required_scope: "resource:read", ip_address: "127.0.0.1" };
+    case "get_api_key_usage_stats":
+      return { key_id: get("key_id") };
+  }
+  return undefined;
+}
+
+// ── IdentityProviderService (core/idp/services/v1) — 27 RPCs ───────────────────
+// SAML/SCIM/external-IdP RPCs need an external provider — best valid body only.
+function idpBody(methodName: string, tenantId: string, projectId: string, tctx: any, get: (k: string) => string): any | undefined {
+  const provider_id = get("provider_id");
+  const context = { tenant: { tenant_id: tenantId } };
+  const page = { page: 1, page_size: 20 };
+  switch (methodName) {
+    case "create_provider":
+      // kind must be ≤24 chars → IDP_KIND_OIDC (VARCHAR(24) overflow on EXTERNAL_SESSION).
+      return { tenant_id: tenantId, kind: "IDP_KIND_OIDC", display_name: `Acme OIDC ${liveUuid().slice(0, 8)}`, issuer: "https://idp.example.com", jwks_url: "https://idp.example.com/jwks", client_ids: ["client-1"], audiences: ["udb"], claim_mapping_json: "{}", group_mapping_json: "{}", jit_policy_json: "{}", account_linking_policy: "explicit", enabled: true, created_by: get("user_id"), context };
+    case "update_provider":
+      return { provider_id, tenant_id: tenantId, display_name: "Acme OIDC v2", claim_mapping_json: "{}", group_mapping_json: "{}", jit_policy_json: "{}", account_linking_policy: "explicit", updated_by: get("user_id"), context };
+    case "disable_provider":
+      return { provider_id, tenant_id: tenantId, updated_by: get("user_id"), context };
+    case "get_provider":
+      return { provider_id, tenant_id: tenantId };
+    case "list_providers":
+      return { tenant_id: tenantId, kind: "IDP_KIND_UNSPECIFIED", enabled_only: false, page };
+    case "test_provider_discovery":
+      return { provider_id, tenant_id: tenantId };
+    case "force_jwks_refresh":
+      return { provider_id, tenant_id: tenantId };
+    case "preview_claim_mapping":
+      return { provider_id, tenant_id: tenantId, claims_json: JSON.stringify({ sub: "abc", email: "a@x.com" }), claim_mapping_json: "" };
+    case "preview_group_mapping":
+      return { provider_id, tenant_id: tenantId, groups: ["admins"], group_mapping_json: "" };
+    case "list_external_identities":
+      return { tenant_id: tenantId, provider_id: "", user_id: "", page };
+    case "link_identity":
+      return { tenant_id: tenantId, provider_id, subject: "ext-subject-1", user_id: get("user_id"), email: "a@x.com", email_verified: true, context };
+    case "unlink_identity":
+      return { tenant_id: tenantId, external_identity_id: get("record_id"), context };
+    case "import_saml_metadata":
+      return { provider_id, tenant_id: tenantId, metadata_xml: "<EntityDescriptor></EntityDescriptor>", updated_by: get("user_id"), context };
+    case "start_saml_login":
+      return { provider_id, tenant_id: tenantId, relay_state: "state-1" };
+    case "saml_acs":
+      return { provider_id, tenant_id: tenantId, saml_response: "", relay_state: "state-1", context };
+    case "resolve_external_identity":
+      return { provider_id, tenant_id: tenantId, claims_json: JSON.stringify({ sub: "abc", email: "a@x.com", email_verified: true }) };
+    case "scim_create_user":
+      return { tenant_id: tenantId, provider_id, scim_user_json: JSON.stringify({ userName: "a@x.com", active: true }), context };
+    case "scim_get_user":
+      return { tenant_id: tenantId, provider_id, scim_user_id: get("record_id") };
+    case "scim_list_users":
+      return { tenant_id: tenantId, provider_id, filter: "", page };
+    case "scim_replace_user":
+      return { tenant_id: tenantId, provider_id, scim_user_id: get("record_id"), scim_user_json: JSON.stringify({ userName: "a@x.com", active: true }), context };
+    case "scim_patch_user":
+      return { tenant_id: tenantId, provider_id, scim_user_id: get("record_id"), operations: [{ op: "replace", path: "active", value_json: "false" }], context };
+    case "scim_delete_user":
+      return { tenant_id: tenantId, provider_id, scim_user_id: get("record_id"), context };
+    case "scim_create_group":
+      return { tenant_id: tenantId, provider_id, scim_group_json: JSON.stringify({ displayName: "admins" }), context };
+    case "scim_get_group":
+      return { tenant_id: tenantId, provider_id, scim_group_id: get("record_id") };
+    case "scim_list_groups":
+      return { tenant_id: tenantId, provider_id, filter: "", page };
+    case "scim_patch_group":
+      return { tenant_id: tenantId, provider_id, scim_group_id: get("record_id"), operations: [{ op: "add", path: "members", value_json: '["scim-user-id"]' }], context };
+    case "scim_delete_group":
+      return { tenant_id: tenantId, provider_id, scim_group_id: get("record_id"), context };
+  }
+  return undefined;
+}
+
+// ── TenantService (core/tenant/services/v1) — 6 RPCs ───────────────────────────
+function tenantBody(methodName: string, get: (k: string) => string): any | undefined {
+  const tenant_id = get("tenant_id");
+  switch (methodName) {
+    case "create_tenant":
+      // unique code per call avoids the unique-code collision the MD flags.
+      return { code: `bench-${liveUuid().slice(0, 8)}`, name: "Acme Bench", type: "organization", parent_tenant_id: "", config: "{}", branding: "{}" };
+    case "get_tenant":
+      return { tenant_id };
+    case "list_tenants":
+      return { type: "", status: "", page: 1, page_size: 20 };
+    case "update_tenant":
+      return { tenant_id, name: "Acme Bench", status: "active", config: "{}", branding: "{}" };
+    case "get_tenant_config":
+      return { tenant_id };
+    case "update_tenant_config":
+      return { tenant_id, config_key: "feature.flag", config_value: "on", type: "string" };
+  }
+  return undefined;
+}
+
+// ── AnalyticsService (core/analytics/services/v1) — 7 RPCs ─────────────────────
+function analyticsBody(methodName: string, tenantId: string, projectId: string, tctx: any, get: (k: string) => string): any | undefined {
+  const context = { tenant: { tenant_id: tenantId, project_id: projectId }, request_id: `ts-perf-${Date.now()}` };
+  const stage_name = get("stage_name");
+  switch (methodName) {
+    case "record_pipeline_metric":
+      return { stage_name, tenant_id: tenantId, latency_ms: 12.5, is_success: true, context };
+    case "get_pipeline_summary":
+      return { stage_name, tenant_id: tenantId, hour_from: "2026-06-01T00", hour_to: "2026-06-14T23", page: { page: 1, page_size: 50 } };
+    case "get_executor_performance":
+      return { executor_identity: "", workload_kind: "", date_from: "2026-06-01", date_to: "2026-06-14" };
+    case "get_reconciliation_analytics":
+      return { date_from: "2026-06-01", date_to: "2026-06-14" };
+    case "get_throughput":
+      return { tenant_id: tenantId, hour_from: "2026-06-01T00", hour_to: "2026-06-14T23" };
+    case "get_sla_compliance":
+      return { stage_name, date_from: "2026-06-01", date_to: "2026-06-14", p99_threshold_ms: 250.0, error_rate_threshold: 0.01 };
+    case "trigger_snapshot":
+      return { stage_name, hour: "2026-06-14T10", context };
+  }
+  return undefined;
+}
+
+// ── AssetService (core/asset/services/v1) — 8 RPCs ─────────────────────────────
+function assetBody(methodName: string, tenantId: string, projectId: string, get: (k: string) => string): any | undefined {
+  switch (methodName) {
+    case "create_pipeline_definition":
+      return { tenant_id: tenantId, name: `bench-pipeline-${liveUuid().slice(0, 8)}`, description: "Generate thumbnails", media_type: "image/png", steps: JSON.stringify([{ name: "resize", type: "TRANSFORM" }]), version: 1 };
+    case "get_pipeline_definition":
+      return { tenant_id: tenantId, definition_id: get("definition_id") };
+    case "register_asset":
+      return { tenant_id: tenantId, project_id: "", file_id: get("file_id"), name: "logo.png", media_type: "image/png", metadata: JSON.stringify({ source: "upload" }) };
+    case "start_pipeline":
+      return { tenant_id: tenantId, definition_id: get("definition_id"), asset_id: get("asset_id"), context: "{}", correlation_id: `run-${liveUuid().slice(0, 8)}` };
+    case "get_pipeline":
+      return { tenant_id: tenantId, instance_id: get("instance_id") };
+    case "complete_step":
+      // step_id is a real step from a started pipeline (GetPipeline.steps[].id) — no
+      // dedicated seed; use record_id as the best-effort ref.
+      return { tenant_id: tenantId, step_id: get("step_id") || get("record_id"), status: "COMPLETED", result: "{}", error_message: "" };
+    case "list_assets":
+      return { tenant_id: tenantId, media_type: "", status: "", page: 1, page_size: 20 };
+    case "get_asset":
+      return { tenant_id: tenantId, asset_id: get("asset_id") };
+  }
+  return undefined;
+}
+
+// ── StorageService (core/storage/services/v1) — 7 RPCs ─────────────────────────
+function storageBody(methodName: string, tenantId: string, get: (k: string) => string): any | undefined {
+  const file_id = get("file_id");
+  switch (methodName) {
+    case "register_upload":
+      return { tenant_id: tenantId, project_id: "", filename: "report.pdf", content_type: "application/pdf", file_type: "document", reference_id: liveUuid(), reference_type: "document", is_public: false, expires_in_minutes: 15, size_bytes: 1024 };
+    case "finalize_upload":
+      return { tenant_id: tenantId, file_id, content_type: "application/pdf", file_type: "document", reference_id: file_id, reference_type: "document", is_public: false, size_bytes: 1024 };
+    case "get_download_url":
+      return { tenant_id: tenantId, file_id, expires_in_minutes: 15 };
+    case "get_file":
+      return { tenant_id: tenantId, file_id };
+    case "update_file":
+      return { tenant_id: tenantId, file_id, filename: "renamed.pdf", content_type: "application/pdf", file_type: "document", reference_id: file_id, reference_type: "document", is_public: true };
+    case "delete_file":
+      // destructive against the seeded disposable file (cleaned up afterward anyway).
+      return { tenant_id: tenantId, file_id };
+    case "list_files":
+      return { tenant_id: tenantId, file_type: "document", page: 1, page_size: 20 };
+  }
+  return undefined;
+}
+
+// ── NotificationService (core/notification/services/v1) — 11 RPCs ──────────────
+function notificationBody(methodName: string, tenantId: string, projectId: string, tctx: any, get: (k: string) => string): any | undefined {
+  const event_type = get("event_type");
+  switch (methodName) {
+    case "send_notification":
+      return { event_type, recipient_id: get("user_id"), recipient_address: "user@example.com", tenant_id: tenantId, project_id: projectId, locale: "en", variables: {}, channels: ["NOTIFICATION_CHANNEL_EMAIL"] };
+    case "get_notification":
+      return { log_id: get("log_id") };
+    case "list_notifications":
+      return { tenant_id: tenantId, page: { page: 1, page_size: 20 } };
+    case "retry_notification":
+      return { log_id: get("log_id") };
+    case "upsert_template":
+      return { event_type, channel: "NOTIFICATION_CHANNEL_EMAIL", locale: "en", subject_template: "Hello {name}", body_template: "Body {name}", is_active: true };
+    case "get_template":
+      return { event_type, channel: "NOTIFICATION_CHANNEL_EMAIL", locale: "en" };
+    case "list_templates":
+      return { page: { page: 1, page_size: 20 } };
+    case "get_delivery_stats":
+      return { tenant_id: tenantId, event_type, date_from: "2026-01-01", date_to: "2026-12-31" };
+    case "set_preference":
+      return { user_id: get("user_id"), tenant_id: tenantId, channel: "NOTIFICATION_CHANNEL_EMAIL", event_type: "", is_opted_out: true };
+    case "get_preference":
+      return { user_id: get("user_id"), tenant_id: tenantId, channel: "NOTIFICATION_CHANNEL_EMAIL", event_type: "" };
+    case "list_preferences":
+      return { user_id: get("user_id"), tenant_id: tenantId, page: { page: 1, page_size: 20 } };
+  }
+  return undefined;
+}
+
+// ── WebRTC Room/Peer/Track/Turn (core/webrtc/services/v1) — unary RPCs ─────────
+// Destructive room/peer/track teardown targets the seeded disposable room.
+function webrtcBody(methodName: string, tenantId: string, get: (k: string) => string): any | undefined {
+  const room_id = get("room_id");
+  const peer_id = get("peer_id");
+  const track_id = get("track_id");
+  switch (methodName) {
+    case "create_room":
+      return { tenant_id: tenantId, name: `bench-room-${liveUuid().slice(0, 8)}`, max_participants: 10, config: "{}", created_by: get("user_id") };
+    case "get_room":
+      return { tenant_id: tenantId, room_id };
+    case "update_room":
+      return { tenant_id: tenantId, room_id, name: "bench-room-2", state: "active", config: "{}" };
+    case "close_room":
+      // destructive against a NON-seeded throwaway room id so the seeded room stays
+      // available to the other webrtc RPCs in the same run.
+      return { tenant_id: tenantId, room_id: `bench-close-noop-${liveUuid().slice(0, 8)}` };
+    case "list_rooms":
+      return { tenant_id: tenantId, state: "active", page: 1, page_size: 20 };
+    case "join_room":
+      return { tenant_id: tenantId, room_id, display_name: "Bench User", metadata: "{}", user_agent: "bench/1.0" };
+    case "leave_room":
+      // destructive — a throwaway peer id so the seeded peer stays for read RPCs.
+      return { tenant_id: tenantId, room_id, peer_id: `bench-leave-noop-${liveUuid().slice(0, 8)}` };
+    case "get_peer":
+      return { tenant_id: tenantId, peer_id };
+    case "list_peers":
+      return { tenant_id: tenantId, room_id, state: "connected" };
+    case "publish_track":
+      return { tenant_id: tenantId, room_id, peer_id, kind: "audio", label: "mic", settings: "{}", metadata: "{}" };
+    case "unpublish_track":
+      // destructive — a throwaway track id so the seeded track stays for read RPCs.
+      return { tenant_id: tenantId, track_id: `bench-unpub-noop-${liveUuid().slice(0, 8)}` };
+    case "mute_track":
+      return { tenant_id: tenantId, track_id, muted: true };
+    case "list_tracks":
+      return { tenant_id: tenantId, room_id, peer_id, kind: "audio" };
+    case "issue_credentials":
+      return { tenant_id: tenantId, room_id, peer_id, ttl_seconds: 3600 };
+    case "signal":
+      // SignalingService bidi: first SignalRequest is a keepalive ping for the room/peer.
+      return { tenant_id: tenantId, room_id, peer_id, ping: true };
+  }
+  return undefined;
+}
+
+// ── ControlPlaneService (core/control/services/v1) — unary RPCs ────────────────
+// node_id refs a data-plane PEP node that opened a stream session — un-seedable in
+// a passive bench; best valid body. (Stream RPCs are timed separately by the loop.)
+function controlPlaneBody(methodName: string, tenantId: string, get: (k: string) => string): any | undefined {
+  const context = { tenant: { tenant_id: tenantId } };
+  const node_id = get("node_id");
+  switch (methodName) {
+    case "stream_resources":
+      // Bidi first DiscoveryRequest = a subscription (empty version_info/response_nonce).
+      return { node_id: node_id || "ts-perf-node", resource_type: "RESOURCE_TYPE_BACKEND_TARGET_DEFINITION", version_info: "", response_nonce: "", resource_names: [], context };
+    case "delta_resources":
+      // Bidi first DeltaDiscoveryRequest = initial subscribe (empty nonce/versions).
+      return { node_id: node_id || "ts-perf-node", resource_type: "RESOURCE_TYPE_BACKEND_TARGET_DEFINITION", response_nonce: "", resource_names_subscribe: [], resource_names_unsubscribe: [], initial_resource_versions: {}, context };
+    case "get_resources":
+      return { resource_type: "RESOURCE_TYPE_BACKEND_TARGET_DEFINITION", tenant_id: tenantId, resource_names: [], page: { page: 1, page_size: 50 }, context };
+    case "list_node_states":
+      return { node_id: "", resource_type: "RESOURCE_TYPE_UNSPECIFIED", page: { page: 1, page_size: 50 }, context };
+    case "ack_status":
+      return { node_id, resource_type: "RESOURCE_TYPE_BACKEND_TARGET_DEFINITION", context };
   }
   return undefined;
 }
@@ -318,8 +966,9 @@ function perfRealBody(
 // same create flows the conformance suite (runLiveNativeServiceE2E above) already
 // proves succeed — and records their real identifiers into a PerfFixtures map keyed
 // by SEMANTIC field name (user_id, role, policy_id, file_id, room_id, subject, …).
-// populateSeeded consults this map first, so a reflectively-built request for, say,
-// AuthzService/get_role gets the seeded role_id and drives the success path.
+// perfRealBody resolves each request's reference/ID fields against this map, so a
+// body for, say, AuthzService/get_role gets the seeded role_id and drives the
+// success path.
 //
 // Seeding runs in DEPENDENCY ORDER (a user before a role assignment before a
 // notification; a file before an asset; a room before a peer before a track),
@@ -452,6 +1101,7 @@ async function seedPerfFixtures(
     const created = (await gen.AuthnService.create_user({ username: uname, email: `${uname}@example.com`, password: pw, tenant_id: tenantId, project_id: projectId, full_name: "SDK Perf User" }, opts)).user;
     const uid = created.user_id;
     fix.set("user_id", uid);
+    fix.set("username", uname);
     fix.set("recipient_id", uid);
     fix.set("assigned_by", uid);
     fix.set("created_by", uid);
@@ -530,6 +1180,45 @@ async function seedPerfFixtures(
     fix.set("key_id", key.key.key_id);
     fix.set("plain_key", key.plain_key);
     fix.set("owner_id", principal);
+  });
+
+  // ── IdentityProviderService: a real OIDC provider → provider_id ────────────────
+  // kind MUST be ≤24 chars (IDP_KIND_OIDC) — IDP_KIND_EXTERNAL_SESSION overflows the
+  // VARCHAR(24) `kind` column (BENCH_RPC_BODIES.md CreateProvider note).
+  await tryRun("CreateProvider", async () => {
+    const prov = await gen.IdentityProviderService.create_provider({
+      tenant_id: tenantId, kind: "IDP_KIND_OIDC", display_name: `SDK Perf OIDC ${suffix}`,
+      issuer: "https://idp.example.com", jwks_url: "https://idp.example.com/jwks",
+      client_ids: ["client-1"], audiences: ["udb"], claim_mapping_json: "{}", group_mapping_json: "{}",
+      jit_policy_json: "{}", account_linking_policy: "explicit", enabled: true,
+      created_by: fix.lookup("user_id") ?? liveUuid(), context: { tenant: { tenant_id: tenantId } },
+    }, opts);
+    const pid = prov.provider?.provider_id ?? prov.provider_id;
+    if (pid) {
+      fix.set("provider_id", pid);
+      addCleanup(async () => {
+        try { await gen.IdentityProviderService.disable_provider({ provider_id: pid, tenant_id: tenantId, updated_by: fix.lookup("user_id") ?? liveUuid(), context: { tenant: { tenant_id: tenantId } } }, opts); } catch { /* best-effort */ }
+      });
+    }
+  });
+
+  // ── AuthzService governance: a real policy draft → policy_draft_id ─────────────
+  await tryRun("CreatePolicyDraft", async () => {
+    const subject = fix.lookup("subject") ?? `user:${fix.lookup("user_id") ?? liveUuid()}`;
+    const draft = await gen.AuthzService.create_policy_draft({
+      actor: { subject, tenant_id: tenantId, project_id: projectId, scopes: ["udb:authz:policy:write"] },
+      tenant_id: tenantId, project_id: projectId, policy_set_name: "default",
+      title: `sdk-perf draft ${suffix}`, change_reason: "seed", document: { policies: [] },
+    }, opts);
+    const did = draft.draft?.draft_id ?? draft.draft_id;
+    if (did) fix.set("policy_draft_id", did);
+  });
+
+  // ── DataBroker migration: a real plan run → migration_id (run_id) ──────────────
+  await tryRun("PlanMigration", async () => {
+    const plan = await data.plan_migration({ context: ctx, project_id: projectId, dry_run: true }, opts);
+    const runId = plan.run_id ?? plan.run?.run_id;
+    if (runId) fix.set("migration_id", runId);
   });
 
   // ── AnalyticsService: a recorded metric → a stage_name with data ───────────────
@@ -623,32 +1312,6 @@ async function seedPerfFixtures(
       for (let i = cleanups.length - 1; i >= 0; i--) await cleanups[i]();
     },
   };
-}
-
-// populateSeeded deepens surfaceProbeRequest with SEEDED reference/ID values so a
-// reflective request drives the RPC's SUCCESS path. proto-loader drops keys the
-// concrete request type does not declare, so over-supplying is safe: every RPC
-// picks up exactly the fields it has, now resolved to real identifiers (user_id,
-// role_id, file_id, room_id, …). The nested `context` and a one-level-deep
-// sub-message (`resource`, `policy`, `tuple`, `binding`, …) are populated too.
-function populateSeeded(
-  serviceName: string,
-  methodName: string,
-  tenantId: string,
-  projectId: string,
-  fixtures: PerfFixtures,
-): any {
-  const base: Record<string, any> = surfaceProbeRequest(tenantId, projectId);
-  // Spread every seeded semantic key onto the request; proto-loader keeps only the
-  // declared ones. Reference/ID fields thus resolve to real entities.
-  for (const [k, v] of fixtures.m) base[k] = v;
-  // A few common formats the fixtures do not carry.
-  base.email = "sdk-live-probe@example.com";
-  base.url = "https://idp.example/sdk-live";
-  // A one-level sub-message that several reference RPCs require (a store resource).
-  const mongo = fixtures.lookup("mongo_collection");
-  if (mongo) base.resource = { backend: "mongodb", resource_name: mongo };
-  return base;
 }
 
 async function expectGeneratedUnarySurfaceMounted(
@@ -1803,9 +2466,104 @@ test("live per-RPC perf", {
       if (methodName === "get_object") {
         return { context: requestContext(tenantId, projectId, "ts.live.perf"), bucket: fixtures.lookup("bucket") ?? (process.env.UDB_LIVE_S3_BUCKET || "udb-live-sdk"), object_key: fixtures.lookup("object_key") ?? "" };
       }
-      return surfaceProbeRequest(tenantId, projectId);
+      // Only select_v2/get_object reach here; never a generic body.
+      return perfRealBody("DataBroker", methodName, tenantId, projectId, fixtures) ?? {};
     };
 
+    // ── measureRpc: time ONE RPC (unary or streaming) and push its sample ─────────
+    // Extracted from the old single-pass loop so the AUTH-ROUTE 3-phase ordering
+    // (BENCH_RPC_BODIES.md "Execution order") can drive the SAME measurement code in
+    // a deterministic order: Phase 1 (session establish) → seed → Phase 2 (the bulk)
+    // → Phase 3 (session/credential teardown), so a destructive AuthnService RPC
+    // never kills the live principal mid-run.
+    const measureRpc = async (serviceName: string, api: any, methodName: string, fn: any): Promise<void> => {
+      if (NON_UNARY_METHODS.has(methodName)) {
+        // CDC subscription: subscribe → fire a real seeded Upsert → first event.
+        if (serviceName === "DataBroker" && methodName === "publish_c_d_c") {
+          const durs: number[] = [];
+          let errCode = "OK";
+          await timeCdcFirstEvent(fn, cdcRequest()); // warm-up
+          for (let i = 0; i < 3; i++) {
+            const r = await timeCdcFirstEvent(fn, cdcRequest());
+            durs.push(r.ms);
+            if (r.err !== "OK") errCode = r.err;
+          }
+          durs.sort((a, b) => a - b);
+          const pct = (p: number) => durs[Math.min(durs.length - 1, Math.floor((p * (durs.length - 1)) / 100))];
+          samples.push({ service: serviceName, rpc: methodName, kind: "stream", err: errCode, p50: pct(50), p99: pct(99), mean: durs.reduce((s, d) => s + d, 0) / durs.length, note: "cdc: time-to-first-event (real seeded Upsert produced)" });
+          return;
+        }
+        // Server-streaming reads with a real first response (select_v2, get_object).
+        if (SERVER_STREAM_FIRST_RESPONSE.has(methodName)) {
+          const req = seededStreamRequest(methodName);
+          const durs: number[] = [];
+          let errCode = "OK";
+          await timeServerStreamFirstResponse(fn, req); // warm-up
+          for (let i = 0; i < 5; i++) {
+            const r = await timeServerStreamFirstResponse(fn, req);
+            durs.push(r.ms);
+            if (r.err !== "OK") errCode = r.err;
+          }
+          durs.sort((a, b) => a - b);
+          const pct = (p: number) => durs[Math.min(durs.length - 1, Math.floor((p * (durs.length - 1)) / 100))];
+          samples.push({ service: serviceName, rpc: methodName, kind: "stream", err: errCode, p50: pct(50), p99: pct(99), mean: durs.reduce((s, d) => s + d, 0) / durs.length, note: "streaming: time-to-first-response (seeded)" });
+          return;
+        }
+        // Client-streaming / bidi: a single seeded message cannot drive a real
+        // response in a passive run — report stream-open latency. The first message
+        // is the DOC-GROUNDED body (no generic): perfRealBody must cover it.
+        const streamReq = perfRealBody(serviceName, methodName, tenantId, projectId, fixtures);
+        if (!streamReq) throw new Error(`perfRealBody has no doc-grounded body for streaming ${serviceName}/${methodName} — gap/bypass not allowed`);
+        const d = timeStreamOpen(fn, streamReq);
+        samples.push({ service: serviceName, rpc: methodName, kind: "stream_open", err: "OK", p50: d, p99: d, mean: d, note: "streaming: stream-open latency" });
+        return;
+      }
+      const kind = operationKindOf(api.serviceFull, methodName) || "read_only";
+      // Every RPC gets its DOC-GROUNDED valid body from perfRealBody — NO generic
+      // fallback. A missing body is a loud failure (gap/bypass not allowed), never a
+      // silently-populated placeholder. Destructive RPCs run for real against the
+      // disposable seeded target, measured once.
+      const request = perfRealBody(serviceName, methodName, tenantId, projectId, fixtures);
+      if (!request) throw new Error(`perfRealBody has no doc-grounded body for ${serviceName}/${methodName} — gap/bypass not allowed`);
+      await timeMethod(fn, request); // warm-up
+      const durs: number[] = [];
+      let errCode = "OK"; // last observed non-OK status marks the RPC failed
+      for (let i = 0; i < itersFor(kind); i++) {
+        const r = await timeMethod(fn, request);
+        durs.push(r.ms);
+        if (r.err !== "OK") errCode = r.err;
+      }
+      durs.sort((a, b) => a - b);
+      const pct = (p: number) => durs[Math.min(durs.length - 1, Math.floor((p * (durs.length - 1)) / 100))];
+      samples.push({
+        service: serviceName, rpc: methodName, kind, err: errCode,
+        p50: pct(50), p99: pct(99), mean: durs.reduce((s, d) => s + d, 0) / durs.length,
+        note: kind === "destructive" ? "destructive: 1 real call against a seeded disposable target" : `${kind} (seeded success path)`,
+      });
+    };
+
+    // ── AUTH-ROUTE 3-phase partitioning (BENCH_RPC_BODIES.md "Execution order") ───
+    // Phase 1 (FIRST, in this exact order): AuthnService session-establish RPCs.
+    const PHASE1_AUTHN_ORDER = [
+      "login", "refresh_token", "refresh_session", "authenticate",
+      "validate_token", "introspect_token", "get_jwks",
+    ];
+    // Phase 3 (LAST): AuthnService RPCs that end a session / invalidate a principal
+    // or credentials. These target the seeded DISPOSABLE user / its session (the
+    // perfRealBody bodies point at <seed:user_id>/<seed:session_id>, and the
+    // tenant-wide / emergency ones target throwaway non-admin targets), so the
+    // admin's own bearer/session stays live until the very end.
+    const PHASE3_AUTHN = new Set([
+      "logout", "revoke_session", "admin_revoke_session", "admin_revoke_all_user_sessions",
+      "admin_revoke_all_tenant_sessions", "emergency_revoke", "change_password",
+      "reset_password", "admin_reset_password", "change_user_status", "admin_reset_mfa",
+      "revoke_recovery_codes", "revoke_device", "delete_web_authn_credential", "disable_mfa_factor",
+    ]);
+
+    type Unit = { serviceName: string; api: any; methodName: string; fn: any };
+    const phase1: Unit[] = [];
+    const phase2: Unit[] = [];
+    const phase3: Unit[] = [];
     const surfaces: Array<[string, any, readonly string[]]> = [
       ["authTarget", authGenerated, NATIVE_SERVICE_APIS],
       ["target", project.generated, ["DataBroker"]],
@@ -1817,71 +2575,24 @@ test("live per-RPC perf", {
         for (const [methodName, fn] of Object.entries(api)) {
           if (methodName === "serviceFull") continue;
           if (typeof fn !== "function") continue;
-          if (NON_UNARY_METHODS.has(methodName)) {
-            // CDC subscription: subscribe → fire a real seeded Upsert → first event.
-            if (serviceName === "DataBroker" && methodName === "publish_c_d_c") {
-              const durs: number[] = [];
-              let errCode = "OK";
-              await timeCdcFirstEvent(fn, cdcRequest()); // warm-up
-              for (let i = 0; i < 3; i++) {
-                const r = await timeCdcFirstEvent(fn, cdcRequest());
-                durs.push(r.ms);
-                if (r.err !== "OK") errCode = r.err;
-              }
-              durs.sort((a, b) => a - b);
-              const pct = (p: number) => durs[Math.min(durs.length - 1, Math.floor((p * (durs.length - 1)) / 100))];
-              samples.push({ service: serviceName, rpc: methodName, kind: "stream", err: errCode, p50: pct(50), p99: pct(99), mean: durs.reduce((s, d) => s + d, 0) / durs.length, note: "cdc: time-to-first-event (real seeded Upsert produced)" });
-              continue;
-            }
-            // Server-streaming reads with a real first response (select_v2, get_object).
-            if (SERVER_STREAM_FIRST_RESPONSE.has(methodName)) {
-              const req = seededStreamRequest(methodName);
-              const durs: number[] = [];
-              let errCode = "OK";
-              await timeServerStreamFirstResponse(fn, req); // warm-up
-              for (let i = 0; i < 5; i++) {
-                const r = await timeServerStreamFirstResponse(fn, req);
-                durs.push(r.ms);
-                if (r.err !== "OK") errCode = r.err;
-              }
-              durs.sort((a, b) => a - b);
-              const pct = (p: number) => durs[Math.min(durs.length - 1, Math.floor((p * (durs.length - 1)) / 100))];
-              samples.push({ service: serviceName, rpc: methodName, kind: "stream", err: errCode, p50: pct(50), p99: pct(99), mean: durs.reduce((s, d) => s + d, 0) / durs.length, note: "streaming: time-to-first-response (seeded)" });
-              continue;
-            }
-            // Client-streaming / bidi: a single seeded message cannot drive a real
-            // response in a passive run — report stream-open latency.
-            const d = timeStreamOpen(fn, surfaceProbeRequest(tenantId, projectId));
-            samples.push({ service: serviceName, rpc: methodName, kind: "stream_open", err: "OK", p50: d, p99: d, mean: d, note: "streaming: stream-open latency" });
-            continue;
-          }
-          const kind = operationKindOf((api as any).serviceFull, methodName) || "read_only";
-          // Top data-plane CRUD + backend-specific RPCs get a real, valid body (real
-          // handler work); everything else falls back to the SEEDED probe request so
-          // reference/ID fields resolve to real entities and the RPC runs its success
-          // path. Destructive RPCs are now also seeded (run for real against the
-          // disposable seeded target), measured once.
-          const request =
-            perfRealBody(serviceName, methodName, tenantId, projectId, fixtures) ??
-            populateSeeded(serviceName, methodName, tenantId, projectId, fixtures);
-          await timeMethod(fn, request); // warm-up
-          const durs: number[] = [];
-          let errCode = "OK"; // last observed non-OK status marks the RPC failed
-          for (let i = 0; i < itersFor(kind); i++) {
-            const r = await timeMethod(fn, request);
-            durs.push(r.ms);
-            if (r.err !== "OK") errCode = r.err;
-          }
-          durs.sort((a, b) => a - b);
-          const pct = (p: number) => durs[Math.min(durs.length - 1, Math.floor((p * (durs.length - 1)) / 100))];
-          samples.push({
-            service: serviceName, rpc: methodName, kind, err: errCode,
-            p50: pct(50), p99: pct(99), mean: durs.reduce((s, d) => s + d, 0) / durs.length,
-            note: kind === "destructive" ? "destructive: 1 real call against a seeded disposable target" : `${kind} (seeded success path)`,
-          });
+          const unit: Unit = { serviceName, api, methodName, fn: fn as any };
+          if (serviceName === "AuthnService" && PHASE1_AUTHN_ORDER.includes(methodName)) phase1.push(unit);
+          else if (serviceName === "AuthnService" && PHASE3_AUTHN.has(methodName)) phase3.push(unit);
+          else phase2.push(unit);
         }
       }
     }
+    // Order Phase 1 by the mandated sequence (login first, get_jwks last).
+    phase1.sort((a, b) => PHASE1_AUTHN_ORDER.indexOf(a.methodName) - PHASE1_AUTHN_ORDER.indexOf(b.methodName));
+
+    // Phase 1: establish/validate the session FIRST (the seed phase already ran above
+    // and captured the session/token fixtures these RPCs consume).
+    for (const u of phase1) await measureRpc(u.serviceName, u.api, u.methodName, u.fn);
+    // Phase 2: measure everything else under the live session.
+    for (const u of phase2) await measureRpc(u.serviceName, u.api, u.methodName, u.fn);
+    // Phase 3: tear the session/credentials down LAST (disposable seeded targets;
+    // the admin's own logout/revoke is effectively last).
+    for (const u of phase3) await measureRpc(u.serviceName, u.api, u.methodName, u.fn);
 
     const svc = new Map<string, number[]>();
     for (const s of samples) { (svc.get(s.service) ?? svc.set(s.service, []).get(s.service)!).push(s.mean); }
@@ -1900,6 +2611,12 @@ test("live per-RPC perf", {
       + "stream-open latency. CDC subscription (publish_c_d_c, kind=stream) reports time-to-FIRST-EVENT: "
       + "the harness subscribes, fires a real seeded Upsert that flows outbox→CDC→Kafka, and times the "
       + "first delivered event.", "",
+      "RPCs run on the AUTH ROUTE in three phases (BENCH_RPC_BODIES.md \"Execution order\"): Phase 1 "
+      + "establishes the session (AuthnService login → refresh_token → refresh_session → authenticate → "
+      + "validate_token → introspect_token → get_jwks), then the seed phase; Phase 2 measures everything "
+      + "else; Phase 3 LAST runs the session/credential-teardown AuthnService RPCs (logout, revoke_*, "
+      + "change/reset password, admin_reset_mfa, disable_mfa_factor, …) against the seeded DISPOSABLE "
+      + "user/session so the admin's own session is never killed mid-run.", "",
       "## Seeded fixtures", "",
       `Captured semantic field → seeded value keys used to resolve request fields: ${fkeys.join(", ")}`, "",
       "## Per-service mean latency", "", "| Service | RPCs | mean ms |", "|---|--:|--:|"];

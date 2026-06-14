@@ -12,6 +12,68 @@ The published bench was ~70% red because requests were generically populated (ev
 NOT_FOUND. Seeding IDs alone is not enough — each RPC needs a semantically-valid body.
 This file is the source of truth for those bodies.
 
+## Latest benchmark triage (2026-06-14, v0.3.5 / `07d4da8`)
+
+Source of truth checked: `https://fahara02.github.io/udb/bench-results.json`
+(`generated_at=2026-06-14T12:42:10+00:00`). Published summary: 6 SDK entries,
+3 `ok`, 1 `failed`, 2 `skipped`, 786 measured RPCs, 376 failed RPCs.
+
+### What the latest run really says
+
+| SDK | status | measured | failed RPCs | dominant signal |
+|---|---:|---:|---:|---|
+| Go | ok | 262 | 156 | request bodies still invalid or under-seeded (`InvalidArgument`, `Internal`, `PermissionDenied`, `NotFound`) |
+| Python | failed | 0 | 0 | runner exited before producing `perf_report_python.md`; root cause is hidden by missing artifact/report |
+| TypeScript | ok | 262 | 220 | auth/scope mismatch dominates (`PERMISSION_DENIED` = 157) plus invalid/under-seeded bodies |
+| PHP | ok | 262 | 0 | false green: PHP harness does not record non-OK gRPC status codes |
+| C# | skipped | - | 0 | no live per-RPC harness yet |
+| Java | skipped | - | 0 | no live per-RPC harness yet |
+
+### Recommendations from the latest run
+
+1. **Fix PHP observability first.**
+   Current PHP perf code catches `Throwable`, keeps only elapsed milliseconds, and emits no
+   `err` column / `## Failures` section. That makes PHP look fully green while Go/TS show
+   many non-OK statuses. Remedy: make PHP samples carry `err="OK"|<grpc status>`, render
+   a Failures section, and include `err` in the slow/full tables so the existing collector
+   can count PHP failures.
+
+2. **Make Python publish a partial failure report.**
+   The JSON only says `Benchmark command did not produce a Markdown report.` That blocks root
+   cause analysis. Remedy: write `perf_report_python.md` in `finally` with any collected rows
+   and the exception summary; workflow should also tee pytest output into the uploaded artifact
+   or status note.
+
+3. **Treat non-OK as failure, never latency.**
+   Go/TS already expose `failed_rpcs`, but their slowest table still includes failed RPCs such
+   as `PublishCDC` at ~15s. Remedy: keep status-coded rows in `failed_rpcs` and exclude them
+   from service latency means / trend points. The dashboard can reveal them, but they must not
+   shape latency curves.
+
+4. **Fix TypeScript auth/scope parity before chasing latency.**
+   TS reports 157 `PERMISSION_DENIED` failures, far above Go. That points to generated TS calls
+   not carrying the same benchmark admin authority, bearer metadata, scopes, or request context
+   as the Go harness. Remedy: compare TS generated-client metadata injection and per-call options
+   against Go for every native service, then only re-measure latency after permissions match.
+
+5. **Complete seeded request bodies by failure class.**
+   The shared Go/TS failures normalize to 143 common RPCs. Most are not perf defects:
+   `InvalidArgument` = body is syntactically/semantically wrong; `NotFound` = missing seeded ID;
+   `FailedPrecondition`/`ResourceExhausted` = backend/resource/capability not available;
+   `PermissionDenied` = missing scope or actor context. Remedy: update each table row below with
+   the exact seed dependency and make the harness resolve those seeds instead of placeholders.
+
+6. **Escalate `INTERNAL` separately as broker defects.**
+   Go has 21 `Internal`, TS has 19 `INTERNAL`. Repeated clusters include Analytics reads,
+   Authn/WebAuthn/OTP/device paths, list/admin resources, policy/list paths, and `PutPolicy`.
+   Remedy: these should not be "body checklist only" items; add server-side fixes so invalid
+   inputs become typed `INVALID_ARGUMENT` / `FAILED_PRECONDITION` / `NOT_FOUND`, not `INTERNAL`.
+
+7. **Fix CDC measurement contract.**
+   `DataBroker/PublishCDC` fails in both Go and TS with `DeadlineExceeded` around 15s. Remedy:
+   either seed a matching subscription, produce an event, and measure first delivered event, or
+   record `DEADLINE_EXCEEDED` as a failed RPC. Do not publish the 15s timeout as latency.
+
 ## How to read the tables
 `| done | RPC | op_kind | request msg | valid body | seed refs / notes |`
 - **valid body** — the concrete fields to send. Scalars are literals; enums are a valid

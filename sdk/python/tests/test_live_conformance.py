@@ -4,13 +4,16 @@ import importlib
 import json
 import os
 import pkgutil
+import re
 import time
 import uuid
 from dataclasses import replace
+from pathlib import Path
 
 import grpc
 import pytest
 from google.protobuf import struct_pb2
+from google.protobuf.descriptor import FieldDescriptor as _FD
 from google.protobuf.message_factory import GetMessageClass
 
 from udb.services.v1 import data_broker_pb2, data_broker_pb2_grpc
@@ -839,82 +842,9 @@ def run_native_service_e2e(auth_channel, meta: Metadata, uuid_meta: Metadata | N
     room_stub.CloseRoom(webrtc_pb.CloseRoomRequest(tenant_id=uuid_tenant, room_id=room.room_id), metadata=wmd, timeout=8.0)
 
 
-from google.protobuf.descriptor import FieldDescriptor as _FD
-
-_INT_FD_TYPES = {
-    _FD.TYPE_INT32, _FD.TYPE_INT64, _FD.TYPE_UINT32, _FD.TYPE_UINT64,
-    _FD.TYPE_SINT32, _FD.TYPE_SINT64, _FD.TYPE_FIXED32, _FD.TYPE_FIXED64,
-    _FD.TYPE_SFIXED32, _FD.TYPE_SFIXED64,
-}
-
-
 def rpc_path(method) -> str:
     """Full gRPC path "/pkg.Service/Method" for a proto MethodDescriptor."""
     return f"/{method.containing_service.full_name}/{method.name}"
-
-
-def should_populate(method) -> bool:
-    """Field-populate every RPC except DESTRUCTIVE ones, classified by the
-    proto-derived RPC_OPERATION_KIND from the generated client — never a hardcoded
-    name list. A populated destructive RPC (PutPolicy, RollbackCatalog,
-    revoke-all/emergency/reset, DropResource, …) could corrupt shared state."""
-    return RPC_OPERATION_KIND.get(rpc_path(method)) != "destructive"
-
-
-def _probe_string(name: str, tenant: str, project: str) -> str:
-    n = name.lower()
-    if "tenant" in n:
-        return tenant
-    if "project" in n:
-        return project
-    if n == "message_type" or "messagetype" in n:
-        return LIVE_MESSAGE_TYPE
-    if "domain" in n:
-        return tenant
-    if "purpose" in n:
-        return "python.live.probe"
-    if "page_token" in n or "pagetoken" in n:
-        return ""
-    return "sdk-live-probe"
-
-
-def populate_context(ctx_msg, full: str, tenant: str, project: str) -> None:
-    try:
-        if full == "udb.core.common.v1.RequestContext":
-            ctx_msg.tenant.tenant_id = tenant
-            ctx_msg.tenant.project_id = project
-            ctx_msg.purpose = "python.live.probe"
-        else:
-            ctx_msg.tenant_id = tenant
-            ctx_msg.project_id = project
-            ctx_msg.purpose = "python.live.probe"
-    except (AttributeError, ValueError, TypeError):
-        pass
-
-
-def populate_probe(msg, tenant: str, project: str, depth: int = 0) -> None:
-    """Field-populate a read RPC's request so the probe exercises real decode +
-    validation + handler logic across the full surface (not just an empty ping)."""
-    for f in msg.DESCRIPTOR.fields:
-        if f.label == _FD.LABEL_REPEATED or f.name == "context":
-            continue
-        try:
-            if f.type == _FD.TYPE_STRING:
-                setattr(msg, f.name, _probe_string(f.name, tenant, project))
-            elif f.type in _INT_FD_TYPES:
-                setattr(msg, f.name, 1)
-            elif f.type in (_FD.TYPE_DOUBLE, _FD.TYPE_FLOAT):
-                setattr(msg, f.name, 1.0)
-            elif f.type == _FD.TYPE_MESSAGE:
-                full = f.message_type.full_name
-                if full in ("udb.entity.v1.RequestContext", "udb.core.common.v1.RequestContext"):
-                    populate_context(getattr(msg, f.name), full, tenant, project)
-                elif full.startswith("google.protobuf."):
-                    pass
-                elif depth < 1:
-                    populate_probe(getattr(msg, f.name), tenant, project, depth + 1)
-        except (AttributeError, ValueError, TypeError):
-            pass  # best-effort: a populate mismatch must never break the probe
 
 
 def run_auth_lifecycle(auth_target: str, meta: Metadata, username: str, password: str) -> None:
@@ -1273,77 +1203,478 @@ def service_descriptor(client_cls: type):
     raise AssertionError(f"descriptor for {client_cls._SERVICE_FULL} not found")
 
 
-def default_request(method, meta: Metadata):
+DOC_BY_CLIENT = {
+    "AnalyticsServiceClient": "analytics.md",
+    "ApiKeyServiceClient": "apikey.md",
+    "AssetServiceClient": "asset.md",
+    "AuthnServiceClient": "authn.md",
+    "AuthzServiceClient": "authz.md",
+    "ControlPlaneServiceClient": "control_plane.md",
+    "IdentityProviderServiceClient": "idp.md",
+    "NotificationServiceClient": "notification.md",
+    "StorageServiceClient": "storage.md",
+    "TenantServiceClient": "tenant.md",
+    "PeerServiceClient": "webrtc.md",
+    "RoomServiceClient": "webrtc.md",
+    "SignalingServiceClient": "webrtc.md",
+    "TrackServiceClient": "webrtc.md",
+    "TurnServiceClient": "webrtc.md",
+    "DataBrokerClient": "data_broker.md",
+}
+
+WEBRTC_DOC_PREFIX = {
+    "PeerServiceClient": "PeerService",
+    "RoomServiceClient": "RoomService",
+    "SignalingServiceClient": "SignalingService",
+    "TrackServiceClient": "TrackService",
+    "TurnServiceClient": "TurnService",
+}
+
+INT_FD_TYPES = {
+    _FD.TYPE_INT32, _FD.TYPE_INT64, _FD.TYPE_UINT32, _FD.TYPE_UINT64,
+    _FD.TYPE_SINT32, _FD.TYPE_SINT64, _FD.TYPE_FIXED32, _FD.TYPE_FIXED64,
+    _FD.TYPE_SFIXED32, _FD.TYPE_SFIXED64,
+}
+
+DOC_ROWS: dict[tuple[str, str], str] | None = None
+
+
+def bench_body_rows() -> dict[tuple[str, str], str]:
+    global DOC_ROWS
+    if DOC_ROWS is not None:
+        return DOC_ROWS
+    root = Path(__file__).resolve().parents[3]
+    rows: dict[tuple[str, str], str] = {}
+    for path in sorted((root / "docs" / "bench-bodies").glob("*.md")):
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if not line.startswith("| ["):
+                continue
+            parts = [part.strip() for part in line.strip().strip("|").split("|")]
+            if len(parts) >= 5 and parts[1] != "RPC":
+                rows[(path.name, parts[1])] = parts[4]
+    DOC_ROWS = rows
+    return rows
+
+
+def doc_body_text(client_cls, method) -> str | None:
+    filename = DOC_BY_CLIENT[client_cls.__name__]
+    method_name = method.name
+    prefix = WEBRTC_DOC_PREFIX.get(client_cls.__name__)
+    rows = bench_body_rows()
+    if prefix:
+        return rows.get((filename, f"{prefix}.{method_name}")) or rows.get((filename, method_name))
+    return rows.get((filename, method_name))
+
+
+def doc_field_names(client_cls, method) -> set[str]:
+    body = doc_body_text(client_cls, method)
+    if body is None:
+        raise MissingExplicitPerfBody(f"no docs/bench-bodies row for {client_cls._SERVICE_FULL}/{method.name}")
+    low = body.lower()
+    fields: set[str] = set()
+    for field in method.input_type.fields:
+        names = {field.name.lower(), field.json_name.lower()}
+        if field.name == "context" and ("ctx" in low or "context" in low):
+            fields.add(field.name)
+            continue
+        if any(re.search(rf"(?<![a-z0-9_]){re.escape(name)}(?![a-z0-9_])", low) for name in names):
+            fields.add(field.name)
+    if client_cls is DataBrokerClient:
+        if method.name in {"BatchSelect", "SelectV2"}:
+            fields.update({"context", "message_type", "filter", "limit"})
+        elif method.name in {"BatchUpsert"}:
+            fields.update({"context", "message_type", "record_json", "conflict_fields"})
+        elif method.name in {"VectorBatchUpsert"}:
+            fields.update({"context", "collection", "points"})
+    return fields
+
+
+def doc_mentions_field(field, body: str) -> bool:
+    low = body.lower()
+    names = {field.name.lower(), field.json_name.lower()}
+    return any(re.search(rf"(?<![a-z0-9_]){re.escape(name)}(?![a-z0-9_])", low) for name in names)
+
+
+class MissingExplicitPerfBody(RuntimeError):
+    pass
+
+
+def perf_real_body(client_cls, method, meta: Metadata, fix: "PerfFixtures"):
+    """Build a request from the explicit row for this RPC in docs/bench-bodies."""
+    body = doc_body_text(client_cls, method)
+    fields = doc_field_names(client_cls, method)
     request = GetMessageClass(method.input_type)()
-    ctx_field = method.input_type.fields_by_name.get("context")
-    if ctx_field is not None and ctx_field.message_type is not None:
-        src = meta.to_request_context()
-        # Two distinct `RequestContext` messages exist (entity.v1 for the data
-        # plane vs core.common.v1 for the auth/control plane). Only copy when the
-        # method's `context` field actually matches our builder's type; otherwise
-        # leave it default — a mount probe just needs the RPC to be reachable, and
-        # the broker authorizes from the bearer JWT, not the body context, so a
-        # validation error (not a mount-failure code) is fine.
-        if ctx_field.message_type.full_name == src.DESCRIPTOR.full_name:
-            request.context.CopyFrom(src)
-    # Deepen the full-surface probe: read RPCs get a field-populated request.
-    if should_populate(method):
-        populate_probe(request, meta.tenant_id, meta.project_id)
+    apply_doc_fields(request, fields, body or "", meta, fix)
     return request
 
 
-def perf_real_body(method, meta: Metadata):
-    """A SEMANTICALLY VALID body for the top data-plane CRUD RPCs so the perf
-    harness measures REAL handler work (a real Upsert/Select against the built-in
-    ``udb.sdk.live.v1.SdkLiveRecord`` schema, always active) instead of
-    validation-rejection on an empty/placeholder request. Upsert uses a FIXED
-    record_id so repeated iterations are idempotent (no row accumulation). Returns
-    ``None`` for RPCs without an override — the caller falls back to
-    ``default_request``. Only DataBroker exposes Select/Upsert, so matching on the
-    method name is unambiguous.
-    """
-    if method.name == "Upsert":
-        return relational_pb2.UpsertRequest(
-            context=meta.to_request_context(),
-            message_type=LIVE_MESSAGE_TYPE,
-            record_json=live_record_json(
-                f"py-perf-{meta.tenant_id}-{meta.project_id}",
-                meta.tenant_id,
-                meta.project_id,
-                "py-perf-lk",
-                "py-perf",
-                1,
-            ),
-            conflict_fields=["record_id"],
-        )
-    if method.name == "Select":
-        return relational_pb2.SelectRequest(
-            context=meta.to_request_context(),
-            message_type=LIVE_MESSAGE_TYPE,
-            filter=live_struct({"tenant_id": meta.tenant_id, "project_id": meta.project_id}),
-            limit=10,
-        )
+def _fixture(fix, key: str, default: str = "") -> str:
+    return fix.lookup(key) or default
+
+
+def _doc_seed_key(field_name: str, body: str) -> str | None:
+    pattern = rf"(?<![a-z0-9_]){re.escape(field_name.lower())}(?![a-z0-9_]).{{0,80}}?<seed:([^>]+)>"
+    match = re.search(pattern, body.lower())
+    if match:
+        return match.group(1)
     return None
+
+
+def _field_seed(field_name: str, meta: Metadata, fix, body: str = "") -> str:
+    tenant, project = meta.tenant_id, meta.project_id
+    name = field_name.lower()
+    doc_key = _doc_seed_key(name, body)
+    if doc_key:
+        seeded = fix.lookup(doc_key)
+        if seeded:
+            return seeded
+    direct = fix.lookup(name)
+    if direct:
+        return direct
+    aliases = {
+        "tenant": tenant, "tenant_id": tenant, "domain": tenant,
+        "project": project, "project_id": project,
+        "message_type": LIVE_MESSAGE_TYPE,
+        "username": _fixture(fix, "username", "sdk-live-perf@example.com"),
+        "identifier": _fixture(fix, "username", "sdk-live-perf@example.com"),
+        "password": _fixture(fix, "password", "CorrectHorse1!"),
+        "current_password": _fixture(fix, "password", "CorrectHorse1!"),
+        "new_password": _fixture(fix, "new_password", "CorrectHorse2!"),
+        "email": "sdk-live-perf@example.com",
+        "full_name": "SDK Perf User",
+        "reason": "python-live-perf",
+        "revoke_reason": "python-live-perf",
+        "rotation_reason": "python-live-perf",
+        "change_reason": "python-live-perf",
+        "device_name": "python-sdk-perf",
+        "device_id": _fixture(fix, "record_id", "python-sdk-perf-device"),
+        "device_fingerprint": "python-sdk-perf-device",
+        "phone": "+15551234567",
+        "otp_id": _fixture(fix, "code", "123456"),
+        "original_otp_id": _fixture(fix, "code", "123456"),
+        "challenge_id": _fixture(fix, "code", "123456"),
+        "code": "123456",
+        "csrf_token": _fixture(fix, "csrf_token", "123456"),
+        "token": _fixture(fix, "token", _fixture(fix, "access_token")),
+        "bearer_token": _fixture(fix, "token", _fixture(fix, "access_token")),
+        "refresh_token": _fixture(fix, "refresh_token"),
+        "session_id": _fixture(fix, "session_id"),
+        "user_id": _fixture(fix, "user_id", "python-live-user"),
+        "principal_id": _fixture(fix, "user_id", "python-live-user"),
+        "subject": _fixture(fix, "subject", f"user:{_fixture(fix, 'user_id', 'python-live-user')}"),
+        "created_by": _fixture(fix, "subject", _fixture(fix, "user_id", "python-live-user")),
+        "updated_by": _fixture(fix, "subject", _fixture(fix, "user_id", "python-live-user")),
+        "deleted_by": _fixture(fix, "subject", _fixture(fix, "user_id", "python-live-user")),
+        "assigned_by": _fixture(fix, "subject", _fixture(fix, "user_id", "python-live-user")),
+        "revoked_by": _fixture(fix, "subject", _fixture(fix, "user_id", "python-live-user")),
+        "owner_id": _fixture(fix, "owner_id", _fixture(fix, "user_id", "python-live-user")),
+        "role_id": _fixture(fix, "role_id", "python-live-role"),
+        "role": _fixture(fix, "role", "sdk_reader"),
+        "role_code": _fixture(fix, "role_code", "sdk_reader"),
+        "user_role_id": _fixture(fix, "user_role_id", "python-live-user-role"),
+        "policy_id": _fixture(fix, "policy_id", "1"),
+        "policy_draft_id": _fixture(fix, "policy_draft_id", _fixture(fix, "policy_id", "python-live-policy")),
+        "policy_set_id": _fixture(fix, "policy_id", "python-live-policy"),
+        "policy_version_id": _fixture(fix, "policy_id", "python-live-policy"),
+        "target_version_id": _fixture(fix, "policy_id", "python-live-policy"),
+        "against_version_id": "",
+        "canary_id": _fixture(fix, "policy_id", "python-live-policy"),
+        "draft_id": _fixture(fix, "policy_draft_id", _fixture(fix, "policy_id", "python-live-policy")),
+        "id": _fixture(fix, doc_key or "record_id", "python-live-record"),
+        "credential_id": _fixture(fix, "record_id", "python-live-credential"),
+        "key_id": _fixture(fix, "key_id", "python-live-key"),
+        "key_prefix": "",
+        "plain_key": _fixture(fix, "plain_key", "udbk_python_live_key"),
+        "ip_allowlist": "127.0.0.1/32",
+        "stage_name": _fixture(fix, "stage_name", "python_live_stage"),
+        "executor_identity": "python-live-executor",
+        "operation_name": "python-live-operation",
+        "workload_kind": "pipeline",
+        "hour": "2026-06-14T00",
+        "hour_from": "2026-06-14T00",
+        "hour_to": "2026-06-14T23",
+        "date_from": "2026-06-01",
+        "date_to": "2026-06-14",
+        "event_type": _fixture(fix, "event_type", "python.live.perf"),
+        "log_id": _fixture(fix, "log_id", "python-live-log"),
+        "notification_id": _fixture(fix, "notification_id", "python-live-log"),
+        "template_id": _fixture(fix, "template_id", _fixture(fix, "event_type", "python.live.perf")),
+        "file_id": _fixture(fix, "file_id", "python-live-file"),
+        "definition_id": _fixture(fix, "definition_id", "python-live-definition"),
+        "asset_id": _fixture(fix, "asset_id", "python-live-asset"),
+        "instance_id": _fixture(fix, "instance_id", "python-live-instance"),
+        "room_id": _fixture(fix, "room_id", "python-live-room"),
+        "peer_id": _fixture(fix, "peer_id", "python-live-peer"),
+        "track_id": _fixture(fix, "track_id", "python-live-track"),
+        "provider_id": _fixture(fix, "provider_id", "python-live-provider"),
+        "external_identity_id": _fixture(fix, "external_identity_id", "python-live-external-identity"),
+        "scim_user_id": _fixture(fix, "scim_user_id", "python-live-scim-user"),
+        "scim_group_id": _fixture(fix, "scim_group_id", "python-live-scim-group"),
+        "migration_id": _fixture(fix, "migration_id", "python-live-migration"),
+        "run_id": _fixture(fix, "migration_id", "python-live-migration"),
+        "saga_id": _fixture(fix, "saga_id", "python-live-saga"),
+        "dlq_id": _fixture(fix, "dlq_id", _fixture(fix, "record_id", "python-live-dlq")),
+        "bucket": _fixture(fix, "bucket", "udb-live-sdk"),
+        "object_key": _fixture(fix, "object_key", "python-live-object.txt"),
+        "document_id": _fixture(fix, "document_id", "python-live-document"),
+        "collection": _fixture(fix, "collection", LIVE_MESSAGE_TYPE),
+        "mongo_collection": _fixture(fix, "mongo_collection", "sdk_perf_docs"),
+        "resource_name": _fixture(fix, "mongo_collection", "sdk_perf_docs"),
+        "resource": _fixture(fix, "resource", "invoice"),
+        "resource_type": _fixture(fix, "resource", "invoice"),
+        "object": _fixture(fix, "object", "group:python-live"),
+        "action": _fixture(fix, "action", "data.select"),
+        "relation": _fixture(fix, "relation", "member"),
+        "scope": "udb:admin",
+        "required_scope": "udb:read",
+        "scope_values": "10",
+        "backend": "mongodb",
+        "operation": "ping",
+        "schema": "public",
+        "query": "SELECT 1",
+        "table": LIVE_MESSAGE_TYPE,
+        "text_query": "hello",
+        "key": _fixture(fix, "object_key", "python-live-object.txt"),
+        "key_pattern": "*",
+        "conflict_fields": "record_id",
+        "version": "",
+        "name": _fixture(fix, "name", "python-live-perf"),
+        "display_name": "Python Live Perf",
+        "description": "python-live-perf",
+        "label": "python-live",
+        "title": "python-live",
+        "source": "manual",
+        "locale": "en",
+        "channel": str(NOTIFICATION_CHANNEL_EMAIL),
+        "recipient_id": _fixture(fix, "user_id", "python-live-user"),
+        "recipient_address": "sdk-live-perf@example.com",
+        "subject_template": "Hello {{name}}",
+        "body_template": "python-live-body",
+        "steps": '[{"name":"extract","type":"EXTRACT"}]',
+        "error_message": "",
+        "new_label": "work key",
+        "filename": _fixture(fix, "filename", "python-live.txt"),
+        "content_type": "text/plain",
+        "file_type": STORAGE_FILE_TYPE,
+        "media_type": "application/json",
+        "reference_id": _fixture(fix, "record_id", "python-live-record"),
+        "reference_type": "sdk.perf",
+        "kind": "audio",
+        "state": "active",
+        "status": "active",
+        "method": "GET",
+        "endpoint": "/v1/test",
+        "topic": _fixture(fix, "event_type", "python.live.perf"),
+        "topic_pattern": "*",
+        "partition_key": _fixture(fix, "document_id", "python-live-document"),
+        "slot_name": "udb_cdc",
+        "redaction_mode": "mask",
+        "scan_mode": "sample",
+        "cdc_topic_prefix": f"{project}.",
+        "policy_set_name": "default",
+        "reviewer": _fixture(fix, "subject", "python-live-reviewer"),
+        "node_id": "python-live-node",
+        "response_nonce": "",
+        "filter": "",
+        "op": "replace",
+        "path": "active",
+        "value_json": "false",
+        "step_id": _fixture(fix, "instance_id", "python-live-step"),
+        "correlation_id": str(uuid.uuid4()),
+        "ip_address": "127.0.0.1",
+        "user_agent": "python-sdk-perf",
+        "uploaded_by": _fixture(fix, "user_id", "python-live-user"),
+        "parent_tenant_id": "",
+        "branding": "{}",
+        "config_key": "feature.flag",
+        "config_value": "on",
+        "type": "organization",
+        "issuer": "https://idp.example.com",
+        "jwks_url": "https://idp.example.com/jwks",
+        "client_id": "client-1",
+        "audience": "udb",
+        "relay_state": "state-1",
+        "saml_response": "PHNhbWxwOlJlc3BvbnNlLz4=",
+        "metadata_xml": '<EntityDescriptor entityID="https://idp.example.com"></EntityDescriptor>',
+        "claims_json": '{"sub":"abc","email":"a@x.com","email_verified":true}',
+        "claim_mapping_json": "{}",
+        "group_mapping_json": "{}",
+        "jit_policy_json": "{}",
+        "account_linking_policy": "explicit",
+        "scim_user_json": '{"userName":"a@x.com","active":true}',
+        "scim_group_json": '{"displayName":"admins"}',
+        "public_key_credential_json": '{"id":"bench","rawId":"bench","type":"public-key","response":{}}',
+        "metadata": "{}",
+        "settings": "{}",
+        "config": "{}",
+        "context": "{}",
+        "result": "{}",
+    }
+    if name in aliases:
+        return aliases[name]
+    raise MissingExplicitPerfBody(f"no explicit doc-backed value for string field {field_name!r}")
+
+
+def _enum_number(field, body: str) -> int:
+    if field.enum_type is None:
+        return 0
+    for value in field.enum_type.values:
+        if value.name != value.name.upper():
+            continue
+        if value.name != "UNSPECIFIED" and value.name in body:
+            return value.number
+    for value in field.enum_type.values:
+        if value.number != 0:
+            return value.number
+    return field.enum_type.values[0].number if field.enum_type.values else 0
+
+
+def _set_struct(msg, values: dict) -> None:
+    msg.Clear()
+    msg.update(values)
+
+
+def _fill_common_context(msg, meta: Metadata) -> None:
+    if hasattr(msg, "tenant"):
+        msg.tenant.tenant_id = meta.tenant_id
+        msg.tenant.project_id = meta.project_id
+    if hasattr(msg, "purpose"):
+        msg.purpose = "python.live.perf"
+    if hasattr(msg, "user_agent"):
+        msg.user_agent = "python-sdk-perf"
+
+
+def _fill_entity_context(msg, meta: Metadata) -> None:
+    msg.CopyFrom(meta.to_request_context())
+    if hasattr(msg, "purpose"):
+        msg.purpose = "python.live.perf"
+
+
+def _fill_message(msg, field_name: str, body: str, meta: Metadata, fix) -> None:
+    full = msg.DESCRIPTOR.full_name
+    if full == "google.protobuf.Struct":
+        vals = {"tenant_id": meta.tenant_id, "project_id": meta.project_id}
+        if field_name in {"filter", "parameters"}:
+            vals.update({"record_id": _fixture(fix, "record_id", "python-live-record"), "id": _fixture(fix, "record_id", "python-live-record")})
+        elif field_name in {"payload", "document", "fields"}:
+            vals.update({"record_id": _fixture(fix, "record_id", "python-live-record"), "payload": "python-live"})
+        elif field_name == "metadata":
+            vals = {"source": "python-live-perf"}
+        _set_struct(msg, vals)
+        return
+    if full == "google.protobuf.Timestamp":
+        msg.FromSeconds(int(time.time()))
+        return
+    if full == "udb.core.common.v1.RequestContext":
+        _fill_common_context(msg, meta)
+        return
+    if full == "udb.entity.v1.RequestContext":
+        _fill_entity_context(msg, meta)
+        return
+    if full.endswith(".PageRequest"):
+        if hasattr(msg, "page"):
+            msg.page = 1
+        if hasattr(msg, "page_size"):
+            msg.page_size = 50
+        return
+    for field in msg.DESCRIPTOR.fields:
+        if doc_mentions_field(field, body):
+            set_doc_field(msg, field, body, meta, fix)
+
+
+def _append_doc_value(container, field, body: str, meta: Metadata, fix) -> None:
+    if field.message_type is not None and field.message_type.GetOptions().map_entry:
+        value_field = field.message_type.fields_by_name["value"]
+        if value_field.type == _FD.TYPE_STRING:
+            container["python-live"] = "true"
+        elif value_field.type in INT_FD_TYPES:
+            container["python-live"] = 1
+        elif value_field.type in (_FD.TYPE_DOUBLE, _FD.TYPE_FLOAT):
+            container["python-live"] = 1.0
+        elif value_field.type == _FD.TYPE_BOOL:
+            container["python-live"] = True
+        return
+    if field.type == _FD.TYPE_STRING:
+        if field.name in {"scopes", "requested_scopes", "required_scopes"}:
+            container.append("udb:admin")
+        elif field.name in {"channels"}:
+            container.append(str(NOTIFICATION_CHANNEL_EMAIL))
+        elif field.name in {"client_ids"}:
+            container.append("client-1")
+        elif field.name in {"audiences"}:
+            container.append("udb")
+        elif field.name in {"groups"}:
+            container.append("admins")
+        elif field.name in {"resource_names", "resource_names_subscribe"}:
+            container.append(_fixture(fix, "resource_name", "python-live-resource"))
+        elif field.name in {"fusion_weights"}:
+            container.append("0.5")
+        else:
+            container.append(_field_seed(field.name, meta, fix, body))
+    elif field.type in INT_FD_TYPES:
+        container.append(1)
+    elif field.type in (_FD.TYPE_DOUBLE, _FD.TYPE_FLOAT):
+        container.append(0.1)
+    elif field.type == _FD.TYPE_BOOL:
+        container.append(True)
+    elif field.type == _FD.TYPE_ENUM:
+        container.append(_enum_number(field, body))
+    elif field.type == _FD.TYPE_MESSAGE:
+        item = container.add()
+        _fill_message(item, field.name, body, meta, fix)
+
+
+def set_doc_field(msg, field, body: str, meta: Metadata, fix) -> None:
+    if field.label == _FD.LABEL_REPEATED:
+        _append_doc_value(getattr(msg, field.name), field, body, meta, fix)
+        return
+    if field.type == _FD.TYPE_STRING:
+        setattr(msg, field.name, _field_seed(field.name, meta, fix, body))
+    elif field.type == _FD.TYPE_BYTES:
+        if field.name == "record_json":
+            setattr(msg, field.name, live_record_json(_fixture(fix, "record_id", "python-live-record"), meta.tenant_id, meta.project_id, "py-perf-lk", "python-live", 1))
+        elif field.name == "payload_json":
+            setattr(msg, field.name, json.dumps({"event_id": str(uuid.uuid4()), "event_type": _fixture(fix, "event_type", "python.live.perf"), "document_id": _fixture(fix, "document_id", "python-live-document")}).encode())
+        elif field.name == "manifest_json":
+            setattr(msg, field.name, b'{"version":"python-live-perf","messages":[]}')
+        else:
+            setattr(msg, field.name, b"python-live")
+    elif field.type == _FD.TYPE_BOOL:
+        setattr(msg, field.name, field.name not in {"dry_run", "redact", "repair", "preserve_event_id", "all_sessions", "all_for_principal", "only_if_absent", "only_if_present"})
+    elif field.type in INT_FD_TYPES:
+        if field.name in {"limit", "page_size", "ttl_seconds", "expires_in_minutes", "count", "rows_per_target", "rate_limit_per_minute", "rate_limit_per_day", "success_window_secs", "min_samples"}:
+            setattr(msg, field.name, 10)
+        elif field.name in {"part_count", "version", "redaction_version", "expected_revision", "expected_policy_revision", "expected_relationship_revision", "expected_updated_at_unix", "priority"}:
+            setattr(msg, field.name, 1)
+        elif "size" in field.name:
+            setattr(msg, field.name, 128)
+        else:
+            setattr(msg, field.name, 1)
+    elif field.type in (_FD.TYPE_DOUBLE, _FD.TYPE_FLOAT):
+        setattr(msg, field.name, 0.99 if "threshold" in field.name else 100.0)
+    elif field.type == _FD.TYPE_ENUM:
+        setattr(msg, field.name, _enum_number(field, body))
+    elif field.type == _FD.TYPE_MESSAGE:
+        _fill_message(getattr(msg, field.name), field.name, body, meta, fix)
+
+
+def apply_doc_fields(request, field_names: set[str], body: str, meta: Metadata, fix) -> None:
+    for field in request.DESCRIPTOR.fields:
+        if field.name in field_names:
+            set_doc_field(request, field, body, meta, fix)
 
 
 # --------------------------------------------------------------------------------
 # Perf SEED phase + fixture map (Python counterpart of the Go harness in
 # live_perf_seed_test.go / live_surface_probe_test.go). The perf run measures REAL
-# successful-call latency for the whole RPC surface; to do that every reference/ID
-# field in a request must point at an entity that actually exists. perf_seed builds
-# those entities up front — REUSING the same create flows the conformance suite
-# already proves succeed — and records their real identifiers into a PerfFixtures
-# map keyed by SEMANTIC field name. populate_seeded then resolves a reflectively
-# built request's reference/ID/enum/email/url fields from that map so each RPC is
-# driven down its SUCCESS path instead of failing on a placeholder.
+# successful-call latency for the RPC surface; every measured RPC must use an
+# explicit, doc-backed request body from perf_real_body. Missing bodies fail fast
+# as MissingExplicitPerfBody instead of falling back to reflective filler.
 # --------------------------------------------------------------------------------
 
 
 class PerfFixtures:
-    """Maps a semantic field name -> a real seeded value. ``lookup`` resolves a
-    proto field name (lower-cased) against it, preferring an exact match then a
-    ``_``-suffix match (so ``user_id``, ``assigned_by``, ``created_by`` all reach the
-    seeded user UUID when registered under those keys)."""
+    """Maps a semantic field name to a real seeded value."""
 
     def __init__(self) -> None:
         self.m: dict[str, str] = {}
@@ -1359,78 +1690,6 @@ class PerfFixtures:
             if field == k or field.endswith("_" + k):
                 return v
         return None
-
-
-# Enum value used for the first non-zero pick in populate_seeded.
-def _first_nonzero_enum(enum_type):
-    for value in enum_type.values:
-        if value.number != 0:
-            return value.number
-    return enum_type.values[0].number if enum_type.values else 0
-
-
-def _seeded_string(name: str, tenant: str, project: str, fix: PerfFixtures) -> str:
-    """Resolve a string field to a REAL seeded value (fixture first, then the
-    constrained-format heuristics, then the generic scalar fallback)."""
-    n = name.lower()
-    hit = fix.lookup(n)
-    if hit is not None:
-        return hit
-    if "tenant" in n:
-        return tenant
-    if "project" in n:
-        return project
-    if n == "message_type" or "messagetype" in n:
-        return LIVE_MESSAGE_TYPE
-    if "domain" in n:
-        return tenant
-    if "purpose" in n:
-        return "python.live.perf"
-    if "page_token" in n or "pagetoken" in n:
-        return ""
-    if "email" in n:
-        return "sdk-live-perf@example.com"
-    if n == "url" or n.endswith("_url") or "issuer" in n or "jwks" in n:
-        return "https://idp.example/sdk-live"
-    return "sdk-live-probe"
-
-
-def populate_seeded(msg, fix: PerfFixtures, tenant: str, project: str, depth: int = 0):
-    """Walk a protobuf message and set reference/ID/enum/email/url/scalar fields from
-    the fixture map so the request drives the RPC's SUCCESS path. Recurses one level
-    into singular sub-messages; the ``context`` field gets the tenant/project; repeated
-    and map fields are skipped (the perf surface's required fields are all singular).
-    Returns ``msg`` so it can be used inline as a fallback for ``default_request``."""
-    for f in msg.DESCRIPTOR.fields:
-        if f.label == _FD.LABEL_REPEATED:
-            continue
-        try:
-            if f.name == "context" and f.type == _FD.TYPE_MESSAGE:
-                full = f.message_type.full_name
-                if full in ("udb.entity.v1.RequestContext", "udb.core.common.v1.RequestContext"):
-                    populate_context(getattr(msg, f.name), full, tenant, project)
-                continue
-            if f.type == _FD.TYPE_STRING:
-                setattr(msg, f.name, _seeded_string(f.name, tenant, project, fix))
-            elif f.type in _INT_FD_TYPES:
-                setattr(msg, f.name, 1)
-            elif f.type in (_FD.TYPE_DOUBLE, _FD.TYPE_FLOAT):
-                setattr(msg, f.name, 1.0)
-            elif f.type == _FD.TYPE_ENUM:
-                # First non-zero value (zero is usually UNSPECIFIED, rejected by validators).
-                setattr(msg, f.name, _first_nonzero_enum(f.enum_type))
-            elif f.type == _FD.TYPE_MESSAGE:
-                full = f.message_type.full_name
-                if full in ("udb.entity.v1.RequestContext", "udb.core.common.v1.RequestContext"):
-                    populate_context(getattr(msg, f.name), full, tenant, project)
-                elif full.startswith("google.protobuf."):
-                    pass  # well-known types (Struct/Timestamp/Any/...): default is valid
-                elif depth < 1:
-                    populate_seeded(getattr(msg, f.name), fix, tenant, project, depth + 1)
-        except (AttributeError, ValueError, TypeError):
-            pass  # best-effort: a populate mismatch must never break the harness
-    return msg
-
 
 def perf_seed(clients: dict, meta: Metadata):
     """Create real, disposable entities across the services the perf run touches and
@@ -1515,8 +1774,8 @@ def perf_seed(clients: dict, meta: Metadata):
         pass
     # NOTE: a single backend/resource_name fixture cannot serve both the SQL and the
     # document/cache/vector/graph RPCs, so those backend-specific DataBroker RPCs are
-    # driven by typed bodies in perf_real_body, not the generic reflective probe — we
-    # deliberately do NOT register a global backend/resource_name fixture.
+    # driven by typed bodies in perf_real_body. We deliberately do NOT register a
+    # global backend/resource_name fixture.
     fix.set("collection", collection)
     fix.set("mongo_collection", collection)
     fix.set("document_id", document_id)
@@ -1769,17 +2028,29 @@ def time_cdc_first_event(broker_stub, method, meta: Metadata, record_id: str, ti
             pass
 
 
-def time_first_recv(rpc_callable, request, meta: Metadata, client_streaming: bool, timeout: float = 12.0) -> str:
+def time_first_recv(
+    rpc_callable,
+    request,
+    meta: Metadata,
+    client_streaming: bool,
+    server_streaming: bool,
+    timeout: float = 12.0,
+) -> str:
     """Open a non-CDC streaming RPC with a seeded request and read up to the FIRST
     server response (a real round-trip, not just stream-open). For client/bidi we send
     one seeded message and close the send side; for server-streaming we send the seeded
     request. Returns "OK" on first response (or an empty stream), else the gRPC code."""
     md = meta.to_grpc_metadata()
+    stream = None
     try:
         if client_streaming:
-            stream = rpc_callable(iter([request]), metadata=md, timeout=timeout)
+            response_or_stream = rpc_callable(iter([request]), metadata=md, timeout=timeout)
         else:
-            stream = rpc_callable(request, metadata=md, timeout=timeout)
+            response_or_stream = rpc_callable(request, metadata=md, timeout=timeout)
+        if client_streaming and not server_streaming:
+            # stream-unary returns the unary response object, not an iterator.
+            return "OK"
+        stream = response_or_stream
         try:
             next(iter(stream))
             return "OK"
@@ -1787,11 +2058,62 @@ def time_first_recv(rpc_callable, request, meta: Metadata, client_streaming: boo
             return "OK"
     except grpc.RpcError as exc:
         return exc.code().name
+    except Exception as exc:
+        return f"CLIENT_ERROR:{type(exc).__name__}"
     finally:
-        try:
-            stream.cancel()
-        except Exception:
-            pass
+        if stream is not None:
+            try:
+                stream.cancel()
+            except Exception:
+                pass
+
+
+def write_python_perf_report(samples, fixtures, authed_meta: Metadata, error: Exception | None = None) -> None:
+    svc = {}
+    for s in samples:
+        svc.setdefault(s["service"], []).append(s["mean"])
+    lines = ["# UDB SDK Live Perf — Python (localhost)", "",
+             f"RPCs measured: {len(samples)}   tenant={authed_meta.tenant_id}", "",
+             "Every RPC is driven down its SUCCESS path: a SEED phase first creates real, "
+             "disposable entities (a user, role + assignment + policies, an API key, a notification, "
+             "a stored file, an asset + pipeline, a WebRTC room/peer/track, an SdkLiveRecord row) and "
+             "the harness resolves each request's reference/ID fields to those real identifiers. So "
+             "the numbers reflect real handler work, not validation-rejection latency. The TARGET is "
+             "zero failures; any residual non-OK RPC is listed under Failures for the maintainer to "
+             "finish.", "",
+             "Unary = full request/response round-trip. Non-CDC streaming RPCs (kind=stream_first_recv) "
+             "report time-to-FIRST-RESPONSE with seeded inputs. CDC subscription (kind=cdc_first_event, "
+             "PublishCDC) reports time-to-FIRST-EVENT: the harness subscribes, fires a real Upsert that "
+             "flows outbox->CDC->Kafka, and times the first delivered event.", ""]
+    if error is not None:
+        detail = str(error).replace("\n", " ").replace("|", "\\|")
+        lines += ["## Harness error", "",
+                  f"`{type(error).__name__}`: {detail}", "",
+                  "This is a partial report written before the benchmark process failed.", ""]
+    lines += ["## Seeded fixtures", "",
+              "Captured semantic field -> seeded value keys used to resolve request fields: "
+              + ", ".join(sorted(fixtures.m)), "",
+              "## Per-service mean latency", "", "| Service | RPCs | mean ms |", "|---|--:|--:|"]
+    for name in sorted(svc, key=lambda k: -sum(svc[k]) / len(svc[k])):
+        lines.append(f"| {name} | {len(svc[name])} | {sum(svc[name]) / len(svc[name]):.2f} |")
+    # Failures subsection: every RPC whose last iteration returned a non-OK gRPC status.
+    # A failing RPC is a FAILURE with its code, never a silent latency sample.
+    failed = [s for s in samples if s["err"] != "OK"]
+    lines += ["", f"## Failures ({len(failed)})", ""]
+    if not failed:
+        lines.append("No RPC returned a non-OK gRPC status.")
+    else:
+        lines.append("These RPCs returned a non-OK gRPC status and are FAILURES, not latency samples.")
+        lines += ["", "| RPC | kind | err | p99 ms | mean ms | iters |", "|---|---|---|--:|--:|--:|"]
+        for s in sorted(failed, key=lambda x: (x["service"], x["rpc"])):
+            lines.append(f"| {s['service']}/{s['rpc']} | {s['kind']} | {s['err']} | {s['p99']:.2f} | {s['mean']:.2f} | {s['iters']} |")
+    lines += ["", "## Slowest 20 by p99", "", "| RPC | kind | err | p50 ms | p99 ms | mean ms |", "|---|---|---|--:|--:|--:|"]
+    for s in sorted(samples, key=lambda x: -x["p99"])[:20]:
+        lines.append(f"| {s['service']}/{s['rpc']} | {s['kind']} | {s['err']} | {s['p50']:.2f} | {s['p99']:.2f} | {s['mean']:.2f} |")
+    report = "\n".join(lines) + "\n"
+    with open("perf_report_python.md", "w", encoding="utf-8") as fh:
+        fh.write(report)
+    print(f"\nPython perf: {len(samples)} RPCs measured, {len(failed)} FAILED (non-OK gRPC status) -> sdk/python/perf_report_python.md")
 
 
 def assert_not_mount_failure(label: str, exc: grpc.RpcError) -> None:
@@ -1920,6 +2242,43 @@ ALL_RPCS = _all_rpcs()
 assert len(ALL_RPCS) == 262, f"expected 262 RPCs from the descriptor set, found {len(ALL_RPCS)}"
 
 
+def assert_explicit_perf_body_coverage() -> None:
+    rows = bench_body_rows()
+    missing_rows = []
+    empty_bodies = []
+    for client_cls, method in ALL_RPCS:
+        body = doc_body_text(client_cls, method)
+        if body is None:
+            missing_rows.append(f"{client_cls._SERVICE_FULL}/{method.name}")
+            continue
+        fields = doc_field_names(client_cls, method)
+        if method.input_type.fields and not fields and method.name != "GetJwks":
+            empty_bodies.append(f"{client_cls._SERVICE_FULL}/{method.name}")
+    assert len(rows) == 262, f"docs/bench-bodies must have exactly 262 RPC rows, found {len(rows)}"
+    assert not missing_rows, "missing docs/bench-bodies rows: " + ", ".join(missing_rows)
+    assert not empty_bodies, "docs rows did not name any real request fields: " + ", ".join(empty_bodies)
+
+
+assert_explicit_perf_body_coverage()
+
+AUTH_FIRST_PERF = {"Login", "RefreshToken", "RefreshSession", "Authenticate", "ValidateToken", "IntrospectToken", "GetJwks"}
+AUTH_LAST_PERF = {
+    "Logout", "RevokeSession", "RevokeDevice", "DisableMfaFactor", "RevokeRecoveryCodes",
+    "DeleteWebAuthnCredential", "ChangePassword", "ResetPassword", "AdminResetPassword",
+    "ChangeUserStatus", "AdminResetMfa", "AdminRevokeSession", "AdminRevokeAllUserSessions",
+    "AdminRevokeAllTenantSessions", "EmergencyRevoke",
+}
+
+
+def perf_rpc_order_key(item):
+    client_cls, method = item
+    if client_cls is AuthnServiceClient and method.name in AUTH_FIRST_PERF:
+        return (0, method.name)
+    if client_cls is AuthnServiceClient and method.name in AUTH_LAST_PERF:
+        return (2, method.name)
+    return (1, client_cls._SERVICE_FULL, method.name)
+
+
 @pytest.fixture(scope="module")
 def live_session():
     target = required_env("UDB_GRPC_TARGET")
@@ -1932,12 +2291,17 @@ def live_session():
     )
     canonical_tenant = auth.authenticate_bearer(login.access_token).principal.tenant_id
     authed_meta = replace(metadata(bearer_token=login.access_token), tenant_id=canonical_tenant)
+    fixtures = PerfFixtures()
+    fixtures.set("token", login.access_token)
+    fixtures.set("access_token", login.access_token)
+    fixtures.set("refresh_token", login.refresh_token)
+    fixtures.set("session_id", login.session_id)
     clients = {}
     for client_cls in SERVICE_CLIENTS:
         endpoint = target if client_cls is DataBrokerClient else auth_target
         clients[client_cls] = client_cls(endpoint, authed_meta, timeout=10.0)
     try:
-        yield {"authed_meta": authed_meta, "clients": clients}
+        yield {"authed_meta": authed_meta, "clients": clients, "fixtures": fixtures}
     finally:
         for client in clients.values():
             client.close()
@@ -1950,8 +2314,9 @@ def test_rpc_surface(live_session, rpc):
     client_cls, method = rpc
     authed_meta = live_session["authed_meta"]
     client = live_session["clients"][client_cls]
+    fixtures = live_session["fixtures"]
     label = f"{client_cls._SERVICE_FULL}/{method.name}"
-    request = default_request(method, authed_meta)
+    request = perf_real_body(client_cls, method, authed_meta, fixtures)
     rpc_callable = getattr(client.stub, method.name)
     try:
         if method.client_streaming:
@@ -1970,7 +2335,7 @@ def test_rpc_surface(live_session, rpc):
 # Per-RPC performance (gated on UDB_LIVE_PERF=1). Times every RPC over multiple
 # iterations and writes perf_report_python.md — the Python counterpart of the Go
 # perf harness. read_only RPCs are timed many times; mutations a few; destructive
-# once typed-empty (validation latency only).
+# once with explicit bodies.
 # --------------------------------------------------------------------------------
 
 @pytest.mark.skipif(os.getenv("UDB_LIVE_PERF") != "1", reason="perf run requires UDB_LIVE_PERF=1")
@@ -2005,10 +2370,8 @@ def test_live_perf():
         # (e.g. "UNAVAILABLE", "FAILED_PRECONDITION") on a non-OK status, else "OK".
         # A failing RPC must never be reported as a silent latency sample.
         #
-        # Every RPC is driven down its SUCCESS path: the top data-plane CRUD RPCs get a
-        # real, valid body (perf_real_body); every OTHER RPC gets a descriptor-built
-        # request whose reference/ID/enum fields are resolved from the seed fixtures
-        # (populate_seeded), so it targets the real entities created in the seed phase.
+        # Every measured RPC must have an explicit doc-backed body. No reflective
+        # fallback is allowed here; missing coverage is a harness error.
         rpc_callable = getattr(client.stub, method.name)
         start = time.perf_counter()
         err_code = "OK"
@@ -2017,13 +2380,13 @@ def test_live_perf():
             # (outbox->CDC->Kafka), and time the first delivered event.
             err_code = time_cdc_first_event(broker_stub, method, authed_meta, seed_record_id)
             return (time.perf_counter() - start) * 1000.0, err_code
-        request = perf_real_body(method, authed_meta) or populate_seeded(
-            default_request(method, authed_meta), fixtures, authed_meta.tenant_id, authed_meta.project_id
-        )
+        request = perf_real_body(client_cls, method, authed_meta, fixtures)
         if method.client_streaming or method.server_streaming:
             # Other streaming RPCs: open with seeded inputs and measure time to the
             # FIRST server response (a real round-trip), not just stream-open.
-            err_code = time_first_recv(rpc_callable, request, authed_meta, method.client_streaming)
+            err_code = time_first_recv(
+                rpc_callable, request, authed_meta, method.client_streaming, method.server_streaming
+            )
             return (time.perf_counter() - start) * 1000.0, err_code
         try:
             rpc_callable(request, metadata=authed_meta.to_grpc_metadata(), timeout=20.0)
@@ -2039,7 +2402,7 @@ def test_live_perf():
     # (PublishCDC) = time-to-first-event (subscribe, fire a real Upsert, time delivery).
     samples = []
     try:
-        for client_cls, method in ALL_RPCS:
+        for client_cls, method in sorted(ALL_RPCS, key=perf_rpc_order_key):
             client = clients[client_cls]
             streaming = method.client_streaming or method.server_streaming
             if is_cdc_subscription(client_cls, method):
@@ -2066,48 +2429,12 @@ def test_live_perf():
                 "rpc": method.name, "kind": kind, "iters": n, "err": err_code,
                 "p50": pct(50), "p99": pct(99), "mean": sum(durs) / len(durs),
             })
+    except Exception as exc:
+        write_python_perf_report(samples, fixtures, authed_meta, exc)
+        raise
     finally:
         seed_cleanup()
         for c in clients.values():
             c.close()
 
-    svc = {}
-    for s in samples:
-        svc.setdefault(s["service"], []).append(s["mean"])
-    lines = ["# UDB SDK Live Perf — Python (localhost)", "",
-             f"RPCs measured: {len(samples)}   tenant={authed_meta.tenant_id}", "",
-             "Every RPC is driven down its SUCCESS path: a SEED phase first creates real, "
-             "disposable entities (a user, role + assignment + policies, an API key, a notification, "
-             "a stored file, an asset + pipeline, a WebRTC room/peer/track, an SdkLiveRecord row) and "
-             "the harness resolves each request's reference/ID fields to those real identifiers. So "
-             "the numbers reflect real handler work, not validation-rejection latency. The TARGET is "
-             "zero failures; any residual non-OK RPC is listed under Failures for the maintainer to "
-             "finish.", "",
-             "Unary = full request/response round-trip. Non-CDC streaming RPCs (kind=stream_first_recv) "
-             "report time-to-FIRST-RESPONSE with seeded inputs. CDC subscription (kind=cdc_first_event, "
-             "PublishCDC) reports time-to-FIRST-EVENT: the harness subscribes, fires a real Upsert that "
-             "flows outbox->CDC->Kafka, and times the first delivered event.", "",
-             "## Seeded fixtures", "",
-             "Captured semantic field -> seeded value keys used to resolve request fields: "
-             + ", ".join(sorted(fixtures.m)), "",
-             "## Per-service mean latency", "", "| Service | RPCs | mean ms |", "|---|--:|--:|"]
-    for name in sorted(svc, key=lambda k: -sum(svc[k]) / len(svc[k])):
-        lines.append(f"| {name} | {len(svc[name])} | {sum(svc[name]) / len(svc[name]):.2f} |")
-    # Failures subsection: every RPC whose last iteration returned a non-OK gRPC status.
-    # A failing RPC is a FAILURE with its code, never a silent latency sample.
-    failed = [s for s in samples if s["err"] != "OK"]
-    lines += ["", f"## Failures ({len(failed)})", ""]
-    if not failed:
-        lines.append("No RPC returned a non-OK gRPC status.")
-    else:
-        lines.append("These RPCs returned a non-OK gRPC status and are FAILURES, not latency samples.")
-        lines += ["", "| RPC | kind | err | p99 ms | mean ms | iters |", "|---|---|---|--:|--:|--:|"]
-        for s in sorted(failed, key=lambda x: (x["service"], x["rpc"])):
-            lines.append(f"| {s['service']}/{s['rpc']} | {s['kind']} | {s['err']} | {s['p99']:.2f} | {s['mean']:.2f} | {s['iters']} |")
-    lines += ["", "## Slowest 20 by p99", "", "| RPC | kind | err | p50 ms | p99 ms | mean ms |", "|---|---|---|--:|--:|--:|"]
-    for s in sorted(samples, key=lambda x: -x["p99"])[:20]:
-        lines.append(f"| {s['service']}/{s['rpc']} | {s['kind']} | {s['err']} | {s['p50']:.2f} | {s['p99']:.2f} | {s['mean']:.2f} |")
-    report = "\n".join(lines) + "\n"
-    with open("perf_report_python.md", "w", encoding="utf-8") as fh:
-        fh.write(report)
-    print(f"\nPython perf: {len(samples)} RPCs measured, {len(failed)} FAILED (non-OK gRPC status) → sdk/python/perf_report_python.md")
+    write_python_perf_report(samples, fixtures, authed_meta)

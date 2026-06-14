@@ -32,6 +32,8 @@ import (
 	authzentpb "github.com/fahara02/udb/sdk/go/gen/udb/core/authz/entity/v1"
 	authzpb "github.com/fahara02/udb/sdk/go/gen/udb/core/authz/services/v1"
 	commonpb "github.com/fahara02/udb/sdk/go/gen/udb/core/common/v1"
+	idpentpb "github.com/fahara02/udb/sdk/go/gen/udb/core/idp/entity/v1"
+	idppb "github.com/fahara02/udb/sdk/go/gen/udb/core/idp/services/v1"
 	notifentpb "github.com/fahara02/udb/sdk/go/gen/udb/core/notification/entity/v1"
 	notifpb "github.com/fahara02/udb/sdk/go/gen/udb/core/notification/services/v1"
 	storagepb "github.com/fahara02/udb/sdk/go/gen/udb/core/storage/services/v1"
@@ -167,6 +169,9 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 	} else {
 		uid := created.GetUser().GetUserId()
 		fix.set("user_id", uid)
+		// The measured Phase-1 Login drives this username + the same password, so the
+		// seeded user IS the account the perf Login authenticates against.
+		fix.set("username", uname)
 		fix.set("recipient_id", uid)
 		fix.set("assigned_by", uid)
 		fix.set("created_by", uid)
@@ -234,6 +239,29 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 	fix.set("object", "group:sdk-perf-"+suffix)
 	fix.set("resource", "invoice")
 	fix.set("action", "data.select")
+	// A governed policy draft → policy_draft_id for the draft lifecycle RPCs
+	// (Update/Diff/Submit/Approve/Reject/Simulate).
+	if draft, err := authz.CreatePolicyDraft(base, &authzpb.CreatePolicyDraftRequest{
+		Actor:    &authzpb.GovernanceActor{Subject: fix.m["subject"], TenantId: tenant, ProjectId: project, Scopes: []string{"udb:authz:policy:write"}},
+		TenantId: tenant, ProjectId: project, PolicySetName: "default", Title: "sdk perf draft " + suffix, ChangeReason: "seed", Document: &authzpb.PolicyDocument{},
+	}); err == nil {
+		fix.set("policy_draft_id", draft.GetDraft().GetDraftId())
+	}
+
+	// ── IdentityProviderService: a real OIDC provider → provider_id ───────────────
+	idp := idppb.NewIdentityProviderServiceClient(authConn)
+	if prov, err := idp.CreateProvider(base, &idppb.CreateProviderRequest{
+		TenantId: tenant, Kind: idpentpb.IdpKind_IDP_KIND_OIDC, DisplayName: "SDK Perf OIDC " + suffix,
+		Issuer: "https://idp.example.com/" + suffix, JwksUrl: "https://idp.example.com/jwks",
+		ClientIds: []string{"perf-client"}, Audiences: []string{"udb"},
+		ClaimMappingJson: "{}", GroupMappingJson: "{}", JitPolicyJson: "{}", AccountLinkingPolicy: "explicit",
+		Enabled: true, CreatedBy: fix.m["user_id"],
+		Context: &commonpb.RequestContext{Tenant: &commonpb.TenantContext{TenantId: tenant, ProjectId: project}},
+	}); err != nil {
+		t.Logf("perf seed: CreateProvider failed (idp RPCs will fall back): %v", err)
+	} else {
+		fix.set("provider_id", prov.GetProvider().GetProviderId())
+	}
 
 	// ── ApiKeyService: a real key → key_id + plain_key ────────────────────────────
 	apikey := apikeypb.NewApiKeyServiceClient(authConn)
@@ -306,6 +334,10 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 					TenantId: uuidTenant, DefinitionId: did, AssetId: a.GetAssetId(), Context: `{}`, CorrelationId: "sdk-perf-" + suffix,
 				}); err == nil {
 					fix.set("instance_id", inst.GetInstanceId())
+					// A started pipeline exposes its steps → a real step_id for CompleteStep.
+					if pl, err := asset.GetPipeline(nativeCtxFn(), &assetpb.GetPipelineRequest{TenantId: uuidTenant, InstanceId: inst.GetInstanceId()}); err == nil && len(pl.GetSteps()) > 0 {
+						fix.set("step_id", pl.GetSteps()[0].GetStepId())
+					}
 				}
 			}
 		}

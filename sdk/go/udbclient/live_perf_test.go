@@ -133,21 +133,22 @@ func TestLivePerf(t *testing.T) {
 		start := time.Now()
 		var err error
 		if rpc.Kind == KindUnary {
-			// Top data-plane CRUD RPCs are measured with a SEMANTICALLY VALID body so
-			// the number reflects REAL handler work (a real Upsert/Select/Delete against
-			// the built-in `udb.sdk.live.v1.SdkLiveRecord` schema) — not validation
-			// rejection on a placeholder request. Every OTHER RPC is driven with a
-			// SEEDED, fixture-resolved request so reference/ID fields point at the real
-			// entities created in the seed phase → the RPC runs its SUCCESS path.
-			if in, out, ok := perfRealBody(rpc, tenant, project, fix); ok {
+			// NO generic fill. An explicit, MD-grounded body is required: the
+			// control-plane services come from buildSpecBody (BENCH_RPC_BODIES.md
+			// field specs), the DataBroker bodies from the typed perfRealBody. An RPC
+			// with neither returns NO-BODY and is surfaced as a failure to fix — never
+			// a placeholder request the broker rejects with INVALID_ARGUMENT.
+			if in, out, ok := buildSpecBody(rpc.FullMethod, fix); ok {
+				err = gen.InvokeUnary(callCtx, rpc.FullMethod, in, out)
+			} else if in, out, ok := perfRealBody(rpc, tenant, project, fix); ok {
 				err = gen.InvokeUnary(callCtx, rpc.FullMethod, in, out)
 			} else {
-				err = seededProbeLiveRPC(callCtx, gen, rpc, tenant, project, fix)
+				err = errNoExplicitBody
 			}
 		} else if isCdcSubscriptionRPC(rpc) {
 			// Event-driven success path: subscribe, then fire a real mutation that
 			// flows outbox→CDC→Kafka, and measure time-to-FIRST-delivered-event.
-			err = timeCdcFirstEvent(callCtx, gen, broker, brokerGen.outgoingContext(callCtx), rpc, tenant, project, seed.recordID)
+			err = timeCdcFirstEvent(callCtx, gen, broker, brokerGen.outgoingContext(callCtx), rpc, tenant, project, seed.recordID, fix)
 		} else {
 			// Other streaming RPCs: open with seeded inputs and measure first RecvMsg
 			// (a real server response), not just stream-open.
@@ -171,8 +172,11 @@ func TestLivePerf(t *testing.T) {
 		}
 	}
 
+	// Auth route: measure Phase 1 (session setup) first, Phase 2 (everything under
+	// the live session) next, Phase 3 (terminal auth) last — so logout/revoke never
+	// kill the session mid-run. See BENCH_RPC_BODIES.md "Execution order".
 	samples := make([]sample, 0, len(AllRPCs))
-	for _, rpc := range AllRPCs {
+	for _, rpc := range orderRPCsByAuthPhase(AllRPCs) {
 		gen := authGen
 		if rpc.Service == "DataBroker" {
 			gen = brokerGen
@@ -191,7 +195,9 @@ func TestLivePerf(t *testing.T) {
 		var lastErrCode string
 		for i := 0; i < iters; i++ {
 			d, err := timeOne(gen, rpc)
-			if err != nil {
+			if err == errNoExplicitBody {
+				lastErrCode = "NO-BODY"
+			} else if err != nil {
 				lastErrCode = status.Code(err).String()
 			}
 			durs = append(durs, d)
@@ -333,11 +339,6 @@ func TestLivePerf(t *testing.T) {
 // from the proto descriptor BUT resolves reference/ID fields from the seed fixture
 // map (fix), so the unary RPC runs its SUCCESS path against the real entities
 // created in the seed phase. Returns the gRPC error (OK on success).
-func seededProbeLiveRPC(ctx context.Context, gen *GeneratedClient, rpc RPCInfo, tenant, project string, fix *perfFixtures) error {
-	in, out := buildSeededProbeMessages(rpc.FullMethod, tenant, project, fix)
-	return gen.InvokeUnary(ctx, rpc.FullMethod, in, out)
-}
-
 // seededFirstRecv opens a non-CDC streaming RPC with a seeded request and measures
 // up to the FIRST server response (RecvMsg) — a real round-trip, not just
 // stream-open. For client-streaming it sends one seeded message, closes the send
@@ -345,7 +346,10 @@ func seededProbeLiveRPC(ctx context.Context, gen *GeneratedClient, rpc RPCInfo, 
 // then reads the first streamed message. io.EOF on first recv is treated as a
 // successful (empty) stream completion, not a failure.
 func seededFirstRecv(ctx context.Context, gen *GeneratedClient, rpc RPCInfo, tenant, project string, fix *perfFixtures) error {
-	in, out := buildSeededProbeMessages(rpc.FullMethod, tenant, project, fix)
+	in, out, ok := buildSpecBody(rpc.FullMethod, fix)
+	if !ok {
+		return errNoExplicitBody
+	}
 	switch rpc.Kind {
 	case KindServerStreaming:
 		stream, err := gen.NewServerStream(ctx, rpc.FullMethod, &grpc.StreamDesc{ServerStreams: true}, in)
@@ -402,8 +406,11 @@ func isCdcSubscriptionRPC(rpc RPCInfo) bool {
 // is delivered back on the stream. The measured cost (in the caller's timer) is
 // dominated by produce→deliver, which is the honest first-event latency a real
 // subscriber sees. A drained EOF/Recv error after the mutation is surfaced.
-func timeCdcFirstEvent(ctx context.Context, gen *GeneratedClient, broker servicesv1.DataBrokerClient, brokerCtx context.Context, rpc RPCInfo, tenant, project, recordID string) error {
-	in, out := buildSeededProbeMessages(rpc.FullMethod, tenant, project, nil)
+func timeCdcFirstEvent(ctx context.Context, gen *GeneratedClient, broker servicesv1.DataBrokerClient, brokerCtx context.Context, rpc RPCInfo, tenant, project, recordID string, fix *perfFixtures) error {
+	in, out, ok := buildSpecBody(rpc.FullMethod, fix)
+	if !ok {
+		return errNoExplicitBody
+	}
 	stream, err := gen.NewServerStream(ctx, rpc.FullMethod, &grpc.StreamDesc{ServerStreams: true}, in)
 	if err != nil {
 		return err
