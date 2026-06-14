@@ -5791,9 +5791,15 @@ final class GeneratedClient
         $options = (array) ($this->config['channel_options'] ?? []);
         $options['credentials'] = $credentials;
 
-        $target = $tls['target'] ?? $this->config['endpoint'];
-        if ($target !== $this->config['endpoint']) {
+        $endpoint = (string) $this->config['endpoint'];
+        $target = $tls['target'] ?? $endpoint;
+        if ($target !== $endpoint) {
             $options['grpc.default_authority'] = (string) $target;
+        } elseif (str_starts_with($endpoint, 'unix:') && ! isset($options['grpc.default_authority'])) {
+            // A `unix:` (Unix-domain-socket) target has no host, so default
+            // the `:authority` for servers that require a non-empty one.
+            // host:port endpoints keep gRPC's host-derived authority.
+            $options['grpc.default_authority'] = 'localhost';
         }
 
         $this->channelOptions = $options;

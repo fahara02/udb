@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::env;
+use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
@@ -186,7 +187,39 @@ impl ScopedSemaphoreEntry {
 
 /// Per-scope semaphore map value: the semaphore plus metadata used by
 /// idle-TTL eviction. (#206/#31)
-type ScopeSemMap = Arc<Mutex<HashMap<String, ScopedSemaphoreEntry>>>;
+///
+/// **Perf (PERF_TODO §5a):** keyed on a precomputed `u64` scope hash rather than
+/// a `format!`-built `String`. Each scope-kind already has its OWN map
+/// (`tenant_sems`, `project_sems`, …), so the scope-kind prefix that the old
+/// string key carried was redundant; uniqueness within a single map only needs
+/// the operation discriminant plus the scope value(s). Hashing those directly on
+/// the stack removes the 4-5 per-admission heap `String` allocations the old
+/// `format!("tenant:{}:{}", …)` keys required, while preserving the exact same
+/// scoping granularity (op × tenant × project × instance × backend-instance) and
+/// per-scope limits/fairness.
+type ScopeSemMap = Arc<Mutex<HashMap<u64, ScopedSemaphoreEntry>>>;
+
+/// Compute the `u64` map key for a single-value scope (`op` × `value`) without
+/// any heap allocation. The discriminant of `op` is mixed in so two operations
+/// on the same scope value never collide within a shared map.
+fn scope_key1(op: OperationChannel, value: &str) -> u64 {
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    (op as u8).hash(&mut hasher);
+    value.hash(&mut hasher);
+    hasher.finish()
+}
+
+/// Compute the `u64` map key for the backend-instance scope
+/// (`op` × `backend` × `instance`) without any heap allocation. `Hash` on `&str`
+/// includes a length-prefix per field, so distinct `(backend, instance)` splits
+/// hash distinctly (no `format!("{}:{}", …)` join needed).
+fn scope_key2(op: OperationChannel, backend: &str, instance: &str) -> u64 {
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    (op as u8).hash(&mut hasher);
+    backend.hash(&mut hasher);
+    instance.hash(&mut hasher);
+    hasher.finish()
+}
 
 /// Max live entries in any per-scope map before idle/over-cap eviction kicks in.
 const SCOPE_MAP_MAX_ENTRIES: usize = 10_000;
@@ -198,20 +231,22 @@ const SCOPE_MAP_IDLE_TTL: std::time::Duration = std::time::Duration::from_secs(3
 /// has reached `cap`, so the common small-map path stays O(1). `last` reads each value's
 /// last-access instant (the sidecar `Instant` for semaphores, `last_refill`
 /// for token buckets, the staged-at instant for catalogs).
-fn evict_scope_map<V>(
-    map: &mut HashMap<String, V>,
+fn evict_scope_map<K, V>(
+    map: &mut HashMap<K, V>,
     cap: usize,
     ttl: std::time::Duration,
     last: impl Fn(&V) -> Instant,
     can_evict: impl Fn(&V) -> bool,
-) {
+) where
+    K: Eq + Hash + Clone,
+{
     if map.len() < cap {
         return;
     }
     let now = Instant::now();
     map.retain(|_, v| !can_evict(v) || now.saturating_duration_since(last(v)) < ttl);
     if map.len() > cap {
-        let mut ages: Vec<(String, Instant)> = map
+        let mut ages: Vec<(K, Instant)> = map
             .iter()
             .filter(|(_, v)| can_evict(v))
             .map(|(k, v)| (k.clone(), last(v)))
@@ -645,7 +680,7 @@ impl ChannelManager {
             Some(tenant) => {
                 let sem = self.scoped_sem(
                     &self.tenant_sems,
-                    format!("tenant:{}:{}", tenant, op.as_str()),
+                    scope_key1(op, tenant),
                     self.tenant_limit(op, tenant),
                 );
                 Some(self.acquire_one(op, sem, timeout, "tenant channel").await?)
@@ -656,7 +691,7 @@ impl ChannelManager {
             Some(project) => {
                 let sem = self.scoped_sem(
                     &self.project_sems,
-                    format!("project:{}:{}", project, op.as_str()),
+                    scope_key1(op, project),
                     self.project_limit(op, project),
                 );
                 Some(
@@ -670,7 +705,7 @@ impl ChannelManager {
             Some(instance) => {
                 let sem = self.scoped_sem(
                     &self.instance_sems,
-                    format!("instance:{}:{}", instance, op.as_str()),
+                    scope_key1(op, instance),
                     self.instance_limit(op, instance),
                 );
                 Some(
@@ -682,10 +717,9 @@ impl ChannelManager {
         };
         let backend_instance = match (scoped_value(backend), scoped_value(instance_name)) {
             (Some(backend), Some(instance)) => {
-                let key = format!("{}:{}", backend, instance);
                 let sem = self.scoped_sem(
                     &self.backend_instance_sems,
-                    format!("backend-instance:{}:{}", key, op.as_str()),
+                    scope_key2(op, backend, instance),
                     self.backend_instance_limit(op, backend, instance),
                 );
                 Some(
@@ -747,7 +781,7 @@ impl ChannelManager {
         }
     }
 
-    fn scoped_sem(&self, map: &ScopeSemMap, key: String, limit: usize) -> Arc<Semaphore> {
+    fn scoped_sem(&self, map: &ScopeSemMap, key: u64, limit: usize) -> Arc<Semaphore> {
         let mut guard = map.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
         // #206: bound the map before inserting a new scope's semaphore.
         if !guard.contains_key(&key) {

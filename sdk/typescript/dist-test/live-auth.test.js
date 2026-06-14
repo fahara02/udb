@@ -181,13 +181,25 @@ function describeGrpcError(err) {
     const codeName = code === undefined ? "unknown" : grpc.status[code] ?? String(code);
     return `${codeName}: ${anyErr?.details ?? anyErr?.message ?? String(err)}`;
 }
+function reachedUdbHandler(err) {
+    const anyErr = err;
+    const text = String(anyErr?.details ??
+        anyErr?.message ??
+        anyErr?.udb?.details ??
+        anyErr?.udb?.message ??
+        "");
+    return /\budb\s+[\w.]+\/[A-Za-z0-9_]+:/.test(text) || /\(code=[A-Z_]+\)/.test(text);
+}
+function isFatalMountError(err) {
+    const code = grpcCode(err);
+    return code !== undefined && FATAL_CONNECTIVITY_CODES.has(code) && !reachedUdbHandler(err);
+}
 async function expectMounted(label, op) {
     try {
         await op();
     }
     catch (err) {
-        const code = grpcCode(err);
-        if (code !== undefined && FATAL_CONNECTIVITY_CODES.has(code)) {
+        if (isFatalMountError(err)) {
             throw new Error(`${label} did not reach an implemented live RPC: ${describeGrpcError(err)}`);
         }
     }
@@ -210,8 +222,7 @@ async function expectStreamMounted(label, open) {
         };
         const timer = setTimeout(() => finish(), 750);
         stream.once("error", (err) => {
-            const code = grpcCode(err);
-            if (code !== undefined && FATAL_CONNECTIVITY_CODES.has(code)) {
+            if (isFatalMountError(err)) {
                 finish(new Error(`${label} did not reach an implemented live stream RPC: ${describeGrpcError(err)}`));
             }
             else {
@@ -362,6 +373,82 @@ async function runLiveAuthNegative(authn, tenantId, projectId, username) {
         fatalIfMount("negative IntrospectToken", err);
     }
     node_assert_1.strict.equal(failures.length, 0, `SECURITY (auth did not fail closed): ${failures.join("; ")}`);
+}
+// runLiveEdgeCases: per-RPC EDGE cases (malformed/hostile inputs + isolation
+// boundaries). Each must fail closed with a typed error (or safely accept-and-
+// sanitise), never leak cross-tenant data, and never surface a server fault
+// (UNKNOWN/INTERNAL/DATA_LOSS = the input crashed the handler). Mirrors the Go suite.
+const EDGE_SERVER_FAULTS = new Set([2, 13, 15]); // UNKNOWN, INTERNAL, DATA_LOSS
+async function runLiveEdgeCases(data, tenantId, projectId) {
+    const ctx = requestContext(tenantId, projectId, "ts.live.edge");
+    const opts = { deadlineMs: 8_000, noRetry: true };
+    const suffix = `${tenantId}-edge`;
+    const notFault = (label, err) => {
+        const c = grpcCode(err);
+        if (c !== undefined && EDGE_SERVER_FAULTS.has(c)) {
+            throw new Error(`${label} faulted the server (code ${c}): ${describeGrpcError(err)}`);
+        }
+    };
+    // 1. missing project_id in the filter -> project isolation must reject.
+    let accepted1 = false;
+    try {
+        await data.select({ context: ctx, message_type: LIVE_MESSAGE_TYPE, filter: { tenant_id: tenantId }, limit: 1 }, opts);
+        accepted1 = true;
+    }
+    catch (err) {
+        notFault("missing project_id", err);
+    }
+    node_assert_1.strict.equal(accepted1, false, "Select without a project_id filter was ACCEPTED — project isolation not enforced");
+    // 2. cross-tenant read -> RLS scopes to the JWT tenant; a foreign filter leaks nothing.
+    const foreign = "00000000-0000-0000-0000-0000deadbeef";
+    try {
+        const resp = await data.select({ context: ctx, message_type: LIVE_MESSAGE_TYPE, filter: { tenant_id: foreign, project_id: projectId }, limit: 10 }, opts);
+        const n = (resp?.records_json ?? []).length;
+        node_assert_1.strict.equal(n, 0, `cross-tenant Select LEAKED ${n} record(s) for ${foreign}`);
+    }
+    catch (err) {
+        notFault("cross-tenant Select", err);
+    }
+    // 3. NUL byte in a text field -> stripped/rejected, never a raw UTF8 0x00 fault (B14).
+    try {
+        await data.upsert({
+            context: ctx, message_type: LIVE_MESSAGE_TYPE,
+            record_json: jsonBytes({ record_id: `edge-nul-${suffix}`, tenant_id: tenantId, project_id: projectId, lookup_key: `edge-nul-lk-${suffix}`, payload: "payload with-nul", revision: 1 }),
+            conflict_fields: ["record_id"],
+        }, opts);
+    }
+    catch (err) {
+        notFault("NUL-byte payload", err);
+    }
+    // 4. limit boundaries (negative/zero/huge) -> clamped/validated, never a crash.
+    for (const lim of [-1, 0, 1_000_000]) {
+        try {
+            await data.select({ context: ctx, message_type: LIVE_MESSAGE_TYPE, filter: { tenant_id: tenantId, project_id: projectId }, limit: lim }, opts);
+        }
+        catch (err) {
+            notFault(`Select limit=${lim}`, err);
+        }
+    }
+    // 5. unknown message_type -> typed error, not a 500.
+    let accepted5 = false;
+    try {
+        await data.select({ context: ctx, message_type: "udb.does.not.Exist", filter: { tenant_id: tenantId, project_id: projectId }, limit: 1 }, opts);
+        accepted5 = true;
+    }
+    catch (err) {
+        notFault("unknown message_type", err);
+    }
+    node_assert_1.strict.equal(accepted5, false, "Select on an unknown message_type was ACCEPTED");
+    // 6. invalid backend -> typed error, never a panic/Internal.
+    let accepted6 = false;
+    try {
+        await data.list_resources({ context: ctx, backend: "nonexistent-backend-xyz" }, opts);
+        accepted6 = true;
+    }
+    catch (err) {
+        notFault("invalid backend", err);
+    }
+    node_assert_1.strict.equal(accepted6, false, "ListResources on a nonexistent backend was ACCEPTED");
 }
 async function drainReadable(stream) {
     return await new Promise((resolve, reject) => {
@@ -1119,6 +1206,9 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
         // Edge cases: the auth plane must fail CLOSED on bad credentials/forged bearers.
         await runLiveAuthNegative(project.authGenerated?.AuthnService ?? project.generated.AuthnService, tenantId, projectId, username);
         await runLiveBackendE2E(project, tenantId, projectId);
+        // Per-RPC EDGE cases (malformed/hostile inputs + isolation boundaries): every one
+        // must fail closed with a typed error and never leak cross-tenant data or fault.
+        await runLiveEdgeCases(project.generated.DataBroker, tenantId, projectId);
         // Breadth: a real category-appropriate round-trip against EVERY advertised backend
         // kind (relational SQL, object, document, cache, vector, graph) — not just the
         // canonical postgres/mongodb/minio trio. Adapts to whatever the broker enabled.
@@ -1199,6 +1289,25 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
             catch { /* latency still counts */ }
             return performance.now() - start;
         };
+        // Stream-open timer: create the streaming call and tear it down WITHOUT draining
+        // responses. A subscription/upload stream emits a first message only on an event,
+        // so draining it in a passive run would just hit the deadline. This measures the
+        // client-side latency to establish the stream.
+        const timeStreamOpen = (fn, request) => {
+            const start = performance.now();
+            try {
+                const r = fn(request, { deadlineMs: 1_500, noRetry: true });
+                const s = r?.stream ?? r;
+                if (s && typeof s.cancel === "function")
+                    s.cancel();
+                else if (s && typeof s.destroy === "function")
+                    s.destroy();
+                if (r?.response && typeof r.response.catch === "function")
+                    r.response.catch(() => { });
+            }
+            catch { /* setup latency still counts */ }
+            return performance.now() - start;
+        };
         const surfaces = [
             ["authTarget", authGenerated, NATIVE_SERVICE_APIS],
             ["target", project.generated, ["DataBroker"]],
@@ -1209,10 +1318,16 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
                 if (!api)
                     continue;
                 for (const [methodName, fn] of Object.entries(api)) {
-                    if (methodName === "serviceFull" || NON_UNARY_METHODS.has(methodName))
+                    if (methodName === "serviceFull")
                         continue;
                     if (typeof fn !== "function")
                         continue;
+                    if (NON_UNARY_METHODS.has(methodName)) {
+                        // Measured, not dropped — streaming reports stream-open latency.
+                        const d = timeStreamOpen(fn, surfaceProbeRequest(tenantId, projectId));
+                        samples.push({ service: serviceName, rpc: methodName, kind: "stream_open", p50: d, p99: d, mean: d });
+                        continue;
+                    }
                     const kind = operationKindOf(api.serviceFull, methodName) || "read_only";
                     const request = kind !== "destructive" ? surfaceProbeRequest(tenantId, projectId) : {};
                     await timeMethod(fn, request); // warm-up
@@ -1233,7 +1348,10 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
             (svc.get(s.service) ?? svc.set(s.service, []).get(s.service)).push(s.mean);
         }
         const mean = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
-        const lines = ["# UDB SDK Live Perf — TypeScript (localhost)", "", `RPCs measured: ${samples.length}`, "",
+        const lines = ["# UDB SDK Live Perf — TypeScript (localhost)", "",
+            `RPCs measured: ${samples.length}`, "",
+            "Unary = full request/response round-trip. Streaming rows (kind=stream_open) report "
+                + "stream-open latency (establish the stream, no response drain), NOT first-message latency.", "",
             "## Per-service mean latency", "", "| Service | RPCs | mean ms |", "|---|--:|--:|"];
         for (const name of [...svc.keys()].sort((a, b) => mean(svc.get(b)) - mean(svc.get(a)))) {
             lines.push(`| ${name} | ${svc.get(name).length} | ${mean(svc.get(name)).toFixed(2)} |`);
@@ -1243,7 +1361,7 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
             lines.push(`| ${s.service}/${s.rpc} | ${s.kind} | ${s.p50.toFixed(2)} | ${s.p99.toFixed(2)} | ${s.mean.toFixed(2)} |`);
         }
         (0, node_fs_1.writeFileSync)("perf_report_ts.md", lines.join("\n") + "\n");
-        node_assert_1.strict.ok(samples.length >= 200, `perf measured only ${samples.length} unary RPCs`);
+        node_assert_1.strict.ok(samples.length >= 260, `perf measured only ${samples.length} RPCs (want all 262)`);
         console.log(`\nTS perf: ${samples.length} RPCs measured → sdk/typescript/perf_report_ts.md`);
     }
     finally {

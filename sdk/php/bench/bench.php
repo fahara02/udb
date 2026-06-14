@@ -146,9 +146,11 @@ $ctx = (new \Udb\Entity\V1\RequestContext())->setTenantId($tenant)->setProjectId
 fwrite(STDERR, "tenant=$tenant  iters=$ITERS warmup=$WARMUP fanout=$FANOUT\n");
 
 // ---- seed identical data on BOTH paths (same tenant UUID, same row count) ----
+// Seed a realistic row population so the list/aggregate ops scan real data.
+$SEED = (int) envv('BENCH_SEED', '200');
 $ins = $pdo->prepare('INSERT INTO bench_records (tenant_id,project_id,record_id,lookup_key,payload,revision)
   VALUES (:t,:p,:r,:lk,:pl,1) ON CONFLICT (tenant_id,record_id) DO UPDATE SET payload=EXCLUDED.payload');
-for ($i = 0; $i < $FANOUT; $i++) {
+for ($i = 0; $i < $SEED; $i++) {
     $rid = "bench-seed-$i";
     $ins->execute([':t' => $tenant, ':p' => $project, ':r' => $rid, ':lk' => "lk-$i", ':pl' => "seed-$i"]);
     $data->upsert((new \Udb\Entity\V1\UpsertRequest())->setContext($ctx)->setMessageType($messageType)
@@ -164,6 +166,11 @@ $wrUp    = $pdo->prepare('INSERT INTO bench_records (tenant_id,project_id,record
   VALUES (:t,:p,:r,:lk,:pl,:rev) ON CONFLICT (tenant_id,record_id) DO UPDATE SET payload=EXCLUDED.payload, revision=EXCLUDED.revision');
 $wrOut   = $pdo->prepare('INSERT INTO bench_outbox (event_id,topic,partition_key,payload)
   VALUES (gen_random_uuid(), :topic, :pk, :payload)');
+$selList50  = $pdo->prepare('SELECT record_id,payload,revision FROM bench_records WHERE tenant_id=:t LIMIT 50');
+$selList200 = $pdo->prepare('SELECT record_id,payload,revision FROM bench_records WHERE tenant_id=:t LIMIT 200');
+$wrRet      = $pdo->prepare('INSERT INTO bench_records (tenant_id,project_id,record_id,lookup_key,payload,revision)
+  VALUES (:t,:p,:r,:lk,:pl,1) ON CONFLICT (tenant_id,record_id) DO UPDATE SET payload=EXCLUDED.payload
+  RETURNING record_id,payload,revision');
 
 $ops = [
     'point_read' => [
@@ -218,9 +225,49 @@ $ops = [
             $st->execute();
             $st->fetchAll();
         },
-        'udb' => function () use ($data, $ctx, $authedMeta, $messageType, $tenant, $FANOUT) {
+        'udb' => function () use ($data, $ctx, $authedMeta, $messageType, $tenant, $project, $FANOUT) {
             $data->select((new \Udb\Entity\V1\SelectRequest())->setContext($ctx)->setMessageType($messageType)
                 ->setFilter(liveStruct(['tenant_id' => $tenant, 'project_id' => $project]))->setLimit($FANOUT), $authedMeta);
+        },
+    ],
+    // ---- HARDER / real-world ops (amortise the fixed per-call overhead) ----
+    'list_read_50' => [
+        // realistic "list endpoint": return 50 tenant rows in one call.
+        'direct' => function () use ($selList50, $tenant) {
+            $selList50->execute([':t' => $tenant]);
+            $selList50->fetchAll();
+        },
+        'udb' => function () use ($data, $ctx, $authedMeta, $messageType, $tenant, $project) {
+            $data->select((new \Udb\Entity\V1\SelectRequest())->setContext($ctx)->setMessageType($messageType)
+                ->setFilter(liveStruct(['tenant_id' => $tenant, 'project_id' => $project]))->setLimit(50), $authedMeta);
+        },
+    ],
+    'list_read_200' => [
+        // heavier list: 200 rows.
+        'direct' => function () use ($selList200, $tenant) {
+            $selList200->execute([':t' => $tenant]);
+            $selList200->fetchAll();
+        },
+        'udb' => function () use ($data, $ctx, $authedMeta, $messageType, $tenant, $project) {
+            $data->select((new \Udb\Entity\V1\SelectRequest())->setContext($ctx)->setMessageType($messageType)
+                ->setFilter(liveStruct(['tenant_id' => $tenant, 'project_id' => $project]))->setLimit(200), $authedMeta);
+        },
+    ],
+    'write_read_roundtrip' => [
+        // realistic "create-and-return": write a record + outbox, return the row.
+        'direct' => function (int $i) use ($pdo, $wrRet, $wrOut, $tenant, $project) {
+            $rid = "bench-wr-$i";
+            $pdo->beginTransaction();
+            $wrRet->execute([':t' => $tenant, ':p' => $project, ':r' => $rid, ':lk' => "wrlk-$i", ':pl' => "wr-$i"]);
+            $wrRet->fetch();
+            $wrOut->execute([':topic' => 'udb.sdk.live.v1.SdkLiveRecord', ':pk' => $tenant, ':payload' => json_encode(['record_id' => $rid])]);
+            $pdo->commit();
+        },
+        'udb' => function (int $i) use ($data, $ctx, $authedMeta, $messageType, $tenant, $project) {
+            $rid = "bench-wr-$i";
+            $data->upsert((new \Udb\Entity\V1\UpsertRequest())->setContext($ctx)->setMessageType($messageType)
+                ->setRecordJson(recordJson($rid, $tenant, $project, "wrlk-$i", "wr-$i", 1))
+                ->setConflictFields(['record_id'])->setReturnRecord(true), $authedMeta);
         },
     ],
 ];

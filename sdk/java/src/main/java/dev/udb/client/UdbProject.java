@@ -13,7 +13,6 @@ import com.udb.core.tenant.services.v1.CreateTenantRequest;
 import com.udb.core.tenant.services.v1.CreateTenantResponse;
 import com.udb.core.tenant.services.v1.TenantServiceGrpc;
 import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -98,13 +97,8 @@ public final class UdbProject implements AutoCloseable {
   }
 
   private static ManagedChannel channel(String target, boolean tls) {
-    ManagedChannelBuilder<?> b = ManagedChannelBuilder.forTarget(target);
-    if (tls) {
-      b.useTransportSecurity();
-    } else {
-      b.usePlaintext();
-    }
-    return b.build();
+    // Long-lived channel with UDB keepalive + UNAVAILABLE retry; reused across RPCs.
+    return UdbChannels.forTarget(target, tls);
   }
 
   // ── Raw clients / stubs (reachable, never hidden) ──────────────────────────

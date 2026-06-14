@@ -9,7 +9,7 @@ import * as protoLoader from "@grpc/proto-loader";
 import * as crypto from "crypto";
 import path from "path";
 
-import { UdbMetadata, metadata } from "./client";
+import { UdbMetadata, metadata, UDB_DEFAULT_CHANNEL_OPTIONS } from "./client";
 import type { TlsOptions } from "./generatedClient";
 import { defaultProtoRoot } from "./protoRoot";
 
@@ -54,7 +54,7 @@ function loadAuth(target: string, protoRoot: string, opts: UdbAuthClientOptions 
   const authn = grpc.loadPackageDefinition(authnDef) as any;
   const authz = grpc.loadPackageDefinition(authzDef) as any;
   const creds = buildCredentials(opts);
-  const channelOptions = opts.channelOptions ?? {};
+  const channelOptions = { ...UDB_DEFAULT_CHANNEL_OPTIONS, ...(opts.channelOptions ?? {}) };
   return {
     authn: new authn.udb.core.authn.services.v1.AuthnService(target, creds, channelOptions),
     authz: new authz.udb.core.authz.services.v1.AuthzService(target, creds, channelOptions),

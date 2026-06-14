@@ -3,6 +3,27 @@ use super::*;
 use crate::protocol::BackendCapabilityDescriptor;
 use crate::runtime::schema_registry::{LookupError, NegotiationOutcome, SchemaRegistry};
 
+// Perf: `GetHealthReport` with `with_probes=true` fans out a serial round-trip to
+// every configured backend (~13) plus a per-native-service store self-check — the
+// dominant ~143ms cost of the RPC. The two awaited loops are now run concurrently
+// (see `get_health_report_inner`), and the fully-assembled response is cached for a
+// SHORT TTL keyed by (project_scope, with_probes). The TTL is deliberately tiny so a
+// newly-failing required fact (bad signing key, missing PG) can't be masked for more
+// than a few seconds — health must stay responsive (directive: no capability lies).
+const HEALTH_REPORT_CACHE_TTL_SECS: u64 = 3;
+
+#[allow(clippy::type_complexity)]
+fn health_report_cache() -> &'static std::sync::Mutex<
+    std::collections::HashMap<(String, bool), (std::time::Instant, HealthReportResponse)>,
+> {
+    static CACHE: std::sync::OnceLock<
+        std::sync::Mutex<
+            std::collections::HashMap<(String, bool), (std::time::Instant, HealthReportResponse)>,
+        >,
+    > = std::sync::OnceLock::new();
+    CACHE.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()))
+}
+
 impl DataBrokerService {
     pub(crate) async fn get_capabilities_inner(
         &self,
@@ -186,11 +207,30 @@ impl DataBrokerService {
         request: Request<HealthReportRequest>,
     ) -> Result<Response<HealthReportResponse>, Status> {
         let (started, security) = authorized_call!(self, request, "GetHealthReport");
+        // Admin scope is enforced on EVERY call, BEFORE any cache return, so cached
+        // health data is never served to an unauthorized caller.
         if let Err(err) = require_admin_scope(&security) {
             return self.record_grpc("GetHealthReport", started, Err(err));
         }
         let request = request.into_inner();
         let project_scope = request.project_id.trim().to_string();
+
+        // Fast path: serve a recently-assembled report within the short TTL. Keyed by
+        // (project_scope, with_probes) so scoped/probe variants don't collide.
+        let cache_key = (project_scope.clone(), request.with_probes);
+        let ttl = std::time::Duration::from_secs(HEALTH_REPORT_CACHE_TTL_SECS);
+        if let Ok(cache) = health_report_cache().lock() {
+            if let Some((stored_at, cached)) = cache.get(&cache_key) {
+                if stored_at.elapsed() < ttl {
+                    return self.record_grpc(
+                        "GetHealthReport",
+                        started,
+                        Ok(Response::new(cached.clone())),
+                    );
+                }
+            }
+        }
+
         let init = self.runtime_snapshot().init_report().clone();
         let mut errors = Vec::new();
         let mut warnings = init.warnings.clone();
@@ -220,9 +260,20 @@ impl DataBrokerService {
         // Live probes
         let mut probes = Vec::new();
         if request.with_probes {
-            for backend in self.runtime_snapshot().configured_probe_backends(false) {
-                probes.push(self.runtime_snapshot().probe_backend(backend).await);
-            }
+            // Perf: each `probe_backend` / `native_store_self_check` is an independent
+            // network round-trip. Awaiting them in series made this RPC's dominant cost.
+            // Collect the futures and drive them concurrently with
+            // `futures::future::join_all` (matches the `futures` idiom used elsewhere in
+            // src/runtime, e.g. core/catalog_sql.rs). `configured_probe_backends` returns
+            // a deterministic order; `join_all` preserves input order in its output, so
+            // the probe order in the report stays deterministic.
+            let snapshot = self.runtime_snapshot();
+            let backend_probe_futs: Vec<_> = snapshot
+                .configured_probe_backends(false)
+                .into_iter()
+                .map(|backend| snapshot.probe_backend(backend))
+                .collect();
+            probes.extend(futures::future::join_all(backend_probe_futs).await);
             #[cfg(feature = "kafka")]
             probes.push(self.runtime_snapshot().probe_kafka_metadata());
 
@@ -232,25 +283,39 @@ impl DataBrokerService {
             // capability claim (directive #4). Previously only "storage" was probed,
             // so the other mounted native services' persistence was never verified.
             // Degraded → per-service warning, never fatal.
-            for status in native_statuses.iter().filter(|s| {
-                s.mounted
-                    && crate::runtime::service::native_store_binding::native_service_store_backend(
-                        &s.service_id,
-                    )
-                    .is_some()
-            }) {
-                match self
-                    .runtime_snapshot()
-                    .native_store_self_check(&status.service_id, &project_scope)
-                    .await
-                {
+            //
+            // These self-checks are likewise independent round-trips: collect them
+            // (keeping each service_id alongside its future) and join concurrently,
+            // then fold the Ok/Err results into `warnings` with the SAME message
+            // format strings, in the deterministic native-status iteration order.
+            let self_check_futs: Vec<_> = native_statuses
+                .iter()
+                .filter(|s| {
+                    s.mounted
+                        && crate::runtime::service::native_store_binding::native_service_store_backend(
+                            &s.service_id,
+                        )
+                        .is_some()
+                })
+                .map(|status| {
+                    let service_id = status.service_id.clone();
+                    let snapshot = self.runtime_snapshot();
+                    let project_scope = project_scope.clone();
+                    async move {
+                        let outcome = snapshot
+                            .native_store_self_check(&service_id, &project_scope)
+                            .await;
+                        (service_id, outcome)
+                    }
+                })
+                .collect();
+            for (service_id, outcome) in futures::future::join_all(self_check_futs).await {
+                match outcome {
                     Ok(backend) => warnings.push(format!(
-                        "native store [{}]: persistence verified on '{backend}'",
-                        status.service_id
+                        "native store [{service_id}]: persistence verified on '{backend}'"
                     )),
                     Err(err) => warnings.push(format!(
-                        "native store [{}]: persistence self-check failed: {}",
-                        status.service_id,
+                        "native store [{service_id}]: persistence self-check failed: {}",
                         err.message()
                     )),
                 }
@@ -338,27 +403,39 @@ impl DataBrokerService {
             .map(crate::runtime::service::native_registry::status_to_proto)
             .collect();
 
+        let response = HealthReportResponse {
+            passed: errors.is_empty(),
+            postgres_configured: init.postgres_configured,
+            redis_configured: init.redis_configured,
+            qdrant_configured: init.qdrant_configured,
+            s3_configured: init.s3_configured,
+            errors,
+            warnings,
+            privileges_json,
+            probes_json,
+            backend_instances: self
+                .runtime_snapshot()
+                .backend_instances()
+                .iter()
+                .map(backend_instance_status)
+                .collect(),
+            native_services,
+        };
+
+        // Cache the freshly-assembled report for the short TTL. Clear the map if it
+        // grows (project-scope churn) rather than letting it accumulate — same bounded
+        // strategy as the catalog-manifest cache.
+        if let Ok(mut cache) = health_report_cache().lock() {
+            if cache.len() > 8 {
+                cache.clear();
+            }
+            cache.insert(cache_key, (std::time::Instant::now(), response.clone()));
+        }
+
         self.record_grpc(
             "GetHealthReport",
             started,
-            Ok(Response::new(HealthReportResponse {
-                passed: errors.is_empty(),
-                postgres_configured: init.postgres_configured,
-                redis_configured: init.redis_configured,
-                qdrant_configured: init.qdrant_configured,
-                s3_configured: init.s3_configured,
-                errors,
-                warnings,
-                privileges_json,
-                probes_json,
-                backend_instances: self
-                    .runtime_snapshot()
-                    .backend_instances()
-                    .iter()
-                    .map(backend_instance_status)
-                    .collect(),
-                native_services,
-            })),
+            Ok(Response::new(response)),
         )
     }
 

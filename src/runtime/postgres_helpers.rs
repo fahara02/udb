@@ -333,7 +333,7 @@ pub(crate) fn bind_one<'q>(
         return Ok(query.bind(Option::<String>::None));
     }
     if sql_type.contains("JSON") {
-        return Ok(query.bind(sqlx::types::Json(value.clone())));
+        return Ok(query.bind(sqlx::types::Json(strip_nul_json(value))));
     }
     if sql_type == "UUID" {
         let parsed = value
@@ -391,7 +391,11 @@ pub(crate) fn bind_one<'q>(
         }
         // text / varchar / enum / timestamp and friends: a text[] compares
         // correctly for text-typed columns (`text = ANY(text[])`).
-        let arr: Vec<String> = items.iter().map(json_scalar_to_string).collect();
+        let arr: Vec<String> = items
+            .iter()
+            .map(json_scalar_to_string)
+            .map(|s| strip_nul(&s))
+            .collect();
         return Ok(query.bind(arr));
     }
     if sql_type.contains("BOOL") {
@@ -408,7 +412,31 @@ pub(crate) fn bind_one<'q>(
     {
         return Ok(query.bind(json_f64(value)?));
     }
-    Ok(query.bind(json_scalar_to_string(value)))
+    Ok(query.bind(strip_nul(&json_scalar_to_string(value))))
+}
+
+/// A NUL (`0x00`) byte cannot be stored in a Postgres `text`/`varchar`/`json(b)`
+/// value. Strip it at the typed-record bind edge so a hostile/garbage byte cannot
+/// fault the whole upsert with Postgres' UTF-8 NUL rejection (B14). This path does
+/// NOT go through `bind_generic_pg_param` (which already strips), so it needs its
+/// own guard.
+fn strip_nul(s: &str) -> String {
+    if s.contains('\u{0}') {
+        s.replace('\u{0}', "")
+    } else {
+        s.to_string()
+    }
+}
+
+fn strip_nul_json(value: &JsonValue) -> JsonValue {
+    match value {
+        JsonValue::String(s) if s.contains('\u{0}') => JsonValue::String(s.replace('\u{0}', "")),
+        JsonValue::Array(items) => JsonValue::Array(items.iter().map(strip_nul_json).collect()),
+        JsonValue::Object(map) => {
+            JsonValue::Object(map.iter().map(|(k, v)| (k.clone(), strip_nul_json(v))).collect())
+        }
+        other => other.clone(),
+    }
 }
 
 // ── Record serialisation ──────────────────────────────────────────────────────

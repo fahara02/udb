@@ -78,6 +78,26 @@ var (allowed, decision) = await auth.CanAsync(
     "read");
 ```
 
+## Performance
+
+Each `UdbClient` / `UdbAuthClient` / `UdbProject` holds a **single long-lived
+`GrpcChannel`** — construct the client once and reuse it across every RPC. Never
+create a client per call: a fresh channel forces a TCP+TLS+HTTP/2 handshake every
+time, which dominates per-RPC latency.
+
+Channels are created via `UdbChannel.ForAddress(...)`, which applies:
+
+- **Keepalive** through a `SocketsHttpHandler` (`KeepAlivePingDelay = 30s`,
+  `KeepAlivePingTimeout = 10s`) so an idle connection stays warm instead of dropping
+  to IDLE and re-handshaking. `EnableMultipleHttp2Connections` is on, so the channel
+  pools connections past the server's max-concurrent-streams without raising that
+  server limit.
+- A native gRPC **service-config retry** on `UNAVAILABLE` (4 attempts, 0.1s initial
+  backoff, 2s ceiling, x2 multiplier, jittered, bounded by the call deadline).
+
+Use `UdbChannel.DefaultOptions()` / `UdbChannel.ForAddress(...)` if you build a
+`GrpcChannel` yourself and want the same behaviour.
+
 ## Local SDK Development
 
 Consumers do not need this. Use it only when editing this repository:

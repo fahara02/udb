@@ -108,6 +108,29 @@ async with UdbAsyncClient("127.0.0.1:50051", meta) as udb:
     )
 ```
 
+The async client is faster under concurrency than the sync client (it shares one
+HTTP/2 channel across many in-flight coroutines), so prefer `UdbAsyncClient` /
+`UdbAsyncProject` (`create_udb_async`) for high-throughput or fan-out workloads.
+
+## Performance
+
+Every UDB client holds a **single long-lived gRPC channel** — construct the
+client once and reuse it across all RPCs (the `with`/`async with` block above keeps
+it open for its body). Never create a client per call: a fresh channel forces a
+TCP+TLS+HTTP/2 handshake every time, which dominates per-RPC latency.
+
+By default the channel is built with `udb_client.default_channel_options()`, which adds:
+
+- **Keepalive** (`keepalive_time_ms=30000`, `keepalive_timeout_ms=10000`,
+  `keepalive_permit_without_calls=1`) so an idle connection stays warm instead of
+  dropping to IDLE and re-handshaking.
+- A native gRPC **service-config retry** on `UNAVAILABLE` (4 attempts, 0.1s initial
+  backoff, 2s ceiling, x2 multiplier, ~20% jitter, bounded by the call deadline).
+
+Pass your own `channel_options=` to override any of these (your options win on
+conflicting keys); `merge_channel_options(...)` is exposed if you want to layer
+yours on top of the defaults yourself.
+
 ## Authz Check
 
 ```python

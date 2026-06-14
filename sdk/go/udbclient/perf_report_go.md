@@ -1,6 +1,6 @@
 # UDB SDK Live Perf — Go (localhost)
 
-RPCs measured: 262   tenant=e6eaed2c-67e0-40b7-9842-53598e248dcb
+RPCs measured: 262   tenant=b811961a-11e9-48d9-b3a9-f0d018a6d2ed
 
 Unary RPCs = full request→response round-trip. Streaming RPCs (server/client/bidi) report STREAM-OPEN latency (initiate + send request + CloseSend), NOT first-message latency: a subscription stream's first message arrives only on an event, so draining it in a passive run would just hit the deadline. Streaming rows are marked in the note column.
 
@@ -8,316 +8,316 @@ Unary RPCs = full request→response round-trip. Streaming RPCs (server/client/b
 
 | Service | RPCs | mean |
 |---|---:|---:|
-| AuthnService | 50 | 63.956ms |
-| AuthzService | 41 | 68.699ms |
-| DataBroker | 76 | 18.257ms |
-| IdentityProviderService | 27 | 7.232ms |
-| ControlPlaneService | 5 | 38.507ms |
-| NotificationService | 11 | 9.864ms |
-| ApiKeyService | 9 | 9.101ms |
-| TenantService | 6 | 7.888ms |
-| AnalyticsService | 7 | 5.417ms |
-| AssetService | 8 | 2.797ms |
-| StorageService | 7 | 2.817ms |
-| RoomService | 5 | 3.405ms |
-| PeerService | 4 | 3.044ms |
-| TrackService | 4 | 2.792ms |
-| TurnService | 1 | 2.753ms |
+| AuthnService | 50 | 26.081ms |
+| ApiKeyService | 9 | 49.558ms |
+| DataBroker | 76 | 5.779ms |
+| AuthzService | 41 | 7.315ms |
+| IdentityProviderService | 27 | 3.4ms |
+| AnalyticsService | 7 | 11.146ms |
+| NotificationService | 11 | 7.017ms |
+| ControlPlaneService | 5 | 9.441ms |
+| TenantService | 6 | 4.508ms |
+| StorageService | 7 | 2.494ms |
+| AssetService | 8 | 2.171ms |
+| RoomService | 5 | 2.479ms |
+| TrackService | 4 | 2.556ms |
+| PeerService | 4 | 2.166ms |
+| TurnService | 1 | 2.371ms |
 | SignalingService | 1 | 0s |
 
 ## Slowest 25 RPCs by p99
 
 | RPC | kind | p50 | p99 | mean | iters | note |
 |---|---|---:|---:|---:|---:|---|
-| AuthnService/Login | mutation | 2.201375s | 3.080443s | 2.072356s | 5 | mutation |
-| DataBroker/GetCatalogManifest | read_only | 204.557ms | 730.204ms | 364.936ms | 25 | read_only |
-| AuthzService/PutRelationship | mutation | 642.283ms | 716.879ms | 646.829ms | 5 | mutation |
-| AuthnService/CreateUser | mutation | 675.745ms | 689.631ms | 674.937ms | 5 | mutation (last code=Internal) |
-| AuthzService/PutRoleBinding | mutation | 557.707ms | 583.211ms | 526.098ms | 5 | mutation |
-| DataBroker/GetHealthReport | read_only | 47.52ms | 468.004ms | 143.082ms | 25 | read_only |
-| ControlPlaneService/ListNodeStates | read_only | 100.359ms | 424.953ms | 171.84ms | 25 | read_only |
-| AuthzService/Authorize | read_only | 112.81ms | 203.707ms | 117.782ms | 25 | read_only |
-| AuthzService/GetNativeAccess | read_only | 70.629ms | 197.393ms | 87.728ms | 25 | read_only |
-| AuthzService/GetCanaryStatus | read_only | 100.991ms | 168.108ms | 122.921ms | 25 | read_only (last code=PermissionDenied) |
-| AuthzService/ExplainPolicy | read_only | 109.275ms | 167.231ms | 96.474ms | 25 | read_only (last code=PermissionDenied) |
-| DataBroker/GetCatalogVersions | read_only | 83.322ms | 156.057ms | 94.287ms | 25 | read_only |
-| DataBroker/GetCdcStatus | read_only | 56.832ms | 144.538ms | 87.809ms | 25 | read_only |
-| AuthzService/DiffPolicyDraft | read_only | 19.83ms | 142.993ms | 38.113ms | 25 | read_only (last code=PermissionDenied) |
-| AuthzService/RejectPolicyDraft | mutation | 102.516ms | 142.184ms | 115.533ms | 5 | mutation (last code=PermissionDenied) |
-| AuthzService/ListPolicyVersions | read_only | 86.619ms | 131.916ms | 98.198ms | 25 | read_only (last code=PermissionDenied) |
-| AuthzService/CheckAccess | read_only | 77.106ms | 129.899ms | 83.912ms | 25 | read_only |
-| AuthzService/ListPolicyRules | read_only | 59.023ms | 124.658ms | 65.204ms | 25 | read_only |
-| DataBroker/GetAdminSummary | read_only | 73.485ms | 123.036ms | 74.455ms | 25 | read_only |
-| AuthzService/SeedBuiltinRoles | mutation | 116.932ms | 118.849ms | 115.115ms | 5 | mutation (last code=PermissionDenied) |
-| AuthzService/SubmitPolicyDraft | mutation | 99.725ms | 110.362ms | 99.005ms | 5 | mutation (last code=PermissionDenied) |
-| AuthzService/UpdatePolicyDraft | mutation | 79.947ms | 91.102ms | 83.542ms | 5 | mutation (last code=PermissionDenied) |
-| AuthzService/GetAuthzRevision | read_only | 49.125ms | 90.941ms | 50.987ms | 25 | read_only |
-| AuthzService/SimulatePolicy | mutation | 87.728ms | 90.649ms | 86.063ms | 5 | mutation (last code=PermissionDenied) |
-| DataBroker/GetCatalogVersion | read_only | 66.695ms | 79.918ms | 67.706ms | 25 | read_only (last code=NotFound) |
+| AuthnService/Login | mutation | 550.213ms | 561.252ms | 552.541ms | 5 | mutation |
+| AuthnService/CreateUser | mutation | 515.108ms | 534.099ms | 509.289ms | 5 | mutation (last code=Internal) |
+| ApiKeyService/CreateApiKey | mutation | 343.884ms | 374.72ms | 320.079ms | 5 | mutation |
+| ApiKeyService/ValidateApiKey | read_only | 36.499ms | 241.797ms | 82.116ms | 25 | read_only |
+| DataBroker/GetHealthReport | read_only | 32.177ms | 113.375ms | 41.142ms | 25 | read_only |
+| ControlPlaneService/ListNodeStates | read_only | 46.166ms | 70.587ms | 44.171ms | 25 | read_only |
+| NotificationService/ListTemplates | read_only | 26.667ms | 41.241ms | 27.57ms | 25 | read_only |
+| AnalyticsService/RecordPipelineMetric | mutation | 39.191ms | 40.101ms | 40.251ms | 5 | mutation |
+| DataBroker/GetAdminSummary | read_only | 26.582ms | 34.522ms | 26.225ms | 25 | read_only |
+| AuthzService/Authorize | read_only | 25.901ms | 34.158ms | 26.951ms | 25 | read_only |
+| AuthzService/GetNativeAccess | read_only | 20.491ms | 32.835ms | 21.953ms | 25 | read_only |
+| DataBroker/ApplyMigration | mutation | 26.901ms | 27.446ms | 27.325ms | 5 | mutation (last code=Internal) |
+| AuthzService/PutRelationship | mutation | 26.142ms | 26.66ms | 25.835ms | 5 | mutation |
+| ApiKeyService/GetApiKeyUsageStats | read_only | 14.467ms | 25.073ms | 14.682ms | 25 | read_only |
+| AuthzService/CheckAccess | read_only | 14.622ms | 22.447ms | 15.875ms | 25 | read_only |
+| IdentityProviderService/ListProviders | read_only | 10.499ms | 22.432ms | 12.247ms | 25 | read_only |
+| DataBroker/EnsureProject | mutation | 21.243ms | 22.169ms | 20.496ms | 5 | mutation |
+| AuthzService/ListAccessDecisionAudits | read_only | 10.915ms | 21.806ms | 11.958ms | 25 | read_only |
+| DataBroker/GetCdcStatus | read_only | 7.591ms | 21.609ms | 8.732ms | 25 | read_only |
+| NotificationService/GetDeliveryStats | read_only | 6.954ms | 20.146ms | 11.223ms | 25 | read_only (last code=Internal) |
+| AuthzService/PutRoleBinding | mutation | 18.849ms | 19.971ms | 18.789ms | 5 | mutation |
+| ApiKeyService/ListApiKeys | read_only | 5.718ms | 19.734ms | 6.881ms | 25 | read_only |
+| DataBroker/PauseCdc | mutation | 18.472ms | 19.209ms | 17.21ms | 5 | mutation |
+| DataBroker/GetCatalogVersions | read_only | 6.584ms | 18.867ms | 9.313ms | 25 | read_only |
+| IdentityProviderService/ListExternalIdentities | read_only | 11.49ms | 17.941ms | 11.934ms | 25 | read_only |
 
 ## Full per-RPC table (sorted by service, then name)
 
 | Service | RPC | kind | p50 | p99 | mean | min | max | iters |
 |---|---|---|---:|---:|---:|---:|---:|---:|
-| AnalyticsService | GetExecutorPerformance | read_only | 4.863ms | 9.84ms | 5.741ms | 3.648ms | 10.398ms | 25 |
-| AnalyticsService | GetPipelineSummary | read_only | 4.241ms | 10.162ms | 5.329ms | 2.809ms | 10.942ms | 25 |
-| AnalyticsService | GetReconciliationAnalytics | read_only | 4.898ms | 8.604ms | 5.66ms | 3.474ms | 9.186ms | 25 |
-| AnalyticsService | GetSlaCompliance | read_only | 5.066ms | 6.981ms | 5.667ms | 4.106ms | 14.34ms | 25 |
-| AnalyticsService | GetThroughput | read_only | 4.257ms | 5.842ms | 4.364ms | 3.152ms | 6.554ms | 25 |
-| AnalyticsService | RecordPipelineMetric | mutation | 7.028ms | 7.517ms | 6.952ms | 5.383ms | 7.809ms | 5 |
-| AnalyticsService | TriggerSnapshot | mutation | 4.241ms | 4.8ms | 4.206ms | 3.138ms | 5.06ms | 5 |
-| ApiKeyService | CreateApiKey | mutation | 26.961ms | 27.971ms | 27.607ms | 23.078ms | 34.207ms | 5 |
-| ApiKeyService | EmergencyRevokeApiKeys | destructive | 2.074ms | 2.074ms | 2.074ms | 2.074ms | 2.074ms | 1 |
-| ApiKeyService | GetApiKey | read_only | 5.317ms | 8.041ms | 5.814ms | 3.702ms | 10.014ms | 25 |
-| ApiKeyService | GetApiKeyUsageStats | read_only | 8.473ms | 20.473ms | 10.52ms | 5.361ms | 21.935ms | 25 |
-| ApiKeyService | ListApiKeys | read_only | 8.096ms | 13.612ms | 8.96ms | 5.956ms | 18.504ms | 25 |
-| ApiKeyService | RevokeApiKey | mutation | 4.963ms | 5.819ms | 5.252ms | 4.658ms | 6.08ms | 5 |
-| ApiKeyService | RotateApiKey | mutation | 4.486ms | 4.656ms | 4.191ms | 3.169ms | 4.859ms | 5 |
-| ApiKeyService | UpdateApiKey | mutation | 4.57ms | 4.604ms | 4.634ms | 3.203ms | 6.236ms | 5 |
-| ApiKeyService | ValidateApiKey | read_only | 12.149ms | 19.45ms | 12.854ms | 9.194ms | 19.65ms | 25 |
-| AssetService | CompleteStep | mutation | 2.852ms | 3.174ms | 3.036ms | 2.102ms | 4.34ms | 5 |
-| AssetService | CreatePipelineDefinition | mutation | 2.774ms | 2.812ms | 2.752ms | 2.64ms | 2.837ms | 5 |
-| AssetService | GetAsset | read_only | 3.673ms | 5.776ms | 3.685ms | 2.041ms | 7.173ms | 25 |
-| AssetService | GetPipeline | read_only | 2.691ms | 3.521ms | 2.71ms | 1.769ms | 3.603ms | 25 |
-| AssetService | GetPipelineDefinition | read_only | 2.454ms | 3.86ms | 2.582ms | 1.578ms | 4.973ms | 25 |
-| AssetService | ListAssets | read_only | 2.596ms | 3.167ms | 2.512ms | 1.951ms | 3.264ms | 25 |
-| AssetService | RegisterAsset | mutation | 2.106ms | 2.72ms | 2.348ms | 1.631ms | 3.181ms | 5 |
-| AssetService | StartPipeline | mutation | 2.679ms | 3.163ms | 2.755ms | 2.092ms | 3.253ms | 5 |
-| AuthnService | AdminResetMfa | destructive | 3.676ms | 3.676ms | 3.676ms | 3.676ms | 3.676ms | 1 |
-| AuthnService | AdminResetPassword | destructive | 4.517ms | 4.517ms | 4.517ms | 4.517ms | 4.517ms | 1 |
-| AuthnService | AdminRevokeAllTenantSessions | destructive | 1.591ms | 1.591ms | 1.591ms | 1.591ms | 1.591ms | 1 |
-| AuthnService | AdminRevokeAllUserSessions | destructive | 2.476ms | 2.476ms | 2.476ms | 2.476ms | 2.476ms | 1 |
-| AuthnService | AdminRevokeSession | destructive | 1.646ms | 1.646ms | 1.646ms | 1.646ms | 1.646ms | 1 |
-| AuthnService | Authenticate | read_only | 5.346ms | 10.089ms | 5.825ms | 2.641ms | 10.206ms | 25 |
-| AuthnService | ChangePassword | mutation | 2.357ms | 2.752ms | 2.506ms | 1.601ms | 3.618ms | 5 |
-| AuthnService | ChangeUserStatus | destructive | 1.987ms | 1.987ms | 1.987ms | 1.987ms | 1.987ms | 1 |
-| AuthnService | ConfirmMFAEnrollment | mutation | 6.24ms | 6.302ms | 6.027ms | 4.558ms | 7.192ms | 5 |
-| AuthnService | CreateSession | mutation | 4.923ms | 4.966ms | 5.003ms | 3.468ms | 6.775ms | 5 |
-| AuthnService | CreateUser | mutation | 675.745ms | 689.631ms | 674.937ms | 616.749ms | 721.627ms | 5 |
-| AuthnService | DeleteWebAuthnCredential | mutation | 10.88ms | 12.171ms | 11.295ms | 9.214ms | 14.264ms | 5 |
-| AuthnService | DisableMfaFactor | mutation | 3.699ms | 4.256ms | 3.893ms | 3.551ms | 4.26ms | 5 |
-| AuthnService | EmergencyRevoke | destructive | 2.124ms | 2.124ms | 2.124ms | 2.124ms | 2.124ms | 1 |
-| AuthnService | EnrollMFA | mutation | 3.229ms | 3.457ms | 3.712ms | 3.15ms | 5.56ms | 5 |
-| AuthnService | FinishWebAuthnAuthentication | mutation | 1.06ms | 1.064ms | 969µs | 603µs | 1.065ms | 5 |
-| AuthnService | FinishWebAuthnRegistration | mutation | 1.624ms | 1.674ms | 1.576ms | 1.081ms | 1.93ms | 5 |
-| AuthnService | ForgotPassword | mutation | 18.072ms | 19.28ms | 18.094ms | 16.742ms | 19.476ms | 5 |
-| AuthnService | GenerateRecoveryCodes | mutation | 4.344ms | 4.973ms | 4.423ms | 3.269ms | 6.134ms | 5 |
-| AuthnService | GetJwks | read_only | 3.663ms | 5.877ms | 4.155ms | 2.647ms | 6.35ms | 25 |
-| AuthnService | GetMfaPolicy | read_only | 4.5ms | 6.111ms | 4.612ms | 2.523ms | 8.122ms | 25 |
-| AuthnService | GetSession | read_only | 4.852ms | 23.725ms | 8.018ms | 3.706ms | 32.274ms | 25 |
-| AuthnService | GetUser | read_only | 3.793ms | 5.864ms | 3.989ms | 2.619ms | 6.524ms | 25 |
-| AuthnService | IntrospectToken | read_only | 1.631ms | 3.099ms | 1.911ms | 507µs | 3.357ms | 25 |
-| AuthnService | IssueMfaChallenge | mutation | 4.466ms | 4.671ms | 4.15ms | 3.146ms | 5.219ms | 5 |
-| AuthnService | ListDevices | read_only | 3.573ms | 8.515ms | 4.327ms | 2.63ms | 8.591ms | 25 |
-| AuthnService | ListMfaFactors | read_only | 3.378ms | 4.619ms | 3.504ms | 2.613ms | 4.74ms | 25 |
-| AuthnService | ListSessions | read_only | 7.71ms | 16.614ms | 8.543ms | 5.819ms | 17.035ms | 25 |
-| AuthnService | ListUsers | read_only | 6.587ms | 9.095ms | 6.879ms | 4.768ms | 9.443ms | 25 |
-| AuthnService | ListWebAuthnCredentials | read_only | 3.285ms | 4.046ms | 3.454ms | 3.143ms | 4.498ms | 25 |
-| AuthnService | Login | mutation | 2.201375s | 3.080443s | 2.072356s | 608.106ms | 3.800787s | 5 |
-| AuthnService | Logout | mutation | 17.355ms | 20.528ms | 16.62ms | 7.301ms | 29.685ms | 5 |
-| AuthnService | PutMfaPolicy | mutation | 23.938ms | 24.673ms | 20.69ms | 8.843ms | 26.053ms | 5 |
-| AuthnService | RefreshSession | mutation | 19.328ms | 20.204ms | 19.469ms | 13.3ms | 29.846ms | 5 |
-| AuthnService | RefreshToken | mutation | 14.058ms | 16.398ms | 14.404ms | 10.947ms | 17.201ms | 5 |
-| AuthnService | RenamePasskey | mutation | 29.351ms | 30.609ms | 27.038ms | 16.275ms | 35.51ms | 5 |
-| AuthnService | ResendOTP | mutation | 15.371ms | 20.12ms | 16.279ms | 12.108ms | 20.453ms | 5 |
-| AuthnService | ResetPassword | mutation | 11.485ms | 11.746ms | 12.12ms | 8.569ms | 18.156ms | 5 |
-| AuthnService | RevokeDevice | mutation | 19.486ms | 22.493ms | 19.573ms | 14.488ms | 26.153ms | 5 |
-| AuthnService | RevokeRecoveryCodes | mutation | 11.37ms | 19.323ms | 14.457ms | 9.947ms | 21.076ms | 5 |
-| AuthnService | RevokeSession | mutation | 7.699ms | 10.827ms | 9.347ms | 6.93ms | 13.741ms | 5 |
-| AuthnService | SendOTP | mutation | 14.95ms | 20.504ms | 26.482ms | 13.007ms | 70.64ms | 5 |
-| AuthnService | SendPhoneVerification | mutation | 13.723ms | 16.659ms | 16.109ms | 12.436ms | 24.136ms | 5 |
-| AuthnService | StartWebAuthnAuthentication | mutation | 8.581ms | 9.782ms | 7.799ms | 1.905ms | 10.423ms | 5 |
-| AuthnService | StartWebAuthnRegistration | mutation | 11.549ms | 12.96ms | 12.62ms | 8.795ms | 18.798ms | 5 |
-| AuthnService | UpdateUser | mutation | 15.049ms | 19.437ms | 18.005ms | 13.082ms | 27.739ms | 5 |
-| AuthnService | ValidateCSRF | read_only | 11.587ms | 29.123ms | 13.861ms | 6.222ms | 30.522ms | 25 |
-| AuthnService | ValidateToken | read_only | 9.325ms | 20.515ms | 10.577ms | 4.865ms | 28.777ms | 25 |
-| AuthnService | VerifyMfaChallenge | read_only | 26.036ms | 34.085ms | 25.847ms | 16.114ms | 36.883ms | 25 |
-| AuthnService | VerifyOTP | read_only | 12.898ms | 18.652ms | 14.325ms | 9.134ms | 45.498ms | 25 |
-| AuthzService | ActivateCanary | destructive | 14.241ms | 14.241ms | 14.241ms | 14.241ms | 14.241ms | 1 |
-| AuthzService | ActivatePolicyVersion | destructive | 13.803ms | 13.803ms | 13.803ms | 13.803ms | 13.803ms | 1 |
-| AuthzService | ApprovePolicyDraft | mutation | 21.966ms | 22.755ms | 21.294ms | 17.197ms | 26.229ms | 5 |
-| AuthzService | AssignRole | mutation | 16.439ms | 23.27ms | 18ms | 11.039ms | 27.246ms | 5 |
-| AuthzService | Authorize | read_only | 112.81ms | 203.707ms | 117.782ms | 59.868ms | 219.512ms | 25 |
-| AuthzService | BatchCheckPermissions | read_only | 21.375ms | 54.906ms | 26.896ms | 10.131ms | 92.78ms | 25 |
-| AuthzService | CheckAccess | read_only | 77.106ms | 129.899ms | 83.912ms | 47.742ms | 192.625ms | 25 |
-| AuthzService | CreatePolicyDraft | mutation | 21.952ms | 21.963ms | 20.486ms | 14.474ms | 28.788ms | 5 |
-| AuthzService | CreatePolicyRule | mutation | 6.124ms | 8.105ms | 6.774ms | 5.522ms | 8.361ms | 5 |
-| AuthzService | CreateRole | mutation | 9.689ms | 10.74ms | 12.234ms | 5.914ms | 25.496ms | 5 |
-| AuthzService | DeletePolicyRule | mutation | 7.369ms | 9.794ms | 7.872ms | 5.302ms | 10.697ms | 5 |
-| AuthzService | DeleteRole | mutation | 11.289ms | 11.73ms | 11.373ms | 8.012ms | 17.59ms | 5 |
-| AuthzService | DiffPolicyDraft | read_only | 19.83ms | 142.993ms | 38.113ms | 9.402ms | 148.563ms | 25 |
-| AuthzService | ExplainPolicy | read_only | 109.275ms | 167.231ms | 96.474ms | 16.829ms | 172.526ms | 25 |
-| AuthzService | GetAuthzRevision | read_only | 49.125ms | 90.941ms | 50.987ms | 22.71ms | 97.551ms | 25 |
-| AuthzService | GetCanaryStatus | read_only | 100.991ms | 168.108ms | 122.921ms | 59.714ms | 517.377ms | 25 |
-| AuthzService | GetNativeAccess | read_only | 70.629ms | 197.393ms | 87.728ms | 40.323ms | 298.283ms | 25 |
-| AuthzService | GetPolicyBundle | read_only | 36.278ms | 64.944ms | 38.438ms | 16.696ms | 82.838ms | 25 |
-| AuthzService | GetPolicyRule | read_only | 6.971ms | 11.888ms | 7.434ms | 4.635ms | 12.52ms | 25 |
-| AuthzService | GetRole | read_only | 9.784ms | 13.846ms | 9.724ms | 5.324ms | 15.085ms | 25 |
-| AuthzService | InvalidatePolicyBundles | destructive | 6.6ms | 6.6ms | 6.6ms | 6.6ms | 6.6ms | 1 |
-| AuthzService | LintAuthzPolicies | read_only | 10.656ms | 27.347ms | 13.264ms | 4.944ms | 28.403ms | 25 |
-| AuthzService | ListAccessDecisionAudits | read_only | 16.702ms | 28.958ms | 18.549ms | 8.925ms | 42.437ms | 25 |
-| AuthzService | ListPolicyRules | read_only | 59.023ms | 124.658ms | 65.204ms | 6.604ms | 315.127ms | 25 |
-| AuthzService | ListPolicyVersions | read_only | 86.619ms | 131.916ms | 98.198ms | 55.273ms | 146.112ms | 25 |
-| AuthzService | ListRoles | read_only | 55.876ms | 79.072ms | 58.626ms | 33.605ms | 108.271ms | 25 |
-| AuthzService | ListUserPermissions | read_only | 9.209ms | 34.533ms | 13.492ms | 4.953ms | 45.988ms | 25 |
-| AuthzService | ListUserRoles | read_only | 8.598ms | 16.099ms | 9.635ms | 4.25ms | 19.387ms | 25 |
-| AuthzService | MigrateLegacyPolicies | destructive | 6.427ms | 6.427ms | 6.427ms | 6.427ms | 6.427ms | 1 |
-| AuthzService | PromoteCanary | destructive | 10.181ms | 10.181ms | 10.181ms | 10.181ms | 10.181ms | 1 |
-| AuthzService | PutAuthzPolicy | mutation | 10.139ms | 11.222ms | 10.754ms | 7.632ms | 16.036ms | 5 |
-| AuthzService | PutRelationship | mutation | 642.283ms | 716.879ms | 646.829ms | 504.548ms | 779.417ms | 5 |
-| AuthzService | PutRoleBinding | mutation | 557.707ms | 583.211ms | 526.098ms | 411.05ms | 601.144ms | 5 |
-| AuthzService | RejectPolicyDraft | mutation | 102.516ms | 142.184ms | 115.533ms | 63.894ms | 183.488ms | 5 |
-| AuthzService | RevokeRole | mutation | 9.092ms | 9.952ms | 9.499ms | 8.412ms | 11.564ms | 5 |
-| AuthzService | RollbackPolicyVersion | destructive | 7.702ms | 7.702ms | 7.702ms | 7.702ms | 7.702ms | 1 |
-| AuthzService | SeedBuiltinRoles | mutation | 116.932ms | 118.849ms | 115.115ms | 92.184ms | 135.721ms | 5 |
-| AuthzService | SimulatePolicy | mutation | 87.728ms | 90.649ms | 86.063ms | 66.641ms | 109.361ms | 5 |
-| AuthzService | SubmitPolicyDraft | mutation | 99.725ms | 110.362ms | 99.005ms | 78.917ms | 116.454ms | 5 |
-| AuthzService | UpdatePolicyDraft | mutation | 79.947ms | 91.102ms | 83.542ms | 72.434ms | 98.106ms | 5 |
-| AuthzService | UpdateRole | mutation | 8.898ms | 9.83ms | 9.876ms | 8.364ms | 13.815ms | 5 |
-| ControlPlaneService | AckStatus | mutation | 10.105ms | 10.558ms | 10.089ms | 8.54ms | 11.399ms | 5 |
+| AnalyticsService | GetExecutorPerformance | read_only | 5.849ms | 12.967ms | 7.167ms | 2.691ms | 13.36ms | 25 |
+| AnalyticsService | GetPipelineSummary | read_only | 4.833ms | 13.387ms | 7.086ms | 3.531ms | 13.966ms | 25 |
+| AnalyticsService | GetReconciliationAnalytics | read_only | 4.674ms | 10.63ms | 6.19ms | 3.206ms | 13.047ms | 25 |
+| AnalyticsService | GetSlaCompliance | read_only | 4.222ms | 10.563ms | 5.82ms | 2.039ms | 12.339ms | 25 |
+| AnalyticsService | GetThroughput | read_only | 5.388ms | 7.396ms | 5.532ms | 850µs | 15.259ms | 25 |
+| AnalyticsService | RecordPipelineMetric | mutation | 39.191ms | 40.101ms | 40.251ms | 37.832ms | 45.223ms | 5 |
+| AnalyticsService | TriggerSnapshot | mutation | 6.141ms | 6.538ms | 5.973ms | 4.78ms | 6.765ms | 5 |
+| ApiKeyService | CreateApiKey | mutation | 343.884ms | 374.72ms | 320.079ms | 86.244ms | 667.131ms | 5 |
+| ApiKeyService | EmergencyRevokeApiKeys | destructive | 513µs | 513µs | 513µs | 513µs | 513µs | 1 |
+| ApiKeyService | GetApiKey | read_only | 6.085ms | 13.108ms | 7.345ms | 4.204ms | 18.793ms | 25 |
+| ApiKeyService | GetApiKeyUsageStats | read_only | 14.467ms | 25.073ms | 14.682ms | 5.533ms | 28.642ms | 25 |
+| ApiKeyService | ListApiKeys | read_only | 5.718ms | 19.734ms | 6.881ms | 4.22ms | 19.77ms | 25 |
+| ApiKeyService | RevokeApiKey | mutation | 4.668ms | 5.254ms | 5.49ms | 3.417ms | 10.363ms | 5 |
+| ApiKeyService | RotateApiKey | mutation | 4.795ms | 4.825ms | 4.612ms | 3.763ms | 5.239ms | 5 |
+| ApiKeyService | UpdateApiKey | mutation | 4.609ms | 4.752ms | 4.308ms | 3.541ms | 4.891ms | 5 |
+| ApiKeyService | ValidateApiKey | read_only | 36.499ms | 241.797ms | 82.116ms | 13.478ms | 262.309ms | 25 |
+| AssetService | CompleteStep | mutation | 2.689ms | 2.785ms | 2.603ms | 2.126ms | 2.994ms | 5 |
+| AssetService | CreatePipelineDefinition | mutation | 2.223ms | 2.328ms | 2.017ms | 1.162ms | 2.672ms | 5 |
+| AssetService | GetAsset | read_only | 2.114ms | 2.846ms | 2.007ms | 1.042ms | 2.88ms | 25 |
+| AssetService | GetPipeline | read_only | 1.861ms | 2.661ms | 1.816ms | 572µs | 2.709ms | 25 |
+| AssetService | GetPipelineDefinition | read_only | 2.158ms | 2.863ms | 2.126ms | 1.062ms | 3.23ms | 25 |
+| AssetService | ListAssets | read_only | 2.112ms | 2.823ms | 1.991ms | 908µs | 2.974ms | 25 |
+| AssetService | RegisterAsset | mutation | 2.116ms | 2.412ms | 2.213ms | 1.615ms | 3.3ms | 5 |
+| AssetService | StartPipeline | mutation | 2.868ms | 3.008ms | 2.594ms | 1.513ms | 3.066ms | 5 |
+| AuthnService | AdminResetMfa | destructive | 11.021ms | 11.021ms | 11.021ms | 11.021ms | 11.021ms | 1 |
+| AuthnService | AdminResetPassword | destructive | 9.909ms | 9.909ms | 9.909ms | 9.909ms | 9.909ms | 1 |
+| AuthnService | AdminRevokeAllTenantSessions | destructive | 2.113ms | 2.113ms | 2.113ms | 2.113ms | 2.113ms | 1 |
+| AuthnService | AdminRevokeAllUserSessions | destructive | 1.852ms | 1.852ms | 1.852ms | 1.852ms | 1.852ms | 1 |
+| AuthnService | AdminRevokeSession | destructive | 2.092ms | 2.092ms | 2.092ms | 2.092ms | 2.092ms | 1 |
+| AuthnService | Authenticate | read_only | 4.264ms | 10.211ms | 5.125ms | 2.722ms | 16.509ms | 25 |
+| AuthnService | ChangePassword | mutation | 1.639ms | 1.671ms | 1.582ms | 1.166ms | 2.211ms | 5 |
+| AuthnService | ChangeUserStatus | destructive | 2.146ms | 2.146ms | 2.146ms | 2.146ms | 2.146ms | 1 |
+| AuthnService | ConfirmMFAEnrollment | mutation | 5.382ms | 6.848ms | 5.482ms | 3.884ms | 6.862ms | 5 |
+| AuthnService | CreateSession | mutation | 6.597ms | 6.869ms | 6.205ms | 4.894ms | 7.365ms | 5 |
+| AuthnService | CreateUser | mutation | 515.108ms | 534.099ms | 509.289ms | 456.2ms | 540.653ms | 5 |
+| AuthnService | DeleteWebAuthnCredential | mutation | 6.997ms | 7.5ms | 7.056ms | 6.102ms | 8.412ms | 5 |
+| AuthnService | DisableMfaFactor | mutation | 4.021ms | 4.713ms | 4.169ms | 3.28ms | 4.844ms | 5 |
+| AuthnService | EmergencyRevoke | destructive | 1.054ms | 1.054ms | 1.054ms | 1.054ms | 1.054ms | 1 |
+| AuthnService | EnrollMFA | mutation | 3.359ms | 3.715ms | 3.595ms | 2.644ms | 5.089ms | 5 |
+| AuthnService | FinishWebAuthnAuthentication | mutation | 1.048ms | 1.076ms | 1.162ms | 1.042ms | 1.602ms | 5 |
+| AuthnService | FinishWebAuthnRegistration | mutation | 1.045ms | 1.065ms | 1.269ms | 1.033ms | 2.159ms | 5 |
+| AuthnService | ForgotPassword | mutation | 16.629ms | 17.436ms | 17.203ms | 15.583ms | 19.857ms | 5 |
+| AuthnService | GenerateRecoveryCodes | mutation | 3.712ms | 3.888ms | 4.054ms | 3.572ms | 5.402ms | 5 |
+| AuthnService | GetJwks | read_only | 4.866ms | 6.639ms | 4.77ms | 3.175ms | 6.861ms | 25 |
+| AuthnService | GetMfaPolicy | read_only | 4.556ms | 5.79ms | 4.485ms | 2.65ms | 6.621ms | 25 |
+| AuthnService | GetSession | read_only | 5.056ms | 17.518ms | 7.685ms | 2.579ms | 19.289ms | 25 |
+| AuthnService | GetUser | read_only | 3.754ms | 4.239ms | 3.678ms | 2.65ms | 4.652ms | 25 |
+| AuthnService | IntrospectToken | read_only | 1.569ms | 1.701ms | 1.404ms | 1.05ms | 2.167ms | 25 |
+| AuthnService | IssueMfaChallenge | mutation | 3.172ms | 3.201ms | 3.22ms | 2.719ms | 4.094ms | 5 |
+| AuthnService | ListDevices | read_only | 4.241ms | 6.877ms | 4.474ms | 506µs | 7.761ms | 25 |
+| AuthnService | ListMfaFactors | read_only | 3.83ms | 5.007ms | 4.039ms | 3.171ms | 5.431ms | 25 |
+| AuthnService | ListSessions | read_only | 8.164ms | 17.106ms | 8.824ms | 2.458ms | 22.852ms | 25 |
+| AuthnService | ListUsers | read_only | 7.28ms | 9.003ms | 7.13ms | 5.061ms | 10.868ms | 25 |
+| AuthnService | ListWebAuthnCredentials | read_only | 3.756ms | 6.018ms | 3.807ms | 2.3ms | 6.122ms | 25 |
+| AuthnService | Login | mutation | 550.213ms | 561.252ms | 552.541ms | 495.718ms | 612.095ms | 5 |
+| AuthnService | Logout | mutation | 6.932ms | 8.029ms | 6.785ms | 4.876ms | 8.123ms | 5 |
+| AuthnService | PutMfaPolicy | mutation | 6.596ms | 6.944ms | 6.617ms | 6.066ms | 7.068ms | 5 |
+| AuthnService | RefreshSession | mutation | 4.858ms | 4.918ms | 5.017ms | 4.422ms | 6.216ms | 5 |
+| AuthnService | RefreshToken | mutation | 4.419ms | 5.511ms | 5.654ms | 3.678ms | 10.453ms | 5 |
+| AuthnService | RenamePasskey | mutation | 5.874ms | 5.936ms | 5.742ms | 4.909ms | 6.528ms | 5 |
+| AuthnService | ResendOTP | mutation | 6.239ms | 6.658ms | 6.118ms | 4.247ms | 7.464ms | 5 |
+| AuthnService | ResetPassword | mutation | 1.638ms | 1.764ms | 1.52ms | 1.048ms | 2.087ms | 5 |
+| AuthnService | RevokeDevice | mutation | 12.278ms | 15.34ms | 12.984ms | 6.453ms | 23.171ms | 5 |
+| AuthnService | RevokeRecoveryCodes | mutation | 5.314ms | 5.627ms | 5.767ms | 4.267ms | 8.332ms | 5 |
+| AuthnService | RevokeSession | mutation | 5.926ms | 6.34ms | 6.256ms | 5.299ms | 8.102ms | 5 |
+| AuthnService | SendOTP | mutation | 4.824ms | 4.957ms | 4.565ms | 3.817ms | 5.096ms | 5 |
+| AuthnService | SendPhoneVerification | mutation | 4.913ms | 4.931ms | 4.617ms | 3.777ms | 5.302ms | 5 |
+| AuthnService | StartWebAuthnAuthentication | mutation | 1.147ms | 2.233ms | 1.734ms | 1.038ms | 3.213ms | 5 |
+| AuthnService | StartWebAuthnRegistration | mutation | 1.761ms | 1.989ms | 1.836ms | 1.568ms | 2.179ms | 5 |
+| AuthnService | UpdateUser | mutation | 5.38ms | 5.478ms | 5.729ms | 5.227ms | 7.264ms | 5 |
+| AuthnService | ValidateCSRF | read_only | 5.669ms | 6.969ms | 5.612ms | 2.845ms | 6.999ms | 25 |
+| AuthnService | ValidateToken | read_only | 2.156ms | 2.688ms | 2.089ms | 1.347ms | 2.733ms | 25 |
+| AuthnService | VerifyMfaChallenge | read_only | 6.598ms | 9.058ms | 6.888ms | 5.477ms | 9.27ms | 25 |
+| AuthnService | VerifyOTP | read_only | 5.986ms | 7.833ms | 6.07ms | 4.412ms | 8.529ms | 25 |
+| AuthzService | ActivateCanary | destructive | 2.711ms | 2.711ms | 2.711ms | 2.711ms | 2.711ms | 1 |
+| AuthzService | ActivatePolicyVersion | destructive | 2.696ms | 2.696ms | 2.696ms | 2.696ms | 2.696ms | 1 |
+| AuthzService | ApprovePolicyDraft | mutation | 12.702ms | 14.039ms | 13.682ms | 9.797ms | 19.68ms | 5 |
+| AuthzService | AssignRole | mutation | 2.441ms | 2.518ms | 2.445ms | 2.037ms | 3.107ms | 5 |
+| AuthzService | Authorize | read_only | 25.901ms | 34.158ms | 26.951ms | 20.302ms | 36.568ms | 25 |
+| AuthzService | BatchCheckPermissions | read_only | 2.717ms | 4.242ms | 2.742ms | 1.037ms | 4.503ms | 25 |
+| AuthzService | CheckAccess | read_only | 14.622ms | 22.447ms | 15.875ms | 11.846ms | 26.636ms | 25 |
+| AuthzService | CreatePolicyDraft | mutation | 12.68ms | 17.619ms | 17.265ms | 10.458ms | 34.571ms | 5 |
+| AuthzService | CreatePolicyRule | mutation | 2.201ms | 2.237ms | 2.227ms | 2.036ms | 2.479ms | 5 |
+| AuthzService | CreateRole | mutation | 2.348ms | 2.871ms | 2.547ms | 2.073ms | 3.193ms | 5 |
+| AuthzService | DeletePolicyRule | mutation | 2.996ms | 3.555ms | 2.972ms | 2.307ms | 3.611ms | 5 |
+| AuthzService | DeleteRole | mutation | 2.252ms | 2.554ms | 2.368ms | 2.12ms | 2.717ms | 5 |
+| AuthzService | DiffPolicyDraft | read_only | 10.307ms | 13.997ms | 11.269ms | 8.744ms | 14.353ms | 25 |
+| AuthzService | ExplainPolicy | read_only | 10.286ms | 15.135ms | 11.041ms | 7.759ms | 18.728ms | 25 |
+| AuthzService | GetAuthzRevision | read_only | 5.437ms | 8.636ms | 6.104ms | 4.079ms | 10.283ms | 25 |
+| AuthzService | GetCanaryStatus | read_only | 9.31ms | 13.81ms | 9.728ms | 7.436ms | 13.886ms | 25 |
+| AuthzService | GetNativeAccess | read_only | 20.491ms | 32.835ms | 21.953ms | 17.184ms | 44.219ms | 25 |
+| AuthzService | GetPolicyBundle | read_only | 9.65ms | 12.419ms | 10.047ms | 7.516ms | 14.299ms | 25 |
+| AuthzService | GetPolicyRule | read_only | 1.709ms | 3.247ms | 1.851ms | 508µs | 3.951ms | 25 |
+| AuthzService | GetRole | read_only | 1.929ms | 2.543ms | 1.926ms | 1.518ms | 2.67ms | 25 |
+| AuthzService | InvalidatePolicyBundles | destructive | 1.52ms | 1.52ms | 1.52ms | 1.52ms | 1.52ms | 1 |
+| AuthzService | LintAuthzPolicies | read_only | 1.837ms | 2.745ms | 1.944ms | 509µs | 3.525ms | 25 |
+| AuthzService | ListAccessDecisionAudits | read_only | 10.915ms | 21.806ms | 11.958ms | 6.783ms | 22.701ms | 25 |
+| AuthzService | ListPolicyRules | read_only | 5.048ms | 7.734ms | 5.405ms | 3.246ms | 9.154ms | 25 |
+| AuthzService | ListPolicyVersions | read_only | 7.118ms | 8.497ms | 7.015ms | 5.31ms | 8.755ms | 25 |
+| AuthzService | ListRoles | read_only | 4.758ms | 6.636ms | 4.966ms | 1.822ms | 9.04ms | 25 |
+| AuthzService | ListUserPermissions | read_only | 1.63ms | 2.752ms | 1.813ms | 1.055ms | 3.243ms | 25 |
+| AuthzService | ListUserRoles | read_only | 1.607ms | 2.669ms | 1.808ms | 1.055ms | 3.282ms | 25 |
+| AuthzService | MigrateLegacyPolicies | destructive | 2.112ms | 2.112ms | 2.112ms | 2.112ms | 2.112ms | 1 |
+| AuthzService | PromoteCanary | destructive | 2.201ms | 2.201ms | 2.201ms | 2.201ms | 2.201ms | 1 |
+| AuthzService | PutAuthzPolicy | mutation | 2.165ms | 2.179ms | 1.98ms | 1.627ms | 2.275ms | 5 |
+| AuthzService | PutRelationship | mutation | 26.142ms | 26.66ms | 25.835ms | 23.942ms | 27.519ms | 5 |
+| AuthzService | PutRoleBinding | mutation | 18.849ms | 19.971ms | 18.789ms | 16.145ms | 21.835ms | 5 |
+| AuthzService | RejectPolicyDraft | mutation | 7.29ms | 7.996ms | 7.188ms | 5.907ms | 8.08ms | 5 |
+| AuthzService | RevokeRole | mutation | 1.416ms | 1.573ms | 1.469ms | 1.05ms | 2.117ms | 5 |
+| AuthzService | RollbackPolicyVersion | destructive | 2.732ms | 2.732ms | 2.732ms | 2.732ms | 2.732ms | 1 |
+| AuthzService | SeedBuiltinRoles | mutation | 7.498ms | 8.096ms | 7.572ms | 6.649ms | 8.463ms | 5 |
+| AuthzService | SimulatePolicy | mutation | 7.805ms | 7.841ms | 7.789ms | 7.259ms | 8.711ms | 5 |
+| AuthzService | SubmitPolicyDraft | mutation | 8.847ms | 8.872ms | 8.877ms | 8.09ms | 10.249ms | 5 |
+| AuthzService | UpdatePolicyDraft | mutation | 6.968ms | 7.998ms | 7.158ms | 6.106ms | 8.495ms | 5 |
+| AuthzService | UpdateRole | mutation | 1.481ms | 1.562ms | 1.393ms | 1.027ms | 1.805ms | 5 |
+| ControlPlaneService | AckStatus | mutation | 1.57ms | 1.67ms | 1.503ms | 1.099ms | 2.042ms | 5 |
 | ControlPlaneService | DeltaResources | mutation | 0s | 0s | 0s | 0s | 0s | 5 |
-| ControlPlaneService | GetResources | read_only | 9.542ms | 17.539ms | 10.604ms | 5.535ms | 27.766ms | 25 |
-| ControlPlaneService | ListNodeStates | read_only | 100.359ms | 424.953ms | 171.84ms | 58.271ms | 766.338ms | 25 |
+| ControlPlaneService | GetResources | read_only | 1.495ms | 2.363ms | 1.528ms | 509µs | 2.71ms | 25 |
+| ControlPlaneService | ListNodeStates | read_only | 46.166ms | 70.587ms | 44.171ms | 27.977ms | 84.525ms | 25 |
 | ControlPlaneService | StreamResources | mutation | 0s | 0s | 0s | 0s | 0s | 5 |
-| DataBroker | ActivateCatalog | destructive | 7.005ms | 7.005ms | 7.005ms | 7.005ms | 7.005ms | 1 |
-| DataBroker | AnalyticalQuery | read_only | 3.175ms | 4.06ms | 3.164ms | 2.167ms | 4.251ms | 25 |
-| DataBroker | ApplyMigration | mutation | 26.867ms | 30.849ms | 27.459ms | 24.098ms | 31.032ms | 5 |
-| DataBroker | ApproveMigrationPlan | mutation | 16.093ms | 17.047ms | 14.031ms | 2.647ms | 18.699ms | 5 |
+| DataBroker | ActivateCatalog | destructive | 8.221ms | 8.221ms | 8.221ms | 8.221ms | 8.221ms | 1 |
+| DataBroker | AnalyticalQuery | read_only | 2.9ms | 3.806ms | 3.113ms | 2.124ms | 5.983ms | 25 |
+| DataBroker | ApplyMigration | mutation | 26.901ms | 27.446ms | 27.325ms | 22.268ms | 33.149ms | 5 |
+| DataBroker | ApproveMigrationPlan | mutation | 15.665ms | 16.096ms | 13.15ms | 2.64ms | 17.158ms | 5 |
 | DataBroker | BatchSelect | mutation | 0s | 0s | 0s | 0s | 0s | 5 |
-| DataBroker | BatchUpsert | mutation | 0s | 0s | 0s | 0s | 0s | 5 |
-| DataBroker | BeginTx | mutation | 0s | 0s | 105µs | 0s | 525µs | 5 |
-| DataBroker | CacheDelete | mutation | 3.233ms | 4.05ms | 3.363ms | 2.034ms | 4.661ms | 5 |
-| DataBroker | CacheGet | read_only | 3.177ms | 3.926ms | 3.162ms | 2.106ms | 4.789ms | 25 |
-| DataBroker | CacheScan | read_only | 3.249ms | 4.473ms | 3.284ms | 2.063ms | 4.539ms | 25 |
-| DataBroker | CacheSet | mutation | 2.989ms | 3.299ms | 3.041ms | 2.683ms | 3.386ms | 5 |
-| DataBroker | CreateMaterializedView | mutation | 4.084ms | 4.292ms | 3.892ms | 2.621ms | 4.496ms | 5 |
-| DataBroker | Delete | mutation | 3.827ms | 4.202ms | 4.146ms | 3.722ms | 5.15ms | 5 |
-| DataBroker | DeletePolicy | mutation | 7.169ms | 7.653ms | 6.704ms | 4.502ms | 7.854ms | 5 |
-| DataBroker | DismissDlqEvent | mutation | 4.107ms | 4.255ms | 4.162ms | 3.793ms | 4.858ms | 5 |
-| DataBroker | DocumentDelete | mutation | 3.924ms | 4.298ms | 4.067ms | 3.147ms | 5.721ms | 5 |
-| DataBroker | DocumentFind | read_only | 4.23ms | 6.091ms | 4.451ms | 3.046ms | 8.458ms | 25 |
-| DataBroker | DocumentGet | read_only | 4.223ms | 11.579ms | 5.096ms | 2.604ms | 13.612ms | 25 |
-| DataBroker | DocumentUpsert | mutation | 3.256ms | 4.875ms | 4.586ms | 1.822ms | 10.276ms | 5 |
-| DataBroker | DropResource | destructive | 2.893ms | 2.893ms | 2.893ms | 2.893ms | 2.893ms | 1 |
-| DataBroker | EnqueueOutboxEvent | mutation | 9.047ms | 9.418ms | 8.938ms | 7.202ms | 10.165ms | 5 |
-| DataBroker | EnsureProject | mutation | 64.096ms | 71.824ms | 63.412ms | 46.612ms | 75.547ms | 5 |
-| DataBroker | EnsureResource | mutation | 5.254ms | 5.453ms | 5.024ms | 3.666ms | 6.307ms | 5 |
-| DataBroker | GeneratePresignedUrl | mutation | 6.201ms | 8.692ms | 7.671ms | 4.179ms | 14.358ms | 5 |
-| DataBroker | GenericDispatch | mutation | 6.773ms | 8.599ms | 6.584ms | 4.041ms | 9.016ms | 5 |
-| DataBroker | GetAdminSummary | read_only | 73.485ms | 123.036ms | 74.455ms | 39.977ms | 135.776ms | 25 |
-| DataBroker | GetCapabilities | read_only | 17.295ms | 21.397ms | 17.127ms | 11.653ms | 22.907ms | 25 |
-| DataBroker | GetCatalogManifest | read_only | 204.557ms | 730.204ms | 364.936ms | 149.72ms | 826.215ms | 25 |
-| DataBroker | GetCatalogVersion | read_only | 66.695ms | 79.918ms | 67.706ms | 44.01ms | 95.712ms | 25 |
-| DataBroker | GetCatalogVersions | read_only | 83.322ms | 156.057ms | 94.287ms | 41.684ms | 182.749ms | 25 |
-| DataBroker | GetCdcStatus | read_only | 56.832ms | 144.538ms | 87.809ms | 33.433ms | 436.967ms | 25 |
-| DataBroker | GetDlqEvent | read_only | 10.08ms | 29.346ms | 13.062ms | 4.513ms | 34.188ms | 25 |
-| DataBroker | GetHealthReport | read_only | 47.52ms | 468.004ms | 143.082ms | 18.541ms | 480.182ms | 25 |
-| DataBroker | GetMigrationStatus | read_only | 7.952ms | 14.249ms | 9.053ms | 4.685ms | 15.703ms | 25 |
-| DataBroker | GetObject | read_only | 0s | 580µs | 206µs | 0s | 4.032ms | 25 |
-| DataBroker | GetSaga | read_only | 10.244ms | 24.918ms | 11.429ms | 7.147ms | 26.17ms | 25 |
-| DataBroker | GraphMutate | mutation | 6.174ms | 6.835ms | 6.861ms | 4.886ms | 10.332ms | 5 |
-| DataBroker | GraphQuery | read_only | 8.036ms | 12.72ms | 8.637ms | 4.251ms | 15.731ms | 25 |
-| DataBroker | InitiateMultipartUpload | mutation | 8.862ms | 21.107ms | 13.045ms | 5.041ms | 21.655ms | 5 |
-| DataBroker | LintPolicies | read_only | 9.844ms | 15.356ms | 9.897ms | 5.017ms | 15.416ms | 25 |
-| DataBroker | ListAdminAuditLogs | read_only | 7.997ms | 12.659ms | 8.185ms | 5.507ms | 13.026ms | 25 |
-| DataBroker | ListDlqEvents | read_only | 3.298ms | 5.799ms | 3.558ms | 2.135ms | 5.884ms | 25 |
-| DataBroker | ListMessageSchemas | read_only | 2.895ms | 3.873ms | 2.937ms | 1.64ms | 3.919ms | 25 |
-| DataBroker | ListMigrationRuns | read_only | 7.128ms | 10.944ms | 7.326ms | 4.414ms | 11.301ms | 25 |
-| DataBroker | ListPolicies | read_only | 7.671ms | 12.003ms | 7.86ms | 5.75ms | 12.143ms | 25 |
-| DataBroker | ListProjects | read_only | 9.246ms | 14.399ms | 9.287ms | 6.467ms | 14.645ms | 25 |
-| DataBroker | ListResources | read_only | 4.361ms | 6.739ms | 4.645ms | 3.186ms | 7.079ms | 25 |
-| DataBroker | ListSagas | read_only | 5.008ms | 9.167ms | 5.583ms | 3.195ms | 9.227ms | 25 |
-| DataBroker | LookupMessageSchema | read_only | 3.839ms | 6.092ms | 4.135ms | 2.729ms | 6.14ms | 25 |
-| DataBroker | MarkSagaReviewed | mutation | 4.233ms | 4.474ms | 4.397ms | 3.298ms | 6.071ms | 5 |
-| DataBroker | PauseCdc | mutation | 29.297ms | 30.754ms | 27.583ms | 18.424ms | 31.033ms | 5 |
-| DataBroker | PlanMigration | mutation | 18.428ms | 23.989ms | 20.561ms | 16.5ms | 25.712ms | 5 |
-| DataBroker | PreviewCdcRedaction | read_only | 14.142ms | 18.983ms | 14.612ms | 11.824ms | 21.213ms | 25 |
-| DataBroker | PublishCDC | mutation | 0s | 0s | 111µs | 0s | 554µs | 5 |
+| DataBroker | BatchUpsert | mutation | 0s | 0s | 111µs | 0s | 555µs | 5 |
+| DataBroker | BeginTx | mutation | 0s | 0s | 0s | 0s | 0s | 5 |
+| DataBroker | CacheDelete | mutation | 2.675ms | 2.92ms | 2.898ms | 2.103ms | 4.136ms | 5 |
+| DataBroker | CacheGet | read_only | 2.842ms | 4.248ms | 2.902ms | 509µs | 4.347ms | 25 |
+| DataBroker | CacheScan | read_only | 2.67ms | 3.702ms | 2.865ms | 1.975ms | 3.716ms | 25 |
+| DataBroker | CacheSet | mutation | 2.721ms | 2.966ms | 2.849ms | 2.683ms | 3.172ms | 5 |
+| DataBroker | CreateMaterializedView | mutation | 2.189ms | 2.632ms | 2.349ms | 2.117ms | 2.645ms | 5 |
+| DataBroker | Delete | mutation | 3.211ms | 3.296ms | 3.393ms | 3.119ms | 4.144ms | 5 |
+| DataBroker | DeletePolicy | mutation | 7.808ms | 7.864ms | 7.532ms | 5.86ms | 9.124ms | 5 |
+| DataBroker | DismissDlqEvent | mutation | 2.683ms | 3.198ms | 2.752ms | 2.117ms | 3.199ms | 5 |
+| DataBroker | DocumentDelete | mutation | 2.699ms | 2.708ms | 2.733ms | 2.117ms | 3.527ms | 5 |
+| DataBroker | DocumentFind | read_only | 2.686ms | 3.335ms | 2.787ms | 2.047ms | 4.794ms | 25 |
+| DataBroker | DocumentGet | read_only | 3.174ms | 3.672ms | 3.034ms | 2.215ms | 4.585ms | 25 |
+| DataBroker | DocumentUpsert | mutation | 2.89ms | 3.077ms | 2.929ms | 2.1ms | 3.735ms | 5 |
+| DataBroker | DropResource | destructive | 2.632ms | 2.632ms | 2.632ms | 2.632ms | 2.632ms | 1 |
+| DataBroker | EnqueueOutboxEvent | mutation | 7.823ms | 8.472ms | 7.846ms | 6.91ms | 8.781ms | 5 |
+| DataBroker | EnsureProject | mutation | 21.243ms | 22.169ms | 20.496ms | 15.031ms | 24.541ms | 5 |
+| DataBroker | EnsureResource | mutation | 2.529ms | 2.569ms | 2.501ms | 2.107ms | 3.16ms | 5 |
+| DataBroker | GeneratePresignedUrl | mutation | 2.524ms | 2.625ms | 2.479ms | 2.127ms | 2.659ms | 5 |
+| DataBroker | GenericDispatch | mutation | 3.201ms | 3.393ms | 2.995ms | 2.133ms | 3.911ms | 5 |
+| DataBroker | GetAdminSummary | read_only | 26.582ms | 34.522ms | 26.225ms | 19.502ms | 39.017ms | 25 |
+| DataBroker | GetCapabilities | read_only | 7.836ms | 10.425ms | 8.006ms | 5.317ms | 13.122ms | 25 |
+| DataBroker | GetCatalogManifest | read_only | 10.038ms | 15.985ms | 10.682ms | 8.739ms | 16.665ms | 25 |
+| DataBroker | GetCatalogVersion | read_only | 5.196ms | 6.655ms | 5.373ms | 4.492ms | 6.656ms | 25 |
+| DataBroker | GetCatalogVersions | read_only | 6.584ms | 18.867ms | 9.313ms | 4.477ms | 37.954ms | 25 |
+| DataBroker | GetCdcStatus | read_only | 7.591ms | 21.609ms | 8.732ms | 4.662ms | 23ms | 25 |
+| DataBroker | GetDlqEvent | read_only | 4.129ms | 5.988ms | 4.209ms | 2.279ms | 6.659ms | 25 |
+| DataBroker | GetHealthReport | read_only | 32.177ms | 113.375ms | 41.142ms | 22.843ms | 140.502ms | 25 |
+| DataBroker | GetMigrationStatus | read_only | 3.491ms | 6.156ms | 3.78ms | 2.843ms | 7.066ms | 25 |
+| DataBroker | GetObject | read_only | 0s | 0s | 27µs | 0s | 684µs | 25 |
+| DataBroker | GetSaga | read_only | 2.726ms | 4.554ms | 3.046ms | 2.023ms | 4.781ms | 25 |
+| DataBroker | GraphMutate | mutation | 3.337ms | 4.469ms | 3.768ms | 2.682ms | 5.356ms | 5 |
+| DataBroker | GraphQuery | read_only | 2.95ms | 4.534ms | 3.074ms | 2.196ms | 4.539ms | 25 |
+| DataBroker | InitiateMultipartUpload | mutation | 5.26ms | 5.619ms | 5.327ms | 3.86ms | 7.663ms | 5 |
+| DataBroker | LintPolicies | read_only | 7.086ms | 10.931ms | 7.504ms | 5.021ms | 13.056ms | 25 |
+| DataBroker | ListAdminAuditLogs | read_only | 7.601ms | 11.58ms | 8.151ms | 5.49ms | 12.356ms | 25 |
+| DataBroker | ListDlqEvents | read_only | 3.322ms | 5.472ms | 3.52ms | 1.967ms | 6.542ms | 25 |
+| DataBroker | ListMessageSchemas | read_only | 3.805ms | 4.79ms | 3.729ms | 2.707ms | 4.88ms | 25 |
+| DataBroker | ListMigrationRuns | read_only | 6.901ms | 10.61ms | 6.938ms | 5.133ms | 11.197ms | 25 |
+| DataBroker | ListPolicies | read_only | 7.35ms | 12.842ms | 8.342ms | 4.884ms | 13.008ms | 25 |
+| DataBroker | ListProjects | read_only | 5.947ms | 9.393ms | 6.467ms | 3.868ms | 11.799ms | 25 |
+| DataBroker | ListResources | read_only | 2.161ms | 3.085ms | 2.295ms | 1.6ms | 4.125ms | 25 |
+| DataBroker | ListSagas | read_only | 2.167ms | 2.817ms | 2.251ms | 1.582ms | 3.035ms | 25 |
+| DataBroker | LookupMessageSchema | read_only | 2.912ms | 4.508ms | 3.18ms | 1.639ms | 6.119ms | 25 |
+| DataBroker | MarkSagaReviewed | mutation | 3.764ms | 4.356ms | 4.264ms | 3.661ms | 5.799ms | 5 |
+| DataBroker | PauseCdc | mutation | 18.472ms | 19.209ms | 17.21ms | 12.062ms | 20.974ms | 5 |
+| DataBroker | PlanMigration | mutation | 8.647ms | 9.044ms | 8.933ms | 8.125ms | 10.272ms | 5 |
+| DataBroker | PreviewCdcRedaction | read_only | 9.571ms | 12.525ms | 9.974ms | 7.673ms | 16.589ms | 25 |
+| DataBroker | PublishCDC | mutation | 0s | 0s | 0s | 0s | 0s | 5 |
 | DataBroker | PutObject | mutation | 0s | 0s | 0s | 0s | 0s | 5 |
-| DataBroker | PutPolicy | destructive | 37.023ms | 37.023ms | 37.023ms | 37.023ms | 37.023ms | 1 |
-| DataBroker | QuarantineDlqEvent | mutation | 3.768ms | 3.942ms | 3.633ms | 2.865ms | 4.258ms | 5 |
-| DataBroker | ReloadPolicies | destructive | 16.285ms | 16.285ms | 16.285ms | 16.285ms | 16.285ms | 1 |
-| DataBroker | ReplayDlqEvent | mutation | 2.75ms | 2.791ms | 2.698ms | 2.231ms | 3.474ms | 5 |
-| DataBroker | ResumeCdc | mutation | 16.191ms | 16.558ms | 16.224ms | 14.467ms | 18.212ms | 5 |
-| DataBroker | RetrySagaCompensation | mutation | 2.837ms | 3.052ms | 2.921ms | 2.664ms | 3.354ms | 5 |
-| DataBroker | RollbackCatalog | destructive | 7.081ms | 7.081ms | 7.081ms | 7.081ms | 7.081ms | 1 |
-| DataBroker | ScanProjectionDrift | read_only | 3.504ms | 4.438ms | 3.42ms | 2.274ms | 4.567ms | 25 |
-| DataBroker | Select | read_only | 4.751ms | 6.013ms | 4.759ms | 3.609ms | 6.675ms | 25 |
-| DataBroker | SelectV2 | read_only | 0s | 0s | 28µs | 0s | 690µs | 25 |
-| DataBroker | StageCatalog | destructive | 5.656ms | 5.656ms | 5.656ms | 5.656ms | 5.656ms | 1 |
-| DataBroker | StepDownCdcLeader | mutation | 18.51ms | 19.419ms | 18.914ms | 17.91ms | 20.24ms | 5 |
-| DataBroker | TimeSeriesQuery | read_only | 3.235ms | 4.287ms | 3.26ms | 2.231ms | 4.388ms | 25 |
-| DataBroker | TimeSeriesWrite | mutation | 3.024ms | 3.116ms | 2.962ms | 2.701ms | 3.185ms | 5 |
-| DataBroker | Upsert | mutation | 2.716ms | 3.523ms | 2.937ms | 2.155ms | 3.675ms | 5 |
-| DataBroker | ValidateCatalog | destructive | 2.247ms | 2.247ms | 2.247ms | 2.247ms | 2.247ms | 1 |
+| DataBroker | PutPolicy | destructive | 4.425ms | 4.425ms | 4.425ms | 4.425ms | 4.425ms | 1 |
+| DataBroker | QuarantineDlqEvent | mutation | 1.593ms | 2.115ms | 1.867ms | 1.542ms | 2.545ms | 5 |
+| DataBroker | ReloadPolicies | destructive | 12.001ms | 12.001ms | 12.001ms | 12.001ms | 12.001ms | 1 |
+| DataBroker | ReplayDlqEvent | mutation | 2.525ms | 2.62ms | 2.395ms | 1.589ms | 3.231ms | 5 |
+| DataBroker | ResumeCdc | mutation | 11.638ms | 12.44ms | 11.825ms | 10.545ms | 13.071ms | 5 |
+| DataBroker | RetrySagaCompensation | mutation | 1.582ms | 1.841ms | 1.836ms | 1.568ms | 2.622ms | 5 |
+| DataBroker | RollbackCatalog | destructive | 3.974ms | 3.974ms | 3.974ms | 3.974ms | 3.974ms | 1 |
+| DataBroker | ScanProjectionDrift | read_only | 2.278ms | 3.293ms | 2.396ms | 504µs | 3.734ms | 25 |
+| DataBroker | Select | read_only | 2.146ms | 3.797ms | 2.444ms | 1.549ms | 6.405ms | 25 |
+| DataBroker | SelectV2 | read_only | 0s | 0s | 21µs | 0s | 522µs | 25 |
+| DataBroker | StageCatalog | destructive | 3.094ms | 3.094ms | 3.094ms | 3.094ms | 3.094ms | 1 |
+| DataBroker | StepDownCdcLeader | mutation | 11.876ms | 13.489ms | 12.617ms | 10.993ms | 15.644ms | 5 |
+| DataBroker | TimeSeriesQuery | read_only | 2.639ms | 7.575ms | 2.98ms | 1.602ms | 8.565ms | 25 |
+| DataBroker | TimeSeriesWrite | mutation | 2.129ms | 2.233ms | 2.214ms | 1.591ms | 3.499ms | 5 |
+| DataBroker | Upsert | mutation | 2.171ms | 2.269ms | 2.161ms | 1.608ms | 2.633ms | 5 |
+| DataBroker | ValidateCatalog | destructive | 1.591ms | 1.591ms | 1.591ms | 1.591ms | 1.591ms | 1 |
 | DataBroker | VectorBatchUpsert | mutation | 0s | 0s | 0s | 0s | 0s | 5 |
-| DataBroker | VectorHybridSearch | read_only | 2.464ms | 2.984ms | 2.513ms | 1.699ms | 3.79ms | 25 |
-| DataBroker | VectorSearch | read_only | 3.238ms | 5.377ms | 3.25ms | 2.231ms | 5.617ms | 25 |
-| DataBroker | VectorUpsert | mutation | 2.975ms | 3.325ms | 3.251ms | 2.721ms | 4.288ms | 5 |
-| DataBroker | VerifyAdminAuditLog | read_only | 8.414ms | 15.825ms | 9.884ms | 6.563ms | 15.905ms | 25 |
-| IdentityProviderService | CreateProvider | mutation | 6.2ms | 7.555ms | 6.811ms | 5.206ms | 8.946ms | 5 |
-| IdentityProviderService | DisableProvider | mutation | 8.766ms | 11.967ms | 9.909ms | 4.757ms | 17.587ms | 5 |
-| IdentityProviderService | ForceJwksRefresh | mutation | 16.678ms | 16.899ms | 17.834ms | 9.602ms | 33.738ms | 5 |
-| IdentityProviderService | GetProvider | read_only | 8.764ms | 27.124ms | 11.873ms | 4.818ms | 32.632ms | 25 |
-| IdentityProviderService | ImportSamlMetadata | mutation | 11.088ms | 13.466ms | 12.043ms | 5.282ms | 21.992ms | 5 |
-| IdentityProviderService | LinkIdentity | mutation | 11.237ms | 12.23ms | 10.939ms | 7.572ms | 14.227ms | 5 |
-| IdentityProviderService | ListExternalIdentities | read_only | 21.933ms | 49.309ms | 26.02ms | 11.145ms | 61.264ms | 25 |
-| IdentityProviderService | ListProviders | read_only | 20.892ms | 43.055ms | 21.556ms | 8.163ms | 43.51ms | 25 |
-| IdentityProviderService | PreviewClaimMapping | read_only | 9.46ms | 18.555ms | 11.152ms | 4.347ms | 20.34ms | 25 |
-| IdentityProviderService | PreviewGroupMapping | read_only | 5.268ms | 14.802ms | 5.971ms | 2.291ms | 16.249ms | 25 |
-| IdentityProviderService | ResolveExternalIdentity | mutation | 3.23ms | 3.444ms | 3.362ms | 2.653ms | 4.26ms | 5 |
-| IdentityProviderService | SamlAcs | mutation | 2.776ms | 3.067ms | 2.857ms | 2.138ms | 3.594ms | 5 |
-| IdentityProviderService | ScimCreateGroup | mutation | 3.719ms | 4.289ms | 3.538ms | 2.275ms | 4.552ms | 5 |
-| IdentityProviderService | ScimCreateUser | mutation | 2.793ms | 2.868ms | 3.057ms | 2.132ms | 5.02ms | 5 |
-| IdentityProviderService | ScimDeleteGroup | mutation | 3.408ms | 3.953ms | 3.606ms | 3.058ms | 4.38ms | 5 |
-| IdentityProviderService | ScimDeleteUser | mutation | 3.05ms | 3.3ms | 2.791ms | 2.114ms | 3.375ms | 5 |
-| IdentityProviderService | ScimGetGroup | mutation | 2.66ms | 3.304ms | 3.465ms | 1.949ms | 6.766ms | 5 |
-| IdentityProviderService | ScimGetUser | mutation | 2.68ms | 6.998ms | 4.027ms | 1.62ms | 7.051ms | 5 |
-| IdentityProviderService | ScimListGroups | mutation | 2.509ms | 3.078ms | 2.679ms | 2.227ms | 3.237ms | 5 |
-| IdentityProviderService | ScimListUsers | mutation | 2.658ms | 2.974ms | 2.676ms | 2.141ms | 3.056ms | 5 |
-| IdentityProviderService | ScimPatchGroup | mutation | 2.744ms | 3.23ms | 2.856ms | 2.15ms | 3.467ms | 5 |
-| IdentityProviderService | ScimPatchUser | mutation | 3.61ms | 3.868ms | 3.297ms | 2.055ms | 3.872ms | 5 |
-| IdentityProviderService | ScimReplaceUser | mutation | 3.793ms | 3.992ms | 3.76ms | 3.092ms | 4.542ms | 5 |
-| IdentityProviderService | StartSamlLogin | mutation | 3.268ms | 3.542ms | 3.57ms | 2.649ms | 5.191ms | 5 |
-| IdentityProviderService | TestProviderDiscovery | read_only | 3.209ms | 5.965ms | 3.523ms | 1.615ms | 7.419ms | 25 |
-| IdentityProviderService | UnlinkIdentity | mutation | 5.097ms | 5.266ms | 4.793ms | 3.788ms | 5.8ms | 5 |
-| IdentityProviderService | UpdateProvider | mutation | 4.708ms | 7.842ms | 7.302ms | 2.75ms | 17.409ms | 5 |
-| NotificationService | GetDeliveryStats | read_only | 7.378ms | 19.817ms | 10.229ms | 4.746ms | 19.871ms | 25 |
-| NotificationService | GetNotification | read_only | 4.392ms | 6.492ms | 4.302ms | 2.153ms | 7.158ms | 25 |
-| NotificationService | GetPreference | read_only | 4.036ms | 7.797ms | 4.438ms | 2.129ms | 8.179ms | 25 |
-| NotificationService | GetTemplate | read_only | 24.235ms | 47.387ms | 26.125ms | 16.233ms | 51.019ms | 25 |
-| NotificationService | ListNotifications | read_only | 13.901ms | 16.903ms | 14.253ms | 10.154ms | 17.985ms | 25 |
-| NotificationService | ListPreferences | read_only | 2.749ms | 4.516ms | 2.905ms | 1.061ms | 4.953ms | 25 |
-| NotificationService | ListTemplates | read_only | 30.779ms | 46.449ms | 32.091ms | 26.506ms | 47.376ms | 25 |
-| NotificationService | RetryNotification | mutation | 2.485ms | 2.866ms | 2.487ms | 1.519ms | 4ms | 5 |
-| NotificationService | SendNotification | mutation | 2.856ms | 3.273ms | 2.95ms | 2.519ms | 3.569ms | 5 |
-| NotificationService | SetPreference | mutation | 3.472ms | 3.602ms | 3.325ms | 2.697ms | 4.058ms | 5 |
-| NotificationService | UpsertTemplate | mutation | 5.493ms | 5.7ms | 5.401ms | 4.353ms | 6.167ms | 5 |
-| PeerService | GetPeer | read_only | 2.731ms | 4.221ms | 2.936ms | 2.101ms | 4.856ms | 25 |
-| PeerService | JoinRoom | mutation | 2.792ms | 2.806ms | 2.742ms | 2.179ms | 3.672ms | 5 |
-| PeerService | LeaveRoom | mutation | 2.663ms | 3.001ms | 2.849ms | 2.131ms | 3.798ms | 5 |
-| PeerService | ListPeers | read_only | 3.373ms | 5.575ms | 3.651ms | 2.119ms | 6.191ms | 25 |
-| RoomService | CloseRoom | mutation | 3.72ms | 4.119ms | 3.568ms | 2.698ms | 4.562ms | 5 |
-| RoomService | CreateRoom | mutation | 3.767ms | 3.939ms | 3.793ms | 3.233ms | 4.289ms | 5 |
-| RoomService | GetRoom | read_only | 3.627ms | 4.843ms | 3.686ms | 2.147ms | 5.535ms | 25 |
-| RoomService | ListRooms | read_only | 2.859ms | 4.476ms | 3.131ms | 1.757ms | 4.866ms | 25 |
-| RoomService | UpdateRoom | mutation | 2.686ms | 3.299ms | 2.846ms | 2.389ms | 3.387ms | 5 |
+| DataBroker | VectorHybridSearch | read_only | 2.522ms | 3.376ms | 2.465ms | 1.566ms | 3.407ms | 25 |
+| DataBroker | VectorSearch | read_only | 2.148ms | 3.893ms | 2.349ms | 1.51ms | 4.892ms | 25 |
+| DataBroker | VectorUpsert | mutation | 2.165ms | 2.664ms | 2.33ms | 1.714ms | 3.004ms | 5 |
+| DataBroker | VerifyAdminAuditLog | read_only | 7.997ms | 12.692ms | 8.894ms | 5.65ms | 12.699ms | 25 |
+| IdentityProviderService | CreateProvider | mutation | 3.019ms | 3.176ms | 2.817ms | 2.155ms | 3.352ms | 5 |
+| IdentityProviderService | DisableProvider | mutation | 3.299ms | 3.392ms | 3.318ms | 2.658ms | 4.529ms | 5 |
+| IdentityProviderService | ForceJwksRefresh | mutation | 5.294ms | 5.307ms | 5.457ms | 3.625ms | 8.709ms | 5 |
+| IdentityProviderService | GetProvider | read_only | 2.904ms | 5.067ms | 3.272ms | 2.125ms | 7.5ms | 25 |
+| IdentityProviderService | ImportSamlMetadata | mutation | 2.433ms | 2.651ms | 2.219ms | 354µs | 4.542ms | 5 |
+| IdentityProviderService | LinkIdentity | mutation | 3.252ms | 3.349ms | 2.923ms | 2.121ms | 3.545ms | 5 |
+| IdentityProviderService | ListExternalIdentities | read_only | 11.49ms | 17.941ms | 11.934ms | 6.593ms | 18.988ms | 25 |
+| IdentityProviderService | ListProviders | read_only | 10.499ms | 22.432ms | 12.247ms | 6.242ms | 31.765ms | 25 |
+| IdentityProviderService | PreviewClaimMapping | read_only | 2.44ms | 4.459ms | 2.642ms | 1.607ms | 4.93ms | 25 |
+| IdentityProviderService | PreviewGroupMapping | read_only | 2.627ms | 3.644ms | 2.71ms | 1.583ms | 5.211ms | 25 |
+| IdentityProviderService | ResolveExternalIdentity | mutation | 2.727ms | 2.882ms | 2.619ms | 2.191ms | 3.104ms | 5 |
+| IdentityProviderService | SamlAcs | mutation | 2.825ms | 3.271ms | 2.697ms | 1.688ms | 3.763ms | 5 |
+| IdentityProviderService | ScimCreateGroup | mutation | 2.719ms | 2.806ms | 2.718ms | 2.422ms | 3.121ms | 5 |
+| IdentityProviderService | ScimCreateUser | mutation | 2.215ms | 2.352ms | 2.326ms | 2.166ms | 2.721ms | 5 |
+| IdentityProviderService | ScimDeleteGroup | mutation | 2.128ms | 2.764ms | 2.524ms | 1.585ms | 4.484ms | 5 |
+| IdentityProviderService | ScimDeleteUser | mutation | 2.753ms | 3.249ms | 2.775ms | 2.146ms | 3.534ms | 5 |
+| IdentityProviderService | ScimGetGroup | mutation | 2.177ms | 2.639ms | 2.424ms | 2.165ms | 2.968ms | 5 |
+| IdentityProviderService | ScimGetUser | mutation | 2.356ms | 3.377ms | 2.759ms | 2.291ms | 3.422ms | 5 |
+| IdentityProviderService | ScimListGroups | mutation | 2.783ms | 3.356ms | 3.005ms | 2.12ms | 4.042ms | 5 |
+| IdentityProviderService | ScimListUsers | mutation | 2.622ms | 2.625ms | 2.498ms | 2.121ms | 2.919ms | 5 |
+| IdentityProviderService | ScimPatchGroup | mutation | 2.469ms | 2.749ms | 2.588ms | 2.132ms | 3.445ms | 5 |
+| IdentityProviderService | ScimPatchUser | mutation | 2.373ms | 2.43ms | 2.183ms | 747µs | 3.517ms | 5 |
+| IdentityProviderService | ScimReplaceUser | mutation | 2.345ms | 2.58ms | 2.25ms | 1.625ms | 2.692ms | 5 |
+| IdentityProviderService | StartSamlLogin | mutation | 2.175ms | 2.207ms | 2.15ms | 1.627ms | 3.102ms | 5 |
+| IdentityProviderService | TestProviderDiscovery | read_only | 2.617ms | 3.093ms | 2.448ms | 1.513ms | 3.421ms | 25 |
+| IdentityProviderService | UnlinkIdentity | mutation | 2.124ms | 2.604ms | 2.128ms | 1.581ms | 2.716ms | 5 |
+| IdentityProviderService | UpdateProvider | mutation | 2.159ms | 2.257ms | 2.165ms | 1.919ms | 2.354ms | 5 |
+| NotificationService | GetDeliveryStats | read_only | 6.954ms | 20.146ms | 11.223ms | 4.894ms | 20.766ms | 25 |
+| NotificationService | GetNotification | read_only | 2.142ms | 3.405ms | 2.059ms | 513µs | 3.895ms | 25 |
+| NotificationService | GetPreference | read_only | 2.663ms | 3.969ms | 2.646ms | 1.607ms | 4.045ms | 25 |
+| NotificationService | GetTemplate | read_only | 10.43ms | 12.939ms | 10.343ms | 7.784ms | 12.977ms | 25 |
+| NotificationService | ListNotifications | read_only | 6.565ms | 7.854ms | 6.63ms | 2.122ms | 11.382ms | 25 |
+| NotificationService | ListPreferences | read_only | 2.676ms | 3.831ms | 2.691ms | 1.598ms | 4.089ms | 25 |
+| NotificationService | ListTemplates | read_only | 26.667ms | 41.241ms | 27.57ms | 16.185ms | 41.971ms | 25 |
+| NotificationService | RetryNotification | mutation | 2.647ms | 3.181ms | 2.719ms | 2.141ms | 3.44ms | 5 |
+| NotificationService | SendNotification | mutation | 2.641ms | 2.718ms | 2.498ms | 1.878ms | 2.876ms | 5 |
+| NotificationService | SetPreference | mutation | 2.714ms | 2.921ms | 2.854ms | 2.143ms | 4.02ms | 5 |
+| NotificationService | UpsertTemplate | mutation | 5.898ms | 5.942ms | 5.958ms | 5.056ms | 7.212ms | 5 |
+| PeerService | GetPeer | read_only | 2.153ms | 3.691ms | 2.494ms | 1.471ms | 4.446ms | 25 |
+| PeerService | JoinRoom | mutation | 1.596ms | 2.103ms | 1.798ms | 1.582ms | 2.12ms | 5 |
+| PeerService | LeaveRoom | mutation | 2.129ms | 2.332ms | 2.104ms | 1.606ms | 2.383ms | 5 |
+| PeerService | ListPeers | read_only | 2.104ms | 3.383ms | 2.268ms | 1.576ms | 3.695ms | 25 |
+| RoomService | CloseRoom | mutation | 2.198ms | 2.689ms | 2.491ms | 2.15ms | 3.255ms | 5 |
+| RoomService | CreateRoom | mutation | 2.691ms | 3.192ms | 2.915ms | 2.124ms | 3.94ms | 5 |
+| RoomService | GetRoom | read_only | 2.588ms | 3.23ms | 2.528ms | 1.57ms | 3.686ms | 25 |
+| RoomService | ListRooms | read_only | 2.42ms | 3.7ms | 2.47ms | 1.393ms | 3.98ms | 25 |
+| RoomService | UpdateRoom | mutation | 1.991ms | 2.138ms | 1.992ms | 1.594ms | 2.641ms | 5 |
 | SignalingService | Signal | mutation | 0s | 0s | 0s | 0s | 0s | 5 |
-| StorageService | DeleteFile | mutation | 2.688ms | 3.349ms | 2.902ms | 2.126ms | 3.676ms | 5 |
-| StorageService | FinalizeUpload | mutation | 2.378ms | 2.559ms | 2.408ms | 2.112ms | 2.798ms | 5 |
-| StorageService | GetDownloadUrl | read_only | 2.552ms | 3.771ms | 2.618ms | 1.087ms | 3.931ms | 25 |
-| StorageService | GetFile | read_only | 2.604ms | 3.89ms | 2.787ms | 1.862ms | 4.601ms | 25 |
-| StorageService | ListFiles | read_only | 2.893ms | 3.625ms | 2.915ms | 1.611ms | 3.857ms | 25 |
-| StorageService | RegisterUpload | mutation | 2.917ms | 3.261ms | 3.037ms | 2.662ms | 3.63ms | 5 |
-| StorageService | UpdateFile | mutation | 2.675ms | 3.375ms | 3.055ms | 2.646ms | 3.91ms | 5 |
-| TenantService | CreateTenant | mutation | 2.655ms | 2.659ms | 2.555ms | 2.222ms | 2.721ms | 5 |
-| TenantService | GetTenant | read_only | 17.364ms | 24.14ms | 17.868ms | 12.581ms | 25.077ms | 25 |
-| TenantService | GetTenantConfig | read_only | 17.106ms | 27.515ms | 18.137ms | 12.955ms | 28.49ms | 25 |
-| TenantService | ListTenants | read_only | 2.49ms | 3.243ms | 2.434ms | 966µs | 3.658ms | 25 |
-| TenantService | UpdateTenant | mutation | 3.235ms | 3.877ms | 3.25ms | 2.557ms | 3.945ms | 5 |
-| TenantService | UpdateTenantConfig | mutation | 2.775ms | 3.744ms | 3.08ms | 2.241ms | 4.265ms | 5 |
-| TrackService | ListTracks | read_only | 2.689ms | 4.245ms | 2.932ms | 2.144ms | 4.568ms | 25 |
-| TrackService | MuteTrack | mutation | 3.157ms | 3.281ms | 2.898ms | 1.594ms | 3.423ms | 5 |
-| TrackService | PublishTrack | mutation | 2.74ms | 3.092ms | 2.789ms | 1.615ms | 3.844ms | 5 |
-| TrackService | UnpublishTrack | mutation | 2.676ms | 2.966ms | 2.55ms | 1.607ms | 3.293ms | 5 |
-| TurnService | IssueCredentials | mutation | 2.73ms | 2.867ms | 2.753ms | 1.628ms | 3.919ms | 5 |
+| StorageService | DeleteFile | mutation | 2.462ms | 2.65ms | 2.48ms | 2.186ms | 2.74ms | 5 |
+| StorageService | FinalizeUpload | mutation | 2.572ms | 2.669ms | 2.492ms | 2.145ms | 2.867ms | 5 |
+| StorageService | GetDownloadUrl | read_only | 2.645ms | 3.698ms | 2.615ms | 1.594ms | 4.611ms | 25 |
+| StorageService | GetFile | read_only | 2.696ms | 3.201ms | 2.567ms | 1.52ms | 3.265ms | 25 |
+| StorageService | ListFiles | read_only | 2.245ms | 3.12ms | 2.282ms | 1.57ms | 3.66ms | 25 |
+| StorageService | RegisterUpload | mutation | 2.696ms | 3.173ms | 2.615ms | 1.588ms | 3.31ms | 5 |
+| StorageService | UpdateFile | mutation | 2.427ms | 2.517ms | 2.41ms | 1.641ms | 3.126ms | 5 |
+| TenantService | CreateTenant | mutation | 2.178ms | 2.215ms | 2.271ms | 2.14ms | 2.675ms | 5 |
+| TenantService | GetTenant | read_only | 9.475ms | 12.128ms | 9.641ms | 6.301ms | 12.646ms | 25 |
+| TenantService | GetTenantConfig | read_only | 7.852ms | 10.356ms | 8.209ms | 6.699ms | 10.606ms | 25 |
+| TenantService | ListTenants | read_only | 1.625ms | 3.184ms | 2.02ms | 1.057ms | 5.405ms | 25 |
+| TenantService | UpdateTenant | mutation | 2.13ms | 2.482ms | 2.254ms | 1.606ms | 3.235ms | 5 |
+| TenantService | UpdateTenantConfig | mutation | 2.649ms | 3.053ms | 2.652ms | 2.135ms | 3.272ms | 5 |
+| TrackService | ListTracks | read_only | 2.426ms | 3.595ms | 2.596ms | 1.449ms | 8.246ms | 25 |
+| TrackService | MuteTrack | mutation | 2.23ms | 2.382ms | 2.476ms | 1.973ms | 3.759ms | 5 |
+| TrackService | PublishTrack | mutation | 2.586ms | 2.955ms | 3.005ms | 1.795ms | 5.892ms | 5 |
+| TrackService | UnpublishTrack | mutation | 2.203ms | 2.639ms | 2.148ms | 1.46ms | 2.833ms | 5 |
+| TurnService | IssueCredentials | mutation | 2.56ms | 2.644ms | 2.371ms | 1.414ms | 2.836ms | 5 |

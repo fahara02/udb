@@ -28,7 +28,7 @@ public sealed class UdbAuthClient : IAsyncDisposable
     /// </param>
     public UdbAuthClient(string address, UdbMetadata metadata, AuthzCache? cache = null, string? bundleSecret = null, UdbCredentials? credentials = null)
     {
-        _ownedChannel = GrpcChannel.ForAddress(address);
+        _ownedChannel = UdbChannel.ForAddress(address);
         _metadata = metadata;
         _credentials = credentials ?? new UdbCredentials(metadata.BearerToken, metadata.ApiKey);
         _authn = new AuthnV1.AuthnService.AuthnServiceClient(_ownedChannel);

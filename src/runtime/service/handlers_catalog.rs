@@ -1,6 +1,21 @@
 //! service.rs split — catalog RPC handlers (Phase G).
 use super::*;
 
+// Perf: `GetCatalogManifest` re-serialised the whole manifest (serde_json
+// to_string_pretty over every table/column) on every call — the dominant cost of
+// the RPC. The manifest changes ONLY on catalog activation, so cache the serialised
+// bytes keyed by (manifest content checksum, redact flag). A content change yields a
+// fresh checksum key; a handful of keys means activation churn, so we clear rather
+// than grow.
+#[allow(clippy::type_complexity)]
+fn catalog_manifest_json_cache()
+-> &'static std::sync::Mutex<std::collections::HashMap<(String, bool), std::sync::Arc<Vec<u8>>>> {
+    static CACHE: std::sync::OnceLock<
+        std::sync::Mutex<std::collections::HashMap<(String, bool), std::sync::Arc<Vec<u8>>>>,
+    > = std::sync::OnceLock::new();
+    CACHE.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()))
+}
+
 impl DataBrokerService {
     pub(crate) async fn get_catalog_manifest_inner(
         &self,
@@ -11,9 +26,26 @@ impl DataBrokerService {
             return self.record_grpc("GetCatalogManifest", started, Err(err));
         }
         let request = request.into_inner();
+        let active = self.catalog.active();
+        let checksum = active.manifest.checksum_sha256.clone();
+        let cache_key = (checksum.clone(), request.redact);
+        // Fast path: serve the already-serialised bytes for this manifest version.
+        if !checksum.is_empty() {
+            if let Ok(cache) = catalog_manifest_json_cache().lock() {
+                if let Some(bytes) = cache.get(&cache_key) {
+                    return self.record_grpc(
+                        "GetCatalogManifest",
+                        started,
+                        Ok(Response::new(CatalogManifestResponse {
+                            manifest_json: bytes.as_ref().clone(),
+                        })),
+                    );
+                }
+            }
+        }
         let manifest_value = self
             .runtime_snapshot()
-            .catalog_manifest_json(&self.catalog.active().manifest, request.redact);
+            .catalog_manifest_json(&active.manifest, request.redact);
         let manifest_json = match serde_json::to_string_pretty(&manifest_value) {
             Ok(json) => json.into_bytes(),
             Err(e) => {
@@ -26,6 +58,14 @@ impl DataBrokerService {
                 );
             }
         };
+        if !checksum.is_empty() {
+            if let Ok(mut cache) = catalog_manifest_json_cache().lock() {
+                if cache.len() > 8 {
+                    cache.clear();
+                }
+                cache.insert(cache_key, std::sync::Arc::new(manifest_json.clone()));
+            }
+        }
         self.record_grpc(
             "GetCatalogManifest",
             started,

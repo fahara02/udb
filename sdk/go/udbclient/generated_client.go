@@ -38,8 +38,18 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+)
+
+// Keepalive defaults for the long-lived UDB channel. They keep an otherwise idle
+// HTTP/2 connection warm so it does not drop to IDLE (gRPC default ~300s) and pay
+// a fresh TCP+TLS+HTTP/2 handshake on the next RPC. Construct the channel ONCE and
+// reuse it across all calls (see DialOptions); these are then a pure win.
+const (
+	keepaliveTime    = 30 * time.Second // ping an idle connection this often
+	keepaliveTimeout = 10 * time.Second // wait this long for the ping ack before closing
 )
 
 // SDKVersion is the UDB release this generated layer was rendered from. It is
@@ -364,6 +374,11 @@ func (g *GeneratedClient) DialOptions() []grpc.DialOption {
 	return []grpc.DialOption{
 		grpc.WithChainUnaryInterceptor(g.unaryInterceptor()),
 		grpc.WithChainStreamInterceptor(g.streamInterceptor()),
+		grpc.WithKeepaliveParams(keepalive.ClientParameters{
+			Time:                keepaliveTime,
+			Timeout:             keepaliveTimeout,
+			PermitWithoutStream: true,
+		}),
 	}
 }
 

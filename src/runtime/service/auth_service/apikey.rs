@@ -53,6 +53,7 @@ use super::now_unix;
 /// Native ApiKey entity (descriptor-routed `udb_authn.api_keys`).
 const API_KEY_MSG: &str = "udb.core.apikey.entity.v1.ApiKey";
 
+#[derive(Clone)]
 pub struct ApiKeyServiceImpl {
     api_keys: Arc<dyn ApiKeyStore>,
     config: AuthnConfig,
@@ -1285,9 +1286,6 @@ impl ApiKeyService for ApiKeyServiceImpl {
                 ..Default::default()
             }));
         };
-        // Best-effort last_used_at stamp on a successful match. Fire-and-forget
-        // so it never adds latency to (or fails) the auth hot path.
-        let _ = self.api_keys.touch_last_used(&rec.key_prefix, now).await;
         // Wildcard handling must match `SecurityContext::has_scope` (`*` and
         // `udb:*`) so an API key's scope semantics are uniform with the JWT/ABAC
         // path rather than only honoring a bare `*`.
@@ -1306,20 +1304,30 @@ impl ApiKeyService for ApiKeyServiceImpl {
         // a store error denies the request (rate_limited=true) rather than
         // silently letting it through; in dev/test it fails open as before.
         let per_minute_limit = self.config_rate_limit_per_minute();
-        // The COUNT must run BEFORE this request's own usage row is inserted, so
-        // the trailing-window count reflects PRIOR requests (this request is the
-        // (count+1)th). Inserting first would let a key count itself.
-        let count = self.recent_request_count(&rec.key_prefix, 60).await;
+        // Hot-path COUNT elision: when the key is UNLIMITED (`per_minute_limit == 0`)
+        // the trailing-window COUNT can never change the decision (see
+        // `rate_limit_decision`: `limit <= 0` → never limited), so we skip the DB
+        // round-trip entirely and treat the count as a real 0. Only when a finite
+        // ceiling is configured do we pay for the COUNT.
+        //
+        // Ordering invariant: when we DO count, the COUNT must run BEFORE this
+        // request's own usage row is inserted, so the trailing-window count
+        // reflects PRIOR requests (this request is the (count+1)th). Inserting
+        // first would let a key count itself. `record_usage` is therefore spawned
+        // AFTER this synchronous COUNT, never before it.
+        let count = if per_minute_limit <= 0 {
+            Ok(0)
+        } else {
+            self.recent_request_count(&rec.key_prefix, 60).await
+        };
         let rate_limited = rate_limit_decision(
             count,
             per_minute_limit,
             crate::runtime::security::fail_closed_mode(),
         );
         let valid = scope_ok && !rate_limited;
-        // Persist this request into `api_key_usages` so the NEXT validate's COUNT
-        // (and the usage-stats aggregation) act on real data — this is the fix
-        // for the rate-limit capability-lie. Representative HTTP status: 429 when
-        // rate-limited, 403 on a scope miss, else 200. Non-fatal (logged-only).
+        // Representative HTTP status for the persisted usage row: 429 when
+        // rate-limited, 403 on a scope miss, else 200.
         let http_status: i32 = if rate_limited {
             429
         } else if !scope_ok {
@@ -1327,78 +1335,107 @@ impl ApiKeyService for ApiKeyServiceImpl {
         } else {
             200
         };
-        self.record_usage(
-            &rec.key_prefix,
-            &rec.tenant_id,
-            &req.endpoint,
-            &req.ip_address,
-            http_status,
-            rate_limited,
-        )
-        .await;
-        // Emit the matching security event so the validate path is auditable:
-        // rate-limit trips and scope failures were previously silent. (A
-        // not-found key is handled above.)
-        if rate_limited {
-            self.emit_validate_event(
-                topics::API_KEY_RATE_LIMITED,
-                &rec.key_prefix,
-                &rec.tenant_id,
-                &req.endpoint,
-                &req.ip_address,
-                "deny",
-                "rate_limited",
-            )
-            .await;
-        } else if !scope_ok {
-            self.emit_validate_event(
-                topics::API_KEY_VALIDATE_FAILED,
-                &rec.key_prefix,
-                &rec.tenant_id,
-                &req.endpoint,
-                &req.ip_address,
-                "failure",
-                "insufficient_scope",
-            )
-            .await;
-        }
-        // Anomalous-use detection (distinct-source-IP spread). A trustworthy,
-        // cheap signal that does NOT duplicate rate limiting: rate limiting counts
-        // request VOLUME, this counts how many distinct client IPs a single key is
-        // used from in the trailing window. A key fanning out across many IPs is a
-        // credential-sharing / stolen-key indicator. We evaluate it AFTER
-        // `record_usage` (so this request's own IP is included) and only on a
-        // request that actually matched a key (a not-found key is handled above and
-        // has no prefix to baseline). It is observability/audit only — it never
-        // changes the `valid` decision (anomaly detection must not become a second
-        // silent deny path), so the response is unchanged. Disabled when the
-        // threshold is 0 or no source IP was supplied.
-        let anomaly_threshold = self.config_distinct_ip_anomaly();
-        if anomaly_threshold > 0 && !req.ip_address.trim().is_empty() {
-            let distinct_ips = self
-                .distinct_ip_count(&rec.key_prefix, Self::ANOMALY_WINDOW_SECS)
-                .await;
-            if distinct_ips > anomaly_threshold {
-                self.emit_validate_event(
-                    topics::API_KEY_ANOMALOUS_USE,
-                    &rec.key_prefix,
-                    &rec.tenant_id,
-                    &req.endpoint,
-                    &req.ip_address,
-                    "anomaly",
-                    "distinct_source_ip_spread",
-                )
-                .await;
-            }
-        }
-        Ok(Response::new(apikey_pb::ValidateApiKeyResponse {
+        // The auth DECISION (valid/rate_limited/scopes) is now fully computed, so
+        // build the response up front and run every best-effort side-effect off
+        // the hot path. None of the following writes feed back into THIS response,
+        // and the COUNT above already observed PRIOR requests, so deferring the
+        // usage-row insert keeps the "this request's row is visible to the NEXT
+        // request's COUNT" guarantee without adding latency to THIS response.
+        let response = apikey_pb::ValidateApiKeyResponse {
             valid,
-            key_id: rec.key_prefix,
+            key_id: rec.key_prefix.clone(),
             owner_id: rec.principal_id,
             owner_type: apikey_entity_pb::ApiKeyOwnerType::ServiceAccount as i32,
             scopes: rec.scopes,
             rate_limited,
-        }))
+        };
+
+        // Detached best-effort writes: last_used_at stamp, the usage-row INSERT
+        // (the NEXT request's COUNT feed), the validate audit events, and the
+        // distinct-IP anomaly probe. A clone of the service carries the cheap Arc
+        // handles (`api_keys`, `event_sink`, `pg_pool`, `config`) into the task;
+        // every helper here is already non-fatal (logged + swallowed) so a spawned
+        // failure can never affect the response, which has already returned.
+        let svc = self.clone();
+        let key_prefix = rec.key_prefix;
+        let tenant_id = rec.tenant_id;
+        let endpoint = req.endpoint;
+        let ip_address = req.ip_address;
+        tokio::spawn(async move {
+            // Best-effort last_used_at stamp on a successful match. Fire-and-forget
+            // so it never adds latency to (or fails) the auth hot path.
+            let _ = svc.api_keys.touch_last_used(&key_prefix, now).await;
+            // Persist this request into `api_key_usages` so the NEXT validate's
+            // COUNT (and the usage-stats aggregation) act on real data — this is
+            // the fix for the rate-limit capability-lie. Runs AFTER the
+            // synchronous COUNT above so a key never counts itself. Non-fatal
+            // (logged-only).
+            svc.record_usage(
+                &key_prefix,
+                &tenant_id,
+                &endpoint,
+                &ip_address,
+                http_status,
+                rate_limited,
+            )
+            .await;
+            // Emit the matching security event so the validate path is auditable:
+            // rate-limit trips and scope failures were previously silent. (A
+            // not-found key is handled on the synchronous path above.)
+            if rate_limited {
+                svc.emit_validate_event(
+                    topics::API_KEY_RATE_LIMITED,
+                    &key_prefix,
+                    &tenant_id,
+                    &endpoint,
+                    &ip_address,
+                    "deny",
+                    "rate_limited",
+                )
+                .await;
+            } else if !scope_ok {
+                svc.emit_validate_event(
+                    topics::API_KEY_VALIDATE_FAILED,
+                    &key_prefix,
+                    &tenant_id,
+                    &endpoint,
+                    &ip_address,
+                    "failure",
+                    "insufficient_scope",
+                )
+                .await;
+            }
+            // Anomalous-use detection (distinct-source-IP spread). A trustworthy,
+            // cheap signal that does NOT duplicate rate limiting: rate limiting
+            // counts request VOLUME, this counts how many distinct client IPs a
+            // single key is used from in the trailing window. A key fanning out
+            // across many IPs is a credential-sharing / stolen-key indicator. We
+            // evaluate it AFTER `record_usage` (so this request's own IP is
+            // included). It is observability/audit only — it never changes the
+            // `valid` decision (anomaly detection must not become a second silent
+            // deny path), so the response is unchanged. Disabled when the
+            // threshold is 0 or no source IP was supplied.
+            let anomaly_threshold = svc.config_distinct_ip_anomaly();
+            if anomaly_threshold > 0 && !ip_address.trim().is_empty() {
+                let distinct_ips = svc
+                    .distinct_ip_count(&key_prefix, ApiKeyServiceImpl::ANOMALY_WINDOW_SECS)
+                    .await;
+                if distinct_ips > anomaly_threshold {
+                    svc.emit_validate_event(
+                        topics::API_KEY_ANOMALOUS_USE,
+                        &key_prefix,
+                        &tenant_id,
+                        &endpoint,
+                        &ip_address,
+                        "anomaly",
+                        "distinct_source_ip_spread",
+                    )
+                    .await;
+                }
+            }
+        });
+
+        Ok(Response::new(response))
     }
 
     async fn get_api_key_usage_stats(

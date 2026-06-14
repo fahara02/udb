@@ -41,6 +41,16 @@ use Udb\Services\V1\DataBrokerClient;
  */
 class UdbClient
 {
+    /**
+     * Default HTTP/2 `:authority` for a Unix-domain-socket endpoint.
+     *
+     * A `unix:` target has no host component, but gRPC still sends an
+     * `:authority` pseudo-header and some servers reject an empty one.
+     * `localhost` is the conventional value for a local sidecar reached
+     * over a UDS. Overridable per-deployment via `tls.target`.
+     */
+    private const UDS_DEFAULT_AUTHORITY = 'localhost';
+
     private ?UdbMetadata $boundContext = null;
     private ?DataBrokerClient $stub = null;
 
@@ -67,9 +77,21 @@ class UdbClient
         if ($endpoint === '') {
             throw new UdbConfigurationException(
                 'UDB endpoint is not configured. Set UDB_ENDPOINT or '
-                . 'config/udb.php#endpoint to host:port (e.g. "127.0.0.1:50051").'
+                . 'config/udb.php#endpoint to host:port (e.g. "127.0.0.1:50051") '
+                . 'or a Unix-domain-socket target (e.g. "unix:///var/run/udb.sock") '
+                . 'for a co-located sidecar.'
             );
         }
+    }
+
+    /**
+     * Is `$endpoint` a gRPC Unix-domain-socket target? gRPC accepts
+     * `unix:relative/path`, `unix:/absolute/path` and the URI form
+     * `unix:///absolute/path` — all begin with the `unix:` scheme.
+     */
+    private static function isUnixTarget(string $endpoint): bool
+    {
+        return str_starts_with($endpoint, 'unix:');
     }
 
     /**
@@ -209,15 +231,25 @@ class UdbClient
         $options = (array) ($this->config['channel_options'] ?? []);
         $options['credentials'] = $credentials;
 
-        $target = $tls['target'] ?? $this->config['endpoint'];
-        if ($target !== $this->config['endpoint']) {
+        $endpoint = (string) $this->config['endpoint'];
+        $target = $tls['target'] ?? $endpoint;
+        if ($target !== $endpoint) {
             // gRPC's PHP extension honours `grpc.default_authority`
             // for SNI / authority override — match Go's
             // `WithAuthority(...)` semantics.
             $options['grpc.default_authority'] = (string) $target;
+        } elseif (self::isUnixTarget($endpoint) && ! isset($options['grpc.default_authority'])) {
+            // A `unix:` target carries no host, so gRPC has no authority
+            // to derive. Default it so servers that require a non-empty
+            // `:authority` accept the call. host:port endpoints are
+            // unaffected — they keep gRPC's host-derived authority.
+            $options['grpc.default_authority'] = self::UDS_DEFAULT_AUTHORITY;
         }
 
-        return new DataBrokerClient((string) $this->config['endpoint'], $options);
+        // The endpoint is passed verbatim as the gRPC target, so a
+        // `unix:///var/run/udb.sock` value connects over a Unix domain
+        // socket with no code change beyond the authority default above.
+        return new DataBrokerClient($endpoint, $options);
     }
 
     /**

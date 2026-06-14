@@ -95,9 +95,9 @@ public sealed class UdbProject : IAsyncDisposable, IDisposable
 
         var authTarget = string.IsNullOrEmpty(config.AuthTarget) ? config.Target : config.AuthTarget!;
         var webrtcTarget = string.IsNullOrEmpty(config.WebrtcTarget) ? authTarget : config.WebrtcTarget!;
-        _dataChannel = GrpcChannel.ForAddress(config.Target);
+        _dataChannel = UdbChannel.ForAddress(config.Target);
         _separateAuthChannel = !string.Equals(authTarget, config.Target, StringComparison.Ordinal);
-        _authChannel = _separateAuthChannel ? GrpcChannel.ForAddress(authTarget) : _dataChannel;
+        _authChannel = _separateAuthChannel ? UdbChannel.ForAddress(authTarget) : _dataChannel;
         _nativeServicesChannel = _authChannel;
         // WebRTC rides the control-plane channel unless a distinct webrtcTarget is set.
         if (string.Equals(webrtcTarget, authTarget, StringComparison.Ordinal))
@@ -112,7 +112,7 @@ public sealed class UdbProject : IAsyncDisposable, IDisposable
         }
         else
         {
-            _webrtcChannel = GrpcChannel.ForAddress(webrtcTarget);
+            _webrtcChannel = UdbChannel.ForAddress(webrtcTarget);
             _separateWebrtcChannel = true;
         }
 

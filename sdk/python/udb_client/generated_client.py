@@ -41,6 +41,7 @@ from typing import Any, Callable, Iterable, Iterator, Sequence
 
 import grpc
 
+from ._channel import merge_channel_options
 from .exceptions import UdbConfigurationError, UdbError, UdbRpcError
 from .metadata import Metadata
 
@@ -486,7 +487,7 @@ class _ServiceClientBase:
         self._bearer_token = bearer_token
         self._owns_channel = channel is None
         if channel is None:
-            options = list(channel_options or ())
+            options = merge_channel_options(channel_options)
             if channel_credentials is not None:
                 channel = grpc.secure_channel(target, channel_credentials, options=options)
             elif secure:

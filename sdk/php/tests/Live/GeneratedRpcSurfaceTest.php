@@ -988,6 +988,91 @@ function run_auth_negative_php(GeneratedClient $client, UdbMetadata $meta, strin
     }
 }
 
+// A server fault (gRPC INTERNAL=13 / UNKNOWN=2 / DATA_LOSS=15) means a malformed
+// input crashed the handler instead of being validated — always a bug. Client-side
+// codes (InvalidArgument/FailedPrecondition/NotFound/PermissionDenied) are correct.
+function isServerFaultPhp(int $code): bool
+{
+    return in_array($code, [13, 2, 15], true);
+}
+
+/**
+ * Per-RPC EDGE cases (malformed/hostile inputs + isolation boundaries). Every case
+ * must FAIL CLOSED with a typed client-side error (or safely accept-and-sanitise),
+ * never leak another tenant's rows, and never surface a server fault. Mirrors the Go
+ * `runLiveEdgeCasesE2E` / Python `run_live_edge_cases` suites.
+ */
+function run_edge_cases_php(GeneratedClient $data, UdbMetadata $meta, string $tenant, string $project): void
+{
+    $suffix = bin2hex(random_bytes(6));
+    $mt = 'udb.sdk.live.v1.SdkLiveRecord';
+    $ctx = fn (string $p) => (new \Udb\Entity\V1\RequestContext())
+        ->setTenantId($tenant)->setProjectId($project)->setPurpose($p);
+
+    // 1. missing project_id in the filter -> project isolation must reject it.
+    $accepted = false;
+    try {
+        $data->select((new \Udb\Entity\V1\SelectRequest())->setContext($ctx('php.edge.no-project'))
+            ->setMessageType($mt)->setFilter(liveStruct(['tenant_id' => $tenant]))->setLimit(1), $meta);
+        $accepted = true;
+    } catch (\Fahara02\UdbLaravel\Exceptions\UdbRpcException $e) {
+        expect(isServerFaultPhp($e->status))->toBeFalse("missing project_id faulted the server: {$e->getMessage()}");
+    }
+    expect($accepted)->toBeFalse('Select without a project_id filter was ACCEPTED — project isolation not enforced');
+
+    // 2. cross-tenant read -> RLS scopes to the JWT tenant; a foreign filter leaks nothing.
+    $foreign = '00000000-0000-0000-0000-0000deadbeef';
+    try {
+        $resp = $data->select((new \Udb\Entity\V1\SelectRequest())->setContext($ctx('php.edge.cross-tenant'))
+            ->setMessageType($mt)->setFilter(liveStruct(['tenant_id' => $foreign, 'project_id' => $project]))->setLimit(10), $meta);
+        expect(count($resp->getRecordsJson()))->toBe(0, 'cross-tenant Select LEAKED rows for a foreign tenant');
+    } catch (\Fahara02\UdbLaravel\Exceptions\UdbRpcException $e) {
+        expect(isServerFaultPhp($e->status))->toBeFalse("cross-tenant Select faulted: {$e->getMessage()}");
+    }
+
+    // 3. NUL byte in a text field -> stripped/rejected, never a raw UTF8 0x00 fault (B14).
+    try {
+        $data->upsert((new \Udb\Entity\V1\UpsertRequest())->setContext($ctx('php.edge.nul'))->setMessageType($mt)
+            ->setRecordJson(liveRecordJson("edge-nul-$suffix", $tenant, $project, "edge-nul-lk-$suffix", "payload\x00with-nul", 1))
+            ->setConflictFields(['record_id']), $meta);
+    } catch (\Fahara02\UdbLaravel\Exceptions\UdbRpcException $e) {
+        expect(isServerFaultPhp($e->status))->toBeFalse("NUL-byte payload faulted: {$e->getMessage()}");
+    }
+
+    // 4. limit boundaries (negative/zero/huge) -> clamped/validated, never a crash.
+    foreach ([-1, 0, 1000000] as $lim) {
+        try {
+            $data->select((new \Udb\Entity\V1\SelectRequest())->setContext($ctx('php.edge.limit'))->setMessageType($mt)
+                ->setFilter(liveStruct(['tenant_id' => $tenant, 'project_id' => $project]))->setLimit($lim), $meta);
+        } catch (\Fahara02\UdbLaravel\Exceptions\UdbRpcException $e) {
+            expect(isServerFaultPhp($e->status))->toBeFalse("Select limit=$lim faulted: {$e->getMessage()}");
+        }
+    }
+
+    // 5. unknown message_type -> typed error, not a 500.
+    $acc5 = false;
+    try {
+        $data->select((new \Udb\Entity\V1\SelectRequest())->setContext($ctx('php.edge.unknown-type'))
+            ->setMessageType('udb.does.not.Exist')
+            ->setFilter(liveStruct(['tenant_id' => $tenant, 'project_id' => $project]))->setLimit(1), $meta);
+        $acc5 = true;
+    } catch (\Fahara02\UdbLaravel\Exceptions\UdbRpcException $e) {
+        expect(isServerFaultPhp($e->status))->toBeFalse("unknown message_type faulted: {$e->getMessage()}");
+    }
+    expect($acc5)->toBeFalse('Select on an unknown message_type was ACCEPTED');
+
+    // 6. invalid backend -> typed error, never a panic/Internal.
+    $acc6 = false;
+    try {
+        $data->list_resources((new \Udb\Entity\V1\ResourceAdminRequest())->setContext($ctx('php.edge.bad-backend'))
+            ->setBackend('nonexistent-backend-xyz'), $meta);
+        $acc6 = true;
+    } catch (\Fahara02\UdbLaravel\Exceptions\UdbRpcException $e) {
+        expect(isServerFaultPhp($e->status))->toBeFalse("invalid backend faulted: {$e->getMessage()}");
+    }
+    expect($acc6)->toBeFalse('ListResources on a nonexistent backend was ACCEPTED');
+}
+
 it('covers the live generated RPC surface', function () {
     $target = liveEnv('UDB_GRPC_TARGET');
     $authTarget = liveEnv('UDB_AUTH_GRPC_TARGET', $target);
@@ -1042,6 +1127,9 @@ it('covers the live generated RPC surface', function () {
 
     // Real DataBroker backend round-trips (Postgres + Mongo, unary).
     run_live_backend_e2e($data, $authedMeta, $authedMeta->tenantId, $meta->projectId);
+
+    // Per-RPC EDGE cases (fail-closed / no cross-tenant leak / no server fault).
+    run_edge_cases_php($data, $authedMeta, $authedMeta->tenantId, $meta->projectId);
 
     // Breadth: a real category-appropriate round-trip against EVERY advertised backend
     // kind (relational SQL, object, document, cache, vector, graph) — not just the

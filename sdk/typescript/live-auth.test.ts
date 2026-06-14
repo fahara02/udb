@@ -1124,6 +1124,10 @@ test("live broker login refreshes once and hot-swaps SDK credentials", {
 
     await runLiveBackendE2E(project, tenantId, projectId);
 
+    // Per-RPC EDGE cases (malformed/hostile inputs + isolation boundaries): every one
+    // must fail closed with a typed error and never leak cross-tenant data or fault.
+    await runLiveEdgeCases(project.generated.DataBroker, tenantId, projectId);
+
     // Breadth: a real category-appropriate round-trip against EVERY advertised backend
     // kind (relational SQL, object, document, cache, vector, graph) — not just the
     // canonical postgres/mongodb/minio trio. Adapts to whatever the broker enabled.

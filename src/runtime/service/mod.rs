@@ -1277,6 +1277,76 @@ fn catalog_payload_version(bytes: &[u8], manifest: &CatalogManifest) -> String {
     "unversioned".to_string()
 }
 
+/// Optional Unix-domain-socket DataBroker listener for co-located clients (e.g.
+/// a PHP sidecar) — removes the TCP/loopback+NAT hop that dominates the per-RPC
+/// latency for a same-host caller (PERF_TODO §3). OFF unless `UDB_DATA_UDS_PATH`
+/// is set; Unix-only. The SAME security/timeout/concurrency tower layer wraps it
+/// (the UDS path NEVER bypasses `MethodSecurityLayer`/auth — it is a transport
+/// swap, not a trust boundary). A bind failure logs and is non-fatal: the TCP
+/// listener keeps serving. Returns `None` when unconfigured so the caller can
+/// `let _ =` it without branching.
+#[cfg(unix)]
+fn spawn_uds_data_plane(
+    service: DataBrokerService,
+    grpc_timeout: Duration,
+    grpc_max_concurrent: usize,
+) -> Option<tokio::task::JoinHandle<()>> {
+    let path = std::env::var("UDB_DATA_UDS_PATH")
+        .ok()
+        .map(|p| p.trim().to_string())
+        .filter(|p| !p.is_empty())?;
+    Some(tokio::spawn(async move {
+        // A stale socket file from a prior run makes bind() fail with EADDRINUSE;
+        // remove it first (best-effort — a missing file is the normal case).
+        let _ = tokio::fs::remove_file(&path).await;
+        let listener = match tokio::net::UnixListener::bind(&path) {
+            Ok(listener) => listener,
+            Err(err) => {
+                tracing::error!(
+                    uds_path = %path,
+                    error = %err,
+                    "UDB UDS data-plane bind failed; TCP listener still serving"
+                );
+                return;
+            }
+        };
+        tracing::info!(uds_path = %path, "UDB DataBroker UDS listener ready");
+        // Turn the accept loop into an `incoming` stream of connections for
+        // tonic. `futures::stream::unfold` avoids needing tokio-stream's `net`
+        // feature; `tokio::net::UnixStream` implements tonic's `Connected`.
+        let incoming = futures::stream::unfold(listener, |listener| async move {
+            let conn = listener.accept().await.map(|(stream, _addr)| stream);
+            Some((conn, listener))
+        });
+        // Rebuild the SAME layer stack the TCP listener uses (security is applied
+        // by the wrapped services + this timeout/concurrency envelope).
+        let layer = tower::ServiceBuilder::new()
+            .layer(crate::runtime::otel::TraceExtractLayer::new())
+            .timeout(grpc_timeout)
+            .concurrency_limit(grpc_max_concurrent)
+            .into_inner();
+        let reflection = match tonic_reflection::server::Builder::configure()
+            .register_encoded_file_descriptor_set(UDB_FILE_DESCRIPTOR_SET)
+            .build_v1()
+        {
+            Ok(reflection) => reflection,
+            Err(err) => {
+                tracing::error!(error = %err, "UDB UDS reflection build failed; UDS listener aborted");
+                return;
+            }
+        };
+        if let Err(err) = tonic::transport::Server::builder()
+            .layer(layer)
+            .add_service(reflection)
+            .add_service(DataBrokerServer::new(service))
+            .serve_with_incoming_shutdown(incoming, shutdown_signal())
+            .await
+        {
+            tracing::error!(uds_path = %path, error = %err, "UDB UDS data-plane listener exited with error");
+        }
+    }))
+}
+
 pub async fn serve(
     manifest: CatalogManifest,
     schemas: Vec<ProtoSchema>,
@@ -1896,6 +1966,10 @@ pub async fn serve(
             public_addr = %addr,
             "native services disabled or no native listener selected; only the public DataBroker listener will start"
         );
+        // Optional co-located UDS data-plane (PERF_TODO §3) — clone before the
+        // service is moved into the TCP builder below. No-op unless configured.
+        #[cfg(unix)]
+        let _uds_data_plane = spawn_uds_data_plane(service.clone(), grpc_timeout, grpc_max_concurrent);
         server
             .add_service(reflection_service)
             .add_service(health_service)
@@ -2188,6 +2262,10 @@ pub async fn serve(
         )
         .serve_with_shutdown(webrtc_addr, shutdown_signal());
 
+    // Optional co-located UDS data-plane (PERF_TODO §3) — clone before the
+    // service is moved into the TCP builder. No-op unless UDB_DATA_UDS_PATH is set.
+    #[cfg(unix)]
+    let _uds_data_plane = spawn_uds_data_plane(service.clone(), grpc_timeout, grpc_max_concurrent);
     let main_fut = server
         .add_service(reflection_service)
         .add_service(health_service)

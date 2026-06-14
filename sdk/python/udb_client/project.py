@@ -39,6 +39,7 @@ from typing import Any, Sequence
 
 import grpc
 
+from ._channel import merge_channel_options
 from .auth import AuthzCache, UdbAuthClient, as_resource
 from .client import UdbAsyncClient, UdbClient
 from .exceptions import UdbConfigurationError
@@ -911,7 +912,7 @@ def _make_channel(
     root_certificates: bytes | None,
     options: Sequence[tuple[str, Any]] | None,
 ) -> grpc.Channel:
-    opts = list(options or ())
+    opts = merge_channel_options(options)
     if tls:
         creds = grpc.ssl_channel_credentials(root_certificates)
         return grpc.secure_channel(target, creds, options=opts)

@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
+use std::sync::{Mutex, OnceLock};
 
 use crate::backend::BackendKind;
 use crate::generation::sql::{
@@ -336,7 +337,94 @@ impl QueryPlan {
     }
 }
 
+/// Compose the single deterministic cache key for `build_select_query_plan`.
+///
+/// The key encodes EVERY input that can influence the emitted SQL / `QueryPlan`,
+/// so two requests collide on the key only when they would build a byte-identical
+/// plan. Composition (in order):
+///   1. `manifest.checksum_sha256` FIRST — the catalog version. Any schema reload
+///      changes the checksum, so a manifest change can never reuse a prior plan
+///      (the checksum is a strict prefix of the key, mirroring `manifest_index.rs`).
+///      When the checksum is empty we fall back to the `ptr:{:p}:{len}` discriminator
+///      that `manifest_index.rs:31` uses so an unchecksummed manifest is never
+///      conflated with another.
+///   2. `message_type` — selects the table/columns/security.
+///   3. canonical filter JSON — `serde_json::Map` is a `BTreeMap` here
+///      (no `preserve_order` feature), so `to_string()` is key-order-stable.
+///   4. `fields` in request order — order is preserved into `selected_columns`,
+///      so it is part of the output identity and must NOT be reordered.
+///   5. sort specs (field + direction, in order).
+///   6. `limit`.
+///   7. planning-affecting `RequestContext` bits: effective SQL backend
+///      (`target_backend` drives `effective_sql_backend`, which selects the SQL
+///      dialect), `tenant_id`, `project_id`, `purpose`, and the sorted `scopes`
+///      (scope order does not affect output, so it is normalized for hit-rate).
+fn select_plan_cache_key(manifest: &CatalogManifest, request: &SelectPlanRequest) -> String {
+    let manifest_key = if manifest.checksum_sha256.is_empty() {
+        format!("ptr:{:p}:{}", manifest, manifest.tables.len())
+    } else {
+        manifest.checksum_sha256.clone()
+    };
+    let ctx = &request.context;
+    let backend = effective_sql_backend(ctx);
+    let mut scopes = ctx.scopes.clone();
+    scopes.sort();
+    let sort_key = request
+        .sort
+        .iter()
+        .map(|sort| format!("{}:{}", sort.field, sort.descending))
+        .collect::<Vec<_>>()
+        .join(",");
+    format!(
+        "{ck}\u{1f}msg={msg}\u{1f}flt={flt}\u{1f}fields={fields}\u{1f}sort={sort}\u{1f}limit={limit}\u{1f}backend={backend:?}\u{1f}tenant={tenant}\u{1f}project={project}\u{1f}purpose={purpose}\u{1f}scopes={scopes}",
+        ck = manifest_key,
+        msg = request.message_type,
+        flt = request.filter,
+        fields = request.fields.join(","),
+        sort = sort_key,
+        limit = request.limit,
+        tenant = ctx.tenant_id,
+        project = ctx.project_id,
+        purpose = ctx.purpose,
+        scopes = scopes.join(","),
+    )
+}
+
+/// Build the IR→SQL read plan for a typed Select, with a transparent, bounded,
+/// process-global memoization (#136 pattern, see `select_plan_cache_key` and
+/// `manifest_index.rs`). Identical inputs (including the manifest checksum) return
+/// a byte-identical `QueryPlan` cloned from the cache; the planning output is
+/// unchanged for every input. On a miss it builds exactly as before, caches, and
+/// returns. Because `manifest.checksum_sha256` is the key prefix, a manifest
+/// change always produces a fresh key and can never serve a stale plan.
 pub fn build_select_query_plan(
+    manifest: &CatalogManifest,
+    request: &SelectPlanRequest,
+) -> QueryPlan {
+    static PLAN_CACHE: OnceLock<Mutex<HashMap<String, QueryPlan>>> = OnceLock::new();
+    let cache_key = select_plan_cache_key(manifest, request);
+    let cache = PLAN_CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+    if let Ok(guard) = cache.lock()
+        && let Some(plan) = guard.get(&cache_key)
+    {
+        return plan.clone();
+    }
+    let plan = build_select_query_plan_uncached(manifest, request);
+    if let Ok(mut guard) = cache.lock() {
+        // Bound the process-global cache. The manifest checksum is part of every
+        // key, so without a cap the map grows unbounded across schema reloads.
+        // When a new key would exceed the cap, drop the whole cache and rebuild
+        // lazily (rebuilding one plan is cheap) — #136.
+        const PLAN_CACHE_CAP: usize = 512;
+        if guard.len() >= PLAN_CACHE_CAP && !guard.contains_key(&cache_key) {
+            guard.clear();
+        }
+        guard.entry(cache_key).or_insert_with(|| plan.clone());
+    }
+    plan
+}
+
+fn build_select_query_plan_uncached(
     manifest: &CatalogManifest,
     request: &SelectPlanRequest,
 ) -> QueryPlan {

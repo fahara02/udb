@@ -121,6 +121,43 @@ UDB_MIDDLEWARE_AUTO=true
 
 The full reference lives in [`config/udb.php`](config/udb.php).
 
+`UDB_ENDPOINT` accepts either a `host:port` value or a **Unix-domain-socket**
+target (`unix:///var/run/udb.sock`) for a co-located broker sidecar — see
+[Performance](#performance) below.
+
+---
+
+## Performance
+
+PHP-FPM is **shared-nothing**: it tears down the worker after every request, so
+a normal PHP UDB client opens a **new gRPC channel per request** and re-pays the
+TCP + TLS + HTTP/2 handshake every time ([grpc#15426]). That re-handshake is the
+dominant PHP latency against a gRPC broker.
+
+The fix is to hold a **warm channel** in a persistent-worker runtime
+(OpenSwoole / RoadRunner / FrankenPHP) that builds the client **once** and reuses
+it across requests, and/or to run a **local UDB sidecar** reached over a Unix
+domain socket. See:
+
+- **Guide:** [`docs/php-perf.md`](../../docs/php-perf.md) — why PHP-FPM can't pool
+  a channel, per-runtime setup recipes, keepalive args, and the local sidecar /
+  UDS pattern (incl. the required broker-side UDS bind, a maintainer follow-up).
+- **Runnable example:** [`examples/persistent-worker/`](examples/persistent-worker/)
+  — a worker that constructs the client once and serves requests on the warm
+  channel (OpenSwoole + RoadRunner + a plain-CLI fallback).
+
+Worker keepalive env (set these for a persistent-worker deployment so the warm
+channel isn't dropped to IDLE and re-handshaked):
+
+```env
+UDB_GRPC_KEEPALIVE_MS=30000
+UDB_GRPC_KEEPALIVE_TIMEOUT_MS=10000
+# co-located sidecar over a Unix domain socket (needs the broker to bind it):
+UDB_ENDPOINT=unix:///var/run/udb.sock
+```
+
+[grpc#15426]: https://github.com/grpc/grpc/issues/15426
+
 ---
 
 ## Usage

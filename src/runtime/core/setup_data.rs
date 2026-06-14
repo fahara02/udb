@@ -258,22 +258,35 @@ impl DataBrokerRuntime {
         };
         let plan = build_select_query_plan(manifest, &plan_request);
         reject_plan(&plan.errors)?;
-        let cache_key = cache_key(
-            "select",
-            &request.message_type,
-            &context,
-            &manifest.checksum_sha256,
-            &filter,
-            &request.fields,
-        );
         let bypass_read = request
             .cache
             .as_ref()
             .map(|cache| cache.bypass_read)
             .unwrap_or(false);
+        let bypass_write = request
+            .cache
+            .as_ref()
+            .map(|cache| cache.bypass_write)
+            .unwrap_or(false);
+        // Only compute the read cache key (filter JSON serialize + SHA256) when the
+        // cache will actually be consulted (read) or populated (write). When both are
+        // bypassed the key is pure waste, so skip the hashing entirely.
+        let cache_key = if bypass_read && bypass_write {
+            None
+        } else {
+            Some(cache_key(
+                "select",
+                &request.message_type,
+                &context,
+                &manifest.checksum_sha256,
+                &filter,
+                &request.fields,
+            ))
+        };
         if !bypass_read
+            && let Some(cache_key) = cache_key.as_deref()
             && let Some(cached) = self
-                .cache_get_fresh(&cache_key, &manifest.checksum_sha256, &context)
+                .cache_get_fresh(cache_key, &manifest.checksum_sha256, &context)
                 .await
         {
             return Ok(cached_record_set(cached));
@@ -293,11 +306,17 @@ impl DataBrokerRuntime {
             },
         )
         .await?;
-        let mut tx = pool
-            .begin()
-            .await
-            .map_err(|e| tonic::Status::internal(format!("PG transaction begin failed: {e}")))?;
-        set_request_local_settings(&mut tx, &context).await?;
+        // READ fast-path: a read-only SELECT does NOT need a transaction. We
+        // acquire ONE pooled connection, install the RLS context as SESSION
+        // settings (is_local=false) on it, run the SELECT on that SAME
+        // connection, then ALWAYS reset those session GUCs before the
+        // connection returns to the pool — on BOTH the success and error path.
+        // This drops the BEGIN+COMMIT round-trips while keeping RLS isolation
+        // byte-identical (same keys/values as the write path).
+        let mut conn = pool.acquire().await.map_err(|e| {
+            tonic::Status::internal(format!("PG connection acquire failed: {e}"))
+        })?;
+        set_request_local_settings_conn(&mut conn, &context).await?;
         let values = filter_bind_values(&filter);
         let query = bind_values(
             sqlx::query(&plan.sql),
@@ -305,13 +324,27 @@ impl DataBrokerRuntime {
             &plan.parameter_columns,
             &values,
         )?;
-        let rows = query
-            .fetch_all(&mut *tx)
+        // Capture the SELECT result WITHOUT early-`?`-returning, so the reset
+        // below runs unconditionally even on query failure (leak-safety).
+        let rows_result = query
+            .fetch_all(&mut *conn)
             .await
-            .map_err(|err| tonic::Status::internal(format!("PostgreSQL select failed: {err}")))?;
-        tx.commit().await.map_err(|err| {
-            tonic::Status::internal(format!("PostgreSQL select commit failed: {err}"))
-        })?;
+            .map_err(|err| tonic::Status::internal(format!("PostgreSQL select failed: {err}")));
+        let reset_result = reset_request_local_settings_conn(&mut conn, &context).await;
+        // Leak-safety teardown: if the RESET succeeded the connection is clean
+        // and may recycle into the pool (plain drop). If the RESET FAILED the
+        // connection may still carry this request's tenant GUCs, so we MUST NOT
+        // hand it back clean — `detach()` removes it from pool accounting and
+        // dropping the detached connection closes the underlying socket instead
+        // of recycling a dirty session. (Defense in depth only — every path
+        // re-applies its own context before querying.)
+        if reset_result.is_ok() {
+            drop(conn);
+        } else {
+            drop(conn.detach());
+        }
+        let rows = rows_result?;
+        reset_result?;
         let record_set = rows_to_record_set(
             rows,
             Some(table),
@@ -320,12 +353,9 @@ impl DataBrokerRuntime {
             self.encryption.as_ref(),
             &self.encryption_metrics,
         )?;
-        let bypass_write = request
-            .cache
-            .as_ref()
-            .map(|cache| cache.bypass_write)
-            .unwrap_or(false);
-        if !bypass_write {
+        if !bypass_write
+            && let Some(cache_key) = cache_key.as_deref()
+        {
             let ttl = request
                 .cache
                 .as_ref()
@@ -334,7 +364,7 @@ impl DataBrokerRuntime {
                 .unwrap_or(300) as u64;
             let _ = self
                 .cache_set_stamped_from_pool(
-                    &cache_key,
+                    cache_key,
                     &record_set.records_json,
                     ttl,
                     &manifest.checksum_sha256,
@@ -371,17 +401,29 @@ impl DataBrokerRuntime {
             },
         )
         .await?;
-        let mut tx = pool
-            .begin()
-            .await
-            .map_err(|e| tonic::Status::internal(format!("PG transaction begin failed: {e}")))?;
-        set_request_local_settings(&mut tx, &context).await?;
-        let rows = query.fetch_all(&mut *tx).await.map_err(|err| {
+        // READ fast-path (see `select`): no transaction. Acquire one pooled
+        // connection, install RLS context as SESSION settings, run the join
+        // SELECT, then ALWAYS reset the session GUCs before the connection
+        // returns to the pool — on success AND error.
+        let mut conn = pool.acquire().await.map_err(|e| {
+            tonic::Status::internal(format!("PG connection acquire failed: {e}"))
+        })?;
+        set_request_local_settings_conn(&mut conn, &context).await?;
+        // Capture the SELECT result WITHOUT early-`?`-returning so the reset
+        // runs unconditionally even on query failure (leak-safety).
+        let rows_result = query.fetch_all(&mut *conn).await.map_err(|err| {
             tonic::Status::internal(format!("PostgreSQL join select failed: {err}"))
-        })?;
-        tx.commit().await.map_err(|err| {
-            tonic::Status::internal(format!("PostgreSQL join select commit failed: {err}"))
-        })?;
+        });
+        let reset_result = reset_request_local_settings_conn(&mut conn, &context).await;
+        // Recycle the connection only if it was cleaned; otherwise close it
+        // (detach) so a dirty session is never handed to the next request.
+        if reset_result.is_ok() {
+            drop(conn);
+        } else {
+            drop(conn.detach());
+        }
+        let rows = rows_result?;
+        reset_result?;
         rows_to_record_set(
             rows,
             None,

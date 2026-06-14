@@ -89,3 +89,23 @@ try (var auth = new UdbAuthClient("localhost:50051", meta)) {
 
 Use `dev.udb.client.UdbClient` and `UdbAuthClient` for normal app code. The
 `com.udb.*` packages provide the protobuf request/response types.
+
+## Performance
+
+Each `UdbClient` / `UdbAuthClient` / `UdbProject` / `GeneratedUdbClient` holds a
+**single long-lived `ManagedChannel`** — construct the client once and reuse it
+across every RPC. Never create a client per call: a fresh channel forces a
+TCP+TLS+HTTP/2 handshake every time, which dominates per-RPC latency.
+
+Channels are built via `dev.udb.client.UdbChannels`, which applies:
+
+- **Keepalive** (`keepAliveTime(30s)`, `keepAliveTimeout(10s)`,
+  `keepAliveWithoutCalls(true)`) so an idle connection stays warm instead of
+  dropping to IDLE and re-handshaking.
+- A native gRPC **service-config retry** on `UNAVAILABLE` (4 attempts, 0.1s initial
+  backoff, 2s ceiling, x2 multiplier, jittered, bounded by the call deadline), via
+  `enableRetry()` + `defaultServiceConfig(...)`.
+
+If you build a `ManagedChannel` yourself, pass it through
+`UdbChannels.tune(builder)` (or use `UdbChannels.forTarget(target, tls)`) to get the
+same behaviour, then hand the channel to the client constructor that accepts one.

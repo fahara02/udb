@@ -84,6 +84,25 @@ const [allowed, decision] = await auth.can(
 );
 ```
 
+## Performance
+
+The SDK uses a **single long-lived gRPC channel** — the generated client caches one
+stub per service and reuses it, and `dataBrokerClient()` returns a reusable stub.
+Construct the client once and reuse it across every RPC; never build a new client
+per call, since a fresh channel forces a TCP+TLS+HTTP/2 handshake every time.
+
+Channels are created with `UDB_DEFAULT_CHANNEL_OPTIONS` (exported from
+`@udb_plus/sdk/client`), which add:
+
+- **Keepalive** (`grpc.keepalive_time_ms=30000`, `grpc.keepalive_timeout_ms=10000`,
+  `grpc.keepalive_permit_without_calls=1`) so an idle connection stays warm instead
+  of dropping to IDLE and re-handshaking.
+- A native gRPC **service-config retry** on `UNAVAILABLE` (4 attempts, 0.1s initial
+  backoff, 2s ceiling, x2 multiplier, ~20% jitter, bounded by the call deadline).
+
+Pass `channelOptions` in the client/project options to override any of these; your
+values are spread on top of the defaults and win.
+
 ## Notes For Users
 
 The package bundles the UDB wire protos and loads them at runtime through

@@ -51,7 +51,7 @@ message ApiKeyUsage {
 
   string usage_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "usage_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
 
-  string key_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "key_id" sql_type: "UUID" not_null: true comment: "FK to udb_authn.api_keys.key_id" foreign_key: { references_table: "api_keys" references_schema: "udb_authn" references_column: "key_id" on_delete: REFERENTIAL_ACTION_CASCADE constraint_name: "fk_api_key_usages_key_id" } index: { index_name: "idx_aku_key_id_day" index_type: "BTREE" columns: "requested_at" } }];
+  string key_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "key_id" sql_type: "UUID" not_null: true comment: "FK to udb_authn.api_keys.key_id" foreign_key: { references_table: "api_keys" references_schema: "udb_authn" references_column: "key_id" on_delete: REFERENTIAL_ACTION_CASCADE constraint_name: "fk_api_key_usages_key_id" } index: { index_name: "idx_aku_key_id_day" index_type: "BTREE" columns: "key_id" columns: "requested_at" } }];
 
   string endpoint = 3 [(udb.core.common.v1.pg_column) = { column_name: "endpoint" sql_type: "VARCHAR(200)" not_null: true comment: "gRPC method or HTTP path" }];
   string ip_address = 4 [(udb.core.common.v1.pg_column) = { column_name: "ip_address" sql_type: "INET" }, (udb.core.common.v1.pii) = true, (udb.core.common.v1.log_masked) = true, (udb.core.common.v1.data_purpose) = "Rate limiting and abuse detection"];

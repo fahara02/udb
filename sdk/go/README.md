@@ -112,3 +112,33 @@ protobuf request and response types you pass to UDB; you do not need to run
 
 `udbclient.ProtocolVersion` is sent as `x-udb-client-catalog-version` so the
 broker can reject incompatible clients early.
+
+## Performance
+
+The SDK uses a **single long-lived gRPC channel** — construct the `*grpc.ClientConn`
+(or use `udbclient.NewUdb`) **once and reuse it** across every RPC.
+Never open a new channel per call: a fresh channel forces a TCP+TLS+HTTP/2 handshake
+on every request, which dominates per-RPC latency.
+
+For the best behaviour, append the generated layer's dial options to your own
+security options when you dial. They add:
+
+- **Keepalive** (`Time: 30s`, `Timeout: 10s`, `PermitWithoutStream: true`) so an idle
+  connection stays warm instead of dropping to IDLE and re-handshaking.
+- **Jittered exponential-backoff retry** on `UNAVAILABLE` / `RESOURCE_EXHAUSTED`
+  (4 attempts, 100ms base, full jitter, bounded by the call deadline), applied only to
+  read-safe RPCs per the proto `operation_kind`.
+- Metadata injection and typed error mapping.
+
+```go
+gen := udbclient.NewGenerated(nil, udbclient.Options{})
+conn, err := grpc.NewClient(
+    "localhost:50051",
+    append(
+        []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())},
+        gen.DialOptions()...,
+    )...,
+)
+```
+
+`udbclient.NewUdb(ctx, cfg)` wires these dial options in for you automatically.

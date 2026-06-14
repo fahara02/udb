@@ -26,7 +26,7 @@ public sealed class UdbClient : IAsyncDisposable
 
     public UdbClient(string address, UdbMetadata metadata)
     {
-        _channel = GrpcChannel.ForAddress(address);
+        _channel = UdbChannel.ForAddress(address);
         _metadata = metadata;
         Broker = new DataBroker.DataBrokerClient(_channel);
     }

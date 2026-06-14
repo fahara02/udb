@@ -9,6 +9,7 @@ from google.protobuf.struct_pb2 import Struct
 from udb.entity.v1 import types_pb2
 from udb.services.v1 import data_broker_pb2_grpc
 
+from ._channel import merge_channel_options
 from .exceptions import UdbConfigurationError, UdbRpcError
 from .metadata import Metadata
 
@@ -56,7 +57,7 @@ class UdbClient:
         self._timeout = timeout
         self._owns_channel = channel is None
         if channel is None:
-            options = list(channel_options or ())
+            options = merge_channel_options(channel_options)
             if secure:
                 credentials = grpc.ssl_channel_credentials(root_certificates)
                 channel = grpc.secure_channel(target, credentials, options=options)
@@ -418,7 +419,7 @@ class UdbAsyncClient:
         self._timeout = timeout
         self._owns_channel = channel is None
         if channel is None:
-            options = list(channel_options or ())
+            options = merge_channel_options(channel_options)
             if secure:
                 credentials = grpc.ssl_channel_credentials(root_certificates)
                 channel = grpc.aio.secure_channel(target, credentials, options=options)

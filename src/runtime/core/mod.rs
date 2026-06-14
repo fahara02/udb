@@ -835,10 +835,14 @@ fn decode_catalog_manifest_row(
     }
 }
 
-pub(crate) async fn set_request_local_settings(
-    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-    context: &RequestContext,
-) -> Result<(), tonic::Status> {
+/// Build the canonical, ordered list of `(GUC key, value)` pairs the broker
+/// installs to drive Postgres RLS for a request. This is the SINGLE source of
+/// truth for BOTH the transaction-scoped write path and the session-scoped
+/// read path, so the two can never drift: the keys/values applied (and later
+/// reset) are byte-identical regardless of which host (tx vs connection) is
+/// used. `app.current_*` come from `AppliedContext::session_context_pairs`
+/// (item 135); `application_name` is PG-specific and added here.
+fn request_local_setting_pairs(context: &RequestContext) -> Vec<(&'static str, String)> {
     let app_name = if context.correlation_id.trim().is_empty() {
         "udb".to_string()
     } else {
@@ -847,28 +851,141 @@ pub(crate) async fn set_request_local_settings(
             &context.correlation_id[..context.correlation_id.len().min(58)]
         )
     };
-    // Item 135: the `app.current_*` variables come from the single canonical
-    // source (`AppliedContext::session_context_pairs`) shared with the
-    // dialect-aware renderer, so the PG fast path and the universal backend
-    // enforcer never drift. `application_name` is PG-specific and stays here.
     let applied = crate::runtime::backend_context::AppliedContext::from_request(context);
-    let mut settings: Vec<(&str, String)> = vec![("application_name", app_name)];
+    let mut settings: Vec<(&'static str, String)> = vec![("application_name", app_name)];
     settings.extend(
         applied
             .session_context_pairs()
             .into_iter()
             .map(|(key, value)| (key, value.to_string())),
     );
-    for (key, value) in settings {
-        sqlx::query("SELECT set_config($1, $2, true)")
-            .bind(key)
-            .bind(value)
-            .execute(&mut **tx)
-            .await
-            .map_err(|err| {
-                tonic::Status::internal(format!("failed to set request database context: {err}"))
-            })?;
+    settings
+}
+
+/// Apply the request's RLS context GUCs against an arbitrary Postgres executor
+/// (a transaction OR a single pooled connection). `is_local` selects the
+/// `set_config` scope:
+///   * `true`  — transaction-local (`SET LOCAL` semantics), auto-reset on
+///     COMMIT/ROLLBACK. Used by the WRITE path, which already runs in a tx.
+///   * `false` — session-level on the connection, persists until explicitly
+///     reset. Used by the READ path, which acquires ONE connection, applies the
+///     context, runs the SELECT, then ALWAYS resets via
+///     [`reset_request_local_settings_conn`] before returning the connection to
+///     the pool.
+///
+/// Both scopes install IDENTICAL keys/values (see `request_local_setting_pairs`);
+/// only the local-vs-session flag differs, so RLS permits the exact same rows
+/// either way.
+async fn apply_request_local_settings<'e, E>(
+    executor: E,
+    context: &RequestContext,
+    is_local: bool,
+) -> Result<(), tonic::Status>
+where
+    E: sqlx::PgExecutor<'e>,
+{
+    let settings = request_local_setting_pairs(context);
+    if settings.is_empty() {
+        return Ok(());
     }
+    // Perf: batch every setting into a SINGLE round-trip
+    //   SELECT set_config($1,$2,<is_local>), set_config($3,$4,<is_local>), …
+    // instead of one `SELECT set_config(...)` round-trip PER setting. Each
+    // request previously paid 4-6 PG round-trips just to install the RLS
+    // `app.current_*` context (the dominant fixed cost on the read/write fast
+    // path); all `set_config(...)` calls are order-independent so collapsing
+    // them is semantically identical. The `is_local` flag is a fixed boolean
+    // literal (never user input), so direct interpolation is injection-safe.
+    let is_local_literal = if is_local { "true" } else { "false" };
+    let mut sql = String::with_capacity(8 + settings.len() * 30);
+    sql.push_str("SELECT ");
+    for i in 0..settings.len() {
+        if i > 0 {
+            sql.push_str(", ");
+        }
+        use std::fmt::Write as _;
+        let _ = write!(
+            sql,
+            "set_config(${}, ${}, {is_local_literal})",
+            2 * i + 1,
+            2 * i + 2
+        );
+    }
+    let mut query = sqlx::query(&sql);
+    for (key, value) in &settings {
+        query = query.bind(*key).bind(value.as_str());
+    }
+    query.execute(executor).await.map_err(|err| {
+        tonic::Status::internal(format!("failed to set request database context: {err}"))
+    })?;
+    Ok(())
+}
+
+/// WRITE-path entry point (UNCHANGED public contract): install the request's
+/// RLS context as transaction-local settings inside the open write transaction.
+/// Auto-resets on COMMIT/ROLLBACK, so no explicit reset is needed.
+pub(crate) async fn set_request_local_settings(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    context: &RequestContext,
+) -> Result<(), tonic::Status> {
+    apply_request_local_settings(&mut **tx, context, /* is_local = */ true).await
+}
+
+/// READ-path entry point: install the request's RLS context as SESSION-level
+/// settings on a single pooled connection (the read path no longer opens a
+/// transaction). Because session GUCs PERSIST on a pooled connection after it
+/// returns to the pool, the caller MUST pair this with
+/// [`reset_request_local_settings_conn`] on the SAME connection on BOTH the
+/// success and error paths before the connection drops — otherwise a later
+/// request reusing that connection could observe a stale (wider) tenant
+/// context. See `select` / `select_join_fusion` in `setup_data.rs`.
+pub(crate) async fn set_request_local_settings_conn(
+    conn: &mut sqlx::pool::PoolConnection<sqlx::Postgres>,
+    context: &RequestContext,
+) -> Result<(), tonic::Status> {
+    apply_request_local_settings(&mut **conn, context, /* is_local = */ false).await
+}
+
+/// READ-path teardown: clear EVERY session GUC installed by
+/// [`set_request_local_settings_conn`] so the connection returns to the pool
+/// with NO residual tenant context. This is leak-safety-critical and MUST run
+/// unconditionally (success AND error) before the connection drops.
+///
+/// `RESET <name>` restores each GUC to its server/role default. We reset the
+/// exact same key list that was set (iterating `request_local_setting_pairs`),
+/// so no key set can survive un-reset. Defense in depth: every read/write path
+/// re-applies the full context BEFORE its own query (overwrite-before-use), so
+/// even a hypothetically-missed reset could not WIDEN visibility — but that is
+/// NOT relied upon here; this explicit reset is the primary guard.
+pub(crate) async fn reset_request_local_settings_conn(
+    conn: &mut sqlx::pool::PoolConnection<sqlx::Postgres>,
+    context: &RequestContext,
+) -> Result<(), tonic::Status> {
+    let settings = request_local_setting_pairs(context);
+    if settings.is_empty() {
+        return Ok(());
+    }
+    // `RESET app.current_tenant_id;` is the correct inverse of a GUC set via
+    // `set_config(name, value, false)` — it restores the role/server default
+    // (effectively unset for our custom `app.*` namespace). Batch all RESETs
+    // into one statement to keep teardown a single round-trip. Keys are fixed
+    // identifiers from `session_context_pairs` (no user input), so direct
+    // interpolation is injection-safe.
+    let mut sql = String::with_capacity(settings.len() * 32);
+    for (key, _) in &settings {
+        use std::fmt::Write as _;
+        let _ = write!(sql, "RESET {key}; ");
+    }
+    // IMPORTANT: run the multi-statement RESET string via `Executor::execute`
+    // with a raw `&str` (the SIMPLE query protocol), which DOES support several
+    // `;`-separated statements in one round-trip. The prepared/extended path
+    // (`sqlx::query(...).execute()`) does NOT accept multi-statement strings on
+    // a PoolConnection — see control::lifecycle for the same caveat — so we must
+    // NOT use it here.
+    let executor: &mut sqlx::PgConnection = &mut **conn;
+    executor.execute(sql.as_str()).await.map_err(|err| {
+        tonic::Status::internal(format!("failed to reset request database context: {err}"))
+    })?;
     Ok(())
 }
 
@@ -1807,10 +1924,17 @@ fn rows_to_record_set(
     let mut proto_rows = Vec::with_capacity(rows.len());
     let mut records_json = Vec::with_capacity(rows.len());
     for row in rows {
-        // Size the per-row maps to the column count up front, so a wide row does
-        // not rehash/regrow its field map cell-by-cell.
+        // The default relational read path serialises every row into
+        // `records_json` (the bytes every SDK actually decodes). The per-row
+        // proto `fields` map was a parallel representation that no client reads,
+        // so we no longer build it on this path: that drops a per-row HashMap
+        // allocation plus a `json_to_prost_value` convert per column. The proto
+        // `ProtoRow.fields` field is preserved in the message (emitted empty)
+        // to keep the wire contract intact.
+        //
+        // Size the per-row json map to the column count up front, so a wide row
+        // does not rehash/regrow cell-by-cell.
         let columns = row.columns();
-        let mut fields = HashMap::with_capacity(columns.len());
         let mut json_row = serde_json::Map::with_capacity(columns.len());
         for (idx, column) in columns.iter().enumerate() {
             let name = column.name().to_string();
@@ -1830,9 +1954,6 @@ fn rows_to_record_set(
             if masked_columns.contains(&name) && !can_read_pii {
                 json_value = JsonValue::String("***MASKED***".to_string());
             }
-            if let Some(prost) = json_to_prost_value(&json_value) {
-                fields.insert(name.clone(), prost);
-            }
             json_row.insert(name, json_value);
         }
         records_json.push(
@@ -1840,7 +1961,7 @@ fn rows_to_record_set(
                 tonic::Status::internal(format!("failed to serialize record JSON: {err}"))
             })?,
         );
-        proto_rows.push(ProtoRow { fields });
+        proto_rows.push(ProtoRow::default());
     }
     Ok(RecordSet {
         total_count: proto_rows.len() as i32,

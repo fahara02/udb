@@ -6,7 +6,6 @@ import io.grpc.ClientCall;
 import io.grpc.ClientInterceptor;
 import io.grpc.ForwardingClientCall;
 import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
 import io.grpc.Metadata;
 import io.grpc.MethodDescriptor;
 import java.util.Objects;
@@ -46,7 +45,7 @@ public final class UdbClient implements AutoCloseable {
 
   public UdbClient(String target, UdbMetadata metadata) {
     this(
-        ManagedChannelBuilder.forTarget(target).usePlaintext().build(),
+        UdbChannels.forTarget(target, false),
         metadata,
         UdbCredentials.fromMetadata(metadata),
         true);

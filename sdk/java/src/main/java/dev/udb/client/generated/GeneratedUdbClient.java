@@ -22,12 +22,12 @@
 // the returned values, in your own code under src/main/java.
 package dev.udb.client.generated;
 
+import dev.udb.client.UdbChannels;
 import dev.udb.client.UdbClient;
 import dev.udb.client.UdbMetadata;
 import dev.udb.client.generated.GeneratedClientSupport.CallTuning;
 import io.grpc.Channel;
 import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
 import io.grpc.Metadata;
 import io.grpc.stub.StreamObserver;
 import java.time.Duration;
@@ -50,7 +50,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
 
   /** Connect to {@code target} (plaintext) with the supplied metadata + tuning. */
   public GeneratedUdbClient(String target, UdbMetadata metadata, CallTuning tuning) {
-    this(ManagedChannelBuilder.forTarget(target).usePlaintext().build(), metadata, tuning, true);
+    this(UdbChannels.forTarget(target, false), metadata, tuning, true);
   }
 
   /** Connect to {@code target} (plaintext) with default tuning. */

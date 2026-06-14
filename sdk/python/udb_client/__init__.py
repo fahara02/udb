@@ -1,3 +1,4 @@
+from ._channel import default_channel_options, merge_channel_options
 from .client import UdbAsyncClient, UdbClient, decode_records, to_record_json, to_struct
 from .exceptions import (
     UdbAuthzDenied,
@@ -75,6 +76,8 @@ __all__ = [
     "UdbPolicyBundleError",
     "UdbRpcError",
     "client_supported_encodings",
+    "default_channel_options",
+    "merge_channel_options",
     "decode_records",
     "to_record_json",
     "to_struct",

@@ -19,7 +19,6 @@ import com.udb.core.authz.services.v1.Principal;
 import com.udb.core.authz.services.v1.ResourceRef;
 import com.udb.core.authz.services.v1.SignedPolicyBundle;
 import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
 import io.grpc.Metadata;
 import io.grpc.stub.MetadataUtils;
 import java.nio.charset.StandardCharsets;
@@ -48,7 +47,7 @@ public class UdbAuthClient implements AutoCloseable {
   private volatile String bundleSecret;
 
   public UdbAuthClient(String target, UdbMetadata metadata) {
-    this(ManagedChannelBuilder.forTarget(target).usePlaintext().build(), metadata);
+    this(UdbChannels.forTarget(target, false), metadata);
   }
 
   public UdbAuthClient(ManagedChannel channel, UdbMetadata metadata) {
