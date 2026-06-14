@@ -9,8 +9,8 @@ name: Release · C# SDK (NuGet)
 # The release flow mirrors the Python/TypeScript SDKs: version consistency is
 # verified, tests pass, then nuget push fires. Publishing uses NuGet trusted
 # publishing: the `production` environment is bound to the nuget.org trusted
-# publisher policy for the `nuget_sdk` account, so no long-lived API key secret
-# is required.
+# publisher policy owned by the `fahara02` account, so no long-lived API key
+# secret is required.
 #
 # Trigger: a pushed `v*.*.*` tag, or manual dispatch with an expected version.
 
@@ -136,7 +136,7 @@ jobs:
         id: nuget_login
         uses: NuGet/login@v1
         with:
-          user: nuget_sdk
+          user: fahara02
 
       - name: Publish Udb.Client to NuGet
         if: steps.nuget_client.outputs.exists != 'true'
