@@ -432,11 +432,7 @@ impl DataBrokerService {
             cache.insert(cache_key, (std::time::Instant::now(), response.clone()));
         }
 
-        self.record_grpc(
-            "GetHealthReport",
-            started,
-            Ok(Response::new(response)),
-        )
+        self.record_grpc("GetHealthReport", started, Ok(Response::new(response)))
     }
 
     pub(crate) async fn lookup_message_schema_inner(

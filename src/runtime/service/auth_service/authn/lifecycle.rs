@@ -1650,10 +1650,11 @@ impl AuthnServiceImpl {
         let sql = format!(
             "SELECT {id}::TEXT AS credential_id, COALESCE({label}::TEXT,'') AS label, \
                     {created} AS created_at, {last} AS last_used_at \
-             FROM {rel} WHERE {user} = $1::UUID ORDER BY {created} ASC",
+             FROM {rel} WHERE {user} = $1::UUID ORDER BY {created_col} ASC",
             id = m.q("credential_id"),
             label = m.q("label"),
             created = m.timestamp_unix_as("created_at", "created_at"),
+            created_col = m.q("created_at"),
             last = m.timestamp_unix_as("last_used_at", "last_used_at"),
             rel = m.relation,
             user = m.q("user_id"),

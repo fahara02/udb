@@ -432,9 +432,11 @@ fn strip_nul_json(value: &JsonValue) -> JsonValue {
     match value {
         JsonValue::String(s) if s.contains('\u{0}') => JsonValue::String(s.replace('\u{0}', "")),
         JsonValue::Array(items) => JsonValue::Array(items.iter().map(strip_nul_json).collect()),
-        JsonValue::Object(map) => {
-            JsonValue::Object(map.iter().map(|(k, v)| (k.clone(), strip_nul_json(v))).collect())
-        }
+        JsonValue::Object(map) => JsonValue::Object(
+            map.iter()
+                .map(|(k, v)| (k.clone(), strip_nul_json(v)))
+                .collect(),
+        ),
         other => other.clone(),
     }
 }

@@ -1969,7 +1969,8 @@ pub async fn serve(
         // Optional co-located UDS data-plane (PERF_TODO §3) — clone before the
         // service is moved into the TCP builder below. No-op unless configured.
         #[cfg(unix)]
-        let _uds_data_plane = spawn_uds_data_plane(service.clone(), grpc_timeout, grpc_max_concurrent);
+        let _uds_data_plane =
+            spawn_uds_data_plane(service.clone(), grpc_timeout, grpc_max_concurrent);
         server
             .add_service(reflection_service)
             .add_service(health_service)

@@ -313,9 +313,10 @@ impl DataBrokerRuntime {
         // connection returns to the pool — on BOTH the success and error path.
         // This drops the BEGIN+COMMIT round-trips while keeping RLS isolation
         // byte-identical (same keys/values as the write path).
-        let mut conn = pool.acquire().await.map_err(|e| {
-            tonic::Status::internal(format!("PG connection acquire failed: {e}"))
-        })?;
+        let mut conn = pool
+            .acquire()
+            .await
+            .map_err(|e| tonic::Status::internal(format!("PG connection acquire failed: {e}")))?;
         set_request_local_settings_conn(&mut conn, &context).await?;
         let values = filter_bind_values(&filter);
         let query = bind_values(
@@ -353,9 +354,7 @@ impl DataBrokerRuntime {
             self.encryption.as_ref(),
             &self.encryption_metrics,
         )?;
-        if !bypass_write
-            && let Some(cache_key) = cache_key.as_deref()
-        {
+        if !bypass_write && let Some(cache_key) = cache_key.as_deref() {
             let ttl = request
                 .cache
                 .as_ref()
@@ -405,9 +404,10 @@ impl DataBrokerRuntime {
         // connection, install RLS context as SESSION settings, run the join
         // SELECT, then ALWAYS reset the session GUCs before the connection
         // returns to the pool — on success AND error.
-        let mut conn = pool.acquire().await.map_err(|e| {
-            tonic::Status::internal(format!("PG connection acquire failed: {e}"))
-        })?;
+        let mut conn = pool
+            .acquire()
+            .await
+            .map_err(|e| tonic::Status::internal(format!("PG connection acquire failed: {e}")))?;
         set_request_local_settings_conn(&mut conn, &context).await?;
         // Capture the SELECT result WITHOUT early-`?`-returning so the reset
         // runs unconditionally even on query failure (leak-safety).
