@@ -370,6 +370,13 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 		}
 	}
 
+	// ── DataBroker: a dry-run migration plan → run_id (migration lifecycle RPCs) ──
+	if plan, err := broker.PlanMigration(brokerCtx, &entityv1.MigrationPlanRequest{
+		Context: liveRequestContext(tenant, project, "go.live.perf.seed"), ProjectId: project, DryRun: true,
+	}); err == nil {
+		fix.set("migration_id", plan.GetRunId())
+	}
+
 	// Convenience scalars consumed by reflective populate for non-ID constrained
 	// fields the heuristics already handle (email/url) are set in probeString; the
 	// remaining commonly-required free-text fields default to a stable value.
@@ -379,6 +386,10 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 	fix.set("file_type", "DOCUMENT")
 	fix.set("kind", "audio")
 	fix.set("topic_pattern", perfCdcTopicPattern(tenant))
+	// node_id is a CLIENT-chosen PEP identifier (not a server entity): the perf
+	// StreamResources/DeltaResources open a session under it, and AckStatus references
+	// it — so a stable literal is the correct seed.
+	fix.set("node_id", "sdk-perf-node-"+suffix)
 
 	return perfSeedResult{
 		fix:      fix,

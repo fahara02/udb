@@ -335,10 +335,6 @@ func TestLivePerf(t *testing.T) {
 		len(samples), len(failed), (grand / time.Duration(len(samples))).Round(time.Microsecond))
 }
 
-// seededProbeLiveRPC is probeLiveRPC for the perf harness: it builds the request
-// from the proto descriptor BUT resolves reference/ID fields from the seed fixture
-// map (fix), so the unary RPC runs its SUCCESS path against the real entities
-// created in the seed phase. Returns the gRPC error (OK on success).
 // seededFirstRecv opens a non-CDC streaming RPC with a seeded request and measures
 // up to the FIRST server response (RecvMsg) — a real round-trip, not just
 // stream-open. For client-streaming it sends one seeded message, closes the send
