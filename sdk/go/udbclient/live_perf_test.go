@@ -2,6 +2,7 @@ package udbclient
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"sort"
@@ -10,9 +11,12 @@ import (
 	"time"
 
 	authnv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/authn/services/v1"
+	entityv1 "github.com/fahara02/udb/sdk/go/gen/udb/entity/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // TestLivePerf measures per-RPC latency for the entire 262-RPC surface against a
@@ -114,7 +118,16 @@ func TestLivePerf(t *testing.T) {
 		start := time.Now()
 		var err error
 		if rpc.Kind == KindUnary {
-			err = probeLiveRPC(callCtx, gen, rpc, tenant, project)
+			// Top data-plane CRUD RPCs are measured with a SEMANTICALLY VALID body so
+			// the number reflects REAL handler work (a real Upsert/Select/Delete against
+			// the built-in `udb.sdk.live.v1.SdkLiveRecord` schema) — not validation
+			// rejection on a placeholder request. Everything else falls back to the
+			// generic typed probe.
+			if in, out, ok := perfRealBody(rpc, tenant, project); ok {
+				err = gen.InvokeUnary(callCtx, rpc.FullMethod, in, out)
+			} else {
+				err = probeLiveRPC(callCtx, gen, rpc, tenant, project)
+			}
 		} else {
 			err = openLiveStream(callCtx, gen, rpc, tenant, project)
 		}
@@ -305,6 +318,55 @@ func openLiveStream(ctx context.Context, gen *GeneratedClient, rpc RPCInfo, tena
 	default:
 		return nil
 	}
+}
+
+// perfRealBody returns a SEMANTICALLY VALID request (and the matching empty
+// response message) for the top data-plane CRUD RPCs, so the perf harness
+// measures REAL handler work against the built-in `udb.sdk.live.v1.SdkLiveRecord`
+// schema (always active) instead of validation-rejection on a placeholder body.
+// Upsert uses a FIXED record_id so repeated iterations are idempotent (no row
+// accumulation). Returns ok=false for RPCs without a real-body override — the
+// caller falls back to the generic typed probe.
+func perfRealBody(rpc RPCInfo, tenant, project string) (proto.Message, proto.Message, bool) {
+	if rpc.Service != "DataBroker" {
+		return nil, nil, false
+	}
+	rc := liveRequestContext(tenant, project, "go.live.perf")
+	switch rpc.Name {
+	case "Upsert":
+		return &entityv1.UpsertRequest{
+			Context:        rc,
+			MessageType:    liveMessageType,
+			RecordJson:     perfRecordJSON(tenant, project),
+			ConflictFields: []string{"record_id"},
+		}, &entityv1.MutationResponse{}, true
+	case "Select":
+		return &entityv1.SelectRequest{
+			Context:     rc,
+			MessageType: liveMessageType,
+			Filter:      perfTenantFilter(tenant, project),
+			Limit:       10,
+		}, &entityv1.RecordSet{}, true
+	}
+	return nil, nil, false
+}
+
+func perfRecordJSON(tenant, project string) []byte {
+	// json.Marshal of a map of strings/ints never errors.
+	raw, _ := json.Marshal(map[string]any{
+		"record_id":  "go-perf-" + tenant + "-" + project,
+		"tenant_id":  tenant,
+		"project_id": project,
+		"lookup_key": "go-perf-lk",
+		"payload":    "go-perf",
+		"revision":   1,
+	})
+	return raw
+}
+
+func perfTenantFilter(tenant, project string) *structpb.Struct {
+	s, _ := structpb.NewStruct(map[string]any{"tenant_id": tenant, "project_id": project})
+	return s
 }
 
 // pct returns the index into a sorted slice of length n for the p-th percentile.

@@ -121,7 +121,11 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: "8.2"
-          extensions: grpc, protobuf, mbstring, intl
+          # NOT the protobuf PECL C extension: it fatals on the SDK's `import public`
+          # descriptors ("public_dep N is out of range"), which crashes test collection
+          # (PHPUnit exit 2) before any RPC is measured. The pure-PHP google/protobuf
+          # runtime (composer) handles public imports correctly. Mirrors Dockerfile.live-test.
+          extensions: grpc, mbstring, intl
           coverage: none
           tools: composer:v2
 
