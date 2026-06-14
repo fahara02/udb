@@ -44,44 +44,44 @@ public final class ApiKeyUsageProto {
       "e.proto\022\031udb.core.apikey.entity.v1\032\037goog" +
       "le/protobuf/timestamp.proto\032\033udb/core/co" +
       "mmon/v1/db.proto\032!udb/core/common/v1/sec" +
-      "urity.proto\"\316\t\n\013ApiKeyUsage\022F\n\010usage_id\030" +
+      "urity.proto\"\326\t\n\013ApiKeyUsage\022F\n\010usage_id\030" +
       "\001 \001(\tB+\202\267\030\'\n\010usage_id\022\004UUID\030\001(\001:\021gen_ran" +
-      "dom_uuid()R\007usageId\022\264\001\n\006key_id\030\002 \001(\tB\234\001\202" +
-      "\267\030\227\001\n\006key_id\022\004UUID\030\001J9\n\010api_keys\022\006key_id" +
+      "dom_uuid()R\007usageId\022\274\001\n\006key_id\030\002 \001(\tB\244\001\202" +
+      "\267\030\237\001\n\006key_id\022\004UUID\030\001J9\n\010api_keys\022\006key_id" +
       "\032\tudb_authn \0032\030fk_api_key_usages_key_idR" +
-      ")\n\022idx_aku_key_id_day\022\005BTREEZ\014requested_" +
-      "atZ\037FK to udb_authn.api_keys.key_idR\005key" +
-      "Id\022T\n\010endpoint\030\003 \001(\tB8\202\267\0304\n\010endpoint\022\014VA" +
-      "RCHAR(200)\030\001Z\030gRPC method or HTTP pathR\010" +
-      "endpoint\022b\n\nip_address\030\004 \001(\tBC\320\265\030\001\340\265\030\001\202\266" +
-      "\030!Rate limiting and abuse detection\202\267\030\022\n" +
-      "\nip_address\022\004INETR\tipAddress\022<\n\013http_sta" +
-      "tus\030\005 \001(\005B\033\202\267\030\027\n\013http_status\022\010SMALLINTR\n" +
-      "httpStatus\0228\n\nlatency_ms\030\006 \001(\005B\031\202\267\030\025\n\nla" +
-      "tency_ms\022\007INTEGERR\tlatencyMs\022G\n\014rate_lim" +
-      "ited\030\007 \001(\010B$\202\267\030 \n\014rate_limited\022\007BOOLEAN\030" +
-      "\001:\005FALSER\013rateLimited\022w\n\014requested_at\030\010 " +
-      "\001(\0132\032.google.protobuf.TimestampB8\202\267\0304\n\014r" +
-      "equested_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIME" +
-      "STAMP`\001h\001R\013requestedAt\022_\n\ttenant_id\030\t \001(" +
-      "\tBB\202\267\030>\n\ttenant_id\022\013VARCHAR(64)\030\001R\037\n\026idx" +
-      "_apikeyusage_tenant\022\005BTREE\230\002\001R\010tenantId:" +
-      "\352\002\372\266\030\317\001\n\016api_key_usages\022\tudb_authn\030\005 \001*9" +
-      "Per-request API key usage log for rate l" +
-      "imiting and audit@\001H\003R\014requested_atX\355\002b^" +
-      "\n\020tenant_isolation\032H(tenant_id::text = c" +
-      "urrent_setting(\'app.current_tenant_id\', " +
-      "true)::text)(\001\212\262\031\221\001\n\006tenant\032\ttenant_id*4" +
-      "tenant_id = current_setting(\'app.current" +
-      "_tenant_id\')2\004none:\022apikey.operational@\355" +
-      "\002H\002R\006tenantZ\010standardr\025tenant.data_resid" +
-      "encyB\201\002\n\035com.udb.core.apikey.entity.v1B\020" +
-      "ApiKeyUsageProtoP\001ZEgithub.com/fahara02/" +
-      "udb/sdk/go/gen/udb/core/apikey/entity/v1" +
-      ";entityv1\242\002\004UCAE\252\002\031udb.core.Apikey.Entit" +
-      "y.V1\312\002\031Udb\\Core\\Apikey\\Entity\\V1\342\002%Udb\\G" +
-      "PBMetadata\\Core\\Apikey\\Entity\\V1\352\002\035Udb::" +
-      "Core::Apikey::Entity::V1b\006proto3"
+      "1\n\022idx_aku_key_id_day\022\005BTREEZ\006key_idZ\014re" +
+      "quested_atZ\037FK to udb_authn.api_keys.key" +
+      "_idR\005keyId\022T\n\010endpoint\030\003 \001(\tB8\202\267\0304\n\010endp" +
+      "oint\022\014VARCHAR(200)\030\001Z\030gRPC method or HTT" +
+      "P pathR\010endpoint\022b\n\nip_address\030\004 \001(\tBC\320\265" +
+      "\030\001\340\265\030\001\202\266\030!Rate limiting and abuse detect" +
+      "ion\202\267\030\022\n\nip_address\022\004INETR\tipAddress\022<\n\013" +
+      "http_status\030\005 \001(\005B\033\202\267\030\027\n\013http_status\022\010SM" +
+      "ALLINTR\nhttpStatus\0228\n\nlatency_ms\030\006 \001(\005B\031" +
+      "\202\267\030\025\n\nlatency_ms\022\007INTEGERR\tlatencyMs\022G\n\014" +
+      "rate_limited\030\007 \001(\010B$\202\267\030 \n\014rate_limited\022\007" +
+      "BOOLEAN\030\001:\005FALSER\013rateLimited\022w\n\014request" +
+      "ed_at\030\010 \001(\0132\032.google.protobuf.TimestampB" +
+      "8\202\267\0304\n\014requested_at\022\013TIMESTAMPTZ\030\001:\021CURR" +
+      "ENT_TIMESTAMP`\001h\001R\013requestedAt\022_\n\ttenant" +
+      "_id\030\t \001(\tBB\202\267\030>\n\ttenant_id\022\013VARCHAR(64)\030" +
+      "\001R\037\n\026idx_apikeyusage_tenant\022\005BTREE\230\002\001R\010t" +
+      "enantId:\352\002\372\266\030\317\001\n\016api_key_usages\022\tudb_aut" +
+      "hn\030\005 \001*9Per-request API key usage log fo" +
+      "r rate limiting and audit@\001H\003R\014requested" +
+      "_atX\355\002b^\n\020tenant_isolation\032H(tenant_id::" +
+      "text = current_setting(\'app.current_tena" +
+      "nt_id\', true)::text)(\001\212\262\031\221\001\n\006tenant\032\tten" +
+      "ant_id*4tenant_id = current_setting(\'app" +
+      ".current_tenant_id\')2\004none:\022apikey.opera" +
+      "tional@\355\002H\002R\006tenantZ\010standardr\025tenant.da" +
+      "ta_residencyB\201\002\n\035com.udb.core.apikey.ent" +
+      "ity.v1B\020ApiKeyUsageProtoP\001ZEgithub.com/f" +
+      "ahara02/udb/sdk/go/gen/udb/core/apikey/e" +
+      "ntity/v1;entityv1\242\002\004UCAE\252\002\031udb.core.Apik" +
+      "ey.Entity.V1\312\002\031Udb\\Core\\Apikey\\Entity\\V1" +
+      "\342\002%Udb\\GPBMetadata\\Core\\Apikey\\Entity\\V1" +
+      "\352\002\035Udb::Core::Apikey::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

@@ -139,14 +139,14 @@ var File_udb_core_apikey_entity_v1_api_key_usage_proto protoreflect.FileDescript
 
 const file_udb_core_apikey_entity_v1_api_key_usage_proto_rawDesc = "" +
 	"\n" +
-	"-udb/core/apikey/entity/v1/api_key_usage.proto\x12\x19udb.core.apikey.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xce\t\n" +
+	"-udb/core/apikey/entity/v1/api_key_usage.proto\x12\x19udb.core.apikey.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xd6\t\n" +
 	"\vApiKeyUsage\x12F\n" +
 	"\busage_id\x18\x01 \x01(\tB+\x82\xb7\x18'\n" +
-	"\busage_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\ausageId\x12\xb4\x01\n" +
-	"\x06key_id\x18\x02 \x01(\tB\x9c\x01\x82\xb7\x18\x97\x01\n" +
+	"\busage_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\ausageId\x12\xbc\x01\n" +
+	"\x06key_id\x18\x02 \x01(\tB\xa4\x01\x82\xb7\x18\x9f\x01\n" +
 	"\x06key_id\x12\x04UUID\x18\x01J9\n" +
-	"\bapi_keys\x12\x06key_id\x1a\tudb_authn \x032\x18fk_api_key_usages_key_idR)\n" +
-	"\x12idx_aku_key_id_day\x12\x05BTREEZ\frequested_atZ\x1fFK to udb_authn.api_keys.key_idR\x05keyId\x12T\n" +
+	"\bapi_keys\x12\x06key_id\x1a\tudb_authn \x032\x18fk_api_key_usages_key_idR1\n" +
+	"\x12idx_aku_key_id_day\x12\x05BTREEZ\x06key_idZ\frequested_atZ\x1fFK to udb_authn.api_keys.key_idR\x05keyId\x12T\n" +
 	"\bendpoint\x18\x03 \x01(\tB8\x82\xb7\x184\n" +
 	"\bendpoint\x12\fVARCHAR(200)\x18\x01Z\x18gRPC method or HTTP pathR\bendpoint\x12b\n" +
 	"\n" +
