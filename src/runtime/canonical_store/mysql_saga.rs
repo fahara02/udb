@@ -106,6 +106,7 @@ impl SagaStore for MysqlCanonicalStore {
         let super::sql_schema::MysqlSagasDdl {
             create_table,
             create_idx,
+            create_idx_updated,
         } = super::sql_schema::mysql_sagas_ddl(TABLE);
         sqlx::query(&create_table)
             .execute(self.mysql_pool())
@@ -113,10 +114,12 @@ impl SagaStore for MysqlCanonicalStore {
             .map_err(|e| SystemStoreError::query("mysql", create_table.clone(), e))?;
         // Index creation idempotent across MySQL versions: tolerate
         // "Duplicate key name".
-        if let Err(e) = sqlx::query(&create_idx).execute(self.mysql_pool()).await {
-            let msg = e.to_string();
-            if !msg.contains("Duplicate key name") && !msg.contains("already exists") {
-                return Err(SystemStoreError::query("mysql", create_idx.clone(), e));
+        for sql in [&create_idx, &create_idx_updated] {
+            if let Err(e) = sqlx::query(sql).execute(self.mysql_pool()).await {
+                let msg = e.to_string();
+                if !msg.contains("Duplicate key name") && !msg.contains("already exists") {
+                    return Err(SystemStoreError::query("mysql", sql.clone(), e));
+                }
             }
         }
         Ok(())

@@ -1742,7 +1742,7 @@ impl DataBrokerRuntime {
         limit: i64,
         offset: i64,
     ) -> Result<Vec<crate::runtime::saga::SagaAdminRecord>, tonic::Status> {
-        let store = self.default_system_stores_or_unavailable()?;
+        let store = self.default_system_stores_or_unready()?;
         let config = crate::runtime::system::SystemCatalogConfig::default();
         crate::runtime::saga::list_sagas(
             store.as_ref(),
@@ -1762,35 +1762,44 @@ impl DataBrokerRuntime {
         &self,
         saga_id: &str,
     ) -> Result<crate::runtime::saga::SagaAdminRecord, tonic::Status> {
-        let store = self.default_system_stores_or_unavailable()?;
+        let store = self.default_system_stores_or_unready()?;
         let config = crate::runtime::system::SystemCatalogConfig::default();
         crate::runtime::saga::get_saga(store.as_ref(), &config, saga_id).await
     }
 
     /// Retry compensation for a saga.
     pub async fn retry_saga_compensation_admin(&self, saga_id: &str) -> Result<(), tonic::Status> {
-        let store = self.default_system_stores_or_unavailable()?;
+        let store = self.default_system_stores_or_unready()?;
         let config = crate::runtime::system::SystemCatalogConfig::default();
         crate::runtime::saga::retry_saga_compensation(store.as_ref(), &config, saga_id).await
     }
 
     /// Mark a saga as reviewed.
     pub async fn mark_saga_reviewed_admin(&self, saga_id: &str) -> Result<(), tonic::Status> {
-        let store = self.default_system_stores_or_unavailable()?;
+        let store = self.default_system_stores_or_unready()?;
         let config = crate::runtime::system::SystemCatalogConfig::default();
         crate::runtime::saga::mark_saga_reviewed(store.as_ref(), &config, saga_id).await
     }
 
-    /// NW1-3c helper: resolves the default `SystemStores` trait
-    /// object or returns gRPC `Unavailable` for callers that need a
-    /// canonical store registered.
-    fn default_system_stores_or_unavailable(
+    /// Resolves the default `SystemStores` trait object, or returns gRPC
+    /// `FailedPrecondition` (NOT `Unavailable`) when no canonical store is
+    /// registered.
+    ///
+    /// Rationale (S2): "no canonical store registered" is a permanent
+    /// configuration/provisioning state, not a transient outage — the caller
+    /// must NOT retry until an operator fixes it. `Unavailable` is in the SDK
+    /// retry set, so returning it here made an unprovisioned broker look like a
+    /// ~0.7 s "slow RPC" (4 retries × backoff) on the benchmark dashboard
+    /// instead of a clear, fail-fast precondition error. `FailedPrecondition`
+    /// is the correct gRPC code for "system not in the required state."
+    fn default_system_stores_or_unready(
         &self,
     ) -> Result<std::sync::Arc<dyn crate::runtime::canonical_store::SystemStores>, tonic::Status>
     {
         self.default_system_stores().ok_or_else(|| {
-            tonic::Status::unavailable(
-                "no canonical store is registered; saga admin requires Postgres / MySQL / SQLite",
+            tonic::Status::failed_precondition(
+                "no canonical store is registered; saga/audit admin requires a provisioned \
+                 Postgres / MySQL / SQLite system store (udb_system)",
             )
         })
     }
@@ -2177,7 +2186,7 @@ impl DataBrokerRuntime {
         use crate::runtime::canonical_store::system_store::{
             AdminAuditListFilter, AdminAuditStore,
         };
-        let store = self.default_system_stores_or_unavailable()?;
+        let store = self.default_system_stores_or_unready()?;
         let filter = AdminAuditListFilter {
             operation: (!operation_filter.trim().is_empty()).then(|| operation_filter.to_string()),
             actor: (!actor_filter.trim().is_empty()).then(|| actor_filter.to_string()),
@@ -2233,7 +2242,7 @@ impl DataBrokerRuntime {
         use crate::runtime::canonical_store::system_store::{
             AdminAuditChainReport, AdminAuditStore,
         };
-        let store = self.default_system_stores_or_unavailable()?;
+        let store = self.default_system_stores_or_unready()?;
         let limit_opt = if limit > 0 { Some(limit) } else { None };
         let report = AdminAuditStore::verify_admin_audit_chain(store.as_ref(), limit_opt)
             .await

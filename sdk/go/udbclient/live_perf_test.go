@@ -200,24 +200,55 @@ func TestLivePerf(t *testing.T) {
 		out.WriteString(fmt.Sprintf("| %s | %d | %s |\n", sv, svcCount[sv], (svcMean[sv] / time.Duration(svcCount[sv])).Round(time.Microsecond)))
 	}
 
+	// A non-OK status on the LAST iteration marks the RPC failed. err column carries
+	// the gRPC status code (e.g. UNAVAILABLE, FAILED_PRECONDITION) so a failing RPC is
+	// never reported as a silent latency sample — this is what turns a saga/audit
+	// regression from a "slow RPC" into an obvious FAILURE with its code.
+	errOf := func(s sample) string {
+		if s.errCode != "" && s.errCode != "OK" {
+			return s.errCode
+		}
+		return "OK"
+	}
+
+	// Failures subsection: every RPC whose last iteration returned a non-OK status.
+	failed := make([]sample, 0)
+	for _, s := range samples {
+		if e := errOf(s); e != "OK" {
+			failed = append(failed, s)
+		}
+	}
+	out.WriteString(fmt.Sprintf("\n## Failures (%d)\n\n", len(failed)))
+	if len(failed) == 0 {
+		out.WriteString("No RPC returned a non-OK gRPC status.\n")
+	} else {
+		out.WriteString("These RPCs returned a non-OK gRPC status and are FAILURES, not latency samples.\n\n")
+		out.WriteString("| RPC | kind | err | p99 | mean | iters |\n|---|---|---|---:|---:|---:|\n")
+		sort.Slice(failed, func(i, j int) bool {
+			return failed[i].rpc.Service+"/"+failed[i].rpc.Name < failed[j].rpc.Service+"/"+failed[j].rpc.Name
+		})
+		for _, s := range failed {
+			out.WriteString(fmt.Sprintf("| %s/%s | %s | %s | %s | %s | %d |\n",
+				s.rpc.Service, s.rpc.Name, s.rpc.OperationKind, errOf(s),
+				s.p99.Round(time.Microsecond), s.mean.Round(time.Microsecond), s.iters))
+		}
+	}
+
 	out.WriteString("\n## Slowest 25 RPCs by p99\n\n")
-	out.WriteString("| RPC | kind | p50 | p99 | mean | iters | note |\n|---|---|---:|---:|---:|---:|---|\n")
+	out.WriteString("| RPC | kind | err | p50 | p99 | mean | iters | note |\n|---|---|---|---:|---:|---:|---:|---|\n")
 	sort.Slice(samples, func(i, j int) bool { return samples[i].p99 > samples[j].p99 })
 	for i, s := range samples {
 		if i >= 25 {
 			break
 		}
 		n := s.note
-		if s.errCode != "" {
-			n += " (last code=" + s.errCode + ")"
-		}
-		out.WriteString(fmt.Sprintf("| %s/%s | %s | %s | %s | %s | %d | %s |\n",
-			s.rpc.Service, s.rpc.Name, s.rpc.OperationKind,
+		out.WriteString(fmt.Sprintf("| %s/%s | %s | %s | %s | %s | %s | %d | %s |\n",
+			s.rpc.Service, s.rpc.Name, s.rpc.OperationKind, errOf(s),
 			s.p50.Round(time.Microsecond), s.p99.Round(time.Microsecond), s.mean.Round(time.Microsecond), s.iters, n))
 	}
 
 	out.WriteString("\n## Full per-RPC table (sorted by service, then name)\n\n")
-	out.WriteString("| Service | RPC | kind | p50 | p99 | mean | min | max | iters |\n|---|---|---|---:|---:|---:|---:|---:|---:|\n")
+	out.WriteString("| Service | RPC | kind | err | p50 | p99 | mean | min | max | iters |\n|---|---|---|---|---:|---:|---:|---:|---:|---:|\n")
 	sort.Slice(samples, func(i, j int) bool {
 		if samples[i].rpc.Service != samples[j].rpc.Service {
 			return samples[i].rpc.Service < samples[j].rpc.Service
@@ -225,8 +256,8 @@ func TestLivePerf(t *testing.T) {
 		return samples[i].rpc.Name < samples[j].rpc.Name
 	})
 	for _, s := range samples {
-		out.WriteString(fmt.Sprintf("| %s | %s | %s | %s | %s | %s | %s | %s | %d |\n",
-			s.rpc.Service, s.rpc.Name, s.rpc.OperationKind,
+		out.WriteString(fmt.Sprintf("| %s | %s | %s | %s | %s | %s | %s | %s | %s | %d |\n",
+			s.rpc.Service, s.rpc.Name, s.rpc.OperationKind, errOf(s),
 			s.p50.Round(time.Microsecond), s.p99.Round(time.Microsecond), s.mean.Round(time.Microsecond),
 			s.min.Round(time.Microsecond), s.max.Round(time.Microsecond), s.iters))
 	}
@@ -236,8 +267,8 @@ func TestLivePerf(t *testing.T) {
 		t.Logf("could not write perf_report_go.md: %v", err)
 	}
 	t.Logf("\n%s", report)
-	t.Logf("Go perf: %d RPCs measured (streaming rows = stream-open latency), grand mean per-RPC = %s; report → sdk/go/perf_report_go.md",
-		len(samples), (grand / time.Duration(len(samples))).Round(time.Microsecond))
+	t.Logf("Go perf: %d RPCs measured (streaming rows = stream-open latency), %d FAILED (non-OK gRPC status), grand mean per-RPC = %s; report → sdk/go/perf_report_go.md",
+		len(samples), len(failed), (grand / time.Duration(len(samples))).Round(time.Microsecond))
 }
 
 // openLiveStream establishes a streaming RPC and returns as soon as the stream is

@@ -1248,13 +1248,24 @@ test("live per-RPC perf", {
 
     const authGenerated = (project as any).authGenerated ?? project.generated;
     const itersFor = (kind: string) => (kind === "destructive" ? 1 : kind === "mutation" ? 5 : 25);
-    type Sample = { service: string; rpc: string; kind: string; p50: number; p99: number; mean: number };
+    type Sample = { service: string; rpc: string; kind: string; err: string; p50: number; p99: number; mean: number };
     const samples: Sample[] = [];
 
-    const timeMethod = async (fn: any, request: any): Promise<number> => {
+    // gRPC status code NAME for an error (e.g. "UNAVAILABLE", "FAILED_PRECONDITION"),
+    // reusing the file's grpcCode() extractor; "OK" when there was no error.
+    const codeNameOf = (err: unknown): string => {
+      const code = grpcCode(err);
+      if (code === undefined) return "UNKNOWN";
+      return (grpc.status as any)[code] ?? String(code);
+    };
+
+    // timeMethod returns latency AND the observed gRPC status code so a failing RPC
+    // (non-OK status) is recorded as a FAILURE with its code, never a silent sample.
+    const timeMethod = async (fn: any, request: any): Promise<{ ms: number; err: string }> => {
       const start = performance.now();
-      try { await fn(request, { deadlineMs: 20_000, noRetry: true }); } catch { /* latency still counts */ }
-      return performance.now() - start;
+      let err = "OK";
+      try { await fn(request, { deadlineMs: 20_000, noRetry: true }); } catch (e) { err = codeNameOf(e); }
+      return { ms: performance.now() - start, err };
     };
 
     // Stream-open timer: create the streaming call and tear it down WITHOUT draining
@@ -1287,18 +1298,23 @@ test("live per-RPC perf", {
           if (NON_UNARY_METHODS.has(methodName)) {
             // Measured, not dropped — streaming reports stream-open latency.
             const d = timeStreamOpen(fn, surfaceProbeRequest(tenantId, projectId));
-            samples.push({ service: serviceName, rpc: methodName, kind: "stream_open", p50: d, p99: d, mean: d });
+            samples.push({ service: serviceName, rpc: methodName, kind: "stream_open", err: "OK", p50: d, p99: d, mean: d });
             continue;
           }
           const kind = operationKindOf((api as any).serviceFull, methodName) || "read_only";
           const request = kind !== "destructive" ? surfaceProbeRequest(tenantId, projectId) : {};
           await timeMethod(fn, request); // warm-up
           const durs: number[] = [];
-          for (let i = 0; i < itersFor(kind); i++) durs.push(await timeMethod(fn, request));
+          let errCode = "OK"; // last observed non-OK status marks the RPC failed
+          for (let i = 0; i < itersFor(kind); i++) {
+            const r = await timeMethod(fn, request);
+            durs.push(r.ms);
+            if (r.err !== "OK") errCode = r.err;
+          }
           durs.sort((a, b) => a - b);
           const pct = (p: number) => durs[Math.min(durs.length - 1, Math.floor((p * (durs.length - 1)) / 100))];
           samples.push({
-            service: serviceName, rpc: methodName, kind,
+            service: serviceName, rpc: methodName, kind, err: errCode,
             p50: pct(50), p99: pct(99), mean: durs.reduce((s, d) => s + d, 0) / durs.length,
           });
         }
@@ -1316,13 +1332,25 @@ test("live per-RPC perf", {
     for (const name of [...svc.keys()].sort((a, b) => mean(svc.get(b)!) - mean(svc.get(a)!))) {
       lines.push(`| ${name} | ${svc.get(name)!.length} | ${mean(svc.get(name)!).toFixed(2)} |`);
     }
-    lines.push("", "## Slowest 20 by p99", "", "| RPC | kind | p50 ms | p99 ms | mean ms |", "|---|---|--:|--:|--:|");
+    // Failures subsection: every RPC whose last iteration returned a non-OK gRPC status.
+    const failed = samples.filter((s) => s.err !== "OK");
+    lines.push("", `## Failures (${failed.length})`, "");
+    if (failed.length === 0) {
+      lines.push("No RPC returned a non-OK gRPC status.");
+    } else {
+      lines.push("These RPCs returned a non-OK gRPC status and are FAILURES, not latency samples.");
+      lines.push("", "| RPC | kind | err | p99 ms | mean ms |", "|---|---|---|--:|--:|");
+      for (const s of [...failed].sort((a, b) => (a.service + a.rpc).localeCompare(b.service + b.rpc))) {
+        lines.push(`| ${s.service}/${s.rpc} | ${s.kind} | ${s.err} | ${s.p99.toFixed(2)} | ${s.mean.toFixed(2)} |`);
+      }
+    }
+    lines.push("", "## Slowest 20 by p99", "", "| RPC | kind | err | p50 ms | p99 ms | mean ms |", "|---|---|---|--:|--:|--:|");
     for (const s of [...samples].sort((a, b) => b.p99 - a.p99).slice(0, 20)) {
-      lines.push(`| ${s.service}/${s.rpc} | ${s.kind} | ${s.p50.toFixed(2)} | ${s.p99.toFixed(2)} | ${s.mean.toFixed(2)} |`);
+      lines.push(`| ${s.service}/${s.rpc} | ${s.kind} | ${s.err} | ${s.p50.toFixed(2)} | ${s.p99.toFixed(2)} | ${s.mean.toFixed(2)} |`);
     }
     writeFileSync("perf_report_ts.md", lines.join("\n") + "\n");
     assert.ok(samples.length >= 260, `perf measured only ${samples.length} RPCs (want all 262)`);
-    console.log(`\nTS perf: ${samples.length} RPCs measured → sdk/typescript/perf_report_ts.md`);
+    console.log(`\nTS perf: ${samples.length} RPCs measured, ${failed.length} FAILED (non-OK gRPC status) → sdk/typescript/perf_report_ts.md`);
   } finally {
     project.close();
   }

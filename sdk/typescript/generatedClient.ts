@@ -47,7 +47,7 @@ export interface RetryPolicy {
   initialBackoffMs: number;
   maxBackoffMs: number;
   backoffMultiplier: number;
-  /** gRPC status codes considered transient and therefore retryable. */
+  /** gRPC status codes considered transient for read-only unary RPCs. */
   retryableCodes: grpc.status[];
 }
 
@@ -65,31 +65,15 @@ export const DEFAULT_RETRY_POLICY: RetryPolicy = {
 /**
  * Default @grpc/grpc-js channel options for the long-lived UDB channel. They keep
  * an otherwise idle HTTP/2 connection warm (keepalive) so it does not drop to IDLE
- * and pay a fresh TCP+TLS+HTTP/2 handshake on the next RPC, and attach a native
- * gRPC service-config retry policy (jittered exponential backoff on UNAVAILABLE,
- * bounded by the call deadline). Construct the client ONCE and reuse it; these are
- * then a pure win. Caller-supplied `channelOptions` are spread on top and win.
+ * and pay a fresh TCP+TLS+HTTP/2 handshake on the next RPC. Retries are applied by
+ * this wrapper only when the proto-derived operation_kind marks a unary RPC as
+ * read-only. Caller-supplied `channelOptions` are spread on top and win.
  */
 export const DEFAULT_CHANNEL_OPTIONS: grpc.ChannelOptions = {
   "grpc.keepalive_time_ms": 30_000,
   "grpc.keepalive_timeout_ms": 10_000,
   "grpc.keepalive_permit_without_calls": 1,
   "grpc.http2.max_pings_without_data": 0,
-  "grpc.enable_retries": 1,
-  "grpc.service_config": JSON.stringify({
-    methodConfig: [
-      {
-        name: [{}], // empty name => applies to every method on the channel
-        retryPolicy: {
-          maxAttempts: 4,
-          initialBackoff: "0.1s",
-          maxBackoff: "2s",
-          backoffMultiplier: 2.0,
-          retryableStatusCodes: ["UNAVAILABLE"],
-        },
-      },
-    ],
-  }),
 };
 
 export interface TlsOptions {
@@ -577,7 +561,8 @@ export class UdbCore {
   }
 
   private isRetryable(err: grpc.ServiceError, readOnly: boolean): boolean {
-    if (err.code === grpc.status.DEADLINE_EXCEEDED) return readOnly;
+    if (!readOnly) return false;
+    if (err.code === grpc.status.DEADLINE_EXCEEDED) return true;
     return this.retry.retryableCodes.includes(err.code);
   }
 

@@ -9,6 +9,7 @@ target_*/
 target-*/
 Cargo.lock.bak
 *.pdb
+*.exe
 *.rlib
 *.rmeta
 *.profraw

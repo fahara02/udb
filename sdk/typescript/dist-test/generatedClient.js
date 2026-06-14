@@ -63,7 +63,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.UdbGeneratedClient = exports.UdbCore = exports.RPC_OPERATION_KIND = exports.UdbError = exports.DEFAULT_RETRY_POLICY = exports.UDB_SDK_VERSION = void 0;
+exports.UdbGeneratedClient = exports.UdbCore = exports.RPC_OPERATION_KIND = exports.UdbError = exports.DEFAULT_CHANNEL_OPTIONS = exports.DEFAULT_RETRY_POLICY = exports.UDB_SDK_VERSION = void 0;
 exports.buildAnalyticsServiceApi = buildAnalyticsServiceApi;
 exports.buildApiKeyServiceApi = buildApiKeyServiceApi;
 exports.buildAssetServiceApi = buildAssetServiceApi;
@@ -97,6 +97,19 @@ exports.DEFAULT_RETRY_POLICY = {
         grpc.status.UNAVAILABLE,
         grpc.status.RESOURCE_EXHAUSTED,
     ],
+};
+/**
+ * Default @grpc/grpc-js channel options for the long-lived UDB channel. They keep
+ * an otherwise idle HTTP/2 connection warm (keepalive) so it does not drop to IDLE
+ * and pay a fresh TCP+TLS+HTTP/2 handshake on the next RPC. Retries are applied by
+ * this wrapper only when the proto-derived operation_kind marks a unary RPC as
+ * read-only. Caller-supplied `channelOptions` are spread on top and win.
+ */
+exports.DEFAULT_CHANNEL_OPTIONS = {
+    "grpc.keepalive_time_ms": 30_000,
+    "grpc.keepalive_timeout_ms": 10_000,
+    "grpc.keepalive_permit_without_calls": 1,
+    "grpc.http2.max_pings_without_data": 0,
 };
 /** Clean, typed error surfaced by every generated method. Wraps the underlying
  *  gRPC ServiceError and the decoded UDB error trailer when the server sent one. */
@@ -493,7 +506,8 @@ class UdbCore {
         let stub = this.stubs.get(fullName);
         if (!stub) {
             const Ctor = resolveService(this.loaded, fullName);
-            stub = new Ctor(this.opts.target, this.creds, this.opts.channelOptions ?? {});
+            const channelOptions = { ...exports.DEFAULT_CHANNEL_OPTIONS, ...(this.opts.channelOptions ?? {}) };
+            stub = new Ctor(this.opts.target, this.creds, channelOptions);
             this.stubs.set(fullName, stub);
         }
         return stub;
@@ -523,8 +537,10 @@ class UdbCore {
         return options;
     }
     isRetryable(err, readOnly) {
+        if (!readOnly)
+            return false;
         if (err.code === grpc.status.DEADLINE_EXCEEDED)
-            return readOnly;
+            return true;
         return this.retry.retryableCodes.includes(err.code);
     }
     backoff(attempt) {

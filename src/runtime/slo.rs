@@ -533,6 +533,30 @@ pub fn build_readiness_facts(
         },
     ));
 
+    // S1: a FULL canonical system store (saga / admin-audit / migration /
+    // projection tables) is required whenever a relational write backend is
+    // configured. Missing it = `udb_system` not provisioned, so the
+    // saga/audit/admin RPCs fail-fast with FAILED_PRECONDITION; fail readiness
+    // so health/doctor name it instead of it surfacing only as a per-RPC error.
+    let relational_store_expected = init.postgres_configured
+        || init.mysql_configured
+        || init.sqlite_configured
+        || init.mssql_configured;
+    let system_store_ok = !relational_store_expected || init.full_system_store_registered;
+    facts.push(ReadinessFact::required(
+        "system_store",
+        system_store_ok,
+        if !relational_store_expected {
+            "no relational backend configured; canonical system store not required".to_string()
+        } else if init.full_system_store_registered {
+            "canonical system store registered".to_string()
+        } else {
+            "canonical system store NOT registered — udb_system not provisioned; \
+             saga/audit/admin RPCs return FAILED_PRECONDITION"
+                .to_string()
+        },
+    ));
+
     // ── Auth-plane facts (signing keys / JWKS / casbin / audit sink / policy
     //    snapshot). The caller passes the already-evaluated auth checks; an auth
     //    check failure is required-fail only for the keys/model, optional for the
@@ -738,6 +762,10 @@ mod tests {
     fn pg_only_init() -> RuntimeInitReport {
         RuntimeInitReport {
             postgres_configured: true,
+            // A healthy PG broker provisions udb_system, so the full canonical
+            // store registers — model that so readiness reflects a provisioned
+            // broker (S1). The unregistered case is covered by its own test.
+            full_system_store_registered: true,
             ..RuntimeInitReport::default()
         }
     }
@@ -849,5 +877,41 @@ mod tests {
         let status = native_status("asset", false, false, "");
         let facts = build_readiness_facts(&init, std::slice::from_ref(&status), &[]);
         assert!(facts.get("native.asset").is_none());
+    }
+
+    #[test]
+    fn readiness_fails_when_pg_configured_but_system_store_unregistered() {
+        // S1: a relational backend is configured but the FULL canonical store did
+        // not register (udb_system not provisioned) → readiness FAILS and names
+        // `system_store`, instead of the saga/audit/admin RPCs surfacing it lazily
+        // as a per-RPC FAILED_PRECONDITION.
+        let init = RuntimeInitReport {
+            postgres_configured: true,
+            full_system_store_registered: false,
+            ..RuntimeInitReport::default()
+        };
+        let facts = build_readiness_facts(&init, &[], &[]);
+        assert!(!facts.passed(), "expected readiness to fail");
+        assert!(
+            facts.errors().iter().any(|e| e.starts_with("system_store")),
+            "errors: {:?}",
+            facts.errors()
+        );
+    }
+
+    #[test]
+    fn system_store_not_required_without_relational_backend() {
+        // A pure cache/object deployment (no relational backend) legitimately has
+        // no full canonical store; `system_store` must NOT fail readiness there.
+        let init = RuntimeInitReport {
+            redis_configured: true,
+            full_system_store_registered: false,
+            ..RuntimeInitReport::default()
+        };
+        let facts = build_readiness_facts(&init, &[], &[]);
+        // postgres is still a required fact and will fail, but the system_store
+        // fact itself must be satisfied (not an error).
+        let store_fact = facts.get("system_store").expect("system_store fact present");
+        assert!(store_fact.ok, "system_store should be ok without a relational backend");
     }
 }

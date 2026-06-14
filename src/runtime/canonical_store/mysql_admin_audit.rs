@@ -71,12 +71,13 @@ impl AdminAuditStore for MysqlCanonicalStore {
             create_table,
             idx_op,
             idx_hash,
+            idx_created,
         } = super::sql_schema::mysql_admin_audit_ddl(TABLE);
         sqlx::query(&create_table)
             .execute(self.mysql_pool())
             .await
             .map_err(|e| SystemStoreError::query("mysql", create_table.clone(), e))?;
-        for sql in [&idx_op, &idx_hash] {
+        for sql in [&idx_op, &idx_hash, &idx_created] {
             if let Err(e) = sqlx::query(sql).execute(self.mysql_pool()).await {
                 let msg = e.to_string();
                 if !msg.contains("Duplicate key name") && !msg.contains("already exists") {

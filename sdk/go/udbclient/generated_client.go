@@ -75,12 +75,12 @@ type RetryConfig struct {
 	BaseBackoff  time.Duration // backoff for the first retry
 	MaxBackoff   time.Duration // backoff ceiling
 	Jitter       float64       // 0..1 fraction of randomized jitter added to each backoff
-	RetryOnCodes []codes.Code  // transient codes considered retryable
+	RetryOnCodes []codes.Code  // transient codes retried only for read-only unary RPCs
 }
 
 // DefaultRetryConfig returns the proven UDB defaults: 4 attempts, 100ms base,
-// 5s ceiling, full jitter, retrying only transient codes safe for mutations.
-// DEADLINE_EXCEEDED is admitted separately for read-only RPCs.
+// 5s ceiling, full jitter, retrying only read-only unary RPCs on transient codes.
+// Mutating RPCs are never retried automatically.
 func DefaultRetryConfig() RetryConfig {
 	return RetryConfig{
 		MaxAttempts: 4,
@@ -104,8 +104,11 @@ func (rc RetryConfig) retryable(code codes.Code) bool {
 }
 
 func (rc RetryConfig) retryableForRPC(code codes.Code, readOnly bool) bool {
+	if !readOnly {
+		return false
+	}
 	if code == codes.DeadlineExceeded {
-		return readOnly
+		return true
 	}
 	return rc.retryable(code)
 }

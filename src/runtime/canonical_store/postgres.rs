@@ -189,6 +189,24 @@ impl CanonicalStore for PostgresCanonicalStore {
 
     async fn ensure_system_tables(&self) -> Result<(), String> {
         let rel = self.safe_relation()?;
+        // Create the containing schema BEFORE the outbox table. The outbox
+        // relation is schema-qualified (e.g. `"udb_system"."udb_outbox_events"`)
+        // and `CREATE TABLE IF NOT EXISTS` does not create a missing schema, so
+        // on a brand-new database the bare table DDL fails with
+        // `schema "udb_system" does not exist`. That error is swallowed by the
+        // best-effort registration in `setup_data::register_postgres`, so the
+        // canonical store silently never registers and every saga/audit admin
+        // RPC then returns UNAVAILABLE (masked as ~700 ms by client retries)
+        // while health stays green. Derive the schema from the segment before
+        // the first '.' (already quoted when the relation is quoted; a bare,
+        // unqualified relation lives in the default schema and needs nothing).
+        // Mirrors the guard in `ensure_advisory_lease_table`; `safe_relation`
+        // has already validated the characters, so the formatted name is safe.
+        if let Some((schema, _table)) = rel.split_once('.') {
+            let _ = sqlx::query(&format!("CREATE SCHEMA IF NOT EXISTS {schema}"))
+                .execute(&self.pool)
+                .await;
+        }
         // B.7: outbox DDL comes from the shared `sql_schema` renderer (single
         // source of truth across SQL backends); execute/error-handling below
         // is unchanged.

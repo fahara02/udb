@@ -694,3 +694,62 @@ fn message_descriptor_to_proto(
             .collect(),
     }
 }
+
+// ── B2: GetHealthReport cache contract ────────────────────────────────────────
+#[cfg(test)]
+mod health_cache_tests {
+    use super::*;
+
+    /// B2 (capability-lie guard): the report cache TTL must stay tiny so a
+    /// newly-failing required fact (bad signing key, missing PG/store) cannot be
+    /// masked by a stale cached `passed=true` for more than a few seconds.
+    #[test]
+    fn health_cache_ttl_is_short_enough_to_not_mask_failures() {
+        assert!(
+            HEALTH_REPORT_CACHE_TTL_SECS <= 5,
+            "health cache TTL must stay tiny (capability-lie guard): {HEALTH_REPORT_CACHE_TTL_SECS}s"
+        );
+    }
+
+    /// B2 (cache keying): the key is `(project_scope, with_probes)`, so a
+    /// probe-less request, a different probe mode, or a different project must
+    /// NOT read another variant's cached report.
+    #[test]
+    fn health_cache_key_separates_project_scope_and_probe_mode() {
+        let now = std::time::Instant::now();
+        let yes = HealthReportResponse {
+            passed: true,
+            ..Default::default()
+        };
+        let no = HealthReportResponse {
+            passed: false,
+            ..Default::default()
+        };
+        let k_probe = ("b2-cache-proj".to_string(), true);
+        let k_noprobe = ("b2-cache-proj".to_string(), false);
+        {
+            let mut cache = health_report_cache().lock().unwrap();
+            cache.insert(k_probe.clone(), (now, yes));
+            cache.insert(k_noprobe.clone(), (now, no));
+        }
+        {
+            let cache = health_report_cache().lock().unwrap();
+            assert!(
+                cache.get(&k_probe).unwrap().1.passed,
+                "with_probes=true variant"
+            );
+            assert!(
+                !cache.get(&k_noprobe).unwrap().1.passed,
+                "with_probes=false must be a distinct cache entry"
+            );
+            assert!(
+                cache.get(&("b2-other-proj".to_string(), true)).is_none(),
+                "a different project scope must not collide"
+            );
+        }
+        // Don't pollute the process-global cache for the live handler.
+        let mut cache = health_report_cache().lock().unwrap();
+        cache.remove(&k_probe);
+        cache.remove(&k_noprobe);
+    }
+}

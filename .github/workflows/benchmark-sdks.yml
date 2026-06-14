@@ -328,6 +328,7 @@ jobs:
             sdk/python/perf_report_python.md
             sdk/typescript/perf_report_ts.md
             sdk/php/perf_report_php.md
+            /tmp/udb-bench.log
           if-no-files-found: ignore
 
       - uses: actions/configure-pages@v5

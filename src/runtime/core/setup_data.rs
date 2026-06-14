@@ -177,6 +177,38 @@ impl DataBrokerRuntime {
         }
         assert_pg_outbox_receipt_store_consistency(&runtime);
 
+        // S1 (luna): all store registration is done; record whether a FULL
+        // canonical system store (saga / admin-audit / migration / projection
+        // tables) actually registered as the default. If a relational write
+        // backend is configured but no full store registered, `udb_system` was
+        // not provisioned (`ensure_full_system_store_tables` failed) and the
+        // saga/audit/admin RPCs would return `FAILED_PRECONDITION` at request
+        // time. Surface it LOUDLY at boot + as a failing readiness fact
+        // (`slo::build_readiness_facts`) instead of silently per-RPC.
+        report.full_system_store_registered = runtime
+            .canonical_stores
+            .lock()
+            .ok()
+            .and_then(|stores| stores.default_full_store())
+            .is_some();
+        let relational_store_expected = report.postgres_configured
+            || report.mysql_configured
+            || report.sqlite_configured
+            || report.mssql_configured;
+        if relational_store_expected && !report.full_system_store_registered {
+            tracing::error!(
+                "no canonical system store registered despite a relational backend being \
+                 configured — udb_system is likely not provisioned \
+                 (ensure_full_system_store_tables failed). Saga/audit/admin RPCs will return \
+                 FAILED_PRECONDITION until this is fixed."
+            );
+            report.warnings.push(
+                "CRITICAL: no canonical system store registered (udb_system not provisioned?); \
+                 saga/audit/admin RPCs return FAILED_PRECONDITION"
+                    .to_string(),
+            );
+        }
+
         match EncryptionRuntime::from_settings(&config.encryption).await {
             Ok(Some(encryption)) => {
                 report.encryption_configured = true;

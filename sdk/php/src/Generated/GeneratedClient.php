@@ -47,7 +47,7 @@ use Grpc\ChannelCredentials;
  */
 final class GeneratedClient
 {
-    /** gRPC status codes that are safe to retry for mutating calls. */
+    /** gRPC status codes retried only for read-only unary calls. */
     private const RETRYABLE_CODES = [
         14, // UNAVAILABLE
         8,  // RESOURCE_EXHAUSTED
@@ -5897,8 +5897,11 @@ final class GeneratedClient
 
     private function isRetryable(int $code, bool $readOnly): bool
     {
+        if (! $readOnly) {
+            return false;
+        }
         if ($code === 4) { // DEADLINE_EXCEEDED
-            return $readOnly;
+            return true;
         }
         return in_array($code, self::RETRYABLE_CODES, true);
     }

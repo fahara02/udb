@@ -54,8 +54,8 @@ __all__ = [
     # @@UDB_SERVICE_END
 ]
 
-# Default set of gRPC status codes that are safe to retry for mutating RPCs.
-# DEADLINE_EXCEEDED is gated separately to read-only RPCs.
+# Default set of gRPC status codes retried only for read-only unary RPCs.
+# Mutating RPCs are never retried automatically.
 _RETRYABLE_CODES: frozenset[grpc.StatusCode] = frozenset(
     {
         grpc.StatusCode.UNAVAILABLE,
@@ -80,10 +80,10 @@ class RetryPolicy:
     retryable_codes: frozenset[grpc.StatusCode] = field(default_factory=lambda: _RETRYABLE_CODES)
 
     def should_retry(self, code: grpc.StatusCode, attempt: int, *, read_only: bool) -> bool:
-        if attempt >= self.max_attempts:
+        if attempt >= self.max_attempts or not read_only:
             return False
         if code == grpc.StatusCode.DEADLINE_EXCEEDED:
-            return read_only
+            return True
         return code in self.retryable_codes
 
     def backoff_for(self, attempt: int) -> float:

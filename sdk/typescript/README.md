@@ -97,8 +97,8 @@ Channels are created with `UDB_DEFAULT_CHANNEL_OPTIONS` (exported from
 - **Keepalive** (`grpc.keepalive_time_ms=30000`, `grpc.keepalive_timeout_ms=10000`,
   `grpc.keepalive_permit_without_calls=1`) so an idle connection stays warm instead
   of dropping to IDLE and re-handshaking.
-- A native gRPC **service-config retry** on `UNAVAILABLE` (4 attempts, 0.1s initial
-  backoff, 2s ceiling, x2 multiplier, ~20% jitter, bounded by the call deadline).
+- No channel-wide retry policy. Generated wrappers retry only read-only unary RPCs
+  using proto-derived `operation_kind`; mutating RPCs are never replayed by default.
 
 Pass `channelOptions` in the client/project options to override any of these; your
 values are spread on top of the defaults and win.

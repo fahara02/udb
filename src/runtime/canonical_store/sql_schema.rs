@@ -242,6 +242,17 @@ pub(crate) fn postgres_sagas_ddl(rel: &str) -> Vec<String> {
             r#"CREATE INDEX IF NOT EXISTS "idx_udb_sagas_tenant_status"
                      ON {rel} (tenant_id, status, updated_at DESC)"#
         ),
+        // L2: the composite `(tenant_id, status, updated_at)` index cannot order
+        // an UNFILTERED `ListSagas` (`ORDER BY updated_at DESC LIMIT n`) — its
+        // leading columns aren't constrained — so that query degrades to a Seq
+        // Scan + Sort as the table grows. A standalone `(updated_at DESC)` index
+        // serves the admin list as a bounded backward index scan. (The saga path
+        // is not the CI 700ms cause — that was store-not-registered — this is
+        // latent scale hygiene, same class as L1.)
+        format!(
+            r#"CREATE INDEX IF NOT EXISTS "idx_udb_sagas_updated"
+                     ON {rel} (updated_at DESC)"#
+        ),
     ]
 }
 
@@ -252,6 +263,9 @@ pub(crate) fn postgres_sagas_ddl(rel: &str) -> Vec<String> {
 pub(crate) struct MysqlSagasDdl {
     pub create_table: String,
     pub create_idx: String,
+    /// L2: standalone `(updated_at)` for the unfiltered admin `ListSagas`
+    /// (the composite `(tenant_id, status, updated_at)` can't order it).
+    pub create_idx_updated: String,
 }
 
 pub(crate) fn mysql_sagas_ddl(table: &str) -> MysqlSagasDdl {
@@ -284,6 +298,9 @@ pub(crate) fn mysql_sagas_ddl(table: &str) -> MysqlSagasDdl {
         create_idx: format!(
             "CREATE INDEX idx_{table_name}_tenant_status \
              ON {table_name} (tenant_id, status, updated_at)"
+        ),
+        create_idx_updated: format!(
+            "CREATE INDEX idx_{table_name}_updated ON {table_name} (updated_at)"
         ),
     }
 }
@@ -321,6 +338,12 @@ pub(crate) fn sqlite_sagas_ddl(table: &str) -> Vec<String> {
         format!(
             "CREATE INDEX IF NOT EXISTS idx_{table_name}_tenant_status \
              ON {table_name} (tenant_id, status, updated_at DESC)"
+        ),
+        // L2 (SQLite parity): standalone `(updated_at DESC)` for the unfiltered
+        // admin `ListSagas` so it doesn't scan+sort as the table grows.
+        format!(
+            "CREATE INDEX IF NOT EXISTS idx_{table_name}_updated \
+             ON {table_name} (updated_at DESC)"
         ),
     ]
 }
@@ -690,6 +713,18 @@ pub(crate) fn postgres_admin_audit_ddl(rel: &str) -> Vec<String> {
             r#"CREATE INDEX IF NOT EXISTS "idx_udb_admin_audit_log_hash"
                      ON {rel} (current_hash)"#
         ),
+        // L1: one `(created_at, audit_id)` btree serves all three unfiltered
+        // chronological paths so none degrades to a Seq Scan + Sort as the
+        // (un-prunable hash-chain) table grows: the chain-tail lookup before
+        // EVERY audited write (`ORDER BY created_at DESC, audit_id DESC LIMIT 1`,
+        // a backward index scan), `ListAdminAuditLogs` (`created_at DESC`), and
+        // `VerifyAdminAuditLog` (`created_at ASC, audit_id ASC`, a forward scan).
+        // Without it the existing `(operation, created_at)` index can't order an
+        // unfiltered query, so audit-write latency grows with the table.
+        format!(
+            r#"CREATE INDEX IF NOT EXISTS "idx_udb_admin_audit_log_created"
+                     ON {rel} (created_at, audit_id)"#
+        ),
     ]
 }
 
@@ -701,6 +736,9 @@ pub(crate) struct MysqlAdminAuditDdl {
     pub create_table: String,
     pub idx_op: String,
     pub idx_hash: String,
+    /// L1: `(created_at, audit_id)` — serves the chain-tail lookup + unfiltered
+    /// list/verify so audit-write latency stays flat as the table grows.
+    pub idx_created: String,
 }
 
 pub(crate) fn mysql_admin_audit_ddl(table: &str) -> MysqlAdminAuditDdl {
@@ -728,6 +766,9 @@ pub(crate) fn mysql_admin_audit_ddl(table: &str) -> MysqlAdminAuditDdl {
         ),
         idx_op: format!("CREATE INDEX idx_{table_name}_op ON {table_name} (operation, created_at)"),
         idx_hash: format!("CREATE INDEX idx_{table_name}_hash ON {table_name} (current_hash)"),
+        idx_created: format!(
+            "CREATE INDEX idx_{table_name}_created ON {table_name} (created_at, audit_id)"
+        ),
     }
 }
 
@@ -762,6 +803,13 @@ pub(crate) fn sqlite_admin_audit_ddl(table: &str) -> Vec<String> {
              ON {table_name} (operation, created_at DESC)"
         ),
         format!("CREATE INDEX IF NOT EXISTS idx_{table_name}_hash ON {table_name} (current_hash)"),
+        // L1 (SQLite parity): `(created_at, audit_id)` serves the chain-tail
+        // lookup on every audited write + the unfiltered list/verify scans, so
+        // audit-write latency stays flat as the hash-chain table grows.
+        format!(
+            "CREATE INDEX IF NOT EXISTS idx_{table_name}_created \
+             ON {table_name} (created_at, audit_id)"
+        ),
     ]
 }
 
@@ -1163,6 +1211,10 @@ mod tests {
                 r#"CREATE INDEX IF NOT EXISTS "idx_udb_sagas_tenant_status"
                      ON {rel} (tenant_id, status, updated_at DESC)"#
             ),
+            format!(
+                r#"CREATE INDEX IF NOT EXISTS "idx_udb_sagas_updated"
+                     ON {rel} (updated_at DESC)"#
+            ),
         ];
         assert_eq!(postgres_sagas_ddl(rel), expected);
     }
@@ -1199,9 +1251,12 @@ mod tests {
             "CREATE INDEX idx_{TABLE}_tenant_status \
              ON {TABLE} (tenant_id, status, updated_at)"
         );
+        let create_idx_updated =
+            format!("CREATE INDEX idx_{TABLE}_updated ON {TABLE} (updated_at)");
         let got = mysql_sagas_ddl(TABLE);
         assert_eq!(got.create_table, create_table);
         assert_eq!(got.create_idx, create_idx);
+        assert_eq!(got.create_idx_updated, create_idx_updated);
     }
 
     /// Byte-identical gate for the SQLite sagas store.
@@ -1236,6 +1291,10 @@ mod tests {
             format!(
                 "CREATE INDEX IF NOT EXISTS idx_{TABLE}_tenant_status \
              ON {TABLE} (tenant_id, status, updated_at DESC)"
+            ),
+            format!(
+                "CREATE INDEX IF NOT EXISTS idx_{TABLE}_updated \
+             ON {TABLE} (updated_at DESC)"
             ),
         ];
         assert_eq!(sqlite_sagas_ddl(TABLE), expected);
@@ -1580,6 +1639,10 @@ mod tests {
                 r#"CREATE INDEX IF NOT EXISTS "idx_udb_admin_audit_log_hash"
                      ON {rel} (current_hash)"#
             ),
+            format!(
+                r#"CREATE INDEX IF NOT EXISTS "idx_udb_admin_audit_log_created"
+                     ON {rel} (created_at, audit_id)"#
+            ),
         ];
         assert_eq!(postgres_admin_audit_ddl(rel), expected);
     }
@@ -1610,10 +1673,13 @@ mod tests {
         );
         let idx_op = format!("CREATE INDEX idx_{TABLE}_op ON {TABLE} (operation, created_at)");
         let idx_hash = format!("CREATE INDEX idx_{TABLE}_hash ON {TABLE} (current_hash)");
+        let idx_created =
+            format!("CREATE INDEX idx_{TABLE}_created ON {TABLE} (created_at, audit_id)");
         let got = mysql_admin_audit_ddl(TABLE);
         assert_eq!(got.create_table, create_table);
         assert_eq!(got.idx_op, idx_op);
         assert_eq!(got.idx_hash, idx_hash);
+        assert_eq!(got.idx_created, idx_created);
     }
 
     /// Byte-identical gate for the SQLite admin-audit store.
@@ -1646,6 +1712,10 @@ mod tests {
              ON {TABLE} (operation, created_at DESC)"
             ),
             format!("CREATE INDEX IF NOT EXISTS idx_{TABLE}_hash ON {TABLE} (current_hash)"),
+            format!(
+                "CREATE INDEX IF NOT EXISTS idx_{TABLE}_created \
+             ON {TABLE} (created_at, audit_id)"
+            ),
         ];
         assert_eq!(sqlite_admin_audit_ddl(TABLE), expected);
     }

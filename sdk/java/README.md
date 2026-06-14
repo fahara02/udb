@@ -102,9 +102,8 @@ Channels are built via `dev.udb.client.UdbChannels`, which applies:
 - **Keepalive** (`keepAliveTime(30s)`, `keepAliveTimeout(10s)`,
   `keepAliveWithoutCalls(true)`) so an idle connection stays warm instead of
   dropping to IDLE and re-handshaking.
-- A native gRPC **service-config retry** on `UNAVAILABLE` (4 attempts, 0.1s initial
-  backoff, 2s ceiling, x2 multiplier, jittered, bounded by the call deadline), via
-  `enableRetry()` + `defaultServiceConfig(...)`.
+- No channel-wide retry policy. Generated wrappers retry only read-only unary RPCs
+  using proto-derived `operation_kind`; mutating RPCs are never replayed by default.
 
 If you build a `ManagedChannel` yourself, pass it through
 `UdbChannels.tune(builder)` (or use `UdbChannels.forTarget(target, tls)`) to get the

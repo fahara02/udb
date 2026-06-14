@@ -106,7 +106,8 @@
       ["SDKs OK", count(summary.ok)],
       ["Failed", count(summary.failed)],
       ["Skipped", count(summary.skipped)],
-      ["Measured RPCs", count(summary.measured_rpc_count)]
+      ["Measured RPCs", count(summary.measured_rpc_count)],
+      ["Failed RPCs", count(summary.failed_rpc_count)]
     ].map(function (x) {
       return '<div class="bench-kpi"><span>' + esc(x[0]) + '</span><b>' + esc(x[1]) + '</b></div>';
     }).join("");
@@ -129,15 +130,29 @@
 
     var slowRows = [];
     (data.sdks || []).forEach(function (s) {
+      var seen = {};
+      // Failed RPCs first — a non-OK gRPC status is a FAILURE, never a latency sample.
+      (s.failed_rpcs || []).forEach(function (r) {
+        seen[r.rpc] = true;
+        slowRows.push({ sdk: s.name, row: r, failed: true });
+      });
       (s.slowest || []).slice(0, 8).forEach(function (r) {
-        slowRows.push({ sdk: s.name, row: r });
+        if (seen[r.rpc]) return;
+        slowRows.push({ sdk: s.name, row: r, failed: !!r.err_code });
       });
     });
-    slowRows.sort(function (a, b) { return (b.row.p99_ms || 0) - (a.row.p99_ms || 0); });
+    // Failures float to the top; then sort the rest by p99 descending.
+    slowRows.sort(function (a, b) {
+      if (a.failed !== b.failed) return a.failed ? -1 : 1;
+      return (b.row.p99_ms || 0) - (a.row.p99_ms || 0);
+    });
     $("bench-slowest-rows").innerHTML = slowRows.slice(0, 40).map(function (x) {
       var r = x.row;
+      var p99Cell = x.failed
+        ? '<td><span class="bench-status fail">FAILED (' + esc(r.err_code || "ERR") + ')</span></td>'
+        : '<td class="n">' + ms(r.p99_ms) + '</td>';
       return '<tr><td>' + esc(x.sdk) + '</td><td><code>' + esc(r.rpc) + '</code></td><td>' + esc(r.kind) + '</td>' +
-        '<td class="n">' + ms(r.p50_ms) + '</td><td class="n">' + ms(r.p99_ms) + '</td><td class="n">' + ms(r.mean_ms) + '</td></tr>';
+        '<td class="n">' + ms(r.p50_ms) + '</td>' + p99Cell + '<td class="n">' + ms(r.mean_ms) + '</td></tr>';
     }).join("");
 
     renderCurve(data);

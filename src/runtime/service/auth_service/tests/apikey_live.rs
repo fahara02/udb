@@ -79,6 +79,109 @@ async fn live_postgres_apikey_roundtrip() {
     cleanup_native_auth_db(&pool).await;
 }
 
+// ── B1: ValidateApiKey hot-path ───────────────────────────────────────────────
+
+/// B1 (composite index): the `api_key_usages` index `idx_aku_key_id_day` must be
+/// a COMPOSITE on `(key_id, requested_at)` so the trailing-window rate-limit
+/// COUNT is index-only, not a `requested_at`-only scan across all keys. The DDL
+/// is proto-derived, so this asserts the generated index over a live Postgres.
+#[tokio::test]
+#[ignore = "requires live Postgres; run with UDB_LIVE_AUTH_TESTS=1 cargo test --lib live_postgres_apikey_usage_composite_index -- --ignored --nocapture"]
+async fn live_postgres_apikey_usage_composite_index() {
+    let _guard = live_auth_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_auth_db(&pool).await;
+    let def: String = sqlx::query_scalar(
+        "SELECT indexdef FROM pg_indexes WHERE indexname = 'idx_aku_key_id_day'",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("idx_aku_key_id_day must exist on api_key_usages");
+    let lower = def.to_lowercase();
+    let ki = lower
+        .find("key_id")
+        .unwrap_or_else(|| panic!("index must cover key_id: {def}"));
+    let ra = lower
+        .find("requested_at")
+        .unwrap_or_else(|| panic!("index must cover requested_at: {def}"));
+    assert!(
+        ki < ra,
+        "index must be composite with key_id LEADING requested_at: {def}"
+    );
+    cleanup_native_auth_db(&pool).await;
+}
+
+/// B1 (off-hot-path write): `ValidateApiKey` returns the decision immediately,
+/// then persists the usage row in a detached `tokio::spawn`. Prove the spawned
+/// write (a) still lands and (b) is non-fatal — the validate succeeded above
+/// regardless. (The rate-limit COUNT runs synchronously BEFORE the spawn, so a
+/// key never counts itself; that ordering is structural — this test guards the
+/// persistence + non-fatal contract that the spawn must keep.)
+#[tokio::test]
+#[ignore = "requires live Postgres; run with UDB_LIVE_AUTH_TESTS=1 cargo test --lib live_postgres_apikey_validate_records_usage -- --ignored --nocapture"]
+async fn live_postgres_apikey_validate_records_usage() {
+    let _guard = live_auth_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_auth_db(&pool).await;
+    let svc = api_key_service(pool.clone());
+    let principal_id = Uuid::new_v4().to_string();
+    let created = svc
+        .create_api_key(Request::new(apikey_pb::CreateApiKeyRequest {
+            name: "usage-key".to_string(),
+            owner_id: principal_id.clone(),
+            scopes: vec!["data:read".to_string()],
+            context: Some(common_pb::RequestContext {
+                principal_id: principal_id.clone(),
+                tenant: Some(common_pb::TenantContext {
+                    tenant_id: "acme".to_string(),
+                    project_id: "billing".to_string(),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            }),
+            ..Default::default()
+        }))
+        .await
+        .expect("create API key")
+        .into_inner();
+
+    let count_usages = |pool: sqlx::PgPool| async move {
+        sqlx::query_scalar::<_, i64>("SELECT COUNT(*)::bigint FROM udb_authn.api_key_usages")
+            .fetch_one(&pool)
+            .await
+            .unwrap_or(0)
+    };
+    let before = count_usages(pool.clone()).await;
+
+    let valid = svc
+        .validate_api_key(Request::new(apikey_pb::ValidateApiKeyRequest {
+            plain_key: created.plain_key.clone(),
+            required_scope: "data:read".to_string(),
+            endpoint: "/b1-test".to_string(),
+            ..Default::default()
+        }))
+        .await
+        .expect("validate must succeed independent of the detached usage write")
+        .into_inner();
+    assert!(valid.valid, "ValidateApiKey returned invalid for a good key");
+
+    // The usage write is detached; poll until it lands (proves it persists and
+    // is non-fatal — the response already returned).
+    let mut after = before;
+    for _ in 0..50 {
+        after = count_usages(pool.clone()).await;
+        if after > before {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    }
+    assert!(
+        after > before,
+        "the detached ValidateApiKey usage write must persist a row (before={before}, after={after})"
+    );
+    cleanup_native_auth_db(&pool).await;
+}
+
 #[tokio::test]
 #[ignore = "requires live Postgres; run with UDB_LIVE_AUTH_TESTS=1 cargo test --lib live_postgres_apikey_admin_lifecycle -- --ignored --nocapture"]
 async fn live_postgres_apikey_admin_lifecycle() {

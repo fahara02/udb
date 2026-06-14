@@ -75,7 +75,7 @@ function loadAuth(target, protoRoot, opts = {}) {
     const authn = grpc.loadPackageDefinition(authnDef);
     const authz = grpc.loadPackageDefinition(authzDef);
     const creds = buildCredentials(opts);
-    const channelOptions = opts.channelOptions ?? {};
+    const channelOptions = { ...client_1.UDB_DEFAULT_CHANNEL_OPTIONS, ...(opts.channelOptions ?? {}) };
     return {
         authn: new authn.udb.core.authn.services.v1.AuthnService(target, creds, channelOptions),
         authz: new authz.udb.core.authz.services.v1.AuthzService(target, creds, channelOptions),

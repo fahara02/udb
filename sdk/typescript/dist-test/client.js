@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.UDB_PROTOCOL_VERSION = void 0;
+exports.UDB_DEFAULT_CHANNEL_OPTIONS = exports.UDB_PROTOCOL_VERSION = void 0;
 exports.metadata = metadata;
 exports.dataBrokerClient = dataBrokerClient;
 const grpc = __importStar(require("@grpc/grpc-js"));
@@ -61,6 +61,15 @@ function metadata(meta) {
         headers.set("x-api-key", meta.apiKey);
     return headers;
 }
+// Default channel options for the long-lived UDB channel: keepalive keeps an idle
+// HTTP/2 connection warm instead of dropping to IDLE and re-handshaking. Retries
+// are handled by the generated wrapper where proto-derived operation_kind is known.
+exports.UDB_DEFAULT_CHANNEL_OPTIONS = {
+    "grpc.keepalive_time_ms": 30_000,
+    "grpc.keepalive_timeout_ms": 10_000,
+    "grpc.keepalive_permit_without_calls": 1,
+    "grpc.http2.max_pings_without_data": 0,
+};
 function dataBrokerClient(target, protoRoot = (0, protoRoot_1.defaultProtoRoot)()) {
     const protoPath = path_1.default.join(protoRoot, "udb/services/v1/data_broker.proto");
     const definition = protoLoader.loadSync(protoPath, {
@@ -71,5 +80,5 @@ function dataBrokerClient(target, protoRoot = (0, protoRoot_1.defaultProtoRoot)(
         oneofs: true,
     });
     const loaded = grpc.loadPackageDefinition(definition);
-    return new loaded.udb.services.v1.DataBroker(target, grpc.credentials.createInsecure());
+    return new loaded.udb.services.v1.DataBroker(target, grpc.credentials.createInsecure(), exports.UDB_DEFAULT_CHANNEL_OPTIONS);
 }

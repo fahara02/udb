@@ -129,6 +129,13 @@ pub struct RuntimeInitReport {
     /// C9: GCS primary configured via UDB_GCS_DSN.
     pub gcs_configured: bool,
     pub backend_instances: Vec<RuntimeBackendInstance>,
+    /// S1: a full canonical system store (saga / admin-audit / migration-audit /
+    /// projection tables) actually registered as the default `SystemStores`.
+    /// `false` while a relational backend is configured means `udb_system` was
+    /// not provisioned (`ensure_full_system_store_tables` failed) → the
+    /// saga/audit/admin RPCs fail-fast with `FAILED_PRECONDITION`. Surfaced as a
+    /// failing readiness fact (`slo::build_readiness_facts`) + a loud boot log.
+    pub full_system_store_registered: bool,
     pub warnings: Vec<String>,
 }
 
@@ -987,6 +994,90 @@ pub(crate) async fn reset_request_local_settings_conn(
         tonic::Status::internal(format!("failed to reset request database context: {err}"))
     })?;
     Ok(())
+}
+
+#[allow(clippy::items_after_test_module)]
+#[cfg(test)]
+mod rls_conn_leak_tests {
+    use super::*;
+
+    fn ctx_for(tenant: &str) -> RequestContext {
+        RequestContext {
+            tenant_id: tenant.to_string(),
+            project_id: "p".to_string(),
+            correlation_id: "rls-leak-test".to_string(),
+            ..Default::default()
+        }
+    }
+
+    async fn current_tenant_guc(
+        conn: &mut sqlx::pool::PoolConnection<sqlx::Postgres>,
+    ) -> String {
+        let val: Option<String> =
+            sqlx::query_scalar("SELECT current_setting('app.current_tenant_id', true)")
+                .fetch_one(&mut **conn)
+                .await
+                .expect("read app.current_tenant_id");
+        val.unwrap_or_default()
+    }
+
+    /// B3: the session-GUC RLS read path must NOT leak a tenant's context onto a
+    /// pooled connection. Proves, on a live Postgres connection:
+    ///   1. `set` installs `app.current_tenant_id` (the read path can see its tenant);
+    ///   2. `reset` CLEARS it — so the next pool user inherits no residual tenant
+    ///      (the cross-tenant-leak guard the txn-drop relies on);
+    ///   3. `set(B)` after `set(A)` OVERWRITES — defense-in-depth, since every
+    ///      request re-applies its own context before querying.
+    /// Env-gated on a live PG DSN (the CI live-DB job); a no-op otherwise.
+    #[tokio::test]
+    async fn rls_session_settings_reset_and_overwrite_no_cross_tenant_leak() {
+        let Some(dsn) = std::env::var("UDB_PG_DSN")
+            .ok()
+            .or_else(|| std::env::var("DATABASE_URL").ok())
+        else {
+            eprintln!("skipping B3 RLS leak test: set UDB_PG_DSN / DATABASE_URL");
+            return;
+        };
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(2)
+            .connect(&dsn)
+            .await
+            .expect("connect live PG");
+        let mut conn = pool.acquire().await.expect("acquire");
+
+        // (1) set(A) is visible on this connection.
+        set_request_local_settings_conn(&mut conn, &ctx_for("tenant-A"))
+            .await
+            .expect("set A");
+        assert_eq!(current_tenant_guc(&mut conn).await, "tenant-A");
+
+        // (2) reset CLEARS it — no residual tenant leaks to the next pool user.
+        reset_request_local_settings_conn(&mut conn, &ctx_for("tenant-A"))
+            .await
+            .expect("reset A");
+        assert_eq!(
+            current_tenant_guc(&mut conn).await,
+            "",
+            "reset must clear app.current_tenant_id (cross-tenant leak guard)"
+        );
+
+        // (3) set(A) then set(B) without an intervening reset → B overwrites A.
+        set_request_local_settings_conn(&mut conn, &ctx_for("tenant-A"))
+            .await
+            .expect("set A again");
+        set_request_local_settings_conn(&mut conn, &ctx_for("tenant-B"))
+            .await
+            .expect("set B");
+        assert_eq!(
+            current_tenant_guc(&mut conn).await,
+            "tenant-B",
+            "a later set must overwrite the prior tenant (overwrite-before-use)"
+        );
+
+        reset_request_local_settings_conn(&mut conn, &ctx_for("tenant-B"))
+            .await
+            .expect("reset B");
+    }
 }
 
 #[allow(clippy::items_after_test_module)]

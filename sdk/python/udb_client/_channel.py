@@ -7,10 +7,8 @@ channel behave well:
 
 * **Keepalive** so an otherwise idle HTTP/2 connection does not drop to IDLE
   (gRPC default ~300s) and pay a fresh TCP+TLS+HTTP/2 handshake on the next RPC.
-* A native gRPC **service-config retry policy** (jittered exponential backoff,
-  ``UNAVAILABLE`` only, bounded by the call deadline) so transient broker blips
-  do not surface as errors. This is the transport-level retry; the generated
-  layer additionally applies an app-level retry for read-safe RPCs.
+* No channel-wide retry policy. Retries are applied by the generated layer only
+  when proto-derived operation_kind marks a unary RPC as read-only.
 
 User-supplied ``channel_options`` always win: :func:`merge_channel_options`
 appends them after the defaults so a caller can override any single key.
@@ -18,7 +16,6 @@ appends them after the defaults so a caller can override any single key.
 
 from __future__ import annotations
 
-import json
 from typing import Any, Sequence
 
 # Keepalive (milliseconds). Ping an idle connection every 30s, give the ack 10s,
@@ -26,27 +23,8 @@ from typing import Any, Sequence
 KEEPALIVE_TIME_MS = 30_000
 KEEPALIVE_TIMEOUT_MS = 10_000
 
-# Native gRPC service-config retry: 4 attempts, 0.1s base, 2s ceiling, x2 growth,
-# only on UNAVAILABLE. gRPC applies ~20% jitter to each backoff internally and
-# bounds the whole sequence by the call deadline.
-_RETRY_SERVICE_CONFIG = {
-    "methodConfig": [
-        {
-            "name": [{}],  # empty name = applies to every method on the channel
-            "retryPolicy": {
-                "maxAttempts": 4,
-                "initialBackoff": "0.1s",
-                "maxBackoff": "2s",
-                "backoffMultiplier": 2.0,
-                "retryableStatusCodes": ["UNAVAILABLE"],
-            },
-        }
-    ]
-}
-
-
 def default_channel_options() -> list[tuple[str, Any]]:
-    """Return UDB's default gRPC channel options (keepalive + retry).
+    """Return UDB's default gRPC channel options (keepalive only).
 
     Suitable to pass directly as ``options=`` to ``grpc.insecure_channel`` /
     ``grpc.secure_channel`` (and their ``grpc.aio`` equivalents).
@@ -57,8 +35,6 @@ def default_channel_options() -> list[tuple[str, Any]]:
         ("grpc.keepalive_timeout_ms", KEEPALIVE_TIMEOUT_MS),
         ("grpc.keepalive_permit_without_calls", 1),
         ("grpc.http2.max_pings_without_data", 0),
-        ("grpc.enable_retries", 1),
-        ("grpc.service_config", json.dumps(_RETRY_SERVICE_CONFIG)),
     ]
 
 

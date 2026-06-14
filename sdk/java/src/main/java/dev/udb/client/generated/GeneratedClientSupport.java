@@ -45,7 +45,7 @@ public final class GeneratedClientSupport {
 
   private GeneratedClientSupport() {}
 
-  /** gRPC status codes treated as transient for mutating calls. */
+  /** gRPC status codes retried only for read-only unary calls. */
   public static final Set<Status.Code> RETRYABLE_CODES =
       Set.of(
           Status.Code.UNAVAILABLE,
@@ -241,7 +241,10 @@ public final class GeneratedClientSupport {
   // wrapper passes operation_kind.equals("read_only")) — never guessed from the name.
 
   private static boolean isRetryable(Status.Code code, boolean readOnly) {
-    return code == Status.Code.DEADLINE_EXCEEDED ? readOnly : RETRYABLE_CODES.contains(code);
+    if (!readOnly) {
+      return false;
+    }
+    return code == Status.Code.DEADLINE_EXCEEDED || RETRYABLE_CODES.contains(code);
   }
 
   // ── Server streaming (single attempt) ────────────────────────────────────────

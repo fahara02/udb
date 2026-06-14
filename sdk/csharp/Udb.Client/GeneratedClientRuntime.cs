@@ -37,7 +37,7 @@ public sealed record UdbCallOptions
     /// <summary>Exponential growth multiplier between attempts.</summary>
     public double BackoffMultiplier { get; init; } = 2.0;
 
-    /// <summary>gRPC status codes treated as transient for mutating calls.</summary>
+    /// <summary>gRPC status codes retried only for read-only unary calls.</summary>
     public IReadOnlySet<StatusCode> RetryableCodes { get; init; } = new HashSet<StatusCode>
     {
         StatusCode.Unavailable,
@@ -158,7 +158,11 @@ public abstract class GeneratedServiceBase
 
     private bool IsRetryable(StatusCode code, bool readOnly)
     {
-        return code == StatusCode.DeadlineExceeded ? readOnly : Options.RetryableCodes.Contains(code);
+        if (!readOnly)
+        {
+            return false;
+        }
+        return code == StatusCode.DeadlineExceeded || Options.RetryableCodes.Contains(code);
     }
 
     /// <summary>

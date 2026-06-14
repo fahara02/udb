@@ -788,6 +788,18 @@ pub(crate) async fn connect_pg_pool_from_config(
     } else {
         crate::runtime::config::DEFAULT_DB_MAX_OPEN_CONNS as u32
     };
+    // L3: per-connection prepared-statement cache. sqlx defaults to 100; UDB
+    // emits many distinct parameterized SELECT/UPSERT strings across message
+    // types, so raise the cap so repeat reads are parsed/planned ONCE per
+    // physical connection (pooled-driver parity; pairs with the broker
+    // compiled-plan cache). Cached statements are kept for the connection's
+    // lifetime (sqlx does not DEALLOCATE unless the cache overflows), so warm
+    // pooled connections never re-parse a hot statement.
+    const PG_STATEMENT_CACHE_CAPACITY: usize = 512;
+    let connect_options = connection_string
+        .parse::<sqlx::postgres::PgConnectOptions>()
+        .map_err(|err| err.to_string())?
+        .statement_cache_capacity(PG_STATEMENT_CACHE_CAPACITY);
     PgPoolOptions::new()
         .min_connections(min_connections)
         .max_connections(max_connections)
@@ -809,7 +821,7 @@ pub(crate) async fn connect_pg_pool_from_config(
                 Ok(())
             })
         })
-        .connect(&connection_string)
+        .connect_with(connect_options)
         .await
         .map_err(|err| err.to_string())
 }

@@ -87,8 +87,17 @@ def _parse_report(path: Path) -> dict[str, Any]:
 
     services: list[dict[str, Any]] = []
     slowest: list[dict[str, Any]] = []
+    failures: list[dict[str, Any]] = []
     section = ""
     headers: list[str] = []
+
+    # An err cell of "OK"/""/"-" means the RPC succeeded; anything else is a non-OK
+    # gRPC status code (UNAVAILABLE, FAILED_PRECONDITION, …) and counts as a failure.
+    def _norm_err(value: str | None) -> str | None:
+        raw = (value or "").strip()
+        if raw in {"", "-", "OK", "ok"}:
+            return None
+        return raw
 
     for line in lines:
         low = line.lower()
@@ -98,6 +107,10 @@ def _parse_report(path: Path) -> dict[str, Any]:
             continue
         if low.startswith("## slowest"):
             section = "slowest"
+            headers = []
+            continue
+        if low.startswith("## failures"):
+            section = "failures"
             headers = []
             continue
         if low.startswith("## "):
@@ -131,16 +144,44 @@ def _parse_report(path: Path) -> dict[str, Any]:
             slowest.append({
                 "rpc": rpc,
                 "kind": row.get("kind", ""),
+                # err_code: None for OK rows; absent column (older report) also → None.
+                "err_code": _norm_err(row.get("err")),
                 "p50_ms": _duration_ms(row.get("p50_ms") or row.get("p50") or ""),
+                "p99_ms": _duration_ms(row.get("p99_ms") or row.get("p99") or ""),
+                "mean_ms": _duration_ms(row.get("mean_ms") or row.get("mean") or ""),
+            })
+        elif section == "failures":
+            rpc = row.get("rpc")
+            if not rpc:
+                continue
+            failures.append({
+                "rpc": rpc,
+                "kind": row.get("kind", ""),
+                "err_code": _norm_err(row.get("err")) or "UNKNOWN",
                 "p99_ms": _duration_ms(row.get("p99_ms") or row.get("p99") or ""),
                 "mean_ms": _duration_ms(row.get("mean_ms") or row.get("mean") or ""),
             })
 
     service_means = [s["mean_ms"] for s in services if isinstance(s.get("mean_ms"), (int, float))]
+    # Authoritative failure set = the Failures subsection, unioned (by rpc) with any
+    # failed rows that leaked into the slowest table. Backward compatible: an older
+    # report with neither a Failures section nor an err column yields 0 failures.
+    failed_by_rpc: dict[str, dict[str, Any]] = {}
+    for f in failures:
+        failed_by_rpc[f["rpc"]] = f
+    for s in slowest:
+        if s.get("err_code") and s["rpc"] not in failed_by_rpc:
+            failed_by_rpc[s["rpc"]] = {
+                "rpc": s["rpc"], "kind": s.get("kind", ""), "err_code": s["err_code"],
+                "p99_ms": s.get("p99_ms"), "mean_ms": s.get("mean_ms"),
+            }
+    failed_rpcs = sorted(failed_by_rpc.values(), key=lambda x: x["rpc"])
+
     summary: dict[str, Any] = {
         "rpc_count": measured,
         "service_count": len(services),
         "slowest_count": len(slowest),
+        "failed_rpc_count": len(failed_rpcs),
     }
     if service_means:
         summary["mean_service_latency_ms"] = sum(service_means) / len(service_means)
@@ -150,6 +191,7 @@ def _parse_report(path: Path) -> dict[str, Any]:
         "summary": summary,
         "services": services,
         "slowest": slowest,
+        "failed_rpcs": failed_rpcs,
         "report_path": str(path.relative_to(ROOT)).replace("\\", "/"),
     }
 
@@ -193,9 +235,10 @@ def main() -> int:
             "status": "skipped",
             "exit_code": None,
             "note": note,
-            "summary": {"rpc_count": None, "service_count": 0, "slowest_count": 0},
+            "summary": {"rpc_count": None, "service_count": 0, "slowest_count": 0, "failed_rpc_count": 0},
             "services": [],
             "slowest": [],
+            "failed_rpcs": [],
         })
 
     ok = sum(1 for s in sdks if s["status"] == "ok")
@@ -211,6 +254,7 @@ def main() -> int:
                 "id": s["id"],
                 "status": s["status"],
                 "rpc_count": s.get("summary", {}).get("rpc_count"),
+                "failed_rpc_count": s.get("summary", {}).get("failed_rpc_count", 0),
                 "mean_service_latency_ms": s.get("summary", {}).get("mean_service_latency_ms"),
                 "slowest_service_mean_ms": s.get("summary", {}).get("slowest_service_mean_ms"),
             }
@@ -235,6 +279,7 @@ def main() -> int:
                             "id": s.get("id"),
                             "status": s.get("status"),
                             "rpc_count": s.get("summary", {}).get("rpc_count"),
+                            "failed_rpc_count": s.get("summary", {}).get("failed_rpc_count", 0),
                             "mean_service_latency_ms": s.get("summary", {}).get("mean_service_latency_ms"),
                             "slowest_service_mean_ms": s.get("summary", {}).get("slowest_service_mean_ms"),
                         }
@@ -271,6 +316,7 @@ def main() -> int:
             "failed": failed,
             "skipped": skipped,
             "measured_rpc_count": sum((s.get("summary", {}).get("rpc_count") or 0) for s in sdks),
+            "failed_rpc_count": sum((s.get("summary", {}).get("failed_rpc_count") or 0) for s in sdks),
         },
         "history": history[-25:],
         "sdks": sdks,

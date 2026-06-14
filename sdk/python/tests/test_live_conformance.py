@@ -1488,10 +1488,14 @@ def test_live_perf():
         return 1 if kind == "destructive" else (5 if kind == "mutation" else 25)
 
     def time_one(client, method):
+        # Returns (elapsed_ms, err_code) where err_code is the gRPC status code NAME
+        # (e.g. "UNAVAILABLE", "FAILED_PRECONDITION") on a non-OK status, else "OK".
+        # A failing RPC must never be reported as a silent latency sample.
         request = default_request(method, authed_meta)
         rpc_callable = getattr(client.stub, method.name)
         streaming = method.client_streaming or method.server_streaming
         start = time.perf_counter()
+        err_code = "OK"
         try:
             if method.client_streaming:
                 # Open the client/bidi stream and push one message, then cancel WITHOUT
@@ -1505,9 +1509,12 @@ def test_live_perf():
                 call.cancel()
             else:
                 rpc_callable(request, metadata=authed_meta.to_grpc_metadata(), timeout=20.0)
-        except grpc.RpcError:
-            pass
-        return (time.perf_counter() - start) * 1000.0  # ms; streaming rows = stream-open
+        except grpc.RpcError as exc:
+            try:
+                err_code = exc.code().name
+            except Exception:
+                err_code = "UNKNOWN"
+        return (time.perf_counter() - start) * 1000.0, err_code  # ms; streaming rows = stream-open
 
     # All 262 RPCs are measured. Unary = full round-trip; streaming = stream-open
     # latency (initiate + push request, no response drain), so a passive subscription
@@ -1519,12 +1526,18 @@ def test_live_perf():
         kind = "stream_open" if streaming else RPC_OPERATION_KIND.get(rpc_path(method), "read_only")
         n = 1 if streaming else iters_for(kind)
         time_one(client, method)  # warm-up
-        durs = sorted(time_one(client, method) for _ in range(n))
+        runs = [time_one(client, method) for _ in range(n)]
+        durs = sorted(d for d, _ in runs)
+        # Last observed non-OK status code marks the RPC failed (mirrors Go's lastErrCode).
+        err_code = "OK"
+        for _, code in runs:
+            if code != "OK":
+                err_code = code
         def pct(p):
             return durs[min(len(durs) - 1, (p * (len(durs) - 1)) // 100)]
         samples.append({
             "service": client_cls._SERVICE_FULL.split(".")[-1],
-            "rpc": method.name, "kind": kind, "iters": n,
+            "rpc": method.name, "kind": kind, "iters": n, "err": err_code,
             "p50": pct(50), "p99": pct(99), "mean": sum(durs) / len(durs),
         })
     for c in clients.values():
@@ -1541,10 +1554,21 @@ def test_live_perf():
              "## Per-service mean latency", "", "| Service | RPCs | mean ms |", "|---|--:|--:|"]
     for name in sorted(svc, key=lambda k: -sum(svc[k]) / len(svc[k])):
         lines.append(f"| {name} | {len(svc[name])} | {sum(svc[name]) / len(svc[name]):.2f} |")
-    lines += ["", "## Slowest 20 by p99", "", "| RPC | kind | p50 ms | p99 ms | mean ms |", "|---|---|--:|--:|--:|"]
+    # Failures subsection: every RPC whose last iteration returned a non-OK gRPC status.
+    # A failing RPC is a FAILURE with its code, never a silent latency sample.
+    failed = [s for s in samples if s["err"] != "OK"]
+    lines += ["", f"## Failures ({len(failed)})", ""]
+    if not failed:
+        lines.append("No RPC returned a non-OK gRPC status.")
+    else:
+        lines.append("These RPCs returned a non-OK gRPC status and are FAILURES, not latency samples.")
+        lines += ["", "| RPC | kind | err | p99 ms | mean ms | iters |", "|---|---|---|--:|--:|--:|"]
+        for s in sorted(failed, key=lambda x: (x["service"], x["rpc"])):
+            lines.append(f"| {s['service']}/{s['rpc']} | {s['kind']} | {s['err']} | {s['p99']:.2f} | {s['mean']:.2f} | {s['iters']} |")
+    lines += ["", "## Slowest 20 by p99", "", "| RPC | kind | err | p50 ms | p99 ms | mean ms |", "|---|---|---|--:|--:|--:|"]
     for s in sorted(samples, key=lambda x: -x["p99"])[:20]:
-        lines.append(f"| {s['service']}/{s['rpc']} | {s['kind']} | {s['p50']:.2f} | {s['p99']:.2f} | {s['mean']:.2f} |")
+        lines.append(f"| {s['service']}/{s['rpc']} | {s['kind']} | {s['err']} | {s['p50']:.2f} | {s['p99']:.2f} | {s['mean']:.2f} |")
     report = "\n".join(lines) + "\n"
     with open("perf_report_python.md", "w", encoding="utf-8") as fh:
         fh.write(report)
-    print(f"\nPython perf: {len(samples)} RPCs measured → sdk/python/perf_report_python.md")
+    print(f"\nPython perf: {len(samples)} RPCs measured, {len(failed)} FAILED (non-OK gRPC status) → sdk/python/perf_report_python.md")

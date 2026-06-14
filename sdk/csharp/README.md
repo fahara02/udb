@@ -92,8 +92,8 @@ Channels are created via `UdbChannel.ForAddress(...)`, which applies:
   to IDLE and re-handshaking. `EnableMultipleHttp2Connections` is on, so the channel
   pools connections past the server's max-concurrent-streams without raising that
   server limit.
-- A native gRPC **service-config retry** on `UNAVAILABLE` (4 attempts, 0.1s initial
-  backoff, 2s ceiling, x2 multiplier, jittered, bounded by the call deadline).
+- No channel-wide retry policy. Generated wrappers retry only read-only unary RPCs
+  using proto-derived `operation_kind`; mutating RPCs are never replayed by default.
 
 Use `UdbChannel.DefaultOptions()` / `UdbChannel.ForAddress(...)` if you build a
 `GrpcChannel` yourself and want the same behaviour.
