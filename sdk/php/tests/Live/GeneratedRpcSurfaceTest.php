@@ -572,6 +572,9 @@ function probeStringPhp(string $field, string $tenant, string $project): string
     if (str_contains($n, 'purpose')) {
         return 'php.live.probe';
     }
+    if ($n === 'locale' || str_contains($n, 'locale')) {
+        return 'en';
+    }
     if (str_contains($n, 'pagetoken')) {
         return '';
     }

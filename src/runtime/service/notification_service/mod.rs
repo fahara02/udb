@@ -38,6 +38,7 @@ use super::native_helpers::{
 const LOG_MSG: &str = "udb.core.notification.entity.v1.NotificationLog";
 const TEMPLATE_MSG: &str = "udb.core.notification.entity.v1.NotificationTemplate";
 const PREFERENCE_MSG: &str = "udb.core.notification.entity.v1.NotificationPreference";
+const TEMPLATE_LOCALE_MAX_CHARS: usize = 10;
 
 pub struct NotificationServiceImpl {
     pg_pool: Option<PgPool>,
@@ -487,6 +488,19 @@ fn template_scope_filter(
     }
     filters.push(LogicalFilter::IsNull("deleted_at".to_string()));
     LogicalFilter::And(filters)
+}
+
+fn template_locale_or_default(locale: &str) -> Result<String, Status> {
+    let locale = locale.trim();
+    if locale.is_empty() {
+        return Ok("en".to_string());
+    }
+    if locale.chars().count() > TEMPLATE_LOCALE_MAX_CHARS {
+        return Err(Status::invalid_argument(
+            "locale must be 10 characters or fewer",
+        ));
+    }
+    Ok(locale.to_string())
 }
 
 fn template_read(filter: LogicalFilter, offset: u64, limit: u32) -> LogicalRead {
@@ -1178,11 +1192,7 @@ impl NotificationService for NotificationServiceImpl {
         let pool = self.require_pool()?;
         let m = template_model();
         let rel = m.relation.clone();
-        let locale = if req.locale.trim().is_empty() {
-            "en".to_string()
-        } else {
-            req.locale.clone()
-        };
+        let locale = template_locale_or_default(&req.locale)?;
         let projection = template_select_projection(&m);
         // Hybrid tenant model (F4.3): this control-plane write path has no tenant
         // scope in the request, so it always writes a platform-global default
@@ -1241,11 +1251,7 @@ impl NotificationService for NotificationServiceImpl {
             None,
         )
         .await?;
-        let locale = if req.locale.trim().is_empty() {
-            "en".to_string()
-        } else {
-            req.locale.clone()
-        };
+        let locale = template_locale_or_default(&req.locale)?;
         let runtime = self.require_runtime()?;
         let context = native_service_context(&metadata, &scoped_tenant, "");
         let filter = template_scope_filter(
