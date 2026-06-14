@@ -82,9 +82,175 @@ function normalizeJavaGeneratedText(text) {
 }
 
 function normalizePhpGeneratedText(text) {
-  return normalizeGeneratedText(text).replace(
+  return fixPhpDescriptorPublicDeps(normalizeGeneratedText(text)).replace(
     /^[ \t]*\*[ \t]*\n(?=[ \t]*\* (?:Generated from protobuf message|Migration order|Hybrid model:|`GetNativeAccess`|`GetPolicyBundle`))/gmu,
     "",
+  );
+}
+
+function normalizePhpDescriptorText(text) {
+  return fixPhpDescriptorPublicDeps(normalizeGeneratedText(text));
+}
+
+function readVarint(bytes, offset) {
+  let value = 0;
+  let shift = 0;
+  let cursor = offset;
+  while (cursor < bytes.length) {
+    const byte = bytes[cursor++];
+    value += (byte & 0x7f) * 2 ** shift;
+    if ((byte & 0x80) === 0) {
+      return [value, cursor];
+    }
+    shift += 7;
+  }
+  throw new Error("unterminated varint in generated PHP descriptor");
+}
+
+function writeVarint(value) {
+  const out = [];
+  let next = value;
+  do {
+    let byte = next & 0x7f;
+    next = Math.floor(next / 128);
+    if (next !== 0) {
+      byte |= 0x80;
+    }
+    out.push(byte);
+  } while (next !== 0);
+  return Buffer.from(out);
+}
+
+function skipWireValue(bytes, offset, wireType) {
+  if (wireType === 0) {
+    return readVarint(bytes, offset)[1];
+  }
+  if (wireType === 1) {
+    return offset + 8;
+  }
+  if (wireType === 2) {
+    const [length, valueOffset] = readVarint(bytes, offset);
+    return valueOffset + length;
+  }
+  if (wireType === 5) {
+    return offset + 4;
+  }
+  throw new Error(`unsupported wire type ${wireType} in generated PHP descriptor`);
+}
+
+function decodePhpDoubleQuotedBytes(literal) {
+  const out = [];
+  for (let i = 0; i < literal.length; i += 1) {
+    const char = literal[i];
+    if (char !== "\\") {
+      out.push(char.charCodeAt(0));
+      continue;
+    }
+    i += 1;
+    const escaped = literal[i];
+    if (escaped === "x") {
+      out.push(Number.parseInt(literal.slice(i + 1, i + 3), 16));
+      i += 2;
+    } else if (/[0-7]/u.test(escaped)) {
+      let octal = escaped;
+      while (i + 1 < literal.length && octal.length < 3 && /[0-7]/u.test(literal[i + 1])) {
+        octal += literal[++i];
+      }
+      out.push(Number.parseInt(octal, 8));
+    } else {
+      const escapes = new Map([
+        ["n", 10],
+        ["r", 13],
+        ["t", 9],
+        ["v", 11],
+        ["e", 27],
+        ["f", 12],
+        ["\\", 92],
+        ['"', 34],
+        ["$", 36],
+      ]);
+      out.push(escapes.get(escaped) ?? escaped.charCodeAt(0));
+    }
+  }
+  return Buffer.from(out);
+}
+
+function encodePhpDoubleQuotedBytes(bytes) {
+  return Array.from(bytes, (byte) => `\\x${byte.toString(16).padStart(2, "0").toUpperCase()}`).join("");
+}
+
+function fixFileDescriptorProtoPublicDeps(fileBytes) {
+  let dependencyCount = 0;
+  for (let offset = 0; offset < fileBytes.length;) {
+    const [tag, valueOffset] = readVarint(fileBytes, offset);
+    const fieldNumber = Math.floor(tag / 8);
+    const wireType = tag & 0x7;
+    const next = skipWireValue(fileBytes, valueOffset, wireType);
+    if (fieldNumber === 3) {
+      dependencyCount += 1;
+    }
+    offset = next;
+  }
+
+  const chunks = [];
+  let changed = false;
+  for (let offset = 0; offset < fileBytes.length;) {
+    const fieldStart = offset;
+    const [tag, valueOffset] = readVarint(fileBytes, offset);
+    const fieldNumber = Math.floor(tag / 8);
+    const wireType = tag & 0x7;
+    const next = skipWireValue(fileBytes, valueOffset, wireType);
+    if (fieldNumber === 10 && wireType === 0) {
+      const [publicDependency] = readVarint(fileBytes, valueOffset);
+      if (publicDependency >= dependencyCount) {
+        changed = true;
+        offset = next;
+        continue;
+      }
+    }
+    chunks.push(fileBytes.subarray(fieldStart, next));
+    offset = next;
+  }
+  return changed ? Buffer.concat(chunks) : fileBytes;
+}
+
+function fixPhpDescriptorSetPublicDeps(bytes) {
+  const chunks = [];
+  let changed = false;
+  for (let offset = 0; offset < bytes.length;) {
+    const fieldStart = offset;
+    const [tag, valueOffset] = readVarint(bytes, offset);
+    const fieldNumber = Math.floor(tag / 8);
+    const wireType = tag & 0x7;
+    const next = skipWireValue(bytes, valueOffset, wireType);
+    if (fieldNumber === 1 && wireType === 2) {
+      const [length, messageOffset] = readVarint(bytes, valueOffset);
+      const original = bytes.subarray(messageOffset, messageOffset + length);
+      const fixed = fixFileDescriptorProtoPublicDeps(original);
+      if (!fixed.equals(original)) {
+        changed = true;
+        chunks.push(writeVarint(tag), writeVarint(fixed.length), fixed);
+        offset = next;
+        continue;
+      }
+    }
+    chunks.push(bytes.subarray(fieldStart, next));
+    offset = next;
+  }
+  return changed ? Buffer.concat(chunks) : bytes;
+}
+
+function fixPhpDescriptorPublicDeps(text) {
+  return text.replace(
+    /internalAddGeneratedFile\(\s*"((?:[^"\\]|\\.)*)"\s*,/gsu,
+    (match, literal) => {
+      const before = decodePhpDoubleQuotedBytes(literal);
+      const after = fixPhpDescriptorSetPublicDeps(before);
+      if (after.equals(before)) {
+        return match;
+      }
+      return match.replace(literal, encodePhpDoubleQuotedBytes(after));
+    },
   );
 }
 
@@ -106,8 +272,13 @@ for (const root of GENERATED_ROOTS) {
         rewrite(file, normalizeGoGeneratedText);
       } else if (ext === ".java") {
         rewrite(file, normalizeJavaGeneratedText);
-      } else if (ext === ".php" && PHP_COMMENT_DRIFT_FILES.has(path.normalize(file))) {
-        rewrite(file, normalizePhpGeneratedText);
+      } else if (ext === ".php") {
+        rewrite(
+          file,
+          PHP_COMMENT_DRIFT_FILES.has(path.normalize(file))
+            ? normalizePhpGeneratedText
+            : normalizePhpDescriptorText,
+        );
       } else {
         rewrite(file, normalizeGeneratedText);
       }
