@@ -20,15 +20,22 @@ readme = "README.md"
 keywords = ["grpc", "database", "multi-tenant", "broker", "cdc"]
 categories = ["database", "network-programming", "web-programming::http-server"]
 authors = ["fahara02 <idea3d.faruk@gmail.com>"]
-# `cargo publish` honours this glob. Keep docs, examples, configs, SDKs, and
-# generated protocol artifacts because the README links to them; omit only CI,
-# local build output, and temporary files.
-exclude = [
-    "/.github/**",
-    "/target*/**",
-    "/bin/**",
-    "/tmp/**",
-    "/.tmp/**",
+# Keep the crates.io package below the 10MiB upload cap. Release workflows test
+# the full repository before publishing; the package itself only needs the Rust
+# crate, embedded proto contract, third-party proto imports, and files referenced
+# at compile time.
+include = [
+    "/Cargo.lock",
+    "/Cargo.toml",
+    "/LICENSE",
+    "/README.md",
+    "/build.rs",
+    "/docs/abac_seed.json",
+    "/docs/generated/contract-baseline.bin",
+    "/docs/generated/udb-native-contract.json",
+    "/proto/udb/**",
+    "/src/**",
+    "/third_party/googleapis/**",
 ]
 
 [lib]

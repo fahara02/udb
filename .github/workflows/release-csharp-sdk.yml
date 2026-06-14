@@ -7,11 +7,10 @@ name: Release · C# SDK (NuGet)
 #
 # Both packages follow the main UDB release version tracked in versions.json.
 # The release flow mirrors the Python/TypeScript SDKs: version consistency is
-# verified, tests pass, then nuget push fires. Already-published versions are
-# skipped gracefully (NuGet returns 409 Conflict which we detect and ignore).
-#
-# Required `production` environment secret:
-#   NUGET_API_TOKEN   https://www.nuget.org/account/apikeys
+# verified, tests pass, then nuget push fires. Publishing uses NuGet trusted
+# publishing: the `production` environment is bound to the nuget.org trusted
+# publisher policy for the `nuget_sdk` account, so no long-lived API key secret
+# is required.
 #
 # Trigger: a pushed `v*.*.*` tag, or manual dispatch with an expected version.
 
@@ -27,6 +26,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   publish:
@@ -131,34 +131,29 @@ jobs:
         run: dotnet pack --configuration Release --no-build --output ./nupkg
 
       # ── Publish ───────────────────────────────────────────────────────────
+      - name: NuGet trusted publishing login
+        if: steps.nuget_client.outputs.exists != 'true' || steps.nuget_cli.outputs.exists != 'true'
+        id: nuget_login
+        uses: NuGet/login@v1
+        with:
+          user: nuget_sdk
+
       - name: Publish Udb.Client to NuGet
         if: steps.nuget_client.outputs.exists != 'true'
         working-directory: sdk/csharp/Udb.Client
-        env:
-          NUGET_API_TOKEN: ${{ secrets.NUGET_API_TOKEN }}
         run: |
           set -euo pipefail
-          if [ -z "${NUGET_API_TOKEN:-}" ]; then
-            echo "::warning::NUGET_API_TOKEN is not configured; skipping Udb.Client publish."
-            exit 0
-          fi
           dotnet nuget push ./nupkg/*.nupkg \
-            --api-key "${NUGET_API_TOKEN}" \
+            --api-key "${{ steps.nuget_login.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate
 
       - name: Publish Udb.Cli to NuGet
         if: steps.nuget_cli.outputs.exists != 'true'
         working-directory: sdk/csharp/Udb.Cli
-        env:
-          NUGET_API_TOKEN: ${{ secrets.NUGET_API_TOKEN }}
         run: |
           set -euo pipefail
-          if [ -z "${NUGET_API_TOKEN:-}" ]; then
-            echo "::warning::NUGET_API_TOKEN is not configured; skipping Udb.Cli publish."
-            exit 0
-          fi
           dotnet nuget push ./nupkg/*.nupkg \
-            --api-key "${NUGET_API_TOKEN}" \
+            --api-key "${{ steps.nuget_login.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate
