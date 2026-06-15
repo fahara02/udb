@@ -1,22 +1,6 @@
 name: Benchmark · SDKs
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/benchmark-sdks.yml"
-      - "scripts/collect_sdk_bench_results.py"
-      - "docs/site/benchmarks.html"
-      - "docs/site/benchmarks.js"
-      - "docs/site/styles.css"
-      - "docs/bench-bodies/**"
-      - "sdk/go/udbclient/live_perf_bodies.go"
-      - "sdk/go/udbclient/live_perf_bodies_test.go"
-      - "sdk/go/udbclient/live_perf_seed_test.go"
-      - "sdk/go/udbclient/live_perf_test.go"
-      - "sdk/python/tests/test_live_conformance.py"
-      - "sdk/typescript/live-auth.test.ts"
-      - "sdk/php/tests/Live/GeneratedRpcSurfaceTest.php"
   workflow_dispatch:
     inputs:
       release_tag:
@@ -30,8 +14,6 @@ on:
   workflow_run:
     workflows: ["Release · binaries"]
     types: [completed]
-  schedule:
-    - cron: "17 3 * * 1"
 
 permissions:
   contents: read
@@ -60,6 +42,12 @@ env:
   # in the dashboard. UDB_COLUMN_DSN is the broker's primary ClickHouse var (deploy.rs:248).
   UDB_QDRANT_URL: http://localhost:6333
   UDB_REDIS_DSN: redis://localhost:6379/0
+  # Graph backend (GraphMutate/GraphQuery). Without neo4j those RPCs fail "backend executor
+  # 'neo4j:default' is not registered" across all SDKs. Broker reads UDB_GRAPH_DSN (HTTP).
+  UDB_GRAPH_DSN: http://localhost:7474
+  UDB_GRAPH_USER: neo4j
+  UDB_GRAPH_PASSWORD: test1234
+  UDB_GRAPH_DATABASE: neo4j
   # ClickHouse: the broker connects over the HTTP interface (clickhouse.rs) and resolves
   # credentials from UDB_COLUMN_USER/PASSWORD/DATABASE labels — NOT from the DSN userinfo
   # (instances.rs:403-406). So use the container's zero-config `default` user (no password,
@@ -119,7 +107,13 @@ env:
 jobs:
   benchmark:
     name: Release binary + SDK live benchmarks
-    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event_name == 'workflow_run' &&
+        github.event.workflow_run.conclusion == 'success' &&
+        startsWith(github.event.workflow_run.head_branch, 'v')
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 75
     services:
@@ -178,13 +172,21 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           INPUT_TAG: ${{ inputs.release_tag || 'latest' }}
           INPUT_ASSET: ${{ inputs.release_asset || 'udb-linux-amd64-full' }}
+          WORKFLOW_RUN_TAG: ${{ github.event.workflow_run.head_branch || '' }}
         run: |
           set -euo pipefail
           mkdir -p bench-output/bin bench-output/status
           tag="${INPUT_TAG}"
-          if [ -z "${tag}" ] || [ "${tag}" = "latest" ]; then
+          if [ -n "${WORKFLOW_RUN_TAG}" ]; then
+            tag="${WORKFLOW_RUN_TAG}"
+          elif [ -z "${tag}" ] || [ "${tag}" = "latest" ]; then
             tag="$(gh release view --repo "${GITHUB_REPOSITORY}" --json tagName --jq .tagName)"
           fi
+          if [[ ! "${tag}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            echo "::error::Benchmark requires a released SemVer tag, got '${tag}'"
+            exit 1
+          fi
+          gh release view "${tag}" --repo "${GITHUB_REPOSITORY}" >/dev/null
           gh release download "${tag}" --repo "${GITHUB_REPOSITORY}" --pattern "${INPUT_ASSET}" --dir bench-output/bin
           chmod +x "bench-output/bin/${INPUT_ASSET}"
           {
