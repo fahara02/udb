@@ -112,6 +112,13 @@ function stubAccessors(GeneratedClient $data, GeneratedClient $authGenerated): a
     return $out;
 }
 
+// Normalize a grpc stub method name (PascalCase, e.g. PutObject / RefreshSession / GetJwks)
+// to the snake_case form used by the body builder + phase lists. No-op for snake input.
+function rpcSnake(string $name): string
+{
+    return strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $name));
+}
+
 function liveStruct(array $fields): \Google\Protobuf\Struct
 {
     $struct = new \Google\Protobuf\Struct();
@@ -1341,6 +1348,9 @@ function perfBodyPhp(string $name, PerfFixturesPhp $fix, string $tenant, string 
 {
     $g = fn (string $k, string $d = '') => $fix->lookup($k) ?? $d;
     $sub = $fix->lookup('subject') ?? ('user:'.($fix->lookup('user_id') ?? ''));
+    // created_by / assigned_by / deleted_by / … are audit columns the broker validates
+    // as bare UUIDs — the casbin $sub ("user:<uuid>") is NOT a valid UUID there.
+    $byId = $fix->lookup('user_id') ?? liveUuidV4();
     // data-plane (udb.entity.v1) context
     $ctxE = fn () => (new \Udb\Entity\V1\RequestContext())->setTenantId($tenant)->setProjectId($project)->setPurpose('php.live.perf');
     // control-plane (udb.core.common.v1) context with nested tenant
@@ -1408,12 +1418,13 @@ function perfBodyPhp(string $name, PerfFixturesPhp $fix, string $tenant, string 
             return (new ($A('SendOTPRequest'))())->setUserId($g('user_id'))->setOtpType(1); // EMAIL_VERIFICATION=1
         case 'verify_o_t_p':
         case 'verify_otp':
-            return (new ($A('VerifyOTPRequest'))())->setOtpId($g('code'))->setCode('123456');
+            return (new ($A('VerifyOTPRequest'))())->setOtpId($g('otp_id'))->setCode($g('otp_code') ?: '123456');
         case 'resend_o_t_p':
         case 'resend_otp':
-            return (new ($A('ResendOTPRequest'))())->setOriginalOtpId($g('code'))->setReason('not_received');
+            return (new ($A('ResendOTPRequest'))())->setOriginalOtpId($g('otp_id'))->setReason('not_received');
         case 'change_password':
-            return (new ($A('ChangePasswordRequest'))())->setUserId($g('user_id'))->setCurrentPassword('Str0ng!Passw0rd')->setNewPassword('N3w!Passw0rd9')->setOtpId($g('code'));
+            // current_password MUST be the exact password the seed user was created with.
+            return (new ($A('ChangePasswordRequest'))())->setUserId($g('user_id'))->setCurrentPassword('CorrectHorse1!')->setNewPassword('N3w!Passw0rd9');
         case 'create_session':
             return (new ($A('CreateSessionRequest'))())->setPrincipal((new ($A('Principal'))())->setPrincipalId($g('user_id'))->setSubject($sub)->setUserId($g('user_id'))->setTenantId($tenant))->setTtlSeconds(3600);
         case 'refresh_session':
@@ -1435,27 +1446,33 @@ function perfBodyPhp(string $name, PerfFixturesPhp $fix, string $tenant, string 
         case 'generate_recovery_codes':
             return (new ($A('GenerateRecoveryCodesRequest'))())->setUserId($g('user_id'))->setCount(10);
         case 'put_mfa_policy':
-            return (new ($A('PutMfaPolicyRequest'))())->setTenantId($tenant)->setRequireMfa(true);
+            // require_mfa MUST stay false on the live login tenant: setting it true
+            // makes every later Login fail FAILED_PRECONDITION "MFA enrollment required
+            // by tenant policy" and poisons the whole bench (the admin has no 2nd factor).
+            return (new ($A('PutMfaPolicyRequest'))())->setTenantId($tenant)->setRequireMfa(false);
         case 'get_mfa_policy':
             return (new ($A('GetMfaPolicyRequest'))())->setTenantId($tenant);
         case 'forgot_password':
             return (new ($A('ForgotPasswordRequest'))())->setIdentifier('alice@acme.test');
         case 'reset_password':
-            return (new ($A('ResetPasswordRequest'))())->setOtpId($g('code'))->setCode('123456')->setNewPassword('N3w!Passw0rd9');
+            // Real dev-echoed code only (UDB_OTP_DEV_ECHO=1 echoes it unconditionally —
+            // mfa.rs:208). No '123456' fallback: a wrong code denies and masks an empty
+            // reset_otp_code (BENCH_TS_PHP_ADVISORY.md).
+            return (new ($A('ResetPasswordRequest'))())->setOtpId($g('reset_otp_id'))->setCode($g('reset_otp_code'))->setNewPassword('N3w!Passw0rd9');
         case 'send_phone_verification':
             return (new ($A('SendPhoneVerificationRequest'))())->setUserId($g('user_id'))->setPhone('+15551234567');
         case 'start_web_authn_registration':
             return (new ($A('StartWebAuthnRegistrationRequest'))())->setUserId($g('user_id'))->setLabel('yubikey')->setTenantId($tenant);
         case 'finish_web_authn_registration':
-            return (new ($A('FinishWebAuthnRegistrationRequest'))())->setChallengeId($g('code'))->setPublicKeyCredentialJson('{}')->setLabel('yubikey');
+            return (new ($A('FinishWebAuthnRegistrationRequest'))())->setChallengeId($g('reg_challenge_id'))->setPublicKeyCredentialJson('__UDB_WEBAUTHN_TEST__')->setLabel('perf-key');
         case 'start_web_authn_authentication':
             return (new ($A('StartWebAuthnAuthenticationRequest'))())->setUserId($g('user_id'))->setTenantId($tenant);
         case 'finish_web_authn_authentication':
-            return (new ($A('FinishWebAuthnAuthenticationRequest'))())->setChallengeId($g('code'))->setPublicKeyCredentialJson('{}');
+            return (new ($A('FinishWebAuthnAuthenticationRequest'))())->setChallengeId($g('auth_challenge_id'))->setPublicKeyCredentialJson('__UDB_WEBAUTHN_TEST__');
         case 'list_devices':
             return (new ($A('ListDevicesRequest'))())->setUserId($g('user_id'));
         case 'revoke_device':
-            return (new ($A('RevokeDeviceRequest'))())->setDeviceId($g('record_id'))->setReason('lost device');
+            return (new ($A('RevokeDeviceRequest'))())->setDeviceId($g('device_id'))->setReason('lost device');
         case 'admin_revoke_session':
             return (new ($A('AdminRevokeSessionRequest'))())->setUserId($g('user_id'))->setSessionId($g('session_id'))->setReason('compromised');
         case 'admin_revoke_all_user_sessions':
@@ -1467,7 +1484,7 @@ function perfBodyPhp(string $name, PerfFixturesPhp $fix, string $tenant, string 
         case 'issue_mfa_challenge':
             return (new ($A('IssueMfaChallengeRequest'))())->setUserId($g('user_id'))->setFactorKind(1)->setPurpose(1); // TOTP=1, SENSITIVE_OP=1
         case 'verify_mfa_challenge':
-            return (new ($A('VerifyMfaChallengeRequest'))())->setChallengeId($g('code'))->setCode('123456');
+            return (new ($A('VerifyMfaChallengeRequest'))())->setChallengeId($g('challenge_id'))->setCode($g('otp_code') ?: '123456');
         case 'list_mfa_factors':
             return (new ($A('ListMfaFactorsRequest'))())->setUserId($g('user_id'));
         case 'disable_mfa_factor':
@@ -1491,11 +1508,14 @@ function perfBodyPhp(string $name, PerfFixturesPhp $fix, string $tenant, string 
         case 'list_api_keys':
             return (new ($K('ListApiKeysRequest'))())->setOwnerId($g('owner_id'));
         case 'update_api_key':
-            return (new ($K('UpdateApiKeyRequest'))())->setKeyId($g('key_id'))->setName('bench-key-2')->setDescription('updated')->setScopes(['resource:read'])->setContext($ctxC());
+            // revoke/rotate/update resolve the key by PREFIX (get_by_prefix), not key_id UUID.
+            return (new ($K('UpdateApiKeyRequest'))())->setKeyId($g('update_key_prefix') ?: $g('key_prefix'))->setName('bench-key-2')->setDescription('updated')->setScopes(['resource:read'])->setContext($ctxC());
         case 'revoke_api_key':
-            return (new ($K('RevokeApiKeyRequest'))())->setKeyId($g('key_id'))->setRevokeReason('bench cleanup')->setContext($ctxC());
+            // the SEPARATE disposable key seeded for revocation (real 200); the primary
+            // key survives for rotate/update/get/validate. Lookup is by key_prefix.
+            return (new ($K('RevokeApiKeyRequest'))())->setKeyId($g('revoke_key_prefix') ?: $g('key_prefix'))->setRevokeReason('bench cleanup')->setContext($ctxC());
         case 'rotate_api_key':
-            return (new ($K('RotateApiKeyRequest'))())->setKeyId($g('key_id'))->setRotationReason('bench rotate')->setContext($ctxC());
+            return (new ($K('RotateApiKeyRequest'))())->setKeyId($g('key_prefix'))->setRotationReason('bench rotate')->setContext($ctxC());
         case 'emergency_revoke_api_keys':
             return (new ($K('EmergencyRevokeApiKeysRequest'))())->setOwnerId($g('owner_id'))->setReason('bench emergency')->setContext($ctxC());
         case 'validate_api_key':
@@ -1507,17 +1527,17 @@ function perfBodyPhp(string $name, PerfFixturesPhp $fix, string $tenant, string 
         case 'record_pipeline_metric':
             return (new ($AN('RecordPipelineMetricRequest'))())->setStageName($g('stage_name'))->setTenantId($tenant)->setLatencyMs(12.5)->setIsSuccess(true)->setContext($ctxC());
         case 'get_pipeline_summary':
-            return (new ($AN('GetPipelineSummaryRequest'))())->setStageName($g('stage_name'))->setTenantId($tenant)->setHourFrom('2026-06-01T00')->setHourTo('2026-06-14T23');
+            return (new ($AN('GetPipelineSummaryRequest'))())->setStageName($g('stage_name'))->setTenantId($tenant)->setHourFrom('2026-06-01T00:00:00Z')->setHourTo('2026-06-14T23:00:00Z');
         case 'get_executor_performance':
             return (new ($AN('GetExecutorPerformanceRequest'))())->setDateFrom('2026-06-01')->setDateTo('2026-06-14');
         case 'get_reconciliation_analytics':
             return (new ($AN('GetReconciliationAnalyticsRequest'))())->setDateFrom('2026-06-01')->setDateTo('2026-06-14');
         case 'get_throughput':
-            return (new ($AN('GetThroughputRequest'))())->setTenantId($tenant)->setHourFrom('2026-06-01T00')->setHourTo('2026-06-14T23');
+            return (new ($AN('GetThroughputRequest'))())->setTenantId($tenant)->setHourFrom('2026-06-01T00:00:00Z')->setHourTo('2026-06-14T23:00:00Z');
         case 'get_sla_compliance':
             return (new ($AN('GetSlaComplianceRequest'))())->setStageName($g('stage_name'))->setDateFrom('2026-06-01')->setDateTo('2026-06-14')->setP99ThresholdMs(250.0)->setErrorRateThreshold(0.01);
         case 'trigger_snapshot':
-            return (new ($AN('TriggerSnapshotRequest'))())->setStageName($g('stage_name'))->setHour('2026-06-14T10')->setContext($ctxC());
+            return (new ($AN('TriggerSnapshotRequest'))())->setStageName($g('stage_name'))->setHour('2026-06-14T10:00:00Z')->setContext($ctxC());
 
         // ── NotificationService ──
         case 'send_notification':
@@ -1545,7 +1565,9 @@ function perfBodyPhp(string $name, PerfFixturesPhp $fix, string $tenant, string 
 
         // ── StorageService ──
         case 'register_upload':
-            return (new ($S('RegisterUploadRequest'))())->setTenantId($tenant)->setProjectId($project)->setFilename('report.pdf')->setContentType('application/pdf')->setFileType('document')->setReferenceId($g('file_id'))->setReferenceType('document')->setExpiresInMinutes(15)->setSizeBytes(1024);
+            // project_id must be empty (the broker parses a non-empty project_id as a UUID;
+            // "default" fails "uuid params must be UUID strings"). reference_id is a fresh UUID.
+            return (new ($S('RegisterUploadRequest'))())->setTenantId($tenant)->setProjectId('')->setFilename('report.pdf')->setContentType('application/pdf')->setFileType('document')->setReferenceId(liveUuidV4())->setReferenceType('document')->setExpiresInMinutes(15)->setSizeBytes(1024);
         case 'finalize_upload':
             return (new ($S('FinalizeUploadRequest'))())->setTenantId($tenant)->setFileId($g('file_id'))->setContentType('application/pdf')->setFileType('document')->setReferenceId($g('file_id'))->setReferenceType('document')->setSizeBytes(1024);
         case 'get_download_url':
@@ -1555,7 +1577,8 @@ function perfBodyPhp(string $name, PerfFixturesPhp $fix, string $tenant, string 
         case 'update_file':
             return (new ($S('UpdateFileRequest'))())->setTenantId($tenant)->setFileId($g('file_id'))->setFilename('renamed.pdf')->setContentType('application/pdf')->setFileType('document')->setReferenceId($g('file_id'))->setReferenceType('document');
         case 'delete_file':
-            return (new ($S('DeleteFileRequest'))())->setTenantId($tenant)->setFileId($g('file_id'));
+            // destructive — the SEPARATE disposable file seeded for deletion (real 200).
+            return (new ($S('DeleteFileRequest'))())->setTenantId($tenant)->setFileId($g('delete_file_id') ?: liveUuidV4());
         case 'list_files':
             return (new ($S('ListFilesRequest'))())->setTenantId($tenant)->setPage(1)->setPageSize(20);
 
@@ -1565,7 +1588,8 @@ function perfBodyPhp(string $name, PerfFixturesPhp $fix, string $tenant, string 
         case 'get_pipeline_definition':
             return (new ($AS('GetPipelineDefinitionRequest'))())->setTenantId($tenant)->setDefinitionId($g('definition_id'));
         case 'register_asset':
-            return (new ($AS('RegisterAssetRequest'))())->setTenantId($tenant)->setProjectId($project)->setFileId($g('file_id'))->setName('logo.png')->setMediaType('image/png')->setMetadata('{"source":"upload"}');
+            // project_id must be empty (non-empty is parsed as a UUID and "default" fails).
+            return (new ($AS('RegisterAssetRequest'))())->setTenantId($tenant)->setProjectId('')->setFileId($g('file_id'))->setName('logo.png')->setMediaType('image/png')->setMetadata('{"source":"upload"}');
         case 'start_pipeline':
             return (new ($AS('StartPipelineRequest'))())->setTenantId($tenant)->setDefinitionId($g('definition_id'))->setAssetId($g('asset_id'))->setContext('{}')->setCorrelationId('run-001');
         case 'get_pipeline':
@@ -1585,13 +1609,14 @@ function perfBodyPhp(string $name, PerfFixturesPhp $fix, string $tenant, string 
         case 'update_room':
             return (new ($W('UpdateRoomRequest'))())->setTenantId($tenant)->setRoomId($g('room_id'))->setName('bench-room-2')->setState('active')->setConfig('{}');
         case 'close_room':
-            return (new ($W('CloseRoomRequest'))())->setTenantId($tenant)->setRoomId($g('room_id'));
+            // the SEPARATE disposable room seeded for closing (real 200); the main room survives.
+            return (new ($W('CloseRoomRequest'))())->setTenantId($tenant)->setRoomId($g('close_room_id') ?: liveUuidV4());
         case 'list_rooms':
             return (new ($W('ListRoomsRequest'))())->setTenantId($tenant)->setState('active')->setPage(1)->setPageSize(20);
         case 'join_room':
             return (new ($W('JoinRoomRequest'))())->setTenantId($tenant)->setRoomId($g('room_id'))->setDisplayName('Bench User')->setMetadata('{}')->setUserAgent('bench/1.0');
         case 'leave_room':
-            return (new ($W('LeaveRoomRequest'))())->setTenantId($tenant)->setRoomId($g('room_id'))->setPeerId($g('peer_id'));
+            return (new ($W('LeaveRoomRequest'))())->setTenantId($tenant)->setRoomId($g('room_id'))->setPeerId($g('leave_peer_id') ?: liveUuidV4());
         case 'get_peer':
             return (new ($W('GetPeerRequest'))())->setTenantId($tenant)->setPeerId($g('peer_id'));
         case 'list_peers':
@@ -1599,7 +1624,7 @@ function perfBodyPhp(string $name, PerfFixturesPhp $fix, string $tenant, string 
         case 'publish_track':
             return (new ($W('PublishTrackRequest'))())->setTenantId($tenant)->setRoomId($g('room_id'))->setPeerId($g('peer_id'))->setKind('audio')->setLabel('mic')->setSettings('{}')->setMetadata('{}');
         case 'unpublish_track':
-            return (new ($W('UnpublishTrackRequest'))())->setTenantId($tenant)->setTrackId($g('track_id'));
+            return (new ($W('UnpublishTrackRequest'))())->setTenantId($tenant)->setTrackId($g('unpublish_track_id') ?: liveUuidV4());
         case 'mute_track':
             return (new ($W('MuteTrackRequest'))())->setTenantId($tenant)->setTrackId($g('track_id'))->setMuted(true);
         case 'list_tracks':
@@ -1623,11 +1648,15 @@ function perfBodyPhp(string $name, PerfFixturesPhp $fix, string $tenant, string 
 
         // ── IdentityProviderService ──
         case 'create_provider':
-            return (new ($I('CreateProviderRequest'))())->setTenantId($tenant)->setKind(2)->setDisplayName('Acme OIDC '.bin2hex(random_bytes(3)))->setIssuer('https://idp.example.com')->setJwksUrl('https://idp.example.com/jwks')->setClientIds(['client-1'])->setAudiences(['udb'])->setClaimMappingJson('{}')->setGroupMappingJson('{}')->setJitPolicyJson('{}')->setAccountLinkingPolicy('explicit')->setEnabled(true)->setCreatedBy($g('user_id'))->setContext($ctxC()); // OIDC=2
+            return (new ($I('CreateProviderRequest'))())->setTenantId($tenant)->setKind(2)->setDisplayName('Acme OIDC '.bin2hex(random_bytes(3)))->setIssuer('https://idp.example.com')->setJwksUrl('https://idp.example.com/jwks')->setClientIds(['client-1'])->setAudiences(['udb'])->setClaimMappingJson('{}')->setGroupMappingJson('{}')->setJitPolicyJson('{"require_verified_email":false}')->setAccountLinkingPolicy('explicit')->setEnabled(true)->setCreatedBy($g('user_id'))->setContext($ctxC()); // OIDC=2
         case 'update_provider':
-            return (new ($I('UpdateProviderRequest'))())->setProviderId($g('provider_id'))->setTenantId($tenant)->setDisplayName('Acme OIDC v2')->setClaimMappingJson('{}')->setGroupMappingJson('{}')->setJitPolicyJson('{}')->setAccountLinkingPolicy('explicit')->setUpdatedBy($g('user_id'))->setContext($ctxC());
+            // PRESERVE the seeded group_mapping key — UpdateProvider overwrites the provider's
+            // group_mapping_json, and ScimGetGroup resolves scim_group_id against those KEYS
+            // (idp/mod.rs group_keys). Wiping to '{}' makes a later/earlier ScimGetGroup
+            // NOT_FOUND regardless of phase ordering. Mirror Python's postprocess (keep the key).
+            return (new ($I('UpdateProviderRequest'))())->setProviderId($g('provider_id'))->setTenantId($tenant)->setDisplayName('Acme OIDC '.bin2hex(random_bytes(4)))->setClaimMappingJson('{}')->setGroupMappingJson('{"sdk-perf-group":"reader"}')->setJitPolicyJson('{"require_verified_email":false}')->setAccountLinkingPolicy('explicit')->setUpdatedBy($g('user_id'))->setContext($ctxC());
         case 'disable_provider':
-            return (new ($I('DisableProviderRequest'))())->setProviderId($g('provider_id'))->setTenantId($tenant)->setUpdatedBy($g('user_id'))->setContext($ctxC());
+            return (new ($I('DisableProviderRequest'))())->setProviderId($g('disable_provider_id') ?: $g('provider_id'))->setTenantId($tenant)->setUpdatedBy($g('user_id'))->setContext($ctxC());
         case 'get_provider':
             return (new ($I('GetProviderRequest'))())->setProviderId($g('provider_id'))->setTenantId($tenant);
         case 'list_providers':
@@ -1652,9 +1681,9 @@ function perfBodyPhp(string $name, PerfFixturesPhp $fix, string $tenant, string 
             return (new ($E('UpsertRequest'))())->setContext($ctxE())->setMessageType('udb.sdk.live.v1.SdkLiveRecord')
                 ->setRecordJson(liveRecordJson($g('record_id'), $tenant, $project, 'php-perf-lk', 'php-perf', 1))->setConflictFields(['record_id']);
         case 'select':
-            return (new ($E('SelectRequest'))())->setContext($ctxE())->setMessageType('udb.sdk.live.v1.SdkLiveRecord')->setFilter(liveStruct(['record_id' => $g('record_id')]))->setLimit(10);
+            return (new ($E('SelectRequest'))())->setContext($ctxE())->setMessageType('udb.sdk.live.v1.SdkLiveRecord')->setFilter(liveStruct(['record_id' => $g('record_id'), 'tenant_id' => $tenant, 'project_id' => $project]))->setLimit(10);
         case 'delete':
-            return (new ($E('DeleteRequest'))())->setContext($ctxE())->setMessageType('udb.sdk.live.v1.SdkLiveRecord')->setFilter(liveStruct(['record_id' => $g('record_id')]));
+            return (new ($E('DeleteRequest'))())->setContext($ctxE())->setMessageType('udb.sdk.live.v1.SdkLiveRecord')->setFilter(liveStruct(['record_id' => 'php-perf-delete-noop', 'tenant_id' => $tenant, 'project_id' => $project]));
         case 'get_capabilities':
             return (new ($E('CapabilitiesRequest'))())->setContext($ctxE())->setProjectId($project);
         case 'get_catalog_manifest':
@@ -1686,7 +1715,7 @@ function perfBodyPhp(string $name, PerfFixturesPhp $fix, string $tenant, string 
         case 'list_policies':
             return (new ($E('PolicyListRequest'))())->setContext($ctxE())->setLimit(50);
         case 'generic_dispatch':
-            return (new ($E('GenericDispatchRequest'))())->setContext($ctxE())->setBackend('mongodb')->setOperation('ping');
+            return (new ($E('GenericDispatchRequest'))())->setContext($ctxE())->setBackend('postgres')->setOperation('query')->setSpecJson('{"sql":"SELECT 1 AS live_probe"}');
         case 'ensure_resource':
             return (new ($E('ResourceAdminRequest'))())->setContext($ctxE())->setBackend('mongodb')->setResourceName($g('mongo_collection', 'sdk_perf'));
         case 'list_resources':
@@ -1698,17 +1727,19 @@ function perfBodyPhp(string $name, PerfFixturesPhp $fix, string $tenant, string 
         case 'check_access':
             return (new ($Z('CheckAccessRequest'))())->setUserId($g('user_id'))->setDomain($tenant)->setObject($g('object', 'group:sdk'))->setAction($g('action', 'data.select'));
         case 'create_role':
-            return (new ($Z('CreateRoleRequest'))())->setName('reader')->setCreatedBy($sub)->setRoleCode($g('role_code', 'reader'))->setDomain($tenant)->setTenantId($tenant)->setScopeType(2);
+            // random name/role_code so per-iteration rebuilds don't collide on the
+            // unique (name,domain) constraint; created_by must be a bare UUID.
+            return (new ($Z('CreateRoleRequest'))())->setName('reader-'.bin2hex(random_bytes(4)))->setCreatedBy($byId)->setRoleCode('reader_'.bin2hex(random_bytes(4)))->setDomain($tenant)->setTenantId($tenant)->setScopeType(2);
         case 'assign_role':
-            return (new ($Z('AssignRoleRequest'))())->setUserId($g('user_id'))->setRoleId($g('role_id'))->setDomain($tenant)->setAssignedBy($sub)->setPrincipalKind(1)->setTenantId($tenant);
+            return (new ($Z('AssignRoleRequest'))())->setUserId($g('user_id'))->setRoleId($g('role_id'))->setDomain($tenant)->setAssignedBy($byId)->setPrincipalKind(1)->setTenantId($tenant);
         case 'create_policy_rule':
-            return (new ($Z('CreatePolicyRuleRequest'))())->setSubject($sub)->setDomain($tenant)->setObject($g('object', 'group:sdk'))->setAction($g('action', 'data.update'))->setEffect(1)->setCreatedBy($sub)->setTenantId($tenant);
+            return (new ($Z('CreatePolicyRuleRequest'))())->setSubject($sub)->setDomain($tenant)->setObject($g('object', 'group:sdk'))->setAction($g('action', 'data.update'))->setEffect(1)->setCreatedBy($byId)->setTenantId($tenant);
         case 'list_user_permissions':
             return (new ($Z('ListUserPermissionsRequest'))())->setUserId($g('user_id'))->setDomain($tenant);
         case 'list_access_decision_audits':
             return (new ($Z('ListAccessDecisionAuditsRequest'))())->setUserId($g('user_id'))->setDomain($tenant)->setPage($page());
         case 'revoke_role':
-            return (new ($Z('RevokeRoleRequest'))())->setUserId($g('user_id'))->setUserRoleId($g('user_role_id'))->setReason('rotation')->setRevokedBy($sub);
+            return (new ($Z('RevokeRoleRequest'))())->setUserId($g('user_id'))->setUserRoleId($g('user_role_id'))->setReason('rotation')->setRevokedBy($byId);
         case 'list_user_roles':
             return (new ($Z('ListUserRolesRequest'))())->setUserId($g('user_id'))->setDomain($tenant)->setActiveOnly(true);
         case 'get_role':
@@ -1718,15 +1749,17 @@ function perfBodyPhp(string $name, PerfFixturesPhp $fix, string $tenant, string 
         case 'batch_check_permissions':
             return (new ($Z('BatchCheckPermissionsRequest'))())->setUserId($g('user_id'))->setDomain($tenant)->setChecks([(new ($Z('PermissionCheck'))())->setObject($g('object', 'group:sdk'))->setAction($g('action', 'data.select'))]);
         case 'update_role':
-            return (new ($Z('UpdateRoleRequest'))())->setRoleId($g('role_id'))->setUpdatedBy($sub)->setName('reader-2')->setDescription('x')->setIsActive(true);
+            return (new ($Z('UpdateRoleRequest'))())->setRoleId($g('role_id'))->setUpdatedBy($byId)->setName('reader-'.bin2hex(random_bytes(4)))->setDescription('x')->setIsActive(true);
         case 'delete_role':
-            return (new ($Z('DeleteRoleRequest'))())->setRoleId($g('role_id'))->setDeletedBy($sub);
+            // destructive — the SEPARATE disposable role seeded for deletion (real 200).
+            return (new ($Z('DeleteRoleRequest'))())->setRoleId($g('delete_role_id') ?: liveUuidV4())->setDeletedBy($byId);
         case 'get_policy_rule':
             return (new ($Z('GetPolicyRuleRequest'))())->setPolicyId($g('policy_id'));
         case 'list_policy_rules':
             return (new ($Z('ListPolicyRulesRequest'))())->setDomain($tenant)->setActiveOnly(true)->setPage($page());
         case 'delete_policy_rule':
-            return (new ($Z('DeletePolicyRuleRequest'))())->setPolicyId($g('policy_id'))->setDeletedBy($sub);
+            // destructive — the SEPARATE disposable policy rule seeded for deletion (real 200).
+            return (new ($Z('DeletePolicyRuleRequest'))())->setPolicyId($g('delete_policy_id') ?: liveUuidV4())->setDeletedBy($byId);
         case 'put_role_binding':
             return (new ($Z('PutRoleBindingRequest'))())->setBinding((new ($Z('RoleBinding'))())->setSubject($sub)->setRole($g('role', 'reader'))->setTenant($tenant)->setProject($project)->setSource('manual'));
         case 'put_relationship':
@@ -1740,55 +1773,55 @@ function perfBodyPhp(string $name, PerfFixturesPhp $fix, string $tenant, string 
         case 'get_policy_bundle':
             return (new ($Z('PolicyBundleRequest'))())->setTenantId($tenant)->setProjectId($project)->setDomain($tenant);
         case 'create_policy_draft':
-            return (new ($Z('CreatePolicyDraftRequest'))())->setActor($actor(['udb:authz:policy:write']))->setTenantId($tenant)->setProjectId($project)->setPolicySetName('default')->setTitle('draft 1')->setChangeReason('init')->setDocument(new ($Z('PolicyDocument'))());
+            return (new ($Z('CreatePolicyDraftRequest'))())->setActor($actor(['authz:policy:write']))->setTenantId($tenant)->setProjectId($project)->setPolicySetName('default')->setTitle('draft 1')->setChangeReason('init')->setDocument(new ($Z('PolicyDocument'))());
         case 'update_policy_draft':
-            return (new ($Z('UpdatePolicyDraftRequest'))())->setActor($actor(['udb:authz:policy:write']))->setDraftId($g('policy_draft_id'))->setDocument(new ($Z('PolicyDocument'))())->setChangeReason('edit')->setTitle('draft 1');
+            return (new ($Z('UpdatePolicyDraftRequest'))())->setActor($actor(['authz:policy:write']))->setDraftId($g('update_draft_id') ?: $g('policy_draft_id'))->setDocument(new ($Z('PolicyDocument'))())->setChangeReason('edit')->setTitle('draft 1');
         case 'diff_policy_draft':
-            return (new ($Z('DiffPolicyDraftRequest'))())->setActor($actor(['udb:authz:policy:read']))->setDraftId($g('policy_draft_id'));
+            return (new ($Z('DiffPolicyDraftRequest'))())->setActor($actor(['authz:policy:read']))->setDraftId($g('policy_draft_id'));
         case 'submit_policy_draft':
-            return (new ($Z('SubmitPolicyDraftRequest'))())->setActor($actor(['udb:authz:policy:write']))->setDraftId($g('policy_draft_id'));
+            return (new ($Z('SubmitPolicyDraftRequest'))())->setActor($actor(['authz:policy:write']))->setDraftId($g('policy_draft_id'));
         case 'approve_policy_draft':
-            return (new ($Z('ApprovePolicyDraftRequest'))())->setActor($actor(['udb:authz:policy:approve']))->setDraftId($g('policy_draft_id'))->setReviewer($sub)->setReason('ok');
+            return (new ($Z('ApprovePolicyDraftRequest'))())->setActor($actor(['authz:policy:approve']))->setDraftId($g('approve_draft_id'))->setReviewer($sub)->setReason('ok');
         case 'reject_policy_draft':
-            return (new ($Z('RejectPolicyDraftRequest'))())->setActor($actor(['udb:authz:policy:approve']))->setDraftId($g('policy_draft_id'))->setReviewer($sub)->setReason('nack');
+            return (new ($Z('RejectPolicyDraftRequest'))())->setActor($actor(['authz:policy:approve']))->setDraftId($g('reject_draft_id'))->setReviewer($sub)->setReason('nack');
         case 'activate_policy_version':
-            return (new ($Z('ActivatePolicyVersionRequest'))())->setActor($actor(['udb:authz:admin']))->setPolicyVersionId($g('policy_id'));
+            return (new ($Z('ActivatePolicyVersionRequest'))())->setActor($actor(['authz:admin']))->setPolicyVersionId($g('policy_version_id') ?: liveUuidV4());
         case 'rollback_policy_version':
-            return (new ($Z('RollbackPolicyVersionRequest'))())->setActor($actor(['udb:authz:admin']))->setPolicySetId($g('policy_id'))->setTargetVersionId($g('policy_id'))->setChangeReason('revert');
+            return (new ($Z('RollbackPolicyVersionRequest'))())->setActor($actor(['authz:admin']))->setPolicySetId($g('rollback_policy_set_id') ?: liveUuidV4())->setTargetVersionId($g('rollback_target_version_id') ?: liveUuidV4())->setChangeReason('revert');
         case 'activate_canary':
-            return (new ($Z('ActivateCanaryRequest'))())->setActor($actor(['udb:authz:admin']))->setPolicyVersionId($g('policy_id'))->setScopeKind(3)->setScopeValues(['10'])->setSuccessWindowSecs(300)->setMetricThreshold(0.99)->setMinSamples(100);
+            return (new ($Z('ActivateCanaryRequest'))())->setActor($actor(['authz:admin']))->setPolicyVersionId($g('canary_version_id') ?: liveUuidV4())->setScopeKind(3)->setScopeValues(['10'])->setSuccessWindowSecs(0)->setMetricThreshold(0.99)->setMinSamples(0);
         case 'promote_canary':
-            return (new ($Z('PromoteCanaryRequest'))())->setActor($actor(['udb:authz:admin']))->setCanaryId($g('policy_id'));
+            return (new ($Z('PromoteCanaryRequest'))())->setActor($actor(['authz:admin']))->setCanaryId($g('canary_id') ?: liveUuidV4());
         case 'get_canary_status':
-            return (new ($Z('GetCanaryStatusRequest'))())->setActor($actor(['udb:authz:policy:read']))->setCanaryId($g('policy_id'));
+            return (new ($Z('GetCanaryStatusRequest'))())->setActor($actor(['authz:policy:read']))->setCanaryId($g('canary_id') ?: liveUuidV4());
         case 'list_policy_versions':
-            return (new ($Z('ListPolicyVersionsRequest'))())->setActor($actor(['udb:authz:policy:read']))->setTenantId($tenant)->setProjectId($project)->setPolicySetId($g('policy_id'))->setState(4)->setPage($page());
+            return (new ($Z('ListPolicyVersionsRequest'))())->setActor($actor(['authz:policy:read']))->setTenantId($tenant)->setProjectId($project)->setPolicySetId($g('policy_id'))->setState(4)->setPage($page());
         case 'simulate_policy':
-            return (new ($Z('SimulatePolicyRequest'))())->setActor($actor(['udb:authz:policy:read']))->setTenantId($tenant)->setProjectId($project)->setCases([(new ($Z('SimulationCase'))())->setPrincipal($principal())->setResource($resourceRef())->setAction($g('action', 'data.select'))->setLabel('c1')])->setPersist(false);
+            return (new ($Z('SimulatePolicyRequest'))())->setActor($actor(['authz:policy:read']))->setTenantId($tenant)->setProjectId($project)->setCases([(new ($Z('SimulationCase'))())->setPrincipal($principal())->setResource($resourceRef())->setAction($g('action', 'data.select'))->setLabel('c1')])->setPersist(false);
         case 'explain_policy':
-            return (new ($Z('ExplainPolicyRequest'))())->setActor($actor(['udb:authz:policy:read']))->setTenantId($tenant)->setProjectId($project)->setTestCase((new ($Z('SimulationCase'))())->setPrincipal($principal())->setResource($resourceRef())->setAction($g('action', 'data.select')));
+            return (new ($Z('ExplainPolicyRequest'))())->setActor($actor(['authz:policy:read']))->setTenantId($tenant)->setProjectId($project)->setTestCase((new ($Z('SimulationCase'))())->setPrincipal($principal())->setResource($resourceRef())->setAction($g('action', 'data.select')));
         case 'get_authz_revision':
             return (new ($Z('GetAuthzRevisionRequest'))())->setTenantId($tenant)->setProjectId($project);
         case 'invalidate_policy_bundles':
-            return (new ($Z('InvalidatePolicyBundlesRequest'))())->setActor($actor(['udb:authz:admin']))->setTenantId($tenant)->setProjectId($project)->setReason('rotate');
+            return (new ($Z('InvalidatePolicyBundlesRequest'))())->setActor($actor(['authz:admin']))->setTenantId($tenant)->setProjectId($project)->setReason('rotate');
         case 'seed_builtin_roles':
-            return (new ($Z('SeedBuiltinRolesRequest'))())->setActor($actor(['udb:authz:admin']))->setTenantId($tenant)->setProjectId($project);
+            return (new ($Z('SeedBuiltinRolesRequest'))())->setActor($actor(['authz:admin']))->setTenantId($tenant)->setProjectId($project);
         case 'migrate_legacy_policies':
-            return (new ($Z('MigrateLegacyPoliciesRequest'))())->setActor($actor(['udb:authz:admin']))->setTenantId($tenant)->setProjectId($project)->setApply(false)->setPolicySetName('default');
+            return (new ($Z('MigrateLegacyPoliciesRequest'))())->setActor($actor(['authz:admin']))->setTenantId($tenant)->setProjectId($project)->setApply(false)->setPolicySetName('default');
 
         // ── DataBroker (vector / object / cache / document / graph / timeseries / tx / cdc / catalog / migration / dlq / saga / policy) ──
         case 'batch_select':
         case 'select_v2':
-            return (new ($E('SelectRequest'))())->setContext($ctxE())->setMessageType('udb.sdk.live.v1.SdkLiveRecord')->setFilter(liveStruct(['record_id' => $g('record_id')]))->setLimit(10);
+            return (new ($E('SelectRequest'))())->setContext($ctxE())->setMessageType('udb.sdk.live.v1.SdkLiveRecord')->setFilter(liveStruct(['record_id' => $g('record_id'), 'tenant_id' => $tenant, 'project_id' => $project]))->setLimit(10);
         case 'batch_upsert':
             return (new ($E('UpsertRequest'))())->setContext($ctxE())->setMessageType('udb.sdk.live.v1.SdkLiveRecord')->setRecordJson(liveRecordJson($g('record_id'), $tenant, $project, 'php-perf-lk', 'php-perf', 1))->setConflictFields(['record_id']);
         case 'vector_search':
-            return (new ($E('VectorSearchRequest'))())->setContext($ctxE())->setCollection('udb.sdk.live.v1.SdkLiveRecord')->setVector([0.1, 0.2, 0.3])->setLimit(5)->setWithPayload(true);
+            return (new ($E('VectorSearchRequest'))())->setContext($ctxE())->setCollection('sdk_live_records')->setVector([0.1, 0.2, 0.3])->setLimit(5)->setWithPayload(true);
         case 'vector_hybrid_search':
-            return (new ($E('VectorHybridSearchRequest'))())->setContext($ctxE())->setCollection('udb.sdk.live.v1.SdkLiveRecord')->setVector([0.1, 0.2, 0.3])->setTextQuery('hello')->setLimit(5)->setWithPayload(true);
+            return (new ($E('VectorHybridSearchRequest'))())->setContext($ctxE())->setCollection('sdk_live_records')->setVector([0.1, 0.2, 0.3])->setTextQuery('hello')->setLimit(5)->setWithPayload(true);
         case 'vector_upsert':
         case 'vector_batch_upsert':
-            return (new ($E('VectorUpsertRequest'))())->setContext($ctxE())->setCollection('udb.sdk.live.v1.SdkLiveRecord')->setPoints([(new ($E('VectorPointMutation'))())->setId($g('record_id'))->setVector([0.1, 0.2, 0.3])]);
+            return (new ($E('VectorUpsertRequest'))())->setContext($ctxE())->setCollection('sdk_live_records')->setPoints([(new ($E('VectorPointMutation'))())->setId($g('record_id'))->setVector([0.1, 0.2, 0.3])]);
         case 'put_object':
             return (new ($E('Chunk'))())->setContext($ctxE())->setBucket($g('bucket', 'udb-live-sdk'))->setObjectKey($g('object_key', 'perf.txt'))->setData('x')->setContentType('application/octet-stream')->setFinalChunk(true);
         case 'get_object':
@@ -1818,9 +1851,11 @@ function perfBodyPhp(string $name, PerfFixturesPhp $fix, string $tenant, string 
         case 'graph_mutate':
             return (new ($E('GraphMutationRequest'))())->setContext($ctxE())->setResource($store('neo4j'))->setQuery('CREATE (n:Node {id:$id})')->setParameters(liveStruct(['id' => $g('record_id')]));
         case 'time_series_write':
-            return (new ($E('TimeSeriesWriteRequest'))())->setContext($ctxE())->setResource($store('clickhouse'))->setPoints([(new ($E('TimeSeriesPoint'))())->setTimestamp($ts())->setTags(['host' => 'a'])->setValues(['cpu' => 0.5])]);
+            // No points (matches Go) — TimeSeriesPoint.timestamp is a Timestamp message; the empty write resolves.
+            return (new ($E('TimeSeriesWriteRequest'))())->setContext($ctxE())->setResource($store('clickhouse', $g('ts_table', 'sdk_perf_ts')));
         case 'time_series_query':
-            return (new ($E('TimeSeriesQueryRequest'))())->setContext($ctxE())->setResource($store('clickhouse'))->setFrom($ts())->setTo($ts())->setLimit(100);
+            // No from/to (matches Go) — they are Timestamp messages; resource_name + limit is a valid query.
+            return (new ($E('TimeSeriesQueryRequest'))())->setContext($ctxE())->setResource($store('clickhouse', $g('ts_table', 'sdk_perf_ts')))->setLimit(100);
         case 'analytical_query':
             return (new ($E('AnalyticalQueryRequest'))())->setContext($ctxE())->setResource($store('clickhouse'))->setQuery('SELECT 1')->setLimit(100);
         case 'begin_tx':
@@ -1833,10 +1868,13 @@ function perfBodyPhp(string $name, PerfFixturesPhp $fix, string $tenant, string 
         case 'enqueue_outbox_event':
             return (new ($E('EnqueueOutboxEventRequest'))())->setContext($ctxE())->setTopic($g('event_type', 'sdk.perf'))->setPartitionKey($g('document_id', 'doc-1'))->setPayload(liveStruct(['event_id' => liveUuidV4(), 'event_type' => $g('event_type', 'sdk.perf'), 'correlation_id' => liveUuidV4(), 'document_id' => $g('document_id', 'doc-1')]));
         case 'drop_resource':
-            return (new ($E('ResourceAdminRequest'))())->setContext($ctxE())->setBackend('mongodb')->setResourceName($g('mongo_collection', 'sdk_perf'));
+            // destructive — throwaway name + explicit RLS-bypass ack (a drop spans tenants,
+            // so the broker fail-closes unless udb_allow_rls_bypass is set).
+            return (new ($E('ResourceAdminRequest'))())->setContext($ctxE())->setBackend('mongodb')->setResourceName('php_perf_drop_noop')->setSpecJson(json_encode(['udb_allow_rls_bypass' => true]));
         case 'stage_catalog':
         case 'validate_catalog':
-            return (new ($E('StageCatalogRequest'))())->setContext($ctxE())->setProjectId($project)->setReason('stage');
+            // manifest_json captured live in the seed (the new binary doesn't poison on stage).
+            return (new ($E('StageCatalogRequest'))())->setContext($ctxE())->setManifestJson($g('catalog_manifest'))->setProjectId($project)->setReason('stage');
         case 'activate_catalog':
         case 'rollback_catalog':
         case 'get_catalog_version':
@@ -1844,17 +1882,21 @@ function perfBodyPhp(string $name, PerfFixturesPhp $fix, string $tenant, string 
         case 'plan_migration':
             return (new ($E('MigrationPlanRequest'))())->setContext($ctxE())->setProjectId($project)->setDryRun(true);
         case 'apply_migration':
-            return (new ($E('MigrationApplyRequest'))())->setContext($ctxE())->setRunId($g('migration_id'))->setProjectId($project);
+            // Token is a BODY field (handlers_catalog.rs:694 reads req.approval_token); it was
+            // returned in the ApproveMigrationPlan response HEADER x-udb-approval-token and
+            // captured into 'approval_token' (BENCH_TS_PHP_ADVISORY.md).
+            return (new ($E('MigrationApplyRequest'))())->setContext($ctxE())->setRunId($g('apply_run_id') ?: $g('migration_id'))->setProjectId($project)->setApprovalToken($g('approval_token'));
         case 'get_migration_status':
         case 'approve_migration_plan':
-            return (new ($E('MigrationRunRequest'))())->setContext($ctxE())->setRunId($g('migration_id'))->setProjectId($project);
+            return (new ($E('MigrationRunRequest'))())->setContext($ctxE())->setRunId($g('approve_run_id') ?: $g('migration_id'))->setProjectId($project);
         case 'get_dlq_event':
-            return (new ($E('DlqEventRequest'))())->setContext($ctxE())->setDlqId($g('record_id'));
+            return (new ($E('DlqEventRequest'))())->setContext($ctxE())->setDlqId($g('dlq_id') ?: liveUuidV4());
         case 'replay_dlq_event':
-            return (new ($E('DlqActionRequest'))())->setContext($ctxE())->setDlqId($g('record_id'))->setPreserveEventId(false);
+            return (new ($E('DlqActionRequest'))())->setContext($ctxE())->setDlqId($g('replay_dlq_id') ?: liveUuidV4())->setPreserveEventId(false);
         case 'dismiss_dlq_event':
+            return (new ($E('DlqActionRequest'))())->setContext($ctxE())->setDlqId($g('dismiss_dlq_id') ?: liveUuidV4());
         case 'quarantine_dlq_event':
-            return (new ($E('DlqActionRequest'))())->setContext($ctxE())->setDlqId($g('record_id'));
+            return (new ($E('DlqActionRequest'))())->setContext($ctxE())->setDlqId($g('quarantine_dlq_id') ?: liveUuidV4());
         case 'get_cdc_status':
             return (new ($E('CdcControlRequest'))())->setContext($ctxE())->setSlotName('udb_cdc');
         case 'pause_cdc':
@@ -1868,44 +1910,49 @@ function perfBodyPhp(string $name, PerfFixturesPhp $fix, string $tenant, string 
         case 'scan_projection_drift':
             return (new ($E('ProjectionDriftScanRequest'))())->setContext($ctxE())->setProjectId($project)->setMessageType('udb.sdk.live.v1.SdkLiveRecord')->setScanMode('sample')->setRowsPerTarget(100)->setLimit(10);
         case 'get_saga':
-            return (new ($E('SagaRequest'))())->setContext($ctxE())->setSagaId($g('saga_id'));
+            return (new ($E('SagaRequest'))())->setContext($ctxE())->setSagaId($g('saga_id') ?: liveUuidV4());
         case 'retry_saga_compensation':
-            return (new ($E('SagaRequest'))())->setContext($ctxE())->setSagaId($g('saga_id'))->setReason('retry');
+            return (new ($E('SagaRequest'))())->setContext($ctxE())->setSagaId($g('retry_saga_id') ?: liveUuidV4())->setReason('retry');
         case 'mark_saga_reviewed':
-            return (new ($E('SagaRequest'))())->setContext($ctxE())->setSagaId($g('saga_id'))->setReason('reviewed');
+            return (new ($E('SagaRequest'))())->setContext($ctxE())->setSagaId($g('mark_saga_id') ?: liveUuidV4())->setReason('reviewed');
         case 'put_policy':
-            return (new ($E('PutPolicyRequest'))())->setContext($ctxE())->setPolicy((new ($E('PolicyRecord'))())->setEffect('allow')->setServiceIdentity($g('user_id'))->setTenantId($tenant)->setMessageType('udb.sdk.live.v1.SdkLiveRecord')->setOperation('read')->setRequiredScope('udb:read')->setPriority(100)->setEnabled(true));
+            // ALLOW-ALL (empty selectors = match-any): a narrow policy would flip the
+            // data plane to deny-by-default (snapshot non-empty) and deny the admin's
+            // own Upsert/Select/Vector*/TimeSeries* once reload_policies runs. An
+            // allow-all keeps the data plane open while still exercising the write path.
+            return (new ($E('PutPolicyRequest'))())->setContext($ctxE())->setPolicy((new ($E('PolicyRecord'))())->setEffect('allow')->setServiceIdentity('')->setTenantId($tenant)->setMessageType('')->setOperation('')->setRequiredScope('')->setPriority(1)->setEnabled(true));
         case 'delete_policy':
-            return (new ($E('PolicyRequest'))())->setContext($ctxE())->setPolicyId(1);
+            return (new ($E('PolicyRequest'))())->setContext($ctxE())->setPolicyId((int) ($g('ds_policy_id') ?: 0));
         case 'reload_policies':
         case 'lint_policies':
             return (new ($E('CapabilitiesRequest'))())->setContext($ctxE())->setProjectId($project);
 
         // ── IdentityProviderService — SCIM / SAML / unlink ──
         case 'unlink_identity':
-            return (new ($I('UnlinkIdentityRequest'))())->setTenantId($tenant)->setExternalIdentityId($g('record_id'))->setContext($ctxC());
+            return (new ($I('UnlinkIdentityRequest'))())->setTenantId($tenant)->setExternalIdentityId($g('external_identity_id') ?: liveUuidV4())->setContext($ctxC());
         case 'import_saml_metadata':
-            return (new ($I('ImportSamlMetadataRequest'))())->setProviderId($g('provider_id'))->setTenantId($tenant)->setMetadataXml('<EntityDescriptor></EntityDescriptor>')->setUpdatedBy($g('user_id'))->setContext($ctxC());
+            return (new ($I('ImportSamlMetadataRequest'))())->setProviderId($g('saml_provider_id') ?: $g('provider_id'))->setTenantId($tenant)->setMetadataXml('<md:EntityDescriptor xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata" entityID="https://idp.example.com/perf-saml"><md:IDPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol"><md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://idp.example.com/sso"/><md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://idp.example.com/sso"/></md:IDPSSODescriptor></md:EntityDescriptor>')->setUpdatedBy($g('user_id'))->setContext($ctxC());
         case 'start_saml_login':
-            return (new ($I('StartSamlLoginRequest'))())->setProviderId($g('provider_id'))->setTenantId($tenant)->setRelayState('state-1');
+            // Must target the SAML-kind provider with an imported SSO URL, not the OIDC one.
+            return (new ($I('StartSamlLoginRequest'))())->setProviderId($g('saml_provider_id') ?: $g('provider_id'))->setTenantId($tenant)->setRelayState('state-1');
         case 'saml_acs':
-            return (new ($I('SamlAcsRequest'))())->setProviderId($g('provider_id'))->setTenantId($tenant)->setSamlResponse('')->setRelayState('state-1')->setContext($ctxC());
+            return (new ($I('SamlAcsRequest'))())->setProviderId($g('provider_id'))->setTenantId($tenant)->setSamlResponse('__UDB_SAML_TEST__')->setRelayState('state-1')->setContext($ctxC());
         case 'scim_create_user':
-            return (new ($I('ScimCreateUserRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setScimUserJson('{"userName":"a@x.com","active":true}')->setContext($ctxC());
+            return (new ($I('ScimCreateUserRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setScimUserJson(json_encode(['userName' => 'scim-'.bin2hex(random_bytes(6)).'@x.com', 'active' => true]))->setContext($ctxC());
         case 'scim_get_user':
-            return (new ($I('ScimGetUserRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setScimUserId($g('record_id'));
+            return (new ($I('ScimGetUserRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setScimUserId($g('scim_user_id') ?: $g('record_id'));
         case 'scim_list_users':
             return (new ($I('ScimListUsersRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setPage($page());
         case 'scim_replace_user':
-            return (new ($I('ScimReplaceUserRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setScimUserId($g('record_id'))->setScimUserJson('{"userName":"a@x.com","active":true}')->setContext($ctxC());
+            return (new ($I('ScimReplaceUserRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setScimUserId($g('scim_user_id') ?: $g('record_id'))->setScimUserJson('{"userName":"a@x.com","active":true}')->setContext($ctxC());
         case 'scim_patch_user':
-            return (new ($I('ScimPatchUserRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setScimUserId($g('record_id'))->setOperations([(new ($I('ScimPatchOp'))())->setOp('replace')->setPath('active')->setValueJson('false')])->setContext($ctxC());
+            return (new ($I('ScimPatchUserRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setScimUserId($g('scim_user_id') ?: $g('record_id'))->setOperations([(new ($I('ScimPatchOp'))())->setOp('replace')->setPath('active')->setValueJson('false')])->setContext($ctxC());
         case 'scim_delete_user':
-            return (new ($I('ScimDeleteUserRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setScimUserId($g('record_id'))->setContext($ctxC());
+            return (new ($I('ScimDeleteUserRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setScimUserId($g('delete_scim_user_id') ?: $g('record_id'))->setContext($ctxC());
         case 'scim_create_group':
-            return (new ($I('ScimCreateGroupRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setScimGroupJson('{"displayName":"admins"}')->setContext($ctxC());
+            return (new ($I('ScimCreateGroupRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setScimGroupJson(json_encode(['displayName' => 'grp-'.bin2hex(random_bytes(6))]))->setContext($ctxC());
         case 'scim_get_group':
-            return (new ($I('ScimGetGroupRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setScimGroupId($g('record_id'));
+            return (new ($I('ScimGetGroupRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setScimGroupId($g('scim_group_id') ?: $g('record_id'));
         case 'scim_list_groups':
             return (new ($I('ScimListGroupsRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setPage($page());
         case 'scim_patch_group':
@@ -2008,6 +2055,88 @@ function perfSeedPhp(array $s): array
             $fix->set('code', $codes->getCodes()[0]);
             $fix->set('recovery_code', $codes->getCodes()[0]);
         }
+        // A DEDICATED OTP user (avoids the main user's SendOTP cooldown) -> real
+        // otp_id + dev-echoed code for VerifyOTP / ResendOTP. OTP_TYPE_SENSITIVE_OPERATION=4.
+        $ou = $try('SeedOTPUser', fn () => $authGen->create_user((new \Udb\Core\Authn\Services\V1\CreateUserRequest())
+            ->setUsername("sdk-perf-otp-$suffix")->setEmail("sdk-perf-otp-$suffix@example.com")->setPassword('CorrectHorse1!')
+            ->setTenantId($tenant)->setProjectId($project)->setFullName('SDK Perf OTP User'), $meta));
+        if ($ou) {
+            $so = $try('SeedSendOTP', fn () => $authGen->send_o_t_p((new \Udb\Core\Authn\Services\V1\SendOTPRequest())
+                ->setUserId($ou->getUser()->getUserId())->setOtpType(4), $meta));
+            if ($so) {
+                $fix->set('otp_id', $so->getOtpId());
+                if (method_exists($so, 'getDevOtpCode') && $so->getDevOtpCode() !== '') {
+                    $fix->set('otp_code', $so->getDevOtpCode());
+                }
+            }
+        }
+        // A real MFA challenge -> challenge_id (valid UUID) for VerifyMfaChallenge.
+        // AUTH_FACTOR_KIND_EMAIL_OTP=2, MFA_CHALLENGE_PURPOSE_LOGIN_STEP_UP=1.
+        $mc = $try('SeedMfaChallenge', fn () => $authGen->issue_mfa_challenge((new \Udb\Core\Authn\Services\V1\IssueMfaChallengeRequest())
+            ->setUserId($uid)->setFactorKind(2)->setPurpose(1), $meta));
+        if ($mc) {
+            $fix->set('challenge_id', $mc->getChallengeId());
+        }
+        // A real device row: Login with a device FINGERPRINT (device_id field 7) so
+        // register_login_device inserts a devices row -> device_id for RevokeDevice.
+        $try('SeedDeviceLogin', fn () => $authGen->login((new \Udb\Core\Authn\Services\V1\LoginRequest())
+            ->setUsername($uname)->setPassword('CorrectHorse1!')->setTenantHint($tenant)->setProjectHint($project)
+            ->setDeviceId("php-perf-fp-$suffix")->setDeviceName('php-perf-device')->setIpAddress('127.0.0.1'), $meta));
+        $dl = $try('SeedDevices', fn () => $authGen->list_devices((new \Udb\Core\Authn\Services\V1\ListDevicesRequest())->setUserId($uid), $meta));
+        if ($dl && count($dl->getDevices()) > 0) {
+            $fix->set('device_id', $dl->getDevices()[0]->getDeviceId());
+        }
+        // WebAuthn dev soft-authenticator (UDB_WEBAUTHN_TEST_MODE=1): register a passkey + a FRESH
+        // challenge for each measured Finish (the sentinel makes the broker mint+verify a credential).
+        $sr = $try('SeedWebAuthnReg', fn () => $authGen->start_web_authn_registration((new \Udb\Core\Authn\Services\V1\StartWebAuthnRegistrationRequest())
+            ->setUserId($uid)->setLabel('perf-passkey')->setTenantId($tenant)->setProjectId($project), $meta));
+        if ($sr) {
+            $try('SeedWebAuthnFinish', fn () => $authGen->finish_web_authn_registration((new \Udb\Core\Authn\Services\V1\FinishWebAuthnRegistrationRequest())
+                ->setChallengeId($sr->getChallengeId())->setPublicKeyCredentialJson('__UDB_WEBAUTHN_TEST__')->setLabel('perf-passkey'), $meta));
+        }
+        // The dev soft-authenticator is deterministic (one credential id per user), so the
+        // measured FinishWebAuthnRegistration must use a SEPARATE user with NO existing passkey —
+        // else it's a duplicate/exclude-credential case, not the first-registration success path
+        // (harness_correction.md FinishWebAuthnRegistration).
+        $webauthnRegUid = $uid;
+        $wru = $try('SeedWebAuthnRegUser', fn () => $authGen->create_user((new \Udb\Core\Authn\Services\V1\CreateUserRequest())
+            ->setUsername("sdk-perf-webauthn-reg-$suffix")->setEmail("sdk-perf-webauthn-reg-$suffix@example.com")->setPassword('CorrectHorse1!')
+            ->setTenantId($tenant)->setProjectId($project)->setFullName('SDK Perf WebAuthn Registration User'), $meta));
+        if ($wru && method_exists($wru, 'getUser') && $wru->getUser()) { $webauthnRegUid = $wru->getUser()->getUserId(); }
+        $sr2 = $try('SeedWebAuthnReg2', fn () => $authGen->start_web_authn_registration((new \Udb\Core\Authn\Services\V1\StartWebAuthnRegistrationRequest())
+            ->setUserId($webauthnRegUid)->setLabel('perf-passkey-2')->setTenantId($tenant)->setProjectId($project), $meta));
+        if ($sr2) { $fix->set('reg_challenge_id', $sr2->getChallengeId()); }
+        $sa = $try('SeedWebAuthnAuth', fn () => $authGen->start_web_authn_authentication((new \Udb\Core\Authn\Services\V1\StartWebAuthnAuthenticationRequest())
+            ->setUserId($uid)->setTenantId($tenant), $meta));
+        if ($sa) { $fix->set('auth_challenge_id', $sa->getChallengeId()); }
+        // PASSWORD_RESET OTP (type 3) on a dedicated user; the dev_otp_code IS echoed
+        // unconditionally when UDB_OTP_DEV_ECHO=1 (mfa.rs:208) — BENCH_TS_PHP_ADVISORY.md.
+        $ru = $try('SeedResetUser', fn () => $authGen->create_user((new \Udb\Core\Authn\Services\V1\CreateUserRequest())
+            ->setUsername("sdk-perf-rst-$suffix")->setEmail("sdk-perf-rst-$suffix@example.com")->setPassword('CorrectHorse1!')
+            ->setTenantId($tenant)->setProjectId($project)->setFullName('SDK Perf Reset User'), $meta));
+        if ($ru) {
+            $rso = $try('SeedResetOTP', fn () => $authGen->send_o_t_p((new \Udb\Core\Authn\Services\V1\SendOTPRequest())
+                ->setUserId($ru->getUser()->getUserId())->setOtpType(3), $meta));
+            if ($rso) {
+                $fix->set('reset_otp_id', $rso->getOtpId());
+                if (method_exists($rso, 'getDevOtpCode') && $rso->getDevOtpCode() !== '') { $fix->set('reset_otp_code', $rso->getDevOtpCode()); }
+            }
+        }
+        // THREE independent fresh logins so RefreshToken's rotation doesn't invalidate
+        // Authenticate's token or RefreshSession's session. MUST use the ADMIN bench user
+        // — the measured change_user_status/change_password mutate the sdk-perf user and
+        // would deactivate its tokens/sessions.
+        $adminU = liveEnv('UDB_LIVE_USERNAME', $uname);
+        $adminP = liveEnv('UDB_LIVE_PASSWORD', 'CorrectHorse1!');
+        $lt = $try('FreshLoginToken', fn () => $authGen->login((new \Udb\Core\Authn\Services\V1\LoginRequest())
+            ->setUsername($adminU)->setPassword($adminP)->setTenantHint($tenant)->setProjectHint($project)->setDeviceName('php-perf-token'), $meta));
+        if ($lt) { $fix->set('token', $lt->getAccessToken()); $fix->set('csrf_token', $lt->getCsrfToken()); }
+        $lr = $try('FreshLoginRefresh', fn () => $authGen->login((new \Udb\Core\Authn\Services\V1\LoginRequest())
+            ->setUsername($adminU)->setPassword($adminP)->setTenantHint($tenant)->setProjectHint($project)->setDeviceName('php-perf-refresh'), $meta));
+        if ($lr) { $fix->set('refresh_token', $lr->getRefreshToken()); }
+        $ls = $try('FreshLoginSession', fn () => $authGen->login((new \Udb\Core\Authn\Services\V1\LoginRequest())
+            ->setUsername($adminU)->setPassword($adminP)->setTenantHint($tenant)->setProjectHint($project)->setDeviceName('php-perf-session'), $meta));
+        if ($ls) { $fix->set('session_id', $ls->getSessionId()); }
     }
 
     // AuthzService: role + assignment + policy rule + relationship.
@@ -2027,12 +2156,31 @@ function perfSeedPhp(array $s): array
                 ->setRoleId($rid)->setDeletedBy($uid), $meta));
         }
     }
+    // A SEPARATE disposable role for the destructive DeleteRole -> real 200.
+    $delRole = $try('CreateDeleteRole', fn () => $authGen->create_role((new \Udb\Core\Authz\Services\V1\CreateRoleRequest())
+        ->setName("SDK Perf Del $suffix")->setDescription('disposable')->setCreatedBy($uid !== '' ? $uid : liveUuidV4())
+        ->setRoleCode("sdk_perf_del_$suffix")->setDomain($tenant)->setTenantId($tenant)->setProjectId($project), $meta));
+    if ($delRole) {
+        $fix->set('delete_role_id', $delRole->getRole()->getRoleId());
+    }
     if ($uid !== '') {
-        $rule = $try('CreatePolicyRule', fn () => $authGen->create_policy_rule((new \Udb\Core\Authz\Services\V1\CreatePolicyRuleRequest())
+        // GetPolicyRule's CreatePolicyRule response id IS Get-queryable, BUT
+        // ActivatePolicyVersion/RollbackPolicyVersion DELETE+regenerate ALL policy_rules for the
+        // tenant/project and sort BEFORE GetPolicyRule — wiping a main-project rule. Seed the
+        // target in an ISOLATED project no version-activation touches (harness_correction.md).
+        $getPolProject = "$project-getpolrule";
+        $created = $try('CreatePolicyRule', fn () => $authGen->create_policy_rule((new \Udb\Core\Authz\Services\V1\CreatePolicyRuleRequest())
             ->setSubject($roleCode)->setDomain($tenant)->setObject('ledger')->setAction('data.update')
-            ->setEffect(1)->setDescription('perf seed rule')->setCreatedBy($uid)->setTenantId($tenant)->setProjectId($project), $meta));
-        if ($rule) {
-            $fix->set('policy_id', $rule->getPolicy()->getPolicyId());
+            ->setEffect(1)->setDescription('perf seed rule (version-isolated)')->setCreatedBy($uid)->setTenantId($tenant)->setProjectId($getPolProject), $meta));
+        if ($created && method_exists($created, 'getPolicy') && $created->getPolicy()) {
+            $fix->set('policy_id', $created->getPolicy()->getPolicyId());
+        }
+        // A SEPARATE disposable rule (same isolated project) for the destructive DeletePolicyRule.
+        $delRule = $try('CreateDeletePolicyRule', fn () => $authGen->create_policy_rule((new \Udb\Core\Authz\Services\V1\CreatePolicyRuleRequest())
+            ->setSubject($roleCode)->setDomain($tenant)->setObject('ledger-disposable')->setAction('data.delete')
+            ->setEffect(1)->setDescription('disposable')->setCreatedBy($uid)->setTenantId($tenant)->setProjectId($getPolProject), $meta));
+        if ($delRule && method_exists($delRule, 'getPolicy') && $delRule->getPolicy()) {
+            $fix->set('delete_policy_id', $delRule->getPolicy()->getPolicyId());
         }
     }
     $fix->set('relation', 'member');
@@ -2048,8 +2196,225 @@ function perfSeedPhp(array $s): array
         ->setName("sdk-perf-key-$suffix")->setOwnerId($principal)->setScopes(['data:read'])->setContext($keyCtx), $meta));
     if ($key) {
         $fix->set('key_id', $key->getKey()->getKeyId());
+        // revoke/rotate/update look up by key_PREFIX (get_by_prefix), not the key_id UUID.
+        $fix->set('key_prefix', $key->getKey()->getKeyPrefix());
         $fix->set('plain_key', $key->getPlainKey());
         $fix->set('owner_id', $principal);
+    }
+    // A SEPARATE disposable key for the destructive RevokeApiKey -> real 200.
+    $revKey = $try('CreateRevokeKey', fn () => $authGen->create_api_key((new \Udb\Core\Apikey\Services\V1\CreateApiKeyRequest())
+        ->setName("sdk-perf-revoke-$suffix")->setOwnerId($principal)->setScopes(['data:read'])->setContext($keyCtx), $meta));
+    if ($revKey) {
+        $fix->set('revoke_key_id', $revKey->getKey()->getKeyId());
+        $fix->set('revoke_key_prefix', $revKey->getKey()->getKeyPrefix());
+    }
+    // A SEPARATE disposable key for UpdateApiKey (RotateApiKey rotates the primary key_id).
+    $updKey = $try('CreateUpdateKey', fn () => $authGen->create_api_key((new \Udb\Core\Apikey\Services\V1\CreateApiKeyRequest())
+        ->setName("sdk-perf-update-$suffix")->setOwnerId($principal)->setScopes(['data:read'])->setContext($keyCtx), $meta));
+    if ($updKey) {
+        $fix->set('update_key_id', $updKey->getKey()->getKeyId());
+        $fix->set('update_key_prefix', $updKey->getKey()->getKeyPrefix());
+    }
+
+    // IdentityProviderService: a real OIDC provider -> provider_id (24 IdP RPCs read it).
+    $ctxC = (new \Udb\Core\Common\V1\RequestContext())->setTenant((new \Udb\Core\Common\V1\TenantContext())->setTenantId($tenant)->setProjectId($project));
+    $prov = $try('CreateProvider', fn () => $authGen->create_provider((new \Udb\Core\Idp\Services\V1\CreateProviderRequest())
+        ->setTenantId($tenant)->setKind(2)->setDisplayName("SDK Perf OIDC $suffix")->setIssuer('https://idp.example.com')
+        ->setJwksUrl('https://idp.example.com/jwks')->setClientIds(['client-1'])->setAudiences(['udb'])
+        ->setClaimMappingJson('{}')->setGroupMappingJson('{"sdk-perf-group":"reader"}')->setJitPolicyJson('{"require_verified_email":false}')->setAccountLinkingPolicy('explicit')
+        ->setEnabled(true)->setCreatedBy($uid !== '' ? $uid : liveUuidV4())->setContext($ctxC), $meta));
+    if ($prov) {
+        $pid = method_exists($prov, 'getProvider') && $prov->getProvider() ? $prov->getProvider()->getProviderId() : '';
+        if ($pid !== '') {
+            $fix->set('provider_id', $pid);
+            $cleanups[] = fn () => $try('DisableProvider', fn () => $authGen->disable_provider((new \Udb\Core\Idp\Services\V1\DisableProviderRequest())
+                ->setProviderId($pid)->setTenantId($tenant)->setUpdatedBy($uid !== '' ? $uid : liveUuidV4())->setContext($ctxC), $meta));
+            // SCIM: JIT-provision users. The broker resolves Scim Get/Patch/Replace/Delete by
+            // the SCIM user_id == the userName/subject; external_identity_id = the returned id.
+            $scimUserName = "scim-$suffix@x.com";
+            $su = $try('ScimCreateUser', fn () => $authGen->scim_create_user((new \Udb\Core\Idp\Services\V1\ScimCreateUserRequest())
+                ->setTenantId($tenant)->setProviderId($pid)->setScimUserJson(json_encode(['userName' => $scimUserName, 'active' => true]))->setContext($ctxC), $meta));
+            if ($su) {
+                $fix->set('scim_user_id', $scimUserName);
+            }
+            // A SEPARATE disposable SCIM user backs external_identity_id, so the measured
+            // UnlinkIdentity (which deletes that external identity) does NOT delete the main
+            // SCIM user that ScimGet/Patch/Replace read.
+            $unl = $try('ScimCreateUnlinkUser', fn () => $authGen->scim_create_user((new \Udb\Core\Idp\Services\V1\ScimCreateUserRequest())
+                ->setTenantId($tenant)->setProviderId($pid)->setScimUserJson(json_encode(['userName' => "scim-unl-$suffix@x.com", 'active' => true]))->setContext($ctxC), $meta));
+            if ($unl && method_exists($unl, 'getUser') && $unl->getUser()) {
+                $fix->set('external_identity_id', $unl->getUser()->getId());
+            }
+            $delName = "scim-del-$suffix@x.com";
+            $try('ScimCreateDeleteUser', fn () => $authGen->scim_create_user((new \Udb\Core\Idp\Services\V1\ScimCreateUserRequest())
+                ->setTenantId($tenant)->setProviderId($pid)->setScimUserJson(json_encode(['userName' => $delName, 'active' => true]))->setContext($ctxC), $meta));
+            $fix->set('delete_scim_user_id', $delName);
+            $fix->set('scim_group_id', 'sdk-perf-group');
+            // A real enabled SAML provider (+ imported metadata for an SSO URL) so
+            // StartSamlLogin/SamlAcs resolve an active SAML provider. IDP_KIND_SAML=3.
+            $samlXml = '<md:EntityDescriptor xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata" entityID="https://idp.example.com/perf-saml"><md:IDPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol"><md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://idp.example.com/sso"/><md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://idp.example.com/sso"/></md:IDPSSODescriptor></md:EntityDescriptor>';
+            $sp = $try('CreateSamlProvider', fn () => $authGen->create_provider((new \Udb\Core\Idp\Services\V1\CreateProviderRequest())
+                ->setTenantId($tenant)->setKind(3)->setDisplayName("SDK Perf SAML $suffix")->setIssuer("https://saml.example.com/$suffix")
+                ->setJwksUrl('https://saml.example.com/jwks')->setClientIds(['perf-saml'])->setAudiences(['udb'])
+                ->setClaimMappingJson('{}')->setGroupMappingJson('{}')->setJitPolicyJson('{"require_verified_email":false}')->setAccountLinkingPolicy('explicit')
+                ->setEnabled(true)->setCreatedBy($uid !== '' ? $uid : liveUuidV4())->setContext($ctxC), $meta));
+            if ($sp && method_exists($sp, 'getProvider') && $sp->getProvider()) {
+                $spid = $sp->getProvider()->getProviderId();
+                $fix->set('saml_provider_id', $spid);
+                $try('ImportSamlMetadata', fn () => $authGen->import_saml_metadata((new \Udb\Core\Idp\Services\V1\ImportSamlMetadataRequest())
+                    ->setProviderId($spid)->setTenantId($tenant)->setMetadataXml($samlXml)->setUpdatedBy($uid !== '' ? $uid : liveUuidV4())->setContext($ctxC), $meta));
+            }
+            // A SEPARATE disposable OIDC provider for the destructive DisableProvider, so disabling
+            // it does NOT disable the primary provider_id that SamlAcs/ResolveExternalIdentity read.
+            $dp = $try('CreateDisposableProvider', fn () => $authGen->create_provider((new \Udb\Core\Idp\Services\V1\CreateProviderRequest())
+                ->setTenantId($tenant)->setKind(2)->setDisplayName("SDK Perf OIDC Disposable $suffix")->setIssuer("https://idp-disposable.example.com/$suffix")
+                ->setJwksUrl('https://idp-disposable.example.com/jwks')->setClientIds(['perf-client-disp'])->setAudiences(['udb'])
+                ->setClaimMappingJson('{}')->setGroupMappingJson('{}')->setJitPolicyJson('{"require_verified_email":false}')->setAccountLinkingPolicy('explicit')
+                ->setEnabled(true)->setCreatedBy($uid !== '' ? $uid : liveUuidV4())->setContext($ctxC), $meta));
+            if ($dp && method_exists($dp, 'getProvider') && $dp->getProvider()) {
+                $fix->set('disable_provider_id', $dp->getProvider()->getProviderId());
+            }
+        }
+    }
+
+    // AuthzService governance: a real policy draft -> policy_draft_id.
+    $draft = $try('CreatePolicyDraft', fn () => $authGen->create_policy_draft((new \Udb\Core\Authz\Services\V1\CreatePolicyDraftRequest())
+        ->setActor((new \Udb\Core\Authz\Services\V1\GovernanceActor())->setSubject($fix->lookup('subject') ?? ('user:'.$uid))->setTenantId($tenant)->setProjectId($project)->setScopes(['authz:policy:write']))
+        ->setTenantId($tenant)->setProjectId($project)->setPolicySetName('default')->setTitle("sdk-perf draft $suffix")->setChangeReason('seed')->setDocument(new \Udb\Core\Authz\Services\V1\PolicyDocument()), $meta));
+    if ($draft) {
+        $did2 = method_exists($draft, 'getDraft') && $draft->getDraft() ? $draft->getDraft()->getDraftId() : '';
+        if ($did2 !== '') {
+            $fix->set('policy_draft_id', $did2);
+        }
+    }
+    // Governance lifecycle: drafts in each state, approved versions, a canary, a rollback set.
+    $gA = fn () => (new \Udb\Core\Authz\Services\V1\GovernanceActor())->setSubject($fix->lookup('subject') ?? ('user:'.$uid))->setTenantId($tenant)->setProjectId($project)->setScopes(['authz:admin', 'authz:policy:write', 'authz:policy:approve', 'policy:read']);
+    $mkDraft = function (string $title, string $setName) use ($authGen, $tenant, $project, $meta, $gA, $suffix): string {
+        try {
+            $d = $authGen->create_policy_draft((new \Udb\Core\Authz\Services\V1\CreatePolicyDraftRequest())->setActor($gA())->setTenantId($tenant)->setProjectId($project)->setPolicySetName($setName)->setTitle($title.$suffix)->setChangeReason('seed')->setDocument(new \Udb\Core\Authz\Services\V1\PolicyDocument()), $meta);
+            return ($d->getDraft()) ? $d->getDraft()->getDraftId() : '';
+        } catch (\Throwable $e) {
+            return '';
+        }
+    };
+    $submit = function (string $did) use ($authGen, $gA, $meta): void {
+        try {
+            $authGen->submit_policy_draft((new \Udb\Core\Authz\Services\V1\SubmitPolicyDraftRequest())->setActor($gA())->setDraftId($did), $meta);
+        } catch (\Throwable $e) {
+        }
+    };
+    $u = $mkDraft('sdk-perf-update-', 'default');
+    if ($u !== '') {
+        $fix->set('update_draft_id', $u);
+    }
+    $ad = $mkDraft('sdk-perf-approve-', 'default');
+    if ($ad !== '') {
+        $submit($ad);
+        $fix->set('approve_draft_id', $ad);
+    }
+    $rd = $mkDraft('sdk-perf-reject-', 'default');
+    if ($rd !== '') {
+        $submit($rd);
+        $fix->set('reject_draft_id', $rd);
+    }
+    $mkVersion = function (string $setName, string $title) use ($authGen, $meta, $gA, $mkDraft, $submit, $uid): ?object {
+        $did = $mkDraft($title, $setName);
+        if ($did === '') {
+            return null;
+        }
+        $submit($did);
+        try {
+            $ap = $authGen->approve_policy_draft((new \Udb\Core\Authz\Services\V1\ApprovePolicyDraftRequest())->setActor($gA())->setDraftId($did)->setReviewer($uid)->setReason('seed approve'), $meta);
+            return $ap->getVersion();
+        } catch (\Throwable $e) {
+            return null;
+        }
+    };
+    $av = $mkVersion("sdk-perf-activate-set-$suffix", 'activate-');
+    if ($av) {
+        $fix->set('policy_version_id', $av->getPolicyVersionId());
+    }
+    $cv = $mkVersion("sdk-perf-canary-set-$suffix", 'canary-');
+    if ($cv) {
+        $fix->set('canary_version_id', $cv->getPolicyVersionId());
+        try {
+            // success_window_secs MUST be > 0 (1s): 0 makes the broker substitute a default that
+            // never elapses, so PromoteCanary stays "not promote-eligible".
+            $c = $authGen->activate_canary((new \Udb\Core\Authz\Services\V1\ActivateCanaryRequest())->setActor($gA())->setPolicyVersionId($cv->getPolicyVersionId())->setScopeKind(3)->setScopeValues(['10'])->setSuccessWindowSecs(1)->setMetricThreshold(0.99)->setMinSamples(0), $meta);
+            if ($c->getCanary()) {
+                $fix->set('canary_id', $c->getCanary()->getCanaryId());
+            }
+        } catch (\Throwable $e) {
+        }
+    }
+    $v1 = $mkVersion("sdk-perf-rollback-set-$suffix", 'rb1-');
+    if ($v1) {
+        try {
+            $authGen->activate_policy_version((new \Udb\Core\Authz\Services\V1\ActivatePolicyVersionRequest())->setActor($gA())->setPolicyVersionId($v1->getPolicyVersionId()), $meta);
+        } catch (\Throwable $e) {
+        }
+        $v2 = $mkVersion("sdk-perf-rollback-set-$suffix", 'rb2-');
+        if ($v2) {
+            try {
+                $authGen->activate_policy_version((new \Udb\Core\Authz\Services\V1\ActivatePolicyVersionRequest())->setActor($gA())->setPolicyVersionId($v2->getPolicyVersionId()), $meta);
+            } catch (\Throwable $e) {
+            }
+            $fix->set('rollback_policy_set_id', $v2->getPolicySetId());
+            $fix->set('rollback_target_version_id', $v1->getPolicyVersionId());
+        }
+    }
+
+    // DataBroker: a dry-run migration plan -> migration_id (run_id).
+    $rcSeed = (new \Udb\Entity\V1\RequestContext())->setTenantId($tenant)->setProjectId($project)->setPurpose('php.live.perf.seed');
+    $plan = $try('PlanMigration', fn () => $data->plan_migration((new \Udb\Entity\V1\MigrationPlanRequest())->setContext($rcSeed)->setProjectId($project)->setDryRun(true), $meta));
+    if ($plan && $plan->getRunId() !== '') {
+        $fix->set('migration_id', $plan->getRunId());
+    }
+    // approve_run_id: a NON-dry-run plan left in PREFLIGHT for the measured ApproveMigrationPlan.
+    $p1 = $try('PlanMigrationApprove', fn () => $data->plan_migration((new \Udb\Entity\V1\MigrationPlanRequest())->setContext($rcSeed)->setProjectId($project)->setDryRun(false), $meta));
+    if ($p1 && $p1->getRunId() !== '') {
+        $fix->set('approve_run_id', $p1->getRunId());
+    }
+    // apply_run_id + approval_token: a SECOND non-dry-run plan, then APPROVE it so the measured
+    // ApplyMigration has a valid token. ApproveMigrationPlan returns the token ONLY in the
+    // response HEADER x-udb-approval-token (handlers_catalog.rs:882) — read it via the client's
+    // lastResponseMetadata() right after the approve (BENCH_TS_PHP_ADVISORY.md).
+    $p2 = $try('PlanMigrationApply', fn () => $data->plan_migration((new \Udb\Entity\V1\MigrationPlanRequest())->setContext($rcSeed)->setProjectId($project)->setDryRun(false), $meta));
+    if ($p2 && $p2->getRunId() !== '') {
+        $applyRunId = $p2->getRunId();
+        $fix->set('apply_run_id', $applyRunId);
+        $try('ApproveForApply', function () use ($data, $rcSeed, $project, $applyRunId, $fix, $meta) {
+            $data->approve_migration_plan((new \Udb\Entity\V1\MigrationRunRequest())->setContext($rcSeed)->setRunId($applyRunId)->setProjectId($project), $meta);
+            $md = $data->lastResponseMetadata();
+            $tok = $md['x-udb-approval-token'][0] ?? '';
+            if ($tok !== '') {
+                $fix->set('approval_token', (string) $tok);
+            }
+            return $tok;
+        });
+    }
+    // ds_policy_id: a real broker policy (allow-all, harmless) for the measured DeletePolicy.
+    $try('PutPolicy', fn () => $data->put_policy((new \Udb\Entity\V1\PutPolicyRequest())->setContext($rcSeed)->setPolicy((new \Udb\Entity\V1\PolicyRecord())->setEffect('allow')->setTenantId($tenant)->setPriority(1)->setEnabled(true)), $meta));
+    $pl = $try('ListPolicies', fn () => $data->list_policies((new \Udb\Entity\V1\PolicyListRequest())->setContext($rcSeed)->setIncludeDisabled(true)->setLimit(50), $meta));
+    if ($pl && count($pl->getPolicies()) > 0) {
+        $fix->set('ds_policy_id', (string) $pl->getPolicies()[0]->getPolicyId());
+    }
+
+    // Qdrant: a real vector collection. The name must be qdrant-safe (no dots) -> use
+    // "sdk_live_records". size 3 / cosine matches the 3-dim [0.1,0.2,0.3] body vectors.
+    $try('EnsureVectorCollection', fn () => $data->ensure_resource((new \Udb\Entity\V1\ResourceAdminRequest())
+        ->setContext($rcSeed)->setBackend('qdrant')->setResourceName('sdk_live_records')->setSpecJson('{"size":3,"distance":"Cosine"}'), $meta));
+    // ClickHouse: a real table so TimeSeriesWrite/Query resolve a column store -> ts_table.
+    $tsOk = $try('EnsureTsTable', fn () => $data->ensure_resource((new \Udb\Entity\V1\ResourceAdminRequest())
+        ->setContext($rcSeed)->setBackend('clickhouse')->setResourceName('sdk_perf_ts')->setSpecJson('{}'), $meta));
+    $fix->set('ts_table', 'sdk_perf_ts');
+
+    // Capture the live catalog manifest (READ-ONLY) so the measured StageCatalog has a valid
+    // CatalogManifest (the new binary doesn't bump the active version on stage). K2 catalog
+    // activate/rollback/get_version stay broker-blocked.
+    $cm = $try('CaptureCatalogManifest', fn () => $data->get_catalog_manifest((new \Udb\Entity\V1\CatalogManifestRequest())->setContext($rcSeed)->setRedact(false), $meta));
+    if ($cm && $cm->getManifestJson() !== '') {
+        $fix->set('catalog_manifest', $cm->getManifestJson());
     }
 
     // AnalyticsService: a recorded metric.
@@ -2067,10 +2432,41 @@ function perfSeedPhp(array $s): array
         $sent = $try('SendNotification', fn () => $authGen->send_notification((new \Udb\Core\Notification\Services\V1\SendNotificationRequest())
             ->setEventType($event)->setRecipientId($uid)->setRecipientAddress("sdk+$suffix@example.com")->setTenantId($tenant)->setChannels([1]), $meta));
         if ($sent && count($sent->getLogs()) > 0) {
-            $fix->set('log_id', $sent->getLogs()[0]->getLogId());
-            $fix->set('notification_id', $sent->getLogs()[0]->getLogId());
+            $logId = $sent->getLogs()[0]->getLogId();
+            $fix->set('log_id', $logId);
+            $fix->set('notification_id', $logId);
+            // RetryNotification is status-gated to FAILED rows — mark this log FAILED via
+            // GenericDispatch operation="mutate" (query only allows SELECT). Go pattern.
+            $try('MarkNotificationFailed', fn () => $data->generic_dispatch((new \Udb\Entity\V1\GenericDispatchRequest())
+                ->setContext($rcSeed)->setBackend('postgres')->setOperation('mutate')
+                ->setSpecJson(json_encode(['sql' => "UPDATE udb_notification.notification_logs SET status = 'FAILED', error_message = 'perf seed failure' WHERE log_id = \$1::UUID AND tenant_id = \$2 RETURNING log_id", 'params' => [$logId, $tenant], 'param_types' => ['uuid', 'string'], 'return_rows' => true])), $meta));
         }
+        // An EMAIL preference row so GetPreference resolves.
+        $try('SetPreference', fn () => $authGen->set_preference((new \Udb\Core\Notification\Services\V1\SetPreferenceRequest())
+            ->setUserId($uid)->setTenantId($tenant)->setChannel(1)->setIsOptedOut(false), $meta));
     }
+    // node_id for AckStatus (best-effort: set the id; a non-empty node_id avoids the
+    // "node_id is required" reject even if no stream session is opened here).
+    $nodeId = "sdk-perf-node-$suffix";
+    $fix->set('node_id', $nodeId);
+    // Open a StreamResources session so a node-state row exists for (node_id, BACKEND_TARGET=5);
+    // AckStatus 404s without it.
+    $try('SeedNodeState', function () use ($authGen, $nodeId, $tenant, $project, $meta) {
+        $cpCtx = (new \Udb\Core\Common\V1\RequestContext())->setTenant((new \Udb\Core\Common\V1\TenantContext())->setTenantId($tenant)->setProjectId($project));
+        $stream = $authGen->stream_resources($meta);
+        $stream->write((new \Udb\Core\Control\Services\V1\DiscoveryRequest())->setNodeId($nodeId)->setResourceType(5)->setContext($cpCtx));
+        $stream->read();
+        $stream->cancel();
+    });
+    // Saga + DLQ rows: pre-seeded out-of-band into udb_system (fixed UUIDs, one per
+    // mutating RPC). The SQL insert runs before the test (scoped to the run's tenant).
+    $fix->set('saga_id', '11111111-1111-4111-8111-111111111101');
+    $fix->set('retry_saga_id', '11111111-1111-4111-8111-111111111102');
+    $fix->set('mark_saga_id', '11111111-1111-4111-8111-111111111103');
+    $fix->set('dlq_id', '22222222-2222-4222-8222-222222222201');
+    $fix->set('dismiss_dlq_id', '22222222-2222-4222-8222-222222222202');
+    $fix->set('quarantine_dlq_id', '22222222-2222-4222-8222-222222222203');
+    $fix->set('replay_dlq_id', '22222222-2222-4222-8222-222222222204');
 
     // StorageService (UUID tenant): a registered file -> file_id, + Asset pipeline.
     $reg = $try('RegisterUpload', fn () => $authGen->register_upload((new \Udb\Core\Storage\Services\V1\RegisterUploadRequest())
@@ -2079,6 +2475,46 @@ function perfSeedPhp(array $s): array
     if ($reg) {
         $fid = $reg->getFileId();
         $fix->set('file_id', $fid);
+        // FinalizeUpload HEADs the object bytes the StorageService minted. Upload through the
+        // presigned RegisterUpload.upload_url FIRST (the canonical native path); DataBroker
+        // PutObject is a manifest-gated fallback (harness_correction.md FinalizeUpload).
+        $try('SeedPutObject', function () use ($data, $reg, $suffix, $tenant, $project, $meta) {
+            $payload = "sdk-perf-file-$suffix";
+            $url = method_exists($reg, 'getUploadUrl') ? $reg->getUploadUrl() : '';
+            if ($url !== '') {
+                // The presigned URL targets the broker's minio endpoint. When this harness runs
+                // IN DOCKER (broker reached via host.docker.internal) rewrite the minio host so the
+                // container can reach it; the rewrite breaks the SigV4 host → 403 → DataBroker
+                // fallback below. When running NATIVELY (CI: broker on localhost, minio on
+                // localhost reachable directly) DO NOT rewrite — the presigned PUT works as-is.
+                if (str_contains(liveEnv('UDB_GRPC_TARGET', ''), 'host.docker.internal')) {
+                    $url = str_replace(['127.0.0.1', 'localhost'], 'host.docker.internal', $url);
+                }
+                $ch = curl_init($url);
+                curl_setopt_array($ch, [CURLOPT_CUSTOMREQUEST => 'PUT', CURLOPT_POSTFIELDS => $payload, CURLOPT_HTTPHEADER => ['Content-Type: text/plain'], CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 10]);
+                curl_exec($ch);
+                $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_close($ch);
+                if ($code >= 200 && $code < 300) {
+                    return;
+                }
+            }
+            // Fallback: DataBroker.PutObject to the catalog-manifest bucket (UDB_LIVE_S3_BUCKET).
+            // FinalizeUpload HEADs UDB_STORAGE_BUCKET, which the broker lane sets to the same
+            // bucket so the streamed bytes are found.
+            $bucket = liveEnv('UDB_LIVE_S3_BUCKET', 'udb-live-sdk');
+            $rc = (new \Udb\Entity\V1\RequestContext())->setTenantId($tenant)->setProjectId($project)->setPurpose('php.live.perf.seed');
+            $call = $data->put_object($meta);
+            $call->write((new \Udb\Entity\V1\Chunk())->setContext($rc)->setBucket($bucket)->setObjectKey($reg->getObjectKey())->setData($payload)->setContentType('text/plain')->setFinalChunk(true));
+            $call->wait();
+        });
+        // A SEPARATE disposable file for the destructive DeleteFile -> real 200.
+        $delReg = $try('RegisterDeleteFile', fn () => $authGen->register_upload((new \Udb\Core\Storage\Services\V1\RegisterUploadRequest())
+            ->setTenantId($tenant)->setProjectId('')->setFilename("perf-del-$suffix.txt")->setContentType('text/plain')
+            ->setFileType('DOCUMENT')->setReferenceId(liveUuidV4())->setReferenceType('sdk.perf')->setSizeBytes(64)->setExpiresInMinutes(30), $meta));
+        if ($delReg) {
+            $fix->set('delete_file_id', $delReg->getFileId());
+        }
         if ($fid !== '') {
             $cleanups[] = fn () => $try('DeleteFile', fn () => $authGen->delete_file((new \Udb\Core\Storage\Services\V1\DeleteFileRequest())
                 ->setTenantId($tenant)->setFileId($fid), $meta));
@@ -2099,7 +2535,14 @@ function perfSeedPhp(array $s): array
                     $inst = $try('StartPipeline', fn () => $authGen->start_pipeline((new \Udb\Core\Asset\Services\V1\StartPipelineRequest())
                         ->setTenantId($tenant)->setDefinitionId($did)->setAssetId($aid)->setContext('{}')->setCorrelationId("sdk-perf-$suffix"), $meta));
                     if ($inst) {
-                        $fix->set('instance_id', $inst->getInstanceId());
+                        $iid = $inst->getInstanceId();
+                        $fix->set('instance_id', $iid);
+                        // A started pipeline exposes its steps -> a real step_id for CompleteStep.
+                        $pl = $try('GetPipelineSteps', fn () => $authGen->get_pipeline((new \Udb\Core\Asset\Services\V1\GetPipelineRequest())
+                            ->setTenantId($tenant)->setInstanceId($iid), $meta));
+                        if ($pl && count($pl->getSteps()) > 0) {
+                            $fix->set('step_id', $pl->getSteps()[0]->getStepId());
+                        }
                     }
                 }
             }
@@ -2126,7 +2569,26 @@ function perfSeedPhp(array $s): array
                     if ($pub) {
                         $fix->set('track_id', $pub->getTrackId());
                     }
+                    // A SECOND disposable track for the destructive UnpublishTrack.
+                    $pub2 = $try('PublishUnpublishTrack', fn () => $authGen->publish_track((new \Udb\Core\Webrtc\Services\V1\PublishTrackRequest())
+                        ->setTenantId($tenant)->setRoomId($roomId)->setPeerId($pid)->setKind('video')->setLabel('cam')->setSettings('{}')->setMetadata('{}'), $meta));
+                    if ($pub2) {
+                        $fix->set('unpublish_track_id', $pub2->getTrackId());
+                    }
                 }
+            }
+            // A SEPARATE disposable peer for the destructive LeaveRoom.
+            $lj = $try('JoinLeavePeer', fn () => $authGen->join_room((new \Udb\Core\Webrtc\Services\V1\JoinRoomRequest())
+                ->setTenantId($tenant)->setRoomId($roomId)->setDisplayName('sdk-perf-leave-peer')->setMetadata('{}')->setUserAgent('sdk-perf'), $meta));
+            if ($lj) {
+                $fix->set('leave_peer_id', $lj->getPeer()->getPeerId());
+            }
+            // A SEPARATE disposable room for the destructive CloseRoom (closing the main room
+            // would close its peers and break PublishTrack/MuteTrack/Signal).
+            $cr = $try('CreateCloseRoom', fn () => $authGen->create_room((new \Udb\Core\Webrtc\Services\V1\CreateRoomRequest())
+                ->setTenantId($tenant)->setName("sdk-perf-close-room-$suffix")->setMaxParticipants(8)->setConfig('{}')->setCreatedBy($uid !== '' ? $uid : liveUuidV4()), $meta));
+            if ($cr) {
+                $fix->set('close_room_id', $cr->getRoomId());
             }
         }
     }
@@ -2161,21 +2623,45 @@ it('measures per-RPC latency', function () {
     // Returns [elapsed_ms, err] where err is the gRPC status code NAME on a non-OK
     // status, else "OK" — so a failing RPC is recorded as a FAILURE, never a silent
     // latency sample (BENCH_RPC_BODIES.md #1/#3).
-    $timeUnary = function ($stub, ReflectionMethod $method, $hasRequest, $probeRequest) use ($invoke): array {
+    $timeUnary = function ($stub, ReflectionMethod $method, $hasRequest, $probeRequest) use ($invoke, $authedMeta): array {
         $start = microtime(true);
         $err = 'OK';
+        $detail = '';
         try {
-            $call = $invoke($stub, $method, $hasRequest, $probeRequest);
+            // put_object is CLIENT-STREAMING: the request body is STREAMED via write(), not a
+            // request arg. The generic $invoke binds the Chunk to the put_object(?UdbMetadata)
+            // metadata slot → the broker reads an empty stream ("empty object stream"). Open
+            // with the real metadata, WRITE the seeded Chunk, then close + wait (mirrors the
+            // working SeedPutObject pattern).
+            if ($method->getName() === 'put_object') {
+                $call = $stub->put_object($authedMeta);
+                if ($probeRequest !== null) {
+                    $call->write($probeRequest);
+                }
+            } else {
+                $call = $invoke($stub, $method, $hasRequest, $probeRequest);
+            }
             if (method_exists($call, 'wait')) {
-                $call->wait();
+                // Raw \Grpc\UnaryCall::wait() returns [response, status] and does NOT
+                // throw on a non-OK status — inspect the status code or every failing
+                // RPC is silently recorded as a latency sample (the PHP "false green").
+                $res = $call->wait();
+                $status = is_array($res) ? ($res[1] ?? null) : null;
+                $code = is_object($status) ? (int) ($status->code ?? 0) : (is_array($status) ? (int) ($status['code'] ?? 0) : 0);
+                if ($code !== 0) {
+                    $err = grpcStatusNamePhp($code);
+                    $detail = is_object($status) ? (string) ($status->details ?? '') : (string) ($status['details'] ?? '');
+                }
             }
         } catch (\Fahara02\UdbLaravel\Exceptions\UdbRpcException $e) {
             $err = grpcStatusNamePhp($e->status);
+            $detail = $e->getMessage();
         } catch (\Throwable $e) {
             $err = 'UNKNOWN';
+            $detail = $e->getMessage();
         }
 
-        return [(microtime(true) - $start) * 1000.0, $err];
+        return [(microtime(true) - $start) * 1000.0, $err, $detail];
     };
 
     // All RPCs are measured. Unary = full round-trip. Streaming = STREAM-OPEN latency
@@ -2183,22 +2669,92 @@ it('measures per-RPC latency', function () {
     // emits a first message only on an event, so draining it in a passive run would
     // just hit the deadline — that 20 s drain is what produced the bogus 272 ms.
     $samples = [];
+    // Auth-phase ordering (mirrors Go orderRPCsByAuthPhase): Phase 1 establishes/validates the
+    // session FIRST, Phase 2 runs everything else (reads BEFORE mutations BEFORE destructive so a
+    // read of a seeded entity isn't invalidated by a later rotate/revoke/delete), Phase 3 tears
+    // the session/credentials down LAST.
+    $PHASE1_AUTHN = ['login', 'refresh_session', 'authenticate', 'validate_token', 'introspect_token', 'refresh_token', 'get_jwks'];
+    $PHASE3_AUTHN = ['logout', 'revoke_session', 'admin_revoke_session', 'admin_revoke_all_user_sessions', 'admin_revoke_all_tenant_sessions', 'emergency_revoke', 'change_password', 'reset_password', 'admin_reset_password', 'change_user_status', 'admin_reset_mfa', 'revoke_recovery_codes', 'revoke_device', 'delete_web_authn_credential', 'disable_mfa_factor'];
+    $okRank = ['read_only' => 0, 'mutation' => 1, 'destructive' => 2];
+    $kindOf = fn (string $n) => \Fahara02\UdbLaravel\Generated\GeneratedClient::OPERATION_KIND[$n] ?? 'read_only';
+    // Collect every (stub, method) unit, then sort into phases before measuring.
+    $units = [];
     foreach (stubAccessors($s['data'], $s['authGenerated']) as $stubName => $stub) {
         $svc = preg_replace('/Stub$/', '', $stubName);
         foreach (generatedStubMethods($stub) as $method) {
+            $units[] = ['stub' => $stub, 'svc' => $svc, 'method' => $method, 'name' => $method->getName()];
+        }
+    }
+    // NOTE: $u['name'] is the raw grpc stub method (PascalCase, e.g. RefreshSession); the phase
+    // lists are snake_case → normalize via rpcSnake before matching, or Phase-1/3 protection is
+    // silently lost and a Phase-3 revoke (Logout/RevokeSession) runs BEFORE RefreshSession.
+    $phaseOf = function (array $u) use ($PHASE1_AUTHN, $PHASE3_AUTHN): int {
+        $nm = rpcSnake($u['name']);
+        if ($u['svc'] === 'AuthnService' && in_array($nm, $PHASE1_AUTHN, true)) { return 1; }
+        if ($u['svc'] === 'AuthnService' && in_array($nm, $PHASE3_AUTHN, true)) { return 3; }
+        return 2;
+    };
+    usort($units, function (array $a, array $b) use ($phaseOf, $PHASE1_AUTHN, $okRank, $kindOf): int {
+        $pa = $phaseOf($a); $pb = $phaseOf($b);
+        if ($pa !== $pb) { return $pa <=> $pb; }
+        if ($pa === 1) { return array_search(rpcSnake($a['name']), $PHASE1_AUTHN, true) <=> array_search(rpcSnake($b['name']), $PHASE1_AUTHN, true); }
+        if ($pa === 2) { return ($okRank[$kindOf($a['name'])] ?? 0) <=> ($okRank[$kindOf($b['name'])] ?? 0); }
+        return 0;
+    });
+    foreach ($units as $u) {
+        {
+            $stub = $u['stub']; $svc = $u['svc']; $method = $u['method'];
             $name = $method->getName();
+            // put_object is CLIENT-STREAMING: drive it explicitly (open with metadata, WRITE the
+            // seeded Chunk, then wait) — the reflective probe/timeUnary path binds the Chunk to the
+            // metadata slot → empty stream. Mirrors the working SeedPutObject (which lands code=0).
+            if (rpcSnake($name) === 'put_object') {
+                $durs = [];
+                $err = 'OK';
+                $detail = '';
+                for ($i = 0; $i < 3; $i++) {
+                    $t0 = microtime(true);
+                    try {
+                        // $stub is the RAW grpc stub (PascalCase PutObject, grpc-array metadata).
+                        // Use the GeneratedClient ($s['data']) snake client-streaming put_object
+                        // with the UdbMetadata — the exact working SeedPutObject pattern.
+                        $call = $s['data']->put_object($authedMeta);
+                        $call->write(perfBodyPhp('put_object', $fix, $authedMeta->tenantId, $authedMeta->projectId));
+                        $res = $call->wait();
+                        $st = is_array($res) ? ($res[1] ?? null) : null;
+                        $code = is_object($st) ? (int) ($st->code ?? 0) : 0;
+                        if ($code !== 0 && $err === 'OK') {
+                            $err = grpcStatusNamePhp($code);
+                            $detail = is_object($st) ? (string) ($st->details ?? '') : '';
+                        }
+                    } catch (\Throwable $e) {
+                        if ($err === 'OK') { $err = 'UNKNOWN'; $detail = $e->getMessage(); }
+                    }
+                    $durs[] = (microtime(true) - $t0) * 1000.0;
+                }
+                if ($err !== 'OK') { fwrite(STDERR, "FAILDETAIL $svc/$name [$err] ".substr($detail, 0, 200)."\n"); }
+                sort($durs);
+                $pp = fn (int $p) => $durs[min(count($durs) - 1, intdiv($p * (count($durs) - 1), 100))];
+                $samples[] = ['service' => $svc, 'rpc' => $name, 'kind' => 'mutation', 'err' => $err, 'p50' => $pp(50), 'p99' => $pp(99), 'mean' => array_sum($durs) / count($durs)];
+
+                continue;
+            }
             $params = $method->getParameters();
             $hasRequest = isset($params[0])
                 && $params[0]->getType() instanceof ReflectionNamedType
                 && ! $params[0]->getType()->isBuiltin();
             $probeRequest = null;
             $kind = 'read_only';
+            $mkBody = null;
             if ($hasRequest) {
                 // DOCUMENTED body per docs/bench-bodies/<svc>.md, seed refs resolved from
                 // $fix. NO generic population: an RPC not yet covered by perfBodyPhp gets a
-                // typed-empty request (never a generically-populated placeholder).
-                $body = perfBodyPhp($name, $fix, $authedMeta->tenantId, $authedMeta->projectId);
-                $probeRequest = $body ?? requestFor($method);
+                // typed-empty request (never a generically-populated placeholder). Built via
+                // a factory and rebuilt PER ITERATION so create-style RPCs (random unique
+                // username/role_code/name) don't collide on a reused body (iters 2+ would
+                // hit the unique constraint and the broker leaks it as INTERNAL).
+                $mkBody = fn () => perfBodyPhp($name, $fix, $authedMeta->tenantId, $authedMeta->projectId) ?? requestFor($method);
+                $probeRequest = $mkBody();
                 $kind = shouldPopulatePhp($name) ? 'mutation' : 'destructive';
             }
             // Classify with one probe invoke — invoke() does not block; only
@@ -2230,15 +2786,34 @@ it('measures per-RPC latency', function () {
 
                 continue;
             }
-            $timeUnary($stub, $method, $hasRequest, $probeRequest); // warm-up
-            $durs = [];
-            $errCode = 'OK'; // last observed non-OK status marks the RPC failed
+            // Warm-up ONLY for idempotent reads — a warm-up on a non-idempotent mutation
+            // CONSUMES the op (submit/approve a draft, rotate a token, revoke a key).
+            if ($kind === 'read_only') {
+                $timeUnary($stub, $method, $hasRequest, $mkBody ? $mkBody() : $probeRequest);
+            }
+            $allDurs = [];
+            $okDurs = [];
+            $anyOk = false;
+            $firstErr = 'OK';
+            $errDetail = '';
             for ($i = 0; $i < $itersFor($kind); $i++) {
-                [$ms, $err] = $timeUnary($stub, $method, $hasRequest, $probeRequest);
-                $durs[] = $ms;
-                if ($err !== 'OK') {
-                    $errCode = $err;
+                [$ms, $err, $detail] = $timeUnary($stub, $method, $hasRequest, $mkBody ? $mkBody() : $probeRequest);
+                $allDurs[] = $ms;
+                if ($err === 'OK') {
+                    $anyOk = true;
+                    $okDurs[] = $ms;
+                } elseif ($firstErr === 'OK') {
+                    $firstErr = $err;
+                    $errDetail = $detail;
                 }
+            }
+            // An RPC that succeeds AT LEAST ONCE works: repeated-call failures on a
+            // non-idempotent mutation (consumed token / duplicate / already-deleted) are a
+            // measurement artifact, not an RPC failure (mirrors the Go harness).
+            $errCode = $anyOk ? 'OK' : $firstErr;
+            $durs = $anyOk ? $okDurs : $allDurs;
+            if ($errCode !== 'OK') {
+                fwrite(STDERR, "FAILDETAIL $svc/$name [$errCode] ".substr($errDetail, 0, 200)."\n");
             }
             sort($durs);
             $pct = fn (int $p) => $durs[min(count($durs) - 1, intdiv($p * (count($durs) - 1), 100))];

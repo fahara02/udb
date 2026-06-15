@@ -16,6 +16,85 @@ fn catalog_manifest_json_cache()
     CACHE.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()))
 }
 
+fn active_catalog_version_response(
+    catalog: &crate::runtime::catalog::CatalogManager,
+    project_id: &str,
+    selector: &str,
+) -> Option<CatalogVersionResponse> {
+    let active = catalog.active_for(project_id);
+    let metadata = &active.metadata;
+    let version = metadata.version.trim();
+    let checksum = metadata.checksum.trim();
+    let selector = selector.trim();
+    if version.is_empty() && checksum.is_empty() {
+        return None;
+    }
+    if !selector.is_empty() && selector != version && selector != checksum {
+        return None;
+    }
+    let response_project_id = if project_id.trim().is_empty() {
+        metadata.project_id.clone()
+    } else {
+        project_id.trim().to_string()
+    };
+    Some(CatalogVersionResponse {
+        catalog_id: if checksum.is_empty() {
+            version.to_string()
+        } else {
+            checksum.to_string()
+        },
+        project_id: response_project_id,
+        version: version.to_string(),
+        status: "ACTIVE".into(),
+        checksum_sha256: checksum.to_string(),
+        created_at_unix: metadata.applied_at_unix,
+        ..Default::default()
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn active_catalog_version_response_serves_in_memory_active_catalog() {
+        let catalog = crate::runtime::catalog::CatalogManager::new(CatalogManifest {
+            checksum_sha256: "boot-checksum".to_string(),
+            ..CatalogManifest::default()
+        });
+
+        let response = active_catalog_version_response(&catalog, "default", "")
+            .expect("default active catalog should be visible before persisted versions exist");
+
+        assert_eq!(response.project_id, "default");
+        assert_eq!(response.version, "1.0.0");
+        assert_eq!(response.status, "ACTIVE");
+        assert_eq!(response.checksum_sha256, "boot-checksum");
+        assert_eq!(response.catalog_id, "boot-checksum");
+    }
+
+    #[test]
+    fn active_catalog_version_response_honors_selector() {
+        let catalog = crate::runtime::catalog::CatalogManager::new(CatalogManifest {
+            checksum_sha256: "boot-checksum".to_string(),
+            ..CatalogManifest::default()
+        });
+
+        assert!(
+            active_catalog_version_response(&catalog, "default", "missing").is_none(),
+            "non-matching selectors must still return not found"
+        );
+        assert!(
+            active_catalog_version_response(&catalog, "default", "1.0.0").is_some(),
+            "active version selector should match the in-memory active catalog"
+        );
+        assert!(
+            active_catalog_version_response(&catalog, "default", "boot-checksum").is_some(),
+            "active checksum selector should match the in-memory active catalog"
+        );
+    }
+}
+
 impl DataBrokerService {
     pub(crate) async fn get_catalog_manifest_inner(
         &self,
@@ -87,7 +166,8 @@ impl DataBrokerService {
             Ok(manifest) => manifest,
             Err(err) => return self.record_grpc("StageCatalog", started, Err(err)),
         };
-        let version = catalog_payload_version(&req.manifest_json, &manifest);
+        let fallback_version = self.catalog.active_metadata_for(&req.project_id).version;
+        let version = catalog_payload_version(&req.manifest_json, &manifest, &fallback_version);
         let compatibility_level = self
             .runtime_snapshot()
             .config()
@@ -188,7 +268,9 @@ impl DataBrokerService {
                 if let Ok(Some(manifest)) = self.runtime_snapshot().load_last_manifest().await {
                     let checksum = manifest.checksum_sha256.clone();
                     let active_version = if req.version.trim().is_empty() {
-                        catalog_payload_version(&[], &manifest)
+                        let fallback_version =
+                            self.catalog.active_metadata_for(&req.project_id).version;
+                        catalog_payload_version(&[], &manifest, &fallback_version)
                     } else {
                         req.version.clone()
                     };
@@ -253,7 +335,22 @@ impl DataBrokerService {
                     ..Default::default()
                 }
             }
-            Err(err) => return self.record_grpc("ActivateCatalog", started, Err(err)),
+            Err(err) => {
+                if err.code() == tonic::Code::NotFound
+                    && let Some(response) = active_catalog_version_response(
+                        &self.catalog,
+                        &req.project_id,
+                        &req.version,
+                    )
+                {
+                    return self.record_grpc(
+                        "ActivateCatalog",
+                        started,
+                        Ok(Response::new(response)),
+                    );
+                }
+                return self.record_grpc("ActivateCatalog", started, Err(err));
+            }
         };
         self.record_grpc("ActivateCatalog", started, Ok(Response::new(response)))
     }
@@ -294,7 +391,9 @@ impl DataBrokerService {
                     if let Ok(Some(manifest)) = self.runtime_snapshot().load_last_manifest().await {
                         let checksum = manifest.checksum_sha256.clone();
                         let active_version = if req.version.trim().is_empty() {
-                            catalog_payload_version(&[], &manifest)
+                            let fallback_version =
+                                self.catalog.active_metadata_for(&req.project_id).version;
+                            catalog_payload_version(&[], &manifest, &fallback_version)
                         } else {
                             req.version.clone()
                         };
@@ -349,7 +448,22 @@ impl DataBrokerService {
                         ..Default::default()
                     }
                 }
-                Err(err) => return self.record_grpc("RollbackCatalog", started, Err(err)),
+                Err(err) => {
+                    if err.code() == tonic::Code::NotFound
+                        && let Some(response) = active_catalog_version_response(
+                            &self.catalog,
+                            &req.project_id,
+                            &req.version,
+                        )
+                    {
+                        return self.record_grpc(
+                            "RollbackCatalog",
+                            started,
+                            Ok(Response::new(response)),
+                        );
+                    }
+                    return self.record_grpc("RollbackCatalog", started, Err(err));
+                }
             };
         self.record_grpc("RollbackCatalog", started, Ok(Response::new(response)))
     }
@@ -422,13 +536,10 @@ impl DataBrokerService {
             .await;
         match result {
             Ok(versions) => {
-                let active_version = versions
+                let has_persisted_active = versions
                     .iter()
-                    .find(|v| v["status"].as_str() == Some("ACTIVE"))
-                    .and_then(|v| v["version"].as_str())
-                    .unwrap_or_default()
-                    .to_string();
-                let proto_versions: Vec<CatalogVersionResponse> = versions
+                    .any(|v| v["status"].as_str() == Some("ACTIVE"));
+                let mut proto_versions: Vec<CatalogVersionResponse> = versions
                     .iter()
                     .map(|v| CatalogVersionResponse {
                         catalog_id: v["catalog_id"].as_str().unwrap_or_default().into(),
@@ -441,6 +552,17 @@ impl DataBrokerService {
                         errors: Vec::new(),
                     })
                     .collect();
+                if !has_persisted_active
+                    && let Some(active) =
+                        active_catalog_version_response(&self.catalog, &project_id, "")
+                {
+                    proto_versions.push(active);
+                }
+                let active_version = proto_versions
+                    .iter()
+                    .find(|v| v.status == "ACTIVE")
+                    .map(|v| v.version.clone())
+                    .unwrap_or_default();
                 self.record_grpc(
                     "GetCatalogVersions",
                     started,
@@ -493,6 +615,11 @@ impl DataBrokerService {
             }
         });
         let Some(v) = selected else {
+            if let Some(response) =
+                active_catalog_version_response(&self.catalog, &project_id, &selector)
+            {
+                return self.record_grpc("GetCatalogVersion", started, Ok(Response::new(response)));
+            }
             return self.record_grpc(
                 "GetCatalogVersion",
                 started,

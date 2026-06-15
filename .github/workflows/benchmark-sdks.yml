@@ -9,6 +9,10 @@ on:
       - "docs/site/benchmarks.html"
       - "docs/site/benchmarks.js"
       - "docs/site/styles.css"
+      - "docs/bench-bodies/**"
+      - "sdk/go/udbclient/live_perf_bodies.go"
+      - "sdk/go/udbclient/live_perf_bodies_test.go"
+      - "sdk/go/udbclient/live_perf_seed_test.go"
       - "sdk/go/udbclient/live_perf_test.go"
       - "sdk/python/tests/test_live_conformance.py"
       - "sdk/typescript/live-auth.test.ts"
@@ -40,13 +44,29 @@ concurrency:
 
 env:
   UDB_PG_DSN: postgres://udb:udb@localhost:5432/udb_ci
+  UDB_PG_MAX_CONNECTIONS: "40"
+  UDB_PG_MIN_CONNECTIONS: "4"
+  UDB_PG_ACQUIRE_TIMEOUT: "60"
   UDB_NOSQL_DSN: mongodb://localhost:27017/udb_live_sdk?directConnection=true
   UDB_MONGODB_DSN: mongodb://localhost:27017/udb_live_sdk?directConnection=true
   UDB_NOSQL_DATABASE: udb_live_sdk
   UDB_MINIO_ENDPOINT: http://localhost:9000
   UDB_MINIO_ACCESS_KEY: minio
   UDB_MINIO_SECRET_KEY: minio123
+  UDB_MINIO_REGION: us-east-1
   UDB_KAFKA_BROKERS: localhost:59192
+  # Vector / cache / column backends the perf bench drives (Vector*, Cache*, TimeSeries*/
+  # AnalyticalQuery). Started as docker containers below; without them those ~11 RPCs fail
+  # in the dashboard. UDB_COLUMN_DSN is the broker's primary ClickHouse var (deploy.rs:248).
+  UDB_QDRANT_URL: http://localhost:6333
+  UDB_REDIS_DSN: redis://localhost:6379/0
+  # ClickHouse: the broker connects over the HTTP interface (clickhouse.rs) and resolves
+  # credentials from UDB_COLUMN_USER/PASSWORD/DATABASE labels — NOT from the DSN userinfo
+  # (instances.rs:403-406). So use the container's zero-config `default` user (no password,
+  # `default` db) and a clean host DSN. UDB_COLUMN_DSN is the broker's primary CH var.
+  UDB_COLUMN_DSN: http://localhost:8123
+  # Don't abort broker startup if an optional backend is briefly unready (matches local).
+  UDB_ALLOW_DEGRADED_BACKENDS: "true"
   UDB_GRPC_ADDR: 127.0.0.1:50051
   UDB_GRPC_TARGET: 127.0.0.1:50051
   UDB_AUTH_GRPC_ADDR: 127.0.0.1:50061
@@ -66,6 +86,29 @@ env:
   UDB_SESSION_ENABLED: "true"
   UDB_SESSION_HASH_SECRET: ci-bench-session-hash-secret
   UDB_PASSWORD_HASH_SECRET: ci-bench-password-hash-secret
+  # Bench-harness broker flags — match .bench-local/launch-verify.ps1 so the live perf
+  # harness drives every RPC down its real success path (see harness_correction.md). These
+  # are broker-only env (the SDK processes ignore them); the broker inherits them because it
+  # is launched in the same shell as this env block.
+  # WebAuthn: RP id/origin required by StartWebAuthnRegistration; TEST_MODE enables the dev
+  # soft-authenticator so the harness sentinel mints + verifies a REAL credential.
+  UDB_WEBAUTHN_RP_ID: localhost
+  UDB_WEBAUTHN_ORIGIN: http://localhost
+  UDB_WEBAUTHN_TEST_MODE: "1"
+  # SAML: dev self-asserted IdP for the SamlAcs sentinel path.
+  UDB_SAML_TEST_MODE: "1"
+  # OTP: echo the dev code in SendOTP/IssueMfaChallenge responses so Verify*/Reset* resolve;
+  # cooldown 0 so measured SendOTP/ResendOTP don't race the per-(user,type) cooldown.
+  UDB_OTP_DEV_ECHO: "1"
+  UDB_OTP_COOLDOWN_SECONDS: "0"
+  # Object plane: the StorageService bucket/backend FinalizeUpload HEADs (presigned upload).
+  UDB_OBJECT_BACKEND: minio
+  UDB_OBJECT_BUCKET: udb-storage
+  # Reapers off: the perf seed joins a WebRTC peer via a unary call (no live signaling stream
+  # to heartbeat), so the 60s reaper would disconnect it before measurement → "peer is not an
+  # active member" on PublishTrack/MuteTrack/Signal/IssueCredentials.
+  UDB_WEBRTC_REAP_INTERVAL_SECS: "0"
+  UDB_STORAGE_REAP_INTERVAL_SECS: "0"
   UDB_LIVE_USERNAME: sdk-live@example.com
   UDB_LIVE_PASSWORD: CorrectHorse1!
   UDB_LIVE_TENANT: sdk-live
@@ -209,6 +252,56 @@ jobs:
           docker logs udb-bench-kafka
           exit 1
 
+      # The 3 optional backends below use continue-on-error: a container/health hiccup must
+      # NOT turn this always-green dashboard job red. If one fails to come up, the broker
+      # starts degraded (UDB_ALLOW_DEGRADED_BACKENDS) and only that backend's RPCs show as
+      # dashboard failures — never worse than before these backends were added.
+      - name: Start Qdrant (vector backend)
+        shell: bash
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          docker run -d --name udb-bench-qdrant -p 6333:6333 qdrant/qdrant:v1.12.4
+          for attempt in {1..60}; do
+            curl -fsS http://localhost:6333/readyz >/dev/null 2>&1 && exit 0
+            docker ps --filter name=udb-bench-qdrant --filter status=running --quiet | grep -q . || { docker logs udb-bench-qdrant; exit 1; }
+            sleep 2
+          done
+          docker logs udb-bench-qdrant
+          exit 1
+
+      - name: Start Redis (cache backend)
+        shell: bash
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          docker run -d --name udb-bench-redis -p 6379:6379 redis:7-alpine
+          for attempt in {1..30}; do
+            docker exec udb-bench-redis redis-cli ping 2>/dev/null | grep -q PONG && exit 0
+            docker ps --filter name=udb-bench-redis --filter status=running --quiet | grep -q . || { docker logs udb-bench-redis; exit 1; }
+            sleep 2
+          done
+          docker logs udb-bench-redis
+          exit 1
+
+      - name: Start ClickHouse (column backend)
+        shell: bash
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          # Zero-config default user (no password, `default` db) — the broker resolves CH
+          # auth from UDB_COLUMN_USER/PASSWORD (unset → default/empty), not the DSN userinfo.
+          docker run -d --name udb-bench-clickhouse -p 8123:8123 \
+            -e CLICKHOUSE_SKIP_USER_SETUP=1 \
+            clickhouse/clickhouse-server:24.8
+          for attempt in {1..60}; do
+            curl -fsS "http://localhost:8123/ping" >/dev/null 2>&1 && exit 0
+            docker ps --filter name=udb-bench-clickhouse --filter status=running --quiet | grep -q . || { docker logs udb-bench-clickhouse; exit 1; }
+            sleep 2
+          done
+          docker logs udb-bench-clickhouse
+          exit 1
+
       - name: Create MinIO bucket
         shell: bash
         run: |
@@ -216,6 +309,8 @@ jobs:
           chmod +x /usr/local/bin/mc
           mc alias set local http://localhost:9000 minio minio123
           mc mb --ignore-existing local/udb-live-sdk
+          # StorageService object bucket (UDB_OBJECT_BUCKET) for the presigned FinalizeUpload path.
+          mc mb --ignore-existing local/udb-storage
 
       - name: Install SDK dependencies
         run: |
@@ -254,6 +349,36 @@ jobs:
             --tenant "${UDB_LIVE_TENANT}" \
             --project "${UDB_LIVE_PROJECT}"
 
+      - name: Pre-seed saga + DLQ rows
+        shell: bash
+        continue-on-error: true
+        # The perf seed REFERENCES fixed saga/DLQ ids (UDB_PERF_SAGA_* / UDB_PERF_DLQ_*) but does
+        # not create the rows — the system-store tables are broker-owned (created at first boot).
+        # Insert them here, scoped to the bootstrapped tenant UUID, so GetSaga/ListSagas/
+        # RetrySagaCompensation/MarkSagaReviewed and the DLQ get/list/dismiss/quarantine/replay
+        # RPCs measure their success path. Mirrors .bench-local/grind-once.ps1.
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+          export PGPASSWORD=udb
+          tid="$(psql -h localhost -p 5432 -U udb -d udb_ci -tAq -c \
+            "SELECT tenant_id::text FROM udb_tenant.tenants WHERE code='sdk-live' OR name='sdk-live' LIMIT 1;")"
+          if [ -z "${tid}" ]; then echo "no tenant_id for sdk-live"; exit 1; fi
+          echo "tenant_id=${tid}"
+          psql -h localhost -p 5432 -U udb -d udb_ci -v ON_ERROR_STOP=1 <<SQL
+          INSERT INTO udb_system.udb_sagas (saga_id,tx_id,tenant_id,correlation_id,status,backend_instance,operation,current_step,retry_count,recovery_attempts,compensation_status,steps,compensations,last_error,created_at,updated_at) VALUES
+           ('11111111-1111-4111-8111-111111111101','t1','${tid}','c1','manual_review','postgres:primary','mutate',0,0,0,'manual_review','[]'::jsonb,'[]'::jsonb,'seed',NOW(),NOW()),
+           ('11111111-1111-4111-8111-111111111102','t2','${tid}','c2','manual_review','postgres:primary','mutate',0,0,0,'manual_review','[]'::jsonb,'[]'::jsonb,'seed',NOW(),NOW()),
+           ('11111111-1111-4111-8111-111111111103','t3','${tid}','c3','manual_review','postgres:primary','mutate',0,0,0,'manual_review','[]'::jsonb,'[]'::jsonb,'seed',NOW(),NOW())
+          ON CONFLICT (saga_id) DO UPDATE SET tenant_id=EXCLUDED.tenant_id,status='manual_review',compensation_status='manual_review',updated_at=NOW();
+          INSERT INTO udb_system.udb_cdc_dlq_events (dlq_id,event_id,topic,tenant_id,project_id,payload,error_type,error_message,retry_count,status,created_at,updated_at) VALUES
+           ('22222222-2222-4222-8222-222222222201',gen_random_uuid(),'udb.sdk.live.records.cdc','${tid}','default','{}'::jsonb,'seed','err',0,'OPEN',NOW(),NOW()),
+           ('22222222-2222-4222-8222-222222222202',gen_random_uuid(),'udb.sdk.live.records.cdc','${tid}','default','{}'::jsonb,'seed','err',0,'OPEN',NOW(),NOW()),
+           ('22222222-2222-4222-8222-222222222203',gen_random_uuid(),'udb.sdk.live.records.cdc','${tid}','default','{}'::jsonb,'seed','err',0,'OPEN',NOW(),NOW()),
+           ('22222222-2222-4222-8222-222222222204',gen_random_uuid(),'udb.sdk.live.records.cdc','${tid}','default','{}'::jsonb,'seed','err',0,'OPEN',NOW(),NOW())
+          ON CONFLICT (dlq_id) DO UPDATE SET tenant_id=EXCLUDED.tenant_id,status='OPEN',updated_at=NOW();
+          SQL
+
       - name: Clear stale benchmark reports
         run: |
           rm -f sdk/go/udbclient/perf_report_go.md \
@@ -265,8 +390,24 @@ jobs:
         shell: bash
         run: |
           set +e
-          ( cd sdk/go && go test ./udbclient -run '^TestLivePerf$' -count=1 -timeout 15m )
-          code=$?
+          mkdir -p bench-output/logs
+          ( cd sdk/go && go test ./udbclient -run '^TestLivePerf$' -count=1 -timeout 15m ) 2>&1 | tee bench-output/logs/go.log
+          code=${PIPESTATUS[0]}
+          if [ ! -f sdk/go/udbclient/perf_report_go.md ]; then
+            {
+              echo "# UDB SDK Live Perf — Go"
+              echo
+              echo "RPCs measured: 0"
+              echo
+              echo "## Harness error"
+              echo
+              echo "Benchmark command exited with code ${code} before writing perf_report_go.md."
+              echo
+              echo '```text'
+              tail -200 bench-output/logs/go.log
+              echo '```'
+            } > sdk/go/udbclient/perf_report_go.md
+          fi
           printf '{"exit_code":%d}\n' "$code" > bench-output/status/go.json
           exit 0
 
@@ -274,8 +415,24 @@ jobs:
         shell: bash
         run: |
           set +e
-          ( cd sdk/python && python -m pytest -q tests/test_live_conformance.py -k test_live_perf )
-          code=$?
+          mkdir -p bench-output/logs
+          ( cd sdk/python && python -m pytest -q tests/test_live_conformance.py -k test_live_perf ) 2>&1 | tee bench-output/logs/python.log
+          code=${PIPESTATUS[0]}
+          if [ ! -f sdk/python/perf_report_python.md ]; then
+            {
+              echo "# UDB SDK Live Perf — Python"
+              echo
+              echo "RPCs measured: 0"
+              echo
+              echo "## Harness error"
+              echo
+              echo "Benchmark command exited with code ${code} before writing perf_report_python.md."
+              echo
+              echo '```text'
+              tail -200 bench-output/logs/python.log
+              echo '```'
+            } > sdk/python/perf_report_python.md
+          fi
           printf '{"exit_code":%d}\n' "$code" > bench-output/status/python.json
           exit 0
 
@@ -283,8 +440,24 @@ jobs:
         shell: bash
         run: |
           set +e
-          ( cd sdk/typescript && npm run bundle-proto && npx tsc -p tsconfig.test.json && node --test --test-name-pattern 'live per-RPC perf' dist-test/live-auth.test.js )
-          code=$?
+          mkdir -p bench-output/logs
+          ( cd sdk/typescript && npm run bundle-proto && npx tsc -p tsconfig.test.json && node --test --test-name-pattern 'live per-RPC perf' dist-test/live-auth.test.js ) 2>&1 | tee bench-output/logs/typescript.log
+          code=${PIPESTATUS[0]}
+          if [ ! -f sdk/typescript/perf_report_ts.md ]; then
+            {
+              echo "# UDB SDK Live Perf — TypeScript"
+              echo
+              echo "RPCs measured: 0"
+              echo
+              echo "## Harness error"
+              echo
+              echo "Benchmark command exited with code ${code} before writing perf_report_ts.md."
+              echo
+              echo '```text'
+              tail -200 bench-output/logs/typescript.log
+              echo '```'
+            } > sdk/typescript/perf_report_ts.md
+          fi
           printf '{"exit_code":%d}\n' "$code" > bench-output/status/typescript.json
           exit 0
 
@@ -292,8 +465,24 @@ jobs:
         shell: bash
         run: |
           set +e
-          ( cd sdk/php && vendor/bin/pest tests/Live/GeneratedRpcSurfaceTest.php --filter 'measures per-RPC latency' )
-          code=$?
+          mkdir -p bench-output/logs
+          ( cd sdk/php && vendor/bin/pest tests/Live/GeneratedRpcSurfaceTest.php --filter 'measures per-RPC latency' ) 2>&1 | tee bench-output/logs/php.log
+          code=${PIPESTATUS[0]}
+          if [ ! -f sdk/php/perf_report_php.md ]; then
+            {
+              echo "# UDB SDK Live Perf — PHP"
+              echo
+              echo "RPCs measured: 0"
+              echo
+              echo "## Harness error"
+              echo
+              echo "Benchmark command exited with code ${code} before writing perf_report_php.md."
+              echo
+              echo '```text'
+              tail -200 bench-output/logs/php.log
+              echo '```'
+            } > sdk/php/perf_report_php.md
+          fi
           printf '{"exit_code":%d}\n' "$code" > bench-output/status/php.json
           exit 0
 
@@ -351,6 +540,9 @@ jobs:
           fi
           docker rm -f udb-bench-minio 2>/dev/null || true
           docker rm -f udb-bench-kafka 2>/dev/null || true
+          docker rm -f udb-bench-qdrant 2>/dev/null || true
+          docker rm -f udb-bench-redis 2>/dev/null || true
+          docker rm -f udb-bench-clickhouse 2>/dev/null || true
 
   deploy:
     name: Deploy benchmark dashboard

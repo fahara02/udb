@@ -40,7 +40,7 @@ namespace udb.core.Authn.Entity.V1 {
             "MCkYAToeJ0FVVEhfRkFDVE9SX0tJTkRfVU5TUEVDSUZJRUQnUgpmYWN0b3JL",
             "aW5kEowBCgdwdXJwb3NlGAYgASgOMi0udWRiLmNvcmUuYXV0aG4uZW50aXR5",
             "LnYxLk1mYUNoYWxsZW5nZVB1cnBvc2VCQ4K3GD8KB3B1cnBvc2USC1ZBUkNI",
-            "QVIoNDApGAE6JSdNRkFfQ0hBTExFTkdFX1BVUlBPU0VfTE9HSU5fU1RFUF9V",
+            "QVIoNjQpGAE6JSdNRkFfQ0hBTExFTkdFX1BVUlBPU0VfTE9HSU5fU1RFUF9V",
             "UCdSB3B1cnBvc2USowEKF2RldmljZV9maW5nZXJwcmludF9oYXNoGAcgASgJ",
             "QmvotRgB8LUYAYK3GEgKF2RldmljZV9maW5nZXJwcmludF9oYXNoEgxWQVJD",
             "SEFSKDEyOClaH0JvdW5kIGRldmljZSBmaW5nZXJwcmludCBkaWdlc3SKtxgT",
@@ -213,6 +213,11 @@ namespace udb.core.Authn.Entity.V1 {
     /// <summary>Field number for the "purpose" field.</summary>
     public const int PurposeFieldNumber = 6;
     private global::udb.core.Authn.Entity.V1.MfaChallengePurpose purpose_ = global::udb.core.Authn.Entity.V1.MfaChallengePurpose.Unspecified;
+    /// <summary>
+    /// VARCHAR(64): the enum NAME is persisted; the longest value
+    /// (`MFA_CHALLENGE_PURPOSE_SENSITIVE_OPERATION`, 41 chars) overflowed the
+    /// former VARCHAR(40), failing every IssueMfaChallenge. bug_report.md A1.
+    /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public global::udb.core.Authn.Entity.V1.MfaChallengePurpose Purpose {

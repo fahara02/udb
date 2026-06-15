@@ -85,7 +85,9 @@ pub struct ExternalIdentityRow {
 }
 
 fn map_err(context: &str) -> impl Fn(sqlx::Error) -> Status + '_ {
-    move |err| Status::internal(format!("{context}: {err}"))
+    // bug_report.md B2/B3: classify recognised SQLSTATEs (unique/not-null/22P02)
+    // to typed gRPC codes instead of leaking the raw DB error as Internal.
+    move |err| crate::runtime::executor_utils::sqlx_error_to_status(context, &err)
 }
 
 fn native_compile_context() -> CompileContext<'static> {
@@ -185,7 +187,12 @@ async fn execute_compiled_mutation(
         )?
         .fetch_all(pool)
         .await
-        .map_err(map_err("typed native mutation failed"))?;
+        .map_err(|err| {
+            crate::runtime::executor_utils::sqlx_error_to_status(
+                "typed native mutation failed",
+                &err,
+            )
+        })?;
         let rows = crate::runtime::core::pg_rows_to_json(rows)?;
         Ok((rows.len() as u64, rows))
     } else {
@@ -196,7 +203,12 @@ async fn execute_compiled_mutation(
         )?
         .execute(pool)
         .await
-        .map_err(map_err("typed native mutation failed"))?;
+        .map_err(|err| {
+            crate::runtime::executor_utils::sqlx_error_to_status(
+                "typed native mutation failed",
+                &err,
+            )
+        })?;
         Ok((result.rows_affected(), Vec::new()))
     }
 }
@@ -846,6 +858,47 @@ pub async fn get_external_identity(
     Ok(row.map(|r| external_row_from(&r)))
 }
 
+/// Resolve an external identity by its UUID `external_identity_id` (the id
+/// `ScimCreateUser` returns), tenant- and provider-scoped. SCIM-1 (bug_report.md G).
+pub async fn get_external_identity_by_id(
+    pool: &PgPool,
+    tenant_id: &str,
+    provider_id: &str,
+    external_identity_id: &str,
+) -> Result<Option<ExternalIdentityRow>, Status> {
+    let m = native_model(
+        EXTERNAL_IDENTITY_MSG,
+        &[
+            "external_identity_id",
+            "tenant_id",
+            "provider_id",
+            "deleted_at",
+        ],
+    );
+    let sql = format!(
+        "SELECT {cols} FROM {rel} WHERE {tenant} = $1 AND {pid} = $2::UUID AND {eid} = $3::UUID \
+           AND {del} IS NULL",
+        cols = external_select_clause(),
+        rel = m.relation,
+        tenant = m.q("tenant_id"),
+        pid = m.q("provider_id"),
+        eid = m.q("external_identity_id"),
+        del = m.q("deleted_at"),
+    );
+    let pid = Uuid::parse_str(provider_id.trim())
+        .map_err(|_| Status::invalid_argument("provider_id must be a UUID"))?;
+    let eid = Uuid::parse_str(external_identity_id.trim())
+        .map_err(|_| Status::invalid_argument("external_identity_id must be a UUID"))?;
+    let row = sqlx::query(&sql)
+        .bind(tenant_id)
+        .bind(pid)
+        .bind(eid)
+        .fetch_optional(pool)
+        .await
+        .map_err(map_err("external identity lookup failed"))?;
+    Ok(row.map(|r| external_row_from(&r)))
+}
+
 /// Insert (or upsert on the unique tenant+provider+subject) an external identity
 /// link. Returns the resolved row.
 #[allow(clippy::too_many_arguments)]
@@ -1135,7 +1188,7 @@ pub async fn create_external_user(
             {project}, {fname}, {eva}, {epid}, {esub}, {cby}) \
          VALUES (gen_random_uuid(), $1, $2, '', 'EXTERNAL_IDENTITY', \
             'ACTIVE', $3, $4, $5, \
-            CASE WHEN $6 THEN NOW() ELSE NULL END, $7, $8, $9) \
+            CASE WHEN $6 THEN NOW() ELSE NULL END, $7, $8, $9::UUID) \
          ON CONFLICT ({uname}) DO UPDATE SET {email} = EXCLUDED.{email} \
          RETURNING {uid}::TEXT AS user_id",
         rel = m.relation,
@@ -1153,6 +1206,11 @@ pub async fn create_external_user(
         esub = m.q("external_subject"),
         cby = m.q("created_by"),
     );
+    // `created_by` is a nullable UUID FK to users.user_id. SCIM/JIT provisioning
+    // has no creating admin (the caller passes a system label like "scim"), so a
+    // non-UUID value must bind as SQL NULL rather than be cast text->uuid (which
+    // fails). bug_report.md A3.
+    let created_by_uuid = Uuid::parse_str(created_by.trim()).ok();
     let row = sqlx::query(&sql)
         .bind(&username)
         .bind(email)
@@ -1162,10 +1220,15 @@ pub async fn create_external_user(
         .bind(email_verified)
         .bind(provider_id)
         .bind(subject)
-        .bind(created_by)
+        .bind(created_by_uuid)
         .fetch_one(pool)
         .await
-        .map_err(map_err("external user JIT provision failed"))?;
+        .map_err(|err| {
+            crate::runtime::executor_utils::sqlx_error_to_status(
+                "external user JIT provision failed",
+                &err,
+            )
+        })?;
     Ok(row.try_get::<String, _>("user_id").unwrap_or_default())
 }
 

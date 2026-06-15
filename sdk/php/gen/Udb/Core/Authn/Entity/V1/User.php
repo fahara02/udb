@@ -30,6 +30,13 @@ class User extends \Google\Protobuf\Internal\Message
      */
     protected $username = '';
     /**
+     * SCIM-2 (bug_report.md G): email stays NOT NULL (always a value, maybe '');
+     * the column-level `unique` is dropped and uniqueness is enforced by the
+     * TABLE-level PARTIAL unique index `idx_users_email` (WHERE email <> '')
+     * declared in the pg_table option above — so email-less SCIM users don't
+     * collide. (The column's singular `index` is intentionally NOT used: the
+     * descriptor decode drops its where_clause.)
+     *
      * Generated from protobuf field <code>string email = 3 [json_name = "email", (.udb.core.common.v1.pii) = true, (.udb.core.common.v1.log_masked) = true, (.udb.core.common.v1.data_purpose) = "Authentication and communication", (.udb.core.common.v1.pg_column) = {</code>
      */
     protected $email = '';
@@ -147,6 +154,12 @@ class User extends \Google\Protobuf\Internal\Message
      *     @type string $user_id
      *     @type string $username
      *     @type string $email
+     *           SCIM-2 (bug_report.md G): email stays NOT NULL (always a value, maybe '');
+     *           the column-level `unique` is dropped and uniqueness is enforced by the
+     *           TABLE-level PARTIAL unique index `idx_users_email` (WHERE email <> '')
+     *           declared in the pg_table option above — so email-less SCIM users don't
+     *           collide. (The column's singular `index` is intentionally NOT used: the
+     *           descriptor decode drops its where_clause.)
      *     @type string $password_hash
      *     @type int $account_kind
      *     @type int $status
@@ -226,6 +239,13 @@ class User extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * SCIM-2 (bug_report.md G): email stays NOT NULL (always a value, maybe '');
+     * the column-level `unique` is dropped and uniqueness is enforced by the
+     * TABLE-level PARTIAL unique index `idx_users_email` (WHERE email <> '')
+     * declared in the pg_table option above — so email-less SCIM users don't
+     * collide. (The column's singular `index` is intentionally NOT used: the
+     * descriptor decode drops its where_clause.)
+     *
      * Generated from protobuf field <code>string email = 3 [json_name = "email", (.udb.core.common.v1.pii) = true, (.udb.core.common.v1.log_masked) = true, (.udb.core.common.v1.data_purpose) = "Authentication and communication", (.udb.core.common.v1.pg_column) = {</code>
      * @return string
      */
@@ -235,6 +255,13 @@ class User extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * SCIM-2 (bug_report.md G): email stays NOT NULL (always a value, maybe '');
+     * the column-level `unique` is dropped and uniqueness is enforced by the
+     * TABLE-level PARTIAL unique index `idx_users_email` (WHERE email <> '')
+     * declared in the pg_table option above — so email-less SCIM users don't
+     * collide. (The column's singular `index` is intentionally NOT used: the
+     * descriptor decode drops its where_clause.)
+     *
      * Generated from protobuf field <code>string email = 3 [json_name = "email", (.udb.core.common.v1.pii) = true, (.udb.core.common.v1.log_masked) = true, (.udb.core.common.v1.data_purpose) = "Authentication and communication", (.udb.core.common.v1.pg_column) = {</code>
      * @param string $var
      * @return $this

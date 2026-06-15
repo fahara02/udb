@@ -226,6 +226,9 @@ impl DataBrokerService {
         {
             return self.record_grpc("DocumentGet", started, Err(e));
         }
+        if let Err(e) = require_collection(&req.resource) {
+            return self.record_grpc("DocumentGet", started, Err(e));
+        }
         let spec = serde_json::json!({
             "collection": collection_of(&req.resource),
             "filter": { "_id": req.document_id },
@@ -252,6 +255,9 @@ impl DataBrokerService {
             .authorize(&security, msg_type(&req.resource), "document.find")
             .await
         {
+            return self.record_grpc("DocumentFind", started, Err(e));
+        }
+        if let Err(e) = require_collection(&req.resource) {
             return self.record_grpc("DocumentFind", started, Err(e));
         }
         let spec = serde_json::json!({
@@ -282,6 +288,9 @@ impl DataBrokerService {
         {
             return self.record_grpc("DocumentUpsert", started, Err(e));
         }
+        if let Err(e) = require_collection(&req.resource) {
+            return self.record_grpc("DocumentUpsert", started, Err(e));
+        }
         let spec = serde_json::json!({
             "collection": collection_of(&req.resource),
             "operation": if req.replace { "update" } else { "upsert" },
@@ -309,6 +318,9 @@ impl DataBrokerService {
             .authorize(&security, msg_type(&req.resource), "document.delete")
             .await
         {
+            return self.record_grpc("DocumentDelete", started, Err(e));
+        }
+        if let Err(e) = require_collection(&req.resource) {
             return self.record_grpc("DocumentDelete", started, Err(e));
         }
         let filter = if req.document_id.is_empty() {
@@ -409,6 +421,9 @@ impl DataBrokerService {
         {
             return self.record_grpc("TimeSeriesWrite", started, Err(e));
         }
+        if let Err(e) = require_collection(&req.resource) {
+            return self.record_grpc("TimeSeriesWrite", started, Err(e));
+        }
         let rows: Vec<serde_json::Value> = req
             .points
             .iter()
@@ -453,6 +468,9 @@ impl DataBrokerService {
         {
             return self.record_grpc("TimeSeriesQuery", started, Err(e));
         }
+        if let Err(e) = require_collection(&req.resource) {
+            return self.record_grpc("TimeSeriesQuery", started, Err(e));
+        }
         let spec = serde_json::json!({
             "table": collection_of(&req.resource),
             "filter": struct_field(&req.filter),
@@ -494,6 +512,14 @@ impl DataBrokerService {
             .await
         {
             return self.record_grpc("AnalyticalQuery", started, Err(e));
+        }
+        // A table-scan analytical query (no raw SQL) needs a named collection;
+        // guard it at the boundary so an empty identifier returns InvalidArgument
+        // rather than leaking the backend's identifier error. bug_report.md B4.
+        if req.query.trim().is_empty() {
+            if let Err(e) = require_collection(&req.resource) {
+                return self.record_grpc("AnalyticalQuery", started, Err(e));
+            }
         }
         let spec = if req.query.trim().is_empty() {
             serde_json::json!({ "table": collection_of(&req.resource), "limit": req.limit })
@@ -543,6 +569,25 @@ fn collection_of(resource: &Option<crate::proto::StoreResource>) -> String {
             }
         })
         .unwrap_or_default()
+}
+
+/// Boundary guard for store RPCs that target a table/collection: the request
+/// must carry a non-empty identifier (`resource.resource_name`, or
+/// `message_type` as the fallback). Returns `InvalidArgument` BEFORE dispatch so
+/// an empty identifier never reaches a backend — where the read path returns a
+/// clean `InvalidArgument` (e.g. ClickHouse `select_template_sql`) but the write
+/// path leaked the driver's `identifier '' is invalid` as `Internal`, giving the
+/// two siblings divergent codes for identical bad input. bug_report.md B4
+/// (TimeSeries/Document read↔write parity). Key-based ops (cache) and free-query
+/// ops (graph cypher, analytical raw SQL) do not target a named collection and
+/// are not gated here.
+fn require_collection(resource: &Option<crate::proto::StoreResource>) -> Result<(), Status> {
+    if collection_of(resource).trim().is_empty() {
+        return Err(Status::invalid_argument(
+            "resource.resource_name (or resource.message_type) is required",
+        ));
+    }
+    Ok(())
 }
 
 fn cache_value_bytes(value: &str) -> Vec<u8> {

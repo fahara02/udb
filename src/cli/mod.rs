@@ -1,9 +1,12 @@
 //! CLI entry point internals (Phase H split of main.rs).
 use std::env;
 use std::fs;
+use std::io::Write;
+use std::panic;
 use std::path::PathBuf;
 use std::process;
 use std::process::Command as ProcessCommand;
+use std::sync::Once;
 
 use serde::Serialize;
 use serde_yaml::Value as YamlValue;
@@ -87,6 +90,32 @@ fn serve_thread_stack_size() -> usize {
         .and_then(|value| value.parse::<usize>().ok())
         .filter(|value| *value > 0)
         .unwrap_or(DEFAULT_SERVE_THREAD_STACK_SIZE)
+}
+
+fn install_serve_panic_hook() {
+    static INSTALL: Once = Once::new();
+    INSTALL.call_once(|| {
+        let previous = panic::take_hook();
+        panic::set_hook(Box::new(move |info| {
+            let thread = std::thread::current();
+            let thread_name = thread.name().unwrap_or("unnamed");
+            let payload = info
+                .payload()
+                .downcast_ref::<&str>()
+                .copied()
+                .or_else(|| info.payload().downcast_ref::<String>().map(String::as_str))
+                .unwrap_or("<non-string panic payload>");
+            let location = info
+                .location()
+                .map(|loc| format!("{}:{}:{}", loc.file(), loc.line(), loc.column()))
+                .unwrap_or_else(|| "<unknown>".to_string());
+            eprintln!(
+                "udb serve panic: thread={thread_name} location={location} payload={payload}"
+            );
+            let _ = std::io::stderr().flush();
+            previous(info);
+        }));
+    });
 }
 
 fn admin_reset_sql(ledger_schema: &str) -> String {
@@ -592,6 +621,7 @@ pub fn run() {
             process::exit(exit_code);
         }
         Command::Serve => {
+            install_serve_panic_hook();
             let manifest = CatalogManifest::from_schemas(&schemas)
                 .unwrap_or_else(|err| fatal_json("failed to build catalog manifest", err));
             let addr = serve_addr.parse().unwrap_or_else(|err| {

@@ -44,6 +44,10 @@ class MfaChallenge extends \Google\Protobuf\Internal\Message
      */
     protected $factor_kind = 0;
     /**
+     * VARCHAR(64): the enum NAME is persisted; the longest value
+     * (`MFA_CHALLENGE_PURPOSE_SENSITIVE_OPERATION`, 41 chars) overflowed the
+     * former VARCHAR(40), failing every IssueMfaChallenge. bug_report.md A1.
+     *
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.MfaChallengePurpose purpose = 6 [json_name = "purpose", (.udb.core.common.v1.pg_column) = {</code>
      */
     protected $purpose = 0;
@@ -86,6 +90,9 @@ class MfaChallenge extends \Google\Protobuf\Internal\Message
      *     @type string $project_id
      *     @type int $factor_kind
      *     @type int $purpose
+     *           VARCHAR(64): the enum NAME is persisted; the longest value
+     *           (`MFA_CHALLENGE_PURPOSE_SENSITIVE_OPERATION`, 41 chars) overflowed the
+     *           former VARCHAR(40), failing every IssueMfaChallenge. bug_report.md A1.
      *     @type string $device_fingerprint_hash
      *           Keyed-HMAC digest of the device fingerprint the challenge is bound to.
      *     @type string $ip_address_masked
@@ -211,6 +218,10 @@ class MfaChallenge extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * VARCHAR(64): the enum NAME is persisted; the longest value
+     * (`MFA_CHALLENGE_PURPOSE_SENSITIVE_OPERATION`, 41 chars) overflowed the
+     * former VARCHAR(40), failing every IssueMfaChallenge. bug_report.md A1.
+     *
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.MfaChallengePurpose purpose = 6 [json_name = "purpose", (.udb.core.common.v1.pg_column) = {</code>
      * @return int
      */
@@ -220,6 +231,10 @@ class MfaChallenge extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * VARCHAR(64): the enum NAME is persisted; the longest value
+     * (`MFA_CHALLENGE_PURPOSE_SENSITIVE_OPERATION`, 41 chars) overflowed the
+     * former VARCHAR(40), failing every IssueMfaChallenge. bug_report.md A1.
+     *
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.MfaChallengePurpose purpose = 6 [json_name = "purpose", (.udb.core.common.v1.pg_column) = {</code>
      * @param int $var
      * @return $this

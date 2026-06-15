@@ -48,14 +48,31 @@ impl DataBrokerRuntime {
     }
 
     pub async fn load_abac_policies(&self) -> Vec<AbacPolicy> {
+        // Backward-compatible wrapper: a transient query error degrades to an empty
+        // set for callers that can't act on it (initial load), but the error is now
+        // LOGGED, not silently swallowed. bug_report.md J.
+        match self.try_load_abac_policies().await {
+            Ok(policies) => policies,
+            Err(err) => {
+                tracing::error!(error = %err, "ABAC policy load failed; using empty set");
+                Vec::new()
+            }
+        }
+    }
+
+    /// Load ABAC policies, surfacing a DB query failure as `Err` so the periodic
+    /// refresh retains stale policies on a transient error instead of mistaking it
+    /// for a genuine empty set — the authz-snapshot flapping under CDC pool
+    /// contention (`ABAC policy refresh returned empty set`). bug_report.md J.
+    pub async fn try_load_abac_policies(&self) -> Result<Vec<AbacPolicy>, String> {
         if let Some(raw) = self.config.abac_policies_json.as_ref() {
             match serde_json::from_str::<Vec<AbacPolicy>>(raw) {
-                Ok(policies) => return policies,
+                Ok(policies) => return Ok(policies),
                 Err(err) => tracing::warn!("failed to parse UDB_ABAC_POLICIES_JSON: {err}"),
             }
         }
         let Some(pool) = &self.pg_pool else {
-            return Vec::new();
+            return Ok(Vec::new());
         };
         let abac_schema = if self.config.abac_schema.trim().is_empty() {
             "udb_system"
@@ -78,11 +95,12 @@ impl DataBrokerRuntime {
              WHERE enabled = TRUE
              ORDER BY priority DESC, policy_id ASC"
         );
-        let rows = sqlx::query(&sql).fetch_all(pool).await;
-        let Ok(rows) = rows else {
-            return Vec::new();
-        };
-        rows.into_iter()
+        let rows = sqlx::query(&sql)
+            .fetch_all(pool)
+            .await
+            .map_err(|e| format!("ABAC policy query failed: {e}"))?;
+        Ok(rows
+            .into_iter()
             .map(|row| {
                 let effect = row
                     .try_get::<String, _>("effect")
@@ -105,7 +123,7 @@ impl DataBrokerRuntime {
                     required_scope: row.try_get("required_scope").unwrap_or_default(),
                 }
             })
-            .collect()
+            .collect())
     }
 
     pub async fn try_from_config(config: UdbConfig) -> Result<Self, String> {
@@ -161,7 +179,28 @@ impl DataBrokerRuntime {
                 report: &mut report,
             };
             for plugin in crate::backend::all_plugins() {
-                plugin.register(&mut ctx).await;
+                // C4 (bug_report.md): a backend's startup registration — driver
+                // connect / metadata fetch to a configured-but-UNREACHABLE server
+                // (MSSQL/MySQL/Cassandra/etc.) — must never abort the whole broker.
+                // The register_* error handling already degrades on a returned
+                // Err, but a driver that PANICS during connect would unwind past
+                // here and take the process down. Isolate each plugin in
+                // catch_unwind so a panic degrades to "backend unavailable" and the
+                // broker still serves every reachable backend. (A non-unwinding
+                // driver abort/OOM is not catchable here and needs the driver-level
+                // fix; this closes the panic vector.)
+                use futures::FutureExt as _;
+                let kind = plugin.kind();
+                if std::panic::AssertUnwindSafe(plugin.register(&mut ctx))
+                    .catch_unwind()
+                    .await
+                    .is_err()
+                {
+                    ctx.report.warnings.push(format!(
+                        "backend {kind:?} registration panicked at startup; backend marked \
+                         unavailable (broker continues)"
+                    ));
+                }
             }
         }
         // Store registration makes "first registered wins" the default SystemStores,
@@ -511,7 +550,10 @@ impl DataBrokerRuntime {
 
         let (affected_rows, record_json) = if request.return_record {
             let row = query.fetch_optional(&mut *tx).await.map_err(|err| {
-                tonic::Status::internal(format!("PostgreSQL upsert failed: {err}"))
+                crate::runtime::executor_utils::sqlx_error_to_status(
+                    "PostgreSQL upsert failed",
+                    &err,
+                )
             })?;
             match row {
                 Some(row) => {
@@ -532,7 +574,10 @@ impl DataBrokerRuntime {
             }
         } else {
             let result = query.execute(&mut *tx).await.map_err(|err| {
-                tonic::Status::internal(format!("PostgreSQL upsert failed: {err}"))
+                crate::runtime::executor_utils::sqlx_error_to_status(
+                    "PostgreSQL upsert failed",
+                    &err,
+                )
             })?;
             (result.rows_affected() as i64, Vec::new())
         };
@@ -554,6 +599,19 @@ impl DataBrokerRuntime {
                 .map_err(|err| {
                     tonic::Status::internal(format!("projection task enqueue failed: {err}"))
                 })?;
+            // mutations→CDC: emit a transactional-outbox change event for
+            // CDC-enabled entities IN THE SAME TX, so a real mutation flows
+            // outbox→tailer→Kafka/journal→PublishCDC subscribers (not only the
+            // explicit EnqueueOutboxEvent path). Atomic with the write.
+            self.emit_cdc_outbox_on_mutation(
+                &mut tx,
+                manifest,
+                &request.message_type,
+                "upsert",
+                &record,
+                &context,
+            )
+            .await?;
         }
         tx.commit().await.map_err(|err| {
             tonic::Status::internal(format!("PostgreSQL upsert commit failed: {err}"))
@@ -590,6 +648,78 @@ impl DataBrokerRuntime {
             write_receipt_json: serde_json::to_string(&receipt).unwrap_or_default(),
             ..MutationResponse::default()
         })
+    }
+
+    /// mutations→CDC (bug_report.md §R "kafka is not used"): emit a transactional
+    /// outbox change event for a CDC-enabled entity, IN THE GIVEN TX so it is
+    /// atomic with the data write. No-op when the entity has no `cdc_topic`, or
+    /// when a tenant-scoped (`udb.*`) topic has no tenant to scope the event to
+    /// (it could never reach a tenant-scoped subscriber). The envelope carries a
+    /// top-level `tenant_id`/`project_id` so `stream_cdc`'s scope filter admits it,
+    /// and the operation + record so subscribers see the change. A DB failure here
+    /// rolls back the whole mutation (transactional-outbox atomicity).
+    async fn emit_cdc_outbox_on_mutation(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        manifest: &CatalogManifest,
+        message_type: &str,
+        operation: &str,
+        record: &JsonValue,
+        context: &RequestContext,
+    ) -> Result<(), tonic::Status> {
+        // Resolve via the SAME index the mutation used (case-insensitive, full or
+        // leaf message name) so the emit gate matches exactly what was written —
+        // an exact `==` missed the entity and silently skipped the event.
+        let Some(table) = table_for_message(manifest, message_type) else {
+            return Ok(());
+        };
+        let topic = table.cdc_topic.trim();
+        if topic.is_empty() {
+            return Ok(());
+        }
+        // Tenant-scoped topics can't reach a subscriber without a tenant; skip.
+        if crate::runtime::cdc::tenant_scoped_topic(topic) && context.tenant_id.trim().is_empty() {
+            tracing::debug!(
+                topic,
+                message_type,
+                "[cdc] skip mutation event: tenant-scoped topic with no tenant_id"
+            );
+            return Ok(());
+        }
+        // Partition key = the record's first primary-key value (column-keyed at this
+        // point), falling back to a fresh id so the row is always partitionable.
+        let partition_key = table
+            .primary_key
+            .first()
+            .and_then(|pk| record.get(pk.as_str()))
+            .map(crate::runtime::executor_utils::json_scalar_to_string)
+            .filter(|value| !value.trim().is_empty())
+            .unwrap_or_else(|| Uuid::new_v4().to_string());
+        let event_id = Uuid::new_v4();
+        let envelope = serde_json::json!({
+            "event_id": event_id.to_string(),
+            "event_type": topic,
+            "topic": topic,
+            "tenant_id": context.tenant_id,
+            "project_id": context.project_id,
+            "operation": operation,
+            "message_type": message_type,
+            "document_id": partition_key,
+            "correlation_id": partition_key,
+            "occurred_at": chrono::Utc::now().to_rfc3339(),
+            "payload": record,
+        });
+        let outbox_relation = self.config.cdc.outbox_relation();
+        crate::runtime::cdc::insert_outbox_row(
+            &mut **tx,
+            &outbox_relation,
+            event_id,
+            topic,
+            &partition_key,
+            &envelope,
+        )
+        .await
+        .map_err(|err| tonic::Status::internal(format!("CDC outbox emit failed: {err}")))
     }
 
     pub async fn delete(
@@ -645,6 +775,17 @@ impl DataBrokerRuntime {
                 .map_err(|err| {
                     tonic::Status::internal(format!("projection task enqueue failed: {err}"))
                 })?;
+            // mutations→CDC: emit a delete change event for CDC-enabled entities in
+            // the same tx (the filter carries the deleted row's key).
+            self.emit_cdc_outbox_on_mutation(
+                &mut tx,
+                manifest,
+                message_type,
+                "delete",
+                &filter,
+                &context,
+            )
+            .await?;
         }
         tx.commit().await.map_err(|err| {
             tonic::Status::internal(format!("PostgreSQL delete commit failed: {err}"))
@@ -1390,7 +1531,7 @@ impl DataBrokerRuntime {
     /// Returns `(url, expires_at_unix)`.
     pub async fn presign_object_backend_target(
         &self,
-        instance: Option<&str>,
+        backend_target: &str,
         project_id: &str,
         bucket: &str,
         object_key: &str,
@@ -1401,7 +1542,7 @@ impl DataBrokerRuntime {
         #[cfg(not(feature = "s3"))]
         {
             let _ = (
-                instance,
+                backend_target,
                 project_id,
                 bucket,
                 object_key,
@@ -1427,12 +1568,13 @@ impl DataBrokerRuntime {
             } else {
                 project
             };
-            let target_instance = if let Some(i) = instance {
-                Some(i)
-            } else {
-                let write = method == "PUT";
-                self.choose_instance_name_for_project("minio", write, project)
-                    .or_else(|| self.choose_instance_name_for_project("s3", write, project))
+            let write = method == "PUT";
+            let target = backend_target.trim();
+            let target_lower = target.to_ascii_lowercase();
+            let target_instance = match target_lower.as_str() {
+                "" | "minio" => self.choose_instance_name_for_project("minio", write, project),
+                "s3" => self.choose_instance_name_for_project("s3", write, project),
+                _ => Some(target),
             };
             let s3 = self.s3_for_instance_for_project(target_instance, project)?;
             let ttl = bounded_ttl(ttl_seconds);
@@ -1467,18 +1609,34 @@ impl DataBrokerRuntime {
                 project
             };
             let target = backend_target.trim().to_ascii_lowercase();
+            // Q#7 (bug_report.md): existence-after-write must HEAD the SAME instance
+            // the object was WRITTEN to. PutObject resolves the write instance
+            // (`choose_instance_name_for_project(.., write=true, ..)`); resolving a
+            // read replica here (`write=false`) can target a different MinIO/S3
+            // instance than the upload landed on → spurious not-found / service
+            // error on FinalizeUpload. Use the write instance for the HEAD.
             let target_instance = match target.as_str() {
-                "" | "minio" => self.choose_instance_name_for_project("minio", false, project),
-                "s3" => self.choose_instance_name_for_project("s3", false, project),
+                "" | "minio" => self.choose_instance_name_for_project("minio", true, project),
+                "s3" => self.choose_instance_name_for_project("s3", true, project),
                 instance => Some(instance),
             };
             let s3 = self.s3_for_instance_for_project(target_instance, project)?;
             match s3.head_object().bucket(bucket).key(object_key).send().await {
                 Ok(_) => Ok(true),
                 Err(err) => {
-                    let msg = err.to_string();
-                    if msg.contains("NotFound") || msg.contains("NoSuchKey") || msg.contains("404")
-                    {
+                    // S3 answers a HEAD for a missing object (or bucket) with a
+                    // BODILESS 404, so the SDK error's Display is a generic
+                    // "service error" with NO "NotFound"/"NoSuchKey"/"404" text —
+                    // string-matching it misclassifies a plain absent object as a
+                    // service failure (the FinalizeUpload bug). The NotFound signal
+                    // lives ONLY in the typed service error, so classify on that:
+                    // a 404 → not present (Ok(false)); anything else (auth, network,
+                    // endpoint) → a real failure.
+                    let not_found = err
+                        .as_service_error()
+                        .map(|svc| svc.is_not_found())
+                        .unwrap_or(false);
+                    if not_found {
                         Ok(false)
                     } else {
                         Err(tonic::Status::unavailable(format!(

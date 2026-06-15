@@ -69,6 +69,81 @@ async fn live_minio_storage_object_delete_roundtrip() {
     assert!(after.is_err(), "object must be gone after delete");
 }
 
+/// Regression for the FinalizeUpload bug (bug_report.md §R): `object_exists_backend_target`
+/// is the HEAD FinalizeUpload runs before marking a file ACTIVE. S3 answers a HEAD
+/// for a MISSING object with a bodiless 404 whose SDK Display is a generic "service
+/// error" (no "NotFound"/"404" text), so the old Display-string classification
+/// returned `Unavailable` instead of `Ok(false)` for a plain absent object. This
+/// asserts: present → Ok(true), absent → Ok(false) (NOT an error). Reverting the
+/// typed-error fix makes the missing-object assertion fail.
+#[tokio::test]
+#[ignore = "requires live MinIO+Postgres; run with UDB_LIVE_OBJECT_TESTS=1 ... -- --ignored --nocapture"]
+async fn live_minio_object_exists_missing_returns_false_not_error() {
+    unsafe {
+        std::env::set_var(
+            "UDB_MINIO_ENDPOINT",
+            std::env::var("UDB_MINIO_ENDPOINT")
+                .unwrap_or_else(|_| "http://127.0.0.1:59000".to_string()),
+        );
+        std::env::set_var(
+            "UDB_MINIO_ACCESS_KEY",
+            std::env::var("UDB_MINIO_ACCESS_KEY").unwrap_or_else(|_| "minio".to_string()),
+        );
+        std::env::set_var(
+            "UDB_MINIO_SECRET_KEY",
+            std::env::var("UDB_MINIO_SECRET_KEY").unwrap_or_else(|_| "minio123".to_string()),
+        );
+        std::env::set_var(
+            "UDB_MINIO_REGION",
+            std::env::var("UDB_MINIO_REGION").unwrap_or_else(|_| "us-east-1".to_string()),
+        );
+        std::env::set_var("UDB_ALLOW_DEGRADED_BACKENDS", "true");
+    }
+
+    let runtime = live_runtime().await;
+    let bucket = std::env::var("UDB_STORAGE_BUCKET").unwrap_or_else(|_| "udb-storage".to_string());
+    let key = format!("exists/{}.txt", Uuid::new_v4());
+
+    // A present object → Ok(true).
+    runtime
+        .put_object_backend_target(
+            "minio",
+            None,
+            &object_request_json("put", &bucket, &key, "text/plain"),
+            b"present".to_vec(),
+        )
+        .await
+        .expect("put_object");
+    let present = runtime
+        .object_exists_backend_target("minio", "", &bucket, &key)
+        .await;
+    assert_eq!(
+        present.ok(),
+        Some(true),
+        "present object must HEAD as Ok(true)"
+    );
+
+    // A MISSING object → Ok(false) (the regression: must NOT be an Unavailable error).
+    let missing = runtime
+        .object_exists_backend_target("minio", "", &bucket, "exists/does-not-exist.txt")
+        .await;
+    assert_eq!(
+        missing.as_ref().ok(),
+        Some(&false),
+        "missing object must HEAD as Ok(false), not an error: {missing:?}"
+    );
+
+    // cleanup
+    let _ = runtime
+        .delete_object_backend_target(
+            "minio",
+            None,
+            "default",
+            &object_request_json("delete", &bucket, &key, ""),
+        )
+        .await;
+}
+
 /// Verifies the presigned-URL path the storage service uses for
 /// `RegisterUpload` (PUT) / `GetDownloadUrl` (GET): mint a PUT URL, upload bytes
 /// over plain HTTP to it, confirm via the object path, then mint a GET URL and
@@ -104,7 +179,7 @@ async fn live_minio_presign_put_get_roundtrip() {
 
     // mint presigned PUT and upload bytes directly to the object store
     let (put_url, _) = runtime
-        .presign_object_backend_target(None, "default", &bucket, &key, "PUT", "text/plain", 300)
+        .presign_object_backend_target("minio", "default", &bucket, &key, "PUT", "text/plain", 300)
         .await
         .expect("presign PUT");
     assert!(
@@ -137,7 +212,7 @@ async fn live_minio_presign_put_get_roundtrip() {
 
     // mint presigned GET and download over HTTP
     let (get_url, _) = runtime
-        .presign_object_backend_target(None, "default", &bucket, &key, "GET", "", 300)
+        .presign_object_backend_target("minio", "default", &bucket, &key, "GET", "", 300)
         .await
         .expect("presign GET");
     let body = http

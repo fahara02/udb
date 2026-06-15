@@ -84,6 +84,10 @@ def _parse_report(path: Path) -> dict[str, Any]:
     m = re.search(r"RPCs measured:\s*([0-9]+)", text)
     if m:
         measured = int(m.group(1))
+    harness_error = None
+    h = re.search(r"(?ms)^## Harness error\s+(.+?)(?:\n## |\Z)", text)
+    if h:
+        harness_error = " ".join(line.replace("`", "").strip() for line in h.group(1).splitlines() if line.strip())
 
     services: list[dict[str, Any]] = []
     slowest: list[dict[str, Any]] = []
@@ -187,13 +191,16 @@ def _parse_report(path: Path) -> dict[str, Any]:
         summary["mean_service_latency_ms"] = sum(service_means) / len(service_means)
         summary["slowest_service_mean_ms"] = max(service_means)
 
-    return {
+    parsed = {
         "summary": summary,
         "services": services,
         "slowest": slowest,
         "failed_rpcs": failed_rpcs,
         "report_path": str(path.relative_to(ROOT)).replace("\\", "/"),
     }
+    if harness_error:
+        parsed["harness_error"] = harness_error[:2000]
+    return parsed
 
 
 def main() -> int:
@@ -221,6 +228,8 @@ def main() -> int:
         }
         if report_exists:
             entry.update(_parse_report(path))
+            if entry.get("harness_error"):
+                entry["note"] = entry["harness_error"]
         else:
             entry["status"] = "failed" if exit_code not in (None, 0) else "missing"
             entry["note"] = "Benchmark command did not produce a Markdown report."

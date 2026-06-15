@@ -1368,7 +1368,12 @@ where
     .map_err(|err| err.to_string())?
     .execute(executor)
     .await
-    .map_err(|err| format!("typed authn update failed: {err}"))?;
+    .map_err(|err| {
+        crate::runtime::executor_utils::sqlx_error_to_tagged_string(
+            "typed authn update failed",
+            &err,
+        )
+    })?;
     Ok(result.rows_affected())
 }
 
@@ -1423,7 +1428,10 @@ where
                     }
                 }
             }
-            Err(format!("typed authn write failed: {msg}"))
+            Err(crate::runtime::executor_utils::sqlx_error_to_tagged_string(
+                "typed authn write failed",
+                &err,
+            ))
         }
     }
 }

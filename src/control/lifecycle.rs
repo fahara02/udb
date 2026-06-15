@@ -857,9 +857,27 @@ async fn run_startup_lifecycle_core(
                                 format!("missing manifest store {}", action.resource_name),
                             )
                         })?;
-                    runtime.ensure_qdrant_store(store).await.map_err(|err| {
-                        fail(runtime, &mut report, "qdrant_apply", err.to_string())
-                    })?;
+                    if let Err(err) = runtime.ensure_qdrant_store(store).await {
+                        // C3: a per-backend apply DRIFT (qdrant unreachable / collection
+                        // mismatch) must NOT exit the whole broker under STARTUP_FORCE_SYNC.
+                        // When degraded-backend startup is allowed, emit the drift metric,
+                        // warn, and keep serving the other backends; otherwise stay
+                        // fail-closed (explicit flag, not force-sync). bug_report.md C3.
+                        if allow_degraded_backend_startup(runtime) {
+                            runtime.emit_drift_metric("qdrant_apply");
+                            report.warnings.push(format!(
+                                "degraded: vector collection '{}' apply failed; qdrant serving degraded: {err}",
+                                action.resource_name
+                            ));
+                        } else {
+                            return Err(fail(
+                                runtime,
+                                &mut report,
+                                "qdrant_apply",
+                                err.to_string(),
+                            ));
+                        }
+                    }
                 }
                 "bucket" => {
                     if !runtime.s3_configured() {
@@ -892,10 +910,19 @@ async fn run_startup_lifecycle_core(
                                 format!("missing manifest store {}", action.resource_name),
                             )
                         })?;
-                    runtime
-                        .ensure_s3_bucket(store)
-                        .await
-                        .map_err(|err| fail(runtime, &mut report, "s3_apply", err.to_string()))?;
+                    if let Err(err) = runtime.ensure_s3_bucket(store).await {
+                        // C3: object-store apply drift degrades the object backend
+                        // instead of crashing the broker, when allowed. bug_report.md C3.
+                        if allow_degraded_backend_startup(runtime) {
+                            runtime.emit_drift_metric("s3_apply");
+                            report.warnings.push(format!(
+                                "degraded: object bucket '{}' apply failed; s3/minio serving degraded: {err}",
+                                action.resource_name
+                            ));
+                        } else {
+                            return Err(fail(runtime, &mut report, "s3_apply", err.to_string()));
+                        }
+                    }
                 }
                 "collection" | "graph" | "column_table" | "measurement" | "experiment" => {
                     let store = manifest
@@ -931,12 +958,25 @@ async fn run_startup_lifecycle_core(
                             ));
                         }
                         Err(err) => {
-                            return Err(fail(
-                                runtime,
-                                &mut report,
-                                "backend_apply",
-                                err.to_string(),
-                            ));
+                            // C3: a configured backend's resource-apply drift degrades
+                            // that backend instead of exiting the whole broker, when
+                            // degraded startup is allowed. bug_report.md C3.
+                            if allow_degraded_backend_startup(runtime) {
+                                runtime.emit_drift_metric("backend_apply");
+                                report.warnings.push(format!(
+                                    "degraded: {} resource '{}' apply failed; backend serving degraded: {}",
+                                    action.backend,
+                                    action.resource_name,
+                                    err
+                                ));
+                            } else {
+                                return Err(fail(
+                                    runtime,
+                                    &mut report,
+                                    "backend_apply",
+                                    err.to_string(),
+                                ));
+                            }
                         }
                     }
                 }

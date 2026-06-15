@@ -867,8 +867,13 @@ type SendOTPResponse struct {
 	OtpId            string                 `protobuf:"bytes,1,opt,name=otp_id,json=otpId,proto3" json:"otp_id,omitempty"`
 	ExpiresInSeconds int32                  `protobuf:"varint,2,opt,name=expires_in_seconds,json=expiresInSeconds,proto3" json:"expires_in_seconds,omitempty"`
 	CooldownSeconds  int32                  `protobuf:"varint,3,opt,name=cooldown_seconds,json=cooldownSeconds,proto3" json:"cooldown_seconds,omitempty"` // Wait before next resend
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// Dev-only echo of the plaintext OTP code, populated ONLY when the broker runs
+	// with UDB_OTP_DEV_ECHO=1 (non-production posture). Empty in production. Lets
+	// conformance harnesses complete VerifyOTP/ResetPassword without a delivery
+	// channel. bug_report.md F/Lane-2.
+	DevOtpCode    string `protobuf:"bytes,4,opt,name=dev_otp_code,json=devOtpCode,proto3" json:"dev_otp_code,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *SendOTPResponse) Reset() {
@@ -920,6 +925,13 @@ func (x *SendOTPResponse) GetCooldownSeconds() int32 {
 		return x.CooldownSeconds
 	}
 	return 0
+}
+
+func (x *SendOTPResponse) GetDevOtpCode() string {
+	if x != nil {
+		return x.DevOtpCode
+	}
+	return ""
 }
 
 type VerifyOTPRequest struct {
@@ -6593,11 +6605,13 @@ const file_udb_core_authn_services_v1_core_proto_rawDesc = "" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12<\n" +
 	"\botp_type\x18\x02 \x01(\x0e2!.udb.core.authn.entity.v1.OTPTypeR\aotpType\x12%\n" +
 	"\x0ecorrelation_id\x18\x03 \x01(\tR\rcorrelationId\x12<\n" +
-	"\acontext\x18\x04 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\x9f\x01\n" +
+	"\acontext\x18\x04 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xc1\x01\n" +
 	"\x0fSendOTPResponse\x12\x15\n" +
 	"\x06otp_id\x18\x01 \x01(\tR\x05otpId\x12,\n" +
 	"\x12expires_in_seconds\x18\x02 \x01(\x05R\x10expiresInSeconds\x12)\n" +
-	"\x10cooldown_seconds\x18\x03 \x01(\x05R\x0fcooldownSeconds:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"[\n" +
+	"\x10cooldown_seconds\x18\x03 \x01(\x05R\x0fcooldownSeconds\x12 \n" +
+	"\fdev_otp_code\x18\x04 \x01(\tR\n" +
+	"devOtpCode:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"[\n" +
 	"\x10VerifyOTPRequest\x12\x15\n" +
 	"\x06otp_id\x18\x01 \x01(\tR\x05otpId\x12\x12\n" +
 	"\x04code\x18\x02 \x01(\tR\x04code:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xa4\x01\n" +

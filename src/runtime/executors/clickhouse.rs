@@ -590,6 +590,11 @@ impl MutationExecutor for ClickHouseExecutor {
             .get("table")
             .and_then(Json::as_str)
             .ok_or_else(|| tonic::Status::invalid_argument("missing required field 'table'"))?;
+        // Validate the identifier as a client error BEFORE any I/O, mirroring the
+        // read path (`select_template_sql` → `invalid_argument`). Without this an
+        // empty/over-long table id escaped `insert_rows` as the catch-all `internal`
+        // below, leaking a validation message as a server fault (bug B6).
+        validate_ch_identifier(table).map_err(tonic::Status::invalid_argument)?;
         let rows = spec
             .get("rows")
             .and_then(Json::as_array)

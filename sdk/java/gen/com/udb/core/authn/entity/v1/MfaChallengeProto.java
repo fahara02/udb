@@ -58,7 +58,7 @@ public final class MfaChallengeProto {
       "TOR_KIND_UNSPECIFIED\'R\nfactorKind\022\214\001\n\007pu" +
       "rpose\030\006 \001(\0162-.udb.core.authn.entity.v1.M" +
       "faChallengePurposeBC\202\267\030?\n\007purpose\022\013VARCH" +
-      "AR(40)\030\001:%\'MFA_CHALLENGE_PURPOSE_LOGIN_S" +
+      "AR(64)\030\001:%\'MFA_CHALLENGE_PURPOSE_LOGIN_S" +
       "TEP_UP\'R\007purpose\022\243\001\n\027device_fingerprint_" +
       "hash\030\007 \001(\tBk\350\265\030\001\360\265\030\001\202\267\030H\n\027device_fingerp" +
       "rint_hash\022\014VARCHAR(128)Z\037Bound device fi" +

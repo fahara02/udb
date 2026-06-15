@@ -45,7 +45,8 @@ pub struct NodeStateRow {
 }
 
 fn map_err(context: &'static str) -> impl Fn(sqlx::Error) -> Status {
-    move |err| Status::internal(format!("{context}: {err}"))
+    // bug_report.md B2/B3: typed gRPC codes for recognised SQLSTATEs.
+    move |err| crate::runtime::executor_utils::sqlx_error_to_status(context, &err)
 }
 
 fn native_compile_context() -> CompileContext<'static> {

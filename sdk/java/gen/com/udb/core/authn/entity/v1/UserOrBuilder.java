@@ -35,11 +35,29 @@ public interface UserOrBuilder extends
       getUsernameBytes();
 
   /**
+   * <pre>
+   * SCIM-2 (bug_report.md G): email stays NOT NULL (always a value, maybe '');
+   * the column-level `unique` is dropped and uniqueness is enforced by the
+   * TABLE-level PARTIAL unique index `idx_users_email` (WHERE email &lt;&gt; '')
+   * declared in the pg_table option above — so email-less SCIM users don't
+   * collide. (The column's singular `index` is intentionally NOT used: the
+   * descriptor decode drops its where_clause.)
+   * </pre>
+   *
    * <code>string email = 3 [json_name = "email", (.udb.core.common.v1.pii) = true, (.udb.core.common.v1.log_masked) = true, (.udb.core.common.v1.data_purpose) = "Authentication and communication", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The email.
    */
   java.lang.String getEmail();
   /**
+   * <pre>
+   * SCIM-2 (bug_report.md G): email stays NOT NULL (always a value, maybe '');
+   * the column-level `unique` is dropped and uniqueness is enforced by the
+   * TABLE-level PARTIAL unique index `idx_users_email` (WHERE email &lt;&gt; '')
+   * declared in the pg_table option above — so email-less SCIM users don't
+   * collide. (The column's singular `index` is intentionally NOT used: the
+   * descriptor decode drops its where_clause.)
+   * </pre>
+   *
    * <code>string email = 3 [json_name = "email", (.udb.core.common.v1.pii) = true, (.udb.core.common.v1.log_masked) = true, (.udb.core.common.v1.data_purpose) = "Authentication and communication", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The bytes for email.
    */

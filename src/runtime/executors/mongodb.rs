@@ -722,6 +722,35 @@ impl MongoDbExecutor {
 
 #[cfg(feature = "mongodb-native")]
 impl MongoDbNativeExecutor {
+    /// Classify a MongoDB driver error into a tagged error string (bug_report.md
+    /// B5). Not-primary / topology errors (codes 10107 NotWritablePrimary, 13435
+    /// NotPrimaryNoSecondaryOk, 13436 NotPrimaryOrSecondary, or the
+    /// `NotWritablePrimary`/`NotPrimaryOrSecondary` server labels) are transient:
+    /// they tag a retryable `Unavailable` with a clean message (no raw BSON blob).
+    /// Every other error keeps the descriptive `{context}: {err}` (untagged →
+    /// decodes to `Internal` at the boundary).
+    fn classify_err(context: &str, err: &mongodb_driver::error::Error) -> String {
+        // The driver's typed `code()`/`is_*` predicates are crate-private in
+        // mongodb 3.x, so classify off the public error text + labels. Not-primary
+        // / topology errors surface their SQLSTATE-equivalent code + code-name in
+        // the message (e.g. "Error code 10107 (NotWritablePrimary)").
+        let text = err.to_string();
+        let is_not_primary = text.contains("NotWritablePrimary")
+            || text.contains("NotPrimaryOrSecondary")
+            || text.contains("NotPrimaryNoSecondaryOk")
+            || text.contains("not primary")
+            || text.contains("10107")
+            || text.contains("13435")
+            || text.contains("13436");
+        if is_not_primary {
+            return crate::runtime::executor_utils::tagged_status_string(
+                tonic::Code::Unavailable,
+                "backend temporarily unavailable (not primary)",
+            );
+        }
+        format!("{context}: {err}")
+    }
+
     fn database(&self) -> mongodb_driver::Database {
         self.client.database(&self.config.database)
     }
@@ -736,7 +765,7 @@ impl MongoDbNativeExecutor {
             .collection(collection)
             .insert_one(document)
             .await
-            .map_err(|err| format!("MongoDB native insertOne failed: {err}"))?;
+            .map_err(|err| Self::classify_err("MongoDB native insertOne failed", &err))?;
         Ok(result.inserted_id.to_string())
     }
 
@@ -787,7 +816,7 @@ impl MongoDbNativeExecutor {
             .update_one(filter, update)
             .upsert(upsert)
             .await
-            .map_err(|err| format!("MongoDB native updateOne failed: {err}"))?;
+            .map_err(|err| Self::classify_err("MongoDB native updateOne failed", &err))?;
         let upserted = i64::from(result.upserted_id.is_some());
         Ok((result.modified_count as i64).max(upserted))
     }
@@ -798,7 +827,7 @@ impl MongoDbNativeExecutor {
             .collection(collection)
             .delete_one(filter)
             .await
-            .map_err(|err| format!("MongoDB native deleteOne failed: {err}"))?;
+            .map_err(|err| Self::classify_err("MongoDB native deleteOne failed", &err))?;
         Ok(result.deleted_count as i64)
     }
 
@@ -824,7 +853,7 @@ impl MongoDbNativeExecutor {
             .collection(collection)
             .insert_many(docs)
             .await
-            .map_err(|err| format!("MongoDB native insertMany failed: {err}"))?;
+            .map_err(|err| Self::classify_err("MongoDB native insertMany failed", &err))?;
         Ok(result.inserted_ids.len() as i64)
     }
 
@@ -841,7 +870,7 @@ impl MongoDbNativeExecutor {
             .collection(collection)
             .update_many(filter, update)
             .await
-            .map_err(|err| format!("MongoDB native updateMany failed: {err}"))?;
+            .map_err(|err| Self::classify_err("MongoDB native updateMany failed", &err))?;
         Ok(result.modified_count as i64)
     }
 
@@ -851,7 +880,7 @@ impl MongoDbNativeExecutor {
             .collection(collection)
             .delete_many(filter)
             .await
-            .map_err(|err| format!("MongoDB native deleteMany failed: {err}"))?;
+            .map_err(|err| Self::classify_err("MongoDB native deleteMany failed", &err))?;
         Ok(result.deleted_count as i64)
     }
 
@@ -976,15 +1005,19 @@ impl MongoDbNativeExecutor {
             Ok(_) => Ok(()),
             Err(err) if err.to_string().contains("NamespaceExists") => Ok(()),
             Err(err) if err.to_string().contains("already exists") => Ok(()),
-            Err(err) => Err(format!(
-                "MongoDB native createCollection '{resource_name}' failed: {err}"
+            Err(err) => Err(Self::classify_err(
+                &format!("MongoDB native createCollection '{resource_name}' failed"),
+                &err,
             )),
         }
     }
 
     async fn drop_resource(&self, resource_name: &str) -> Result<(), String> {
         self.collection(resource_name).drop().await.map_err(|err| {
-            format!("MongoDB native drop collection '{resource_name}' failed: {err}")
+            Self::classify_err(
+                &format!("MongoDB native drop collection '{resource_name}' failed"),
+                &err,
+            )
         })
     }
 
@@ -992,7 +1025,7 @@ impl MongoDbNativeExecutor {
         self.database()
             .list_collection_names()
             .await
-            .map_err(|err| format!("MongoDB native listCollections failed: {err}"))
+            .map_err(|err| Self::classify_err("MongoDB native listCollections failed", &err))
     }
 }
 
@@ -1087,7 +1120,7 @@ impl MutationExecutor for MongoDbExecutor {
                 let id = self
                     .insert_document(collection, document)
                     .await
-                    .map_err(tonic::Status::internal)?;
+                    .map_err(crate::runtime::executor_utils::status_from_store_string)?;
                 Ok(json!({ "inserted_id": id }).to_string())
             }
             "insert_many" | "bulk_insert" => {
@@ -1099,7 +1132,7 @@ impl MutationExecutor for MongoDbExecutor {
                 let count = self
                     .insert_many(collection, documents)
                     .await
-                    .map_err(tonic::Status::internal)?;
+                    .map_err(crate::runtime::executor_utils::status_from_store_string)?;
                 Ok(json!({ "affected_rows": count }).to_string())
             }
             "update" | "update_one" => {
@@ -1115,7 +1148,7 @@ impl MutationExecutor for MongoDbExecutor {
                 let count = self
                     .update_document(collection, filter, update)
                     .await
-                    .map_err(tonic::Status::internal)?;
+                    .map_err(crate::runtime::executor_utils::status_from_store_string)?;
                 Ok(json!({ "affected_rows": count }).to_string())
             }
             "update_many" | "bulk_update" => {
@@ -1131,7 +1164,7 @@ impl MutationExecutor for MongoDbExecutor {
                 let count = self
                     .update_many(collection, filter, update)
                     .await
-                    .map_err(tonic::Status::internal)?;
+                    .map_err(crate::runtime::executor_utils::status_from_store_string)?;
                 Ok(json!({ "affected_rows": count }).to_string())
             }
             "upsert" | "upsert_one" => {
@@ -1147,7 +1180,7 @@ impl MutationExecutor for MongoDbExecutor {
                 let count = self
                     .upsert_document(collection, filter, update)
                     .await
-                    .map_err(tonic::Status::internal)?;
+                    .map_err(crate::runtime::executor_utils::status_from_store_string)?;
                 Ok(json!({ "affected_rows": count }).to_string())
             }
             "delete" | "delete_one" => {
@@ -1158,7 +1191,7 @@ impl MutationExecutor for MongoDbExecutor {
                 let count = self
                     .delete_document(collection, filter)
                     .await
-                    .map_err(tonic::Status::internal)?;
+                    .map_err(crate::runtime::executor_utils::status_from_store_string)?;
                 Ok(json!({ "affected_rows": count }).to_string())
             }
             "delete_many" | "bulk_delete" => {
@@ -1169,7 +1202,7 @@ impl MutationExecutor for MongoDbExecutor {
                 let count = self
                     .delete_many(collection, filter)
                     .await
-                    .map_err(tonic::Status::internal)?;
+                    .map_err(crate::runtime::executor_utils::status_from_store_string)?;
                 Ok(json!({ "affected_rows": count }).to_string())
             }
             "create_indexes" | "ensure_indexes" => {
@@ -1226,7 +1259,7 @@ impl ResourceAdminExecutor for MongoDbExecutor {
             native
                 .ensure_resource(resource_name)
                 .await
-                .map_err(tonic::Status::internal)?;
+                .map_err(crate::runtime::executor_utils::status_from_store_string)?;
             let indexes = spec
                 .get("indexes")
                 .and_then(Json::as_array)
@@ -1235,7 +1268,7 @@ impl ResourceAdminExecutor for MongoDbExecutor {
             return self
                 .ensure_indexes(resource_name, &indexes)
                 .await
-                .map_err(tonic::Status::internal);
+                .map_err(crate::runtime::executor_utils::status_from_store_string);
         }
 
         // createCollection is idempotent when the collection already exists
@@ -1259,7 +1292,7 @@ impl ResourceAdminExecutor for MongoDbExecutor {
             return native
                 .drop_resource(resource_name)
                 .await
-                .map_err(tonic::Status::internal);
+                .map_err(crate::runtime::executor_utils::status_from_store_string);
         }
 
         self.run_command(json!({ "drop": resource_name }))
@@ -1273,7 +1306,7 @@ impl ResourceAdminExecutor for MongoDbExecutor {
             return native
                 .list_resources()
                 .await
-                .map_err(tonic::Status::internal);
+                .map_err(crate::runtime::executor_utils::status_from_store_string);
         }
 
         let resp = self

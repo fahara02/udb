@@ -17063,6 +17063,10 @@
           "type": "integer",
           "format": "int32",
           "title": "Wait before next resend"
+        },
+        "devOtpCode": {
+          "type": "string",
+          "description": "Dev-only echo of the plaintext OTP code, populated ONLY when the broker runs\nwith UDB_OTP_DEV_ECHO=1 (non-production posture). Empty in production. Lets\nconformance harnesses complete VerifyOTP/ResetPassword without a delivery\nchannel. bug_report.md F/Lane-2."
         }
       }
     },
@@ -17921,7 +17925,8 @@
           "type": "string"
         },
         "email": {
-          "type": "string"
+          "type": "string",
+          "title": "SCIM-2 (bug_report.md G): email stays NOT NULL (always a value, maybe '');\nthe column-level `unique` is dropped and uniqueness is enforced by the\nTABLE-level PARTIAL unique index `idx_users_email` (WHERE email \u003c\u003e '')\ndeclared in the pg_table option above — so email-less SCIM users don't\ncollide. (The column's singular `index` is intentionally NOT used: the\ndescriptor decode drops its where_clause.)"
         },
         "passwordHash": {
           "type": "string"

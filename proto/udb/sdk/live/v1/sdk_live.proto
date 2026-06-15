@@ -32,6 +32,15 @@ message SdkLiveRecord {
       columns: "lookup_key"
       unique: true
     }
+    // Trivial declared MV so the live suite's CreateMaterializedView
+    // (schema=public, name=mv_test, query="SELECT 1") matches a proto-declared
+    // view (the broker rejects any MV not in the catalog AST). bug_report.md F/Lane-1.
+    materialized_views: {
+      view_name: "mv_test"
+      schema_name: "public"
+      with_data: true
+      query: "SELECT 1"
+    }
   };
   option (udb.core.common.v1.db_table_security) = {
     tenant_isolation_mode: "none"
@@ -42,6 +51,22 @@ message SdkLiveRecord {
     encryption_profile: "none"
     pii_profile: "none"
     export_eligible: false
+  };
+  // Message-level vector projection so the live suite's Vector{Search,Hybrid
+  // Search,Upsert,BatchUpsert} resolve a declared vector store.
+  // collection_name MUST be a Qdrant-valid token (ASCII letters/digits/hyphens/
+  // underscores, NO DOTS): a dotted name ("udb.sdk.live.v1.SdkLiveRecord") makes
+  // STARTUP force-sync abort with "Qdrant collection name may only contain ASCII
+  // letters, digits, hyphens, and underscores" and the whole broker fails to boot
+  // (verified twice). `sdk_live_records` matches the owner pg_table; the harness
+  // Vector bodies send this same string as request.collection so the manifest
+  // lookup (resource_name == request.collection) matches. dimension 3 matches the
+  // harness vector [0.1,0.2,0.3]. bug_report.md F/Lane-1.
+  option (udb.core.common.v1.vector_store) = {
+    backend: VECTOR_BACKEND_QDRANT
+    collection_name: "sdk_live_records"
+    dimension: 3
+    distance: VECTOR_DISTANCE_COSINE
   };
 
   string record_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "record_id" sql_type: "VARCHAR(80)" primary_key: true not_null: true }];

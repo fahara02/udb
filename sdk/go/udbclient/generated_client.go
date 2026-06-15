@@ -456,14 +456,14 @@ const (
 
 // RPCInfo describes a single RPC.
 type RPCInfo struct {
-	Service       string  // e.g. DataBroker
-	ServicePkg    string  // e.g. udb.services.v1
-	FullMethod    string  // e.g. /udb.services.v1.DataBroker/Select
-	Name          string  // e.g. Select
-	Kind          RPCKind // streaming shape
-	ReadOnly      bool    // proto EndpointSecurity.operation_kind == READ_ONLY; the
-	                      // authoritative retry-safety flag (never guessed from the name)
-	OperationKind string  // "read_only" | "mutation" | "destructive"
+	Service    string  // e.g. DataBroker
+	ServicePkg string  // e.g. udb.services.v1
+	FullMethod string  // e.g. /udb.services.v1.DataBroker/Select
+	Name       string  // e.g. Select
+	Kind       RPCKind // streaming shape
+	ReadOnly   bool    // proto EndpointSecurity.operation_kind == READ_ONLY; the
+	// authoritative retry-safety flag (never guessed from the name)
+	OperationKind string // "read_only" | "mutation" | "destructive"
 }
 
 // AllRPCs lists every RPC across every UDB service in this build.
@@ -734,22 +734,22 @@ var AllRPCs = []RPCInfo{
 
 // ServiceRPCCounts maps each service's full name to its RPC count.
 var ServiceRPCCounts = map[string]int{
-	"udb.core.analytics.services.v1.AnalyticsService": 7,
-	"udb.core.apikey.services.v1.ApiKeyService": 9,
-	"udb.core.asset.services.v1.AssetService": 8,
-	"udb.core.authn.services.v1.AuthnService": 50,
-	"udb.core.authz.services.v1.AuthzService": 41,
-	"udb.core.control.services.v1.ControlPlaneService": 5,
-	"udb.core.idp.services.v1.IdentityProviderService": 27,
+	"udb.core.analytics.services.v1.AnalyticsService":       7,
+	"udb.core.apikey.services.v1.ApiKeyService":             9,
+	"udb.core.asset.services.v1.AssetService":               8,
+	"udb.core.authn.services.v1.AuthnService":               50,
+	"udb.core.authz.services.v1.AuthzService":               41,
+	"udb.core.control.services.v1.ControlPlaneService":      5,
+	"udb.core.idp.services.v1.IdentityProviderService":      27,
 	"udb.core.notification.services.v1.NotificationService": 11,
-	"udb.core.storage.services.v1.StorageService": 7,
-	"udb.core.tenant.services.v1.TenantService": 6,
-	"udb.core.webrtc.services.v1.PeerService": 4,
-	"udb.core.webrtc.services.v1.RoomService": 5,
-	"udb.core.webrtc.services.v1.SignalingService": 1,
-	"udb.core.webrtc.services.v1.TrackService": 4,
-	"udb.core.webrtc.services.v1.TurnService": 1,
-	"udb.services.v1.DataBroker": 76,
+	"udb.core.storage.services.v1.StorageService":           7,
+	"udb.core.tenant.services.v1.TenantService":             6,
+	"udb.core.webrtc.services.v1.PeerService":               4,
+	"udb.core.webrtc.services.v1.RoomService":               5,
+	"udb.core.webrtc.services.v1.SignalingService":          1,
+	"udb.core.webrtc.services.v1.TrackService":              4,
+	"udb.core.webrtc.services.v1.TurnService":               1,
+	"udb.services.v1.DataBroker":                            76,
 }
 
 // rpcIndex is a fast Name->RPCInfo lookup built from AllRPCs at init.

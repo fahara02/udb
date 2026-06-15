@@ -176,14 +176,16 @@ class SendOTPRequest(_message.Message):
     def __init__(self, user_id: _Optional[str] = ..., otp_type: _Optional[_Union[_enums_pb2.OTPType, str]] = ..., correlation_id: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ...) -> None: ...
 
 class SendOTPResponse(_message.Message):
-    __slots__ = ("otp_id", "expires_in_seconds", "cooldown_seconds")
+    __slots__ = ("otp_id", "expires_in_seconds", "cooldown_seconds", "dev_otp_code")
     OTP_ID_FIELD_NUMBER: _ClassVar[int]
     EXPIRES_IN_SECONDS_FIELD_NUMBER: _ClassVar[int]
     COOLDOWN_SECONDS_FIELD_NUMBER: _ClassVar[int]
+    DEV_OTP_CODE_FIELD_NUMBER: _ClassVar[int]
     otp_id: str
     expires_in_seconds: int
     cooldown_seconds: int
-    def __init__(self, otp_id: _Optional[str] = ..., expires_in_seconds: _Optional[int] = ..., cooldown_seconds: _Optional[int] = ...) -> None: ...
+    dev_otp_code: str
+    def __init__(self, otp_id: _Optional[str] = ..., expires_in_seconds: _Optional[int] = ..., cooldown_seconds: _Optional[int] = ..., dev_otp_code: _Optional[str] = ...) -> None: ...
 
 class VerifyOTPRequest(_message.Message):
     __slots__ = ("otp_id", "code")

@@ -574,12 +574,20 @@ class UdbCore {
         while (true) {
             try {
                 return await new Promise((resolve, reject) => {
-                    stub[method](request, this.metadataFor(call), this.callMeta(call), (err, resp) => {
+                    const unaryCall = stub[method](request, this.metadataFor(call), this.callMeta(call), (err, resp) => {
                         if (err)
                             reject(err);
                         else
                             resolve(resp);
                     });
+                    if (call?.onResponseMetadata) {
+                        unaryCall.on("metadata", (md) => {
+                            try {
+                                call.onResponseMetadata(md);
+                            }
+                            catch { /* ignore */ }
+                        });
+                    }
                 });
             }
             catch (e) {

@@ -93,6 +93,9 @@ mod sessions;
 mod signing_keys;
 mod token_family;
 mod tokens;
+// Q#9-11: dev-only software WebAuthn authenticator (UDB_WEBAUTHN_TEST_MODE).
+#[cfg(feature = "webauthn")]
+mod webauthn_softauth;
 
 /// `AuthnService` handler over the UDB-owned authn primitives.
 pub struct AuthnServiceImpl {
@@ -151,6 +154,11 @@ struct WebAuthnPasskeyRecord {
 struct WebAuthnStateEnvelope<T> {
     state: T,
     label: String,
+    // Q#9-11: the verbatim b64url challenge issued at Start, retained so the
+    // dev soft-authenticator (UDB_WEBAUTHN_TEST_MODE) can build matching
+    // clientDataJSON at Finish. `default` keeps old persisted envelopes loadable.
+    #[serde(default)]
+    challenge: String,
 }
 
 #[cfg(feature = "webauthn")]
@@ -543,6 +551,19 @@ impl AuthnServiceImpl {
     /// signature alone). Shared by `ValidateToken` and the `Authenticate` bearer
     /// path. `Err` is reserved for real backend failures (fail-closed at the
     /// call site).
+    /// Validate that a client-supplied identifier is a well-formed UUID at the
+    /// RPC boundary, returning `InvalidArgument` (never reaching the DB with a
+    /// malformed id, never leaking a raw Postgres `22P02` error). bug_report.md B1.
+    pub(super) fn require_uuid_arg(value: &str, field: &str) -> Result<(), Status> {
+        let trimmed = value.trim();
+        if trimmed.is_empty() {
+            return Err(Status::invalid_argument(format!("{field} is required")));
+        }
+        Uuid::parse_str(trimmed)
+            .map(|_| ())
+            .map_err(|_| Status::invalid_argument(format!("{field} must be a valid UUID")))
+    }
+
     /// Is `user_id` a live, Active native UDB user? Only UUID subjects are
     /// status-gated; empty/non-UUID subjects (service identities, external
     /// subjects) have no user row and return `Ok(true)` (not gated here). `Err`
@@ -867,6 +888,15 @@ impl AuthnServiceImpl {
         challenge_id: &str,
         ceremony: &str,
     ) -> Result<WebAuthnChallengeRecord, Status> {
+        // bug_report.md §I: challenge_id is bound as `$1::UUID`; a non-UUID value made
+        // Postgres reject the query and the raw error escaped as `Internal`. Validate at
+        // the boundary so Finish{Registration,Authentication} return InvalidArgument and
+        // never leak the DB error string.
+        if uuid::Uuid::parse_str(challenge_id.trim()).is_err() {
+            return Err(Status::invalid_argument(
+                "challenge_id must be a valid UUID",
+            ));
+        }
         let pool = self.require_pg_pool()?;
         let model = webauthn_challenge_model();
         let rel = &model.relation;
@@ -1162,9 +1192,12 @@ impl AuthnServiceImpl {
                 "serialize WebAuthn registration challenge failed: {err}"
             ))
         })?;
+        let challenge_b64 =
+            webauthn_softauth::challenge_from_options(&creation_json).unwrap_or_default();
         let state_json = serde_json::to_string(&WebAuthnStateEnvelope {
             state,
             label: req.label,
+            challenge: challenge_b64,
         })
         .map_err(|err| {
             Status::internal(format!(
@@ -1188,7 +1221,7 @@ impl AuthnServiceImpl {
         &self,
         req: authn_pb::FinishWebAuthnRegistrationRequest,
     ) -> Result<authn_pb::FinishWebAuthnRegistrationResponse, Status> {
-        use webauthn_rs::prelude::{PasskeyRegistration, RegisterPublicKeyCredential};
+        use webauthn_rs::prelude::{PasskeyRegistration, RegisterPublicKeyCredential, Url};
 
         if req.challenge_id.trim().is_empty() || req.public_key_credential_json.trim().is_empty() {
             return Err(Status::invalid_argument(
@@ -1211,16 +1244,71 @@ impl AuthnServiceImpl {
             serde_json::from_str(&challenge.state_json).map_err(|err| {
                 Status::internal(format!("decode WebAuthn registration state failed: {err}"))
             })?;
-        let credential: RegisterPublicKeyCredential =
+        // Q#9-11: dev soft-authenticator path. The harness sends a sentinel; the
+        // broker mints a REAL "none"-attestation credential (P-256/ES256) that the
+        // production verifier below checks legitimately. Fail-closed off in prod.
+        let credential: RegisterPublicKeyCredential = if webauthn_softauth::test_mode_enabled()
+            && req.public_key_credential_json.trim() == webauthn_softauth::TEST_CREDENTIAL_SENTINEL
+        {
+            let cfg = self.webauthn_config()?;
+            let origin = Url::parse(&cfg.rp_origin)
+                .map_err(|err| Status::internal(format!("invalid WebAuthn origin: {err}")))?
+                .origin()
+                .ascii_serialization();
+            let json = webauthn_softauth::make_registration(
+                &user.user_id,
+                &cfg.rp_id,
+                &origin,
+                &envelope.challenge,
+            )
+            .map_err(|err| Status::internal(format!("dev WebAuthn registration failed: {err}")))?;
+            serde_json::from_str(&json).map_err(|err| {
+                Status::internal(format!("decode dev WebAuthn credential failed: {err}"))
+            })?
+        } else {
             serde_json::from_str(&req.public_key_credential_json).map_err(|err| {
                 Status::invalid_argument(format!(
                     "invalid WebAuthn registration credential JSON: {err}"
                 ))
-            })?;
-        let passkey = self
+            })?
+        };
+        let dev_mode = webauthn_softauth::test_mode_enabled()
+            && req.public_key_credential_json.trim() == webauthn_softauth::TEST_CREDENTIAL_SENTINEL;
+        let passkey = match self
             .webauthn()?
             .finish_passkey_registration(&credential, &envelope.state)
-            .map_err(|_| Status::unauthenticated("invalid credential"))?;
+        {
+            Ok(passkey) => passkey,
+            Err(_) if dev_mode => {
+                // Dev idempotency (Q#9-11): the deterministic dev authenticator
+                // yields ONE credential per user, so re-registering the same user
+                // is rejected by webauthn-rs's exclude-credentials guard. In test
+                // mode, treat a re-register as idempotent success when the user
+                // already holds that passkey (NOT a fail-open: prod never reaches
+                // this branch, and a genuinely-absent passkey still errors).
+                use webauthn_rs::prelude::Passkey;
+                let existing = self
+                    .load_webauthn_passkeys(&user.user_id)
+                    .await?
+                    .into_iter()
+                    .find_map(|rec| serde_json::from_str::<Passkey>(&rec.passkey_json).ok());
+                match existing {
+                    Some(passkey) => {
+                        let credential_id = Self::webauthn_credential_id_text(passkey.cred_id())?;
+                        self.consume_webauthn_challenge(&req.challenge_id)
+                            .await
+                            .ok();
+                        return Ok(authn_pb::FinishWebAuthnRegistrationResponse {
+                            registered: true,
+                            credential_id,
+                            user_id: user.user_id,
+                        });
+                    }
+                    None => return Err(Status::unauthenticated("invalid credential")),
+                }
+            }
+            Err(_) => return Err(Status::unauthenticated("invalid credential")),
+        };
         let credential_id = Self::webauthn_credential_id_text(passkey.cred_id())?;
         let passkey_json = serde_json::to_string(&passkey)
             .map_err(|err| Status::internal(format!("serialize WebAuthn passkey failed: {err}")))?;
@@ -1318,9 +1406,12 @@ impl AuthnServiceImpl {
                 "serialize WebAuthn authentication challenge failed: {err}"
             ))
         })?;
+        let challenge_b64 =
+            webauthn_softauth::challenge_from_options(&request_json).unwrap_or_default();
         let state_json = serde_json::to_string(&WebAuthnStateEnvelope {
             state,
             label: String::new(),
+            challenge: challenge_b64,
         })
         .map_err(|err| {
             Status::internal(format!(
@@ -1344,7 +1435,7 @@ impl AuthnServiceImpl {
         &self,
         req: authn_pb::FinishWebAuthnAuthenticationRequest,
     ) -> Result<authn_pb::FinishWebAuthnAuthenticationResponse, Status> {
-        use webauthn_rs::prelude::{Passkey, PasskeyAuthentication, PublicKeyCredential};
+        use webauthn_rs::prelude::{Passkey, PasskeyAuthentication, PublicKeyCredential, Url};
 
         if req.challenge_id.trim().is_empty() || req.public_key_credential_json.trim().is_empty() {
             return Err(Status::invalid_argument(
@@ -1369,12 +1460,36 @@ impl AuthnServiceImpl {
                     "decode WebAuthn authentication state failed: {err}"
                 ))
             })?;
-        let credential: PublicKeyCredential = serde_json::from_str(&req.public_key_credential_json)
-            .map_err(|err| {
+        // Q#9-11: dev soft-authenticator path (see finish_webauthn_registration_impl).
+        // Signs a genuine ES256 assertion with the keypair minted at registration;
+        // the production verifier below checks it. Fail-closed off in prod.
+        let credential: PublicKeyCredential = if webauthn_softauth::test_mode_enabled()
+            && req.public_key_credential_json.trim() == webauthn_softauth::TEST_CREDENTIAL_SENTINEL
+        {
+            let cfg = self.webauthn_config()?;
+            let origin = Url::parse(&cfg.rp_origin)
+                .map_err(|err| Status::internal(format!("invalid WebAuthn origin: {err}")))?
+                .origin()
+                .ascii_serialization();
+            // The userHandle (user UUID bytes) is derived inside make_assertion to
+            // match exactly what start_passkey_* bound as the passkey user handle.
+            let json = webauthn_softauth::make_assertion(
+                &user.user_id,
+                &cfg.rp_id,
+                &origin,
+                &envelope.challenge,
+            )
+            .map_err(|err| Status::internal(format!("dev WebAuthn assertion failed: {err}")))?;
+            serde_json::from_str(&json).map_err(|err| {
+                Status::internal(format!("decode dev WebAuthn assertion failed: {err}"))
+            })?
+        } else {
+            serde_json::from_str(&req.public_key_credential_json).map_err(|err| {
                 Status::invalid_argument(format!(
                     "invalid WebAuthn authentication credential JSON: {err}"
                 ))
-            })?;
+            })?
+        };
         let result = self
             .webauthn()?
             .finish_passkey_authentication(&credential, &envelope.state)

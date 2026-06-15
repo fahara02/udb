@@ -185,7 +185,6 @@ impl DataBrokerService {
                 authn,
                 ApiKeyServiceImpl::with_store(authn_config, api_key_store)
                     .with_postgres(Some(pool.clone()))
-                    .with_runtime(Some(runtime.clone()))
                     .with_event_sink(event_sink.clone()),
             )
         } else {

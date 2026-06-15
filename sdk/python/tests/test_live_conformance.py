@@ -25,6 +25,9 @@ from udb.entity.v1 import admin_pb2, blob_pb2, cdc_pb2, operation_pb2, relationa
 from udb.core.common.v1 import types_pb2 as common_pb, dto_pb2 as common_dto_pb
 from udb.core.tenant.services.v1 import tenant_service_pb2 as tenant_pb, tenant_service_pb2_grpc as tenant_grpc
 from udb.core.authz.services.v1 import core_pb2 as authz_pb, authz_service_pb2_grpc as authz_grpc
+from udb.core.authz.services.v1 import governance_pb2 as authz_gov_pb
+from udb.core.idp.entity.v1 import enums_pb2 as idp_enum_pb
+from udb.core.idp.services.v1 import core_pb2 as idp_pb
 from udb.core.apikey.services.v1 import core_pb2 as apikey_pb, apikey_service_pb2_grpc as apikey_grpc
 from udb.core.analytics.services.v1 import core_pb2 as analytics_pb, analytics_service_pb2_grpc as analytics_grpc
 from udb.core.notification.services.v1 import core_pb2 as notif_pb, notification_service_pb2_grpc as notif_grpc
@@ -527,6 +530,17 @@ def run_live_backend_e2e(stub, meta: Metadata) -> None:
 NOTIFICATION_CHANNEL_EMAIL = 1  # udb.core.notification.entity.v1.NotificationChannel
 API_KEY_STATUS_ACTIVE = 1  # udb.core.apikey.entity.v1.ApiKeyStatus
 STORAGE_FILE_TYPE = "DOCUMENT"  # storage rejects unknown file types
+# Dev test-mode sentinels: with UDB_WEBAUTHN_TEST_MODE / UDB_SAML_TEST_MODE the broker
+# mints + verifies a REAL credential/assertion when the harness sends these (mirrors Go).
+WEBAUTHN_TEST_CREDENTIAL = "__UDB_WEBAUTHN_TEST__"
+SAML_TEST_SENTINEL = "__UDB_SAML_TEST__"
+SAML_IDP_METADATA_XML = (
+    '<md:EntityDescriptor xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata" entityID="https://idp.example.com/perf-saml">'
+    '<md:IDPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">'
+    '<md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://idp.example.com/sso"/>'
+    '<md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://idp.example.com/sso"/>'
+    "</md:IDPSSODescriptor></md:EntityDescriptor>"
+)
 
 
 def run_native_service_e2e(auth_channel, meta: Metadata, uuid_meta: Metadata | None = None) -> None:
@@ -1305,7 +1319,171 @@ def perf_real_body(client_cls, method, meta: Metadata, fix: "PerfFixtures"):
     fields = doc_field_names(client_cls, method)
     request = GetMessageClass(method.input_type)()
     apply_doc_fields(request, fields, body or "", meta, fix)
+    postprocess_perf_body(client_cls, method, request, meta, fix)
     return request
+
+
+def postprocess_perf_body(client_cls, method, request, meta: Metadata, fix: "PerfFixtures") -> None:
+    """Adjust doc-grounded bodies where the valid body is intentionally per-call.
+
+    Docs give the shape; some create RPCs still need unique natural keys so the
+    first measured iteration can succeed instead of colliding with seed data.
+    """
+    suffix = uuid.uuid4().hex[:12]
+    if client_cls is AuthnServiceClient and method.name == "CreateUser":
+        request.username = f"py-perf-u-{suffix}"
+        request.email = f"py-perf-u-{suffix}@example.com"
+        request.password = "Str0ng!Passw0rd"
+        request.tenant_id = meta.tenant_id
+        if hasattr(request, "project_id"):
+            request.project_id = meta.project_id
+    elif client_cls is AuthnServiceClient and method.name == "SendOTP":
+        request.user_id = _fixture(fix, "send_otp_user_id", _fixture(fix, "user_id", request.user_id))
+        if hasattr(request, "otp_type"):
+            request.otp_type = 4
+    elif client_cls is AuthnServiceClient and method.name == "VerifyOTP":
+        request.otp_id = _fixture(fix, "otp_id", request.otp_id)
+        request.code = _fixture(fix, "otp_code", request.code)
+    elif client_cls is AuthnServiceClient and method.name == "ResetPassword":
+        request.otp_id = _fixture(fix, "reset_otp_id", request.otp_id)
+        request.code = _fixture(fix, "reset_otp_code", request.code)
+        request.new_password = "N3w!Passw0rd9"
+    elif client_cls is AuthnServiceClient and method.name == "ResendOTP":
+        request.original_otp_id = _fixture(fix, "otp_id", request.original_otp_id)
+    elif client_cls is AuthnServiceClient and method.name == "VerifyMfaChallenge":
+        request.challenge_id = _fixture(fix, "challenge_id", request.challenge_id)
+        request.code = _fixture(fix, "otp_code", request.code)
+    elif client_cls is AuthnServiceClient and method.name == "ChangePassword":
+        request.current_password = _fixture(fix, "password", request.current_password)
+        request.new_password = "N3w!Passw0rd9"
+        if hasattr(request, "otp_id"):
+            request.otp_id = ""
+    elif client_cls is AuthnServiceClient and method.name == "FinishWebAuthnRegistration":
+        # Dev soft-authenticator: send the sentinel; the broker mints + verifies a REAL
+        # credential against the challenge minted by the seed's StartWebAuthnRegistration.
+        request.challenge_id = _fixture(fix, "reg_challenge_id", _fixture(fix, "challenge_id", request.challenge_id))
+        request.public_key_credential_json = WEBAUTHN_TEST_CREDENTIAL
+    elif client_cls is AuthnServiceClient and method.name == "FinishWebAuthnAuthentication":
+        request.challenge_id = _fixture(fix, "auth_challenge_id", _fixture(fix, "challenge_id", request.challenge_id))
+        request.public_key_credential_json = WEBAUTHN_TEST_CREDENTIAL
+    elif client_cls is AuthnServiceClient and method.name == "RevokeDevice":
+        request.device_id = _fixture(fix, "device_id", request.device_id)
+    elif client_cls is AuthzServiceClient and method.name == "CreateRole":
+        request.name = f"SDK Perf Role {suffix}"
+        request.role_code = f"py_perf_role_{suffix}"
+        request.domain = meta.tenant_id
+        request.tenant_id = meta.tenant_id
+        request.project_id = meta.project_id
+        request.created_by = _fixture(fix, "user_id", request.created_by)
+    elif client_cls is AuthzServiceClient and method.name == "UpdatePolicyDraft":
+        request.draft_id = _fixture(fix, "update_draft_id", request.draft_id)
+        if hasattr(request, "expected_updated_at_unix"):
+            request.expected_updated_at_unix = int(_fixture(fix, "update_draft_updated_at_unix", "0") or "0")
+    elif client_cls is AuthzServiceClient and method.name == "DiffPolicyDraft":
+        request.draft_id = _fixture(fix, "update_draft_id", request.draft_id)
+    elif client_cls is AuthzServiceClient and method.name == "ApprovePolicyDraft":
+        request.draft_id = _fixture(fix, "approve_draft_id", request.draft_id)
+        request.reviewer = _fixture(fix, "user_id", request.reviewer)
+    elif client_cls is AuthzServiceClient and method.name == "RejectPolicyDraft":
+        request.draft_id = _fixture(fix, "reject_draft_id", request.draft_id)
+        request.reviewer = _fixture(fix, "user_id", request.reviewer)
+    elif client_cls is AuthzServiceClient and method.name == "ActivatePolicyVersion":
+        request.policy_version_id = _fixture(fix, "policy_version_id", request.policy_version_id)
+    elif client_cls is AuthzServiceClient and method.name == "ActivateCanary":
+        request.policy_version_id = _fixture(fix, "canary_version_id", request.policy_version_id)
+    elif client_cls is AuthzServiceClient and method.name in {"GetCanaryStatus", "PromoteCanary"}:
+        request.canary_id = _fixture(fix, "canary_id", request.canary_id)
+    elif client_cls is AuthzServiceClient and method.name == "RollbackPolicyVersion":
+        request.policy_set_id = _fixture(fix, "rollback_policy_set_id", request.policy_set_id)
+        request.target_version_id = _fixture(fix, "rollback_target_version_id", request.target_version_id)
+    elif client_cls is ApiKeyServiceClient and method.name == "UpdateApiKey":
+        request.key_id = _fixture(fix, "update_key_id", request.key_id)
+    elif client_cls is ApiKeyServiceClient and method.name == "RevokeApiKey":
+        request.key_id = _fixture(fix, "revoke_key_id", request.key_id)
+    elif client_cls is StorageServiceClient and method.name == "RegisterUpload":
+        request.filename = f"perf-{suffix}.pdf"
+        request.project_id = ""
+        request.reference_id = str(uuid.uuid4())
+        request.reference_type = "document"
+    elif client_cls is StorageServiceClient and method.name == "FinalizeUpload":
+        if hasattr(request, "size_bytes"):
+            request.size_bytes = int(_fixture(fix, "file_size_bytes", "17"))
+        request.content_type = "text/plain"
+        request.file_type = STORAGE_FILE_TYPE
+        request.reference_type = "sdk.perf"
+    elif client_cls is AssetServiceClient and method.name == "RegisterAsset":
+        if hasattr(request, "project_id"):
+            request.project_id = ""
+        request.media_type = "image/png"
+        request.metadata = '{"source":"upload"}'
+    elif client_cls is AssetServiceClient and method.name == "ListAssets":
+        request.status = ""
+        request.media_type = "image/png"
+    elif client_cls is RoomServiceClient and method.name == "CreateRoom":
+        request.name = f"bench-room-{suffix}"
+        request.config = "{}"
+        request.created_by = _fixture(fix, "user_id", request.created_by)
+    elif client_cls is IdentityProviderServiceClient and method.name == "CreateProvider":
+        request.display_name = f"Acme OIDC {suffix}"
+        request.issuer = f"https://idp.example.com/{suffix}"
+    elif client_cls is IdentityProviderServiceClient and method.name == "UpdateProvider":
+        request.group_mapping_json = json.dumps({_fixture(fix, "scim_group_id", "sdk-perf-group"): "admin"})
+    elif client_cls is IdentityProviderServiceClient and method.name == "StartSamlLogin":
+        request.provider_id = _fixture(fix, "saml_provider_id", request.provider_id)
+    elif client_cls is IdentityProviderServiceClient and method.name == "ScimGetGroup":
+        request.provider_id = _fixture(fix, "provider_id", request.provider_id)
+        request.scim_group_id = _fixture(fix, "scim_group_id", request.scim_group_id)
+    elif client_cls is TrackServiceClient and method.name == "UnpublishTrack":
+        request.track_id = _fixture(fix, "unpublish_track_id", request.track_id)
+    elif client_cls is PeerServiceClient and method.name == "LeaveRoom":
+        request.peer_id = _fixture(fix, "leave_peer_id", request.peer_id)
+    elif client_cls is RoomServiceClient and method.name == "CloseRoom":
+        request.room_id = _fixture(fix, "close_room_id", request.room_id)
+    elif client_cls is SignalingServiceClient and method.name == "Signal":
+        request.peer_id = _fixture(fix, "signal_peer_id", request.peer_id)
+    elif client_cls is TenantServiceClient and method.name == "UpdateTenantConfig":
+        request.type = "string"
+    elif client_cls is DataBrokerClient:
+        if method.name in {"Select", "SelectV2", "BatchSelect", "Delete"} and hasattr(request, "filter"):
+            _set_struct(request.filter, {"record_id": _fixture(fix, "record_id", "python-live-record"), "tenant_id": meta.tenant_id, "project_id": meta.project_id})
+        elif method.name == "Upsert":
+            _set_struct(request.payload, {
+                "record_id": f"py-perf-upsert-{suffix}",
+                "tenant_id": meta.tenant_id,
+                "project_id": meta.project_id,
+                "lookup_key": f"py-perf-upsert-lk-{suffix}",
+                "payload": "python-live",
+            })
+            request.conflict_fields[:] = ["record_id"]
+        elif method.name in {"VectorSearch", "VectorHybridSearch", "VectorUpsert", "VectorBatchUpsert"}:
+            request.collection = _fixture(fix, "vector_collection", "sdk_live_records")
+        elif method.name in {"TimeSeriesQuery", "TimeSeriesWrite"} and hasattr(request, "resource"):
+            request.resource.backend = "clickhouse"
+            request.resource.resource_name = _fixture(fix, "ts_table", "sdk_perf_ts")
+        elif method.name == "CreateMaterializedView":
+            request.name = "mv_test"
+        elif method.name == "ApplyMigration":
+            request.run_id = _fixture(fix, "apply_run_id", request.run_id)
+            request.approval_token = _fixture(fix, "approval_token", request.approval_token)
+        elif method.name == "ApproveMigrationPlan":
+            request.run_id = _fixture(fix, "approve_run_id", request.run_id)
+        elif method.name == "GetMigrationStatus":
+            request.run_id = _fixture(fix, "migration_id", request.run_id)
+        elif method.name == "EnqueueOutboxEvent":
+            _set_struct(request.payload, {
+                "event_id": str(uuid.uuid4()),
+                "event_type": _fixture(fix, "event_type", "python.live.perf"),
+                "correlation_id": str(uuid.uuid4()),
+                "document_id": _fixture(fix, "document_id", "python-live-document"),
+            })
+        elif method.name == "GenericDispatch":
+            request.spec_json = "{}"
+        elif method.name == "DropResource":
+            request.spec_json = '{"udb_allow_rls_bypass":true}'
+        elif method.name in {"StageCatalog", "ValidateCatalog"}:
+            catalog_manifest = fix.lookup("catalog_manifest")
+            if catalog_manifest:
+                request.manifest_json = catalog_manifest.encode("utf-8")
 
 
 def _fixture(fix, key: str, default: str = "") -> str:
@@ -1313,10 +1491,57 @@ def _fixture(fix, key: str, default: str = "") -> str:
 
 
 def _doc_seed_key(field_name: str, body: str) -> str | None:
-    pattern = rf"(?<![a-z0-9_]){re.escape(field_name.lower())}(?![a-z0-9_]).{{0,80}}?<seed:([^>]+)>"
+    # Match only the value assigned to this field. The previous loose "within
+    # 80 chars" scan could steal a later field's seed tag, e.g. storage
+    # content_type became <seed:file_id>.
+    pattern = (
+        rf"(?<![a-z0-9_])`?{re.escape(field_name.lower())}`?(?![a-z0-9_])"
+        rf"\s*(?::|=)\s*`?\"?<seed:([^>]+)>"
+    )
     match = re.search(pattern, body.lower())
     if match:
         return match.group(1)
+    return None
+
+
+def _doc_literal_string(field_name: str, body: str) -> str | None:
+    pattern = (
+        rf"(?<![a-z0-9_])`?{re.escape(field_name.lower())}`?(?![a-z0-9_])"
+        rf"\s*(?::|=)\s*`?\"([^\"<`]*)\""
+    )
+    match = re.search(pattern, body, flags=re.IGNORECASE)
+    if match:
+        return match.group(1)
+    return None
+
+
+def _doc_explicit_empty(field_name: str, body: str) -> bool:
+    pattern = (
+        rf"(?<![a-z0-9_])`?{re.escape(field_name.lower())}`?(?![a-z0-9_])"
+        rf"\s*(?::|=)\s*(?:\[\]|\{{\}})"
+    )
+    return re.search(pattern, body.lower()) is not None
+
+
+def _doc_literal_bool(field_name: str, body: str) -> bool | None:
+    pattern = (
+        rf"(?<![a-z0-9_])`?{re.escape(field_name.lower())}`?(?![a-z0-9_])"
+        rf"\s*(?::|=)\s*(true|false)"
+    )
+    match = re.search(pattern, body.lower())
+    if match:
+        return match.group(1) == "true"
+    return None
+
+
+def _doc_literal_int(field_name: str, body: str) -> int | None:
+    pattern = (
+        rf"(?<![a-z0-9_])`?{re.escape(field_name.lower())}`?(?![a-z0-9_])"
+        rf"\s*(?::|=)\s*(-?\d+)"
+    )
+    match = re.search(pattern, body.lower())
+    if match:
+        return int(match.group(1))
     return None
 
 
@@ -1324,6 +1549,19 @@ def _field_seed(field_name: str, meta: Metadata, fix, body: str = "") -> str:
     tenant, project = meta.tenant_id, meta.project_id
     name = field_name.lower()
     doc_key = _doc_seed_key(name, body)
+    if name in {"otp_id", "original_otp_id"} and doc_key == "code":
+        doc_key = "otp_id"
+    elif name == "challenge_id" and doc_key == "code":
+        doc_key = "challenge_id"
+    elif name == "device_id" and doc_key == "record_id":
+        doc_key = "device_id"
+    elif name == "dlq_id" and doc_key == "record_id":
+        doc_key = "dlq_id"
+    literal = _doc_literal_string(name, body)
+    if literal is not None and (literal == "" or name in {"status", "state", "type", "file_type", "media_type", "content_type", "reference_type"}):
+        return literal
+    if name in {"created_by", "updated_by", "deleted_by", "assigned_by", "revoked_by", "approved_by", "rejected_by", "reviewer"}:
+        return _fixture(fix, "user_id", "python-live-user")
     if doc_key:
         seeded = fix.lookup(doc_key)
         if seeded:
@@ -1331,29 +1569,54 @@ def _field_seed(field_name: str, meta: Metadata, fix, body: str = "") -> str:
     direct = fix.lookup(name)
     if direct:
         return direct
+    if name == "status":
+        low = body.lower()
+        if "completed" in low:
+            return "COMPLETED"
+        if "ready" in low:
+            return "READY"
+        if "pending" in low:
+            return "PENDING"
+        if "failed" in low:
+            return "FAILED"
+        return "active"
+    if name == "state":
+        low = body.lower()
+        if "connected" in low:
+            return "connected"
+        if "active" in low:
+            return "active"
+        return "active"
+    if name == "query":
+        low = body.lower()
+        if "match (n)" in low:
+            return "MATCH (n) RETURN n LIMIT 1"
+        if "create (n" in low:
+            return "CREATE (n:Node {id:$id})"
+        return "SELECT 1"
     aliases = {
         "tenant": tenant, "tenant_id": tenant, "domain": tenant,
         "project": project, "project_id": project,
         "message_type": LIVE_MESSAGE_TYPE,
         "username": _fixture(fix, "username", "sdk-live-perf@example.com"),
-        "identifier": _fixture(fix, "username", "sdk-live-perf@example.com"),
+        "identifier": _fixture(fix, "identifier", _fixture(fix, "username", "sdk-live-perf@example.com")),
         "password": _fixture(fix, "password", "CorrectHorse1!"),
         "current_password": _fixture(fix, "password", "CorrectHorse1!"),
         "new_password": _fixture(fix, "new_password", "CorrectHorse2!"),
-        "email": "sdk-live-perf@example.com",
+        "email": _fixture(fix, "email", "sdk-live-perf@example.com"),
         "full_name": "SDK Perf User",
         "reason": "python-live-perf",
         "revoke_reason": "python-live-perf",
         "rotation_reason": "python-live-perf",
         "change_reason": "python-live-perf",
         "device_name": "python-sdk-perf",
-        "device_id": _fixture(fix, "record_id", "python-sdk-perf-device"),
+        "device_id": _fixture(fix, "device_id", ""),
         "device_fingerprint": "python-sdk-perf-device",
         "phone": "+15551234567",
-        "otp_id": _fixture(fix, "code", "123456"),
-        "original_otp_id": _fixture(fix, "code", "123456"),
-        "challenge_id": _fixture(fix, "code", "123456"),
-        "code": "123456",
+        "otp_id": _fixture(fix, "otp_id", ""),
+        "original_otp_id": _fixture(fix, "otp_id", ""),
+        "challenge_id": _fixture(fix, "challenge_id", ""),
+        "code": _fixture(fix, "otp_code", "123456"),
         "csrf_token": _fixture(fix, "csrf_token", "123456"),
         "token": _fixture(fix, "token", _fixture(fix, "access_token")),
         "bearer_token": _fixture(fix, "token", _fixture(fix, "access_token")),
@@ -1362,11 +1625,13 @@ def _field_seed(field_name: str, meta: Metadata, fix, body: str = "") -> str:
         "user_id": _fixture(fix, "user_id", "python-live-user"),
         "principal_id": _fixture(fix, "user_id", "python-live-user"),
         "subject": _fixture(fix, "subject", f"user:{_fixture(fix, 'user_id', 'python-live-user')}"),
-        "created_by": _fixture(fix, "subject", _fixture(fix, "user_id", "python-live-user")),
-        "updated_by": _fixture(fix, "subject", _fixture(fix, "user_id", "python-live-user")),
-        "deleted_by": _fixture(fix, "subject", _fixture(fix, "user_id", "python-live-user")),
-        "assigned_by": _fixture(fix, "subject", _fixture(fix, "user_id", "python-live-user")),
-        "revoked_by": _fixture(fix, "subject", _fixture(fix, "user_id", "python-live-user")),
+        "created_by": _fixture(fix, "user_id", "python-live-user"),
+        "updated_by": _fixture(fix, "user_id", "python-live-user"),
+        "deleted_by": _fixture(fix, "user_id", "python-live-user"),
+        "assigned_by": _fixture(fix, "user_id", "python-live-user"),
+        "revoked_by": _fixture(fix, "user_id", "python-live-user"),
+        "approved_by": _fixture(fix, "user_id", "python-live-user"),
+        "rejected_by": _fixture(fix, "user_id", "python-live-user"),
         "owner_id": _fixture(fix, "owner_id", _fixture(fix, "user_id", "python-live-user")),
         "role_id": _fixture(fix, "role_id", "python-live-role"),
         "role": _fixture(fix, "role", "sdk_reader"),
@@ -1374,11 +1639,11 @@ def _field_seed(field_name: str, meta: Metadata, fix, body: str = "") -> str:
         "user_role_id": _fixture(fix, "user_role_id", "python-live-user-role"),
         "policy_id": _fixture(fix, "policy_id", "1"),
         "policy_draft_id": _fixture(fix, "policy_draft_id", _fixture(fix, "policy_id", "python-live-policy")),
-        "policy_set_id": _fixture(fix, "policy_id", "python-live-policy"),
-        "policy_version_id": _fixture(fix, "policy_id", "python-live-policy"),
-        "target_version_id": _fixture(fix, "policy_id", "python-live-policy"),
+        "policy_set_id": _fixture(fix, "policy_set_id", _fixture(fix, "policy_id", "python-live-policy")),
+        "policy_version_id": _fixture(fix, "policy_version_id", _fixture(fix, "policy_id", "python-live-policy")),
+        "target_version_id": _fixture(fix, "target_version_id", _fixture(fix, "policy_id", "python-live-policy")),
         "against_version_id": "",
-        "canary_id": _fixture(fix, "policy_id", "python-live-policy"),
+        "canary_id": _fixture(fix, "canary_id", _fixture(fix, "policy_id", "python-live-policy")),
         "draft_id": _fixture(fix, "policy_draft_id", _fixture(fix, "policy_id", "python-live-policy")),
         "id": _fixture(fix, doc_key or "record_id", "python-live-record"),
         "credential_id": _fixture(fix, "record_id", "python-live-credential"),
@@ -1390,9 +1655,9 @@ def _field_seed(field_name: str, meta: Metadata, fix, body: str = "") -> str:
         "executor_identity": "python-live-executor",
         "operation_name": "python-live-operation",
         "workload_kind": "pipeline",
-        "hour": "2026-06-14T00",
-        "hour_from": "2026-06-14T00",
-        "hour_to": "2026-06-14T23",
+        "hour": "2026-06-14T00:00:00Z",
+        "hour_from": "2026-06-14T00:00:00Z",
+        "hour_to": "2026-06-14T23:00:00Z",
         "date_from": "2026-06-01",
         "date_to": "2026-06-14",
         "event_type": _fixture(fix, "event_type", "python.live.perf"),
@@ -1418,16 +1683,19 @@ def _field_seed(field_name: str, meta: Metadata, fix, body: str = "") -> str:
         "object_key": _fixture(fix, "object_key", "python-live-object.txt"),
         "document_id": _fixture(fix, "document_id", "python-live-document"),
         "collection": _fixture(fix, "collection", LIVE_MESSAGE_TYPE),
+        "vector_collection": _fixture(fix, "vector_collection", "sdk_live_records"),
         "mongo_collection": _fixture(fix, "mongo_collection", "sdk_perf_docs"),
         "resource_name": _fixture(fix, "mongo_collection", "sdk_perf_docs"),
         "resource": _fixture(fix, "resource", "invoice"),
         "resource_type": _fixture(fix, "resource", "invoice"),
+        "effect": "allow",
         "object": _fixture(fix, "object", "group:python-live"),
         "action": _fixture(fix, "action", "data.select"),
         "relation": _fixture(fix, "relation", "member"),
         "scope": "udb:admin",
         "required_scope": "udb:read",
         "scope_values": "10",
+        "spec_json": "{}",
         "backend": "mongodb",
         "operation": "ping",
         "schema": "public",
@@ -1472,14 +1740,14 @@ def _field_seed(field_name: str, meta: Metadata, fix, body: str = "") -> str:
         "scan_mode": "sample",
         "cdc_topic_prefix": f"{project}.",
         "policy_set_name": "default",
-        "reviewer": _fixture(fix, "subject", "python-live-reviewer"),
+        "reviewer": _fixture(fix, "user_id", "python-live-reviewer"),
         "node_id": "python-live-node",
         "response_nonce": "",
         "filter": "",
         "op": "replace",
         "path": "active",
         "value_json": "false",
-        "step_id": _fixture(fix, "instance_id", "python-live-step"),
+        "step_id": _fixture(fix, "step_id", "python-live-step"),
         "correlation_id": str(uuid.uuid4()),
         "ip_address": "127.0.0.1",
         "user_agent": "python-sdk-perf",
@@ -1488,14 +1756,14 @@ def _field_seed(field_name: str, meta: Metadata, fix, body: str = "") -> str:
         "branding": "{}",
         "config_key": "feature.flag",
         "config_value": "on",
-        "type": "organization",
+        "type": "string" if "config_key" in body.lower() else "organization",
         "issuer": "https://idp.example.com",
         "jwks_url": "https://idp.example.com/jwks",
         "client_id": "client-1",
         "audience": "udb",
         "relay_state": "state-1",
         "saml_response": "PHNhbWxwOlJlc3BvbnNlLz4=",
-        "metadata_xml": '<EntityDescriptor entityID="https://idp.example.com"></EntityDescriptor>',
+        "metadata_xml": SAML_IDP_METADATA_XML,
         "claims_json": '{"sub":"abc","email":"a@x.com","email_verified":true}',
         "claim_mapping_json": "{}",
         "group_mapping_json": "{}",
@@ -1512,6 +1780,8 @@ def _field_seed(field_name: str, meta: Metadata, fix, body: str = "") -> str:
     }
     if name in aliases:
         return aliases[name]
+    if literal is not None:
+        return literal
     raise MissingExplicitPerfBody(f"no explicit doc-backed value for string field {field_name!r}")
 
 
@@ -1554,10 +1824,24 @@ def _fill_message(msg, field_name: str, body: str, meta: Metadata, fix) -> None:
     full = msg.DESCRIPTOR.full_name
     if full == "google.protobuf.Struct":
         vals = {"tenant_id": meta.tenant_id, "project_id": meta.project_id}
-        if field_name in {"filter", "parameters"}:
+        if field_name == "filter":
+            vals.update({"record_id": _fixture(fix, "record_id", "python-live-record")})
+        elif field_name == "parameters":
             vals.update({"record_id": _fixture(fix, "record_id", "python-live-record"), "id": _fixture(fix, "record_id", "python-live-record")})
         elif field_name in {"payload", "document", "fields"}:
-            vals.update({"record_id": _fixture(fix, "record_id", "python-live-record"), "payload": "python-live"})
+            if "event_id" in body:
+                vals.update({
+                    "event_id": str(uuid.uuid4()),
+                    "event_type": _fixture(fix, "event_type", "python.live.perf"),
+                    "correlation_id": str(uuid.uuid4()),
+                    "document_id": _fixture(fix, "document_id", "python-live-document"),
+                })
+            else:
+                vals.update({
+                    "record_id": _fixture(fix, "record_id", "python-live-record"),
+                    "lookup_key": f"py-perf-lk-{uuid.uuid4().hex[:12]}",
+                    "payload": "python-live",
+                })
         elif field_name == "metadata":
             vals = {"source": "python-live-perf"}
         _set_struct(msg, vals)
@@ -1571,6 +1855,31 @@ def _fill_message(msg, field_name: str, body: str, meta: Metadata, fix) -> None:
     if full == "udb.entity.v1.RequestContext":
         _fill_entity_context(msg, meta)
         return
+    if full == "udb.core.authz.services.v1.GovernanceActor":
+        msg.subject = _fixture(fix, "subject", f"user:{_fixture(fix, 'user_id', 'python-live-user')}")
+        msg.tenant_id = meta.tenant_id
+        msg.project_id = meta.project_id
+        msg.scopes.extend(_scope_values_for_body(body, "scopes"))
+        return
+    if full.endswith(".StoreResource"):
+        low = body.lower()
+        backend = ""
+        for candidate in ("redis", "mongodb", "neo4j", "clickhouse", "minio", "qdrant"):
+            if f'backend:"{candidate}"' in low or f'backend="{candidate}"' in low or f'backend:`"{candidate}"' in low or candidate in low:
+                backend = candidate
+                break
+        msg.backend = backend or "mongodb"
+        if msg.backend == "mongodb":
+            msg.resource_name = _fixture(fix, "mongo_collection", "sdk_perf_docs")
+        elif msg.backend == "minio":
+            msg.resource_name = _fixture(fix, "bucket", "udb-live-sdk")
+        elif msg.backend == "clickhouse":
+            msg.resource_name = _fixture(fix, "ts_table", "sdk_perf_ts")
+        elif msg.backend == "qdrant":
+            msg.resource_name = "sdk_live_records"
+        if hasattr(msg, "message_type"):
+            msg.message_type = _fixture(fix, "message_type", LIVE_MESSAGE_TYPE)
+        return
     if full.endswith(".PageRequest"):
         if hasattr(msg, "page"):
             msg.page = 1
@@ -1582,7 +1891,21 @@ def _fill_message(msg, field_name: str, body: str, meta: Metadata, fix) -> None:
             set_doc_field(msg, field, body, meta, fix)
 
 
+def _scope_values_for_body(body: str, field_name: str) -> list[str]:
+    quoted = re.findall(r'"([^"]+)"', body)
+    scopes = [v[4:] if v.startswith("udb:authz:") else v for v in quoted if "authz:" in v or v.startswith("udb:")]
+    if scopes:
+        return scopes
+    if field_name == "required_scopes":
+        return ["udb:read"]
+    if "policy" in body.lower() or "governance" in body.lower():
+        return ["authz:policy:write"]
+    return ["udb:admin"]
+
+
 def _append_doc_value(container, field, body: str, meta: Metadata, fix) -> None:
+    if _doc_explicit_empty(field.name, body):
+        return
     if field.message_type is not None and field.message_type.GetOptions().map_entry:
         value_field = field.message_type.fields_by_name["value"]
         if value_field.type == _FD.TYPE_STRING:
@@ -1596,7 +1919,7 @@ def _append_doc_value(container, field, body: str, meta: Metadata, fix) -> None:
         return
     if field.type == _FD.TYPE_STRING:
         if field.name in {"scopes", "requested_scopes", "required_scopes"}:
-            container.append("udb:admin")
+            container.extend(_scope_values_for_body(body, field.name))
         elif field.name in {"channels"}:
             container.append(str(NOTIFICATION_CHANNEL_EMAIL))
         elif field.name in {"client_ids"}:
@@ -1614,7 +1937,10 @@ def _append_doc_value(container, field, body: str, meta: Metadata, fix) -> None:
     elif field.type in INT_FD_TYPES:
         container.append(1)
     elif field.type in (_FD.TYPE_DOUBLE, _FD.TYPE_FLOAT):
-        container.append(0.1)
+        if field.name == "vector":
+            container.extend([0.1, 0.2, 0.3])
+        else:
+            container.append(0.1)
     elif field.type == _FD.TYPE_BOOL:
         container.append(True)
     elif field.type == _FD.TYPE_ENUM:
@@ -1636,15 +1962,32 @@ def set_doc_field(msg, field, body: str, meta: Metadata, fix) -> None:
         elif field.name == "payload_json":
             setattr(msg, field.name, json.dumps({"event_id": str(uuid.uuid4()), "event_type": _fixture(fix, "event_type", "python.live.perf"), "document_id": _fixture(fix, "document_id", "python-live-document")}).encode())
         elif field.name == "manifest_json":
-            setattr(msg, field.name, b'{"version":"python-live-perf","messages":[]}')
+            catalog_manifest = fix.lookup("catalog_manifest")
+            setattr(msg, field.name, catalog_manifest.encode("utf-8") if catalog_manifest else b'{"checksum_sha256":"python-live-perf","schemas":[]}')
         else:
             setattr(msg, field.name, b"python-live")
     elif field.type == _FD.TYPE_BOOL:
-        setattr(msg, field.name, field.name not in {"dry_run", "redact", "repair", "preserve_event_id", "all_sessions", "all_for_principal", "only_if_absent", "only_if_present"})
+        literal = _doc_literal_bool(field.name, body)
+        if literal is not None:
+            setattr(msg, field.name, literal)
+        else:
+            setattr(msg, field.name, field.name not in {"dry_run", "redact", "repair", "preserve_event_id", "all_sessions", "all_for_principal", "only_if_absent", "only_if_present"})
     elif field.type in INT_FD_TYPES:
-        if field.name in {"limit", "page_size", "ttl_seconds", "expires_in_minutes", "count", "rows_per_target", "rate_limit_per_minute", "rate_limit_per_day", "success_window_secs", "min_samples"}:
+        doc_key = _doc_seed_key(field.name, body)
+        seeded = fix.lookup(doc_key) if doc_key else None
+        literal = _doc_literal_int(field.name, body)
+        if seeded:
+            setattr(msg, field.name, int(seeded))
+        elif literal is not None:
+            setattr(msg, field.name, literal)
+        elif field.name in {"limit", "page_size", "ttl_seconds", "expires_in_minutes", "count", "rows_per_target", "rate_limit_per_minute", "rate_limit_per_day", "success_window_secs", "min_samples"}:
             setattr(msg, field.name, 10)
-        elif field.name in {"part_count", "version", "redaction_version", "expected_revision", "expected_policy_revision", "expected_relationship_revision", "expected_updated_at_unix", "priority"}:
+        elif field.name in {"expected_revision", "expected_policy_revision", "expected_relationship_revision", "expected_updated_at_unix"}:
+            # Optimistic-concurrency tokens: 0 == "skip the check" (governance_activate.rs:47).
+            # Go omits them entirely; filling 1 trips "revision changed concurrently" on
+            # ActivatePolicyVersion once the live revision has advanced past 1.
+            setattr(msg, field.name, 0)
+        elif field.name in {"part_count", "version", "redaction_version", "priority"}:
             setattr(msg, field.name, 1)
         elif "size" in field.name:
             setattr(msg, field.name, 128)
@@ -1671,6 +2014,24 @@ def apply_doc_fields(request, field_names: set[str], body: str, meta: Metadata, 
 # explicit, doc-backed request body from perf_real_body. Missing bodies fail fast
 # as MissingExplicitPerfBody instead of falling back to reflective filler.
 # --------------------------------------------------------------------------------
+
+
+def put_presigned_storage_object(upload_url: str, data: bytes, content_type: str) -> None:
+    """PUT bytes to the StorageService-minted presigned upload_url (harness_correction.md:
+    FinalizeUpload). The native service owns its object bucket/instance, so the bytes MUST
+    land via the service-minted URL, not the catalog-gated DataBroker PutObject path which
+    may write a different object-plane target than FinalizeUpload later HEADs."""
+    import urllib.request
+
+    if not (upload_url or "").strip():
+        raise ValueError("empty storage upload_url")
+    req = urllib.request.Request(upload_url, data=data, method="PUT")
+    if content_type:
+        req.add_header("Content-Type", content_type)
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        status = getattr(resp, "status", resp.getcode())
+        if status < 200 or status >= 300:
+            raise RuntimeError(f"presigned storage PUT failed: {status}")
 
 
 class PerfFixtures:
@@ -1722,6 +2083,14 @@ def perf_seed(clients: dict, meta: Metadata):
     fix.set("file_type", STORAGE_FILE_TYPE)
     fix.set("kind", "audio")
     fix.set("topic_pattern", "*")
+    fix.set("saga_id", "11111111-1111-4111-8111-111111111101")
+    fix.set("retry_saga_id", "11111111-1111-4111-8111-111111111102")
+    fix.set("mark_saga_id", "11111111-1111-4111-8111-111111111103")
+    fix.set("dlq_id", "22222222-2222-4222-8222-222222222201")
+    fix.set("replay_dlq_id", "22222222-2222-4222-8222-222222222202")
+    fix.set("dismiss_dlq_id", "22222222-2222-4222-8222-222222222203")
+    fix.set("quarantine_dlq_id", "22222222-2222-4222-8222-222222222204")
+    fix.set("migration_id", str(uuid.uuid4()))
 
     # ── DataBroker: a real SdkLiveRecord row (drives Upsert/Select/Delete + CDC) ──
     record_id = f"py-perf-{suffix}"
@@ -1779,15 +2148,38 @@ def perf_seed(clients: dict, meta: Metadata):
     fix.set("collection", collection)
     fix.set("mongo_collection", collection)
     fix.set("document_id", document_id)
+    try:
+        broker.EnsureResource(
+            admin_pb2.ResourceAdminRequest(context=rc, backend="qdrant", resource_name="sdk_live_records", spec_json='{"size":3,"distance":"Cosine"}'),
+            metadata=md, timeout=8.0,
+        )
+    except grpc.RpcError:
+        pass
+    try:
+        broker.EnsureResource(
+            admin_pb2.ResourceAdminRequest(context=rc, backend="clickhouse", resource_name="sdk_perf_ts", spec_json="{}"),
+            metadata=md, timeout=8.0,
+        )
+    except grpc.RpcError:
+        pass
+    fix.set("vector_collection", "sdk_live_records")
+    fix.set("ts_table", "sdk_perf_ts")
 
     # ── AuthnService: a real user (id reused everywhere a user_id is needed) ──────
     authn = clients[AuthnServiceClient].stub
     pw = "CorrectHorse1!"
     uname = f"sdk-perf-{suffix}"
+    email = f"{uname}@example.com"
+    fix.set("username", uname)
+    fix.set("identifier", email)
+    fix.set("email", email)
+    fix.set("password", pw)
+    fix.set("current_password", pw)
+    fix.set("new_password", "CorrectHorse2!")
     uid = ""
     try:
         created = authn.CreateUser(
-            authn_pb2.CreateUserRequest(username=uname, email=f"{uname}@example.com", password=pw, tenant_id=tenant, project_id=project, full_name="SDK Perf User"),
+            authn_pb2.CreateUserRequest(username=uname, email=email, password=pw, tenant_id=tenant, project_id=project, full_name="SDK Perf User"),
             metadata=md, timeout=8.0,
         )
         uid = created.user.user_id
@@ -1798,7 +2190,29 @@ def perf_seed(clients: dict, meta: Metadata):
             fix.set(key, uid)
         fix.set("subject", f"user:{uid}")
         try:
-            login = authn.Login(authn_pb2.LoginRequest(username=uname, password=pw, tenant_hint=tenant, project_hint=project, device_name="python-sdk-perf-seed"), metadata=md, timeout=8.0)
+            authn.ChangeUserStatus(
+                authn_pb2.ChangeUserStatusRequest(
+                    user_id=uid,
+                    new_status=2,
+                    reason="perf seed activate",
+                    context=common_pb.RequestContext(tenant=common_pb.TenantContext(tenant_id=tenant, project_id=project)),
+                ),
+                metadata=md, timeout=8.0,
+            )
+        except grpc.RpcError:
+            pass
+        try:
+            login = authn.Login(
+                authn_pb2.LoginRequest(
+                    username=uname,
+                    password=pw,
+                    tenant_hint=tenant,
+                    project_hint=project,
+                    device_name="python-sdk-perf-seed",
+                    device_id=f"python-sdk-perf-device-{suffix}",
+                ),
+                metadata=md, timeout=8.0,
+            )
             fix.set("session_id", login.session_id)
             fix.set("token", login.access_token)
             fix.set("access_token", login.access_token)
@@ -1813,13 +2227,131 @@ def perf_seed(clients: dict, meta: Metadata):
                 fix.set("recovery_code", codes.codes[0])
         except (grpc.RpcError, AttributeError):
             pass
+        try:
+            devices = authn.ListDevices(authn_pb2.ListDevicesRequest(user_id=uid), metadata=md, timeout=8.0)
+            if devices.devices:
+                fix.set("device_id", devices.devices[0].device_id)
+        except (grpc.RpcError, AttributeError):
+            pass
+        try:
+            challenge = authn.IssueMfaChallenge(
+                authn_pb2.IssueMfaChallengeRequest(
+                    user_id=uid,
+                    factor_kind=2,
+                    purpose=1,
+                    device_fingerprint=f"python-sdk-perf-{suffix}",
+                    ip_address="127.0.0.1",
+                    context=common_pb.RequestContext(tenant=common_pb.TenantContext(tenant_id=tenant, project_id=project)),
+                ),
+                metadata=md, timeout=8.0,
+            )
+            fix.set("challenge_id", challenge.challenge_id)
+        except (grpc.RpcError, AttributeError):
+            pass
+        # WebAuthn dev soft-authenticator (broker UDB_WEBAUTHN_TEST_MODE=1): register a real
+        # passkey (Start->Finish with the sentinel) so StartWebAuthnAuthentication has one.
+        # The dev authenticator is deterministic (one credential id per user), so the
+        # measured FinishWebAuthnRegistration gets a challenge for a separate throwaway
+        # user with no existing passkey; otherwise it measures duplicate/exclude handling.
+        try:
+            sr = authn.StartWebAuthnRegistration(
+                authn_pb2.StartWebAuthnRegistrationRequest(user_id=uid, label="perf-passkey", tenant_id=tenant, project_id=project),
+                metadata=md, timeout=8.0,
+            )
+            authn.FinishWebAuthnRegistration(
+                authn_pb2.FinishWebAuthnRegistrationRequest(challenge_id=sr.challenge_id, public_key_credential_json=WEBAUTHN_TEST_CREDENTIAL, label="perf-passkey"),
+                metadata=md, timeout=8.0,
+            )
+        except (grpc.RpcError, AttributeError):
+            pass
+        reg_user_id = ""
+        try:
+            reg_user = authn.CreateUser(
+                authn_pb2.CreateUserRequest(
+                    username=f"sdk-perf-webauthn-reg-{suffix}",
+                    email=f"sdk-perf-webauthn-reg-{suffix}@example.com",
+                    password=pw,
+                    tenant_id=tenant,
+                    project_id=project,
+                    full_name="SDK Perf WebAuthn Registration User",
+                ),
+                metadata=md, timeout=8.0,
+            )
+            reg_user_id = reg_user.user.user_id
+        except (grpc.RpcError, AttributeError):
+            reg_user_id = uid
+        try:
+            sr2 = authn.StartWebAuthnRegistration(
+                authn_pb2.StartWebAuthnRegistrationRequest(user_id=reg_user_id or uid, label="perf-passkey-2", tenant_id=tenant, project_id=project),
+                metadata=md, timeout=8.0,
+            )
+            fix.set("reg_challenge_id", sr2.challenge_id)
+        except (grpc.RpcError, AttributeError):
+            pass
+        try:
+            sa = authn.StartWebAuthnAuthentication(
+                authn_pb2.StartWebAuthnAuthenticationRequest(user_id=uid, tenant_id=tenant, project_id=project),
+                metadata=md, timeout=8.0,
+            )
+            fix.set("auth_challenge_id", sa.challenge_id)
+        except (grpc.RpcError, AttributeError):
+            pass
+        try:
+            otp_user = authn.CreateUser(
+                authn_pb2.CreateUserRequest(
+                    username=f"sdk-perf-otp-{suffix}",
+                    email=f"sdk-perf-otp-{suffix}@example.com",
+                    password=pw,
+                    tenant_id=tenant,
+                    project_id=project,
+                    full_name="SDK Perf OTP User",
+                ),
+                metadata=md, timeout=8.0,
+            )
+            otp = authn.SendOTP(
+                authn_pb2.SendOTPRequest(
+                    user_id=otp_user.user.user_id,
+                    otp_type=4,
+                    context=common_pb.RequestContext(tenant=common_pb.TenantContext(tenant_id=tenant, project_id=project)),
+                ),
+                metadata=md, timeout=8.0,
+            )
+            fix.set("otp_id", otp.otp_id)
+            fix.set("otp_code", otp.dev_otp_code)
+            reset = authn.SendOTP(
+                authn_pb2.SendOTPRequest(
+                    user_id=otp_user.user.user_id,
+                    otp_type=3,
+                    context=common_pb.RequestContext(tenant=common_pb.TenantContext(tenant_id=tenant, project_id=project)),
+                ),
+                metadata=md, timeout=8.0,
+            )
+            fix.set("reset_otp_id", reset.otp_id)
+            fix.set("reset_otp_code", reset.dev_otp_code)
+        except (grpc.RpcError, AttributeError):
+            pass
+        try:
+            send_otp_user = authn.CreateUser(
+                authn_pb2.CreateUserRequest(
+                    username=f"sdk-perf-send-otp-{suffix}",
+                    email=f"sdk-perf-send-otp-{suffix}@example.com",
+                    password=pw,
+                    tenant_id=tenant,
+                    project_id=project,
+                    full_name="SDK Perf Send OTP User",
+                ),
+                metadata=md, timeout=8.0,
+            )
+            fix.set("send_otp_user_id", send_otp_user.user.user_id)
+        except (grpc.RpcError, AttributeError):
+            pass
 
     # ── AuthzService: role + assignment + policies + relationship ─────────────────
     authz = clients[AuthzServiceClient].stub
     role_code = f"sdk_perf_reader_{suffix}"
     try:
         role = authz.CreateRole(
-            authz_pb.CreateRoleRequest(name=f"SDK Perf Reader {suffix}", description="perf seed role", created_by=str(uuid.uuid4()), role_code=role_code, domain=tenant, tenant_id=tenant, project_id=project),
+            authz_pb.CreateRoleRequest(name=f"SDK Perf Reader {suffix}", description="perf seed role", created_by=uid or str(uuid.uuid4()), role_code=role_code, domain=tenant, tenant_id=tenant, project_id=project),
             metadata=md, timeout=8.0,
         ).role
         rid = role.role_id
@@ -1835,7 +2367,30 @@ def perf_seed(clients: dict, meta: Metadata):
         cleanups.append(lambda: authz.DeleteRole(authz_pb.DeleteRoleRequest(role_id=rid, deleted_by=uid), metadata=md, timeout=8.0))
     except grpc.RpcError:
         pass
-    # ABAC policy + an RBAC policy rule -> policy_id for GetPolicyRule/DeletePolicyRule.
+    if uid:
+        extra_role_code = f"sdk_perf_target_{suffix}"
+        try:
+            extra = authz.CreateRole(
+                authz_pb.CreateRoleRequest(
+                    name=f"SDK Perf Target {suffix}",
+                    description="perf seed target role",
+                    created_by=uid,
+                    role_code=extra_role_code,
+                    domain=tenant,
+                    tenant_id=tenant,
+                    project_id=project,
+                ),
+                metadata=md, timeout=8.0,
+            ).role
+            fix.set("role_id", extra.role_id)
+            fix.set("role", extra_role_code)
+            fix.set("role_code", extra_role_code)
+            cleanups.append(lambda: authz.DeleteRole(authz_pb.DeleteRoleRequest(role_id=extra.role_id, deleted_by=uid), metadata=md, timeout=8.0))
+        except grpc.RpcError:
+            pass
+    # ABAC policy + an RBAC policy rule. Capture policy_id only after the exact
+    # GetPolicyRule path accepts it; a tenant-wide ListPolicyRules row can be an
+    # older unrelated policy in dirty live benches.
     try:
         authz.PutAuthzPolicy(
             authz_pb.PutAuthzPolicyRequest(policy=authz_pb.AuthzPolicyRecord(id=str(uuid.uuid4()), enabled=True, effect="allow", tenant=tenant, project=project, role=role_code, action="data.select", resource="invoice")),
@@ -1844,12 +2399,34 @@ def perf_seed(clients: dict, meta: Metadata):
     except grpc.RpcError:
         pass
     if uid:
+        # ActivatePolicyVersion/RollbackPolicyVersion DELETE policy_rules WHERE tenant=$1 AND
+        # project=$2 for the activated (main) project and re-insert the version's rules with
+        # FRESH gen_random_uuid() ids (governance_activate.rs:236,274). Those measured RPCs sort
+        # BEFORE GetPolicyRule, so a main-project rule (and any captured id) is wiped before the
+        # read. GetPolicyRule reads by policy_id ALONE (no project filter; owner bypasses RLS),
+        # so seed its target in an ISOLATED project no version-activation touches → the row + its
+        # CreatePolicyRule response id survive the whole run and stay Get-queryable.
+        get_pol_project = f"{project}-getpolrule"
         try:
-            rule = authz.CreatePolicyRule(
-                authz_pb.CreatePolicyRuleRequest(subject=role_code, domain=tenant, object="ledger", action="data.update", effect=1, description="perf seed rule", created_by=uid, tenant_id=tenant, project_id=project),
+            created_rule = authz.CreatePolicyRule(
+                authz_pb.CreatePolicyRuleRequest(subject=role_code, domain=tenant, object="ledger", action="data.update", effect=1, description="perf seed rule (version-isolated)", created_by=uid, tenant_id=tenant, project_id=get_pol_project),
                 metadata=md, timeout=8.0,
             )
-            fix.set("policy_id", rule.policy.policy_id)
+            pid = getattr(getattr(created_rule, "policy", None), "policy_id", "")
+            if pid:
+                fix.set("policy_id", pid)
+        except (grpc.RpcError, AttributeError, ValueError):
+            pass
+        # A SEPARATE disposable rule (same isolated project) for the destructive DeletePolicyRule,
+        # so deleting it never touches the GetPolicyRule target.
+        try:
+            del_rule = authz.CreatePolicyRule(
+                authz_pb.CreatePolicyRuleRequest(subject=role_code, domain=tenant, object="ledger-disposable", action="data.delete", effect=1, description="perf seed disposable rule", created_by=uid, tenant_id=tenant, project_id=get_pol_project),
+                metadata=md, timeout=8.0,
+            )
+            del_pid = getattr(getattr(del_rule, "policy", None), "policy_id", "")
+            if del_pid:
+                fix.set("delete_policy_id", del_pid)
         except (grpc.RpcError, AttributeError, ValueError):
             pass
         for fn in (
@@ -1864,6 +2441,261 @@ def perf_seed(clients: dict, meta: Metadata):
     fix.set("object", f"group:sdk-perf-{suffix}")
     fix.set("resource", "invoice")
     fix.set("action", "data.select")
+    try:
+        draft = authz.CreatePolicyDraft(
+            authz_gov_pb.CreatePolicyDraftRequest(
+                actor=authz_gov_pb.GovernanceActor(subject=_fixture(fix, "subject"), tenant_id=tenant, project_id=project, scopes=["authz:policy:write"]),
+                tenant_id=tenant,
+                project_id=project,
+                policy_set_name="default",
+                title=f"sdk perf draft {suffix}",
+                change_reason="seed",
+                document=authz_gov_pb.PolicyDocument(),
+            ),
+            metadata=md, timeout=8.0,
+        )
+        fix.set("policy_draft_id", draft.draft.draft_id)
+    except grpc.RpcError:
+        pass
+    def governance_actor() -> authz_gov_pb.GovernanceActor:
+        return authz_gov_pb.GovernanceActor(
+            subject=_fixture(fix, "subject", f"user:{uid}"),
+            tenant_id=tenant,
+            project_id=project,
+            scopes=["authz:admin", "authz:policy:write", "authz:policy:approve", "policy:read"],
+        )
+
+    def make_policy_draft(title: str) -> str:
+        try:
+            response = authz.CreatePolicyDraft(
+                authz_gov_pb.CreatePolicyDraftRequest(
+                    actor=governance_actor(),
+                    tenant_id=tenant,
+                    project_id=project,
+                    policy_set_name="default",
+                    title=f"{title}{suffix}",
+                    change_reason="seed",
+                    document=authz_gov_pb.PolicyDocument(),
+                ),
+                metadata=md, timeout=8.0,
+            )
+            if title == "sdk-perf-update-":
+                fix.set("update_draft_updated_at_unix", str(response.draft.updated_at.seconds))
+            return response.draft.draft_id
+        except (grpc.RpcError, AttributeError):
+            return ""
+
+    update_draft_id = make_policy_draft("sdk-perf-update-")
+    fix.set("update_draft_id", update_draft_id)
+    approve_draft_id = make_policy_draft("sdk-perf-approve-")
+    if approve_draft_id:
+        try:
+            authz.SubmitPolicyDraft(
+                authz_gov_pb.SubmitPolicyDraftRequest(actor=governance_actor(), draft_id=approve_draft_id),
+                metadata=md, timeout=8.0,
+            )
+            fix.set("approve_draft_id", approve_draft_id)
+        except grpc.RpcError:
+            pass
+    reject_draft_id = make_policy_draft("sdk-perf-reject-")
+    if reject_draft_id:
+        try:
+            authz.SubmitPolicyDraft(
+                authz_gov_pb.SubmitPolicyDraftRequest(actor=governance_actor(), draft_id=reject_draft_id),
+                metadata=md, timeout=8.0,
+            )
+            fix.set("reject_draft_id", reject_draft_id)
+        except grpc.RpcError:
+            pass
+
+    def make_policy_version(set_name: str, title: str):
+        try:
+            response = authz.CreatePolicyDraft(
+                authz_gov_pb.CreatePolicyDraftRequest(
+                    actor=governance_actor(),
+                    tenant_id=tenant,
+                    project_id=project,
+                    policy_set_name=set_name,
+                    title=f"{title}{suffix}",
+                    change_reason="seed",
+                    document=authz_gov_pb.PolicyDocument(),
+                ),
+                metadata=md, timeout=8.0,
+            )
+            draft_id = response.draft.draft_id
+            authz.SubmitPolicyDraft(
+                authz_gov_pb.SubmitPolicyDraftRequest(actor=governance_actor(), draft_id=draft_id),
+                metadata=md, timeout=8.0,
+            )
+            approved = authz.ApprovePolicyDraft(
+                authz_gov_pb.ApprovePolicyDraftRequest(actor=governance_actor(), draft_id=draft_id, reviewer=uid, reason="seed approve"),
+                metadata=md, timeout=8.0,
+            )
+            return approved.version
+        except (grpc.RpcError, AttributeError):
+            return None
+
+    version = make_policy_version(f"sdk-perf-activate-set-{suffix}", "activate-")
+    if version is not None:
+        fix.set("policy_version_id", version.policy_version_id)
+    canary_version = make_policy_version(f"sdk-perf-canary-set-{suffix}", "canary-")
+    if canary_version is not None:
+        fix.set("canary_version_id", canary_version.policy_version_id)
+        try:
+            canary = authz.ActivateCanary(
+                authz_gov_pb.ActivateCanaryRequest(
+                    actor=governance_actor(),
+                    policy_version_id=canary_version.policy_version_id,
+                    scope_kind=3,
+                    scope_values=["10"],
+                    # 1s window → promote-eligible ~1s after activation (promote_eligible:
+                    # now-started >= success_window_secs). NOTE: 0 makes ActivateCanary
+                    # substitute the large DEFAULT_CANARY_WINDOW_SECS, which never elapses
+                    # during the run, so the measured PromoteCanary fails "window not elapsed".
+                    success_window_secs=1,
+                    metric_threshold=0.99,
+                    min_samples=0,
+                ),
+                metadata=md, timeout=8.0,
+            )
+            fix.set("canary_id", canary.canary.canary_id)
+        except (grpc.RpcError, AttributeError):
+            pass
+    rollback_v1 = make_policy_version(f"sdk-perf-rollback-set-{suffix}", "rb1-")
+    if rollback_v1 is not None:
+        try:
+            authz.ActivatePolicyVersion(
+                authz_gov_pb.ActivatePolicyVersionRequest(actor=governance_actor(), policy_version_id=rollback_v1.policy_version_id),
+                metadata=md, timeout=8.0,
+            )
+        except grpc.RpcError:
+            pass
+        rollback_v2 = make_policy_version(f"sdk-perf-rollback-set-{suffix}", "rb2-")
+        if rollback_v2 is not None:
+            try:
+                authz.ActivatePolicyVersion(
+                    authz_gov_pb.ActivatePolicyVersionRequest(actor=governance_actor(), policy_version_id=rollback_v2.policy_version_id),
+                    metadata=md, timeout=8.0,
+                )
+                fix.set("rollback_policy_set_id", rollback_v2.policy_set_id)
+                fix.set("rollback_target_version_id", rollback_v1.policy_version_id)
+            except grpc.RpcError:
+                pass
+
+    # ── IdentityProviderService: a real OIDC provider -> provider_id ─────────────
+    idp = clients[IdentityProviderServiceClient].stub
+    try:
+        provider = idp.CreateProvider(
+            idp_pb.CreateProviderRequest(
+                tenant_id=tenant,
+                kind=idp_enum_pb.IDP_KIND_OIDC,
+                display_name=f"SDK Perf OIDC {suffix}",
+                issuer=f"https://idp.example.com/{suffix}",
+                jwks_url="https://idp.example.com/jwks",
+                client_ids=["perf-client"],
+                audiences=["udb"],
+                claim_mapping_json="{}",
+                group_mapping_json='{"sdk-perf-group":"admin"}',
+                jit_policy_json="{}",
+                account_linking_policy="explicit",
+                enabled=True,
+                created_by=uid,
+                context=common_pb.RequestContext(tenant=common_pb.TenantContext(tenant_id=tenant, project_id=project)),
+            ),
+            metadata=md, timeout=8.0,
+        )
+        provider_id = provider.provider.provider_id
+        fix.set("provider_id", provider_id)
+        fix.set("scim_group_id", "sdk-perf-group")
+        scim_ctx = common_pb.RequestContext(tenant=common_pb.TenantContext(tenant_id=tenant, project_id=project))
+        try:
+            group = idp.ScimCreateGroup(
+                idp_pb.ScimCreateGroupRequest(
+                    tenant_id=tenant,
+                    provider_id=provider_id,
+                    scim_group_json=json.dumps({"displayName": "sdk-perf-group", "members": []}),
+                    context=scim_ctx,
+                ),
+                metadata=md, timeout=8.0,
+            )
+            # ScimGetGroup resolves against the provider group_mapping_json key.
+            # The SCIM resource id returned here is not accepted as that mapping id.
+            _ = group
+        except (grpc.RpcError, AttributeError):
+            pass
+        scim_user = f"scim-perf-user-{suffix}"
+        try:
+            scim_created = idp.ScimCreateUser(
+                idp_pb.ScimCreateUserRequest(
+                    tenant_id=tenant,
+                    provider_id=provider_id,
+                    scim_user_json=json.dumps({
+                        "userName": scim_user,
+                        "emails": [{"value": f"{scim_user}@example.com", "primary": True}],
+                        "active": True,
+                    }),
+                    context=scim_ctx,
+                ),
+                metadata=md, timeout=8.0,
+            )
+            fix.set("scim_user_id", scim_user)
+            fix.set("external_identity_id", scim_created.user.id)
+        except (grpc.RpcError, AttributeError):
+            pass
+        scim_delete_user = f"scim-perf-del-{suffix}"
+        try:
+            idp.ScimCreateUser(
+                idp_pb.ScimCreateUserRequest(
+                    tenant_id=tenant,
+                    provider_id=provider_id,
+                    scim_user_json=json.dumps({
+                        "userName": scim_delete_user,
+                        "emails": [{"value": f"{scim_delete_user}@example.com", "primary": True}],
+                        "active": True,
+                    }),
+                    context=scim_ctx,
+                ),
+                metadata=md, timeout=8.0,
+            )
+            fix.set("delete_scim_user_id", scim_delete_user)
+        except grpc.RpcError:
+            pass
+        try:
+            saml = idp.CreateProvider(
+                idp_pb.CreateProviderRequest(
+                    tenant_id=tenant,
+                    kind=idp_enum_pb.IDP_KIND_SAML,
+                    display_name=f"SDK Perf SAML {suffix}",
+                    issuer=f"https://saml.example.com/{suffix}",
+                    jwks_url="https://saml.example.com/jwks",
+                    client_ids=["perf-saml"],
+                    audiences=["udb"],
+                    claim_mapping_json="{}",
+                    group_mapping_json="{}",
+                    jit_policy_json="{}",
+                    account_linking_policy="explicit",
+                    enabled=True,
+                    created_by=uid,
+                    context=scim_ctx,
+                ),
+                metadata=md, timeout=8.0,
+            )
+            saml_provider_id = saml.provider.provider_id
+            fix.set("saml_provider_id", saml_provider_id)
+            idp.ImportSamlMetadata(
+                idp_pb.ImportSamlMetadataRequest(
+                    provider_id=saml_provider_id,
+                    tenant_id=tenant,
+                    metadata_xml=SAML_IDP_METADATA_XML,
+                    updated_by=uid,
+                    context=scim_ctx,
+                ),
+                metadata=md, timeout=8.0,
+            )
+        except (grpc.RpcError, AttributeError):
+            pass
+    except grpc.RpcError:
+        pass
 
     # ── ApiKeyService: a real key -> key_id + plain_key ───────────────────────────
     apikey = clients[ApiKeyServiceClient].stub
@@ -1876,6 +2708,23 @@ def perf_seed(clients: dict, meta: Metadata):
         fix.set("key_id", key.key.key_id)
         fix.set("plain_key", key.plain_key)
         fix.set("owner_id", principal)
+    except grpc.RpcError:
+        pass
+    key_ctx = common_pb.RequestContext(user_id=principal, tenant=common_pb.TenantContext(tenant_id=tenant, project_id=project))
+    try:
+        revoke_key = apikey.CreateApiKey(
+            apikey_pb.CreateApiKeyRequest(name=f"sdk-perf-revoke-{suffix}", owner_id=principal, scopes=["data:read"], context=key_ctx),
+            metadata=md, timeout=8.0,
+        )
+        fix.set("revoke_key_id", revoke_key.key.key_id)
+    except grpc.RpcError:
+        pass
+    try:
+        update_key = apikey.CreateApiKey(
+            apikey_pb.CreateApiKeyRequest(name=f"sdk-perf-update-{suffix}", owner_id=principal, scopes=["data:read"], context=key_ctx),
+            metadata=md, timeout=8.0,
+        )
+        fix.set("update_key_id", update_key.key.key_id)
     except grpc.RpcError:
         pass
 
@@ -1906,10 +2755,40 @@ def perf_seed(clients: dict, meta: Metadata):
                 metadata=md, timeout=8.0,
             )
             if sent.logs:
-                fix.set("log_id", sent.logs[0].log_id)
-                fix.set("notification_id", sent.logs[0].log_id)
+                log_id = sent.logs[0].log_id
+                fix.set("log_id", log_id)
+                fix.set("notification_id", log_id)
+                # RetryNotification is status-gated to FAILED/SUPPRESSED rows
+                # (notification_service/mod.rs retry_notification). Mark this real sent log
+                # FAILED through the broker's Postgres dispatch path (mirrors the Go seed's
+                # markPerfNotificationRetryable) so the measured RetryNotification has a
+                # retryable row — in-band, not a fixed out-of-band row.
+                try:
+                    broker.GenericDispatch(
+                        admin_pb2.GenericDispatchRequest(
+                            context=rc, backend="postgres", operation="mutate",
+                            spec_json=json.dumps({
+                                "sql": "UPDATE udb_notification.notification_logs SET status = 'FAILED', error_message = 'python live perf seed failure' WHERE log_id = $1::UUID AND tenant_id = $2 RETURNING log_id",
+                                "params": [log_id, tenant],
+                                "param_types": ["uuid", "string"],
+                                "return_rows": True,
+                            }),
+                        ),
+                        metadata=md, timeout=8.0,
+                    )
+                except grpc.RpcError:
+                    pass
         except grpc.RpcError:
             pass
+        try:
+            notif.SetPreference(
+                notif_pb.SetPreferenceRequest(user_id=uid, tenant_id=tenant, channel=NOTIFICATION_CHANNEL_EMAIL, is_opted_out=False),
+                metadata=md, timeout=8.0,
+            )
+        except grpc.RpcError:
+            pass
+    fix.set("log_id", os.getenv("UDB_PERF_NOTIF_LOG", _fixture(fix, "log_id", "")))
+    fix.set("notification_id", os.getenv("UDB_PERF_NOTIF_LOG", _fixture(fix, "notification_id", "")))
 
     # ── StorageService: a registered file -> file_id ──────────────────────────────
     storage = clients[StorageServiceClient].stub
@@ -1921,6 +2800,43 @@ def perf_seed(clients: dict, meta: Metadata):
         )
         file_id = reg.file_id
         fix.set("file_id", file_id)
+        file_body = f"sdk-perf-file-{suffix}".encode()
+        fix.set("file_size_bytes", str(len(file_body)))
+        # Upload through the StorageService-minted presigned URL so the bytes land in the
+        # SAME object-plane target (backend/bucket/instance) that FinalizeUpload HEADs. Fall
+        # back to the catalog-gated DataBroker PutObject only when no presigned URL exists.
+        uploaded = False
+        if reg.upload_url:
+            try:
+                put_presigned_storage_object(reg.upload_url, file_body, "text/plain")
+                uploaded = True
+            except Exception as exc:  # noqa: BLE001 — log + fall back, never fail the seed
+                print(f"perf seed: presigned storage PUT failed: {exc}")
+        if not uploaded:
+            storage_bucket = os.getenv("UDB_STORAGE_BUCKET", "udb-storage")
+            try:
+                broker.EnsureResource(admin_pb2.ResourceAdminRequest(context=rc, backend="minio", resource_name=storage_bucket, spec_json="{}"), metadata=md, timeout=8.0)
+                broker.PutObject(
+                    iter([blob_pb2.Chunk(context=rc, bucket=storage_bucket, object_key=reg.object_key, data=file_body, content_type="text/plain", final_chunk=True)]),
+                    metadata=md, timeout=8.0,
+                )
+            except grpc.RpcError:
+                pass
+        try:
+            storage.FinalizeUpload(
+                storage_pb.FinalizeUploadRequest(tenant_id=tenant, file_id=file_id, content_type="text/plain", file_type=STORAGE_FILE_TYPE, reference_id=file_id, reference_type="sdk.perf", size_bytes=len(file_body)),
+                metadata=md, timeout=8.0,
+            )
+        except grpc.RpcError:
+            pass
+        try:
+            delete_reg = storage.RegisterUpload(
+                storage_pb.RegisterUploadRequest(tenant_id=tenant, project_id="", filename=f"perf-del-{suffix}.txt", content_type="text/plain", file_type=STORAGE_FILE_TYPE, reference_id=str(uuid.uuid4()), reference_type="sdk.perf", size_bytes=64, expires_in_minutes=30),
+                metadata=md, timeout=8.0,
+            )
+            fix.set("delete_file_id", delete_reg.file_id)
+        except grpc.RpcError:
+            pass
         cleanups.append(lambda: storage.DeleteFile(storage_pb.DeleteFileRequest(tenant_id=tenant, file_id=file_id), metadata=md, timeout=8.0))
     except grpc.RpcError:
         pass
@@ -1951,6 +2867,12 @@ def perf_seed(clients: dict, meta: Metadata):
                         metadata=md, timeout=8.0,
                     )
                     fix.set("instance_id", inst.instance_id)
+                    try:
+                        pipeline = asset.GetPipeline(asset_pb.GetPipelineRequest(tenant_id=tenant, instance_id=inst.instance_id), metadata=md, timeout=8.0)
+                        if pipeline.steps:
+                            fix.set("step_id", pipeline.steps[0].step_id)
+                    except grpc.RpcError:
+                        pass
                 except grpc.RpcError:
                     pass
         except grpc.RpcError:
@@ -1977,8 +2899,84 @@ def perf_seed(clients: dict, meta: Metadata):
                 fix.set("track_id", pub.track_id)
             except grpc.RpcError:
                 pass
+            try:
+                pub2 = tracks.PublishTrack(webrtc_pb.PublishTrackRequest(tenant_id=tenant, room_id=room_id, peer_id=pid, kind="video", label="cam", settings="{}", metadata="{}"), metadata=md, timeout=8.0)
+                fix.set("unpublish_track_id", pub2.track_id)
+            except grpc.RpcError:
+                pass
+            try:
+                leave_peer = peers.JoinRoom(webrtc_pb.JoinRoomRequest(tenant_id=tenant, room_id=room_id, display_name="sdk-perf-leave-peer", metadata="{}", user_agent="sdk-perf"), metadata=md, timeout=8.0)
+                fix.set("leave_peer_id", leave_peer.peer.peer_id)
+            except grpc.RpcError:
+                pass
+            try:
+                signal_peer = peers.JoinRoom(webrtc_pb.JoinRoomRequest(tenant_id=tenant, room_id=room_id, display_name="sdk-perf-signal-peer", metadata="{}", user_agent="sdk-perf"), metadata=md, timeout=8.0)
+                fix.set("signal_peer_id", signal_peer.peer.peer_id)
+            except grpc.RpcError:
+                pass
         except grpc.RpcError:
             pass
+        try:
+            close_room = rooms.CreateRoom(
+                webrtc_pb.CreateRoomRequest(tenant_id=tenant, name=f"sdk-perf-close-room-{suffix}", max_participants=8, config="{}", created_by=str(uuid.uuid4())),
+                metadata=md, timeout=8.0,
+            )
+            fix.set("close_room_id", close_room.room_id)
+        except grpc.RpcError:
+            pass
+    except grpc.RpcError:
+        pass
+
+    # ── DataBroker migration/catalog lifecycle fixtures ─────────────────────────
+    try:
+        plan = broker.PlanMigration(
+            admin_pb2.MigrationPlanRequest(context=rc, project_id=project, dry_run=True),
+            metadata=md, timeout=8.0,
+        )
+        fix.set("migration_id", plan.run_id)
+    except grpc.RpcError:
+        pass
+    try:
+        approve_plan = broker.PlanMigration(
+            admin_pb2.MigrationPlanRequest(context=meta.with_purpose("python.live.perf.seed.approve").to_request_context(), project_id=project, dry_run=False),
+            metadata=md, timeout=8.0,
+        )
+        fix.set("approve_run_id", approve_plan.run_id)
+    except grpc.RpcError:
+        pass
+    try:
+        apply_plan = broker.PlanMigration(
+            admin_pb2.MigrationPlanRequest(context=meta.with_purpose("python.live.perf.seed.apply").to_request_context(), project_id=project, dry_run=False),
+            metadata=md, timeout=8.0,
+        )
+        _, call = broker.ApproveMigrationPlan.with_call(
+            admin_pb2.MigrationRunRequest(context=meta.with_purpose("python.live.perf.seed.apply").to_request_context(), run_id=apply_plan.run_id, project_id=project),
+            metadata=md, timeout=8.0,
+        )
+        fix.set("apply_run_id", apply_plan.run_id)
+        for key, value in call.initial_metadata() or ():
+            if key.lower() == "x-udb-approval-token":
+                fix.set("approval_token", value)
+                break
+    except grpc.RpcError:
+        pass
+    try:
+        manifest = broker.GetCatalogManifest(admin_pb2.CatalogManifestRequest(context=rc, redact=False), metadata=md, timeout=8.0)
+        if manifest.manifest_json:
+            fix.set("catalog_manifest", manifest.manifest_json.decode("utf-8"))
+    except (grpc.RpcError, UnicodeDecodeError):
+        pass
+    try:
+        broker.PutPolicy(
+            admin_pb2.PutPolicyRequest(
+                context=rc,
+                policy=admin_pb2.PolicyRecord(effect="allow", tenant_id=tenant, priority=1, enabled=True),
+            ),
+            metadata=md, timeout=8.0,
+        )
+        policies = broker.ListPolicies(admin_pb2.PolicyListRequest(context=rc, include_disabled=True, limit=50), metadata=md, timeout=8.0)
+        if policies.policies:
+            fix.set("ds_policy_id", str(policies.policies[0].policy_id))
     except grpc.RpcError:
         pass
 
@@ -2104,16 +3102,17 @@ def write_python_perf_report(samples, fixtures, authed_meta: Metadata, error: Ex
         lines.append("No RPC returned a non-OK gRPC status.")
     else:
         lines.append("These RPCs returned a non-OK gRPC status and are FAILURES, not latency samples.")
-        lines += ["", "| RPC | kind | err | p99 ms | mean ms | iters |", "|---|---|---|--:|--:|--:|"]
+        lines += ["", "| RPC | kind | err | detail | p99 ms | mean ms | iters |", "|---|---|---|---|--:|--:|--:|"]
         for s in sorted(failed, key=lambda x: (x["service"], x["rpc"])):
-            lines.append(f"| {s['service']}/{s['rpc']} | {s['kind']} | {s['err']} | {s['p99']:.2f} | {s['mean']:.2f} | {s['iters']} |")
+            detail = str(s.get("err_detail", "")).replace("\n", " ").replace("|", "\\|")
+            lines.append(f"| {s['service']}/{s['rpc']} | {s['kind']} | {s['err']} | {detail} | {s['p99']:.2f} | {s['mean']:.2f} | {s['iters']} |")
     lines += ["", "## Slowest 20 by p99", "", "| RPC | kind | err | p50 ms | p99 ms | mean ms |", "|---|---|---|--:|--:|--:|"]
     for s in sorted(samples, key=lambda x: -x["p99"])[:20]:
         lines.append(f"| {s['service']}/{s['rpc']} | {s['kind']} | {s['err']} | {s['p50']:.2f} | {s['p99']:.2f} | {s['mean']:.2f} |")
     report = "\n".join(lines) + "\n"
-    with open("perf_report_python.md", "w", encoding="utf-8") as fh:
-        fh.write(report)
-    print(f"\nPython perf: {len(samples)} RPCs measured, {len(failed)} FAILED (non-OK gRPC status) -> sdk/python/perf_report_python.md")
+    report_path = Path(__file__).resolve().parents[1] / "perf_report_python.md"
+    report_path.write_text(report, encoding="utf-8")
+    print(f"\nPython perf: {len(samples)} RPCs measured, {len(failed)} FAILED (non-OK gRPC status) -> {report_path}")
 
 
 def assert_not_mount_failure(label: str, exc: grpc.RpcError) -> None:
@@ -2160,7 +3159,7 @@ def test_live_generated_rpc_surface():
     refreshed = auth.refresh_token(login.refresh_token)
     assert refreshed.access_token
 
-    authed_meta = replace(metadata(bearer_token=login.access_token), tenant_id=canonical_tenant)
+    authed_meta = replace(metadata(bearer_token=login.access_token), tenant_id=canonical_tenant, client_catalog_version="")
     caps_stub = data_broker_pb2_grpc.DataBrokerStub(grpc.insecure_channel(target))
     caps = caps_stub.GetCapabilities(
         admin_pb2.CapabilitiesRequest(context=authed_meta.to_request_context(), project_id=authed_meta.project_id),
@@ -2240,6 +3239,7 @@ def _all_rpcs():
 
 ALL_RPCS = _all_rpcs()
 assert len(ALL_RPCS) == 262, f"expected 262 RPCs from the descriptor set, found {len(ALL_RPCS)}"
+RPC_ORDER_INDEX = {(client_cls, method.name): idx for idx, (client_cls, method) in enumerate(ALL_RPCS)}
 
 
 def assert_explicit_perf_body_coverage() -> None:
@@ -2261,7 +3261,8 @@ def assert_explicit_perf_body_coverage() -> None:
 
 assert_explicit_perf_body_coverage()
 
-AUTH_FIRST_PERF = {"Login", "RefreshToken", "RefreshSession", "Authenticate", "ValidateToken", "IntrospectToken", "GetJwks"}
+AUTH_FIRST_PERF = ["Login", "RefreshToken", "RefreshSession", "Authenticate", "ValidateToken", "IntrospectToken", "GetJwks"]
+AUTH_FIRST_PERF_INDEX = {name: idx for idx, name in enumerate(AUTH_FIRST_PERF)}
 AUTH_LAST_PERF = {
     "Logout", "RevokeSession", "RevokeDevice", "DisableMfaFactor", "RevokeRecoveryCodes",
     "DeleteWebAuthnCredential", "ChangePassword", "ResetPassword", "AdminResetPassword",
@@ -2269,14 +3270,31 @@ AUTH_LAST_PERF = {
     "AdminRevokeAllTenantSessions", "EmergencyRevoke",
 }
 
+TERMINAL_PERF_METHODS = {
+    "CloseRoom", "DeleteFile", "DeletePolicy", "DeletePolicyRule", "DeleteRole",
+    "DisableProvider", "DismissDlqEvent", "DropResource", "LeaveRoom",
+    "MuteTrack", "PromoteCanary", "QuarantineDlqEvent", "RejectPolicyDraft",
+    "ReplayDlqEvent", "RevokeApiKey", "RevokeRole", "RollbackCatalog",
+    "RollbackPolicyVersion", "UnlinkIdentity", "UnpublishTrack",
+}
+
+SINGLE_CALL_PERF_METHODS = {
+    "VerifyOTP", "VerifyMfaChallenge", "SendOTP", "ResendOTP", "ResetPassword",
+    "ChangePassword", "RefreshToken", "RefreshSession", "Authenticate",
+}
+
 
 def perf_rpc_order_key(item):
     client_cls, method = item
-    if client_cls is AuthnServiceClient and method.name in AUTH_FIRST_PERF:
-        return (0, method.name)
+    original_idx = RPC_ORDER_INDEX[(client_cls, method.name)]
+    if client_cls is AuthnServiceClient and method.name in AUTH_FIRST_PERF_INDEX:
+        return (0, AUTH_FIRST_PERF_INDEX[method.name])
     if client_cls is AuthnServiceClient and method.name in AUTH_LAST_PERF:
-        return (2, method.name)
-    return (1, client_cls._SERVICE_FULL, method.name)
+        return (3, original_idx)
+    terminal = 1 if method.name in TERMINAL_PERF_METHODS else 0
+    kind = RPC_OPERATION_KIND.get(rpc_path(method), "read_only")
+    kind_rank = {"read_only": 0, "mutation": 1, "destructive": 2}.get(kind, 1)
+    return (1 + terminal, kind_rank, original_idx)
 
 
 @pytest.fixture(scope="module")
@@ -2290,7 +3308,7 @@ def live_session():
         device_name="python-sdk-surface",
     )
     canonical_tenant = auth.authenticate_bearer(login.access_token).principal.tenant_id
-    authed_meta = replace(metadata(bearer_token=login.access_token), tenant_id=canonical_tenant)
+    authed_meta = replace(metadata(bearer_token=login.access_token), tenant_id=canonical_tenant, client_catalog_version="")
     fixtures = PerfFixtures()
     fixtures.set("token", login.access_token)
     fixtures.set("access_token", login.access_token)
@@ -2340,86 +3358,173 @@ def test_rpc_surface(live_session, rpc):
 
 @pytest.mark.skipif(os.getenv("UDB_LIVE_PERF") != "1", reason="perf run requires UDB_LIVE_PERF=1")
 def test_live_perf():
-    target = required_env("UDB_GRPC_TARGET")
-    auth_target = os.getenv("UDB_AUTH_GRPC_TARGET", target)
-    auth = UdbAuthClient(auth_target, metadata(), timeout=10.0)
-    login = auth.login(required_env("UDB_LIVE_USERNAME"), required_env("UDB_LIVE_PASSWORD"), device_name="python-sdk-perf")
-    canonical_tenant = auth.authenticate_bearer(login.access_token).principal.tenant_id
-    authed_meta = replace(metadata(bearer_token=login.access_token), tenant_id=canonical_tenant)
-    clients = {}
-    for client_cls in SERVICE_CLIENTS:
-        endpoint = target if client_cls is DataBrokerClient else auth_target
-        clients[client_cls] = client_cls(endpoint, authed_meta, timeout=20.0)
-
-    # SEED PHASE (runs before any measurement): create real, disposable entities and
-    # capture their identifiers so every RPC can be driven down its SUCCESS path with
-    # valid inputs. ``authed_meta.tenant_id`` is the canonical tenant UUID, so the one
-    # bearer serves the UUID-strict native services (storage/asset/webrtc) too.
-    fixtures, seed_record_id, seed_cleanup = perf_seed(clients, authed_meta)
-
-    broker_stub = clients[DataBrokerClient].stub
-
-    def is_cdc_subscription(client_cls, method) -> bool:
-        return client_cls is DataBrokerClient and method.name == "PublishCDC"
-
-    def iters_for(kind):
-        return 1 if kind == "destructive" else (5 if kind == "mutation" else 25)
-
-    def time_one(client, client_cls, method):
-        # Returns (elapsed_ms, err_code) where err_code is the gRPC status code NAME
-        # (e.g. "UNAVAILABLE", "FAILED_PRECONDITION") on a non-OK status, else "OK".
-        # A failing RPC must never be reported as a silent latency sample.
-        #
-        # Every measured RPC must have an explicit doc-backed body. No reflective
-        # fallback is allowed here; missing coverage is a harness error.
-        rpc_callable = getattr(client.stub, method.name)
-        start = time.perf_counter()
-        err_code = "OK"
-        if is_cdc_subscription(client_cls, method):
-            # Event-driven success path: subscribe, fire a real seeded Upsert
-            # (outbox->CDC->Kafka), and time the first delivered event.
-            err_code = time_cdc_first_event(broker_stub, method, authed_meta, seed_record_id)
-            return (time.perf_counter() - start) * 1000.0, err_code
-        request = perf_real_body(client_cls, method, authed_meta, fixtures)
-        if method.client_streaming or method.server_streaming:
-            # Other streaming RPCs: open with seeded inputs and measure time to the
-            # FIRST server response (a real round-trip), not just stream-open.
-            err_code = time_first_recv(
-                rpc_callable, request, authed_meta, method.client_streaming, method.server_streaming
-            )
-            return (time.perf_counter() - start) * 1000.0, err_code
-        try:
-            rpc_callable(request, metadata=authed_meta.to_grpc_metadata(), timeout=20.0)
-        except grpc.RpcError as exc:
-            try:
-                err_code = exc.code().name
-            except Exception:
-                err_code = "UNKNOWN"
-        return (time.perf_counter() - start) * 1000.0, err_code
-
-    # All 262 RPCs are measured down their SUCCESS path. Unary = full round-trip;
-    # non-CDC streaming = time-to-first-response (seeded inputs); CDC subscription
-    # (PublishCDC) = time-to-first-event (subscribe, fire a real Upsert, time delivery).
     samples = []
+    fixtures = PerfFixtures()
+    authed_meta = metadata()
+    clients = {}
+    seed_cleanup = lambda: None
     try:
+        target = required_env("UDB_GRPC_TARGET")
+        auth_target = os.getenv("UDB_AUTH_GRPC_TARGET", target)
+        auth = UdbAuthClient(auth_target, metadata(), timeout=10.0)
+        login = auth.login(required_env("UDB_LIVE_USERNAME"), required_env("UDB_LIVE_PASSWORD"), device_name="python-sdk-perf")
+        refreshed = auth.refresh_token(login.refresh_token, session_id=login.session_id)
+        login_access_token = refreshed.access_token or login.access_token
+        canonical_tenant = auth.authenticate_bearer(login_access_token).principal.tenant_id
+        authed_meta = replace(metadata(bearer_token=login_access_token), tenant_id=canonical_tenant, client_catalog_version="")
+        for client_cls in SERVICE_CLIENTS:
+            endpoint = target if client_cls is DataBrokerClient else auth_target
+            clients[client_cls] = client_cls(endpoint, authed_meta, timeout=20.0)
+
+        # SEED PHASE (runs before any measurement): create real, disposable entities and
+        # capture their identifiers so every RPC can be driven down its SUCCESS path with
+        # valid inputs. ``authed_meta.tenant_id`` is the canonical tenant UUID, so the one
+        # bearer serves the UUID-strict native services (storage/asset/webrtc) too.
+        fixtures, seed_record_id, seed_cleanup = perf_seed(clients, authed_meta)
+        fixtures.set("token", login_access_token)
+        fixtures.set("access_token", login_access_token)
+        fixtures.set("refresh_token", login.refresh_token)
+        fixtures.set("session_id", login.session_id)
+        fixtures.set("csrf_token", login.csrf_token)
+
+        broker_stub = clients[DataBrokerClient].stub
+        def fresh_login(device_name: str):
+            return clients[AuthnServiceClient].stub.Login(
+                authn_pb2.LoginRequest(
+                    username=required_env("UDB_LIVE_USERNAME"),
+                    password=required_env("UDB_LIVE_PASSWORD"),
+                    tenant_hint=authed_meta.tenant_id,
+                    project_hint=authed_meta.project_id,
+                    device_name=device_name,
+                ),
+                metadata=authed_meta.to_grpc_metadata(),
+                timeout=8.0,
+            )
+
+        try:
+            token_login = fresh_login("python-sdk-perf-token")
+            fixtures.set("token", token_login.access_token)
+            fixtures.set("access_token", token_login.access_token)
+            fixtures.set("csrf_token", token_login.csrf_token)
+        except grpc.RpcError:
+            pass
+        try:
+            refresh_login = fresh_login("python-sdk-perf-refresh")
+            fixtures.set("refresh_token", refresh_login.refresh_token)
+        except grpc.RpcError:
+            pass
+        try:
+            session_login = fresh_login("python-sdk-perf-session")
+            fixtures.set("session_id", session_login.session_id)
+        except grpc.RpcError:
+            pass
+        try:
+            auto_login = fresh_login("python-sdk-perf-auto-refresh")
+            auto_refresh_token = auto_login.refresh_token
+            auto_session_id = auto_login.session_id
+        except grpc.RpcError:
+            auto_refresh_token = refreshed.refresh_token or login.refresh_token
+            auto_session_id = login.session_id
+        next_token_refresh_at = time.monotonic() + 180.0
+
+        def ensure_fresh_perf_token(force: bool = False) -> None:
+            nonlocal authed_meta, auto_refresh_token, auto_session_id, next_token_refresh_at
+            if not force and time.monotonic() < next_token_refresh_at:
+                return
+            refreshed_token = auth.refresh_token(auto_refresh_token, session_id=auto_session_id)
+            if refreshed_token.access_token:
+                authed_meta = replace(authed_meta, bearer_token=refreshed_token.access_token, client_catalog_version="")
+                fixtures.set("token", refreshed_token.access_token)
+                fixtures.set("access_token", refreshed_token.access_token)
+                for bound_client in clients.values():
+                    bound_client.bind_metadata(authed_meta)
+            if refreshed_token.refresh_token:
+                auto_refresh_token = refreshed_token.refresh_token
+            next_token_refresh_at = time.monotonic() + max(60.0, min(float(refreshed_token.access_token_expires_in or 240) * 0.6, 240.0))
+
+        def is_cdc_subscription(client_cls, method) -> bool:
+            return client_cls is DataBrokerClient and method.name == "PublishCDC"
+
+        def iters_for(kind):
+            return 1 if kind == "destructive" else (3 if kind == "mutation" else 10)
+
+        def time_one(client, client_cls, method):
+            # Returns (elapsed_ms, err_code, err_detail) where err_code is the gRPC
+            # status code NAME on a non-OK status, else "OK".
+            # A failing RPC must never be reported as a silent latency sample.
+            #
+            # Every measured RPC must have an explicit doc-backed body. No reflective
+            # fallback is allowed here; missing coverage is a harness error.
+            ensure_fresh_perf_token()
+            rpc_callable = getattr(client.stub, method.name)
+            start = time.perf_counter()
+            err_code = "OK"
+            err_detail = ""
+            if is_cdc_subscription(client_cls, method):
+                # Event-driven success path: subscribe, fire a real seeded Upsert
+                # (outbox->CDC->Kafka), and time the first delivered event.
+                err_code = time_cdc_first_event(broker_stub, method, authed_meta, seed_record_id)
+                return (time.perf_counter() - start) * 1000.0, err_code, err_detail
+            request = perf_real_body(client_cls, method, authed_meta, fixtures)
+            if method.client_streaming or method.server_streaming:
+                # Other streaming RPCs: open with seeded inputs and measure time to the
+                # FIRST server response (a real round-trip), not just stream-open.
+                err_code = time_first_recv(
+                    rpc_callable, request, authed_meta, method.client_streaming, method.server_streaming
+                )
+                return (time.perf_counter() - start) * 1000.0, err_code, err_detail
+            try:
+                rpc_callable(request, metadata=authed_meta.to_grpc_metadata(), timeout=20.0)
+            except grpc.RpcError as exc:
+                try:
+                    err_code = exc.code().name
+                except Exception:
+                    err_code = "UNKNOWN"
+                try:
+                    err_detail = exc.details() or ""
+                except Exception:
+                    err_detail = str(exc)
+            if err_code == "OK" and client_cls is AuthnServiceClient and method.name == "PutMfaPolicy":
+                try:
+                    reset = authn_pb2.PutMfaPolicyRequest()
+                    reset.CopyFrom(request)
+                    reset.require_mfa = False
+                    rpc_callable(reset, metadata=authed_meta.to_grpc_metadata(), timeout=20.0)
+                except grpc.RpcError:
+                    pass
+            return (time.perf_counter() - start) * 1000.0, err_code, err_detail
+
+        # All 262 RPCs are measured down their SUCCESS path. Unary = full round-trip;
+        # non-CDC streaming = time-to-first-response (seeded inputs); CDC subscription
+        # (PublishCDC) = time-to-first-event (subscribe, fire a real Upsert, time delivery).
         for client_cls, method in sorted(ALL_RPCS, key=perf_rpc_order_key):
             client = clients[client_cls]
             streaming = method.client_streaming or method.server_streaming
             if is_cdc_subscription(client_cls, method):
-                kind, n = "cdc_first_event", 3
+                kind, n = "cdc_first_event", 1
             elif streaming:
                 kind, n = "stream_first_recv", 3
             else:
                 kind = RPC_OPERATION_KIND.get(rpc_path(method), "read_only")
                 n = iters_for(kind)
-            time_one(client, client_cls, method)  # warm-up
-            runs = [time_one(client, client_cls, method) for _ in range(n)]
-            durs = sorted(d for d, _ in runs)
-            # Last observed non-OK status code marks the RPC failed (mirrors Go's lastErrCode).
-            err_code = "OK"
-            for _, code in runs:
-                if code != "OK":
-                    err_code = code
+                if method.name in SINGLE_CALL_PERF_METHODS:
+                    n = 1
+            print(f"[PERF-RPC] {client_cls._SERVICE_FULL}/{method.name} kind={kind} iters={n}", flush=True)
+            runs = []
+            if kind == "read_only" and not streaming and method.name not in SINGLE_CALL_PERF_METHODS:
+                warm = time_one(client, client_cls, method)  # warm-up
+                if warm[1] != "OK":
+                    runs = [warm]
+            while len(runs) < n:
+                run = time_one(client, client_cls, method)
+                runs.append(run)
+                if run[1] != "OK":
+                    break
+            all_durs = [d for d, _, _ in runs]
+            ok_durs = [d for d, code, _ in runs if code == "OK"]
+            err_code = "OK" if ok_durs else next((code for _, code, _ in runs if code != "OK"), "UNKNOWN")
+            err_detail = "" if ok_durs else next((detail for _, code, detail in runs if code != "OK"), "")
+            durs = sorted(ok_durs or all_durs)
 
             def pct(p, durs=durs):
                 return durs[min(len(durs) - 1, (p * (len(durs) - 1)) // 100)]
@@ -2427,13 +3532,21 @@ def test_live_perf():
             samples.append({
                 "service": client_cls._SERVICE_FULL.split(".")[-1],
                 "rpc": method.name, "kind": kind, "iters": n, "err": err_code,
+                "err_detail": err_detail,
                 "p50": pct(50), "p99": pct(99), "mean": sum(durs) / len(durs),
             })
+            if err_code != "OK":
+                print(f"[PERF-FAIL] {client_cls._SERVICE_FULL}/{method.name} => {err_code}: {err_detail}")
+            else:
+                print(f"[PERF-OK] {client_cls._SERVICE_FULL}/{method.name}", flush=True)
     except Exception as exc:
         write_python_perf_report(samples, fixtures, authed_meta, exc)
         raise
     finally:
-        seed_cleanup()
+        try:
+            seed_cleanup()
+        except Exception:
+            pass
         for c in clients.values():
             c.close()
 

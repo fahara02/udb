@@ -782,11 +782,11 @@ impl AuthnServiceImpl {
         self.users
             .put_user_in_tx(&mut *tx, rec.clone())
             .await
-            .map_err(Status::internal)?;
+            .map_err(crate::runtime::executor_utils::status_from_store_string)?;
         self.users
             .put_otp_in_tx(&mut *tx, otp_rec)
             .await
-            .map_err(Status::internal)?;
+            .map_err(crate::runtime::executor_utils::status_from_store_string)?;
         self.emit_event_in_tx(&mut *tx, event).await?;
         tx.commit()
             .await
@@ -951,7 +951,7 @@ impl AuthnServiceImpl {
         self.users
             .put_user(rec.clone())
             .await
-            .map_err(Status::internal)?;
+            .map_err(crate::runtime::executor_utils::status_from_store_string)?;
         Ok(Response::new(authn_pb::UpdateUserResponse {
             user: Some(user_record_to_pb(&rec)),
         }))

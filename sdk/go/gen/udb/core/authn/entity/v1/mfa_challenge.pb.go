@@ -40,7 +40,10 @@ type MfaChallenge struct {
 	TenantId    string                 `protobuf:"bytes,3,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
 	ProjectId   string                 `protobuf:"bytes,4,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	FactorKind  AuthFactorKind         `protobuf:"varint,5,opt,name=factor_kind,json=factorKind,proto3,enum=udb.core.authn.entity.v1.AuthFactorKind" json:"factor_kind,omitempty"`
-	Purpose     MfaChallengePurpose    `protobuf:"varint,6,opt,name=purpose,proto3,enum=udb.core.authn.entity.v1.MfaChallengePurpose" json:"purpose,omitempty"`
+	// VARCHAR(64): the enum NAME is persisted; the longest value
+	// (`MFA_CHALLENGE_PURPOSE_SENSITIVE_OPERATION`, 41 chars) overflowed the
+	// former VARCHAR(40), failing every IssueMfaChallenge. bug_report.md A1.
+	Purpose MfaChallengePurpose `protobuf:"varint,6,opt,name=purpose,proto3,enum=udb.core.authn.entity.v1.MfaChallengePurpose" json:"purpose,omitempty"`
 	// Keyed-HMAC digest of the device fingerprint the challenge is bound to.
 	DeviceFingerprintHash string                 `protobuf:"bytes,7,opt,name=device_fingerprint_hash,json=deviceFingerprintHash,proto3" json:"device_fingerprint_hash,omitempty"`
 	IpAddressMasked       string                 `protobuf:"bytes,8,opt,name=ip_address_masked,json=ipAddressMasked,proto3" json:"ip_address_masked,omitempty"`
@@ -186,7 +189,7 @@ const file_udb_core_authn_entity_v1_mfa_challenge_proto_rawDesc = "" +
 	"\vfactor_kind\x12\vVARCHAR(30)\x18\x01:\x1e'AUTH_FACTOR_KIND_UNSPECIFIED'R\n" +
 	"factorKind\x12\x8c\x01\n" +
 	"\apurpose\x18\x06 \x01(\x0e2-.udb.core.authn.entity.v1.MfaChallengePurposeBC\x82\xb7\x18?\n" +
-	"\apurpose\x12\vVARCHAR(40)\x18\x01:%'MFA_CHALLENGE_PURPOSE_LOGIN_STEP_UP'R\apurpose\x12\xa3\x01\n" +
+	"\apurpose\x12\vVARCHAR(64)\x18\x01:%'MFA_CHALLENGE_PURPOSE_LOGIN_STEP_UP'R\apurpose\x12\xa3\x01\n" +
 	"\x17device_fingerprint_hash\x18\a \x01(\tBk\xe8\xb5\x18\x01\xf0\xb5\x18\x01\x82\xb7\x18H\n" +
 	"\x17device_fingerprint_hash\x12\fVARCHAR(128)Z\x1fBound device fingerprint digest\x8a\xb7\x18\x13\b\x04\x10\x01\x18\x032\vhmac-sha256R\x15deviceFingerprintHash\x12q\n" +
 	"\x11ip_address_masked\x18\b \x01(\tBEе\x18\x01\xe0\xb5\x18\x01\x82\xb7\x189\n" +

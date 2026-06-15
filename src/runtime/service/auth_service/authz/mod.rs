@@ -1821,7 +1821,9 @@ impl AuthzService for AuthzServiceImpl {
                 ConflictStrategy::Error,
             )
             .await
-            .map_err(|err| Status::internal(format!("create role failed: {err}")))?;
+            .map_err(|err| {
+                crate::runtime::executor_utils::prefix_status("create role failed", err)
+            })?;
         self.emit_event(
             AuthEvent::new(
                 topics::ROLE_CREATED,
@@ -2346,19 +2348,38 @@ impl AuthzService for AuthzServiceImpl {
             );
             let context = crate::RequestContext {
                 tenant_id: policy.tenant.clone(),
-                project_id: policy.project.clone(),
+                // `GetPolicyRule`/`ListPolicyRules` read the authz control table
+                // from the service Postgres pool. Store the caller's project_id in
+                // the row, but do not use it for native-store placement here or a
+                // project-scoped backend can receive the write while the served
+                // read path checks the primary control table.
+                project_id: String::new(),
                 ..crate::RequestContext::default()
             };
-            runtime
-                .native_entity_write_for_service(
+            let returned = runtime
+                .native_entity_write_for_service_returning(
                     "authz",
                     &context,
                     "udb.core.authz.entity.v1.PolicyRule",
                     record,
                     ConflictStrategy::Error,
+                    vec!["policy_id".to_string()],
                 )
                 .await
                 .map_err(|err| Status::internal(format!("create policy rule failed: {err}")))?;
+            let created_policy_id = returned
+                .first()
+                .and_then(|r| r.get("policy_id"))
+                .and_then(|v| v.as_str())
+                .ok_or_else(|| {
+                    Status::internal("create policy rule returned no persisted id".to_string())
+                })?
+                .to_string();
+            if created_policy_id != policy.id {
+                return Err(Status::internal(
+                    "create policy rule returned mismatched policy_id",
+                ));
+            }
             let _ = self
                 .bump_authz_revision(
                     &policy.tenant,
@@ -2734,7 +2755,9 @@ impl AuthzService for AuthzServiceImpl {
         .bind(req.is_active)
         .fetch_optional(pool)
         .await
-        .map_err(|err| Status::internal(format!("update role failed: {err}")))?;
+        .map_err(|err| {
+            crate::runtime::executor_utils::sqlx_error_to_status("update role failed", &err)
+        })?;
         let Some(row) = row else {
             return Err(Status::not_found("role not found"));
         };

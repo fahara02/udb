@@ -3,6 +3,18 @@
 
 use super::*;
 
+/// Whether the broker should echo plaintext OTP codes in `SendOTP` responses.
+/// Resolved once from `UDB_OTP_DEV_ECHO` (a dev/conformance affordance — must
+/// never be set in production). bug_report.md F/Lane-2.
+fn otp_dev_echo_enabled() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ENABLED.get_or_init(|| {
+        std::env::var("UDB_OTP_DEV_ECHO")
+            .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+            .unwrap_or(false)
+    })
+}
+
 impl AuthnServiceImpl {
     pub(super) async fn issue_otp(
         &self,
@@ -187,9 +199,17 @@ impl AuthnServiceImpl {
         };
         self.enforce_otp_cooldown(&user.user_id, otp_type, now_unix())
             .await?;
-        let (otp_id, _code) = self
+        let (otp_id, code) = self
             .issue_otp(&user, otp_type, req.correlation_id, now_unix())
             .await?;
+        // Dev-only echo: in a non-production posture (UDB_OTP_DEV_ECHO=1) return
+        // the plaintext code so conformance harnesses can complete the verify
+        // flow without a delivery channel. Never populated in production.
+        let dev_otp_code = if otp_dev_echo_enabled() {
+            code.clone()
+        } else {
+            String::new()
+        };
         self.emit_event(
             AuthEvent::new(
                 topics::OTP_SENT,
@@ -218,6 +238,7 @@ impl AuthnServiceImpl {
             otp_id,
             expires_in_seconds: self.config.otp_ttl_secs as i32,
             cooldown_seconds: self.config.otp_cooldown_secs as i32,
+            dev_otp_code,
         }))
     }
 
@@ -226,6 +247,7 @@ impl AuthnServiceImpl {
         request: Request<authn_pb::VerifyOtpRequest>,
     ) -> Result<Response<authn_pb::VerifyOtpResponse>, Status> {
         let req = request.into_inner();
+        Self::require_uuid_arg(&req.otp_id, "otp_id")?;
         let verified = self
             .verify_otp_record(&req.otp_id, &req.code, None, now_unix())
             .await?;
@@ -378,6 +400,7 @@ impl AuthnServiceImpl {
         request: Request<authn_pb::ResendOtpRequest>,
     ) -> Result<Response<authn_pb::ResendOtpResponse>, Status> {
         let req = request.into_inner();
+        Self::require_uuid_arg(&req.original_otp_id, "otp_id")?;
         let mut original = self
             .users
             .get_otp(&req.original_otp_id)

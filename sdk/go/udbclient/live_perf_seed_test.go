@@ -20,7 +20,12 @@ package udbclient
 // perfSeed returns a cleanup closure that removes the disposable entities.
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -28,10 +33,13 @@ import (
 	analyticspb "github.com/fahara02/udb/sdk/go/gen/udb/core/analytics/services/v1"
 	apikeypb "github.com/fahara02/udb/sdk/go/gen/udb/core/apikey/services/v1"
 	assetpb "github.com/fahara02/udb/sdk/go/gen/udb/core/asset/services/v1"
+	authnentpb "github.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1"
 	authnpb "github.com/fahara02/udb/sdk/go/gen/udb/core/authn/services/v1"
 	authzentpb "github.com/fahara02/udb/sdk/go/gen/udb/core/authz/entity/v1"
 	authzpb "github.com/fahara02/udb/sdk/go/gen/udb/core/authz/services/v1"
 	commonpb "github.com/fahara02/udb/sdk/go/gen/udb/core/common/v1"
+	controlentpb "github.com/fahara02/udb/sdk/go/gen/udb/core/control/entity/v1"
+	controlpb "github.com/fahara02/udb/sdk/go/gen/udb/core/control/services/v1"
 	idpentpb "github.com/fahara02/udb/sdk/go/gen/udb/core/idp/entity/v1"
 	idppb "github.com/fahara02/udb/sdk/go/gen/udb/core/idp/services/v1"
 	notifentpb "github.com/fahara02/udb/sdk/go/gen/udb/core/notification/entity/v1"
@@ -41,6 +49,7 @@ import (
 	entityv1 "github.com/fahara02/udb/sdk/go/gen/udb/entity/v1"
 	servicesv1 "github.com/fahara02/udb/sdk/go/gen/udb/services/v1"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
 // perfFixtures maps a semantic field name → a real seeded value. lookup resolves
@@ -63,7 +72,7 @@ func (f *perfFixtures) set(key, val string) {
 // first, then matches a registered key as a suffix of the field name (e.g. field
 // "definition_id" matches key "definition_id"; field "approved_by" matches key
 // "approved_by"). This keeps resolution explicit — only names we deliberately
-// seeded resolve, everything else falls through to the generic scalar.
+// seeded resolve; body builders must explicitly handle everything else.
 func (f *perfFixtures) lookup(field string) (string, bool) {
 	if v, ok := f.m[field]; ok {
 		return v, true
@@ -74,6 +83,100 @@ func (f *perfFixtures) lookup(field string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+func markPerfNotificationRetryable(ctx context.Context, broker servicesv1.DataBrokerClient, rc *entityv1.RequestContext, logID, tenant string) error {
+	spec, err := json.Marshal(map[string]any{
+		"sql": "UPDATE udb_notification.notification_logs SET status = 'FAILED', error_message = 'go live perf seed failure' WHERE log_id = $1::UUID AND tenant_id = $2 RETURNING log_id",
+		"params": []any{
+			logID,
+			tenant,
+		},
+		"param_types": []string{"uuid", "string"},
+		"return_rows": true,
+	})
+	if err != nil {
+		return err
+	}
+	resp, err := broker.GenericDispatch(ctx, &entityv1.GenericDispatchRequest{
+		Context:   rc,
+		Backend:   "postgres",
+		Operation: "mutate",
+		SpecJson:  string(spec),
+	})
+	if err != nil {
+		return err
+	}
+	var result struct {
+		AffectedRows int `json:"affected_rows"`
+	}
+	if err := json.Unmarshal([]byte(resp.GetResultJson()), &result); err != nil {
+		return err
+	}
+	if result.AffectedRows == 0 {
+		return fmt.Errorf("no notification log row updated for log_id %s", logID)
+	}
+	return nil
+}
+
+func putPresignedStorageObject(ctx context.Context, uploadURL string, data []byte, contentType string) error {
+	if strings.TrimSpace(uploadURL) == "" {
+		return fmt.Errorf("empty storage upload_url")
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, uploadURL, bytes.NewReader(data))
+	if err != nil {
+		return err
+	}
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return fmt.Errorf("presigned storage PUT failed: %s", resp.Status)
+	}
+	return nil
+}
+
+// seedPerfDevice inserts a real udb_authn.devices row for the given user+tenant through the
+// broker's Postgres dispatch path (no RPC mints a device row — Login only writes
+// token_families.device, bug_report.md P3), so RevokeDevice has a live device_id to revoke.
+// Done in-band (not a fixed out-of-band row) so it is scoped to THIS run's user/tenant and
+// never absent or stale. revoke_device matches on device_id + claim-tenant only.
+func seedPerfDevice(ctx context.Context, broker servicesv1.DataBrokerClient, rc *entityv1.RequestContext, deviceID, userID, tenant string) error {
+	spec, err := json.Marshal(map[string]any{
+		"sql": "INSERT INTO udb_authn.devices (device_id, user_id, tenant_id, project_id, device_name, device_type, created_at) " +
+			"VALUES ($1::UUID, $2, $3, $4, 'sdk-perf-device', 'WEB', NOW()) " +
+			"ON CONFLICT (device_id) DO UPDATE SET revoked_at = NULL RETURNING device_id",
+		"params":      []any{deviceID, userID, tenant, "default"},
+		"param_types": []string{"uuid", "string", "string", "string"},
+		"return_rows": true,
+	})
+	if err != nil {
+		return err
+	}
+	resp, err := broker.GenericDispatch(ctx, &entityv1.GenericDispatchRequest{
+		Context:   rc,
+		Backend:   "postgres",
+		Operation: "mutate",
+		SpecJson:  string(spec),
+	})
+	if err != nil {
+		return err
+	}
+	var result struct {
+		AffectedRows int `json:"affected_rows"`
+	}
+	if err := json.Unmarshal([]byte(resp.GetResultJson()), &result); err != nil {
+		return err
+	}
+	if result.AffectedRows == 0 {
+		return fmt.Errorf("no device row inserted for device_id %s", deviceID)
+	}
+	return nil
 }
 
 // perfSeedResult carries the fixture map plus the seeded record's primary key (so
@@ -151,15 +254,31 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 	fix.set("document_id", docID)
 	// NOTE: a single "backend"/"resource_name" fixture cannot serve both the SQL
 	// and the document/cache/vector/graph RPCs (each needs its own backend +
-	// resource). Those backend-specific DataBroker RPCs are driven by typed bodies
-	// in perfRealBody (live_perf_test.go) instead of the generic reflective probe,
+	// resource). Those backend-specific DataBroker RPCs are driven by explicit typed bodies
+	// in perfRealBody (live_perf_test.go),
 	// so we deliberately do NOT register a global backend/resource_name fixture.
 	fix.set("collection", collection)
 	fix.set("mongo_collection", collection)
 
+	// ── Qdrant: a real vector collection named after the message type so the ──────
+	// Vector* RPCs (which address the collection by message_type) resolve. The
+	// seed vectors are 3-dim ([0.1,0.2,0.3]), so declare size 3 / cosine distance.
+	_, _ = broker.EnsureResource(brokerCtx, &entityv1.ResourceAdminRequest{
+		Context: rc, Backend: "qdrant", ResourceName: liveMessageType,
+		SpecJson: `{"size":3,"distance":"Cosine"}`,
+	})
+
+	// ── ClickHouse: a real table so TimeSeriesQuery/Write resolve a column store. The
+	// TimeSeries bodies send resource.resource_name = "sdk_perf_ts"; default columns
+	// (_id String, _data String) match the seeded write point.
+	_, _ = broker.EnsureResource(brokerCtx, &entityv1.ResourceAdminRequest{
+		Context: rc, Backend: "clickhouse", ResourceName: "sdk_perf_ts", SpecJson: `{}`,
+	})
+	fix.set("ts_table", "sdk_perf_ts")
+
 	// ── AuthnService: a real user (id reused everywhere a user_id is needed) ──────
 	authn := authnpb.NewAuthnServiceClient(authConn)
-	pw := "CorrectHorse1!"
+	pw := perfSeedUserPassword
 	uname := "sdk-perf-" + suffix
 	if created, err := authn.CreateUser(base, &authnpb.CreateUserRequest{
 		Username: uname, Email: uname + "@example.com", Password: pw,
@@ -181,6 +300,16 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 		fix.set("approved_by", uid)
 		fix.set("rejected_by", uid)
 		fix.set("subject", "user:"+uid)
+		// CreateUser persists the account as PENDING_VERIFICATION (core.rs:708). Login is
+		// special-cased to allow it, but Authenticate's jwt_persisted_state_valid gates on
+		// AccountStatus::Active (user_is_active, mod.rs:563) → "token subject is no longer
+		// active". Activate the seeded user so the Phase-1 Authenticate (bearer_token of
+		// THIS user) resolves an ACTIVE subject. The measured Phase-3 ChangeUserStatus
+		// later suspends it — fine, Authenticate runs first.
+		_, _ = authn.ChangeUserStatus(base, &authnpb.ChangeUserStatusRequest{
+			UserId: uid, NewStatus: authnentpb.UserStatus_USER_STATUS_ACTIVE, Reason: "perf seed activate",
+			Context: &commonpb.RequestContext{Tenant: &commonpb.TenantContext{TenantId: tenant, ProjectId: project}},
+		})
 		// A real login → session id + tokens for session/token RPCs.
 		if login, err := authn.Login(ctx, &authnpb.LoginRequest{Username: uname, Password: pw, TenantHint: tenant, ProjectHint: project, DeviceName: "go-sdk-perf-seed"}); err == nil {
 			fix.set("session_id", login.GetSessionId())
@@ -188,10 +317,119 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 			fix.set("refresh_token", login.GetRefreshToken())
 			fix.set("csrf_token", login.GetCsrfToken())
 		}
+		// A SEPARATE dedicated login → refresh_session_id + auth_token for the Phase-1
+		// RefreshSession + Authenticate. The shared session_id/token above are consumed
+		// by the measured RefreshToken (rotates the family → supersedes its session) and
+		// the Phase-3 Logout/RevokeSession, so reusing them makes RefreshSession ("session
+		// is not active") and Authenticate ("token subject is no longer active", which
+		// also validates the issuing session) fail. This login is a distinct token family
+		// + session that no measured RPC touches before its Phase-1 read.
+		if dlogin, err := authn.Login(ctx, &authnpb.LoginRequest{Username: uname, Password: pw, TenantHint: tenant, ProjectHint: project, DeviceName: "go-sdk-perf-refresh"}); err == nil {
+			fix.set("refresh_session_id", dlogin.GetSessionId())
+			fix.set("auth_token", dlogin.GetAccessToken())
+		}
 		// Recovery codes (so VerifyOTP/recovery-style reads have a real code).
 		if codes, err := authn.GenerateRecoveryCodes(base, &authnpb.GenerateRecoveryCodesRequest{UserId: uid, Count: 8}); err == nil && len(codes.GetCodes()) > 0 {
 			fix.set("code", codes.GetCodes()[0])
 			fix.set("recovery_code", codes.GetCodes()[0])
+		}
+		// device_id for RevokeDevice. No RPC INSERTs a `devices` row (Login only writes
+		// token_families.device — bug_report.md P3), so ListDevices is empty; insert a real
+		// row for THIS user+tenant through the broker's Postgres dispatch path (mirrors the
+		// notification seed) so RevokeDevice has a live device_id (matches device_id + claim
+		// tenant only).
+		if dl, err := authn.ListDevices(base, &authnpb.ListDevicesRequest{UserId: uid}); err == nil && len(dl.GetDevices()) > 0 {
+			fix.set("device_id", dl.GetDevices()[0].GetDeviceId())
+		} else {
+			deviceID := uuid4()
+			if err := seedPerfDevice(brokerCtx, broker, rc, deviceID, uid, tenant); err != nil {
+				t.Logf("perf seed: seed device failed: %v", err)
+			} else {
+				fix.set("device_id", deviceID)
+			}
+		}
+		// ── WebAuthn dev soft-authenticator (broker UDB_WEBAUTHN_TEST_MODE=1). The harness
+		// sends the sentinel as public_key_credential_json and the broker mints+verifies a
+		// REAL credential. The dev authenticator is deterministic: one credential id per
+		// user. So bootstrap authentication on the main user, but measure registration
+		// against a separate throwaway user with no existing passkey; otherwise the measured
+		// FinishWebAuthnRegistration is a duplicate/exclude case, not the success path.
+		if sr, err := authn.StartWebAuthnRegistration(base, &authnpb.StartWebAuthnRegistrationRequest{UserId: uid, Label: "perf-passkey", TenantId: tenant, ProjectId: project}); err == nil {
+			if _, err := authn.FinishWebAuthnRegistration(base, &authnpb.FinishWebAuthnRegistrationRequest{
+				ChallengeId: sr.GetChallengeId(), PublicKeyCredentialJson: webauthnTestCredential, Label: "perf-passkey",
+			}); err != nil {
+				t.Logf("perf seed: bootstrap FinishWebAuthnRegistration failed: %v", err)
+			}
+		} else {
+			t.Logf("perf seed: bootstrap StartWebAuthnRegistration failed: %v", err)
+		}
+		regUserID := ""
+		if regUser, err := authn.CreateUser(base, &authnpb.CreateUserRequest{
+			Username: "sdk-perf-webauthn-reg-" + suffix, Email: "sdk-perf-webauthn-reg-" + suffix + "@example.com",
+			Password: pw, TenantId: tenant, ProjectId: project, FullName: "SDK Perf WebAuthn Registration User",
+		}); err == nil && regUser.GetUser() != nil {
+			regUserID = regUser.GetUser().GetUserId()
+		} else if err != nil {
+			t.Logf("perf seed: WebAuthn registration user CreateUser failed: %v", err)
+		}
+		if regUserID == "" {
+			regUserID = uid
+		}
+		if sr2, err := authn.StartWebAuthnRegistration(base, &authnpb.StartWebAuthnRegistrationRequest{UserId: regUserID, Label: "perf-passkey-2", TenantId: tenant, ProjectId: project}); err == nil {
+			fix.set("reg_challenge_id", sr2.GetChallengeId())
+		} else {
+			t.Logf("perf seed: measured StartWebAuthnRegistration failed: %v", err)
+		}
+		if sa, err := authn.StartWebAuthnAuthentication(base, &authnpb.StartWebAuthnAuthenticationRequest{UserId: uid, TenantId: tenant, ProjectId: project}); err == nil {
+			fix.set("auth_challenge_id", sa.GetChallengeId())
+		} else {
+			t.Logf("perf seed: StartWebAuthnAuthentication failed: %v", err)
+		}
+		// A real MFA challenge → challenge_id for VerifyMfaChallenge (the answer code
+		// still needs a dev echo — see bug_report.md §G MFA note; this at least makes
+		// challenge_id a valid UUID instead of the "must be UUID" reject).
+		if mc, err := authn.IssueMfaChallenge(base, &authnpb.IssueMfaChallengeRequest{
+			UserId: uid, FactorKind: authnentpb.AuthFactorKind_AUTH_FACTOR_KIND_EMAIL_OTP,
+			Purpose: authnentpb.MfaChallengePurpose_MFA_CHALLENGE_PURPOSE_LOGIN_STEP_UP,
+		}); err == nil {
+			fix.set("challenge_id", mc.GetChallengeId())
+		}
+		// A DEDICATED OTP user (so the seeded OTP doesn't trip the measured SendOTP's
+		// per-user cooldown on the main user) → real otp_id + dev-echoed code for
+		// ResendOTP / VerifyOTP.
+		if ou, err := authn.CreateUser(base, &authnpb.CreateUserRequest{
+			Username: "sdk-perf-otp-" + suffix, Email: "sdk-perf-otp-" + suffix + "@example.com",
+			Password: pw, TenantId: tenant, ProjectId: project, FullName: "SDK Perf OTP User",
+		}); err == nil {
+			// SENSITIVE_OPERATION (not the EMAIL_VERIFICATION that CreateUser auto-sends,
+			// which would leave us in cooldown) so this SendOTP actually issues an otp_id.
+			if so, err := authn.SendOTP(base, &authnpb.SendOTPRequest{
+				UserId: ou.GetUser().GetUserId(), OtpType: authnentpb.OTPType_OTP_TYPE_SENSITIVE_OPERATION,
+				Context: &commonpb.RequestContext{Tenant: &commonpb.TenantContext{TenantId: tenant, ProjectId: project}},
+			}); err == nil {
+				fix.set("otp_id", so.GetOtpId())
+				if so.DevOtpCode != "" {
+					fix.set("otp_code", so.DevOtpCode)
+				}
+			} else {
+				t.Logf("perf seed: SendOTP failed: %v", err)
+			}
+			// A PASSWORD_RESET OTP on the SAME disposable user → reset_otp_id/code for
+			// ResetPassword (reset_password_impl requires OtpType::PasswordReset, login.rs:689).
+			// Cooldown is disabled (UDB_OTP_COOLDOWN_SECONDS=0) so this second SendOTP works.
+			if rso, err := authn.SendOTP(base, &authnpb.SendOTPRequest{
+				UserId: ou.GetUser().GetUserId(), OtpType: authnentpb.OTPType_OTP_TYPE_PASSWORD_RESET,
+				Context: &commonpb.RequestContext{Tenant: &commonpb.TenantContext{TenantId: tenant, ProjectId: project}},
+			}); err == nil {
+				fix.set("reset_otp_id", rso.GetOtpId())
+				if rso.DevOtpCode != "" {
+					fix.set("reset_otp_code", rso.DevOtpCode)
+				}
+			} else {
+				t.Logf("perf seed: reset SendOTP failed: %v", err)
+			}
+		} else {
+			t.Logf("perf seed: OTP-user CreateUser failed: %v", err)
 		}
 	}
 
@@ -219,18 +457,47 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 			_, _ = authz.DeleteRole(base, &authzpb.DeleteRoleRequest{RoleId: rid, DeletedBy: fix.m["user_id"]})
 		})
 	}
-	// ABAC policy + an RBAC policy rule → policy_id for GetPolicyRule/DeletePolicyRule.
+	// A SEPARATE disposable role for the destructive DeleteRole, so deleting it does
+	// not invalidate the primary role_id that GetRole/UpdateRole/ListUserRoles read.
+	if delRole, err := authz.CreateRole(base, &authzpb.CreateRoleRequest{
+		Name: "SDK Perf Disposable " + suffix, Description: "perf seed disposable role", CreatedBy: uuid4(),
+		RoleCode: "sdk_perf_disposable_" + suffix, Domain: tenant, TenantId: tenant, ProjectId: project,
+	}); err == nil {
+		fix.set("delete_role_id", delRole.GetRole().GetRoleId())
+	}
+	// ABAC policy + an RBAC policy rule. Capture policy_id only after the exact
+	// GetPolicyRule path accepts it; a tenant-wide ListPolicyRules row can be an
+	// older unrelated policy in dirty live benches.
 	abacPolicyID := uuid4()
 	_, _ = authz.PutAuthzPolicy(base, &authzpb.PutAuthzPolicyRequest{Policy: &authzpb.AuthzPolicyRecord{
 		Id: abacPolicyID, Enabled: true, Effect: "allow", Tenant: tenant, Project: project,
 		Role: roleCode, Action: "data.select", Resource: "invoice",
 	}})
 	if uid := fix.m["user_id"]; uid != "" {
-		if rule, err := authz.CreatePolicyRule(base, &authzpb.CreatePolicyRuleRequest{
+		// ActivatePolicyVersion/RollbackPolicyVersion DELETE policy_rules WHERE
+		// tenant=$1 AND project=$2 for the activated (main) project and re-insert the
+		// version's rules with FRESH gen_random_uuid() ids (governance_activate.rs:236,274).
+		// Those measured RPCs sort BEFORE GetPolicyRule, so a main-project rule (and any
+		// captured/seed-verified id) is wiped before the read. GetPolicyRule reads by
+		// policy_id ALONE (no project filter; owner bypasses RLS), so seed its target in
+		// an ISOLATED project no version-activation touches → the row survives the whole
+		// run and its CreatePolicyRule response id stays Get-queryable.
+		getPolProject := project + "-getpolrule"
+		if created, err := authz.CreatePolicyRule(base, &authzpb.CreatePolicyRuleRequest{
 			Subject: roleCode, Domain: tenant, Object: "ledger", Action: "data.update",
-			Effect: authzentpb.PolicyEffect_POLICY_EFFECT_ALLOW, Description: "perf seed rule", CreatedBy: uid, TenantId: tenant, ProjectId: project,
+			Effect: authzentpb.PolicyEffect_POLICY_EFFECT_ALLOW, Description: "perf seed rule (version-isolated)", CreatedBy: uid, TenantId: tenant, ProjectId: getPolProject,
+		}); err != nil {
+			t.Logf("perf seed: CreatePolicyRule (getpolrule) failed: %v", err)
+		} else {
+			fix.set("policy_id", created.GetPolicy().GetPolicyId())
+		}
+		// A SEPARATE disposable rule (same isolated project) for the destructive
+		// DeletePolicyRule, so deleting it never touches the GetPolicyRule target.
+		if delRule, err := authz.CreatePolicyRule(base, &authzpb.CreatePolicyRuleRequest{
+			Subject: roleCode, Domain: tenant, Object: "ledger-disposable", Action: "data.delete",
+			Effect: authzentpb.PolicyEffect_POLICY_EFFECT_ALLOW, Description: "perf seed disposable rule", CreatedBy: uid, TenantId: tenant, ProjectId: getPolProject,
 		}); err == nil {
-			fix.set("policy_id", rule.GetPolicy().GetPolicyId())
+			fix.set("delete_policy_id", delRule.GetPolicy().GetPolicyId())
 		}
 		_, _ = authz.PutRoleBinding(base, &authzpb.PutRoleBindingRequest{Binding: &authzpb.RoleBinding{Subject: "user:" + uid, Role: roleCode, Tenant: tenant, Project: project, Source: "sdk-perf"}})
 		_, _ = authz.PutRelationship(base, &authzpb.PutRelationshipRequest{Tuple: &authzpb.RelationshipTuple{Subject: "user:" + uid, Relation: "member", Object: "group:sdk-perf-" + suffix, Tenant: tenant, Project: project, Source: "sdk-perf"}})
@@ -242,10 +509,88 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 	// A governed policy draft → policy_draft_id for the draft lifecycle RPCs
 	// (Update/Diff/Submit/Approve/Reject/Simulate).
 	if draft, err := authz.CreatePolicyDraft(base, &authzpb.CreatePolicyDraftRequest{
-		Actor:    &authzpb.GovernanceActor{Subject: fix.m["subject"], TenantId: tenant, ProjectId: project, Scopes: []string{"udb:authz:policy:write"}},
+		Actor:    &authzpb.GovernanceActor{Subject: fix.m["subject"], TenantId: tenant, ProjectId: project, Scopes: []string{"authz:policy:write"}},
 		TenantId: tenant, ProjectId: project, PolicySetName: "default", Title: "sdk perf draft " + suffix, ChangeReason: "seed", Document: &authzpb.PolicyDocument{},
 	}); err == nil {
 		fix.set("policy_draft_id", draft.GetDraft().GetDraftId())
+	}
+	// Draft lifecycle fixtures: UpdatePolicyDraft needs an OPEN draft; Approve/Reject
+	// need IN_REVIEW (draft_reviewable, governance_drafts.rs). Seed one OPEN draft and
+	// two submitted-to-IN_REVIEW drafts (one each for Approve/Reject, which consume them).
+	gActor := func() *authzpb.GovernanceActor {
+		return &authzpb.GovernanceActor{Subject: fix.m["subject"], TenantId: tenant, ProjectId: project, Scopes: []string{"authz:admin", "authz:policy:write", "authz:policy:approve", "policy:read"}}
+	}
+	mkDraft := func(title string) string {
+		d, err := authz.CreatePolicyDraft(base, &authzpb.CreatePolicyDraftRequest{
+			Actor: gActor(), TenantId: tenant, ProjectId: project, PolicySetName: "default",
+			Title: title + suffix, ChangeReason: "seed", Document: &authzpb.PolicyDocument{},
+		})
+		if err != nil {
+			return ""
+		}
+		return d.GetDraft().GetDraftId()
+	}
+	fix.set("update_draft_id", mkDraft("sdk-perf-update-")) // left OPEN
+	if id := mkDraft("sdk-perf-approve-"); id != "" {
+		if _, err := authz.SubmitPolicyDraft(base, &authzpb.SubmitPolicyDraftRequest{Actor: gActor(), DraftId: id}); err == nil {
+			fix.set("approve_draft_id", id) // now IN_REVIEW
+		}
+	}
+	if id := mkDraft("sdk-perf-reject-"); id != "" {
+		if _, err := authz.SubmitPolicyDraft(base, &authzpb.SubmitPolicyDraftRequest{Actor: gActor(), DraftId: id}); err == nil {
+			fix.set("reject_draft_id", id) // now IN_REVIEW
+		}
+	}
+	// Policy VERSIONS + CANARY: approving a draft promotes a PolicyVersion (APPROVED).
+	// mkVersion(set) → CreateDraft→Submit→Approve→the promoted version. ActivatePolicyVersion/
+	// ActivateCanary need a version in Approved/Superseded/RolledBack; GetCanaryStatus/
+	// PromoteCanary need a real canary_id; RollbackPolicyVersion needs a set with a prior version.
+	mkVersion := func(setName, title string) *authzentpb.PolicyVersion {
+		d, err := authz.CreatePolicyDraft(base, &authzpb.CreatePolicyDraftRequest{
+			Actor: gActor(), TenantId: tenant, ProjectId: project, PolicySetName: setName,
+			Title: title + suffix, ChangeReason: "seed", Document: &authzpb.PolicyDocument{},
+		})
+		if err != nil {
+			return nil
+		}
+		did := d.GetDraft().GetDraftId()
+		if _, err := authz.SubmitPolicyDraft(base, &authzpb.SubmitPolicyDraftRequest{Actor: gActor(), DraftId: did}); err != nil {
+			return nil
+		}
+		ap, err := authz.ApprovePolicyDraft(base, &authzpb.ApprovePolicyDraftRequest{Actor: gActor(), DraftId: did, Reviewer: fix.m["user_id"], Reason: "seed approve"})
+		if err != nil {
+			t.Logf("perf seed: ApprovePolicyDraft(version) failed: %v", err)
+			return nil
+		}
+		return ap.GetVersion()
+	}
+	if v := mkVersion("sdk-perf-activate-set-"+suffix, "activate-"); v != nil {
+		fix.set("policy_version_id", v.GetPolicyVersionId()) // measured ActivatePolicyVersion
+	}
+	if v := mkVersion("sdk-perf-canary-set-"+suffix, "canary-"); v != nil {
+		fix.set("canary_version_id", v.GetPolicyVersionId()) // measured ActivateCanary
+		// Seed a canary with a 1s success window → promote-eligible ~1s after activation
+		// (promote_eligible: now-started >= success_window_secs; canary.rs:248). NOTE: passing
+		// 0 makes ActivateCanary substitute DEFAULT_CANARY_WINDOW_SECS (governance_activate.rs:631),
+		// which never elapses during the run; the measured PromoteCanary runs well after 1s.
+		if c, err := authz.ActivateCanary(base, &authzpb.ActivateCanaryRequest{
+			Actor: gActor(), PolicyVersionId: v.GetPolicyVersionId(),
+			ScopeKind: authzentpb.CanaryScopeKind_CANARY_SCOPE_KIND_PERCENT, ScopeValues: []string{"10"},
+			SuccessWindowSecs: 1, MetricThreshold: 0.99, MinSamples: 0,
+		}); err == nil {
+			fix.set("canary_id", c.GetCanary().GetCanaryId())
+		} else {
+			t.Logf("perf seed: ActivateCanary failed: %v", err)
+		}
+	}
+	// Rollback set: activate TWO versions in one set so RollbackPolicyVersion has a prior target.
+	if v1 := mkVersion("sdk-perf-rollback-set-"+suffix, "rb1-"); v1 != nil {
+		_, _ = authz.ActivatePolicyVersion(base, &authzpb.ActivatePolicyVersionRequest{Actor: gActor(), PolicyVersionId: v1.GetPolicyVersionId()})
+		if v2 := mkVersion("sdk-perf-rollback-set-"+suffix, "rb2-"); v2 != nil {
+			_, _ = authz.ActivatePolicyVersion(base, &authzpb.ActivatePolicyVersionRequest{Actor: gActor(), PolicyVersionId: v2.GetPolicyVersionId()})
+			fix.set("rollback_policy_set_id", v2.GetPolicySetId())
+			fix.set("rollback_target_version_id", v1.GetPolicyVersionId())
+		}
 	}
 
 	// ── IdentityProviderService: a real OIDC provider → provider_id ───────────────
@@ -254,13 +599,79 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 		TenantId: tenant, Kind: idpentpb.IdpKind_IDP_KIND_OIDC, DisplayName: "SDK Perf OIDC " + suffix,
 		Issuer: "https://idp.example.com/" + suffix, JwksUrl: "https://idp.example.com/jwks",
 		ClientIds: []string{"perf-client"}, Audiences: []string{"udb"},
-		ClaimMappingJson: "{}", GroupMappingJson: "{}", JitPolicyJson: "{}", AccountLinkingPolicy: "explicit",
+		// A non-empty group→role mapping so ScimGetGroup (which resolves scim_group_id
+		// against the provider's group_mapping_json KEYS — groups are not persisted,
+		// mod.rs:1401) finds a group. scim_group_id below = this key.
+		// require_verified_email:false — the SamlAcs dev self-asserted assertion carries an
+		// `email` attribute (= NameID) but no `email_verified`, and JIT defaults
+		// require_verified_email=true (mapping.rs:252), which rejects "email is not verified".
+		ClaimMappingJson: "{}", GroupMappingJson: `{"sdk-perf-group":"admin"}`, JitPolicyJson: `{"require_verified_email":false}`, AccountLinkingPolicy: "explicit",
 		Enabled: true, CreatedBy: fix.m["user_id"],
 		Context: &commonpb.RequestContext{Tenant: &commonpb.TenantContext{TenantId: tenant, ProjectId: project}},
 	}); err != nil {
 		t.Logf("perf seed: CreateProvider failed (idp RPCs will fall back): %v", err)
 	} else {
-		fix.set("provider_id", prov.GetProvider().GetProviderId())
+		pid := prov.GetProvider().GetProviderId()
+		fix.set("provider_id", pid)
+		fix.set("scim_group_id", "sdk-perf-group") // a key in GroupMappingJson above
+		// A SEPARATE disposable provider for the destructive DisableProvider, so disabling it
+		// does NOT disable the primary provider_id that SamlAcs + ResolveExternalIdentity read
+		// (both reject a disabled provider before their dev-mode path runs).
+		if dprov, err := idp.CreateProvider(base, &idppb.CreateProviderRequest{
+			TenantId: tenant, Kind: idpentpb.IdpKind_IDP_KIND_OIDC, DisplayName: "SDK Perf OIDC Disposable " + suffix,
+			Issuer: "https://idp-disposable.example.com/" + suffix, JwksUrl: "https://idp-disposable.example.com/jwks",
+			ClientIds: []string{"perf-client-disp"}, Audiences: []string{"udb"},
+			ClaimMappingJson: "{}", GroupMappingJson: "{}", JitPolicyJson: "{}", AccountLinkingPolicy: "explicit",
+			Enabled: true, CreatedBy: fix.m["user_id"],
+			Context: &commonpb.RequestContext{Tenant: &commonpb.TenantContext{TenantId: tenant, ProjectId: project}},
+		}); err == nil {
+			fix.set("disable_provider_id", dprov.GetProvider().GetProviderId())
+		}
+		// SCIM users JIT-provisioned via the seeded provider. NOTE: scim_user_id is set
+		// to the SUBJECT (userName), NOT the external_identity_id that ScimCreateUser
+		// returns — find_scim_identity only resolves by subject (broker bug SCIM-1 in
+		// bug_report.md §G). Each user gets a UNIQUE email: an empty email collides on
+		// the unique idx_users_email (empty string != NULL — broker bug SCIM-2). A
+		// SEPARATE disposable user backs the destructive ScimDeleteUser.
+		scimCtx := &commonpb.RequestContext{Tenant: &commonpb.TenantContext{TenantId: tenant, ProjectId: project}}
+		scimUser := "scim-perf-user-" + suffix
+		scimDel := "scim-perf-del-" + suffix
+		if su, err := idp.ScimCreateUser(base, &idppb.ScimCreateUserRequest{
+			TenantId: tenant, ProviderId: pid, Context: scimCtx,
+			ScimUserJson: `{"userName":"` + scimUser + `","emails":[{"value":"` + scimUser + `@example.com","primary":true}],"active":true}`,
+		}); err == nil {
+			fix.set("scim_user_id", scimUser)
+			// The returned SCIM user id IS the external_identity_id (UUID) → UnlinkIdentity.
+			fix.set("external_identity_id", su.GetUser().GetId())
+		} else {
+			t.Logf("perf seed: ScimCreateUser failed: %v", err)
+		}
+		// A real enabled SAML provider so StartSamlLogin resolves an active provider
+		// (ensure_provider_active, idp/mod.rs:321). OIDC above is used for SCIM; SAML
+		// login needs a SAML-kind provider.
+		if sp, err := idp.CreateProvider(base, &idppb.CreateProviderRequest{
+			TenantId: tenant, Kind: idpentpb.IdpKind_IDP_KIND_SAML, DisplayName: "SDK Perf SAML " + suffix,
+			Issuer: "https://saml.example.com/" + suffix, JwksUrl: "https://saml.example.com/jwks",
+			ClientIds: []string{"perf-saml"}, Audiences: []string{"udb"},
+			ClaimMappingJson: "{}", GroupMappingJson: "{}", JitPolicyJson: "{}", AccountLinkingPolicy: "explicit",
+			Enabled: true, CreatedBy: fix.m["user_id"],
+			Context: &commonpb.RequestContext{Tenant: &commonpb.TenantContext{TenantId: tenant, ProjectId: project}},
+		}); err == nil {
+			spid := sp.GetProvider().GetProviderId()
+			fix.set("saml_provider_id", spid)
+			// Import metadata so the SAML provider gets an SSO URL (StartSamlLogin needs it:
+			// "provider has no SAML SSO URL; import metadata first").
+			_, _ = idp.ImportSamlMetadata(base, &idppb.ImportSamlMetadataRequest{
+				ProviderId: spid, TenantId: tenant, MetadataXml: samlIdpMetadataXML, UpdatedBy: fix.m["user_id"],
+				Context: &commonpb.RequestContext{Tenant: &commonpb.TenantContext{TenantId: tenant, ProjectId: project}},
+			})
+		}
+		if _, err := idp.ScimCreateUser(base, &idppb.ScimCreateUserRequest{
+			TenantId: tenant, ProviderId: pid, Context: scimCtx,
+			ScimUserJson: `{"userName":"` + scimDel + `","emails":[{"value":"` + scimDel + `@example.com","primary":true}],"active":true}`,
+		}); err == nil {
+			fix.set("delete_scim_user_id", scimDel)
+		}
 	}
 
 	// ── ApiKeyService: a real key → key_id + plain_key ────────────────────────────
@@ -274,6 +685,20 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 		fix.set("key_id", key.GetKey().GetKeyId())
 		fix.set("plain_key", key.GetPlainKey())
 		fix.set("owner_id", "sdk-perf-svc-"+suffix)
+	}
+	// A SEPARATE disposable key for the destructive RevokeApiKey, so revoking it does
+	// not invalidate the primary key_id that RotateApiKey/UpdateApiKey/GetApiKey read.
+	if rk, err := apikey.CreateApiKey(base, &apikeypb.CreateApiKeyRequest{
+		Name: "sdk-perf-revoke-" + suffix, OwnerId: "sdk-perf-svc-" + suffix, Scopes: []string{"data:read"}, Context: keyCtx,
+	}); err == nil {
+		fix.set("revoke_key_id", rk.GetKey().GetKeyId())
+	}
+	// A SEPARATE disposable key for UpdateApiKey, so the measured RotateApiKey (which
+	// rotates the primary key_id) can't invalidate the key UpdateApiKey targets.
+	if uk, err := apikey.CreateApiKey(base, &apikeypb.CreateApiKeyRequest{
+		Name: "sdk-perf-update-" + suffix, OwnerId: "sdk-perf-svc-" + suffix, Scopes: []string{"data:read"}, Context: keyCtx,
+	}); err == nil {
+		fix.set("update_key_id", uk.GetKey().GetKeyId())
 	}
 
 	// ── AnalyticsService: a recorded metric → a stage_name with data ──────────────
@@ -296,9 +721,24 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 			EventType: event, RecipientId: rid, RecipientAddress: "sdk+" + suffix + "@example.com",
 			TenantId: tenant, Channels: []notifentpb.NotificationChannel{notifentpb.NotificationChannel_NOTIFICATION_CHANNEL_EMAIL},
 		}); err == nil && len(sent.GetLogs()) > 0 {
-			fix.set("log_id", sent.GetLogs()[0].GetLogId())
-			fix.set("notification_id", sent.GetLogs()[0].GetLogId())
+			logID := sent.GetLogs()[0].GetLogId()
+			fix.set("log_id", logID)
+			fix.set("notification_id", logID)
+			// RetryNotification is correctly status-gated to FAILED/SUPPRESSED rows
+			// (notification_service/mod.rs retry_notification). Mirror the Rust live
+			// test by marking this real sent log FAILED through the broker's Postgres
+			// dispatch path; do not depend on a fixed out-of-band row that may be
+			// absent or already consumed by a prior run.
+			if err := markPerfNotificationRetryable(brokerCtx, broker, rc, logID, tenant); err != nil {
+				t.Logf("perf seed: mark notification retryable failed: %v", err)
+			}
 		}
+		// Seed an EMAIL-channel preference for the user so GetPreference (which the
+		// perf spec calls with user_id + tenant_id + EMAIL) finds a real row.
+		_, _ = notif.SetPreference(base, &notifpb.SetPreferenceRequest{
+			UserId: rid, TenantId: tenant,
+			Channel: notifentpb.NotificationChannel_NOTIFICATION_CHANNEL_EMAIL, IsOptedOut: false,
+		})
 	}
 
 	// ── StorageService (UUID tenant): a registered file → file_id ─────────────────
@@ -315,6 +755,51 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 		addCleanup(func() {
 			_, _ = storage.DeleteFile(nativeCtxFn(), &storagepb.DeleteFileRequest{TenantId: uuidTenant, FileId: fid})
 		})
+		// FinalizeUpload verifies the bytes at the exact native storage target
+		// minted by RegisterUpload. Upload through that presigned URL first; broker
+		// PutObject is manifest-gated and may reject the storage service's private
+		// bucket, so it is only a fallback when presign is unavailable.
+		storageBucket := liveEnv("UDB_STORAGE_BUCKET", "udb-storage")
+		if _, err := broker.EnsureResource(brokerCtx, &entityv1.ResourceAdminRequest{Context: rc, Backend: "minio", ResourceName: storageBucket, SpecJson: `{}`}); err != nil {
+			t.Logf("perf seed: EnsureResource for storage bucket %q failed: %v", storageBucket, err)
+		}
+		payload := []byte("sdk-perf-file-" + suffix)
+		uploaded := false
+		if reg.GetUploadUrl() != "" {
+			putCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+			err := putPresignedStorageObject(putCtx, reg.GetUploadUrl(), payload, "text/plain")
+			cancel()
+			if err != nil {
+				t.Logf("perf seed: presigned storage PUT failed: %v", err)
+			} else {
+				uploaded = true
+			}
+		}
+		if !uploaded {
+			if put, err := broker.PutObject(brokerCtx); err == nil {
+				if err := put.Send(&entityv1.Chunk{Context: rc, Bucket: storageBucket, ObjectKey: reg.GetObjectKey(), Data: payload, ContentType: "text/plain", FinalChunk: true}); err != nil {
+					t.Logf("perf seed: fallback storage PutObject send failed: %v", err)
+				}
+				if _, err := put.CloseAndRecv(); err != nil {
+					t.Logf("perf seed: fallback storage PutObject close failed: %v", err)
+				}
+			} else {
+				t.Logf("perf seed: fallback storage PutObject open failed: %v", err)
+			}
+		}
+		if _, err := storage.FinalizeUpload(nctx, &storagepb.FinalizeUploadRequest{
+			TenantId: uuidTenant, FileId: fid, ContentType: "text/plain", FileType: "DOCUMENT", SizeBytes: 17,
+		}); err != nil {
+			t.Logf("perf seed: FinalizeUpload seed failed for file_id=%s object_key=%s bucket=%s uploaded=%v: %v", fid, reg.GetObjectKey(), storageBucket, uploaded, err)
+		}
+		// A SEPARATE disposable file for the destructive DeleteFile, so deleting it
+		// does not invalidate the primary file_id read by Get/Update/Finalize.
+		if dreg, err := storage.RegisterUpload(nctx, &storagepb.RegisterUploadRequest{
+			TenantId: uuidTenant, ProjectId: "", Filename: "perf-del-" + suffix + ".txt", ContentType: "text/plain",
+			FileType: "DOCUMENT", ReferenceId: uuid4(), ReferenceType: "sdk.perf", SizeBytes: 64, ExpiresInMinutes: 30,
+		}); err == nil {
+			fix.set("delete_file_id", dreg.GetFileId())
+		}
 
 		// ── AssetService: pipeline definition + asset + a started instance ────────
 		asset := assetpb.NewAssetServiceClient(authConn)
@@ -367,14 +852,123 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 			}); err == nil {
 				fix.set("track_id", pub.GetTrackId())
 			}
+			// A SECOND disposable track on the same peer for the destructive
+			// UnpublishTrack, so it doesn't end the track MuteTrack/ListTracks read.
+			if pub2, err := tracks.PublishTrack(nativeCtxFn(), &webrtcpb.PublishTrackRequest{
+				TenantId: uuidTenant, RoomId: roomID, PeerId: pid, Kind: "video", Label: "cam", Settings: `{}`, Metadata: `{}`,
+			}); err == nil {
+				fix.set("unpublish_track_id", pub2.GetTrackId())
+			}
+		}
+		// A SEPARATE disposable peer for the destructive LeaveRoom, so leaving it does
+		// NOT remove the primary peer that PublishTrack/MuteTrack/Signal/IssueCredentials
+		// require to be an ACTIVE member (these run in arbitrary mutation order, so a
+		// shared peer would be gone before they measure).
+		if lj, err := peers.JoinRoom(nativeCtxFn(), &webrtcpb.JoinRoomRequest{
+			TenantId: uuidTenant, RoomId: roomID, DisplayName: "sdk-perf-leave-peer", Metadata: `{}`, UserAgent: "sdk-perf",
+		}); err == nil {
+			fix.set("leave_peer_id", lj.GetPeer().GetPeerId())
+		}
+		// A SEPARATE disposable peer for the measured Signal stream. The harness opens
+		// then CLOSES the bidi Signal stream; the broker's stream-death cleanup
+		// (disconnect_peer_sql) transitions the streamed peer CONNECTED→DISCONNECTED.
+		// Pointing Signal at the MAIN peer would disconnect it before PublishTrack/
+		// IssueCredentials (arbitrary order) → "peer is not an active member".
+		if sj, err := peers.JoinRoom(nativeCtxFn(), &webrtcpb.JoinRoomRequest{
+			TenantId: uuidTenant, RoomId: roomID, DisplayName: "sdk-perf-signal-peer", Metadata: `{}`, UserAgent: "sdk-perf",
+		}); err == nil {
+			fix.set("signal_peer_id", sj.GetPeer().GetPeerId())
+		}
+		// A SEPARATE disposable room for the destructive CloseRoom — closing the MAIN room
+		// CLOSES all its peers, breaking PublishTrack/MuteTrack/Signal/IssueCredentials
+		// (which run in arbitrary order vs CloseRoom and are all keyed to the main room/peer).
+		if cr, err := rooms.CreateRoom(nativeCtxFn(), &webrtcpb.CreateRoomRequest{
+			TenantId: uuidTenant, Name: "sdk-perf-close-room-" + suffix, MaxParticipants: 8, Config: `{}`, CreatedBy: uuid4(),
+		}); err == nil {
+			fix.set("close_room_id", cr.GetRoomId())
 		}
 	}
 
-	// ── DataBroker: a dry-run migration plan → run_id (migration lifecycle RPCs) ──
+	// ── DataBroker migration lifecycle ──
+	// migration_id: a dry-run run for GetMigrationStatus/ListMigrationRuns.
 	if plan, err := broker.PlanMigration(brokerCtx, &entityv1.MigrationPlanRequest{
 		Context: liveRequestContext(tenant, project, "go.live.perf.seed"), ProjectId: project, DryRun: true,
 	}); err == nil {
 		fix.set("migration_id", plan.GetRunId())
+	}
+	// approve_run_id: a NON-dry run left in PREFLIGHT for the measured ApproveMigrationPlan.
+	if p1, err := broker.PlanMigration(brokerCtx, &entityv1.MigrationPlanRequest{
+		Context: liveRequestContext(tenant, project, "go.live.perf.seed.approve"), ProjectId: project, DryRun: false,
+	}); err == nil {
+		fix.set("approve_run_id", p1.GetRunId())
+	} else {
+		t.Logf("perf seed: PlanMigration(approve) failed: %v", err)
+	}
+	// apply_run_id + approval_token: a SECOND non-dry run, pre-approved in the seed so the
+	// measured ApplyMigration has a valid token (returned in the x-udb-approval-token header).
+	if p2, err := broker.PlanMigration(brokerCtx, &entityv1.MigrationPlanRequest{
+		Context: liveRequestContext(tenant, project, "go.live.perf.seed.apply"), ProjectId: project, DryRun: false,
+	}); err == nil {
+		var md metadata.MD
+		if _, err := broker.ApproveMigrationPlan(brokerCtx, &entityv1.MigrationRunRequest{
+			Context: liveRequestContext(tenant, project, "go.live.perf.seed.apply"), RunId: p2.GetRunId(), ProjectId: project,
+		}, grpc.Header(&md)); err == nil {
+			fix.set("apply_run_id", p2.GetRunId())
+			if tok := md.Get("x-udb-approval-token"); len(tok) > 0 {
+				fix.set("approval_token", tok[0])
+			}
+		} else {
+			t.Logf("perf seed: ApproveMigrationPlan(apply) failed: %v", err)
+		}
+	}
+
+	// ── DataBroker catalog: capture the live manifest ONLY (for the measured StageCatalog
+	// body, which needs a valid CatalogManifest with checksum_sha256). Do NOT Stage+Activate
+	// a catalog here: activating the live manifest relabels the active catalog version to
+	// "generator-3" (the manifest carries no client-style "version"; catalog_payload_version
+	// derives it from generator_version, and the in-memory stage path keeps that label), which
+	// the client's pinned "1.0.0" then fails as incompatible — breaking ~80 DataBroker RPCs.
+	// This is a broker round-trip limitation (bug_report.md K2), not a harness gap:
+	// GetCatalogManifest → StageCatalog → ActivateCatalog cannot preserve the "1.0.0" contract.
+	if cm, err := broker.GetCatalogManifest(brokerCtx, &entityv1.CatalogManifestRequest{Context: rc, Redact: false}); err == nil && len(cm.GetManifestJson()) > 0 {
+		fix.set("catalog_manifest", string(cm.GetManifestJson()))
+	}
+
+	// ── DataBroker method-security policy → policy_id (int64) for the destructive DeletePolicy.
+	_, _ = broker.PutPolicy(brokerCtx, &entityv1.PutPolicyRequest{Context: rc, Policy: &entityv1.PolicyRecord{
+		Effect: "allow", TenantId: tenant, Priority: 1, Enabled: true,
+	}})
+	if pl, err := broker.ListPolicies(brokerCtx, &entityv1.PolicyListRequest{Context: rc, IncludeDisabled: true, Limit: 50}); err == nil && len(pl.GetPolicies()) > 0 {
+		fix.set("ds_policy_id", strconv.FormatInt(pl.GetPolicies()[0].GetPolicyId(), 10))
+	}
+
+	// ── Saga + DLQ rows (system-store internal state, pre-seeded out-of-band into
+	// udb_system.udb_sagas / udb_cdc_dlq_events for this DB + tenant — see
+	// bug_report.md §F Lane 3). Each mutating RPC gets its OWN disposable row (the
+	// op transitions the row's status, so sharing one would make the 2nd call fail),
+	// mirroring the disposable-role/key pattern above. Fixed UUIDs (env-overridable);
+	// the seed rows carry status manual_review (saga, retryable) / OPEN (dlq).
+	fix.set("saga_id", liveEnv("UDB_PERF_SAGA_ID", "11111111-1111-4111-8111-111111111101"))
+	fix.set("retry_saga_id", liveEnv("UDB_PERF_SAGA_RETRY", "11111111-1111-4111-8111-111111111102"))
+	fix.set("mark_saga_id", liveEnv("UDB_PERF_SAGA_MARK", "11111111-1111-4111-8111-111111111103"))
+	fix.set("dlq_id", liveEnv("UDB_PERF_DLQ_ID", "22222222-2222-4222-8222-222222222201"))
+	fix.set("dismiss_dlq_id", liveEnv("UDB_PERF_DLQ_DISMISS", "22222222-2222-4222-8222-222222222202"))
+	fix.set("quarantine_dlq_id", liveEnv("UDB_PERF_DLQ_QUARANTINE", "22222222-2222-4222-8222-222222222203"))
+	fix.set("replay_dlq_id", liveEnv("UDB_PERF_DLQ_REPLAY", "22222222-2222-4222-8222-222222222204"))
+	// ── ControlPlaneService: open a StreamResources session under node_id so a node ──
+	// state row exists for (node_id, BACKEND_TARGET_DEFINITION). AckStatus reads that
+	// row and 404s without it; only Stream/DeltaResources call ensure_node_state, and
+	// in the measured run AckStatus sorts BEFORE StreamResources, so register it here.
+	nodeID := "sdk-perf-node-" + suffix
+	fix.set("node_id", nodeID)
+	cpCtx := &commonpb.RequestContext{Tenant: &commonpb.TenantContext{TenantId: tenant, ProjectId: project}, Purpose: "go.live.perf.seed"}
+	if cs, err := controlpb.NewControlPlaneServiceClient(authConn).StreamResources(base); err == nil {
+		_ = cs.Send(&controlpb.DiscoveryRequest{
+			NodeId: nodeID, ResourceType: controlentpb.ResourceType_RESOURCE_TYPE_BACKEND_TARGET_DEFINITION, Context: cpCtx,
+		})
+		// First server response confirms the node-state row was created; then close.
+		_, _ = cs.Recv()
+		_ = cs.CloseSend()
 	}
 
 	// Convenience scalars consumed by reflective populate for non-ID constrained
@@ -386,10 +980,8 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 	fix.set("file_type", "DOCUMENT")
 	fix.set("kind", "audio")
 	fix.set("topic_pattern", perfCdcTopicPattern(tenant))
-	// node_id is a CLIENT-chosen PEP identifier (not a server entity): the perf
-	// StreamResources/DeltaResources open a session under it, and AckStatus references
-	// it — so a stable literal is the correct seed.
-	fix.set("node_id", "sdk-perf-node-"+suffix)
+	// node_id is seeded above (a StreamResources session is opened under it so AckStatus
+	// finds a node-state row).
 
 	return perfSeedResult{
 		fix:      fix,

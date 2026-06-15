@@ -522,7 +522,9 @@ impl DataBrokerService {
         let active = self.catalog.active_for(&project_id);
         let plan = crate::runtime::projection::ProjectionPlan::from_manifest(&active.manifest)
             .into_iter()
-            .find(|plan| plan.message_type == message_type)
+            .find(|plan| {
+                crate::runtime::projection::message_type_matches(&plan.message_type, &message_type)
+            })
             .ok_or_else(|| {
                 Status::invalid_argument(format!(
                     "message_type '{}' has no projection plan in project '{}'",

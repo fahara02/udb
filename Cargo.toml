@@ -119,6 +119,7 @@ oidc = ["dep:openidconnect", "openidconnect/reqwest-blocking", "openidconnect/ru
 webauthn = [
     "dep:webauthn-rs",
     "dep:openssl-sys",
+    "dep:p256",
     "webauthn-rs/danger-allow-state-serialisation",
 ]
 # Embedded WebRTC SFU media-plane scaffolding. Off by default: Layer A
@@ -262,6 +263,10 @@ webauthn-rs = { version = "0.5", optional = true }
 # portable on Windows/MSVC, matching the repo's general "no system OpenSSL"
 # stance for optional integrations.
 openssl-sys = { version = "0.9", features = ["vendored"], optional = true }
+# Q#9-11 dev-only WebAuthn software authenticator (UDB_WEBAUTHN_TEST_MODE): a real
+# P-256 keypair produces a genuine "none"-attestation credential + ES256 assertion
+# that webauthn-rs verifies legitimately (NOT an accept-any bypass). Gated by `webauthn`.
+p256 = { version = "0.13", features = ["ecdsa"], optional = true }
 # SIMD base64 codec. Gated by `simd-codecs`.
 # TODO(parent): verify version — 0.8 is the latest on crates.io.
 base64-simd = { version = "0.8", optional = true }

@@ -203,9 +203,10 @@ impl CanonicalStore for PostgresCanonicalStore {
         // Mirrors the guard in `ensure_advisory_lease_table`; `safe_relation`
         // has already validated the characters, so the formatted name is safe.
         if let Some((schema, _table)) = rel.split_once('.') {
-            let _ = sqlx::query(&format!("CREATE SCHEMA IF NOT EXISTS {schema}"))
+            sqlx::query(&format!("CREATE SCHEMA IF NOT EXISTS {schema}"))
                 .execute(&self.pool)
-                .await;
+                .await
+                .map_err(|e| format!("ensure_system_tables (postgres schema) failed: {e}"))?;
         }
         // B.7: outbox DDL comes from the shared `sql_schema` renderer (single
         // source of truth across SQL backends); execute/error-handling below

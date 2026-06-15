@@ -41,17 +41,11 @@ use crate::proto::udb::core::apikey::services::v1 as apikey_pb;
 use crate::proto::udb::core::common::v1 as common_pb;
 use apikey_pb::api_key_service_server::ApiKeyService;
 
-use crate::ir::{ConflictStrategy, LogicalRecord, LogicalValue};
-use crate::runtime::DataBrokerRuntime;
 use crate::runtime::authn::{self, ApiKeyRecord, ApiKeyStore, AuthnConfig, UnavailableApiKeyStore};
-use crate::runtime::service::native_helpers::native_service_context;
 
 use super::events::{self, AuthEvent, AuthEventSink, ComplianceEnvelope, topics};
 use super::mappings::{bounded_page_response, bounded_page_window, timestamp_from_unix};
 use super::now_unix;
-
-/// Native ApiKey entity (descriptor-routed `udb_authn.api_keys`).
-const API_KEY_MSG: &str = "udb.core.apikey.entity.v1.ApiKey";
 
 #[derive(Clone)]
 pub struct ApiKeyServiceImpl {
@@ -61,12 +55,6 @@ pub struct ApiKeyServiceImpl {
     /// Direct pool for read-only usage aggregation over `api_key_usages`
     /// (the trait-based store does not expose analytic queries).
     pg_pool: Option<sqlx::PgPool>,
-    /// Runtime handle for the typed native-entity write path. When wired (the
-    /// production build site), `CreateApiKey` persists through
-    /// `native_entity_write_for_service` with `conflict_on: ["key_hash"]`
-    /// (extend_udb.md P4.J) instead of the bespoke `ApiKeyStore::put` SQL;
-    /// `None` (test/loopback construction) falls back to the trait `put`.
-    runtime: Option<Arc<DataBrokerRuntime>>,
 }
 
 impl ApiKeyServiceImpl {
@@ -76,7 +64,6 @@ impl ApiKeyServiceImpl {
             config,
             event_sink: events::noop_sink(),
             pg_pool: None,
-            runtime: None,
         }
     }
 
@@ -86,7 +73,6 @@ impl ApiKeyServiceImpl {
             config,
             event_sink: events::noop_sink(),
             pg_pool: None,
-            runtime: None,
         }
     }
 
@@ -94,135 +80,6 @@ impl ApiKeyServiceImpl {
     pub(crate) fn with_postgres(mut self, pool: Option<sqlx::PgPool>) -> Self {
         self.pg_pool = pool;
         self
-    }
-
-    /// Wire the runtime so `CreateApiKey` persists via the typed native-entity
-    /// write path (`conflict_on: ["key_hash"]`, extend_udb.md P4.J). Absent ⇒
-    /// `CreateApiKey` falls back to the `ApiKeyStore::put` trait SQL.
-    pub(crate) fn with_runtime(mut self, runtime: Option<Arc<DataBrokerRuntime>>) -> Self {
-        self.runtime = runtime;
-        self
-    }
-
-    /// Persist an api key through the typed native-entity write path with
-    /// `conflict_on: ["key_hash"]` (extend_udb.md P4.J) — the alternate-unique
-    /// upsert the trait's bespoke `put_sql` performs in raw SQL. The record +
-    /// the `DO UPDATE` field subset mirror that SQL exactly (`name` = key_prefix,
-    /// `owner_type` = SERVICE_ACCOUNT, JSONB cols via `LogicalValue::Json`, the
-    /// TIMESTAMPTZ cols via `LogicalValue::Timestamp`/`Null`). `api_keys` is
-    /// `enable_rls: false`, so there is no per-tenant RLS to satisfy.
-    async fn persist_api_key_typed(
-        &self,
-        runtime: &DataBrokerRuntime,
-        context: &crate::RequestContext,
-        rec: &ApiKeyRecord,
-    ) -> Result<(), Status> {
-        // Match `PostgresApiKeyStore::put`: status is REVOKED only when a revoke
-        // timestamp is set (expiry is computed at read time, not stored).
-        let revoked = rec.revoked_at_unix > 0;
-        let scopes_json = serde_json::Value::Array(
-            rec.scopes
-                .iter()
-                .map(|s| serde_json::Value::String(s.clone()))
-                .collect(),
-        );
-        let metadata_json = serde_json::json!({ "service_identity": rec.service_identity });
-
-        let mut record = LogicalRecord::new();
-        record.insert(
-            "key_prefix".to_string(),
-            LogicalValue::String(rec.key_prefix.clone()),
-        );
-        record.insert(
-            "key_hash".to_string(),
-            LogicalValue::String(rec.key_hash.clone()),
-        );
-        // `put_sql` sets name = $1 (the key_prefix) and description = ''.
-        record.insert(
-            "name".to_string(),
-            LogicalValue::String(rec.key_prefix.clone()),
-        );
-        record.insert(
-            "description".to_string(),
-            LogicalValue::String(String::new()),
-        );
-        record.insert(
-            "owner_type".to_string(),
-            LogicalValue::String("SERVICE_ACCOUNT".to_string()),
-        );
-        record.insert(
-            "owner_id".to_string(),
-            LogicalValue::String(rec.principal_id.clone()),
-        );
-        record.insert("scopes_json".to_string(), LogicalValue::Json(scopes_json));
-        record.insert(
-            "status".to_string(),
-            LogicalValue::String(if revoked { "REVOKED" } else { "ACTIVE" }.to_string()),
-        );
-        record.insert(
-            "created_by".to_string(),
-            LogicalValue::String(rec.principal_id.clone()),
-        );
-        record.insert(
-            "tenant_id".to_string(),
-            LogicalValue::String(rec.tenant_id.clone()),
-        );
-        record.insert(
-            "project_id".to_string(),
-            LogicalValue::String(rec.project_id.clone()),
-        );
-        record.insert(
-            "metadata_json".to_string(),
-            LogicalValue::Json(metadata_json),
-        );
-        record.insert(
-            "deleted_by".to_string(),
-            LogicalValue::String(if revoked {
-                rec.principal_id.clone()
-            } else {
-                String::new()
-            }),
-        );
-        // Nullable TIMESTAMPTZ columns are OMITTED when unset (they default to
-        // SQL NULL). A bound SQL NULL types as `text`, which Postgres refuses to
-        // coerce into a `timestamptz` column; omission avoids that. When set they
-        // bind as a real `timestamptz` via the `LogicalValue::Timestamp` path. On
-        // a re-PUT conflict, `EXCLUDED.<col>` yields the defaulted-NULL-or-new
-        // value, matching `put_sql`'s ON CONFLICT behaviour.
-        for (column, unix) in [
-            ("last_used_at", rec.last_used_at_unix),
-            ("expires_at", rec.expires_at_unix),
-            ("deleted_at", rec.revoked_at_unix),
-        ] {
-            if let Some(dt) = unix_to_utc(unix) {
-                record.insert(column.to_string(), LogicalValue::Timestamp(dt));
-            }
-        }
-
-        // ON CONFLICT (key_hash) DO UPDATE SET <these> — the exact subset put_sql
-        // re-applies (insert-only cols name/description/owner_type/created_by are
-        // intentionally excluded from the update).
-        let conflict = ConflictStrategy::update_on(
-            vec![
-                "key_prefix".to_string(),
-                "owner_id".to_string(),
-                "scopes_json".to_string(),
-                "status".to_string(),
-                "last_used_at".to_string(),
-                "expires_at".to_string(),
-                "tenant_id".to_string(),
-                "project_id".to_string(),
-                "metadata_json".to_string(),
-                "deleted_at".to_string(),
-                "deleted_by".to_string(),
-            ],
-            vec!["key_hash".to_string()],
-        );
-
-        runtime
-            .native_entity_write_for_service("authn", context, API_KEY_MSG, record, conflict)
-            .await
-            .map(|_| ())
     }
 
     /// Attach the domain-event sink (outbox → Kafka). Defaults to a no-op.
@@ -683,16 +540,6 @@ fn expires_at_unix(ts: Option<prost_types::Timestamp>) -> u64 {
     ts.map(|ts| ts.seconds.max(0) as u64).unwrap_or(0)
 }
 
-/// A Unix-seconds timestamp as `Some(DateTime<Utc>)`, or `None` when unset (`0`)
-/// so the caller can OMIT the nullable TIMESTAMPTZ column (→ SQL NULL) rather
-/// than bind a text-typed NULL Postgres rejects for a `timestamptz` column.
-fn unix_to_utc(unix: u64) -> Option<chrono::DateTime<chrono::Utc>> {
-    if unix == 0 {
-        return None;
-    }
-    chrono::DateTime::from_timestamp(unix as i64, 0)
-}
-
 fn status_for(rec: &ApiKeyRecord, now_unix: u64) -> apikey_entity_pb::ApiKeyStatus {
     if rec.is_revoked() {
         apikey_entity_pb::ApiKeyStatus::Revoked
@@ -749,7 +596,6 @@ impl ApiKeyService for ApiKeyServiceImpl {
         &self,
         request: Request<apikey_pb::CreateApiKeyRequest>,
     ) -> Result<Response<apikey_pb::CreateApiKeyResponse>, Status> {
-        let metadata = request.metadata().clone();
         if self.hash_key().is_empty() {
             return Err(Status::failed_precondition(
                 "API key hashing requires UDB_SESSION_HASH_SECRET",
@@ -795,18 +641,16 @@ impl ApiKeyService for ApiKeyServiceImpl {
             expires_at_unix: expires_at_unix(req.expires_at),
             revoked_at_unix: 0,
         };
-        // P4.J: persist via the typed native-entity alternate-key upsert
-        // (`conflict_on: ["key_hash"]`) when the runtime is wired; otherwise the
-        // bespoke `ApiKeyStore::put` trait SQL (test/loopback construction).
-        if let Some(runtime) = self.runtime.clone() {
-            let context = native_service_context(&metadata, &rec.tenant_id, &rec.project_id);
-            self.persist_api_key_typed(&runtime, &context, &rec).await?;
-        } else {
-            self.api_keys
-                .put(rec.clone())
-                .await
-                .map_err(Status::internal)?;
-        }
+        // Q#16: persist through the SAME store the reads use (`self.api_keys` →
+        // `self.pool`), exactly like update/revoke/rotate. Previously CreateApiKey
+        // alone diverged to the runtime's native-entity write (a different instance
+        // pool), so a freshly created key could be invisible to `get_by_prefix`
+        // (split-brain create-vs-read). `api_keys` is `enable_rls: false`, so the
+        // store's typed `put` is sufficient; the domain event is emitted below.
+        self.api_keys
+            .put(rec.clone())
+            .await
+            .map_err(Status::internal)?;
         self.emit_event(AuthEvent::new(
             topics::API_KEY_CREATED,
             rec.key_prefix.clone(),
@@ -844,7 +688,7 @@ impl ApiKeyService for ApiKeyServiceImpl {
                 self.enforce_caller_tenant(caller_context.as_ref(), &rec.tenant_id)?;
                 Some(api_key_to_pb(&rec, now))
             }
-            None => None,
+            None => return Err(Status::not_found("api key not found")),
         };
         Ok(Response::new(apikey_pb::GetApiKeyResponse { key }))
     }
@@ -1795,6 +1639,20 @@ mod tests {
         .expect("resolved API key");
         assert_eq!(got.key_id, "key-acme");
         assert_eq!(got.tenant_id, "acme");
+    }
+
+    #[tokio::test]
+    async fn get_api_key_miss_returns_not_found() {
+        let svc = svc_with_records(Vec::new());
+
+        let err = svc
+            .get_api_key(Request::new(apikey_pb::GetApiKeyRequest {
+                key_id: "missing-key".to_string(),
+            }))
+            .await
+            .expect_err("missing API key must not be masked as OK+null");
+
+        assert_eq!(err.code(), Code::NotFound);
     }
 
     #[tokio::test]

@@ -19,6 +19,30 @@ fn install_test_security() {
 }
 
 #[test]
+fn catalog_payload_version_preserves_active_version_for_roundtrip_manifest() {
+    let manifest = CatalogManifest {
+        generator_version: "3".to_string(),
+        checksum_sha256: "abc123".to_string(),
+        ..CatalogManifest::default()
+    };
+    let bytes = serde_json::to_vec(&manifest).expect("manifest json");
+
+    assert_eq!(catalog_payload_version(&bytes, &manifest, "1.0.0"), "1.0.0");
+}
+
+#[test]
+fn catalog_payload_version_honors_explicit_payload_version() {
+    let manifest = CatalogManifest {
+        generator_version: "3".to_string(),
+        checksum_sha256: "abc123".to_string(),
+        ..CatalogManifest::default()
+    };
+    let bytes = br#"{"version":"2.4.0","generator_version":"3"}"#;
+
+    assert_eq!(catalog_payload_version(bytes, &manifest, "1.0.0"), "2.4.0");
+}
+
+#[test]
 fn secure_transport_gate_requires_server_identity_when_enabled() {
     let mut service = crate::runtime::config::ServiceSettings {
         require_secure_transport: true,

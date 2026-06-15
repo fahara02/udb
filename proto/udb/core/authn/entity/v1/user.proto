@@ -68,6 +68,20 @@ message User {
     }
     replica_hint: "primary"
     required_scope: "authn:admin"
+    // SCIM-2 (bug_report.md G): email uniqueness is a PARTIAL unique index
+    // excluding the empty string, so multiple email-less external/SCIM users
+    // (email='') can coexist while real emails stay unique. Declared at the
+    // TABLE level (not the column's singular `index`) because the descriptor
+    // decode that builds the broker manifest carries `where_clause` for
+    // table-level `indexes` (field 17) but drops it for the column-singular
+    // `index` (field 10) — verified empirically via `udb catalog`.
+    indexes: {
+      index_name: "idx_users_email"
+      index_type: "BTREE"
+      unique: true
+      columns: "email"
+      where_clause: "email <> ''"
+    }
   };
   option (udb.core.common.v1.db_table_security) = {
     tenant_isolation_mode: "tenant"
@@ -96,7 +110,13 @@ message User {
 
   string username = 2 [(udb.core.common.v1.pg_column) = { column_name: "username" sql_type: "VARCHAR(80)" not_null: true unique: true trigram_index: true check_constraint: "username ~ '^[a-z][a-z0-9._-]{2,79}$'" comment: "Lowercase alphanumeric; used as login identifier" index: { index_name: "idx_users_username" index_type: "BTREE" unique: true } }, (udb.core.common.v1.log_masked) = true];
 
-  string email = 3 [(udb.core.common.v1.pg_column) = { column_name: "email" sql_type: "VARCHAR(255)" not_null: true unique: true trigram_index: true comment: "Primary email used for OTP delivery and account recovery" index: { index_name: "idx_users_email" index_type: "BTREE" unique: true } }, (udb.core.common.v1.pii) = true, (udb.core.common.v1.log_masked) = true, (udb.core.common.v1.data_purpose) = "Authentication and communication"];
+  // SCIM-2 (bug_report.md G): email stays NOT NULL (always a value, maybe '');
+  // the column-level `unique` is dropped and uniqueness is enforced by the
+  // TABLE-level PARTIAL unique index `idx_users_email` (WHERE email <> '')
+  // declared in the pg_table option above — so email-less SCIM users don't
+  // collide. (The column's singular `index` is intentionally NOT used: the
+  // descriptor decode drops its where_clause.)
+  string email = 3 [(udb.core.common.v1.pg_column) = { column_name: "email" sql_type: "VARCHAR(255)" not_null: true trigram_index: true comment: "Primary email used for OTP delivery and account recovery" }, (udb.core.common.v1.pii) = true, (udb.core.common.v1.log_masked) = true, (udb.core.common.v1.data_purpose) = "Authentication and communication"];
 
   string password_hash = 4 [(udb.core.common.v1.pg_column) = { column_name: "password_hash" sql_type: "VARCHAR(255)" not_null: true comment: "Argon2id PHC hash, peppered by deployment secret; legacy keyed-HMAC values are upgraded on login" }, (udb.core.common.v1.sensitive) = true, (udb.core.common.v1.log_redacted) = true, (udb.core.common.v1.encrypted_security) = true, (udb.core.common.v1.log_masked) = true, (udb.core.common.v1.db_column_security) = { secret_classification: SECRET_CLASSIFICATION_CREDENTIAL output_view: OUTPUT_VIEW_STORAGE_ONLY redaction_strategy: REDACTION_STRATEGY_REDACT hashing_algorithm: "argon2id" uniqueness_scope: "none" }];
 

@@ -32,15 +32,21 @@ const (
 // All PII fields are masked in application logs via (pii) + (log_masked).
 // ---------------------------------------------------------------------------
 type User struct {
-	state        protoimpl.MessageState `protogen:"open.v1"`
-	UserId       string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	Username     string                 `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
-	Email        string                 `protobuf:"bytes,3,opt,name=email,proto3" json:"email,omitempty"`
-	PasswordHash string                 `protobuf:"bytes,4,opt,name=password_hash,json=passwordHash,proto3" json:"password_hash,omitempty"`
-	AccountKind  AccountKind            `protobuf:"varint,5,opt,name=account_kind,json=accountKind,proto3,enum=udb.core.authn.entity.v1.AccountKind" json:"account_kind,omitempty"`
-	Status       UserStatus             `protobuf:"varint,6,opt,name=status,proto3,enum=udb.core.authn.entity.v1.UserStatus" json:"status,omitempty"`
-	TenantId     string                 `protobuf:"bytes,7,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	FullName     string                 `protobuf:"bytes,8,opt,name=full_name,json=fullName,proto3" json:"full_name,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	UserId   string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Username string                 `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
+	// SCIM-2 (bug_report.md G): email stays NOT NULL (always a value, maybe '');
+	// the column-level `unique` is dropped and uniqueness is enforced by the
+	// TABLE-level PARTIAL unique index `idx_users_email` (WHERE email <> '')
+	// declared in the pg_table option above — so email-less SCIM users don't
+	// collide. (The column's singular `index` is intentionally NOT used: the
+	// descriptor decode drops its where_clause.)
+	Email        string      `protobuf:"bytes,3,opt,name=email,proto3" json:"email,omitempty"`
+	PasswordHash string      `protobuf:"bytes,4,opt,name=password_hash,json=passwordHash,proto3" json:"password_hash,omitempty"`
+	AccountKind  AccountKind `protobuf:"varint,5,opt,name=account_kind,json=accountKind,proto3,enum=udb.core.authn.entity.v1.AccountKind" json:"account_kind,omitempty"`
+	Status       UserStatus  `protobuf:"varint,6,opt,name=status,proto3,enum=udb.core.authn.entity.v1.UserStatus" json:"status,omitempty"`
+	TenantId     string      `protobuf:"bytes,7,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	FullName     string      `protobuf:"bytes,8,opt,name=full_name,json=fullName,proto3" json:"full_name,omitempty"`
 	// MFA: totp_secret populated only when MFA is enrolled (TOTP authenticator app)
 	TotpSecretEnc string `protobuf:"bytes,9,opt,name=totp_secret_enc,json=totpSecretEnc,proto3" json:"totp_secret_enc,omitempty"`
 	MfaEnabled    bool   `protobuf:"varint,10,opt,name=mfa_enabled,json=mfaEnabled,proto3" json:"mfa_enabled,omitempty"`
@@ -297,16 +303,15 @@ var File_udb_core_authn_entity_v1_user_proto protoreflect.FileDescriptor
 
 const file_udb_core_authn_entity_v1_user_proto_rawDesc = "" +
 	"\n" +
-	"#udb/core/authn/entity/v1/user.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\x92$\n" +
+	"#udb/core/authn/entity/v1/user.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xa5$\n" +
 	"\x04User\x12C\n" +
 	"\auser_id\x18\x01 \x01(\tB*\x82\xb7\x18&\n" +
 	"\auser_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x06userId\x12\xbc\x01\n" +
 	"\busername\x18\x02 \x01(\tB\x9f\x01\xe0\xb5\x18\x01\x82\xb7\x18\x96\x01\n" +
 	"\busername\x12\vVARCHAR(80)\x18\x01 \x01B%username ~ '^[a-z][a-z0-9._-]{2,79}$'R\x1d\n" +
-	"\x12idx_users_username\x12\x05BTREE\x18\x01Z0Lowercase alphanumeric; used as login identifier\xa8\x01\x01R\busername\x12\xb9\x01\n" +
-	"\x05email\x18\x03 \x01(\tB\xa2\x01е\x18\x01\xe0\xb5\x18\x01\x82\xb6\x18 Authentication and communication\x82\xb7\x18r\n" +
-	"\x05email\x12\fVARCHAR(255)\x18\x01 \x01R\x1a\n" +
-	"\x0fidx_users_email\x12\x05BTREE\x18\x01Z8Primary email used for OTP delivery and account recovery\xa8\x01\x01R\x05email\x12\xd6\x01\n" +
+	"\x12idx_users_username\x12\x05BTREE\x18\x01Z0Lowercase alphanumeric; used as login identifier\xa8\x01\x01R\busername\x12\x9b\x01\n" +
+	"\x05email\x18\x03 \x01(\tB\x84\x01е\x18\x01\xe0\xb5\x18\x01\x82\xb6\x18 Authentication and communication\x82\xb7\x18T\n" +
+	"\x05email\x12\fVARCHAR(255)\x18\x01Z8Primary email used for OTP delivery and account recovery\xa8\x01\x01R\x05email\x12\xd6\x01\n" +
 	"\rpassword_hash\x18\x04 \x01(\tB\xb0\x01ص\x18\x01\xe0\xb5\x18\x01\xe8\xb5\x18\x01\xf0\xb5\x18\x01\x82\xb7\x18\x81\x01\n" +
 	"\rpassword_hash\x12\fVARCHAR(255)\x18\x01Z`Argon2id PHC hash, peppered by deployment secret; legacy keyed-HMAC values are upgraded on login\x8a\xb7\x18\x16\b\x03\x10\x01\x18\x032\bargon2idJ\x04noneR\fpasswordHash\x12\x96\x01\n" +
 	"\faccount_kind\x18\x05 \x01(\x0e2%.udb.core.authn.entity.v1.AccountKindBL\x82\xb7\x18H\n" +
@@ -377,9 +382,10 @@ const file_udb_core_authn_entity_v1_user_proto_rawDesc = "" +
 	"\x05phone\x18\x1b \x01(\tB~е\x18\x01\xe0\xb5\x18\x01\x82\xb6\x18 Authentication and communication\x82\xb7\x18N\n" +
 	"\x05phone\x12\vVARCHAR(32)Z8E.164 phone number for SMS OTP delivery and verificationR\x05phone\x12\xa1\x01\n" +
 	"\x11phone_verified_at\x18\x1c \x01(\v2\x1a.google.protobuf.TimestampBY\x82\xb7\x18U\n" +
-	"\x11phone_verified_at\x12\vTIMESTAMPTZZ3Timestamp the phone number was verified via SMS OTPR\x0fphoneVerifiedAt:\x93\x06\xa2\xb5\x187\b\x01\x12\x12udb:user:{user_id}\x18\xac\x02 \x01(\x01:\x12REDIS_CLUSTER_ADDRB\x04user\xfa\xb6\x18\xb7\x04\n" +
+	"\x11phone_verified_at\x12\vTIMESTAMPTZZ3Timestamp the phone number was verified via SMS OTPR\x0fphoneVerifiedAt:\xc4\x06\xa2\xb5\x187\b\x01\x12\x12udb:user:{user_id}\x18\xac\x02 \x01(\x01:\x12REDIS_CLUSTER_ADDRB\x04user\xfa\xb6\x18\xe8\x04\n" +
 	"\x05users\x12\tudb_authn\x18\x01 \x01*HAccounts authenticated by UDB or mapped from external identity providers0\x018\x01@\x01b^\n" +
-	"\x10tenant_isolation\x1aH(tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\x9a\x01\x12\n" +
+	"\x10tenant_isolation\x1aH(tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\x8a\x01.\n" +
+	"\x0fidx_users_email\x12\x05BTREE\x18\x01:\vemail <> ''Z\x05email\x9a\x01\x12\n" +
 	"\bpgcrypto\x12\x06public\x9a\x01\x11\n" +
 	"\apg_trgm\x12\x06public\xaa\x01O\n" +
 	"\x1atrg_users_touch_updated_at\x12\x06BEFORE\x1a\x06UPDATE\"\x1cudb_authn.touch_updated_at()*\x03ROW\xc2\x01\xda\x01\n" +

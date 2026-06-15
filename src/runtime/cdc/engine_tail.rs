@@ -187,16 +187,111 @@ fn replay_sql_from_anchor(journal_relation: &str, limit: i64) -> String {
     )
 }
 
-/// #19: replay fallback when the anchor event_id is absent from the journal
-/// (pruned by retention, or never journalled): stream the retained window
-/// oldest-first instead of returning nothing.
-fn replay_sql_from_start(journal_relation: &str, limit: i64) -> String {
-    format!(
-        "SELECT event_id, topic, partition_key, payload, published_at \
-         FROM {journal_relation} \
-         ORDER BY published_at ASC, event_id ASC \
-         LIMIT {limit}"
-    )
+/// Bounded per-stream de-dup window for `stream_cdc`'s hybrid delivery: returns
+/// `true` if `id` is newly admitted (first time seen), `false` if it was already
+/// delivered (via the other source). Evicts the oldest id past `window`. This is
+/// request-scoped loop state for one subscription, NOT a shared store.
+fn cdc_dedup_admit(
+    seen: &mut std::collections::HashSet<String>,
+    order: &mut std::collections::VecDeque<String>,
+    id: &str,
+    window: usize,
+) -> bool {
+    if !seen.insert(id.to_string()) {
+        return false;
+    }
+    order.push_back(id.to_string());
+    if order.len() > window {
+        if let Some(old) = order.pop_front() {
+            seen.remove(&old);
+        }
+    }
+    true
+}
+
+/// Poll the durable `cdc_journal` for rows after `(cursor_ts, cursor_id)`, applying
+/// the same topic-pattern + tenant/project scope filters as the live path and the
+/// shared de-dup window. Advances the cursor past every scanned row (matched or
+/// not) and returns the envelopes to yield. This is the cross-replica, race-free
+/// backstop behind the in-process broadcast fast-path.
+#[allow(clippy::too_many_arguments)]
+async fn cdc_journal_poll(
+    pool: &PgPool,
+    sql: &str,
+    cursor_ts: &mut DateTime<Utc>,
+    cursor_id: &mut String,
+    matcher: &WildMatch,
+    tenant_scope: &str,
+    project_scope: &str,
+    privileged: bool,
+    policy_topics: &[String],
+    seen: &mut std::collections::HashSet<String>,
+    order: &mut std::collections::VecDeque<String>,
+    window: usize,
+) -> Vec<CdcEnvelope> {
+    let mut out = Vec::new();
+    // Bind owned/copied cursor values so the live stream can mutate the cursor.
+    let mut rows = sqlx::query(sql)
+        .bind(*cursor_ts)
+        .bind(cursor_id.clone())
+        .fetch(pool);
+    while let Some(row) = tokio_stream::StreamExt::next(&mut rows).await {
+        let record = match row {
+            Ok(record) => record,
+            Err(err) => {
+                warn!("[cdc] journal tail row decode failed: {err}");
+                continue;
+            }
+        };
+        let event_id: Uuid = match record.try_get("event_id") {
+            Ok(value) => value,
+            Err(_) => continue,
+        };
+        let published_at: DateTime<Utc> = match record.try_get("published_at") {
+            Ok(value) => value,
+            Err(_) => continue,
+        };
+        // Advance the cursor past EVERY scanned row so the next poll never rescans it.
+        *cursor_ts = published_at;
+        *cursor_id = event_id.to_string();
+        let topic: String = match record.try_get("topic") {
+            Ok(value) => value,
+            Err(_) => continue,
+        };
+        if !matcher.matches(&topic) {
+            continue;
+        }
+        let payload: serde_json::Value = match record.try_get("payload") {
+            Ok(value) => value,
+            Err(_) => continue,
+        };
+        if !payload_value_matches_stream_scope(
+            &topic,
+            &payload,
+            tenant_scope,
+            project_scope,
+            privileged,
+            policy_topics.iter().any(|policy| policy == &topic),
+        ) {
+            continue;
+        }
+        let partition_key: String = match record.try_get("partition_key") {
+            Ok(value) => value,
+            Err(_) => continue,
+        };
+        let id = event_id.to_string();
+        if !cdc_dedup_admit(seen, order, &id, window) {
+            continue;
+        }
+        out.push(CdcEnvelope {
+            event_id: id,
+            topic,
+            partition_key,
+            payload_json: payload.to_string(),
+            published_at,
+        });
+    }
+    out
 }
 
 /// #26: retention sweep over the CDC journal. Bind `$1` = TTL in seconds
@@ -427,11 +522,6 @@ mod tests {
         assert!(anchored.contains("(published_at, event_id::TEXT) > ($1, $2)"));
         assert!(anchored.contains("ORDER BY published_at ASC, event_id ASC"));
         assert!(!anchored.contains("outbox"));
-
-        let fallback = replay_sql_from_start("udb_system.udb_cdc_journal", 10_000);
-        assert!(fallback.contains("FROM udb_system.udb_cdc_journal"));
-        assert!(!fallback.contains("WHERE"));
-        assert!(fallback.contains("ORDER BY published_at ASC, event_id ASC"));
     }
 
     /// #26: the retention sweep removes only acked journal rows older than
@@ -759,157 +849,145 @@ impl CdcEngine {
 
         use async_stream::try_stream;
 
-        let mut rx = self.broadcast_tx.subscribe();
+        let rx = self.broadcast_tx.subscribe();
         let pool = self.pool.clone();
         // #19: replay reads the durable cdc_journal — outbox rows are
         // deleted on ack, so the outbox cannot serve a reconnect gap.
         let journal_relation = SystemCatalogConfig::default().cdc_journal_relation();
 
         Ok(Box::pin(try_stream! {
-            // 1. Replay historical events if since_event_id is provided
-            // GAP 19: Cap replay at MAX_REPLAY_EVENTS to prevent full table scans on
-            // first reconnect after a long outage. Caller should page via event_id cursor.
-            const MAX_REPLAY_EVENTS: i64 = 10_000;
-            if let Some(since_id) = since_event_id
-                && let Ok(since_uuid) = Uuid::parse_str(&since_id)
+            // Hybrid delivery (bug_report.md §R "kafka is not used"): an in-process
+            // broadcast FAST-PATH for low latency, plus a durable cdc_journal
+            // BACKSTOP that is cross-replica (shared Postgres) and race-free
+            // (subscribe-time cursor), de-duplicated by event_id. The journal row is
+            // written only AFTER Kafka acks the produce, so it is the durable record
+            // of exactly what reached Kafka — and it backfills anything the bounded
+            // broadcast dropped (lag) or never saw (events from another replica).
+            const TAIL_BATCH: i64 = 1_000;
+            const TAIL_POLL: std::time::Duration = std::time::Duration::from_millis(500);
+            const DEDUP_WINDOW: usize = 16_384;
+            let tail_sql = replay_sql_from_anchor(&journal_relation, TAIL_BATCH);
+            let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
+            let mut order: std::collections::VecDeque<String> = std::collections::VecDeque::new();
+
+            // Journal cursor (published_at, event_id). With `since_event_id` we
+            // anchor at that event (or the retained-window start if it was pruned)
+            // to replay history; a fresh subscription starts at "now" so only future
+            // events stream and the subscribe→publish window cannot drop an event.
+            let (mut cursor_ts, mut cursor_id): (DateTime<Utc>, String) = match since_event_id
+                .as_deref()
+                .and_then(|id| Uuid::parse_str(id).ok())
             {
-                    // #19: anchor on the journal row's publish time. A compound
-                    // (published_at, event_id) comparison keeps events journalled
-                    // at the exact same microsecond as the anchor from being
-                    // silently skipped by a strict `published_at >` filter.
+                Some(since_uuid) => {
                     let anchor_sql = format!(
                         "SELECT published_at FROM {journal_relation} WHERE event_id = $1"
                     );
-                    let anchor: Option<(DateTime<Utc>,)> = match sqlx::query_as(&anchor_sql)
+                    match sqlx::query_as::<_, (DateTime<Utc>,)>(&anchor_sql)
                         .bind(since_uuid)
                         .fetch_optional(&pool)
                         .await
                     {
-                        Ok(row) => row,
-                        Err(err) => {
-                            warn!(
-                                "[cdc] replay anchor lookup failed for {since_uuid}: {err}; \
-                                 replaying the retained journal window from the start"
-                            );
-                            None
-                        }
-                    };
-                    let anchored_sql = replay_sql_from_anchor(&journal_relation, MAX_REPLAY_EVENTS);
-                    let start_sql = replay_sql_from_start(&journal_relation, MAX_REPLAY_EVENTS);
-                    // #19: an absent anchor (journal pruned by retention, or an
-                    // id that was never journalled) falls back to a time-cursor
-                    // over the retained window instead of returning nothing.
-                    let mut rows = match anchor {
-                        Some((anchor_published_at,)) => sqlx::query(&anchored_sql)
-                            .bind(anchor_published_at)
-                            .bind(since_uuid.to_string())
-                            .fetch(&pool),
-                        None => sqlx::query(&start_sql).fetch(&pool),
-                    };
+                        Ok(Some((ts,))) => (ts, since_uuid.to_string()),
+                        Ok(None) | Err(_) => (
+                            DateTime::<Utc>::from_timestamp(0, 0).unwrap_or_else(Utc::now),
+                            String::new(),
+                        ),
+                    }
+                }
+                // Fresh subscription: anchor at the journal's CURRENT newest row
+                // (DB clock + DB ordering), NOT the application `Utc::now()` — an
+                // app-vs-DB clock skew could otherwise place the cursor ahead of a
+                // just-committed event's `published_at` and skip it. Every event
+                // journaled after subscribe is strictly greater and is picked up.
+                None => {
+                    let max_sql = format!(
+                        "SELECT published_at, event_id FROM {journal_relation} \
+                         ORDER BY published_at DESC, event_id DESC LIMIT 1"
+                    );
+                    match sqlx::query_as::<_, (DateTime<Utc>, Uuid)>(&max_sql)
+                        .fetch_optional(&pool)
+                        .await
+                    {
+                        Ok(Some((ts, id))) => (ts, id.to_string()),
+                        // Empty journal (or read error): start from the epoch so the
+                        // first future event is admitted; the broadcast fast-path
+                        // covers the interim with no app-clock dependency.
+                        Ok(None) | Err(_) => (
+                            DateTime::<Utc>::from_timestamp(0, 0).unwrap_or_else(Utc::now),
+                            String::new(),
+                        ),
+                    }
+                }
+            };
 
-                    while let Some(row) = tokio_stream::StreamExt::next(&mut rows).await {
-                        match row {
-                        Ok(record) => {
-                            let topic: String = match record.try_get("topic") {
-                                Ok(topic) => topic,
-                                Err(err) => {
-                                    warn!("[cdc] replay row skipped: missing topic: {err}");
-                                    continue;
-                                }
-                            };
-                            if matcher.matches(&topic) {
-                                let event_id: Uuid = match record.try_get("event_id") {
-                                    Ok(value) => value,
-                                    Err(err) => {
-                                        warn!("[cdc] replay row skipped: missing event_id: {err}");
-                                        continue;
-                                    }
-                                };
-                                let partition_key: String = match record.try_get("partition_key") {
-                                    Ok(value) => value,
-                                    Err(err) => {
-                                        warn!(
-                                            "[cdc] replay row skipped for {}: missing partition_key: {err}",
-                                            event_id
-                                        );
-                                        continue;
-                                    }
-                                };
-                                let payload: serde_json::Value = match record.try_get("payload") {
-                                    Ok(value) => value,
-                                    Err(err) => {
-                                        warn!("[cdc] replay row skipped for {}: missing payload: {err}", event_id);
-                                        continue;
-                                    }
-                                };
-                                if !payload_value_matches_stream_scope(
-                                    &topic,
-                                    &payload,
+            // 1. Replay: drain the journal from the cursor (bounded per batch).
+            loop {
+                let batch = cdc_journal_poll(
+                    &pool, &tail_sql, &mut cursor_ts, &mut cursor_id, &matcher,
+                    &tenant_scope, &project_scope, privileged, &policy_topics,
+                    &mut seen, &mut order, DEDUP_WINDOW,
+                )
+                .await;
+                let caught_up = batch.len() < TAIL_BATCH as usize;
+                for envelope in batch {
+                    yield envelope;
+                }
+                if caught_up {
+                    break;
+                }
+            }
+
+            // 2. Live: broadcast fast-path + journal backstop, de-duped by event_id.
+            let mut rx = Some(rx);
+            loop {
+                let fast_path = async {
+                    match rx.as_mut() {
+                        Some(receiver) => receiver.recv().await,
+                        // Fast-path closed: park forever so the journal poll is the
+                        // sole live source (never busy-loop on a closed channel).
+                        None => std::future::pending::<
+                            Result<CdcEnvelope, broadcast::error::RecvError>,
+                        >()
+                        .await,
+                    }
+                };
+                tokio::select! {
+                    received = fast_path => match received {
+                        Ok(envelope) => {
+                            if matcher.matches(&envelope.topic)
+                                && payload_string_matches_stream_scope(
+                                    &envelope.topic,
+                                    &envelope.payload_json,
                                     &tenant_scope,
                                     &project_scope,
                                     privileged,
-                                    policy_topics.iter().any(|policy| policy == &topic),
-                                ) {
-                                    continue;
-                                }
-                                let published_at: DateTime<Utc> = match record.try_get("published_at") {
-                                    Ok(value) => value,
-                                    Err(err) => {
-                                        warn!(
-                                            "[cdc] replay row skipped for {}: missing published_at: {err}",
-                                            event_id
-                                        );
-                                        continue;
-                                    }
-                                };
-                                yield CdcEnvelope {
-                                    event_id: event_id.to_string(),
-                                    topic,
-                                    partition_key,
-                                    payload_json: payload.to_string(),
-                                    published_at,
-                                };
+                                    policy_topics.iter().any(|policy| policy == &envelope.topic),
+                                )
+                                && cdc_dedup_admit(&mut seen, &mut order, &envelope.event_id, DEDUP_WINDOW)
+                            {
+                                yield envelope;
                             }
                         }
-                        Err(err) => {
-                            warn!("[cdc] replay row skipped: decode failed: {err}");
+                        // Dropped on lag — the journal backstop backfills them, so
+                        // do NOT break the stream.
+                        Err(broadcast::error::RecvError::Lagged(n)) => {
+                            warn!("[cdc] PublishCDC fast-path lagged; {n} events dropped (journal backstop backfills)");
                         }
+                        // Fast-path gone — continue with the journal as the sole source.
+                        Err(broadcast::error::RecvError::Closed) => {
+                            rx = None;
                         }
-                    }
-            }
-
-            // 2. Stream live events
-            loop {
-                match rx.recv().await {
-                    Ok(envelope) => {
-                        if matcher.matches(&envelope.topic)
-                            && payload_string_matches_stream_scope(
-                                &envelope.topic,
-                                &envelope.payload_json,
-                                &tenant_scope,
-                                &project_scope,
-                                privileged,
-                                policy_topics.iter().any(|policy| policy == &envelope.topic),
-                            )
-                        {
+                    },
+                    _ = tokio::time::sleep(TAIL_POLL) => {
+                        let batch = cdc_journal_poll(
+                            &pool, &tail_sql, &mut cursor_ts, &mut cursor_id, &matcher,
+                            &tenant_scope, &project_scope, privileged, &policy_topics,
+                            &mut seen, &mut order, DEDUP_WINDOW,
+                        )
+                        .await;
+                        for envelope in batch {
                             yield envelope;
                         }
-                    }
-                    // GAP 19: Emit a metric and warn when the broadcast channel drops
-                    // events because this subscriber fell too far behind.
-                    Err(broadcast::error::RecvError::Lagged(n)) => {
-                        warn!("[cdc] PublishCDC subscriber lagged; {} events dropped", n);
-                        // Use the existing CDC error counter — reason "broadcast_lagged".
-                        // No arc clone needed: metrics is already Arc inside MetricsRecorder.
-                        // We cannot call self.metrics here (inside a try_stream! closure),
-                        // but we can call the pool-level metric via a channel-compatible path.
-                        // For now, record via the tracing subscriber so Prometheus can scrape
-                        // the warn log via a log-to-metric exporter (e.g. promtail + loki rule).
-                        // TODO: pass a metrics handle into stream_cdc if a direct counter is needed.
-                        continue;
-                    }
-                    Err(broadcast::error::RecvError::Closed) => {
-                        break;
                     }
                 }
             }

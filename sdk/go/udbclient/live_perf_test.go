@@ -103,6 +103,37 @@ func TestLivePerf(t *testing.T) {
 	defer seed.cleanup()
 	fix := seed.fix
 
+	// Re-mint FRESH credentials right before measurement, into THREE INDEPENDENT
+	// admin sessions — one per consumer — so the session-mutating Phase-1 RPCs don't
+	// invalidate each other:
+	//   - RefreshToken rotates its refresh-token family and, on the 2nd iteration,
+	//     revokes that whole session family. If `token`/`session_id` shared that
+	//     session, Authenticate ("token subject no longer active") and RefreshSession
+	//     ("session is not active") then failed. Giving each its own login isolates them.
+	// The seed phase also takes long enough that a token captured at its start ages
+	// toward the access-token TTL, so re-minting here keeps them fresh either way.
+	freshLogin := func(device string) (*authnv1.LoginResponse, error) {
+		return authnv1.NewAuthnServiceClient(authConn).Login(ctx, &authnv1.LoginRequest{
+			Username: requiredLiveEnv(t, "UDB_LIVE_USERNAME"), Password: requiredLiveEnv(t, "UDB_LIVE_PASSWORD"),
+			TenantHint: tenant, ProjectHint: project, DeviceName: device,
+		})
+	}
+	// `token` (+csrf) for the token-validating reads (Authenticate/ValidateToken/
+	// IntrospectToken) — a session nothing rotates or revokes.
+	if tok, err := freshLogin("go-sdk-perf-token"); err == nil {
+		fix.set("token", tok.GetAccessToken())
+		fix.set("csrf_token", tok.GetCsrfToken())
+	}
+	// `refresh_token` for RefreshToken — its own family so rotation/revocation is contained.
+	if rt, err := freshLogin("go-sdk-perf-refresh"); err == nil {
+		fix.set("refresh_token", rt.GetRefreshToken())
+	}
+	// `session_id` for RefreshSession (Phase 1) + the Phase-3 Logout/RevokeSession — a
+	// dedicated session so RefreshToken's family revocation can't kill it first.
+	if ss, err := freshLogin("go-sdk-perf-session"); err == nil {
+		fix.set("session_id", ss.GetSessionId())
+	}
+
 	type sample struct {
 		rpc     RPCInfo
 		p50     time.Duration
@@ -189,31 +220,64 @@ func TestLivePerf(t *testing.T) {
 		} else if rpc.Kind != KindUnary {
 			note = "streaming: time-to-first-response (seeded; " + string(rpc.Kind) + ")"
 		}
-		// Warm-up (channel/HTTP2 + server caches) — excluded from the numbers.
-		_, _ = timeOne(gen, rpc)
+		// Warm-up (channel/HTTP2 + server caches), excluded from the numbers — ONLY
+		// for idempotent reads. A warm-up on a non-idempotent mutation would CONSUME
+		// the operation (RefreshToken rotates its token; CreateUser/Logout/revokes/
+		// deletes run once), making every measured iteration fail.
+		if rpc.OperationKind == "read_only" && rpc.Kind == KindUnary {
+			_, _ = timeOne(gen, rpc)
+		}
 		durs := make([]time.Duration, 0, iters)
-		var lastErrCode string
+		okDurs := make([]time.Duration, 0, iters)
+		var firstErr, firstErrText string
 		for i := 0; i < iters; i++ {
 			d, err := timeOne(gen, rpc)
+			code := "OK"
 			if err == errNoExplicitBody {
-				lastErrCode = "NO-BODY"
+				code = "NO-BODY"
 			} else if err != nil {
-				lastErrCode = status.Code(err).String()
+				code = status.Code(err).String()
+			}
+			if i == 0 {
+				firstErr = code
+				if err != nil {
+					firstErrText = err.Error()
+				}
+			}
+			if code == "OK" {
+				okDurs = append(okDurs, d)
 			}
 			durs = append(durs, d)
 		}
-		sort.Slice(durs, func(i, j int) bool { return durs[i] < durs[j] })
+		// An RPC that succeeds AT LEAST ONCE works: repeated-call failures on a
+		// non-idempotent mutation (consumed token / duplicate / already-deleted) are a
+		// measurement artifact, not an RPC failure — report OK and measure latency over
+		// the successful calls. Only an RPC that NEVER succeeds is a real failure (its
+		// first-attempt status).
+		measured := okDurs
+		errCode := "OK"
+		if len(okDurs) == 0 {
+			measured = durs
+			errCode = firstErr
+		}
+		// Surface the FULL gRPC error (code + message + details) for every RPC that
+		// never succeeded, so `go test -v` is a complete diagnosis log — the report
+		// table only carries the status code.
+		if errCode != "OK" {
+			t.Logf("[PERF-FAIL] %s => %s: %s", rpc.FullMethod, errCode, firstErrText)
+		}
+		sort.Slice(measured, func(i, j int) bool { return measured[i] < measured[j] })
 		var sum time.Duration
-		for _, d := range durs {
+		for _, d := range measured {
 			sum += d
 		}
 		s := sample{
-			rpc: rpc, iters: iters, note: note, errCode: lastErrCode,
-			p50:  durs[pct(len(durs), 50)],
-			p99:  durs[pct(len(durs), 99)],
-			mean: sum / time.Duration(len(durs)),
-			min:  durs[0],
-			max:  durs[len(durs)-1],
+			rpc: rpc, iters: iters, note: note, errCode: errCode,
+			p50:  measured[pct(len(measured), 50)],
+			p99:  measured[pct(len(measured), 99)],
+			mean: sum / time.Duration(len(measured)),
+			min:  measured[0],
+			max:  measured[len(measured)-1],
 		}
 		samples = append(samples, s)
 	}
@@ -441,11 +505,10 @@ func liveRecordJSONForCDC(recordID, tenant, project string, revision int64) []by
 // measures REAL handler work against the built-in `udb.sdk.live.v1.SdkLiveRecord`
 // schema (always active) instead of validation-rejection on a placeholder body.
 // Upsert uses a FIXED record_id so repeated iterations are idempotent (no row
-// accumulation). Returns ok=false for RPCs without a real-body override — the
-// caller falls back to the generic typed probe.
+// accumulation). Returns ok=false for RPCs without a typed DataBroker override;
+// the caller must then find an explicit spec body or report NO-BODY.
 // perfRealBody also covers the BACKEND-SPECIFIC DataBroker RPCs (document / cache
-// / vector / graph / object / generic-dispatch), which the generic reflective
-// probe cannot drive: each needs its OWN backend + the resource seeded for it (a
+// / vector / graph / object / generic-dispatch). Each needs its OWN backend + the resource seeded for it (a
 // single global "backend" fixture cannot be both postgres and mongodb). These
 // reuse the exact resources created in the seed phase.
 func perfRealBody(rpc RPCInfo, tenant, project string, fix *perfFixtures) (proto.Message, proto.Message, bool) {

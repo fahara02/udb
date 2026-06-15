@@ -448,9 +448,14 @@ class UdbProject {
     /** Dedicated generated client for the WebRTC target, when `webrtcTarget`
      *  differs from both `target` and `authTarget`; otherwise null. */
     webrtcGenerated = null;
+    /** The single UdbMetadata instance shared by reference across every sub-client
+     *  core (data, auth, native, webrtc). Mutating it (e.g. via setTenant) updates
+     *  the x-tenant-id / x-* headers on ALL outbound channels at once. */
+    sharedMeta;
     constructor(config) {
         this.config = config;
         const meta = metaFromConfig(config);
+        this.sharedMeta = meta;
         const authTarget = (config.authTarget ?? config.target).trim();
         this.generated = new generatedClient_1.UdbGeneratedClient({
             target: config.target,
@@ -540,6 +545,14 @@ class UdbProject {
             this.applyCredentials(resp.access_token || resp.session_token || "");
         }
         return resp;
+    }
+    /** Adopt the canonical tenant id on EVERY outbound channel. After a password
+     *  login with a human tenant code (`tenant_hint: "acme"`), the broker mints a
+     *  bearer whose tenant claim is the canonical tenant UUID; subsequent native
+     *  RPCs reject a mismatched `x-tenant-id`. Call this with the resolved
+     *  `principal.tenant_id` so the shared metadata sends the UUID, not the code. */
+    setTenant(tenantId) {
+        this.sharedMeta.tenantId = tenantId;
     }
     /** Push a refreshed bearer (keeping the configured API key) into every
      *  outbound channel: the data core, the auth client, and — when separate —

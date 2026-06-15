@@ -331,6 +331,14 @@ final class GeneratedClient
     /** @var array<class-string, BaseStub> Lazily-built, channel-sharing stubs. */
     private array $stubs = [];
 
+    /**
+     * Initial (header) response metadata from the most recent unary call —
+     * for reading header-only values such as `x-udb-approval-token`.
+     *
+     * @var array<string,list<string>>
+     */
+    private array $lastResponseMetadata = [];
+
     /** Shared channel options (incl. credentials) — built once, reused per stub. */
     private ?array $channelOptions = null;
 
@@ -5865,6 +5873,11 @@ final class GeneratedClient
             /** @var array{0: ?object, 1: object|array} $result */
             $result = $call->wait();
             [$response, $status] = $result;
+            // Capture the call's INITIAL (header) metadata so callers can read
+            // header-only values (e.g. `x-udb-approval-token`) via lastResponseMetadata().
+            $this->lastResponseMetadata = method_exists($call, 'getMetadata')
+                ? ((array) ($call->getMetadata() ?? []))
+                : [];
 
             $code = $this->statusCode($status);
             if ($code === 0) {
@@ -5888,6 +5901,18 @@ final class GeneratedClient
         }
 
         throw $this->mapError($lastStatus, $rpcName);
+    }
+
+    /**
+     * Initial (header) response metadata from the most recent unary call.
+     * Keys are lower-cased; values are lists. e.g.
+     * `$client->lastResponseMetadata()['x-udb-approval-token'][0] ?? ''`.
+     *
+     * @return array<string,list<string>>
+     */
+    public function lastResponseMetadata(): array
+    {
+        return $this->lastResponseMetadata;
     }
 
     private function statusCode(mixed $status): int

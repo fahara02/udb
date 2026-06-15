@@ -89,6 +89,14 @@ impl SqlDialect for Postgres {
             || ty.eq_ignore_ascii_case("timestamp without time zone")
         {
             format!("{placeholder}::TIMESTAMP")
+        } else if ty.eq_ignore_ascii_case("jsonb") {
+            // A text-bound param (e.g. a `Null` placeholder, which sqlx sends as
+            // text) meeting a jsonb column makes Postgres reject the expression
+            // ("COALESCE types text and jsonb cannot be matched", or an
+            // assignment type mismatch). Cast it so `SET j = $1::JSONB` /
+            // `COALESCE($1::JSONB, j)` type-check; a value already bound as jsonb
+            // casts to itself (no-op). bug_report.md A4.
+            format!("{placeholder}::JSONB")
         } else {
             placeholder.to_string()
         }

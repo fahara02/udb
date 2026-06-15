@@ -33,7 +33,7 @@ All request/response message bodies live in `core/authn/services/v1/core.proto`.
 | [ ] | PutMfaPolicy | MUTATION | PutMfaPolicyRequest | `tenant_id: "<seed:tenant_id>"`, `require_mfa: true` | Optional `context`. |
 | [ ] | GetMfaPolicy | READ_ONLY | GetMfaPolicyRequest | `tenant_id: "<seed:tenant_id>"` | Optional `context`. |
 | [ ] | ForgotPassword | MUTATION | ForgotPasswordRequest | `identifier: "alice@acme.test"` | PUBLIC. `identifier` = username or email. Optional `context`. |
-| [ ] | ResetPassword | MUTATION | ResetPasswordRequest | `otp_id: "<seed:code>"`, `code: "123456"`, `new_password: "N3w!Passw0rd9"` | PUBLIC. `otp_id`/`code` from ForgotPassword (runtime-issued PASSWORD_RESET OTP). Optional `context`. |
+| [ ] | ResetPassword | MUTATION | ResetPasswordRequest | `otp_id: "<seed:reset_otp_id>"`, `code: "<seed:reset_otp_code>"`, `new_password: "N3w!Passw0rd9"` | PUBLIC. `otp_id`/`code` from a runtime-issued PASSWORD_RESET OTP. Optional `context`. |
 | [ ] | IntrospectToken | READ_ONLY | IntrospectTokenRequest | `token: "<seed:token>"` | Optional `context`. |
 | [ ] | SendPhoneVerification | MUTATION | SendPhoneVerificationRequest | `user_id: "<seed:user_id>"`, `phone: "+15551234567"` | `phone` = E.164. Complete with VerifyOTP. Optional `context`. |
 | [ ] | GetJwks | READ_ONLY | GetJwksRequest | `{}` (empty) | PUBLIC. Only optional `context`; no required fields. |
@@ -42,7 +42,7 @@ All request/response message bodies live in `core/authn/services/v1/core.proto`.
 | [ ] | StartWebAuthnAuthentication | MUTATION | StartWebAuthnAuthenticationRequest | `user_id: "<seed:user_id>"`, `tenant_id: "<seed:tenant_id>"` | PUBLIC. Optional `project_id`, `context`. |
 | [ ] | FinishWebAuthnAuthentication | MUTATION | FinishWebAuthnAuthenticationRequest | `challenge_id: "<seed:code>"`, `public_key_credential_json: "{...}"` | PUBLIC. `challenge_id` from Start...; assertion JSON requires a real authenticator — not groundable from proto. Optional `context`. |
 | [ ] | ListDevices | READ_ONLY | ListDevicesRequest | `user_id: "<seed:user_id>"` | Optional `page` (PageRequest), `context`. |
-| [ ] | RevokeDevice | MUTATION | RevokeDeviceRequest | `device_id: "<seed:record_id>"`, `reason: "lost device"` | `device_id` ref (a Device id; no dedicated seed key — use record_id). Optional `context`. |
+| [ ] | RevokeDevice | MUTATION | RevokeDeviceRequest | `device_id: "<seed:device_id>"`, `reason: "lost device"` | `device_id` ref from a real Login-created Device row. Optional `context`. |
 | [ ] | AdminRevokeSession | DESTRUCTIVE | AdminRevokeSessionRequest | `user_id: "<seed:user_id>"`, `session_id: "<seed:session_id>"`, `reason: "compromised"` | Optional `context`. |
 | [ ] | AdminRevokeAllUserSessions | DESTRUCTIVE | AdminRevokeAllUserSessionsRequest | `user_id: "<seed:user_id>"`, `reason: "compromised"` | Optional `context`. |
 | [ ] | AdminRevokeAllTenantSessions | DESTRUCTIVE | AdminRevokeAllTenantSessionsRequest | `tenant_id: "<seed:tenant_id>"`, `reason: "incident"` | Optional `context`. |

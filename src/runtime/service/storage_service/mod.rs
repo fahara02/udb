@@ -6,10 +6,9 @@
 //! [`NativeModel`] (see `runtime::native_catalog`), so the SQL here follows the
 //! same single-source-of-truth rule as the rest of the native services.
 //!
-//! v1 is a metadata/lifecycle service; object bytes + presigned URLs use the
-//! broker's existing `GeneratePresignedUrl`/`PutObject` RPCs with the
-//! `object_key` minted here. The URL fields returned by this service are
-//! intentionally empty in v1 — clients mint the actual URLs separately.
+//! v1 is a metadata/lifecycle service; object bytes are written through the
+//! native presigned URL minted at registration. Public object RPCs remain a
+//! fallback only when no runtime is available to presign.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -162,7 +161,7 @@ impl StorageServiceImpl {
         let ttl_secs = (ttl_minutes.max(1) as i64 * 60).min(7 * 24 * 3600) as i32;
         match runtime
             .presign_object_backend_target(
-                None,
+                &self.object_backend,
                 project_id,
                 &self.object_bucket,
                 object_key,
@@ -274,20 +273,25 @@ impl StorageServiceImpl {
             .unwrap_or(0)
     }
 
-    async fn object_exists(&self, project_id: &str, object_key: &str) -> Result<bool, Status> {
+    async fn object_exists(&self, file: &storage_entity_pb::File) -> Result<bool, Status> {
         let Some(runtime) = self.runtime.as_ref() else {
             return Ok(true);
         };
-        if object_key.trim().is_empty() {
+        if file.object_key.trim().is_empty() {
             return Ok(false);
         }
+        let backend = if file.backend.trim().is_empty() {
+            self.object_backend.as_str()
+        } else {
+            file.backend.as_str()
+        };
+        let bucket = if file.bucket.trim().is_empty() {
+            self.object_bucket.as_str()
+        } else {
+            file.bucket.as_str()
+        };
         runtime
-            .object_exists_backend_target(
-                &self.object_backend,
-                project_id,
-                &self.object_bucket,
-                object_key,
-            )
+            .object_exists_backend_target(backend, &file.project_id, bucket, &file.object_key)
             .await
     }
 
@@ -674,6 +678,8 @@ fn file_register_record(
     tenant_id: &str,
     req: &storage_pb::RegisterUploadRequest,
     file_type: &str,
+    object_backend: &str,
+    object_bucket: &str,
     object_key: &str,
     declared_size: i64,
 ) -> LogicalRecord {
@@ -703,6 +709,8 @@ fn file_register_record(
         "is_public".to_string(),
         LogicalValue::Bool(register_is_public_bind(req.is_public)),
     );
+    record.insert("backend".to_string(), logical_string(object_backend));
+    record.insert("bucket".to_string(), logical_string(object_bucket));
     record.insert("object_key".to_string(), logical_string(object_key));
     record.insert("size_bytes".to_string(), LogicalValue::Int(declared_size));
     record
@@ -874,6 +882,8 @@ impl StorageService for StorageServiceImpl {
                         &tenant_id,
                         &req,
                         &file_type,
+                        &self.object_backend,
+                        &self.object_bucket,
                         &object_key,
                         declared_size,
                     ),
@@ -961,10 +971,7 @@ impl StorageService for StorageServiceImpl {
             Some(row) => file_from_json(row),
             None => return Err(Status::not_found("file not found")),
         };
-        if !self
-            .object_exists(&prior.project_id, &prior.object_key)
-            .await?
-        {
+        if !self.object_exists(&prior).await? {
             return Err(Status::failed_precondition(
                 "uploaded object is not present in the configured object store",
             ));

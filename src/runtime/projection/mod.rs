@@ -109,7 +109,7 @@ impl ProjectionPlan {
                         manifest
                             .projections
                             .iter()
-                            .filter(|p| p.message_type == table.message_name)
+                            .filter(|p| message_type_matches(&p.message_type, &table.message_name))
                             .collect()
                     };
                 if projections.is_empty() {
@@ -272,7 +272,10 @@ impl ProjectionEngine {
         plans: &[ProjectionPlan],
     ) -> Result<Vec<String>, String> {
         let mut task_keys = Vec::new();
-        for plan in plans.iter().filter(|p| p.message_type == message_type) {
+        for plan in plans
+            .iter()
+            .filter(|p| message_type_matches(&p.message_type, message_type))
+        {
             let source_row_key = plan.extract_row_key(source_payload);
             let source_checksum = Self::source_checksum(source_payload);
             for target in &plan.targets {
@@ -415,7 +418,7 @@ impl ProjectionEngine {
     ) -> Result<Vec<crate::runtime::drift_reconciliation::SourceSample>, String> {
         let plan = ProjectionPlan::from_manifest(manifest)
             .into_iter()
-            .find(|plan| plan.message_type == message_type)
+            .find(|plan| message_type_matches(&plan.message_type, message_type))
             .ok_or_else(|| format!("unknown projection message_type {message_type}"))?;
         let rows = self
             .load_source_rows(manifest, message_type, None, None, None, limit.max(1))
@@ -476,7 +479,7 @@ impl ProjectionEngine {
         let table = manifest
             .tables
             .iter()
-            .find(|table| table.message_name == message_type)
+            .find(|table| message_type_matches(&table.message_name, message_type))
             .ok_or_else(|| format!("unknown message_type {message_type}"))?;
         let mut predicates = Vec::new();
         let mut binds = Vec::new();
@@ -530,6 +533,20 @@ impl ProjectionEngine {
             })
             .collect()
     }
+}
+
+pub(crate) fn message_type_matches(
+    catalog_message_type: &str,
+    requested_message_type: &str,
+) -> bool {
+    let catalog = catalog_message_type.trim();
+    let requested = requested_message_type.trim();
+    if catalog.eq_ignore_ascii_case(requested) {
+        return true;
+    }
+    let catalog_leaf = catalog.rsplit('.').next().unwrap_or(catalog);
+    let requested_leaf = requested.rsplit('.').next().unwrap_or(requested);
+    !catalog_leaf.is_empty() && catalog_leaf.eq_ignore_ascii_case(requested_leaf)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1584,6 +1601,55 @@ mod tests {
         assert_eq!(plans.len(), 1);
         assert_eq!(plans[0].targets.len(), 1);
         assert_eq!(plans[0].targets[0].backend, "mongodb");
+    }
+
+    #[test]
+    fn message_type_match_accepts_full_name_and_leaf_alias() {
+        assert!(message_type_matches(
+            "SdkLiveRecord",
+            "udb.sdk.live.v1.SdkLiveRecord"
+        ));
+        assert!(message_type_matches(
+            "udb.sdk.live.v1.SdkLiveRecord",
+            "SdkLiveRecord"
+        ));
+        assert!(!message_type_matches(
+            "udb.sdk.live.v1.SdkLiveRecord",
+            "udb.sdk.live.v1.OtherRecord"
+        ));
+    }
+
+    #[test]
+    fn projection_plan_uses_manifest_level_projection_with_full_name_alias() {
+        let manifest = CatalogManifest {
+            checksum_sha256: "catalog-alias".to_string(),
+            tables: vec![ManifestTable {
+                message_name: "SdkLiveRecord".to_string(),
+                schema: "udb_sdk_live".to_string(),
+                table: "sdk_live_records".to_string(),
+                primary_key: vec!["record_id".to_string()],
+                ..ManifestTable::default()
+            }],
+            projections: vec![ManifestProjection {
+                message_type: "udb.sdk.live.v1.SdkLiveRecord".to_string(),
+                projection_kind: "vector".to_string(),
+                backend: "qdrant".to_string(),
+                resource_name: "sdk_live_records".to_string(),
+                write_policy: "projection".to_string(),
+                fanout_policy: "async_projection".to_string(),
+                ..ManifestProjection::default()
+            }],
+            ..CatalogManifest::default()
+        };
+
+        let plans = ProjectionPlan::from_manifest(&manifest);
+        assert_eq!(plans.len(), 1);
+        assert!(message_type_matches(
+            &plans[0].message_type,
+            "udb.sdk.live.v1.SdkLiveRecord"
+        ));
+        assert_eq!(plans[0].targets.len(), 1);
+        assert_eq!(plans[0].targets[0].backend, "qdrant");
     }
 
     #[test]

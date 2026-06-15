@@ -495,13 +495,27 @@ impl AuthnServiceImpl {
         // (rt_<family>.<jti>), NOT the server-side session id. It is rotated on
         // every RefreshToken call and reuse of a superseded value revokes the
         // family. Falls back to empty when no Postgres pool backs the registry.
+        // P3 (bug_report.md): register/refresh this device so ListDevices returns
+        // it and RevokeDevice is reachable. `req.device_id` is the client device
+        // fingerprint (LoginRequest field 7). Best-effort; empty when no fingerprint.
+        let login_device_id = self
+            .register_login_device(
+                &user.user_id,
+                &user.tenant_id,
+                &user.project_id,
+                &req.device_id,
+                &req.device_name,
+                &req.ip_address,
+            )
+            .await
+            .unwrap_or_default();
         let refresh_token = self
             .mint_refresh_family(
                 &user.user_id,
                 &user.user_id,
                 &user.tenant_id,
                 &user.project_id,
-                "",
+                &login_device_id,
                 &session_id,
                 now,
             )
@@ -672,6 +686,7 @@ impl AuthnServiceImpl {
         request: Request<authn_pb::ResetPasswordRequest>,
     ) -> Result<Response<authn_pb::ResetPasswordResponse>, Status> {
         let req = request.into_inner();
+        Self::require_uuid_arg(&req.otp_id, "otp_id")?;
         authn::PasswordPolicy::from_env()
             .validate(&req.new_password)
             .map_err(Status::invalid_argument)?;

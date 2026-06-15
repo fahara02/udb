@@ -242,6 +242,12 @@ private static final long serialVersionUID = 0L;
   public static final int PURPOSE_FIELD_NUMBER = 6;
   private int purpose_ = 0;
   /**
+   * <pre>
+   * VARCHAR(64): the enum NAME is persisted; the longest value
+   * (`MFA_CHALLENGE_PURPOSE_SENSITIVE_OPERATION`, 41 chars) overflowed the
+   * former VARCHAR(40), failing every IssueMfaChallenge. bug_report.md A1.
+   * </pre>
+   *
    * <code>.udb.core.authn.entity.v1.MfaChallengePurpose purpose = 6 [json_name = "purpose", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The enum numeric value on the wire for purpose.
    */
@@ -249,6 +255,12 @@ private static final long serialVersionUID = 0L;
     return purpose_;
   }
   /**
+   * <pre>
+   * VARCHAR(64): the enum NAME is persisted; the longest value
+   * (`MFA_CHALLENGE_PURPOSE_SENSITIVE_OPERATION`, 41 chars) overflowed the
+   * former VARCHAR(40), failing every IssueMfaChallenge. bug_report.md A1.
+   * </pre>
+   *
    * <code>.udb.core.authn.entity.v1.MfaChallengePurpose purpose = 6 [json_name = "purpose", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The purpose.
    */
@@ -1388,6 +1400,12 @@ private static final long serialVersionUID = 0L;
 
     private int purpose_ = 0;
     /**
+     * <pre>
+     * VARCHAR(64): the enum NAME is persisted; the longest value
+     * (`MFA_CHALLENGE_PURPOSE_SENSITIVE_OPERATION`, 41 chars) overflowed the
+     * former VARCHAR(40), failing every IssueMfaChallenge. bug_report.md A1.
+     * </pre>
+     *
      * <code>.udb.core.authn.entity.v1.MfaChallengePurpose purpose = 6 [json_name = "purpose", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return The enum numeric value on the wire for purpose.
      */
@@ -1395,6 +1413,12 @@ private static final long serialVersionUID = 0L;
       return purpose_;
     }
     /**
+     * <pre>
+     * VARCHAR(64): the enum NAME is persisted; the longest value
+     * (`MFA_CHALLENGE_PURPOSE_SENSITIVE_OPERATION`, 41 chars) overflowed the
+     * former VARCHAR(40), failing every IssueMfaChallenge. bug_report.md A1.
+     * </pre>
+     *
      * <code>.udb.core.authn.entity.v1.MfaChallengePurpose purpose = 6 [json_name = "purpose", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @param value The enum numeric value on the wire for purpose to set.
      * @return This builder for chaining.
@@ -1406,6 +1430,12 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * VARCHAR(64): the enum NAME is persisted; the longest value
+     * (`MFA_CHALLENGE_PURPOSE_SENSITIVE_OPERATION`, 41 chars) overflowed the
+     * former VARCHAR(40), failing every IssueMfaChallenge. bug_report.md A1.
+     * </pre>
+     *
      * <code>.udb.core.authn.entity.v1.MfaChallengePurpose purpose = 6 [json_name = "purpose", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return The purpose.
      */
@@ -1415,6 +1445,12 @@ private static final long serialVersionUID = 0L;
       return result == null ? com.udb.core.authn.entity.v1.MfaChallengePurpose.UNRECOGNIZED : result;
     }
     /**
+     * <pre>
+     * VARCHAR(64): the enum NAME is persisted; the longest value
+     * (`MFA_CHALLENGE_PURPOSE_SENSITIVE_OPERATION`, 41 chars) overflowed the
+     * former VARCHAR(40), failing every IssueMfaChallenge. bug_report.md A1.
+     * </pre>
+     *
      * <code>.udb.core.authn.entity.v1.MfaChallengePurpose purpose = 6 [json_name = "purpose", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @param value The purpose to set.
      * @return This builder for chaining.
@@ -1427,6 +1463,12 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * VARCHAR(64): the enum NAME is persisted; the longest value
+     * (`MFA_CHALLENGE_PURPOSE_SENSITIVE_OPERATION`, 41 chars) overflowed the
+     * former VARCHAR(40), failing every IssueMfaChallenge. bug_report.md A1.
+     * </pre>
+     *
      * <code>.udb.core.authn.entity.v1.MfaChallengePurpose purpose = 6 [json_name = "purpose", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return This builder for chaining.
      */

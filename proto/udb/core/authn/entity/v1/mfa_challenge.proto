@@ -74,7 +74,10 @@ message MfaChallenge {
 
   AuthFactorKind factor_kind = 5 [(udb.core.common.v1.pg_column) = { column_name: "factor_kind" sql_type: "VARCHAR(30)" not_null: true default_value: "'AUTH_FACTOR_KIND_UNSPECIFIED'" }];
 
-  MfaChallengePurpose purpose = 6 [(udb.core.common.v1.pg_column) = { column_name: "purpose" sql_type: "VARCHAR(40)" not_null: true default_value: "'MFA_CHALLENGE_PURPOSE_LOGIN_STEP_UP'" }];
+  // VARCHAR(64): the enum NAME is persisted; the longest value
+  // (`MFA_CHALLENGE_PURPOSE_SENSITIVE_OPERATION`, 41 chars) overflowed the
+  // former VARCHAR(40), failing every IssueMfaChallenge. bug_report.md A1.
+  MfaChallengePurpose purpose = 6 [(udb.core.common.v1.pg_column) = { column_name: "purpose" sql_type: "VARCHAR(64)" not_null: true default_value: "'MFA_CHALLENGE_PURPOSE_LOGIN_STEP_UP'" }];
 
   // Keyed-HMAC digest of the device fingerprint the challenge is bound to.
   string device_fingerprint_hash = 7 [(udb.core.common.v1.pg_column) = { column_name: "device_fingerprint_hash" sql_type: "VARCHAR(128)" comment: "Bound device fingerprint digest" }, (udb.core.common.v1.sensitive) = true, (udb.core.common.v1.log_redacted) = true, (udb.core.common.v1.db_column_security) = { secret_classification: SECRET_CLASSIFICATION_TOKEN output_view: OUTPUT_VIEW_STORAGE_ONLY redaction_strategy: REDACTION_STRATEGY_REDACT hashing_algorithm: "hmac-sha256" }];

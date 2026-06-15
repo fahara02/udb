@@ -242,6 +242,11 @@ message SendOTPResponse {
   string otp_id = 1;
   int32 expires_in_seconds = 2;
   int32 cooldown_seconds = 3; // Wait before next resend
+  // Dev-only echo of the plaintext OTP code, populated ONLY when the broker runs
+  // with UDB_OTP_DEV_ECHO=1 (non-production posture). Empty in production. Lets
+  // conformance harnesses complete VerifyOTP/ResetPassword without a delivery
+  // channel. bug_report.md F/Lane-2.
+  string dev_otp_code = 4;
 }
 
 message VerifyOTPRequest {

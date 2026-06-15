@@ -353,6 +353,88 @@ impl AuthnServiceImpl {
 
     // ── Devices (I2.4) ──────────────────────────────────────────────────────
 
+    /// P3 (bug_report.md): register (or refresh) the caller's device at login so
+    /// the device lifecycle is reachable — without this NO RPC ever inserts a
+    /// `devices` row, so ListDevices is always empty and the client can never get
+    /// a `device_id` to pass to RevokeDevice. Idempotent per (user, fingerprint):
+    /// returns the existing non-revoked device's id when the same fingerprint has
+    /// logged in before (refreshing `last_seen_at`), else inserts a new row.
+    /// `fingerprint` is the client `LoginRequest.device_id`; only its keyed-HMAC
+    /// digest is stored. Best-effort: any failure returns `None` and never blocks
+    /// login (so a missing/legacy `devices` table can't break auth).
+    pub(super) async fn register_login_device(
+        &self,
+        user_id: &str,
+        tenant_id: &str,
+        project_id: &str,
+        fingerprint: &str,
+        device_name: &str,
+        ip_raw: &str,
+    ) -> Option<String> {
+        if fingerprint.trim().is_empty() {
+            return None;
+        }
+        let pool = self.require_pool().ok()?;
+        let m = device_model();
+        let fp_hash = self.device_fingerprint_hash(fingerprint);
+        let ip_masked = mask_ip(ip_raw);
+        let existing: Option<String> = sqlx::query_scalar(&format!(
+            "SELECT {id}::TEXT FROM {rel} WHERE {user} = $1 AND {fp} = $2 AND {revoked} IS NULL \
+             ORDER BY {created} DESC LIMIT 1",
+            id = m.q("device_id"),
+            rel = m.relation,
+            user = m.q("user_id"),
+            fp = m.q("fingerprint_hash"),
+            revoked = m.q("revoked_at"),
+            created = m.q("created_at"),
+        ))
+        .bind(user_id)
+        .bind(&fp_hash)
+        .fetch_optional(pool)
+        .await
+        .ok()
+        .flatten();
+        if let Some(id) = existing {
+            let _ = sqlx::query(&format!(
+                "UPDATE {rel} SET {seen} = NOW(), {ip} = $2 WHERE {id} = $1::UUID",
+                rel = m.relation,
+                seen = m.q("last_seen_at"),
+                ip = m.q("last_ip_masked"),
+                id = m.q("device_id"),
+            ))
+            .bind(&id)
+            .bind(ip_masked)
+            .execute(pool)
+            .await;
+            return Some(id);
+        }
+        let new_id = uuid::Uuid::new_v4().to_string();
+        sqlx::query_scalar(&format!(
+            "INSERT INTO {rel} ({id}, {user}, {tenant}, {project}, {name}, {fp}, {ip}, {seen}) \
+             VALUES ($1::UUID, $2, $3, $4, $5, $6, $7, NOW()) RETURNING {id}::TEXT",
+            rel = m.relation,
+            id = m.q("device_id"),
+            user = m.q("user_id"),
+            tenant = m.q("tenant_id"),
+            project = m.q("project_id"),
+            name = m.q("device_name"),
+            fp = m.q("fingerprint_hash"),
+            ip = m.q("last_ip_masked"),
+            seen = m.q("last_seen_at"),
+        ))
+        .bind(&new_id)
+        .bind(user_id)
+        .bind(tenant_id)
+        .bind(project_id)
+        .bind(device_name)
+        .bind(&fp_hash)
+        .bind(ip_masked)
+        .fetch_optional(pool)
+        .await
+        .ok()
+        .flatten()
+    }
+
     pub(super) async fn list_devices_impl(
         &self,
         request: Request<authn_pb::ListDevicesRequest>,
@@ -435,9 +517,10 @@ impl AuthnServiceImpl {
         request: Request<authn_pb::RevokeDeviceRequest>,
     ) -> Result<Response<authn_pb::RevokeDeviceResponse>, Status> {
         let req = request.into_inner();
-        if req.device_id.trim().is_empty() {
-            return Err(Status::invalid_argument("device_id is required"));
-        }
+        // bug_report.md B1: validate device_id is a UUID at the boundary so a
+        // malformed id never reaches the `WHERE {id} = $1::UUID` query (which
+        // would leak a raw Postgres `22P02` error as Internal).
+        Self::require_uuid_arg(&req.device_id, "device_id")?;
         let propagation_started = std::time::Instant::now();
         // D3: derive the authorized tenant from the VALIDATED bearer claim, never
         // from the request. A tenant-scoped caller may only revoke devices owned by
@@ -1238,9 +1321,11 @@ impl AuthnServiceImpl {
         request: Request<authn_pb::VerifyMfaChallengeRequest>,
     ) -> Result<Response<authn_pb::VerifyMfaChallengeResponse>, Status> {
         let req = request.into_inner();
-        if req.challenge_id.trim().is_empty() {
-            return Err(Status::invalid_argument("challenge_id is required"));
-        }
+        // bug_report.md B1/B4: validate the id is a UUID at the boundary so a
+        // malformed challenge_id never reaches native dispatch / the
+        // `WHERE {id} = $1::UUID` query (whose inner InvalidArgument was being
+        // re-wrapped as Internal).
+        Self::require_uuid_arg(&req.challenge_id, "challenge_id")?;
         if let Ok(runtime) = self.authn_runtime() {
             let now = unix_to_utc(now_unix())
                 .ok_or_else(|| Status::internal("invalid MFA verification time"))?;
@@ -1275,7 +1360,12 @@ impl AuthnServiceImpl {
             let (_, rows) = runtime
                 .native_entity_update_for_service("authn", &context, op)
                 .await
-                .map_err(|err| Status::internal(format!("verify MFA challenge failed: {err}")))?;
+                .map_err(|err| {
+                    crate::runtime::executor_utils::prefix_status(
+                        "verify MFA challenge failed",
+                        err,
+                    )
+                })?;
             let Some(row) = rows.first() else {
                 return Ok(Response::new(authn_pb::VerifyMfaChallengeResponse {
                     verified: false,
@@ -1341,7 +1431,12 @@ impl AuthnServiceImpl {
             .bind(&req.challenge_id)
             .fetch_optional(pool)
             .await
-            .map_err(|err| Status::internal(format!("verify MFA challenge failed: {err}")))?
+            .map_err(|err| {
+                crate::runtime::executor_utils::sqlx_error_to_status(
+                    "verify MFA challenge failed",
+                    &err,
+                )
+            })?
         else {
             // Either expired, already consumed (replay), or over the attempt cap.
             return Ok(Response::new(authn_pb::VerifyMfaChallengeResponse {

@@ -529,6 +529,14 @@ impl DataBrokerService {
                         BackendExecutor, BackendHealth, MutationExecutor, ObjectExecutor,
                         QueryExecutor, ResourceAdminExecutor, SearchExecutor,
                     };
+                    use futures::FutureExt as _;
+                    // bug_report.md H: a single backend executor RPC must NEVER abort
+                    // the whole broker. Run the dispatch inside catch_unwind so a Rust
+                    // panic in any executor (e.g. the ClickHouse insert/HTTP path under
+                    // concurrent load) fails ONLY this request as `Internal` — the
+                    // process and both listeners stay up. The panic hook (C1) still
+                    // logs+flushes the panic location before catch_unwind converts it.
+                    let dispatch = async move {
                     match operation.as_str() {
                         "ping" => executor
                             .ping()
@@ -580,6 +588,15 @@ impl DataBrokerService {
                             "unknown operation '{other}'; allowed: ping, probe, ensure_resource, drop_resource, list_resources, query, mutate, transaction, search, get_object, put_object"
                         ))),
                     }
+                    };
+                    std::panic::AssertUnwindSafe(dispatch)
+                        .catch_unwind()
+                        .await
+                        .unwrap_or_else(|_| {
+                            Err(tonic::Status::internal(
+                                "backend operation panicked; request failed (broker stayed up)",
+                            ))
+                        })
                 },
             )
             .await;

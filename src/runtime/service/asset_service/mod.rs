@@ -1329,7 +1329,12 @@ impl AssetService for AssetServiceImpl {
                 ConflictStrategy::Error,
             )
             .await
-            .map_err(|err| Status::internal(format!("create pipeline definition failed: {err}")))?;
+            .map_err(|err| {
+                crate::runtime::executor_utils::prefix_status(
+                    "create pipeline definition failed",
+                    err,
+                )
+            })?;
         Ok(Response::new(asset_pb::CreatePipelineDefinitionResponse {
             definition_id,
             message: "pipeline definition created".to_string(),
@@ -1412,7 +1417,9 @@ impl AssetService for AssetServiceImpl {
                 ConflictStrategy::Error,
             )
             .await
-            .map_err(|err| Status::internal(format!("register asset failed: {err}")))?;
+            .map_err(|err| {
+                crate::runtime::executor_utils::prefix_status("register asset failed", err)
+            })?;
         emit_payload_event(
             pool,
             self.outbox_relation.as_deref(),

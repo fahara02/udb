@@ -116,6 +116,10 @@ export interface CallOptions {
   noRetry?: boolean;
   /** AbortSignal to cancel the call / streams. */
   signal?: AbortSignal;
+  /** Receives the call's INITIAL (header) response metadata when it arrives —
+   *  for reading header-only values such as `x-udb-approval-token`. Fires on the
+   *  grpc-js `'metadata'` event (NOT trailers); ignored on streaming calls. */
+  onResponseMetadata?: (md: grpc.Metadata) => void;
 }
 
 // ── Typed errors ───────────────────────────────────────────────────────────────
@@ -343,7 +347,7 @@ export class UdbCore {
     while (true) {
       try {
         return await new Promise<TRes>((resolve, reject) => {
-          stub[method](
+          const unaryCall = stub[method](
             request,
             this.metadataFor(call),
             this.callMeta(call),
@@ -352,6 +356,11 @@ export class UdbCore {
               else resolve(resp);
             },
           );
+          if (call?.onResponseMetadata) {
+            unaryCall.on("metadata", (md: grpc.Metadata) => {
+              try { call.onResponseMetadata!(md); } catch { /* ignore */ }
+            });
+          }
         });
       } catch (e) {
         const err = e as grpc.ServiceError;

@@ -28,6 +28,15 @@ class SendOTPResponse extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>int32 cooldown_seconds = 3 [json_name = "cooldownSeconds"];</code>
      */
     protected $cooldown_seconds = 0;
+    /**
+     * Dev-only echo of the plaintext OTP code, populated ONLY when the broker runs
+     * with UDB_OTP_DEV_ECHO=1 (non-production posture). Empty in production. Lets
+     * conformance harnesses complete VerifyOTP/ResetPassword without a delivery
+     * channel. bug_report.md F/Lane-2.
+     *
+     * Generated from protobuf field <code>string dev_otp_code = 4 [json_name = "devOtpCode"];</code>
+     */
+    protected $dev_otp_code = '';
 
     /**
      * Constructor.
@@ -39,6 +48,11 @@ class SendOTPResponse extends \Google\Protobuf\Internal\Message
      *     @type int $expires_in_seconds
      *     @type int $cooldown_seconds
      *           Wait before next resend
+     *     @type string $dev_otp_code
+     *           Dev-only echo of the plaintext OTP code, populated ONLY when the broker runs
+     *           with UDB_OTP_DEV_ECHO=1 (non-production posture). Empty in production. Lets
+     *           conformance harnesses complete VerifyOTP/ResetPassword without a delivery
+     *           channel. bug_report.md F/Lane-2.
      * }
      */
     public function __construct($data = NULL) {
@@ -112,6 +126,38 @@ class SendOTPResponse extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkInt32($var);
         $this->cooldown_seconds = $var;
+
+        return $this;
+    }
+
+    /**
+     * Dev-only echo of the plaintext OTP code, populated ONLY when the broker runs
+     * with UDB_OTP_DEV_ECHO=1 (non-production posture). Empty in production. Lets
+     * conformance harnesses complete VerifyOTP/ResetPassword without a delivery
+     * channel. bug_report.md F/Lane-2.
+     *
+     * Generated from protobuf field <code>string dev_otp_code = 4 [json_name = "devOtpCode"];</code>
+     * @return string
+     */
+    public function getDevOtpCode()
+    {
+        return $this->dev_otp_code;
+    }
+
+    /**
+     * Dev-only echo of the plaintext OTP code, populated ONLY when the broker runs
+     * with UDB_OTP_DEV_ECHO=1 (non-production posture). Empty in production. Lets
+     * conformance harnesses complete VerifyOTP/ResetPassword without a delivery
+     * channel. bug_report.md F/Lane-2.
+     *
+     * Generated from protobuf field <code>string dev_otp_code = 4 [json_name = "devOtpCode"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setDevOtpCode($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->dev_otp_code = $var;
 
         return $this;
     }

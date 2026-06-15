@@ -54,14 +54,44 @@ async fn live_auth_pool() -> Option<sqlx::PgPool> {
 }
 
 async fn cleanup_live_auth_db(pool: &sqlx::PgPool) {
-    sqlx::query("DROP SCHEMA IF EXISTS udb_authz CASCADE")
-        .execute(pool)
-        .await
-        .expect("drop authz schema");
-    sqlx::query("DROP SCHEMA IF EXISTS udb_authn CASCADE")
-        .execute(pool)
-        .await
-        .expect("drop authn schema");
+    // Drop EVERY native `udb_*` schema present, not just udb_authn/udb_authz:
+    // `native_service_catalog_ddl()` creates all native schemas (udb_system,
+    // udb_tenant, udb_control, …), so a DB carrying any of them from a prior run
+    // makes the test's `CREATE SCHEMA` fail with "already exists". Enumerating the
+    // live schemas makes this self-isolating on any DB (mirrors the non-auth
+    // `cleanup_native_service_db` helper).
+    let schemas: Vec<String> = sqlx::query_scalar(
+        "SELECT nspname FROM pg_namespace WHERE nspname LIKE 'udb\\_%' ESCAPE '\\'",
+    )
+    .fetch_all(pool)
+    .await
+    .expect("list native udb_* schemas");
+    for schema in schemas {
+        let stmt = format!(
+            "DROP SCHEMA IF EXISTS \"{}\" CASCADE",
+            schema.replace('"', "\"\"")
+        );
+        sqlx::query(&stmt)
+            .execute(pool)
+            .await
+            .unwrap_or_else(|err| panic!("drop native schema {schema}: {err}"));
+    }
+    // Migration-tracking tables live in `public`; drop them so a re-migrate is clean.
+    let public_tables: Vec<String> =
+        sqlx::query_scalar("SELECT tablename FROM pg_tables WHERE schemaname = 'public'")
+            .fetch_all(pool)
+            .await
+            .expect("list public tables");
+    for table in public_tables {
+        let stmt = format!(
+            "DROP TABLE IF EXISTS public.\"{}\" CASCADE",
+            table.replace('"', "\"\"")
+        );
+        sqlx::query(&stmt)
+            .execute(pool)
+            .await
+            .unwrap_or_else(|err| panic!("drop public table {table}: {err}"));
+    }
     sqlx::query("DROP EXTENSION IF EXISTS pg_partman CASCADE")
         .execute(pool)
         .await

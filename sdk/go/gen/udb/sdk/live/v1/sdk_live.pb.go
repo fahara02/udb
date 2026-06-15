@@ -125,7 +125,7 @@ var File_udb_sdk_live_v1_sdk_live_proto protoreflect.FileDescriptor
 
 const file_udb_sdk_live_v1_sdk_live_proto_rawDesc = "" +
 	"\n" +
-	"\x1eudb/sdk/live/v1/sdk_live.proto\x12\x0fudb.sdk.live.v1\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xca\x05\n" +
+	"\x1eudb/sdk/live/v1/sdk_live.proto\x12\x0fudb.sdk.live.v1\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\x86\x06\n" +
 	"\rSdkLiveRecord\x12=\n" +
 	"\trecord_id\x18\x01 \x01(\tB \x82\xb7\x18\x1c\n" +
 	"\trecord_id\x12\vVARCHAR(80)\x18\x01(\x01R\brecordId\x12?\n" +
@@ -144,10 +144,11 @@ const file_udb_sdk_live_v1_sdk_live_proto_rawDesc = "" +
 	"\brevision\x18\x06 \x01(\x03B\x1b\x82\xb7\x18\x17\n" +
 	"\brevision\x12\x06BIGINT\x18\x01:\x010R\brevision\x12N\n" +
 	"\bblob_ref\x18\a \x01(\tB3\xb2\xb5\x18\x1b\b\x02\x12\fudb-live-sdk\x1a\x03go/ \x01(\x010<\x82\xb7\x18\x10\n" +
-	"\bblob_ref\x12\x04TEXTR\ablobRef:\xf7\x01\xfa\xb6\x18\xbe\x01\n" +
+	"\bblob_ref\x12\x04TEXTR\ablobRef:\xb3\x02\x9a\xb5\x18\x18\b\x01\x12\x10sdk_live_records\x18\x03 \x01\xfa\xb6\x18\xde\x01\n" +
 	"\x10sdk_live_records\x12\fudb_sdk_live\x18\x01 \x01*<Ephemeral rows used by SDK live end-to-end conformance tests\x8a\x012\n" +
 	"\x1bidx_sdk_live_records_lookup\x12\x05BTREE\x18\x01Z\n" +
-	"lookup_key\xf2\x01\x18udb.sdk.live.records.cdc\xfa\x01\tudb:admin\x8a\xb2\x190\n" +
+	"lookup_key\xa2\x01\x1d\n" +
+	"\amv_test\x12\x06public\x1a\bSELECT 1 \x01\xf2\x01\x18udb.sdk.live.records.cdc\xfa\x01\tudb:admin\x8a\xb2\x190\n" +
 	"\x04none\x12\x04none2\x04none:\x0etest.ephemeralH\x01R\x04noneZ\x04noneB\xbd\x01\n" +
 	"\x13com.udb.sdk.live.v1B\fSdkLiveProtoP\x01Z9github.com/fahara02/udb/sdk/go/gen/udb/sdk/live/v1;livev1\xa2\x02\x03USL\xaa\x02\x0fudb.sdk.Live.V1\xca\x02\x0fUdb\\Sdk\\Live\\V1\xe2\x02\x1bUdb\\GPBMetadata\\Sdk\\Live\\V1\xea\x02\x12Udb::Sdk::Live::V1b\x06proto3"
 

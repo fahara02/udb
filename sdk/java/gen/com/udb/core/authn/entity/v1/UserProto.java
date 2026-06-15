@@ -44,130 +44,130 @@ public final class UserProto {
       "db.core.authn.entity.v1\032\037google/protobuf" +
       "/timestamp.proto\032$udb/core/authn/entity/" +
       "v1/enums.proto\032\033udb/core/common/v1/db.pr" +
-      "oto\032!udb/core/common/v1/security.proto\"\222" +
+      "oto\032!udb/core/common/v1/security.proto\"\245" +
       "$\n\004User\022C\n\007user_id\030\001 \001(\tB*\202\267\030&\n\007user_id\022" +
       "\004UUID\030\001(\001:\021gen_random_uuid()R\006userId\022\274\001\n" +
       "\010username\030\002 \001(\tB\237\001\340\265\030\001\202\267\030\226\001\n\010username\022\013V" +
       "ARCHAR(80)\030\001 \001B%username ~ \'^[a-z][a-z0-" +
       "9._-]{2,79}$\'R\035\n\022idx_users_username\022\005BTR" +
       "EE\030\001Z0Lowercase alphanumeric; used as lo" +
-      "gin identifier\250\001\001R\010username\022\271\001\n\005email\030\003 " +
-      "\001(\tB\242\001\320\265\030\001\340\265\030\001\202\266\030 Authentication and com" +
-      "munication\202\267\030r\n\005email\022\014VARCHAR(255)\030\001 \001R" +
-      "\032\n\017idx_users_email\022\005BTREE\030\001Z8Primary ema" +
-      "il used for OTP delivery and account rec" +
-      "overy\250\001\001R\005email\022\326\001\n\rpassword_hash\030\004 \001(\tB" +
-      "\260\001\330\265\030\001\340\265\030\001\350\265\030\001\360\265\030\001\202\267\030\201\001\n\rpassword_hash\022\014" +
-      "VARCHAR(255)\030\001Z`Argon2id PHC hash, peppe" +
-      "red by deployment secret; legacy keyed-H" +
-      "MAC values are upgraded on login\212\267\030\026\010\003\020\001" +
-      "\030\0032\010argon2idJ\004noneR\014passwordHash\022\226\001\n\014acc" +
-      "ount_kind\030\005 \001(\0162%.udb.core.authn.entity." +
-      "v1.AccountKindBL\202\267\030H\n\014account_kind\022\013VARC" +
-      "HAR(40)\030\001:\010\'PERSON\'R\037\n\026idx_users_account" +
-      "_kind\022\005BTREER\013accountKind\022q\n\006status\030\006 \001(" +
-      "\0162$.udb.core.authn.entity.v1.UserStatusB" +
-      "3\202\267\030/\n\006status\022\013VARCHAR(30)\030\001:\026\'PENDING_V" +
-      "ERIFICATION\'R\006status\022\211\001\n\ttenant_id\030\007 \001(\t" +
-      "Bl\202\267\030h\n\ttenant_id\022\014VARCHAR(120)\030\001R\034\n\023idx" +
-      "_users_tenant_id\022\005BTREEZ*Tenant/account " +
-      "boundary for this principal\230\002\001R\010tenantId" +
-      "\022_\n\tfull_name\030\010 \001(\tBB\320\265\030\001\340\265\030\001\202\266\030\027Display" +
-      " and audit trail\202\267\030\033\n\tfull_name\022\014VARCHAR" +
-      "(255)\030\001R\010fullName\022\243\001\n\017totp_secret_enc\030\t " +
-      "\001(\tB{\350\265\030\001\360\265\030\001\202\267\030T\n\017totp_secret_enc\022\004TEXT" +
-      "Z;AES-256-GCM encrypted TOTP secret; nul" +
-      "l if MFA not enrolled\212\267\030\027\010\005\020\001\030\003:\tauthn-m" +
-      "faJ\004noneR\rtotpSecretEnc\022D\n\013mfa_enabled\030\n" +
-      " \001(\010B#\202\267\030\037\n\013mfa_enabled\022\007BOOLEAN\030\001:\005FALS" +
-      "ER\nmfaEnabled\022T\n\022failed_login_count\030\013 \001(" +
-      "\005B&\202\267\030\"\n\022failed_login_count\022\007INTEGER\030\001:\001" +
-      "0R\020failedLoginCount\022\231\001\n\014locked_until\030\014 \001" +
-      "(\0132\032.google.protobuf.TimestampBZ\202\267\030V\n\014lo" +
-      "cked_until\022\013TIMESTAMPTZZ9Account locked " +
-      "until this timestamp (exponential backof" +
-      "f)R\013lockedUntil\022l\n\021email_verified_at\030\r \001" +
-      "(\0132\032.google.protobuf.TimestampB$\202\267\030 \n\021em" +
-      "ail_verified_at\022\013TIMESTAMPTZR\017emailVerif" +
-      "iedAt\022`\n\rlast_login_at\030\016 \001(\0132\032.google.pr" +
-      "otobuf.TimestampB \202\267\030\034\n\rlast_login_at\022\013T" +
-      "IMESTAMPTZR\013lastLoginAt\022\304\001\n\ncreated_by\030\017" +
-      " \001(\tB\244\001\202\267\030\237\001\n\ncreated_by\022\004UUIDJ2\n\005users\022" +
-      "\007user_id\032\tudb_authn \0042\023fk_users_created_" +
-      "byR\035\n\024idx_users_created_by\022\005BTREEZ8FK to" +
-      " users.user_id \342\200\224 which admin created t" +
-      "his accountR\tcreatedBy\022q\n\ncreated_at\030\020 \001" +
-      "(\0132\032.google.protobuf.TimestampB6\202\267\0302\n\ncr" +
-      "eated_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIMESTA" +
-      "MP`\001h\001R\tcreatedAt\022o\n\nupdated_at\030\021 \001(\0132\032." +
-      "google.protobuf.TimestampB4\202\267\0300\n\nupdated" +
-      "_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIMESTAMP`\001R" +
-      "\tupdatedAt\022e\n\ndeleted_at\030\022 \001(\0132\032.google." +
-      "protobuf.TimestampB*\202\267\030&\n\ndeleted_at\022\013TI" +
-      "MESTAMPTZZ\013Soft deleteR\tdeletedAt\022H\n\ndel" +
-      "eted_by\030\023 \001(\tB)\202\267\030%\n\ndeleted_by\022\004UUIDZ\021S" +
-      "oft delete actorR\tdeletedBy\022\235\001\n\nproject_" +
-      "id\030\024 \001(\tB~\202\267\030z\n\nproject_id\022\014VARCHAR(120)" +
-      "R\035\n\024idx_users_project_id\022\005BTREEZ?Optiona" +
-      "l default project/application namespace " +
-      "for this accountR\tprojectId\022\315\001\n\024external" +
-      "_provider_id\030\025 \001(\tB\232\001\202\267\030\225\001\n\024external_pro" +
-      "vider_id\022\014VARCHAR(120)R$\n\033idx_users_exte" +
-      "rnal_provider\022\005BTREEZIIdentity provider " +
-      "id when the account is mapped from an ex" +
-      "ternal providerR\022externalProviderId\022\240\001\n\020" +
-      "external_subject\030\026 \001(\tBu\202\267\030q\n\020external_s" +
-      "ubject\022\014VARCHAR(255)R#\n\032idx_users_extern" +
-      "al_subject\022\005BTREEZ*Subject from an exter" +
-      "nal identity providerR\017externalSubject\022c" +
-      "\n\006locale\030\027 \001(\tBK\202\267\030G\n\006locale\022\013VARCHAR(32" +
-      ")Z0BCP 47 locale hint for notifications " +
-      "and displayR\006locale\022f\n\010timezone\030\030 \001(\tBJ\202" +
-      "\267\030F\n\010timezone\022\013VARCHAR(80)Z-IANA timezon" +
-      "e hint for user-facing timestampsR\010timez" +
-      "one\022\234\001\n\027profile_attributes_json\030\031 \001(\tBd\202" +
-      "\267\030`\n\027profile_attributes_json\022\005JSONB\030\001:\013\'" +
-      "{}\'::jsonbZ-Project-defined non-secret p" +
-      "rofile attributesx\001R\025profileAttributesJs" +
-      "on\022\235\001\n\030external_references_json\030\032 \001(\tBc\202" +
-      "\267\030_\n\030external_references_json\022\005JSONB\030\001:\013" +
-      "\'[]\'::jsonbZ+External system references " +
-      "for this accountx\001R\026externalReferencesJs" +
-      "on\022\224\001\n\005phone\030\033 \001(\tB~\320\265\030\001\340\265\030\001\202\266\030 Authenti" +
-      "cation and communication\202\267\030N\n\005phone\022\013VAR" +
-      "CHAR(32)Z8E.164 phone number for SMS OTP" +
-      " delivery and verificationR\005phone\022\241\001\n\021ph" +
-      "one_verified_at\030\034 \001(\0132\032.google.protobuf." +
-      "TimestampBY\202\267\030U\n\021phone_verified_at\022\013TIME" +
-      "STAMPTZZ3Timestamp the phone number was " +
-      "verified via SMS OTPR\017phoneVerifiedAt:\223\006" +
-      "\242\265\0307\010\001\022\022udb:user:{user_id}\030\254\002 \001(\001:\022REDIS" +
-      "_CLUSTER_ADDRB\004user\372\266\030\267\004\n\005users\022\tudb_aut" +
-      "hn\030\001 \001*HAccounts authenticated by UDB or" +
-      " mapped from external identity providers" +
-      "0\0018\001@\001b^\n\020tenant_isolation\032H(tenant_id::" +
-      "text = current_setting(\'app.current_tena" +
-      "nt_id\', true)::text)(\001\232\001\022\n\010pgcrypto\022\006pub" +
-      "lic\232\001\021\n\007pg_trgm\022\006public\252\001O\n\032trg_users_to" +
-      "uch_updated_at\022\006BEFORE\032\006UPDATE\"\034udb_auth" +
-      "n.touch_updated_at()*\003ROW\302\001\332\001\n\031touch_upd" +
-      "ated_at_function\022\010postgres\032\017before_trigg" +
-      "ers\"\241\001CREATE OR REPLACE FUNCTION udb_aut" +
-      "hn.touch_updated_at()\nRETURNS trigger\nLA" +
-      "NGUAGE plpgsql\nAS $$\nBEGIN\n  NEW.updated" +
-      "_at = CURRENT_TIMESTAMP;\n  RETURN NEW;\nE" +
-      "ND;\n$$;\352\001\007primary\372\001\013authn:admin\212\262\031\227\001\n\006te" +
-      "nant\032\ttenant_id*4tenant_id = current_set" +
-      "ting(\'app.current_tenant_id\')2\013soft_dele" +
-      "te:\021authn.operational@\373\023H\002R\006tenantZ\010stan" +
-      "dardr\025tenant.data_residencyB\364\001\n\034com.udb." +
-      "core.authn.entity.v1B\tUserProtoP\001ZDgithu" +
-      "b.com/fahara02/udb/sdk/go/gen/udb/core/a" +
-      "uthn/entity/v1;entityv1\242\002\004UCAE\252\002\030udb.cor" +
-      "e.Authn.Entity.V1\312\002\030Udb\\Core\\Authn\\Entit" +
-      "y\\V1\342\002$Udb\\GPBMetadata\\Core\\Authn\\Entity" +
-      "\\V1\352\002\034Udb::Core::Authn::Entity::V1b\006prot" +
-      "o3"
+      "gin identifier\250\001\001R\010username\022\233\001\n\005email\030\003 " +
+      "\001(\tB\204\001\320\265\030\001\340\265\030\001\202\266\030 Authentication and com" +
+      "munication\202\267\030T\n\005email\022\014VARCHAR(255)\030\001Z8P" +
+      "rimary email used for OTP delivery and a" +
+      "ccount recovery\250\001\001R\005email\022\326\001\n\rpassword_h" +
+      "ash\030\004 \001(\tB\260\001\330\265\030\001\340\265\030\001\350\265\030\001\360\265\030\001\202\267\030\201\001\n\rpassw" +
+      "ord_hash\022\014VARCHAR(255)\030\001Z`Argon2id PHC h" +
+      "ash, peppered by deployment secret; lega" +
+      "cy keyed-HMAC values are upgraded on log" +
+      "in\212\267\030\026\010\003\020\001\030\0032\010argon2idJ\004noneR\014passwordHa" +
+      "sh\022\226\001\n\014account_kind\030\005 \001(\0162%.udb.core.aut" +
+      "hn.entity.v1.AccountKindBL\202\267\030H\n\014account_" +
+      "kind\022\013VARCHAR(40)\030\001:\010\'PERSON\'R\037\n\026idx_use" +
+      "rs_account_kind\022\005BTREER\013accountKind\022q\n\006s" +
+      "tatus\030\006 \001(\0162$.udb.core.authn.entity.v1.U" +
+      "serStatusB3\202\267\030/\n\006status\022\013VARCHAR(30)\030\001:\026" +
+      "\'PENDING_VERIFICATION\'R\006status\022\211\001\n\ttenan" +
+      "t_id\030\007 \001(\tBl\202\267\030h\n\ttenant_id\022\014VARCHAR(120" +
+      ")\030\001R\034\n\023idx_users_tenant_id\022\005BTREEZ*Tenan" +
+      "t/account boundary for this principal\230\002\001" +
+      "R\010tenantId\022_\n\tfull_name\030\010 \001(\tBB\320\265\030\001\340\265\030\001\202" +
+      "\266\030\027Display and audit trail\202\267\030\033\n\tfull_nam" +
+      "e\022\014VARCHAR(255)\030\001R\010fullName\022\243\001\n\017totp_sec" +
+      "ret_enc\030\t \001(\tB{\350\265\030\001\360\265\030\001\202\267\030T\n\017totp_secret" +
+      "_enc\022\004TEXTZ;AES-256-GCM encrypted TOTP s" +
+      "ecret; null if MFA not enrolled\212\267\030\027\010\005\020\001\030" +
+      "\003:\tauthn-mfaJ\004noneR\rtotpSecretEnc\022D\n\013mfa" +
+      "_enabled\030\n \001(\010B#\202\267\030\037\n\013mfa_enabled\022\007BOOLE" +
+      "AN\030\001:\005FALSER\nmfaEnabled\022T\n\022failed_login_" +
+      "count\030\013 \001(\005B&\202\267\030\"\n\022failed_login_count\022\007I" +
+      "NTEGER\030\001:\0010R\020failedLoginCount\022\231\001\n\014locked" +
+      "_until\030\014 \001(\0132\032.google.protobuf.Timestamp" +
+      "BZ\202\267\030V\n\014locked_until\022\013TIMESTAMPTZZ9Accou" +
+      "nt locked until this timestamp (exponent" +
+      "ial backoff)R\013lockedUntil\022l\n\021email_verif" +
+      "ied_at\030\r \001(\0132\032.google.protobuf.Timestamp" +
+      "B$\202\267\030 \n\021email_verified_at\022\013TIMESTAMPTZR\017" +
+      "emailVerifiedAt\022`\n\rlast_login_at\030\016 \001(\0132\032" +
+      ".google.protobuf.TimestampB \202\267\030\034\n\rlast_l" +
+      "ogin_at\022\013TIMESTAMPTZR\013lastLoginAt\022\304\001\n\ncr" +
+      "eated_by\030\017 \001(\tB\244\001\202\267\030\237\001\n\ncreated_by\022\004UUID" +
+      "J2\n\005users\022\007user_id\032\tudb_authn \0042\023fk_user" +
+      "s_created_byR\035\n\024idx_users_created_by\022\005BT" +
+      "REEZ8FK to users.user_id \342\200\224 which admin" +
+      " created this accountR\tcreatedBy\022q\n\ncrea" +
+      "ted_at\030\020 \001(\0132\032.google.protobuf.Timestamp" +
+      "B6\202\267\0302\n\ncreated_at\022\013TIMESTAMPTZ\030\001:\021CURRE" +
+      "NT_TIMESTAMP`\001h\001R\tcreatedAt\022o\n\nupdated_a" +
+      "t\030\021 \001(\0132\032.google.protobuf.TimestampB4\202\267\030" +
+      "0\n\nupdated_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TI" +
+      "MESTAMP`\001R\tupdatedAt\022e\n\ndeleted_at\030\022 \001(\013" +
+      "2\032.google.protobuf.TimestampB*\202\267\030&\n\ndele" +
+      "ted_at\022\013TIMESTAMPTZZ\013Soft deleteR\tdelete" +
+      "dAt\022H\n\ndeleted_by\030\023 \001(\tB)\202\267\030%\n\ndeleted_b" +
+      "y\022\004UUIDZ\021Soft delete actorR\tdeletedBy\022\235\001" +
+      "\n\nproject_id\030\024 \001(\tB~\202\267\030z\n\nproject_id\022\014VA" +
+      "RCHAR(120)R\035\n\024idx_users_project_id\022\005BTRE" +
+      "EZ?Optional default project/application " +
+      "namespace for this accountR\tprojectId\022\315\001" +
+      "\n\024external_provider_id\030\025 \001(\tB\232\001\202\267\030\225\001\n\024ex" +
+      "ternal_provider_id\022\014VARCHAR(120)R$\n\033idx_" +
+      "users_external_provider\022\005BTREEZIIdentity" +
+      " provider id when the account is mapped " +
+      "from an external providerR\022externalProvi" +
+      "derId\022\240\001\n\020external_subject\030\026 \001(\tBu\202\267\030q\n\020" +
+      "external_subject\022\014VARCHAR(255)R#\n\032idx_us" +
+      "ers_external_subject\022\005BTREEZ*Subject fro" +
+      "m an external identity providerR\017externa" +
+      "lSubject\022c\n\006locale\030\027 \001(\tBK\202\267\030G\n\006locale\022\013" +
+      "VARCHAR(32)Z0BCP 47 locale hint for noti" +
+      "fications and displayR\006locale\022f\n\010timezon" +
+      "e\030\030 \001(\tBJ\202\267\030F\n\010timezone\022\013VARCHAR(80)Z-IA" +
+      "NA timezone hint for user-facing timesta" +
+      "mpsR\010timezone\022\234\001\n\027profile_attributes_jso" +
+      "n\030\031 \001(\tBd\202\267\030`\n\027profile_attributes_json\022\005" +
+      "JSONB\030\001:\013\'{}\'::jsonbZ-Project-defined no" +
+      "n-secret profile attributesx\001R\025profileAt" +
+      "tributesJson\022\235\001\n\030external_references_jso" +
+      "n\030\032 \001(\tBc\202\267\030_\n\030external_references_json\022" +
+      "\005JSONB\030\001:\013\'[]\'::jsonbZ+External system r" +
+      "eferences for this accountx\001R\026externalRe" +
+      "ferencesJson\022\224\001\n\005phone\030\033 \001(\tB~\320\265\030\001\340\265\030\001\202\266" +
+      "\030 Authentication and communication\202\267\030N\n\005" +
+      "phone\022\013VARCHAR(32)Z8E.164 phone number f" +
+      "or SMS OTP delivery and verificationR\005ph" +
+      "one\022\241\001\n\021phone_verified_at\030\034 \001(\0132\032.google" +
+      ".protobuf.TimestampBY\202\267\030U\n\021phone_verifie" +
+      "d_at\022\013TIMESTAMPTZZ3Timestamp the phone n" +
+      "umber was verified via SMS OTPR\017phoneVer" +
+      "ifiedAt:\304\006\242\265\0307\010\001\022\022udb:user:{user_id}\030\254\002 " +
+      "\001(\001:\022REDIS_CLUSTER_ADDRB\004user\372\266\030\350\004\n\005user" +
+      "s\022\tudb_authn\030\001 \001*HAccounts authenticated" +
+      " by UDB or mapped from external identity" +
+      " providers0\0018\001@\001b^\n\020tenant_isolation\032H(t" +
+      "enant_id::text = current_setting(\'app.cu" +
+      "rrent_tenant_id\', true)::text)(\001\212\001.\n\017idx" +
+      "_users_email\022\005BTREE\030\001:\013email <> \'\'Z\005emai" +
+      "l\232\001\022\n\010pgcrypto\022\006public\232\001\021\n\007pg_trgm\022\006publ" +
+      "ic\252\001O\n\032trg_users_touch_updated_at\022\006BEFOR" +
+      "E\032\006UPDATE\"\034udb_authn.touch_updated_at()*" +
+      "\003ROW\302\001\332\001\n\031touch_updated_at_function\022\010pos" +
+      "tgres\032\017before_triggers\"\241\001CREATE OR REPLA" +
+      "CE FUNCTION udb_authn.touch_updated_at()" +
+      "\nRETURNS trigger\nLANGUAGE plpgsql\nAS $$\n" +
+      "BEGIN\n  NEW.updated_at = CURRENT_TIMESTA" +
+      "MP;\n  RETURN NEW;\nEND;\n$$;\352\001\007primary\372\001\013a" +
+      "uthn:admin\212\262\031\227\001\n\006tenant\032\ttenant_id*4tena" +
+      "nt_id = current_setting(\'app.current_ten" +
+      "ant_id\')2\013soft_delete:\021authn.operational" +
+      "@\373\023H\002R\006tenantZ\010standardr\025tenant.data_res" +
+      "idencyB\364\001\n\034com.udb.core.authn.entity.v1B" +
+      "\tUserProtoP\001ZDgithub.com/fahara02/udb/sd" +
+      "k/go/gen/udb/core/authn/entity/v1;entity" +
+      "v1\242\002\004UCAE\252\002\030udb.core.Authn.Entity.V1\312\002\030U" +
+      "db\\Core\\Authn\\Entity\\V1\342\002$Udb\\GPBMetadat" +
+      "a\\Core\\Authn\\Entity\\V1\352\002\034Udb::Core::Auth" +
+      "n::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

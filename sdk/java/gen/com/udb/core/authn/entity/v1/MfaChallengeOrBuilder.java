@@ -70,11 +70,23 @@ public interface MfaChallengeOrBuilder extends
   com.udb.core.authn.entity.v1.AuthFactorKind getFactorKind();
 
   /**
+   * <pre>
+   * VARCHAR(64): the enum NAME is persisted; the longest value
+   * (`MFA_CHALLENGE_PURPOSE_SENSITIVE_OPERATION`, 41 chars) overflowed the
+   * former VARCHAR(40), failing every IssueMfaChallenge. bug_report.md A1.
+   * </pre>
+   *
    * <code>.udb.core.authn.entity.v1.MfaChallengePurpose purpose = 6 [json_name = "purpose", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The enum numeric value on the wire for purpose.
    */
   int getPurposeValue();
   /**
+   * <pre>
+   * VARCHAR(64): the enum NAME is persisted; the longest value
+   * (`MFA_CHALLENGE_PURPOSE_SENSITIVE_OPERATION`, 41 chars) overflowed the
+   * former VARCHAR(40), failing every IssueMfaChallenge. bug_report.md A1.
+   * </pre>
+   *
    * <code>.udb.core.authn.entity.v1.MfaChallengePurpose purpose = 6 [json_name = "purpose", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The purpose.
    */

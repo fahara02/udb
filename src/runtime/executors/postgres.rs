@@ -33,7 +33,9 @@ use crate::runtime::core::{
     bind_typed_generic_pg_params, dispatch_param_types, dispatch_params, pg_rows_to_json,
     set_request_local_settings, validate_pg_mutation_sql, validate_pg_read_sql,
 };
-use crate::runtime::executor_utils::{build_probe, json_required_str, with_executor_timeout};
+use crate::runtime::executor_utils::{
+    build_probe, json_required_str, sqlx_error_to_status, with_executor_timeout,
+};
 use crate::runtime::executors::{
     BackendExecutor, BackendHealth, BackendProbe, MutationExecutor, ObjectExecutor, QueryExecutor,
     ResourceAdminExecutor, SearchExecutor,
@@ -187,9 +189,7 @@ impl MutationExecutor for PostgresExecutor {
                     .fetch_all(&mut *tx)
                     .await
                     .map_err(|err| {
-                        tonic::Status::internal(format!(
-                            "PostgreSQL generic mutation failed: {err}"
-                        ))
+                        sqlx_error_to_status("PostgreSQL generic mutation failed", &err)
                     })?;
                     let rows_json = pg_rows_to_json(rows)?;
                     serde_json::json!({
@@ -206,9 +206,7 @@ impl MutationExecutor for PostgresExecutor {
                     .execute(&mut *tx)
                     .await
                     .map_err(|err| {
-                        tonic::Status::internal(format!(
-                            "PostgreSQL generic mutation failed: {err}"
-                        ))
+                        sqlx_error_to_status("PostgreSQL generic mutation failed", &err)
                     })?;
                     serde_json::json!({ "affected_rows": result.rows_affected() }).to_string()
                 };
@@ -226,9 +224,7 @@ impl MutationExecutor for PostgresExecutor {
                 )?
                 .fetch_all(&self.pool)
                 .await
-                .map_err(|err| {
-                    tonic::Status::internal(format!("PostgreSQL generic mutation failed: {err}"))
-                })?;
+                .map_err(|err| sqlx_error_to_status("PostgreSQL generic mutation failed", &err))?;
                 let rows_json = pg_rows_to_json(rows)?;
                 return Ok(serde_json::json!({
                     "affected_rows": rows_json.len(),
@@ -241,9 +237,7 @@ impl MutationExecutor for PostgresExecutor {
                     .execute(&self.pool)
                     .await
                     .map_err(|err| {
-                        tonic::Status::internal(format!(
-                            "PostgreSQL generic mutation failed: {err}"
-                        ))
+                        sqlx_error_to_status("PostgreSQL generic mutation failed", &err)
                     })?;
             Ok(serde_json::json!({ "affected_rows": result.rows_affected() }).to_string())
         })

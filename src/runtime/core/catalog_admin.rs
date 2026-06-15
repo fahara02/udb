@@ -88,12 +88,30 @@ async fn ensure_migration_payload_json_column(
         ))
     })?;
 
+    // One-time backfill of the legacy `rollback_json` column into the renamed
+    // `payload_json`. Only ledgers created by an OLD schema have `rollback_json`;
+    // a table created by the current DDL never does, so an unconditional UPDATE
+    // referencing it fails with `column "rollback_json" does not exist` and
+    // aborts PlanMigration (which in turn blocks Apply/Status/Approve). Guard the
+    // UPDATE on the column's existence (pg_attribute) so it is a no-op when there
+    // is nothing to migrate. Mirrors the canonical-store backfill in
+    // postgres_migration_audit.rs. bug_report.md A5.
     let backfill = format!(
-        "UPDATE {ledger_rel}
-         SET payload_json = rollback_json
-         WHERE payload_json = '{{}}'::JSONB
-           AND rollback_json IS NOT NULL
-           AND rollback_json <> '{{}}'::JSONB"
+        "DO $$
+         BEGIN
+           IF EXISTS (
+             SELECT 1 FROM pg_attribute
+             WHERE attrelid = to_regclass('{ledger_rel}')
+               AND attname = 'rollback_json'
+               AND NOT attisdropped
+           ) THEN
+             UPDATE {ledger_rel}
+             SET payload_json = rollback_json
+             WHERE payload_json = '{{}}'::JSONB
+               AND rollback_json IS NOT NULL
+               AND rollback_json <> '{{}}'::JSONB;
+           END IF;
+         END $$;"
     );
     sqlx::query(&backfill).execute(pool).await.map_err(|err| {
         tonic::Status::internal(format!(

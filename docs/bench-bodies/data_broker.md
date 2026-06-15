@@ -20,10 +20,10 @@ Reusable nested message: **StoreResource** (`operation.proto`) = `{backend, inst
 | [ ] | Upsert | MUT | UpsertRequest | `ctx`, `message_type:"<seed:message_type>"`, `payload:{<entity fields incl id>}` (Struct) OR `record_json:<bytes JSON>`, `return_record:true` | supply either `payload` (Struct) or `record_json` (bytes), not both required; `conflict_fields`,`idempotency_key`,`cache` optional. id field in payload → `<seed:record_id>`. |
 | [ ] | BatchUpsert | MUT | stream UpsertRequest | one stream element = same as Upsert body | client-streaming; send ≥1. |
 | [ ] | Delete | MUT | DeleteRequest | `ctx`, `message_type:"<seed:message_type>"`, `filter:{id:"<seed:record_id>"}` (Struct) | `idempotency_key` optional. record_id must exist for affected_rows>0. |
-| [ ] | VectorSearch | RO | VectorSearchRequest | `ctx`, `collection:"<seed:message_type>"`, `vector:[0.1,0.2,0.3]` (repeated float, len=collection dim), `limit:5`, `with_payload:true` | vector length MUST equal the collection's configured dimension. `filter`,`score_threshold` optional. Needs a seeded vector collection. |
-| [ ] | VectorHybridSearch | RO | VectorHybridSearchRequest | `ctx`, `collection:"<seed:message_type>"`, `vector:[0.1,0.2,0.3]`, `text_query:"hello"`, `limit:5`, `with_payload:true` | `fusion_weights` (repeated float) & `filter` optional. dim must match collection. |
-| [ ] | VectorUpsert | MUT | VectorUpsertRequest | `ctx`, `collection:"<seed:message_type>"`, `points:[{id:"<seed:record_id>", vector:[0.1,0.2,0.3], payload:{}}]` | each VectorPointMutation = `{id, vector(repeated float), payload(Struct)}`; vector dim must match collection. `idempotency_key` optional. |
-| [ ] | VectorBatchUpsert | MUT | stream VectorUpsertRequest | one stream element = same as VectorUpsert | client-streaming; send ≥1. |
+| [ ] | VectorSearch | RO | VectorSearchRequest | `ctx`, `collection:"<seed:vector_collection>"`, `vector:[0.1,0.2,0.3]` (repeated float, len=collection dim), `limit:5`, `with_payload:true` | vector length MUST equal the collection's configured dimension. `filter`,`score_threshold` optional. Needs a seeded vector collection. |
+| [ ] | VectorHybridSearch | RO | VectorHybridSearchRequest | `ctx`, `collection:"<seed:vector_collection>"`, `vector:[0.1,0.2,0.3]`, `text_query:"hello"`, `limit:5`, `with_payload:true` | `fusion_weights` (repeated float) & `filter` optional. dim must match collection. |
+| [ ] | VectorUpsert | MUT | VectorUpsertRequest | `ctx`, `collection:"<seed:vector_collection>"`, `points:[{id:"<seed:record_id>", vector:[0.1,0.2,0.3], payload:{}}]` | each VectorPointMutation = `{id, vector(repeated float), payload(Struct)}`; vector dim must match collection. `idempotency_key` optional. |
+| [ ] | VectorBatchUpsert | MUT | stream VectorUpsertRequest | `ctx`, `collection:"<seed:vector_collection>"`, `points:[{id:"<seed:record_id>", vector:[0.1,0.2,0.3], payload:{}}]` | client-streaming; send ≥1. |
 | [ ] | PutObject | MUT | stream Chunk | stream of Chunk = `{ctx, bucket:"<seed:bucket>", object_key:"<seed:object_key>", data:<bytes>, content_type:"application/octet-stream", final_chunk:true(on last)}` | client-streaming; set `final_chunk:true` on terminal chunk. `idempotency_key` optional. bucket must exist. |
 | [ ] | GetObject | RO | ObjectRequest | `ctx`, `bucket:"<seed:bucket>"`, `object_key:"<seed:object_key>"` | object must have been Put first. server-streams Chunk. |
 | [ ] | GeneratePresignedUrl | MUT | UrlRequest | `ctx`, `bucket:"<seed:bucket>"`, `object_key:"<seed:object_key>"`, `method:"GET"`, `ttl_seconds:300` | `method` is HTTP verb string (GET/PUT). `content_type` optional. |
@@ -42,7 +42,7 @@ Reusable nested message: **StoreResource** (`operation.proto`) = `{backend, inst
 | [ ] | TimeSeriesQuery | RO | TimeSeriesQueryRequest | `ctx`, `resource:StoreResource{backend:"clickhouse"}`, `from:<Timestamp>`, `to:<Timestamp>`, `limit:100` | `filter`,`fields`,`group_by`,`aggregate`,`window`,`page_token` optional. |
 | [ ] | AnalyticalQuery | RO | AnalyticalQueryRequest | `ctx`, `resource:StoreResource{backend:"clickhouse"}`, `query:"SELECT 1"`, `limit:100` | `parameters`(Struct),`dry_run`,`page_token` optional. |
 | [ ] | BeginTx | MUT | stream Mutation | stream of Mutation = `{ctx, operation:"upsert", message_type:"<seed:message_type>", payload:{...} }` then final `{commit:true}` | bidi-stream. Mutation fields: operation/message_type/record_json/payload/filter/collection/vector_points/commit/rollback/bucket/object_key/object_data/content_type/idempotency_key/tx_id. Send commit:true to finalize. |
-| [ ] | PublishCDC | MUT | CDCSubscriptionRequest | `ctx`, `topic_pattern:"<seed:project>.*"` | `since_event_id` optional (resume). server-streams CDCEnvelope. |
+| [ ] | PublishCDC | MUT | CDCSubscriptionRequest | `ctx`, `topic_pattern:"*"` | `since_event_id` optional (resume). server-streams CDCEnvelope. |
 | [ ] | CreateMaterializedView | MUT | ViewDefinition | `ctx`, `schema:"public"`, `name:"mv_test"`, `query:"SELECT 1"`, `with_data:true` | `ttl_days` optional. |
 | [ ] | EnqueueOutboxEvent | MUT | EnqueueOutboxEventRequest | `ctx`, `topic:"<seed:event_type>"`, `partition_key:"<seed:document_id>"`, `payload:{event_id:"<uuid>", event_type:"<seed:event_type>", correlation_id:"<uuid>", document_id:"<seed:document_id>"}` (Struct) | payload Struct MUST contain event_id/event_type/correlation_id/document_id (per proto comment). `schema_uri`,`idempotency_key` optional. |
 | [ ] | GenericDispatch | MUT | GenericDispatchRequest | `ctx (scopes:[udb:dispatch])`, `backend:"mongodb"`, `operation:"ping"` | operation ∈ {ping, ensure_resource, drop_resource, list_resources}. resource_kind/resource_name/resource_uri/spec_json/idempotency_key/dry_run optional depending on op. |
@@ -56,15 +56,15 @@ Reusable nested message: **StoreResource** (`operation.proto`) = `{backend, inst
 | [ ] | GetCatalogVersions | RO | CatalogManifestRequest | `ctx (scopes:[udb:admin])`, `redact:false` | note: uses CatalogManifestRequest `{context, redact}` — no project field; project from context. |
 | [ ] | GetCatalogVersion | RO | CatalogVersionRequest | `ctx (scopes:[udb:admin])`, `project_id:"<seed:project>"`, `version:""` | empty version = active. |
 | [ ] | PlanMigration | MUT | MigrationPlanRequest | `ctx (scopes:[udb:admin])`, `project_id:"<seed:project>"`, `dry_run:true` | returns run_id. |
-| [ ] | ApplyMigration | MUT | MigrationApplyRequest | `ctx (scopes:[udb:admin])`, `run_id:"<seed:migration_id>"`, `project_id:"<seed:project>"` | run_id from PlanMigration. `approval_token` from ApproveMigrationPlan (required for blocked ops). `idempotency_key` optional. |
+| [ ] | ApplyMigration | MUT | MigrationApplyRequest | `ctx (scopes:[udb:admin])`, `run_id:"<seed:apply_run_id>"`, `project_id:"<seed:project>"`, `approval_token:"<seed:approval_token>"` | run_id from a pre-approved PlanMigration run. `approval_token` from ApproveMigrationPlan is required for blocked ops. `idempotency_key` optional. |
 | [ ] | GetMigrationStatus | RO | MigrationRunRequest | `ctx (scopes:[udb:admin])`, `run_id:"<seed:migration_id>"`, `project_id:"<seed:project>"` | run_id must exist. `idempotency_key` optional. |
 | [ ] | ListMigrationRuns | RO | MigrationRunListRequest | `ctx (scopes:[udb:admin or udb:admin:viewer])`, `project_id:"<seed:project>"`, `limit:50` | `state_filter`,`page_token` optional. |
-| [ ] | ApproveMigrationPlan | MUT | MigrationRunRequest | `ctx (scopes:[udb:admin])`, `run_id:"<seed:migration_id>"`, `project_id:"<seed:project>"` | run_id must be a plan awaiting review. |
+| [ ] | ApproveMigrationPlan | MUT | MigrationRunRequest | `ctx (scopes:[udb:admin])`, `run_id:"<seed:approve_run_id>"`, `project_id:"<seed:project>"` | run_id must be a non-dry-run plan awaiting review. |
 | [ ] | ListDlqEvents | RO | DlqListRequest | `ctx`, `limit:50` | `topic`,`status_filter`(OPEN/REPLAYED/DISMISSED/QUARANTINED),`page_token` optional. |
-| [ ] | GetDlqEvent | RO | DlqEventRequest | `ctx`, `dlq_id:"<seed:record_id>"` | dlq_id = an existing DLQ row id (no dedicated seed key; reuse record_id). |
-| [ ] | ReplayDlqEvent | MUT | DlqActionRequest | `ctx`, `dlq_id:"<seed:record_id>"`, `preserve_event_id:false` | `reason` optional. dlq_id must exist. |
-| [ ] | DismissDlqEvent | MUT | DlqActionRequest | `ctx`, `dlq_id:"<seed:record_id>"` | `reason` optional. |
-| [ ] | QuarantineDlqEvent | MUT | DlqActionRequest | `ctx`, `dlq_id:"<seed:record_id>"` | `reason` optional. |
+| [ ] | GetDlqEvent | RO | DlqEventRequest | `ctx`, `dlq_id:"<seed:dlq_id>"` | dlq_id = an existing DLQ row id. |
+| [ ] | ReplayDlqEvent | MUT | DlqActionRequest | `ctx`, `dlq_id:"<seed:replay_dlq_id>"`, `preserve_event_id:false` | `reason` optional. dlq_id must exist. |
+| [ ] | DismissDlqEvent | MUT | DlqActionRequest | `ctx`, `dlq_id:"<seed:dismiss_dlq_id>"` | `reason` optional. |
+| [ ] | QuarantineDlqEvent | MUT | DlqActionRequest | `ctx`, `dlq_id:"<seed:quarantine_dlq_id>"` | `reason` optional. |
 | [ ] | GetCdcStatus | RO | CdcControlRequest | `ctx`, `slot_name:"<cdc slot>"` | slot_name = a configured CDC slot name (no dedicated seed key). `reason` optional. |
 | [ ] | PauseCdc | MUT | CdcControlRequest | `ctx`, `slot_name:"<cdc slot>"`, `reason:"maintenance"` | slot_name must be a live slot. |
 | [ ] | ResumeCdc | MUT | CdcControlRequest | `ctx`, `slot_name:"<cdc slot>"`, `reason:"resume"` | slot must be paused. |
@@ -73,11 +73,11 @@ Reusable nested message: **StoreResource** (`operation.proto`) = `{backend, inst
 | [ ] | ScanProjectionDrift | RO | ProjectionDriftScanRequest | `ctx`, `project_id:"<seed:project>"`, `message_type:"<seed:message_type>"`, `scan_mode:"sample"`, `rows_per_target:100`, `limit:10` | `repair:false` to scan only. |
 | [ ] | ListSagas | RO | SagaListRequest | `ctx`, `limit:50` | `tenant_id_filter`,`status_filter`(pending/in_progress/committed/compensated/failed_compensation/manual_review),`tx_id_filter`,`correlation_id_filter`,`page_token` optional. |
 | [ ] | GetSaga | RO | SagaRequest | `ctx`, `saga_id:"<seed:saga_id>"` | saga_id must exist. `reason`,`idempotency_key` optional. |
-| [ ] | RetrySagaCompensation | MUT | SagaRequest | `ctx`, `saga_id:"<seed:saga_id>"`, `reason:"retry"` | saga must be in failed_compensation. |
-| [ ] | MarkSagaReviewed | MUT | SagaRequest | `ctx`, `saga_id:"<seed:saga_id>"`, `reason:"reviewed"` | saga must be in manual_review. |
+| [ ] | RetrySagaCompensation | MUT | SagaRequest | `ctx`, `saga_id:"<seed:retry_saga_id>"`, `reason:"retry"` | saga must be in failed_compensation. |
+| [ ] | MarkSagaReviewed | MUT | SagaRequest | `ctx`, `saga_id:"<seed:mark_saga_id>"`, `reason:"reviewed"` | saga must be in manual_review. |
 | [ ] | ListPolicies | RO | PolicyListRequest | `ctx`, `include_disabled:false`, `limit:50` | `page_token` optional. |
 | [ ] | PutPolicy | DEST | PutPolicyRequest | `ctx`, `policy:PolicyRecord{effect:"allow", service_identity:"<seed:user_id>", tenant_id:"<seed:tenant_id>", message_type:"<seed:message_type>", operation:"read", required_scope:"udb:read", priority:100, enabled:true}` | PolicyRecord.policy_id omit/0 for create; set `<seed:policy_id>` to update. effect=allow/deny. |
-| [ ] | DeletePolicy | MUT | PolicyRequest | `ctx`, `policy_id:<seed:policy_id>` (int64) | policy_id must exist. |
+| [ ] | DeletePolicy | MUT | PolicyRequest | `ctx`, `policy_id:<seed:ds_policy_id>` (int64) | policy_id must exist. |
 | [ ] | ReloadPolicies | DEST | CapabilitiesRequest | `ctx`, `project_id:"<seed:project>"` | reuses CapabilitiesRequest `{context, project_id}`. |
 | [ ] | LintPolicies | RO | CapabilitiesRequest | `ctx`, `project_id:"<seed:project>"` | reuses CapabilitiesRequest. |
 | [ ] | GetCapabilities | RO | CapabilitiesRequest | `ctx`, `project_id:"<seed:project>"` | project_id optional (empty = default). |

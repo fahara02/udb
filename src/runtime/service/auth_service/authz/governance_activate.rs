@@ -396,7 +396,7 @@ impl AuthzServiceImpl {
             authz_entity_pb::PolicyVersionState::Active
         };
         sqlx::query(&format!(
-            "UPDATE {rel} SET {state} = $2, {activated_by} = $3, {activated_at} = NOW(), {revision} = {revision} + 1, {rollback_of} = $4 \
+            "UPDATE {rel} SET {state} = $2, {activated_by} = $3, {activated_at} = NOW(), {revision} = {revision} + 1, {rollback_of} = $4::UUID \
              WHERE {policy_version_id} = $1::UUID",
             rel = vm.relation,
             state = vm.q("state"),
@@ -409,7 +409,12 @@ impl AuthzServiceImpl {
         .bind(&version.policy_version_id)
         .bind(version_state_to_db(new_state))
         .bind(actor)
-        .bind(prior_active.clone())
+        // K1-EXPANDED (bug_report.md): rollback_of is a nullable UUID column.
+        // prior_active is Option<String> (the prior active version id, or None) —
+        // bind it as Option<&str> so None→NULL and a real id→text, with $4::UUID
+        // casting it into the uuid column instead of leaking "column is uuid but
+        // expression is text".
+        .bind(prior_active.as_deref())
         .execute(&mut *tx)
         .await
         .map_err(|err| Status::internal(format!("activate version failed: {err}")))?;
@@ -417,7 +422,7 @@ impl AuthzServiceImpl {
         // 4. PolicySet pointers: active = this version, rollback = prior active.
         let sm = self.policy_sets_model();
         sqlx::query(&format!(
-            "UPDATE {rel} SET {active_version_id} = $2::UUID, {rollback_version_id} = $3 WHERE {policy_set_id} = $1::UUID",
+            "UPDATE {rel} SET {active_version_id} = $2::UUID, {rollback_version_id} = $3::UUID WHERE {policy_set_id} = $1::UUID",
             rel = sm.relation,
             active_version_id = sm.q("active_version_id"),
             rollback_version_id = sm.q("rollback_version_id"),
@@ -499,8 +504,8 @@ impl AuthzServiceImpl {
 
     /// Build the production node-state-backed metric source for the canary
     /// evaluator, when a Postgres pool is configured. Returns `None` (→ caller
-    /// falls back to [`canarylib::NoSignalSource`], i.e. everything PAUSES) when
-    /// there is no pool.
+    /// falls back to [`canarylib::NoSignalSource`], i.e. zero-sample canaries
+    /// keep baking and remain explicitly promotable) when there is no pool.
     pub(crate) fn build_canary_metric_source(&self) -> Option<Arc<dyn CanaryMetricSource>> {
         self.pg_pool
             .clone()
@@ -510,8 +515,9 @@ impl AuthzServiceImpl {
     /// Spawn the Phase-9 canary evaluator background task. It periodically reads
     /// each ACTIVE canary's success signal and — per `evaluate_canary` —
     /// auto-rolls-back breaching canaries (restoring the prior version BEFORE
-    /// fleet-wide promotion), PAUSES inconclusive ones, and leaves healthy ones to
-    /// bake until an operator promotes. Detached; runs for the process lifetime.
+    /// fleet-wide promotion), PAUSES low-sample inconclusive ones, and leaves
+    /// healthy or zero-sample canaries to bake until an operator promotes.
+    /// Detached; runs for the process lifetime.
     /// The parent calls this once in `serve()` against the built `AuthzServiceImpl`.
     pub(crate) fn spawn_canary_evaluator(&self) -> tokio::task::JoinHandle<()> {
         let executor: Arc<dyn CanaryExecutor> = Arc::new(self.clone());
@@ -644,7 +650,7 @@ impl AuthzServiceImpl {
                 ({policy_set_id}, {policy_version_id}, {scope_kind}, {scope_values}, {state}, \
                  {success_window_secs}, {metric_threshold}, {created_by}, {tenant_id}, {project_id}, \
                  {min_samples}, {rollback_version_id}, {outcome_reason}) \
-             VALUES ($1::UUID, $2::UUID, $3, $4::JSONB, $5, $6, $7, $8, $9, $10, $11, $12, '') \
+             VALUES ($1::UUID, $2::UUID, $3, $4::JSONB, $5, $6, $7, $8, $9, $10, $11, $12::UUID, '') \
              RETURNING {canary_id}::TEXT AS canary_id",
             rel = m.relation,
             policy_set_id = m.q("policy_set_id"),

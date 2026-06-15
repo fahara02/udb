@@ -1260,13 +1260,20 @@ fn parse_catalog_manifest_payload(bytes: &[u8]) -> Result<CatalogManifest, Statu
     })
 }
 
-fn catalog_payload_version(bytes: &[u8], manifest: &CatalogManifest) -> String {
+fn catalog_payload_version(
+    bytes: &[u8],
+    manifest: &CatalogManifest,
+    fallback_active_version: &str,
+) -> String {
     if !bytes.is_empty()
         && let Ok(value) = serde_json::from_slice::<serde_json::Value>(bytes)
         && let Some(version) = value.get("version").and_then(|v| v.as_str())
         && !version.trim().is_empty()
     {
         return version.trim().to_string();
+    }
+    if !fallback_active_version.trim().is_empty() {
+        return fallback_active_version.trim().to_string();
     }
     if !manifest.generator_version.trim().is_empty() {
         return format!("generator-{}", manifest.generator_version.trim());
@@ -1775,15 +1782,23 @@ pub async fn serve(
                 tokio::time::interval(std::time::Duration::from_secs(abac_refresh_secs));
             loop {
                 interval.tick().await;
-                let fresh = runtime_bg.load_abac_policies().await;
-                if fresh.is_empty() {
-                    tracing::warn!(
-                        "ABAC policy refresh returned empty set - retaining stale policies \
-                         to avoid accidental deny-all"
-                    );
-                    continue;
+                // bug_report.md J: distinguish a transient query failure (PG pool
+                // contention under CDC load) from a genuinely empty policy set. A
+                // failure retains stale policies AND surfaces the real DB error (the
+                // old code swallowed both into a misleading "empty set" warning,
+                // which made the authz snapshot flap run-to-run).
+                match runtime_bg.try_load_abac_policies().await {
+                    Ok(fresh) if !fresh.is_empty() => service_bg.replace_abac_policies(fresh),
+                    Ok(_) => tracing::warn!(
+                        "ABAC policy refresh returned a genuinely empty set - retaining stale \
+                         policies to avoid accidental deny-all"
+                    ),
+                    Err(err) => tracing::error!(
+                        error = %err,
+                        "ABAC policy refresh query FAILED - retaining stale policies (transient; \
+                         likely PG pool contention under CDC load)"
+                    ),
                 }
-                service_bg.replace_abac_policies(fresh);
             }
         });
     }
@@ -2182,6 +2197,11 @@ pub async fn serve(
         Some(native_health_runtime.as_ref()),
     )
     .await;
+    let (listener_shutdown_tx, listener_shutdown_rx) = tokio::sync::watch::channel(false);
+    tokio::spawn(async move {
+        shutdown_signal().await;
+        let _ = listener_shutdown_tx.send(true);
+    });
     let auth_fut = auth_server
         .add_service(native_health)
         .add_service(msec.wrap(auth_service::AuthnServiceServer::new(authn_service)))
@@ -2221,7 +2241,10 @@ pub async fn serve(
         .add_service(msec.wrap(webrtc_service::SignalingServiceServer::new(
             webrtc_service.clone(),
         )))
-        .serve_with_shutdown(auth_addr, shutdown_signal());
+        .serve_with_shutdown(
+            auth_addr,
+            listener_shutdown_signal(listener_shutdown_rx.clone()),
+        );
 
     let mut webrtc_peer_server = tonic::transport::Server::builder().layer(make_layer());
     if let Some(tls) = tls_config_from_settings(&runtime_config.service.tls)? {
@@ -2261,7 +2284,10 @@ pub async fn serve(
                 peer_auth,
             )),
         )
-        .serve_with_shutdown(webrtc_addr, shutdown_signal());
+        .serve_with_shutdown(
+            webrtc_addr,
+            listener_shutdown_signal(listener_shutdown_rx.clone()),
+        );
 
     // Optional co-located UDS data-plane (PERF_TODO §3) — clone before the
     // service is moved into the TCP builder. No-op unless UDB_DATA_UDS_PATH is set.
@@ -2271,7 +2297,7 @@ pub async fn serve(
         .add_service(reflection_service)
         .add_service(health_service)
         .add_service(DataBrokerServer::new(service))
-        .serve_with_shutdown(addr, shutdown_signal());
+        .serve_with_shutdown(addr, listener_shutdown_signal(listener_shutdown_rx.clone()));
 
     // Optional ws:// signalling bridge (feature `ws-signalling`, activated by
     // UDB_WS_SIGNALLING_ADDR). Runs as a detached task bound to the same shutdown
@@ -2289,20 +2315,78 @@ pub async fn serve(
     // not duplicated. Detached task bound to the shared shutdown signal.
     let _scim_http = auth_service::spawn_scim_http_from_env(scim_http_idp, shutdown_signal());
 
-    // Run selected listeners together; if one exits (error or shutdown), bring down all.
+    // Run selected listeners together; if one exits (error, graceful shutdown, or
+    // unexpected listener completion), bring down all. `try_join!` waits after an
+    // `Ok(())`, which allowed one native listener to disappear while the public
+    // data-plane kept serving.
     match (native_control_plane_enabled, native_webrtc_peer_enabled) {
         (true, true) => {
-            tokio::try_join!(main_fut, auth_fut, webrtc_peer_fut)?;
+            tokio::pin!(main_fut);
+            tokio::pin!(auth_fut);
+            tokio::pin!(webrtc_peer_fut);
+            tokio::select! {
+                result = &mut main_fut => listener_finished("data-plane", result, *listener_shutdown_rx.borrow())?,
+                result = &mut auth_fut => listener_finished("native-control-plane", result, *listener_shutdown_rx.borrow())?,
+                result = &mut webrtc_peer_fut => listener_finished("webrtc-peer", result, *listener_shutdown_rx.borrow())?,
+            }
         }
         (true, false) => {
-            tokio::try_join!(main_fut, auth_fut)?;
+            tokio::pin!(main_fut);
+            tokio::pin!(auth_fut);
+            tokio::select! {
+                result = &mut main_fut => listener_finished("data-plane", result, *listener_shutdown_rx.borrow())?,
+                result = &mut auth_fut => listener_finished("native-control-plane", result, *listener_shutdown_rx.borrow())?,
+            }
         }
         (false, true) => {
-            tokio::try_join!(main_fut, webrtc_peer_fut)?;
+            tokio::pin!(main_fut);
+            tokio::pin!(webrtc_peer_fut);
+            tokio::select! {
+                result = &mut main_fut => listener_finished("data-plane", result, *listener_shutdown_rx.borrow())?,
+                result = &mut webrtc_peer_fut => listener_finished("webrtc-peer", result, *listener_shutdown_rx.borrow())?,
+            }
         }
         (false, false) => unreachable!("handled before native service construction"),
     }
     Ok(())
+}
+
+async fn listener_shutdown_signal(mut shutdown: tokio::sync::watch::Receiver<bool>) {
+    if *shutdown.borrow() {
+        return;
+    }
+    let _ = shutdown.changed().await;
+}
+
+fn listener_finished(
+    listener: &'static str,
+    result: Result<(), tonic::transport::Error>,
+    shutdown_requested: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    match result {
+        Ok(()) if shutdown_requested => {
+            tracing::info!(listener, "gRPC listener exited after shutdown signal");
+            Ok(())
+        }
+        Ok(()) => {
+            let err =
+                std::io::Error::other(format!("{listener} gRPC listener exited unexpectedly"));
+            tracing::error!(
+                listener,
+                error = %err,
+                "gRPC listener exited without shutdown; shutting down sibling listeners"
+            );
+            Err(err.into())
+        }
+        Err(err) => {
+            tracing::error!(
+                listener,
+                error = %err,
+                "gRPC listener failed; shutting down sibling listeners"
+            );
+            Err(Box::new(err))
+        }
+    }
 }
 
 #[cfg(feature = "kafka")]
@@ -2310,6 +2394,18 @@ async fn start_cdc_engine(
     runtime: &DataBrokerRuntime,
     metrics: Arc<dyn MetricsRecorder>,
 ) -> Option<Arc<CdcEngine>> {
+    // P4 (bug_report.md): honor UDB_CDC_ENABLED=false — don't start the tailer at
+    // all (the documented load-test mitigation). Default = enabled when unset.
+    let cdc_enabled = std::env::var("UDB_CDC_ENABLED")
+        .map(|v| {
+            let v = v.trim();
+            !(v == "0" || v.eq_ignore_ascii_case("false") || v.eq_ignore_ascii_case("no"))
+        })
+        .unwrap_or(true);
+    if !cdc_enabled {
+        tracing::info!("CDC tailer disabled: UDB_CDC_ENABLED=false");
+        return None;
+    }
     let Some(kafka_brokers) = runtime.config().kafka_brokers.clone() else {
         tracing::info!("CDC tailer disabled: kafka_brokers is not configured");
         return None;

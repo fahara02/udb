@@ -926,8 +926,38 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
         }
         let certs = json_array_to_vec(&provider.saml_idp_certs_json);
         let audience = provider.entity_id.clone();
+        // #12-13: dev self-asserted IdP path. With UDB_SAML_TEST_MODE on, a sentinel
+        // saml_response (`__UDB_SAML_TEST__[:name_id]`) makes the broker mint a REAL
+        // XML-DSig-signed assertion with the dev IdP key and verify it through the
+        // SAME validate_response path below — never an accept-any bypass. Fail-closed
+        // off in production. See `saml::dev_self_assert`.
+        let (saml_response, certs) = if saml::dev_test_mode_enabled()
+            && req
+                .saml_response
+                .trim_start()
+                .starts_with(saml::DEV_SENTINEL)
+        {
+            let name_id = req
+                .saml_response
+                .trim_start()
+                .strip_prefix(saml::DEV_SENTINEL)
+                .map(|rest| rest.trim_start_matches(':').trim())
+                .filter(|s| !s.is_empty())
+                .unwrap_or("dev-user@udb.local")
+                .to_string();
+            let (resp_b64, cert_b64) = saml::dev_self_assert(
+                &provider.entity_id,
+                &name_id,
+                &audience,
+                &std::collections::BTreeMap::new(),
+            )
+            .map_err(|e| Status::internal(format!("dev SAML self-assert failed: {e}")))?;
+            (resp_b64, vec![cert_b64])
+        } else {
+            (req.saml_response.clone(), certs)
+        };
         let (assertion, signature_verified) = match saml::validate_response(
-            &req.saml_response,
+            &saml_response,
             &certs,
             &audience,
             saml_clock_skew_secs(),
@@ -1625,7 +1655,18 @@ impl IdentityProviderServiceImpl {
         provider_id: &str,
         scim_user_id: &str,
     ) -> Result<Option<ExternalIdentityRow>, Status> {
-        // Subject lookup covers the common SCIM userName == subject case.
+        // SCIM-1 (bug_report.md G): ScimCreateUser returns id = external_identity_id
+        // (a UUID), so the standard Create→{id}→Get/Patch/Put/Delete-by-id flow
+        // passes that UUID. Resolve by external_identity_id first; otherwise fall
+        // back to subject (the SCIM userName == subject case).
+        if let Ok(eid) = uuid::Uuid::parse_str(scim_user_id.trim()) {
+            if let Some(row) =
+                store::get_external_identity_by_id(pool, tenant_id, provider_id, &eid.to_string())
+                    .await?
+            {
+                return Ok(Some(row));
+            }
+        }
         store::get_external_identity(pool, tenant_id, provider_id, scim_user_id).await
     }
 }

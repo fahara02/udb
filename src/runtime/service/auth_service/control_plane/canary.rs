@@ -167,7 +167,7 @@ pub enum CanaryVerdict {
     Rollback,
     /// Window elapsed within threshold → eligible for fleet-wide promotion.
     PromoteEligible,
-    /// Insufficient samples → pause (hold, do not promote/rollback).
+    /// Insufficient samples → pause; zero samples from no metric source → hold.
     Pause,
     /// Healthy and still inside the bake window → keep waiting.
     Hold,
@@ -222,7 +222,16 @@ pub fn evaluate_canary(
         return CanaryVerdict::Rollback;
     }
     if !conclusive {
-        return CanaryVerdict::Pause;
+        // P2 (bug_report.md): ZERO observations means there is no metric source at
+        // all (e.g. `NoSignalSource` in a deployment with no canary backend) —
+        // keep baking (stay ACTIVE, manually promotable) rather than auto-pausing
+        // every canary within one cycle. A non-zero but below-`min_samples` count
+        // is genuine inconclusive noise → pause as before (never promote on noise).
+        return if signal.samples <= 0 {
+            CanaryVerdict::Hold
+        } else {
+            CanaryVerdict::Pause
+        };
     }
     // Conclusive and within threshold.
     if elapsed_secs >= policy.success_window_secs {
@@ -261,7 +270,7 @@ pub fn canary_started_at_unix(c: &authz_entity_pb::PolicyCanary) -> i64 {
 /// Production wires a reader over the metrics registry (e.g. the authz deny /
 /// error rate exposed via `udb_authz_denies_total`); tests pass a canned source.
 /// Returning a signal with `samples == 0` is the explicit "no data" case and
-/// drives a PAUSE rather than a false promotion.
+/// holds the canary active rather than auto-pausing or falsely promoting it.
 #[async_trait::async_trait]
 pub trait CanaryMetricSource: Send + Sync {
     /// Read the current signal for one canary (identified by id + scope), over
@@ -269,9 +278,10 @@ pub trait CanaryMetricSource: Send + Sync {
     async fn read(&self, canary: &authz_entity_pb::PolicyCanary, window_secs: i64) -> CanarySignal;
 }
 
-/// A metric source that always reports "no samples" → every canary PAUSES. This
+/// A metric source that always reports "no samples" → every canary HOLDS. This
 /// is the fail-safe default used when no real metric backend is wired: a canary
-/// is never auto-promoted on the strength of zero evidence.
+/// is never auto-promoted on the strength of zero evidence, and explicit
+/// promotion remains possible after the bake window.
 #[derive(Debug, Default, Clone)]
 pub struct NoSignalSource;
 
@@ -450,11 +460,16 @@ mod tests {
         assert_eq!(v, CanaryVerdict::Pause);
     }
 
+    // P2 (bug_report.md): ZERO observations = no metric source at all → keep
+    // baking (Hold), NOT auto-pause. Otherwise every ACTIVE canary in a
+    // deployment without a canary metric backend is paused within one cycle and
+    // PromoteCanary (requires ACTIVE) becomes unreachable. A non-zero but
+    // insufficient count is still genuine noise → Pause (see tests above).
     #[test]
-    fn zero_samples_pauses() {
+    fn zero_samples_holds_not_pauses() {
         let p = policy(300, 0.05, 1);
         let v = evaluate_canary(&p, 400, signal(0.0, 0));
-        assert_eq!(v, CanaryVerdict::Pause);
+        assert_eq!(v, CanaryVerdict::Hold);
     }
 
     // ── scope membership: node ──────────────────────────────────────────────

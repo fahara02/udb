@@ -137,6 +137,132 @@ pub(crate) fn retryable_status(
     status_with_error_detail(tonic::Code::Unavailable, message, detail)
 }
 
+/// Central classifier for `sqlx::Error` -> typed `tonic::Status` (bug_report.md
+/// B1/B2/B3). When the failure is a database error carrying a SQLSTATE we
+/// recognise, map it to the correct gRPC code with a clean, leak-free message;
+/// otherwise fall back to `Internal` with the supplied `context` (the raw DB
+/// string is intentionally NOT echoed for the recognised classes).
+///
+/// SQLSTATE mappings (PostgreSQL codes; the same standard codes are emitted by
+/// the other SQL backends UDB drives):
+///   - `23505` unique_violation        -> `AlreadyExists` ("resource already exists")
+///   - `23502` not_null_violation       -> `InvalidArgument` ("required field <col> is missing")
+///   - `22P02` invalid_text_representation / `22007` invalid_datetime_format
+///                                      -> `InvalidArgument` ("invalid identifier format ...")
+///   - `23503` foreign_key_violation    -> `FailedPrecondition`
+///   - everything else                  -> `Internal` ("{context}") — raw DB text suppressed
+pub(crate) fn sqlx_error_to_status(context: &str, err: &sqlx::Error) -> tonic::Status {
+    if let Some(db) = err.as_database_error() {
+        if let Some(code) = db.code() {
+            match code.as_ref() {
+                "23505" => {
+                    // Unique violation. Map to AlreadyExists. We optionally name
+                    // the constraint (schema metadata, not row data) but never the
+                    // raw DB text/values.
+                    let msg = match db.constraint() {
+                        Some(name) => {
+                            format!("resource already exists (conflicting constraint: {name})")
+                        }
+                        None => "resource already exists".to_string(),
+                    };
+                    return tonic::Status::already_exists(msg);
+                }
+                "23502" => {
+                    // NOT NULL violation. Name the column when the driver exposes
+                    // it so the client knows which required field is missing.
+                    let msg = match not_null_column(db.message()) {
+                        Some(c) => format!("required field '{c}' is missing"),
+                        None => "a required field is missing".to_string(),
+                    };
+                    return tonic::Status::invalid_argument(msg);
+                }
+                "22P02" | "22007" => {
+                    return tonic::Status::invalid_argument(
+                        "invalid identifier format (a parameter must be a valid UUID/value)",
+                    );
+                }
+                "23503" => {
+                    return tonic::Status::failed_precondition(
+                        "operation violates a referential constraint",
+                    );
+                }
+                _ => {}
+            }
+        }
+    }
+    // Unrecognised: keep Internal but do not echo the raw DB string.
+    tonic::Status::internal(context.to_string())
+}
+
+/// Re-contextualise a downstream `tonic::Status` by prefixing its message with
+/// `context`, WITHOUT changing its code (bug_report.md B4). Use this at handler
+/// wrap sites where the downstream value is already a typed `Status` — wrapping
+/// it in `Status::internal(format!(...))` would clobber the correct code (e.g.
+/// turn an `InvalidArgument`/`AlreadyExists` into `Internal`).
+pub(crate) fn prefix_status(context: &str, status: tonic::Status) -> tonic::Status {
+    tonic::Status::new(status.code(), format!("{context}: {}", status.message()))
+}
+
+/// Prefix used to smuggle a typed gRPC code through the `Result<_, String>`
+/// boundaries in the runtime `authn` store layer (whose trait methods return
+/// `String`, not `Status`). The leaf sqlx write classifies its error via
+/// [`sqlx_error_to_status`] then tags the resulting message so the RPC boundary
+/// can reconstruct the correct code instead of forcing every store String into
+/// `Status::internal`. Format: `"<TAG><code-number>:<message>"`. bug_report.md B2/B3.
+const STATUS_TAG_PREFIX: &str = "\u{1}udb-status:";
+
+/// Render a typed gRPC code + message as a tagged String (see
+/// [`STATUS_TAG_PREFIX`]) so a `Result<_, String>` leaf can carry the code
+/// across a String boundary, to be reconstructed by [`status_from_store_string`].
+#[cfg(feature = "mongodb-native")]
+pub(crate) fn tagged_status_string(code: tonic::Code, message: &str) -> String {
+    format!("{STATUS_TAG_PREFIX}{}:{}", code as i32, message)
+}
+
+/// Classify a leaf `sqlx::Error` and render it as a tagged String carrying the
+/// typed gRPC code, for the `String`-returning authn store layer. Recognised
+/// SQLSTATEs become a tagged code; anything else is the plain `{context}: {err}`
+/// (untagged → decodes to `Internal`).
+pub(crate) fn sqlx_error_to_tagged_string(context: &str, err: &sqlx::Error) -> String {
+    let status = sqlx_error_to_status(context, err);
+    if status.code() == tonic::Code::Internal {
+        // Preserve existing behaviour/diagnostics for unrecognised errors.
+        return format!("{context}: {err}");
+    }
+    format!(
+        "{STATUS_TAG_PREFIX}{}:{}",
+        status.code() as i32,
+        status.message()
+    )
+}
+
+/// Decode a String produced by [`sqlx_error_to_tagged_string`] (or any other
+/// store String) into a typed `Status`. Tagged strings restore their original
+/// gRPC code + clean message; untagged strings become `Status::internal`.
+pub(crate) fn status_from_store_string(s: String) -> tonic::Status {
+    if let Some(rest) = s.strip_prefix(STATUS_TAG_PREFIX) {
+        if let Some((code_str, msg)) = rest.split_once(':') {
+            if let Ok(code_num) = code_str.parse::<i32>() {
+                return tonic::Status::new(tonic::Code::from(code_num), msg.to_string());
+            }
+        }
+    }
+    tonic::Status::internal(s)
+}
+
+/// Extract the offending column name from a Postgres NOT NULL violation message
+/// of the form: `null value in column "lookup_key" of relation "..." violates
+/// not-null constraint`. Returns the bare column name when present.
+fn not_null_column(message: &str) -> Option<String> {
+    let after = message.split("column \"").nth(1)?;
+    let name = after.split('"').next()?;
+    if name.is_empty() {
+        None
+    } else {
+        Some(name.to_string())
+    }
+}
+
 /// Compiler refusal: map a `CompileError::code()` token onto a typed
 /// `ErrorDetail` (`kind = SCHEMA`, code carried in `capability_required`).
 /// `InvalidArgument` matches the existing compile-error mapping. Additive — the
