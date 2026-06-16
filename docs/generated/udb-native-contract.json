@@ -39981,7 +39981,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 3,
+      "field_count": 4,
       "fields": [
         {
           "name": "otp_id",
@@ -40025,6 +40025,25 @@
           "name": "cooldown_seconds",
           "number": 3,
           "type": "5",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "dev_otp_code",
+          "number": 4,
+          "type": "9",
           "column_security": null,
           "scalar_security": {
             "pii": false,
