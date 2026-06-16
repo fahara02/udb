@@ -313,6 +313,8 @@ fn source_checksum_is_payload_sensitive() {
     let a = json!({ "id": "cust-1", "email": "alice@acme.com" });
     let b = json!({ "id": "cust-1", "email": "alice@acme.com" });
     let c = json!({ "id": "cust-1", "email": "alice+changed@acme.com" });
+    let nul = json!({ "id": "cust-1", "email": "alice@acme.com", "note": "ok\u{0}then" });
+    let stripped = json!({ "id": "cust-1", "email": "alice@acme.com", "note": "okthen" });
 
     assert_eq!(
         ProjectionEngine::source_checksum(&a),
@@ -323,6 +325,11 @@ fn source_checksum_is_payload_sensitive() {
         ProjectionEngine::source_checksum(&a),
         ProjectionEngine::source_checksum(&c),
         "changed payload → new checksum"
+    );
+    assert_eq!(
+        ProjectionEngine::source_checksum(&nul),
+        ProjectionEngine::source_checksum(&stripped),
+        "NUL bytes are stripped before projection JSONB persistence"
     );
 }
 

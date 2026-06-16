@@ -68,10 +68,13 @@ function normalizeGeneratedText(text) {
 }
 
 function normalizeGoGeneratedText(text) {
-  return normalizeGeneratedText(text).replace(
-    /(\/\/ Hybrid model:\n)\/\/   (SERVER_SIDE:[^\n]+)\n\/\/   (JWT:[^\n]+)/gu,
-    "$1//\n//\t$2\n//\t$3",
-  );
+  return normalizeGeneratedText(text)
+    .replace(
+      /(\/\/ Hybrid model:\n)\/\/   (SERVER_SIDE:[^\n]+)\n\/\/   (JWT:[^\n]+)/gu,
+      "$1//\n//\t$2\n//\t$3",
+    )
+    .replace(/maybe ”\);/gu, "maybe '');")
+    .replace(/\(WHERE email <> ”\)/gu, "(WHERE email <> '')");
 }
 
 function normalizeJavaGeneratedText(text) {

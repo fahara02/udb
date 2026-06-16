@@ -253,7 +253,7 @@ impl ProjectionEngine {
 
     pub fn source_checksum(source_payload: &serde_json::Value) -> String {
         let mut hasher = Sha256::new();
-        hasher.update(source_payload.to_string().as_bytes());
+        hasher.update(strip_nul_json(source_payload).to_string().as_bytes());
         format!("{:x}", hasher.finalize())
     }
 
@@ -272,12 +272,13 @@ impl ProjectionEngine {
         plans: &[ProjectionPlan],
     ) -> Result<Vec<String>, String> {
         let mut task_keys = Vec::new();
+        let source_payload = strip_nul_json(source_payload);
         for plan in plans
             .iter()
             .filter(|p| message_type_matches(&p.message_type, message_type))
         {
-            let source_row_key = plan.extract_row_key(source_payload);
-            let source_checksum = Self::source_checksum(source_payload);
+            let source_row_key = plan.extract_row_key(&source_payload);
+            let source_checksum = Self::source_checksum(&source_payload);
             for target in &plan.targets {
                 let idempotency_key = Self::idempotency_key(
                     project_id,
@@ -305,7 +306,7 @@ impl ProjectionEngine {
                     &target.projection_kind,
                     &target.resource_name,
                     &target.options,
-                    source_payload,
+                    &source_payload,
                     &source_checksum,
                 )
                 .await?;
@@ -532,6 +533,26 @@ impl ProjectionEngine {
                     .map_err(|err| format!("projection replay source row decode failed: {err}"))
             })
             .collect()
+    }
+}
+
+/// PostgreSQL JSONB rejects `\u0000` escapes with "unsupported Unicode escape
+/// sequence". Canonical row writes strip NULs at the Postgres bind edge; mirror
+/// that normalization before projection tasks persist the row payload as JSONB.
+fn strip_nul_json(value: &serde_json::Value) -> serde_json::Value {
+    match value {
+        serde_json::Value::String(s) if s.contains('\u{0}') => {
+            serde_json::Value::String(s.replace('\u{0}', ""))
+        }
+        serde_json::Value::Array(items) => {
+            serde_json::Value::Array(items.iter().map(strip_nul_json).collect())
+        }
+        serde_json::Value::Object(map) => serde_json::Value::Object(
+            map.iter()
+                .map(|(key, value)| (key.replace('\u{0}', ""), strip_nul_json(value)))
+                .collect(),
+        ),
+        other => other.clone(),
     }
 }
 
