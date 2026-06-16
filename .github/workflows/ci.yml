@@ -700,6 +700,7 @@ jobs:
       UDB_MINIO_ENDPOINT: http://localhost:9000
       UDB_MINIO_ACCESS_KEY: minio
       UDB_MINIO_SECRET_KEY: minio123
+      UDB_QDRANT_URL: http://localhost:6333
       UDB_KAFKA_BROKERS: localhost:59192
       UDB_GRPC_ADDR: 127.0.0.1:50051
       UDB_GRPC_TARGET: 127.0.0.1:50051
@@ -755,11 +756,30 @@ jobs:
           done
           docker logs udb-sdk-live-minio
           exit 1
+      - name: Start Qdrant
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run -d --name udb-sdk-live-qdrant \
+            -p 6333:6333 \
+            qdrant/qdrant:v1.13.4
+          for attempt in {1..60}; do
+            if curl -fsS http://localhost:6333/readyz >/dev/null; then
+              exit 0
+            fi
+            docker ps --filter name=udb-sdk-live-qdrant --filter status=running --quiet | grep -q . || {
+              docker logs udb-sdk-live-qdrant
+              exit 1
+            }
+            sleep 2
+          done
+          docker logs udb-sdk-live-qdrant
+          exit 1
       - name: Install TypeScript SDK dependencies
         working-directory: sdk/typescript
         run: npm ci --no-audit --no-fund
       - name: Build UDB broker
-        run: cargo build --locked --bin udb --no-default-features --features "postgres,mongodb-native,s3,kafka,runtime-logging"
+        run: cargo build --locked --bin udb --no-default-features --features "postgres,mongodb-native,s3,kafka,qdrant,runtime-logging"
       - name: Start Kafka
         shell: bash
         run: |
