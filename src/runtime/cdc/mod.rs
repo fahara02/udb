@@ -51,6 +51,9 @@ pub(crate) async fn insert_outbox_row<'c, E>(
 where
     E: sqlx::Executor<'c, Database = sqlx::Postgres>,
 {
+    let topic = strip_nul_text(topic);
+    let partition_key = strip_nul_text(partition_key);
+    let envelope = strip_nul_json(envelope);
     let sql = format!(
         "INSERT INTO {relation} (event_id, topic, partition_key, payload, created_at) \
          VALUES ($1::UUID, $2, $3, $4::JSONB, NOW())"
@@ -63,6 +66,31 @@ where
         .execute(executor)
         .await
         .map(|_| ())
+}
+
+fn strip_nul_text(value: &str) -> String {
+    if value.contains('\u{0}') {
+        value.replace('\u{0}', "")
+    } else {
+        value.to_string()
+    }
+}
+
+fn strip_nul_json(value: &serde_json::Value) -> serde_json::Value {
+    match value {
+        serde_json::Value::String(s) if s.contains('\u{0}') => {
+            serde_json::Value::String(strip_nul_text(s))
+        }
+        serde_json::Value::Array(items) => {
+            serde_json::Value::Array(items.iter().map(strip_nul_json).collect())
+        }
+        serde_json::Value::Object(map) => serde_json::Value::Object(
+            map.iter()
+                .map(|(key, value)| (strip_nul_text(key), strip_nul_json(value)))
+                .collect(),
+        ),
+        other => other.clone(),
+    }
 }
 
 pub mod source; // C2 + C3: per-backend CDC source trait + Postgres / MongoDB / MySQL impls
@@ -1186,6 +1214,27 @@ mod live_tests;
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn outbox_payload_sanitizer_strips_nul_before_jsonb_insert() {
+        let value = json!({
+            "event_id": "evt-1",
+            "payload": {
+                "text": "payload\u{0}with-nul",
+                "nested": ["a\u{0}b"],
+                "bad\u{0}key": "value"
+            }
+        });
+        let sanitized = strip_nul_json(&value);
+
+        assert_eq!(sanitized["payload"]["text"], "payloadwith-nul");
+        assert_eq!(sanitized["payload"]["nested"][0], "ab");
+        assert_eq!(sanitized["payload"]["badkey"], "value");
+        assert!(
+            !sanitized.to_string().contains("\\u0000"),
+            "Postgres JSONB rejects NUL escapes"
+        );
+    }
 
     #[test]
     fn event_envelope_is_project_neutral() {
