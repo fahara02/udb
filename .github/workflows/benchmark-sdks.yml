@@ -83,6 +83,11 @@ env:
   UDB_SAGA_RECOVERY_ENABLED: "false"
   UDB_STARTUP_FORCE_SYNC: "true"
   UDB_STARTUP_DRY_RUN: "false"
+  # Migration admission channel defaults to ONE concurrent op (channels.rs:386). The perf
+  # harness fires Plan/Approve/Apply/Status/Rollback in rapid succession; if one op still
+  # holds the single permit the next overflows the queue → RESOURCE_EXHAUSTED ("migration
+  # overloaded"). Give the bench headroom so migration RPCs don't serialize-and-overflow.
+  UDB_MIGRATION_MAX_CONCURRENT: "16"
   UDB_AUDIT_SINK_URL: file:///tmp/udb-bench-audit.jsonl
   UDB_ENCRYPTION_KEY: QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=
   UDB_JWT_PRIVATE_KEY: src/runtime/testdata/jwt_rs256_private.pem
