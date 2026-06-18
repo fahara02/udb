@@ -26,6 +26,7 @@ native services, operations, security, testing, and SDKs.
 |---|---|
 | Project overview | [../README.md](../README.md) |
 | Architecture, request flow, routing, pooling, events, and backend capability | [architecture.md](architecture.md) |
+| API rules, route naming, OpenAPI operation IDs, SDK alias policy | [api-rules.md](api-rules.md) |
 | Proto annotations | [annotations.md](annotations.md) |
 | Application integration | [integration.md](integration.md) |
 | Native auth, authz, IdP, storage, assets, WebRTC, and SDK facades | [native-services.md](native-services.md) |

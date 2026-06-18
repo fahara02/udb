@@ -85,6 +85,15 @@ env:
   UDB_AUTH_GRPC_TARGET: 127.0.0.1:50061
   UDB_METRICS_ADDR: 127.0.0.1:19092
   UDB_ABAC_DEFAULT_ALLOW: "true"
+  # Dev security posture for the bench: is_production() = tls_required && service_identity_required
+  # (security.rs). In production posture WebAuthn rejects the http://localhost dev origin even with
+  # TEST_MODE ("production WebAuthn requires an https UDB_WEBAUTHN_ORIGIN"), and other auth RPCs
+  # tighten. Force dev so the harness drives the real success path (matches the local grind, which
+  # leaves UDB_ENV unset → dev).
+  UDB_TLS_REQUIRED: "false"
+  UDB_SERVICE_IDENTITY_REQUIRED: "false"
+  # EnsureBaseline (DataBroker admin baseline seed) fails closed unless this is set.
+  UDB_ENABLE_ADMIN_SEED: "1"
   UDB_CDC_ENABLED: "true"
   UDB_PROJECTION_WORKER_ENABLED: "false"
   UDB_RECONCILIATION_ENABLED: "false"
@@ -96,6 +105,10 @@ env:
   # holds the single permit the next overflows the queue → RESOURCE_EXHAUSTED ("migration
   # overloaded"). Give the bench headroom so migration RPCs don't serialize-and-overflow.
   UDB_MIGRATION_MAX_CONCURRENT: "16"
+  # The Read admission channel similarly defaults low; ListPeers and other reads run many rapid
+  # iterations in the perf sweep and can overflow the queue under CI load → RESOURCE_EXHAUSTED.
+  # Give reads headroom too.
+  UDB_READ_MAX_CONCURRENT: "16"
   UDB_AUDIT_SINK_URL: file:///tmp/udb-bench-audit.jsonl
   UDB_ENCRYPTION_KEY: QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=
   UDB_JWT_PRIVATE_KEY: src/runtime/testdata/jwt_rs256_private.pem
@@ -480,9 +493,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # psql for the reset/seed; `update || true` tolerates apt mirror desync.
-          sudo apt-get update -qq || true
-          sudo apt-get install -y -qq postgresql-client
+          # psql for the reset/seed. GitHub-hosted apt can occasionally stall on a bad runner;
+          # keep this bounded and noisy enough that the benchmark fails fast instead of hanging.
+          if ! command -v psql >/dev/null 2>&1; then
+            export DEBIAN_FRONTEND=noninteractive
+            sudo timeout 120s apt-get -o DPkg::Lock::Timeout=60 update
+            sudo timeout 120s apt-get -o DPkg::Lock::Timeout=60 install -y postgresql-client
+          fi
+          psql --version
           mkdir -p bench-output/status bench-output/logs
           # reset.sh runs BEFORE each SDK bench. It reproduces .bench-local/grind-once.ps1 exactly:
           # stop the previous broker, recreate udb_ci, bootstrap, start a FRESH broker, re-seed.
@@ -654,6 +672,12 @@ jobs:
         run: |
           mkdir -p docs/site/api
           cp -v api/*.json docs/site/api/
+      - name: Build UDB's parser to WebAssembly for Pages
+        if: always()
+        run: |
+          rustup target add wasm32-unknown-unknown
+          cargo build -p udb-wasm --release --target wasm32-unknown-unknown
+          cp -v target/wasm32-unknown-unknown/release/udb_wasm.wasm docs/site/udb.wasm
       - name: Verify benchmark Pages artifact contract
         if: always()
         run: |
@@ -661,6 +685,7 @@ jobs:
           test -f docs/site/benchmarks.html
           test -f docs/site/benchmarks.js
           test -f docs/site/bench-results.json
+          test -f docs/site/udb.wasm
           test -f docs/site/api.html
           test -f docs/site/api/udb-broker.swagger.json
           python - <<'PY'

@@ -1,8 +1,8 @@
 # UDB site (`docs/site`)
 
-A self-contained, multi-page marketing/docs site for UDB — dark theme derived
-from the brand logo (`docs/assets/udb_logo.svg`): `#121214` base, orange
-`#ff9f1c → #ff6b00`, cyan/blue `#00e5ff → #0086ff`, Inter. No framework, no build
+A self-contained, multi-page marketing/docs site for UDB — light theme derived
+from the brand logo (`docs/assets/udb_logo.svg`): `#f8fafc` base, warm orange
+actions, darker cyan/blue accents, Inter. No framework, no build
 step; just static HTML/CSS and a sprinkle of vanilla JS for progressive
 enhancement.
 
@@ -10,15 +10,15 @@ enhancement.
 
 | File | Page |
 |---|---|
-| `index.html` | Landing — hero, stats, bento features, request pipeline, tabbed code, backend marquee |
+| `index.html` | Landing — product positioning, descriptor-to-SDK flow, stats, request pipeline, tabbed code, backend marquee |
 | `architecture.html` | Proto → manifest → runtime pipeline; descriptor-as-contract |
-| `data-plane.html` | DataBroker (76 RPCs): backends, 2PC/XA, sagas, CDC, migrations |
-| `control-plane.html` | 15 native services / 186 RPCs: auth, identity, tenancy, policy distribution |
+| `data-plane.html` | DataBroker (77 RPCs): backends, 2PC/XA, sagas, CDC, migrations |
+| `control-plane.html` | 15 native services / 188 RPCs: auth, identity, tenancy, policy distribution |
 | `security.html` | RLS, encryption, mTLS, fail-closed posture, compliance profiles |
 | `enterprise.html` | HA/leader election, recovery, backpressure, observability, runbooks |
 | `sdks.html` | Six SDKs, per-language quickstarts, conformance |
 | `api.html` | Swagger UI over `api/udb-broker.swagger.json`, copied into the Pages artifact |
-| `benchmarks.html` | Release-binary benchmark graph, worst performers, and full per-RPC explorer |
+| `benchmarks.html` | Benchmark dashboard shell; renders release-binary SDK results when `bench-results.json` is populated |
 | **`playground.html`** | **Interactive** — runs UDB's **real** proto parser, compiled to WebAssembly (`udb.wasm`), in the browser |
 
 Shared: `styles.css` (theme + components), `app.js` (scroll-reveal, count-up,
@@ -35,9 +35,10 @@ produces the exact catalog `ProtoSchema` (tables, columns, RLS, per-column data
 classes) and the same sha-256 manifest checksum the broker computes — no server,
 no re-implementation.
 
-**Scope (honest):** SQL generation/execution and the gRPC broker are server-only
-(`tokio` / `sqlx` / `tonic`) and are deliberately *not* in the WASM subset, so the
-demo shows real UDB **parsing & catalog modeling**, not an in-browser database.
+**Scope (honest):** the demo shows real UDB **parsing, catalog modeling,
+bootstrap-DDL generation, and query-compiler output**. The served gRPC broker,
+DB drivers, async execution, and real database I/O (`tokio` / `sqlx` / `tonic`)
+remain server-only; this is not an in-browser database.
 
 ### Rebuilding `udb.wasm`
 

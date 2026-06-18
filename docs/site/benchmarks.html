@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>UDB SDK Benchmarks</title>
 <meta name="description" content="Live UDB SDK benchmark results across Go, Python, TypeScript, PHP, C#, and Java, measured against the published release binary.">
-<meta name="theme-color" content="#121214">
+<meta name="theme-color" content="#f8fafc">
 <link rel="icon" type="image/svg+xml" href="./assets/udb_logo.svg">
 <link rel="stylesheet" href="./styles.css">
 </head>
@@ -32,9 +32,11 @@
 <main>
   <section class="page-head">
     <div class="wrap">
-      <div class="eyebrow reveal">Release binary · live SDKs</div>
-      <h1 class="reveal">Benchmark <span class="g">curves</span></h1>
-      <p class="lead reveal d1">CI runs the published UDB release binary and records live SDK latency reports as JSON. The curve tracks mean per-service latency over recent benchmark runs.</p>
+      <div class="eyebrow reveal">Release binary · SDK dashboard</div>
+      <h1 class="reveal">Benchmark <span class="g">explorer</span></h1>
+      <p class="lead reveal d1">This page reads the generated benchmark artifact at <code>bench-results.json</code>.
+        When CI publishes live results it shows release tag, commit, SDK status, latency curves, failed RPCs, and
+        per-RPC rows. Until then it stays honest and renders the dashboard shell with empty states.</p>
     </div>
   </section>
 
@@ -54,7 +56,7 @@
       <section class="bench-section mt28" aria-labelledby="main-performance-title">
         <div class="bench-chart-head">
           <div>
-            <h3 id="main-performance-title">Main performance graph</h3>
+            <h3 id="main-performance-title">SDK latency graph</h3>
             <p>Mean service latency in milliseconds. Lower is better.</p>
           </div>
           <a class="btn ghost" href="./bench-results.json">Raw JSON</a>
@@ -82,7 +84,7 @@
       <section class="bench-section mt28" aria-labelledby="worst-performance-title">
         <div class="bench-chart-head">
           <div>
-            <h3 id="worst-performance-title">Worst performer table</h3>
+            <h3 id="worst-performance-title">Failures and slowest RPCs</h3>
             <p>Failures first, then highest p99 latency across published SDK reports.</p>
           </div>
         </div>

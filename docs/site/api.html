@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>UDB API Reference</title>
 <meta name="description" content="Swagger API reference for the UDB broker HTTP gateway.">
-<meta name="theme-color" content="#121214">
+<meta name="theme-color" content="#f8fafc">
 <link rel="icon" type="image/svg+xml" href="./assets/udb_logo.svg">
 <link rel="stylesheet" href="./styles.css">
 <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css">
@@ -33,12 +33,25 @@
 <main>
   <section class="page-head">
     <div class="wrap">
-      <div class="eyebrow reveal">Swagger · generated API</div>
+      <div class="eyebrow reveal">HTTP gateway · generated API</div>
       <h1 class="reveal">API <span class="g">reference</span></h1>
-      <p class="lead reveal d1">The published Swagger document is copied from <code>api/udb-broker.swagger.json</code> into the GitHub Pages artifact on every site deploy.</p>
+      <p class="lead reveal d1">Swagger documents UDB's HTTP/JSON gateway view. The primary contract is still the
+        protobuf/gRPC descriptor that generates the broker, native services, and SDKs; the gateway JSON is copied
+        from <code>api/udb-broker.swagger.json</code> into the GitHub Pages artifact on deploy.</p>
       <div class="cta reveal d2">
         <a class="btn primary" href="./api/udb-broker.swagger.json">Open raw JSON</a>
         <a class="btn ghost" href="https://github.com/fahara02/udb/tree/main/api">Source in GitHub</a>
+      </div>
+    </div>
+  </section>
+
+  <section style="border-top:none;padding-top:18px">
+    <div class="wrap">
+      <div class="feature-table reveal">
+        <div><b>gRPC source</b><span>Protobuf services and options define the served contract, metadata headers, and security posture.</span></div>
+        <div><b>Gateway view</b><span>Swagger is the HTTP/JSON transcoding surface for teams that need REST-shaped inspection.</span></div>
+        <div><b>SDK path</b><span>Applications should prefer generated SDKs for credential handling, retries, and tenant/project metadata.</span></div>
+        <div><b>Artifacts</b><span>Generated native contract, service inventory, and authn/authz RPC inventory remain the audit source.</span></div>
       </div>
     </div>
   </section>

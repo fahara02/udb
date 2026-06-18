@@ -2,12 +2,12 @@
   "use strict";
 
   var colors = {
-    go: "#00e5ff",
-    python: "#ff9f1c",
-    typescript: "#3a86ff",
-    php: "#9b7cff",
-    csharp: "#22c55e",
-    java: "#ff6b6b"
+    go: "#008aa3",
+    python: "#c95700",
+    typescript: "#0b66d8",
+    php: "#6f42c1",
+    csharp: "#116329",
+    java: "#b42318"
   };
 
   function $(id) { return document.getElementById(id); }
@@ -58,7 +58,7 @@
     }).filter(function (s) { return s.points.length > 0; });
 
     if (!series.length) {
-      svg.innerHTML = '<text x="36" y="180" fill="#9aa7b8" font-size="18">No trend points yet. Run the benchmark workflow twice to form a curve.</text>';
+      svg.innerHTML = '<text x="36" y="180" fill="#526176" font-size="18">No trend points yet. Run the benchmark workflow twice to form a curve.</text>';
       return;
     }
 
@@ -74,8 +74,8 @@
     for (var gi = 0; gi <= 4; gi++) {
       var gv = (maxY / 4) * gi;
       var yy = y(gv);
-      grid += '<line x1="' + l + '" y1="' + yy + '" x2="' + (w - r) + '" y2="' + yy + '" stroke="rgba(154,167,184,.18)"/>';
-      grid += '<text x="' + (l - 12) + '" y="' + (yy + 4) + '" fill="#9aa7b8" font-size="12" text-anchor="end">' + ms(gv).replace(" ms", "") + '</text>';
+      grid += '<line x1="' + l + '" y1="' + yy + '" x2="' + (w - r) + '" y2="' + yy + '" stroke="#e5edf5"/>';
+      grid += '<text x="' + (l - 12) + '" y="' + (yy + 4) + '" fill="#526176" font-size="12" text-anchor="end">' + ms(gv).replace(" ms", "") + '</text>';
     }
     var paths = series.map(function (s) {
       var d = s.points.map(function (p, i) { return (i ? "L" : "M") + x(p.x).toFixed(1) + " " + y(p.y).toFixed(1); }).join(" ");
@@ -88,17 +88,17 @@
     var labels = "";
     history.forEach(function (p, i) {
       if (history.length > 8 && i % Math.ceil(history.length / 8) !== 0 && i !== history.length - 1) return;
-      labels += '<text x="' + x(i).toFixed(1) + '" y="' + (h - 22) + '" fill="#9aa7b8" font-size="11" text-anchor="middle">' + esc(p.release_tag || p.short_commit || String(i + 1)) + '</text>';
+      labels += '<text x="' + x(i).toFixed(1) + '" y="' + (h - 22) + '" fill="#526176" font-size="11" text-anchor="middle">' + esc(p.release_tag || p.short_commit || String(i + 1)) + '</text>';
     });
     var legend = series.map(function (s, i) {
       var lx = l + i * 138;
       var c = colors[s.id] || "#e8edf5";
-      return '<circle cx="' + lx + '" cy="344" r="5" fill="' + c + '"/><text x="' + (lx + 10) + '" y="348" fill="#c9d1e8" font-size="12">' + esc(s.name) + '</text>';
+      return '<circle cx="' + lx + '" cy="344" r="5" fill="' + c + '"/><text x="' + (lx + 10) + '" y="348" fill="#273247" font-size="12">' + esc(s.name) + '</text>';
     }).join("");
-    svg.innerHTML = '<rect width="980" height="360" rx="14" fill="#11141c"/>' +
+    svg.innerHTML = '<rect width="980" height="360" rx="14" fill="#ffffff"/>' +
       grid +
-      '<line x1="' + l + '" y1="' + (h - b) + '" x2="' + (w - r) + '" y2="' + (h - b) + '" stroke="rgba(154,167,184,.32)"/>' +
-      '<line x1="' + l + '" y1="' + t + '" x2="' + l + '" y2="' + (h - b) + '" stroke="rgba(154,167,184,.32)"/>' +
+      '<line x1="' + l + '" y1="' + (h - b) + '" x2="' + (w - r) + '" y2="' + (h - b) + '" stroke="#cbd7e6"/>' +
+      '<line x1="' + l + '" y1="' + t + '" x2="' + l + '" y2="' + (h - b) + '" stroke="#cbd7e6"/>' +
       paths + labels + legend;
   }
 
@@ -155,6 +155,10 @@
       if (a.failed !== b.failed) return a.failed ? -1 : 1;
       return (b.row.p99_ms || 0) - (a.row.p99_ms || 0);
     });
+    if (!slowRows.length) {
+      $("bench-slowest-rows").innerHTML = '<tr><td colspan="6" class="empty-cell">No per-RPC latency rows are published yet.</td></tr>';
+      return;
+    }
     $("bench-slowest-rows").innerHTML = slowRows.slice(0, 40).map(function (x) {
       var r = x.row;
       var p99Cell = x.failed
@@ -183,6 +187,11 @@
     }).join("");
 
     function draw() {
+      if (!rows.length) {
+        meta.textContent = "No full per-RPC table is published yet.";
+        body.innerHTML = '<tr><td colspan="11" class="empty-cell">No full per-RPC rows are published yet.</td></tr>';
+        return;
+      }
       var sdkSelected = selectedValues("bench-sdk-filter");
       var apiSelected = selectedValues("bench-api-filter");
       var q = (search.value || "").trim().toLowerCase();
@@ -195,9 +204,11 @@
         return a.api.localeCompare(b.api) || a.sdk.localeCompare(b.sdk);
       });
 
-      meta.textContent = rows.length
-        ? "Showing " + filtered.length + " of " + rows.length + " full per-RPC rows."
-        : "No full per-RPC table is published yet. SDKs that only publish slowest rows still appear in the worst performer table.";
+      meta.textContent = "Showing " + filtered.length + " of " + rows.length + " full per-RPC rows.";
+      if (!filtered.length) {
+        body.innerHTML = '<tr><td colspan="11" class="empty-cell">No rows match the current filters.</td></tr>';
+        return;
+      }
       body.innerHTML = filtered.map(function (r) {
         var failed = !!r.err_code;
         return '<tr><td>' + esc(r.sdk) + '</td><td><code>' + esc(r.api) + '</code></td><td>' + esc(r.kind) + '</td>' +
@@ -215,14 +226,23 @@
   }
 
   function render(data) {
-    $("bench-status").style.display = "none";
+    var hasSdkRows = Array.isArray(data.sdks) && data.sdks.length > 0;
+    var hasMeasurements = !!(data.summary && data.summary.measured_rpc_count);
+    if (hasSdkRows || hasMeasurements) {
+      $("bench-status").style.display = "none";
+    } else {
+      $("bench-status").className = "callout cool";
+      $("bench-status").style.display = "block";
+      $("bench-status").textContent = "Benchmark data is pending. CI will replace this placeholder with release, commit, SDK, and per-RPC measurements.";
+    }
     var release = data.release || {};
-    $("bench-title").textContent = release.tag ? "UDB " + release.tag + " SDK benchmark" : "UDB SDK benchmark";
-    $("bench-meta").innerHTML = [
+    $("bench-title").textContent = release.tag ? "UDB " + release.tag + " SDK benchmark" : (hasSdkRows || hasMeasurements ? "UDB SDK benchmark" : "Benchmark data pending");
+    var metaText = [
       data.generated_at ? "Generated " + esc(data.generated_at) : "",
       release.asset ? "binary " + esc(release.asset) : "",
       data.git && data.git.short_commit ? "commit " + esc(data.git.short_commit) : ""
     ].filter(Boolean).join(" · ");
+    $("bench-meta").innerHTML = metaText || "No release run has been published into bench-results.json yet.";
 
     var summary = data.summary || {};
     $("bench-kpis").innerHTML = [
@@ -235,21 +255,21 @@
       return '<div class="bench-kpi"><span>' + esc(x[0]) + '</span><b>' + esc(x[1]) + '</b></div>';
     }).join("");
 
-    $("bench-sdk-grid").innerHTML = (data.sdks || []).map(function (s) {
+    $("bench-sdk-grid").innerHTML = (data.sdks || []).length ? (data.sdks || []).map(function (s) {
       var mean = s.summary && s.summary.mean_service_latency_ms;
       return '<article class="bench-sdk-card ' + statusClass(s.status) + '">' +
         '<div class="bench-sdk-top"><b>' + esc(s.name) + '</b><span class="' + statusClass(s.status) + '">' + esc(s.status) + '</span></div>' +
         '<div class="bench-sdk-main">' + esc(ms(mean)) + '</div>' +
         '<p>' + esc(s.note || ((s.summary && s.summary.rpc_count) ? s.summary.rpc_count + " RPCs measured" : "No live benchmark data")) + '</p>' +
         '</article>';
-    }).join("");
+    }).join("") : '<div class="bench-sdk-empty">No SDK benchmark runs are published yet.</div>';
 
-    $("bench-summary-rows").innerHTML = (data.sdks || []).map(function (s) {
+    $("bench-summary-rows").innerHTML = (data.sdks || []).length ? (data.sdks || []).map(function (s) {
       var sm = s.summary || {};
       return '<tr><td><b>' + esc(s.name) + '</b></td><td><span class="bench-status ' + statusClass(s.status) + '">' + esc(s.status) + '</span></td>' +
         '<td class="n">' + count(sm.rpc_count) + '</td><td class="n">' + count(sm.service_count) + '</td>' +
         '<td class="n">' + ms(sm.mean_service_latency_ms) + '</td><td class="n">' + ms(sm.slowest_service_mean_ms) + '</td></tr>';
-    }).join("");
+    }).join("") : '<tr><td colspan="6" class="empty-cell">No SDK summary has been published yet.</td></tr>';
 
     renderWorstTable(data);
     renderFullExplorer(data);
@@ -265,6 +285,22 @@
     .catch(function (err) {
       $("bench-status").className = "callout";
       $("bench-status").textContent = "No benchmark JSON is published yet: " + err.message;
+      $("bench-title").textContent = "Benchmark data pending";
+      $("bench-meta").textContent = "The dashboard shell is ready; CI will populate live SDK results at bench-results.json.";
+      $("bench-kpis").innerHTML = [
+        ["SDKs OK", "-"],
+        ["Failed", "-"],
+        ["Skipped", "-"],
+        ["Measured RPCs", "-"],
+        ["Failed RPCs", "-"]
+      ].map(function (x) {
+        return '<div class="bench-kpi"><span>' + esc(x[0]) + '</span><b>' + esc(x[1]) + '</b></div>';
+      }).join("");
+      $("bench-sdk-grid").innerHTML = "";
+      $("bench-summary-rows").innerHTML = '<tr><td colspan="6" class="empty-cell">No SDK summary has been published yet.</td></tr>';
+      $("bench-slowest-rows").innerHTML = '<tr><td colspan="6" class="empty-cell">No per-RPC latency rows are published yet.</td></tr>';
+      $("bench-full-meta").textContent = "No full per-RPC table is published yet.";
+      $("bench-full-rows").innerHTML = '<tr><td colspan="11" class="empty-cell">No full per-RPC rows are published yet.</td></tr>';
       renderCurve({ history: [], sdks: [] });
     });
 })();

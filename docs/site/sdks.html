@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SDKs — UDB</title>
 <meta name="description" content="UDB SDKs for Go, Python, TypeScript, Java, C#, and PHP — all generated from one proto descriptor and held to a cross-language conformance contract.">
-<meta name="theme-color" content="#121214">
+<meta name="theme-color" content="#f8fafc">
 <link rel="icon" type="image/svg+xml" href="./assets/udb_logo.svg">
 <link rel="stylesheet" href="./styles.css">
 </head>
@@ -55,49 +55,175 @@
 
   <section>
     <div class="wrap">
-      <div class="eyebrow reveal">Quickstart</div>
-      <h2 class="reveal">A project facade, <span class="accent">everywhere</span></h2>
+      <div class="eyebrow reveal">Recommended path</div>
+      <h2 class="reveal">Workflow helpers first, <span class="accent">raw RPCs still available</span></h2>
       <div class="tabs reveal d1 mt28">
         <input type="radio" name="tab" id="t1" checked><input type="radio" name="tab" id="t2">
         <input type="radio" name="tab" id="t3"><input type="radio" name="tab" id="t4">
         <div class="tabbar">
           <label for="t1">Python</label><label for="t2">Go</label>
-          <label for="t3">TypeScript</label><label for="t4">Java</label>
+          <label for="t3">TypeScript</label><label for="t4">PHP</label>
         </div>
         <div class="panels">
-          <div class="panel" id="p1"><pre><span class="k">from</span> udb_client <span class="k">import</span> Metadata, UdbClient, decode_records
+          <div class="panel" id="p1"><pre><span class="k">import</span> os
+<span class="k">from</span> udb_client.project <span class="k">import</span> UdbProject
 
-meta = <span class="t">Metadata</span>(tenant_id=<span class="s">"acme"</span>, project_id=<span class="s">"billing"</span>,
-                scopes=(<span class="s">"udb:read"</span>, <span class="s">"udb:write"</span>))
+<span class="k">with</span> <span class="t">UdbProject</span>.<span class="fn">connect</span>(
+    target=<span class="s">"127.0.0.1:50051"</span>,
+    tenant_id=<span class="s">"acme"</span>,
+    project_id=<span class="s">"billing"</span>,
+    bearer_token=os.environ[<span class="s">"UDB_TOKEN"</span>],
+) <span class="k">as</span> udb:
+    pdf = open(<span class="s">"invoice.pdf"</span>, <span class="s">"rb"</span>).read()
+    udb.storage.upload_file(<span class="s">"invoice.pdf"</span>, pdf, {<span class="s">"content_type"</span>: <span class="s">"application/pdf"</span>})
+    udb.authz.allow_role(<span class="s">"reader"</span>, <span class="s">"invoice"</span>, <span class="s">"data.select"</span>)
+    rows = udb.data.table(<span class="s">"invoice"</span>).select(where={<span class="s">"status"</span>: <span class="s">"open"</span>})</pre></div>
+          <div class="panel" id="p2"><pre><span class="k">import</span> (
+    <span class="s">"os"</span>
+    udb <span class="s">"github.com/fahara02/udb/sdk/go/udbclient"</span>
+)
 
-<span class="k">with</span> <span class="t">UdbClient</span>(<span class="s">"127.0.0.1:50051"</span>, meta) <span class="k">as</span> udb:
-    rows = udb.select(message_type=<span class="s">"acme.billing.v1.Invoice"</span>, limit=<span class="n">50</span>)
-    <span class="k">print</span>(decode_records(rows))</pre></div>
-          <div class="panel" id="p2"><pre><span class="k">import</span> udb <span class="s">"github.com/fahara02/udb/sdk/go/udbclient"</span>
-
-u, _ := udb.<span class="fn">NewUdb</span>(ctx, udb.Config{
+project, _ := udb.<span class="fn">Connect</span>(ctx, udb.Config{
     Target:    <span class="s">"127.0.0.1:50051"</span>,
     TenantID:  <span class="s">"acme"</span>,
     ProjectID: <span class="s">"billing"</span>,
+    Credentials: udb.Credentials{Bearer: os.Getenv(<span class="s">"UDB_TOKEN"</span>)},
 })
-<span class="k">defer</span> u.<span class="fn">Close</span>()
-rows, _ := u.Data.<span class="fn">Select</span>(ctx, <span class="s">"acme.billing.v1.Invoice"</span>, <span class="n">50</span>)</pre></div>
-          <div class="panel" id="p3"><pre><span class="k">import</span> { createUdb } <span class="k">from</span> <span class="s">"@udb/sdk"</span>;
+<span class="k">defer</span> project.<span class="fn">Close</span>()
+pdf, _ := os.<span class="fn">ReadFile</span>(<span class="s">"invoice.pdf"</span>)
+_, _ = project.Storage.<span class="fn">UploadFile</span>(ctx, <span class="s">"invoice.pdf"</span>, pdf, udb.<span class="fn">WithContentType</span>(<span class="s">"application/pdf"</span>))
+invoices := project.<span class="fn">Entity</span>(<span class="s">"invoice"</span>, udb.<span class="fn">Key</span>(<span class="s">"invoice_id"</span>))
+rows, _ := invoices.<span class="fn">Select</span>(ctx, map[string]any{<span class="s">"status"</span>: <span class="s">"open"</span>})</pre></div>
+          <div class="panel" id="p3"><pre><span class="k">import</span> { readFile } <span class="k">from</span> <span class="s">"node:fs/promises"</span>;
+<span class="k">import</span> { UdbProject } <span class="k">from</span> <span class="s">"@udb_plus/sdk"</span>;
 
-<span class="k">const</span> udb = <span class="fn">createUdb</span>({
+<span class="k">const</span> udb = <span class="k">await</span> UdbProject.<span class="fn">connect</span>({
   target: <span class="s">"127.0.0.1:50051"</span>,
   tenantId: <span class="s">"acme"</span>, projectId: <span class="s">"billing"</span>,
+  credentials: { bearerToken: process.env.UDB_TOKEN },
 });
-<span class="k">const</span> rows = <span class="k">await</span> udb.data.<span class="fn">select</span>({
-  message_type: <span class="s">"acme.billing.v1.Invoice"</span>, limit: <span class="n">50</span>,
-});</pre></div>
-          <div class="panel" id="p4"><pre><span class="k">var</span> udb = <span class="t">UdbProject</span>.<span class="fn">open</span>(<span class="t">UdbProjectConfig</span>.<span class="fn">builder</span>()
-    .<span class="fn">target</span>(<span class="s">"127.0.0.1:50051"</span>)
-    .<span class="fn">tenantId</span>(<span class="s">"acme"</span>)
-    .<span class="fn">projectId</span>(<span class="s">"billing"</span>)
-    .<span class="fn">build</span>());
-<span class="k">var</span> rows = udb.<span class="fn">data</span>().<span class="fn">select</span>(req);</pre></div>
+<span class="k">const</span> pdf = <span class="k">await</span> readFile(<span class="s">"invoice.pdf"</span>);
+<span class="k">await</span> udb.storage.<span class="fn">uploadFile</span>(<span class="s">"invoice.pdf"</span>, pdf, { contentType: <span class="s">"application/pdf"</span> });
+<span class="k">await</span> udb.authz.<span class="fn">allowRole</span>(<span class="s">"reader"</span>, { resource: <span class="s">"invoice"</span>, action: <span class="s">"data.select"</span> });</pre></div>
+          <div class="panel" id="p4"><pre><span class="k">use</span> Fahara02\UdbLaravel\UdbProject;
+
+$udb = UdbProject::<span class="fn">connect</span>([
+    <span class="s">'target'</span> => <span class="s">'127.0.0.1:50051'</span>,
+    <span class="s">'tenantId'</span> => <span class="s">'acme'</span>,
+    <span class="s">'projectId'</span> => <span class="s">'billing'</span>,
+    <span class="s">'credentials'</span> => [<span class="s">'bearerToken'</span> => getenv(<span class="s">'UDB_TOKEN'</span>)],
+]);
+$pdf = file_get_contents(<span class="s">'invoice.pdf'</span>);
+$udb->storage()-><span class="fn">uploadFile</span>(<span class="s">'invoice.pdf'</span>, $pdf, [<span class="s">'contentType'</span> => <span class="s">'application/pdf'</span>]);
+$udb->authz()-><span class="fn">allowRole</span>(<span class="s">'reader'</span>, [
+    <span class="s">'resource'</span> => <span class="s">'invoice'</span>, <span class="s">'action'</span> => <span class="s">'data.select'</span>,
+]);</pre></div>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="eyebrow reveal">Responsibility map</div>
+      <h2 class="reveal">The SDK removes ceremony, <span class="accent">not broker authority</span></h2>
+      <p class="lead reveal d1">The simple client is a thin workflow layer over served RPCs. It should make normal
+        app code short, but it must not become a second protocol or move broker invariants into client conventions.</p>
+      <div class="surface-grid mt28">
+        <article class="surface reveal">
+          <span>Application</span><h3>Express intent</h3>
+          <p>Upload a file, upsert/select an entity, grant a role, subscribe to events. App code supplies business inputs, not internal table rows or protobuf plumbing.</p>
+        </article>
+        <article class="surface reveal d1">
+          <span>SDK</span><h3>Translate safely</h3>
+          <p>Own workflow helpers, byte transfer, token/session handling, typed errors, read-fence helpers, generated entity APIs, and exact sequence tests.</p>
+        </article>
+        <article class="surface reveal d2">
+          <span>Broker</span><h3>Enforce truth</h3>
+          <p>Own tenant/project authority, RLS, object placement, lifecycle state, idempotency, read-after-write guarantees, and fail-closed security decisions.</p>
+        </article>
+        <article class="surface reveal d3">
+          <span>Descriptor</span><h3>Generate shape</h3>
+          <p>Descriptors and manifests drive SDK surfaces, operation kind, retry boundaries, entity metadata, native service recipes, and benchmark fixtures.</p>
+        </article>
+      </div>
+      <div class="callout cool mt28 reveal d4">
+        <p><b>Advanced deployments:</b> add <code>authTarget</code>/<code>auth_target</code> when the native control-plane listener is separate from the data-plane target. Add explicit scopes, purpose, deadlines, and raw generated RPC calls when building admin tools, benchmarks, or integrations that need exact protocol access.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="eyebrow reveal">Common recipes</div>
+      <h2 class="reveal">What app code should reach for first</h2>
+      <p class="lead reveal d1">The simple-client plan changes the docs priority: lead with workflow helpers for
+        common product code, then show the raw generated clients as an escape hatch. These helpers are thin wrappers
+        over served UDB RPCs and each has sequence tests so the SDK cannot hide proof reads or extra authority.</p>
+      <div class="tablewrap mt28 reveal d2">
+        <table>
+          <thead>
+            <tr><th>Workflow</th><th>Use this surface</th><th>What the SDK does</th><th>What stays broker-owned</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><b>Upload bytes</b></td><td><code>storage.uploadFile</code> / <code>upload_file</code></td><td>Register upload, PUT to broker-minted URL, finalize.</td><td>Bucket choice, object key, quota, lifecycle state.</td></tr>
+            <tr><td><b>Download file</b></td><td><code>storage.downloadFile</code></td><td>Prefer one presigned URL call; stream bytes only when requested or needed.</td><td>Access decision, file metadata, object-store authorization.</td></tr>
+            <tr><td><b>CRUD records</b></td><td><code>data.table("invoice")</code> / <code>Entity(...)</code></td><td>Pack filters and records into the DataBroker request shape, decode native records.</td><td>RLS, tenant/project binding, backend routing, query execution.</td></tr>
+            <tr><td><b>Grant a role</b></td><td><code>authz.allowRole</code> / <code>allow_role</code></td><td>Emit one <code>CreatePolicyRule</code> call, no hidden list/get probe.</td><td>Caller authority, policy validity, audit, effective scopes.</td></tr>
+            <tr><td><b>Read after write</b></td><td><code>metadata.afterWrite(receipt)</code></td><td>Convert the write receipt into one read fence for the next read only.</td><td>Durable visibility, wait semantics, replica safety.</td></tr>
+            <tr><td><b>Events</b></td><td><code>events.subscribe(topic).ready()</code></td><td>Open the stream and expose an explicit readiness boundary before publish.</td><td>CDC envelope order, outbox delivery, broker-side matching.</td></tr>
+            <tr><td><b>Advanced/admin work</b></td><td><code>generated</code>, <code>Raw</code>, service stubs</td><td>Expose exact RPC access without forcing every app through raw request bodies.</td><td>Protocol contract, method security, lifecycle rules.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="grid c2 mt28">
+        <div class="code reveal d3">
+          <div class="bar"><span class="dot" style="background:#ff5f57"></span><span class="dot" style="background:#febc2e"></span><span class="dot" style="background:#28c840"></span><span class="f">download.ts</span></div>
+          <pre><span class="c">// Presigned URL path: one GetDownloadUrl RPC.</span>
+<span class="k">const</span> link = <span class="k">await</span> udb.storage.<span class="fn">downloadFile</span>(fileId, { expiresInMinutes: <span class="n">15</span> });
+
+<span class="c">// Fallback path: one DownloadFile stream, reassembled by the SDK.</span>
+<span class="k">const</span> bytes = <span class="k">await</span> udb.storage.<span class="fn">downloadFile</span>(fileId, { stream: <span class="k">true</span> });</pre>
+        </div>
+        <div class="code reveal d4">
+          <div class="bar"><span class="dot" style="background:#ff5f57"></span><span class="dot" style="background:#febc2e"></span><span class="dot" style="background:#28c840"></span><span class="f">read-your-write.ts</span></div>
+          <pre><span class="k">const</span> write = <span class="k">await</span> udb.data.<span class="fn">upsert</span>({
+  message_type: <span class="s">"Invoice"</span>,
+  record_json: Buffer.from(JSON.stringify(invoice)),
+  return_record: <span class="k">true</span>,
+});
+<span class="k">const</span> receipt = udb.metadata.<span class="fn">receiptFromResponse</span>(write);
+<span class="k">const</span> call = receipt ? udb.metadata.<span class="fn">afterWrite</span>(receipt) : undefined;
+
+<span class="k">const</span> rows = <span class="k">await</span> udb.data.table(<span class="s">"Invoice"</span>).select({
+  where: { invoice_id: invoice.invoice_id },
+  call,
+});</pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="eyebrow reveal">Release status</div>
+      <h2 class="reveal">Generated surface vs package maturity</h2>
+      <p class="lead reveal d1">All six SDKs are generated from the same descriptor and participate in conformance.
+        Publishing maturity differs by ecosystem, so the docs separate generated parity from package availability.</p>
+      <div class="tablewrap mt28 reveal d2">
+        <table>
+          <thead>
+            <tr><th>Language</th><th>Generated surface</th><th>Install path</th><th>Primary facade</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><b>Go</b></td><td>DataBroker + native services</td><td><code>go get github.com/fahara02/udb/sdk/go@v0.3.6</code></td><td><code>udbclient.Connect</code></td></tr>
+            <tr><td><b>Python</b></td><td>DataBroker + native services</td><td><code>pip install udb-client==0.3.6</code></td><td><code>UdbProject.connect</code></td></tr>
+            <tr><td><b>TypeScript</b></td><td>DataBroker + native services</td><td><code>npm i @udb_plus/sdk@0.3.6</code></td><td><code>UdbProject.connect</code></td></tr>
+            <tr><td><b>PHP</b></td><td>DataBroker + native services</td><td><code>composer require fahara02/udb-laravel:^0.3.6</code></td><td><code>UdbProject::connect</code></td></tr>
+            <tr><td><b>C#</b></td><td>Generated client surface</td><td><code>dotnet add package Udb.Client --version 0.3.6</code></td><td>generated client + metadata helpers</td></tr>
+            <tr><td><b>Java</b></td><td>Generated client surface</td><td>build from checkout until Maven Central publishing lands</td><td>generated client + Spring-oriented helpers</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </section>
@@ -121,7 +247,7 @@ rows, _ := u.Data.<span class="fn">Select</span>(ctx, <span class="s">"acme.bill
         <p class="lead" style="margin:10px auto 0"><code>udb scaffold</code> emits a starter project; <code>udb sdk generate</code>
           regenerates all six clients from the descriptor; <code>udb proto export</code> hands you the full proto tree.</p>
         <div class="cta">
-          <a class="btn primary" href="./playground.html">▶ Try the playground</a>
+          <a class="btn primary" href="./playground.html">Try the playground</a>
           <a class="btn ghost" href="https://github.com/fahara02/udb/tree/main/sdk">Browse the SDKs</a>
         </div>
       </div>
@@ -138,7 +264,7 @@ rows, _ := u.Data.<span class="fn">Select</span>(ctx, <span class="s">"acme.bill
       <a href="https://github.com/fahara02/udb/blob/main/LICENSE">MIT</a>
     </nav>
   </div>
-  <div class="wrap" style="margin-top:16px"><small>UDB · crate v0.3.2 · protocol v1.0.0 · policy-aware data routing. Built in Rust.</small></div>
+  <div class="wrap" style="margin-top:16px"><small>UDB · crate v0.3.6 · protocol v1.0.0 · policy-aware data routing. Built in Rust.</small></div>
 </footer>
 
 <script defer src="./app.js"></script>

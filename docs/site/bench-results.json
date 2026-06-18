@@ -1,0 +1,20 @@
+{
+  "generated_at": "",
+  "release": {
+    "tag": "",
+    "asset": "",
+    "url": ""
+  },
+  "git": {
+    "short_commit": ""
+  },
+  "summary": {
+    "ok": 0,
+    "failed": 0,
+    "skipped": 0,
+    "measured_rpc_count": 0,
+    "failed_rpc_count": 0
+  },
+  "sdks": [],
+  "history": []
+}

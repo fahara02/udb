@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Playground — UDB</title>
 <meta name="description" content="UDB's real proto parser, compiled to WebAssembly, running in your browser: paste a UDB-annotated .proto and see the exact catalog schema and deterministic manifest checksum the server produces.">
-<meta name="theme-color" content="#121214">
+<meta name="theme-color" content="#f8fafc">
 <link rel="icon" type="image/svg+xml" href="./assets/udb_logo.svg">
 <link rel="stylesheet" href="./styles.css">
 <style>
@@ -16,7 +16,7 @@
   .pgcard .hd .tag{margin-left:auto;font-size:.72rem;font-weight:700;color:var(--muted);font-family:var(--mono)}
   .pgcard .bd{padding:16px}
   textarea.proto{width:100%;min-height:340px;resize:vertical;font-family:var(--mono);font-size:.83rem;line-height:1.6;
-    color:#e8edf5;background:#080a0d;border:1px solid var(--line-2);border-radius:12px;padding:14px;outline:none;white-space:pre;overflow-wrap:normal}
+    color:#172033;background:#fbfdff;border:1px solid var(--line-2);border-radius:12px;padding:14px;outline:none;white-space:pre;overflow-wrap:normal}
   textarea.proto:focus{border-color:var(--cyan)}
   .examples{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
   .ex{font-size:.8rem;font-weight:700;padding:7px 12px;border-radius:9px;border:1px solid var(--line-2);background:var(--panel);color:var(--text);cursor:pointer;transition:.15s}
@@ -24,30 +24,30 @@
   .runbar{display:flex;gap:10px;align-items:center;margin-top:12px}
   .runbar .hint{margin-left:auto;color:var(--muted-2);font-size:.78rem;font-family:var(--mono)}
   .rmeta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--line);color:var(--muted);font-size:.84rem}
-  .rmeta .ok{color:#7ee787;font-weight:700}.rmeta .warn{color:#ffb04d;font-weight:700}.rmeta .err{color:#ff7b72;font-weight:700}
+  .rmeta .ok{color:#116329;font-weight:700}.rmeta .warn{color:#b64b00;font-weight:700}.rmeta .err{color:#b42318;font-weight:700}
   .rmeta b{color:var(--text)}
   .checksum{padding:11px 16px;border-bottom:1px solid var(--line);font-size:.8rem;color:var(--muted)}
-  .checksum code{font-size:.76rem;color:#8fe6ff;word-break:break-all}
+  .checksum code{font-size:.76rem;color:#075a6d;word-break:break-all}
   .genblock{border-top:1px solid var(--line);padding:13px 16px}
   .genblock .ghd{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;font-size:.86rem;font-weight:800;color:var(--text);margin-bottom:9px}
   .genblock .gsub{font-weight:500;font-size:.74rem;color:var(--muted)}
   .genblock .gsub code{font-size:.72rem}
-  .genblock .gsql{margin:0;padding:12px 14px;background:var(--bg-2);border:1px solid var(--line-2);border-radius:var(--radius);overflow:auto;font-family:var(--mono);font-size:.78rem;line-height:1.5;color:#cfe8ff;white-space:pre;max-height:340px}
-  .schema{border-bottom:1px solid rgba(43,56,76,.4)}
+  .genblock .gsql{margin:0;padding:12px 14px;background:#fbfdff;border:1px solid var(--line-2);border-radius:var(--radius);overflow:auto;font-family:var(--mono);font-size:.78rem;line-height:1.5;color:#172033;white-space:pre;max-height:340px}
+  .schema{border-bottom:1px solid rgba(203,215,230,.72)}
   .schema .shd{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:13px 16px;font-size:.92rem}
-  .schema .shd code{color:#8fe6ff}
+  .schema .shd code{color:#075a6d}
   .sbadges{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
   .cbadge{font-size:.68rem;font-weight:800;letter-spacing:.02em;padding:2px 8px;border-radius:7px;border:1px solid var(--line-2);color:var(--muted);background:var(--panel)}
-  .cbadge.pk{color:#ffb04d;border-color:rgba(255,159,28,.35);background:rgba(255,159,28,.08)}
-  .cbadge.rls{color:#7ee787;border-color:rgba(126,231,135,.3);background:rgba(126,231,135,.08)}
-  .cbadge.tenant{color:#8fe6ff;border-color:rgba(0,229,255,.3);background:rgba(0,229,255,.08)}
-  .cbadge.pii{color:#ff9bb0;border-color:rgba(255,107,0,.3);background:rgba(255,107,0,.08)}
-  .cbadge.enc{color:#d2a8ff;border-color:rgba(210,168,255,.3);background:rgba(210,168,255,.08)}
+  .cbadge.pk{color:#b64b00;border-color:#ffd59d;background:#fff5e9}
+  .cbadge.rls{color:#116329;border-color:#b8e1c6;background:#e8f7ee}
+  .cbadge.tenant{color:#075a6d;border-color:#bee3ed;background:#eaf7fb}
+  .cbadge.pii{color:#b42318;border-color:#ffc9c9;background:#fff0f0}
+  .cbadge.enc{color:#6f42c1;border-color:#d8c7ff;background:#f6f1ff}
   .result td{font-size:.84rem}
   .result td code{font-family:var(--mono)}
   .diags{padding:14px 16px}
-  .diag{font-family:var(--mono);font-size:.8rem;color:#ffb04d;margin-top:6px}
-  .diag code{color:#8fe6ff}
+  .diag{font-family:var(--mono);font-size:.8rem;color:#b64b00;margin-top:6px}
+  .diag code{color:#075a6d}
   .loading{padding:50px;text-align:center;color:var(--muted)}
   .spinner{width:30px;height:30px;border:3px solid var(--line-2);border-top-color:var(--cyan);border-radius:50%;margin:0 auto 14px;animation:spin 1s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
@@ -85,8 +85,8 @@
       and the same <b>sha-256 manifest checksum</b> the broker would compute.</p>
     <div class="callout cool" style="margin-top:18px">
       <p style="margin:0"><b>Now in the browser:</b> beyond parsing, this demo runs UDB's real
-        <b>manifest + bootstrap-DDL generation</b> and the <b>IR&nbsp;&rarr;&nbsp;SQL query compiler</b>
-        (all 18 backends) — the exact server source, compiled to WASM. Paste a <code>.proto</code> and you
+        <b>manifest + bootstrap-DDL generation</b> and the <b>IR&nbsp;&rarr;&nbsp;SQL query compiler path</b>
+        used by the backend executors — the exact server source, compiled to WASM. Paste a <code>.proto</code> and you
         get the catalog schema, the generated DDL, and a live-compiled <code>SELECT</code>, client-side.
         <b>Honest about scope:</b> only the <em>runtime</em> — gRPC broker, DB drivers, async execution
         (<code>tokio</code> / <code>sqlx</code> / <code>tonic</code>) — stays server-only.</p>
@@ -107,7 +107,7 @@
             </div>
             <textarea class="proto" id="proto" spellcheck="false"></textarea>
             <div class="runbar">
-              <button class="btn primary" id="run">▶ Parse with UDB</button>
+              <button class="btn primary" id="run">Parse with UDB</button>
               <span class="hint">⌘/Ctrl + Enter</span>
             </div>
           </div>

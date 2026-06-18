@@ -164,19 +164,44 @@
 
   function fail(msg) {
     $("boot").innerHTML =
-      '<p style="color:#ff7b72;font-weight:700;margin:0 0 8px">Could not load the UDB WASM module.</p>' +
+      '<p style="color:#b42318;font-weight:700;margin:0 0 8px">Could not load the UDB WASM module.</p>' +
       '<p style="margin:0;color:var(--muted)">' + esc(msg) + "</p>";
+  }
+
+  function wasmImports() {
+    // The current Pages workflow rebuilds `crates/udb-wasm` as a plain C-ABI
+    // cdylib. Older cached artifacts were wasm-bindgen builds and imported these
+    // four helpers. Providing minimal shims keeps the playground bootable during
+    // cache skew while preserving the exported C ABI used below.
+    function decodeWasmString(ptr, len) {
+      if (!ex || !ex.memory) return "";
+      try { return dec.decode(new Uint8Array(ex.memory.buffer, ptr, len)); }
+      catch (_) { return ""; }
+    }
+    return {
+      __wbindgen_placeholder__: {
+        __wbindgen_describe: function () {},
+        __wbg___wbindgen_throw_1506f2235d1bdba0: function (ptr, len) {
+          throw new Error(decodeWasmString(ptr, len) || "UDB WASM threw an exception");
+        }
+      },
+      __wbindgen_externref_xform__: {
+        __wbindgen_externref_table_set_null: function () {},
+        __wbindgen_externref_table_grow: function () { return 0; }
+      }
+    };
   }
 
   function boot() {
     if (typeof WebAssembly === "undefined") { fail("This browser has no WebAssembly support."); return; }
+    var imports = wasmImports();
     var load = WebAssembly.instantiateStreaming
-      ? WebAssembly.instantiateStreaming(fetch("./udb.wasm"), {}).catch(function () {
+      ? WebAssembly.instantiateStreaming(fetch("./udb.wasm"), imports).catch(function () {
           return fetch("./udb.wasm").then(function (r) { return r.arrayBuffer(); })
-            .then(function (b) { return WebAssembly.instantiate(b, {}); });
+            .then(function (b) { return WebAssembly.instantiate(b, imports); });
         })
       : fetch("./udb.wasm").then(function (r) { return r.arrayBuffer(); })
-          .then(function (b) { return WebAssembly.instantiate(b, {}); });
+          .then(function (b) { return WebAssembly.instantiate(b, imports); });
 
     load.then(function (res) {
       ex = res.instance.exports;

@@ -256,6 +256,7 @@ Start here: [sdk/README.md](sdk/README.md).
 
 - [docs/README.md](docs/README.md) - documentation index
 - [docs/architecture.md](docs/architecture.md) - architecture, request flow, routing, pooling, events, and backend capability
+- [docs/api-rules.md](docs/api-rules.md) - API route rules, OpenAPI operation IDs, and SDK alias policy
 - [docs/annotations.md](docs/annotations.md) - proto annotations
 - [docs/integration.md](docs/integration.md) - application integration
 - [docs/native-services.md](docs/native-services.md) - native auth, authz, IdP, storage, assets, WebRTC, and SDK facades

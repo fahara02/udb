@@ -3147,6 +3147,11 @@ test("live per-RPC perf", {
     // never kills the live principal mid-run.
     const measureRpc = async (serviceName: string, api: any, methodName: string, fn: any): Promise<void> => {
       if (NON_UNARY_METHODS.has(methodName)) {
+        // Facade accessors (DataBroker.table(name) / entity(messageType)) are builder
+        // helpers on the generated client, NOT RPCs — they have no perfRealBody and
+        // must not be measured. Skip them before any streaming/unary path so the run
+        // doesn't abort on "no doc-grounded body for DataBroker/entity".
+        if (methodName === "entity" || methodName === "table") return;
         // CDC subscription: subscribe → fire a real seeded Upsert → first event.
         if (serviceName === "DataBroker" && methodName === "publish_c_d_c") {
           const durs: number[] = [];
