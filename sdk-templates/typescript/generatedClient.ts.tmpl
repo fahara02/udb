@@ -124,13 +124,48 @@ export interface CallOptions {
 
 // ── Typed errors ───────────────────────────────────────────────────────────────
 
+/** Symbolic names for the `udb.entity.v1.ErrorKind` enum (error.proto), mapped
+ *  from the numeric `kind` tag decoded off the `udb-error-detail-bin` trailer. */
+export const ERROR_KIND_NAMES: Record<number, string> = {
+  0: "UNSPECIFIED",
+  1: "VALIDATION",
+  2: "NOT_FOUND",
+  3: "ALREADY_EXISTS",
+  4: "PERMISSION_DENIED",
+  5: "RETRYABLE",
+  6: "INTERNAL",
+};
+
 /** A decoded `ErrorDetail` from the `udb-error-detail-bin` trailer, when present.
- *  Left as a loose record because the SDK does not depend on the generated
- *  message classes (it forwards through the dynamic stubs). */
+ *  Left as a loose record (with the typed fields the broker actually emits) because
+ *  the SDK does not depend on the generated message classes — it forwards through
+ *  the dynamic stubs and hand-decodes the prost bytes. Mirrors the 8-field
+ *  `udb/entity/v1/error.proto::ErrorDetail` (tags 1-8). */
 export interface UdbErrorDetail {
-  code?: string;
-  reason?: string;
+  /** Field 1: backend identifier (e.g. "postgres"). */
+  backend?: string;
+  /** Field 2: backend operation (e.g. "upsert"). */
+  operation?: string;
+  /** Field 3: capability the request required but lacked. */
+  capability_required?: string;
+  /** Field 4: whether the broker considers the failure retryable. */
   retryable?: boolean;
+  /** Field 5: server-suggested backoff before retry, milliseconds. */
+  retry_after_ms?: number;
+  /** Field 6: policy decision id for an authz denial. */
+  policy_decision_id?: string;
+  /** Field 7: correlation id for tracing. */
+  correlation_id?: string;
+  /** Field 8: numeric `ErrorKind` (0=UNSPECIFIED…6=INTERNAL). */
+  kind?: number;
+  /** Symbolic name for `kind`, mapped from {@link ERROR_KIND_NAMES}. */
+  kindName?: string;
+  /** Compatibility alias: legacy callers read `reason`; mapped from the wire shape. */
+  reason?: string;
+  /** Compatibility alias: legacy callers read `code`. */
+  code?: string;
+  /** The raw prost-encoded trailer bytes, always preserved for advanced callers. */
+  rawBytes?: Buffer;
   [key: string]: unknown;
 }
 
@@ -155,9 +190,88 @@ export class UdbError extends Error {
   get retryable(): boolean {
     return Boolean(this.detail?.retryable);
   }
+
+  /** Numeric `ErrorKind` (0=UNSPECIFIED…6=INTERNAL) decoded from the
+   *  `udb-error-detail-bin` trailer, or undefined when the broker sent none.
+   *  Cross-language parity accessor (Go/PHP expose the same). */
+  get kind(): number | undefined {
+    return this.detail?.kind;
+  }
+
+  /** Symbolic `ErrorKind` name (e.g. "ALREADY_EXISTS", "RETRYABLE") mapped from
+   *  {@link UdbError.kind}, or undefined when no detail was present. */
+  get kindName(): string | undefined {
+    return this.detail?.kindName;
+  }
 }
 
 const ERROR_DETAIL_TRAILER = "udb-error-detail-bin";
+
+/** Minimal prost/protobuf wire decoder for the `udb.entity.v1.ErrorDetail`
+ *  message (error.proto tags 1-8). The SDK forwards through dynamic stubs and
+ *  deliberately does NOT depend on generated message classes, so it hand-reads
+ *  the length-delimited / varint fields it needs:
+ *    1 backend(string) 2 operation(string) 3 capability_required(string)
+ *    4 retryable(bool) 5 retry_after_ms(int) 6 policy_decision_id(string)
+ *    7 correlation_id(string) 8 kind(enum/int) */
+function decodeErrorDetailBytes(bytes: Buffer): UdbErrorDetail {
+  const detail: UdbErrorDetail = { rawBytes: bytes };
+  let i = 0;
+  const readVarint = (): number => {
+    let shift = 0;
+    let result = 0;
+    while (i < bytes.length) {
+      const b = bytes[i++];
+      result += (b & 0x7f) * Math.pow(2, shift);
+      if ((b & 0x80) === 0) break;
+      shift += 7;
+    }
+    return result;
+  };
+  while (i < bytes.length) {
+    const tag = readVarint();
+    const field = tag >>> 3;
+    const wire = tag & 0x7;
+    if (wire === 2) {
+      // length-delimited (string/bytes)
+      const len = readVarint();
+      const value = bytes.toString("utf8", i, i + len);
+      i += len;
+      switch (field) {
+        case 1: detail.backend = value; break;
+        case 2: detail.operation = value; break;
+        case 3: detail.capability_required = value; break;
+        case 6: detail.policy_decision_id = value; break;
+        case 7: detail.correlation_id = value; break;
+        default: break; // unknown string field — ignore, raw bytes retained
+      }
+    } else if (wire === 0) {
+      // varint (bool / int / enum)
+      const value = readVarint();
+      switch (field) {
+        case 4: detail.retryable = value !== 0; break;
+        case 5: detail.retry_after_ms = value; break;
+        case 8:
+          detail.kind = value;
+          detail.kindName = ERROR_KIND_NAMES[value];
+          break;
+        default: break;
+      }
+    } else if (wire === 5) {
+      i += 4; // fixed32 — skip
+    } else if (wire === 1) {
+      i += 8; // fixed64 — skip
+    } else {
+      break; // unsupported wire type — stop, raw bytes preserved
+    }
+  }
+  // Compatibility aliases for legacy callers that read code/reason.
+  if (detail.capability_required && detail.reason === undefined) {
+    detail.reason = detail.capability_required;
+  }
+  if (detail.kindName && detail.code === undefined) detail.code = detail.kindName;
+  return detail;
+}
 
 function decodeErrorDetail(err: grpc.ServiceError): UdbErrorDetail | undefined {
   const trailers = err.metadata;
@@ -166,15 +280,9 @@ function decodeErrorDetail(err: grpc.ServiceError): UdbErrorDetail | undefined {
   if (!raw || raw.length === 0) return undefined;
   const buf = raw[0];
   const bytes = typeof buf === "string" ? Buffer.from(buf, "binary") : (buf as Buffer);
-  // The wire payload is a protobuf ErrorDetail. The SDK avoids a hard dependency
-  // on the generated message; surface the raw bytes plus any text the server put
-  // in the standard string trailers so callers can decode if they need to.
-  const detail: UdbErrorDetail = { rawBytes: bytes };
-  const reason = trailers.get("udb-error-reason");
-  if (reason && reason.length) detail.reason = String(reason[0]);
-  const code = trailers.get("udb-error-code");
-  if (code && code.length) detail.code = String(code[0]);
-  return detail;
+  // The wire payload is the prost-encoded `udb.entity.v1.ErrorDetail`; decode it
+  // inline into the typed shape (rawBytes is retained for advanced callers).
+  return decodeErrorDetailBytes(bytes);
 }
 
 // Retry safety is read from the proto-derived operation_kind per RPC (each
@@ -190,6 +298,47 @@ export const RPC_OPERATION_KIND: Record<string, string> = {
   // @@UDB_RPC_BEGIN
   "/{{SERVICE_FULL}}/{{RPC_NAME}}": "{{RPC_OPERATION_KIND}}",
   // @@UDB_RPC_END
+};
+
+// Proto-derived idempotency replay-safety for every RPC, keyed by full gRPC
+// path ("/pkg.Service/Method"). A `true` value means the broker treats a retry
+// carrying the SAME idempotency key as a safe replay (the duplicate is detected
+// and collapsed) -- so the SDK MAY retry an otherwise non-read-only mutation on
+// a transient failure, but ONLY when a non-empty idempotency key is present.
+// Read straight from the proto `idempotency_contract.replay_safe` annotation
+// (R1.1) -- NEVER guessed from the method name. Absent/false => never retry.
+export const RPC_REPLAY_SAFE: Record<string, boolean> = {
+  // @@UDB_RPC_BEGIN
+  "/{{SERVICE_FULL}}/{{RPC_NAME}}": {{RPC_REPLAY_SAFE}},
+  // @@UDB_RPC_END
+};
+
+/** A descriptor-driven entity binding emitted from annotated entity protos. The
+ *  generator fills one row per `@@UDB_ENTITY` block from lane 07's `{{ENTITY_*}}`
+ *  placeholder catalog (D7). `UdbProject.entity(messageType)` looks the binding up
+ *  here so callers need not hand-pass `{ key, tenantField, projectField }`. Until
+ *  lane 07 ships the `{{ENTITY_*}}` substitutions the block emits nothing and this
+ *  registry is empty — the hand-written `entity.ts` path works without it. */
+export interface EntityBinding {
+  messageType: string;
+  table: string;
+  key: string[];
+  tsType?: string;
+  tenantField?: string;
+  projectField?: string;
+}
+
+export const ENTITY_REGISTRY: Record<string, EntityBinding> = {
+  // @@UDB_ENTITY_BEGIN
+  "{{ENTITY_MESSAGE_TYPE}}": {
+    messageType: "{{ENTITY_MESSAGE_TYPE}}",
+    table: "{{ENTITY_TABLE}}",
+    key: [{{ENTITY_PRIMARY_KEYS}}],
+    tsType: "{{ENTITY_TS_TYPE}}",
+    tenantField: "{{ENTITY_TENANT_FIELD}}",
+    projectField: "{{ENTITY_PROJECT_FIELD}}",
+  },
+  // @@UDB_ENTITY_END
 };
 
 // ── Channel & service resolution ────────────────────────────────────────────────
@@ -305,10 +454,37 @@ export class UdbCore {
     return options;
   }
 
-  private isRetryable(err: grpc.ServiceError, readOnly: boolean): boolean {
-    if (!readOnly) return false;
+  /** Whether a failed attempt for this RPC may be retried.
+   *
+   *  `retrySafe` is the proto-derived gate computed in `unary`: it is `true`
+   *  ONLY for READ_ONLY RPCs (always idempotent) or for RPCs the proto marks
+   *  `replay_safe` (RPC_REPLAY_SAFE) when the caller supplied a non-empty
+   *  idempotency key. Every non-replay-safe mutation, and every replay-safe
+   *  mutation WITHOUT a key, arrives here with `retrySafe === false` and is
+   *  never retried — fail-safe by default. */
+  private isRetryable(err: grpc.ServiceError, retrySafe: boolean): boolean {
+    if (!retrySafe) return false;
     if (err.code === grpc.status.DEADLINE_EXCEEDED) return true;
     return this.retry.retryableCodes.includes(err.code);
+  }
+
+  /** Read a non-empty idempotency key off a request body, mirroring the field
+   *  the broker keys replay on (`idempotency_key`; some messages nest it under a
+   *  `context`/`request_context`). Returns false when absent or blank so a
+   *  replay-safe mutation without a key is NOT retried. */
+  private static hasIdempotencyKey(request: any): boolean {
+    if (!request || typeof request !== "object") return false;
+    const fromCtx = (ctx: any): string | undefined =>
+      ctx && typeof ctx === "object"
+        ? (ctx.idempotency_key ?? ctx.idempotencyKey)
+        : undefined;
+    const key =
+      request.idempotency_key ??
+      request.idempotencyKey ??
+      fromCtx(request.context) ??
+      fromCtx(request.request_context) ??
+      fromCtx(request.requestContext);
+    return typeof key === "string" && key.trim().length > 0;
   }
 
   private backoff(attempt: number): number {
@@ -330,16 +506,30 @@ export class UdbCore {
     });
   }
 
-  /** Unary call with retry/backoff and typed error mapping. Retry safety is
-   *  read from the proto-derived operation_kind for this RPC (RPC_OPERATION_KIND)
-   *  — only READ_ONLY RPCs are auto-retried — never guessed from the name. */
+  /** Unary call with retry/backoff and typed error mapping. Retry safety is read
+   *  from the proto-derived per-RPC catalogs — never guessed from the name:
+   *    • READ_ONLY RPCs (RPC_OPERATION_KIND) are always idempotent → retryable.
+   *    • A non-read-only mutation is retried ONLY when the proto marks it
+   *      `replay_safe` (RPC_REPLAY_SAFE) AND the request carries a non-empty
+   *      idempotency key, so the broker collapses the duplicate on replay.
+   *    • Everything else (non-replay-safe mutations, replay-safe without a key)
+   *      is never retried — fail-safe by default.
+   *
+   *  ESCAPE HATCH: `request` stays `any` (and `TRes` defaults to `any`) on purpose
+   *  so advanced / raw / dynamic-dispatch callers (and the bench) can invoke any
+   *  RPC by name without the typed `messages.ts` interfaces. The typed layer wraps
+   *  this; it never narrows `core.unary`. */
   async unary<TRes = any>(
     fullName: string,
     method: string,
     request: any,
     call?: CallOptions,
   ): Promise<TRes> {
-    const readOnly = RPC_OPERATION_KIND[`/${fullName}/${method}`] === "read_only";
+    const path = `/${fullName}/${method}`;
+    const readOnly = RPC_OPERATION_KIND[path] === "read_only";
+    const replaySafe =
+      RPC_REPLAY_SAFE[path] === true && UdbCore.hasIdempotencyKey(request);
+    const retrySafe = readOnly || replaySafe;
     const stub = this.stub(fullName);
     const retryEnabled = !call?.noRetry;
     let attempt = 0;
@@ -364,7 +554,7 @@ export class UdbCore {
         });
       } catch (e) {
         const err = e as grpc.ServiceError;
-        if (retryEnabled && attempt + 1 < this.retry.maxAttempts && this.isRetryable(err, readOnly)) {
+        if (retryEnabled && attempt + 1 < this.retry.maxAttempts && this.isRetryable(err, retrySafe)) {
           await this.delay(this.backoff(attempt), call?.signal);
           attempt += 1;
           continue;
@@ -463,7 +653,14 @@ export interface {{SERVICE_NAME}}Api {
 
 // Method signatures, appended to each service interface via declaration merging.
 // @@UDB_RPC_BEGIN kind=unary
-/** {{SERVICE_FULL}} · {{RPC_KIND}} · `{{RPC_PATH}}` · ({{RPC_INPUT_PKG}}.{{RPC_INPUT}}) → ({{RPC_OUTPUT_PKG}}.{{RPC_OUTPUT}}) */
+/** {{SERVICE_FULL}} · {{RPC_KIND}} · `{{RPC_PATH}}` · ({{RPC_INPUT_PKG}}.{{RPC_INPUT}}) → ({{RPC_OUTPUT_PKG}}.{{RPC_OUTPUT}})
+ *
+ *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
+ *  The signature stays `any`/`Promise<any>` here because the per-message typed
+ *  interfaces live in the hand-written `messages.ts` subset (09.2.2.1) — they are
+ *  NOT in scope inside the generated file, and the full descriptor-driven typed
+ *  signature emit is deferred (D10). Callers wanting compile-time field checking
+ *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface {{SERVICE_NAME}}Api {
   {{RPC_SNAKE}}(request: any, call?: CallOptions): Promise<any>;
 }

@@ -4,11 +4,13 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"sync"
 	"time"
 
 	analyticsv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/analytics/services/v1"
 	apikeyv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/apikey/services/v1"
 	assetv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/asset/services/v1"
+	authnv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/authn/services/v1"
 	authzv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/authz/services/v1"
 	notificationv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/notification/services/v1"
 	storagev1 "github.com/fahara02/udb/sdk/go/gen/udb/core/storage/services/v1"
@@ -124,9 +126,27 @@ type Udb struct {
 	Storage *StorageFacade // StorageService (upload/download/file CRUD) + raw
 	Asset   *AssetFacade   // AssetService (pipeline + asset CRUD) + raw
 	WebRTC  *WebRTCFacade  // WebRTC Room/Peer/Track/Turn sub-facades + Signal stream
+	Events  *EventsFacade  // DataBroker PublishCDC/EnqueueOutboxEvent ready/publish-and-wait
+
+	// adoptMu guards the atomic metadata adoption (adoptMetadata): every facade is
+	// rebuilt over the existing connections under this lock so a concurrent call
+	// sees either the old tenant or the new one in full, never a mix.
+	adoptMu sync.Mutex
+	// Connections retained so adoptMetadata can rebuild facades over them.
+	brokerConn grpc.ClientConnInterface
+	authConn   grpc.ClientConnInterface
+	webrtcConn grpc.ClientConnInterface
 
 	// owned connections to close.
 	conns []*grpc.ClientConn
+}
+
+// Connect is the canonical naming-contract constructor: it dials the broker and
+// wires the full project facade. It is a thin alias of NewUdb (no behavior
+// difference) so the simple-client surface reads `udbclient.Connect(ctx, opts)`
+// across languages. NewUdb stays as the original name.
+func Connect(ctx context.Context, cfg Config) (*Udb, error) {
+	return NewUdb(ctx, cfg)
 }
 
 // NewUdb dials the broker (and the auth endpoint, if different), builds the
@@ -158,7 +178,7 @@ func NewUdb(ctx context.Context, cfg Config) (*Udb, error) {
 		return nil, fmt.Errorf("udb: dial broker %q: %w", cfg.Target, err)
 	}
 
-	u := &Udb{Meta: meta, conns: []*grpc.ClientConn{brokerConn}}
+	u := &Udb{Meta: meta, conns: []*grpc.ClientConn{brokerConn}, brokerConn: brokerConn}
 
 	// Rebind the generated layer onto the live connection so its escape-hatch
 	// Invoke/NewStream go through the dialed broker.
@@ -174,8 +194,11 @@ func NewUdb(ctx context.Context, cfg Config) (*Udb, error) {
 		u.conns = append(u.conns, authConn)
 	}
 
+	u.authConn = authConn
+
 	// Data plane.
 	u.Data = New(brokerConn, meta)
+	u.Events = newEventsFacade(brokerConn, meta)
 
 	// Auth plane + cached authz facade.
 	u.Auth = NewAuthClient(authConn, meta)
@@ -205,9 +228,116 @@ func NewUdb(ctx context.Context, cfg Config) (*Udb, error) {
 		}
 		u.conns = append(u.conns, webrtcConn)
 	}
+	u.webrtcConn = webrtcConn
 	u.WebRTC = newWebRTCFacade(webrtcConn, meta)
 
 	return u, nil
+}
+
+// ── Mutable metadata adoption (chapter 08.5) ─────────────────────────────────
+
+// adoptMetadata atomically re-seeds Udb.Meta and rebuilds every sub-facade over
+// the existing connections with the new metadata, and swaps the generated
+// layer's metadata. Holding adoptMu makes the swap all-or-nothing so a
+// concurrent request can never carry a mixed old/new tenant header pair. The
+// raw generated clients (.Raw) are recreated cheaply over the same conns — no
+// new connection is dialed.
+func (u *Udb) adoptMetadata(meta Metadata) {
+	u.adoptMu.Lock()
+	defer u.adoptMu.Unlock()
+
+	u.Meta = meta
+
+	// Data + events plane.
+	u.Data = New(u.brokerConn, meta)
+	u.Events = newEventsFacade(u.brokerConn, meta)
+
+	// Auth plane + cached authz facade (preserve any policy-bundle secret).
+	prevSecret := u.Auth.policyBundleSecret
+	u.Auth = NewAuthClient(u.authConn, meta)
+	u.Auth.policyBundleSecret = prevSecret
+	cache := NewAuthzCache(u.Auth)
+	u.Auth.AttachAuthzCache(cache)
+	u.Authz = &AuthzFacade{client: u.Auth, cache: cache}
+
+	// Control-plane convenience facades.
+	u.ApiKey = &ApiKeyFacade{Raw: apikeyv1.NewApiKeyServiceClient(u.authConn), meta: meta}
+	u.Tenant = &TenantFacade{Raw: tenantv1.NewTenantServiceClient(u.authConn), meta: meta}
+	u.Notification = &NotificationFacade{Raw: notificationv1.NewNotificationServiceClient(u.authConn), meta: meta}
+	u.Analytics = analyticsv1.NewAnalyticsServiceClient(u.authConn)
+
+	// Media plane.
+	u.Storage = &StorageFacade{Raw: storagev1.NewStorageServiceClient(u.authConn), meta: meta}
+	u.Asset = &AssetFacade{Raw: assetv1.NewAssetServiceClient(u.authConn), meta: meta}
+	u.WebRTC = newWebRTCFacade(u.webrtcConn, meta)
+
+	// Generated robustness layer: atomic swap of the header metadata.
+	if u.Generated != nil {
+		u.Generated.SetMeta(meta)
+	}
+}
+
+// AdoptedLogin is the result of LoginAndAdoptTenant: the bearer token set as the
+// authorization credential and the verified principal whose canonical tenant/
+// project were adopted.
+type AdoptedLogin struct {
+	Token     Token
+	Principal *authnv1.Principal
+}
+
+// LoginAndAdoptTenant performs the CANONICAL 2-RPC login-and-adopt sequence:
+//
+//  1. Login (native AuthnService.Login) to obtain the bearer access token.
+//  2. AuthenticateBearer to resolve + VERIFY the canonical principal.
+//
+// It then derives {tenant_id, project_id} FROM THE VERIFIED PRINCIPAL (never a
+// body hint), atomically adopts that metadata across every facade
+// (adoptMetadata), and installs the bearer as the authorization credential. Both
+// RPCs ALWAYS run — there is no "skip authenticate if a principal is already
+// present" branch. No body tenant copying afterward (the broker derives identity
+// from the verified claim).
+func (u *Udb) LoginAndAdoptTenant(ctx context.Context, req *authnv1.LoginRequest) (*AdoptedLogin, error) {
+	// RPC 1: native login.
+	loginResp, err := u.Auth.Authn.Login(u.Auth.Context(ctx), req)
+	if err != nil {
+		return nil, err
+	}
+	token := loginResp.GetAccessToken()
+	if token == "" {
+		return nil, fmt.Errorf("udb: Login returned no access token (MFA required: %v)", loginResp.GetMfaRequired())
+	}
+
+	// RPC 2: verify the bearer and resolve the canonical principal.
+	authResp, err := u.Auth.AuthenticateBearer(ctx, token)
+	if err != nil {
+		return nil, err
+	}
+	principal := authResp.GetPrincipal()
+	if principal == nil {
+		return nil, fmt.Errorf("udb: AuthenticateBearer returned no principal")
+	}
+
+	// Adopt the canonical tenant/project from the verified principal.
+	meta := u.Meta
+	meta.TenantID = principal.GetTenantId()
+	meta.ProjectID = principal.GetProjectId()
+	if uid := principal.GetUserId(); uid != "" {
+		meta.UserID = uid
+	}
+	u.adoptMetadata(meta)
+	if u.Generated != nil {
+		u.Generated.SetAuthorization("Bearer " + token)
+	}
+
+	tok := Token{
+		AccessToken: token,
+		SessionID:   loginResp.GetSessionId(),
+	}
+	if secs := loginResp.GetAccessTokenExpiresIn(); secs > 0 {
+		tok.ExpiresAt = time.Now().Add(time.Duration(secs) * time.Second)
+	}
+	tok.RefreshToken = loginResp.GetRefreshToken()
+	return &AdoptedLogin{Token: tok, Principal: principal}, nil
 }
 
 // Close closes every connection NewUdb owns. Safe to call once.

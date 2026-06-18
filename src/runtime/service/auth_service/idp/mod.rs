@@ -1401,14 +1401,23 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
     ) -> Result<Response<idp_pb::ScimCreateGroupResponse>, Status> {
         let pool = self.require_pool()?;
         let req = request.into_inner();
-        let _ = self
+        let provider = self
             .load_provider(pool, &req.tenant_id, &req.provider_id)
             .await?;
         let view =
             scim::parse_scim_group(&req.scim_group_json).map_err(Status::invalid_argument)?;
         // Groups are not persisted as separate rows; they drive role binding only
-        // through the configured group mapping. We echo the resource back.
-        let id = uuid::Uuid::new_v4().to_string();
+        // through the configured group mapping. The group id must therefore be a
+        // configured mapping key (mapping-driven), not a random UUID, so the
+        // resolver (`scim_get_group`) can find it. Fail closed otherwise.
+        let keys = group_keys(&provider.group_mapping_json);
+        if !keys.contains(&view.display_name) {
+            return Err(Status::failed_precondition(
+                "group must match a configured group mapping key; \
+                 groups are mapping-driven and not persisted",
+            ));
+        }
+        let id = view.display_name.clone();
         Ok(Response::new(idp_pb::ScimCreateGroupResponse {
             group: Some(scim_group_pb(&id, &view)),
         }))
@@ -1733,6 +1742,10 @@ fn scim_user_pb(id: &str, view: &scim::ScimUserView) -> idp_pb::ScimUser {
             "displayName": view.display_name,
             "active": view.active,
             "emails": [{ "value": view.email, "primary": true }],
+            "meta": {
+                "resourceType": "User",
+                "location": format!("/scim/v2/Users/{id}"),
+            },
         })
         .to_string(),
     }
@@ -1747,6 +1760,10 @@ fn scim_group_pb(id: &str, view: &scim::ScimGroupView) -> idp_pb::ScimGroup {
             "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
             "id": id,
             "displayName": view.display_name,
+            "meta": {
+                "resourceType": "Group",
+                "location": format!("/scim/v2/Groups/{id}"),
+            },
         })
         .to_string(),
     }

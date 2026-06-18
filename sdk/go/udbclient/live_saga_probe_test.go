@@ -1,10 +1,10 @@
 package udbclient
 
-// Diagnostic probe (luna): empirically test whether the saga/admin-audit
+// Diagnostic probe (diag): empirically test whether the saga/admin-audit
 // DataBroker RPCs actually return UNAVAILABLE against a live, properly-provisioned
 // broker, or whether they return OK/data. Gated on UDB_LIVE_SDK_TESTS=1.
 //
-//   go test -run TestLunaSagaProbe -v ./udbclient
+//   go test -run TestDiagSagaProbe -v ./udbclient
 //
 // It logs the per-RPC gRPC status code + latency so we can confirm/refute the
 // "saga RPCs fail with UNAVAILABLE" claim from the CI bench.
@@ -23,7 +23,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func TestLunaSagaProbe(t *testing.T) {
+func TestDiagSagaProbe(t *testing.T) {
 	if os.Getenv("UDB_LIVE_SDK_TESTS") != "1" {
 		t.Skip("set UDB_LIVE_SDK_TESTS=1")
 	}
@@ -35,8 +35,8 @@ func TestLunaSagaProbe(t *testing.T) {
 	tenant := liveEnv("UDB_LIVE_TENANT", "sdk-live")
 	project := liveEnv("UDB_LIVE_PROJECT", "default")
 	meta := Metadata{
-		TenantID: tenant, ProjectID: project, Purpose: "luna.saga.probe",
-		CorrelationID: "luna-saga-probe", ServiceIdentity: "luna.probe",
+		TenantID: tenant, ProjectID: project, Purpose: "diag.saga.probe",
+		CorrelationID: "diag-saga-probe", ServiceIdentity: "diag.probe",
 		ClientCatalogVersion: ProtocolVersion,
 	}
 
@@ -60,7 +60,7 @@ func TestLunaSagaProbe(t *testing.T) {
 	login, err := authnv1.NewAuthnServiceClient(authConn).Login(ctx, &authnv1.LoginRequest{
 		Username:   requiredLiveEnv(t, "UDB_LIVE_USERNAME"),
 		Password:   requiredLiveEnv(t, "UDB_LIVE_PASSWORD"),
-		TenantHint: tenant, ProjectHint: project, DeviceName: "luna-saga-probe",
+		TenantHint: tenant, ProjectHint: project, DeviceName: "diag-saga-probe",
 	})
 	if err != nil {
 		t.Fatalf("Login failed: %v", err)
@@ -76,9 +76,9 @@ func TestLunaSagaProbe(t *testing.T) {
 	brokerGen := NewGenerated(brokerConn, liveGeneratedOptions(meta, authz))
 	broker := servicesv1.NewDataBrokerClient(brokerConn)
 	callCtx := brokerGen.outgoingContext(ctx)
-	rc := liveRequestContext(tenant, project, "luna.saga.probe")
+	rc := liveRequestContext(tenant, project, "diag.saga.probe")
 
-	t.Logf("LUNA-PROBE login OK; canonical tenant=%s", tenant)
+	t.Logf("DIAG-PROBE login OK; canonical tenant=%s", tenant)
 
 	probe := func(name string, fn func() error) {
 		start := time.Now()
@@ -88,7 +88,7 @@ func TestLunaSagaProbe(t *testing.T) {
 		if err != nil {
 			code = status.Code(err).String()
 		}
-		t.Logf("LUNA-PROBE %-22s %8.2fms  status=%-16s err=%v",
+		t.Logf("DIAG-PROBE %-22s %8.2fms  status=%-16s err=%v",
 			name, float64(d.Microseconds())/1000.0, code, err)
 	}
 

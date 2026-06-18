@@ -973,6 +973,10 @@ mod tests {
             // covers `auth_service/mod.rs` and submodules.
             "src/runtime/service/auth_service/",
             "src/runtime/service/method_security.rs",
+            // Notification service reads `UDB_NOTIFICATION_TEST_MODE` via a OnceLock
+            // gate (test-mode FAILED-log affordance) — same native-service
+            // startup-config category as asset/storage/webrtc/auth above.
+            "src/runtime/service/notification_service/",
             "src/runtime/service/storage_service/",
             "src/runtime/service/webrtc_service/",
         ];

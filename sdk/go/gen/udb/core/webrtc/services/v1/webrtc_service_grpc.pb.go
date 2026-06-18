@@ -281,10 +281,11 @@ var RoomService_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	PeerService_JoinRoom_FullMethodName  = "/udb.core.webrtc.services.v1.PeerService/JoinRoom"
-	PeerService_LeaveRoom_FullMethodName = "/udb.core.webrtc.services.v1.PeerService/LeaveRoom"
-	PeerService_GetPeer_FullMethodName   = "/udb.core.webrtc.services.v1.PeerService/GetPeer"
-	PeerService_ListPeers_FullMethodName = "/udb.core.webrtc.services.v1.PeerService/ListPeers"
+	PeerService_JoinRoom_FullMethodName    = "/udb.core.webrtc.services.v1.PeerService/JoinRoom"
+	PeerService_JoinSession_FullMethodName = "/udb.core.webrtc.services.v1.PeerService/JoinSession"
+	PeerService_LeaveRoom_FullMethodName   = "/udb.core.webrtc.services.v1.PeerService/LeaveRoom"
+	PeerService_GetPeer_FullMethodName     = "/udb.core.webrtc.services.v1.PeerService/GetPeer"
+	PeerService_ListPeers_FullMethodName   = "/udb.core.webrtc.services.v1.PeerService/ListPeers"
 )
 
 // PeerServiceClient is the client API for PeerService service.
@@ -293,6 +294,8 @@ const (
 type PeerServiceClient interface {
 	// Join a room
 	JoinRoom(ctx context.Context, in *JoinRoomRequest, opts ...grpc.CallOption) (*JoinRoomResponse, error)
+	// Join a room and atomically mint TURN credentials for the freshly-inserted peer
+	JoinSession(ctx context.Context, in *JoinSessionRequest, opts ...grpc.CallOption) (*JoinSessionResponse, error)
 	// Leave a room
 	LeaveRoom(ctx context.Context, in *LeaveRoomRequest, opts ...grpc.CallOption) (*LeaveRoomResponse, error)
 	// Get a peer
@@ -313,6 +316,16 @@ func (c *peerServiceClient) JoinRoom(ctx context.Context, in *JoinRoomRequest, o
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(JoinRoomResponse)
 	err := c.cc.Invoke(ctx, PeerService_JoinRoom_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *peerServiceClient) JoinSession(ctx context.Context, in *JoinSessionRequest, opts ...grpc.CallOption) (*JoinSessionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(JoinSessionResponse)
+	err := c.cc.Invoke(ctx, PeerService_JoinSession_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -355,6 +368,8 @@ func (c *peerServiceClient) ListPeers(ctx context.Context, in *ListPeersRequest,
 type PeerServiceServer interface {
 	// Join a room
 	JoinRoom(context.Context, *JoinRoomRequest) (*JoinRoomResponse, error)
+	// Join a room and atomically mint TURN credentials for the freshly-inserted peer
+	JoinSession(context.Context, *JoinSessionRequest) (*JoinSessionResponse, error)
 	// Leave a room
 	LeaveRoom(context.Context, *LeaveRoomRequest) (*LeaveRoomResponse, error)
 	// Get a peer
@@ -372,6 +387,9 @@ type UnimplementedPeerServiceServer struct{}
 
 func (UnimplementedPeerServiceServer) JoinRoom(context.Context, *JoinRoomRequest) (*JoinRoomResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method JoinRoom not implemented")
+}
+func (UnimplementedPeerServiceServer) JoinSession(context.Context, *JoinSessionRequest) (*JoinSessionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method JoinSession not implemented")
 }
 func (UnimplementedPeerServiceServer) LeaveRoom(context.Context, *LeaveRoomRequest) (*LeaveRoomResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method LeaveRoom not implemented")
@@ -416,6 +434,24 @@ func _PeerService_JoinRoom_Handler(srv interface{}, ctx context.Context, dec fun
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(PeerServiceServer).JoinRoom(ctx, req.(*JoinRoomRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _PeerService_JoinSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(JoinSessionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PeerServiceServer).JoinSession(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PeerService_JoinSession_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PeerServiceServer).JoinSession(ctx, req.(*JoinSessionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -484,6 +520,10 @@ var PeerService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "JoinRoom",
 			Handler:    _PeerService_JoinRoom_Handler,
+		},
+		{
+			MethodName: "JoinSession",
+			Handler:    _PeerService_JoinSession_Handler,
 		},
 		{
 			MethodName: "LeaveRoom",

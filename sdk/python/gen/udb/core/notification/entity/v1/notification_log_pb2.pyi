@@ -12,7 +12,7 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class NotificationLog(_message.Message):
-    __slots__ = ("log_id", "template_id", "event_type", "channel", "recipient_id", "recipient_address", "tenant_id", "project_id", "resource_type", "resource_id", "resource_name", "correlation_id", "status", "error_message", "provider_message_id", "retry_count", "sent_at", "delivered_at", "created_at")
+    __slots__ = ("log_id", "template_id", "event_type", "channel", "recipient_id", "recipient_address", "tenant_id", "project_id", "resource_type", "resource_id", "resource_name", "correlation_id", "status", "error_message", "provider_message_id", "retry_count", "sent_at", "delivered_at", "created_at", "rendered_subject", "rendered_body")
     LOG_ID_FIELD_NUMBER: _ClassVar[int]
     TEMPLATE_ID_FIELD_NUMBER: _ClassVar[int]
     EVENT_TYPE_FIELD_NUMBER: _ClassVar[int]
@@ -32,6 +32,8 @@ class NotificationLog(_message.Message):
     SENT_AT_FIELD_NUMBER: _ClassVar[int]
     DELIVERED_AT_FIELD_NUMBER: _ClassVar[int]
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
+    RENDERED_SUBJECT_FIELD_NUMBER: _ClassVar[int]
+    RENDERED_BODY_FIELD_NUMBER: _ClassVar[int]
     log_id: str
     template_id: str
     event_type: str
@@ -51,4 +53,6 @@ class NotificationLog(_message.Message):
     sent_at: _timestamp_pb2.Timestamp
     delivered_at: _timestamp_pb2.Timestamp
     created_at: _timestamp_pb2.Timestamp
-    def __init__(self, log_id: _Optional[str] = ..., template_id: _Optional[str] = ..., event_type: _Optional[str] = ..., channel: _Optional[_Union[_enums_pb2.NotificationChannel, str]] = ..., recipient_id: _Optional[str] = ..., recipient_address: _Optional[str] = ..., tenant_id: _Optional[str] = ..., project_id: _Optional[str] = ..., resource_type: _Optional[str] = ..., resource_id: _Optional[str] = ..., resource_name: _Optional[str] = ..., correlation_id: _Optional[str] = ..., status: _Optional[_Union[_enums_pb2.NotificationStatus, str]] = ..., error_message: _Optional[str] = ..., provider_message_id: _Optional[str] = ..., retry_count: _Optional[int] = ..., sent_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., delivered_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    rendered_subject: str
+    rendered_body: str
+    def __init__(self, log_id: _Optional[str] = ..., template_id: _Optional[str] = ..., event_type: _Optional[str] = ..., channel: _Optional[_Union[_enums_pb2.NotificationChannel, str]] = ..., recipient_id: _Optional[str] = ..., recipient_address: _Optional[str] = ..., tenant_id: _Optional[str] = ..., project_id: _Optional[str] = ..., resource_type: _Optional[str] = ..., resource_id: _Optional[str] = ..., resource_name: _Optional[str] = ..., correlation_id: _Optional[str] = ..., status: _Optional[_Union[_enums_pb2.NotificationStatus, str]] = ..., error_message: _Optional[str] = ..., provider_message_id: _Optional[str] = ..., retry_count: _Optional[int] = ..., sent_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., delivered_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., rendered_subject: _Optional[str] = ..., rendered_body: _Optional[str] = ...) -> None: ...

@@ -32,6 +32,14 @@ class RegisterUploadResponse extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>.udb.core.common.v1.ApiError error = 4 [json_name = "error"];</code>
      */
     protected $error = null;
+    /**
+     * Unix-seconds expiry of the presigned PUT `upload_url`; 0 when no URL was
+     * minted (metadata-only mode / presign error). Lets the client know when the
+     * URL dies without a follow-up call.
+     *
+     * Generated from protobuf field <code>int64 expires_at = 5 [json_name = "expiresAt"];</code>
+     */
+    protected $expires_at = 0;
 
     /**
      * Constructor.
@@ -44,6 +52,10 @@ class RegisterUploadResponse extends \Google\Protobuf\Internal\Message
      *     @type string $object_key
      *     @type \Udb\Core\Common\V1\ApiError $error
      *           Error information if operation failed
+     *     @type int|string $expires_at
+     *           Unix-seconds expiry of the presigned PUT `upload_url`; 0 when no URL was
+     *           minted (metadata-only mode / presign error). Lets the client know when the
+     *           URL dies without a follow-up call.
      * }
      */
     public function __construct($data = NULL) {
@@ -149,6 +161,36 @@ class RegisterUploadResponse extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkMessage($var, \Udb\Core\Common\V1\ApiError::class);
         $this->error = $var;
+
+        return $this;
+    }
+
+    /**
+     * Unix-seconds expiry of the presigned PUT `upload_url`; 0 when no URL was
+     * minted (metadata-only mode / presign error). Lets the client know when the
+     * URL dies without a follow-up call.
+     *
+     * Generated from protobuf field <code>int64 expires_at = 5 [json_name = "expiresAt"];</code>
+     * @return int|string
+     */
+    public function getExpiresAt()
+    {
+        return $this->expires_at;
+    }
+
+    /**
+     * Unix-seconds expiry of the presigned PUT `upload_url`; 0 when no URL was
+     * minted (metadata-only mode / presign error). Lets the client know when the
+     * URL dies without a follow-up call.
+     *
+     * Generated from protobuf field <code>int64 expires_at = 5 [json_name = "expiresAt"];</code>
+     * @param int|string $var
+     * @return $this
+     */
+    public function setExpiresAt($var)
+    {
+        GPBUtil::checkInt64($var);
+        $this->expires_at = $var;
 
         return $this;
     }

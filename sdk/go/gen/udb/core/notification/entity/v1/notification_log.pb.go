@@ -44,6 +44,8 @@ type NotificationLog struct {
 	SentAt            *timestamppb.Timestamp `protobuf:"bytes,17,opt,name=sent_at,json=sentAt,proto3" json:"sent_at,omitempty"`
 	DeliveredAt       *timestamppb.Timestamp `protobuf:"bytes,18,opt,name=delivered_at,json=deliveredAt,proto3" json:"delivered_at,omitempty"`
 	CreatedAt         *timestamppb.Timestamp `protobuf:"bytes,19,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	RenderedSubject   string                 `protobuf:"bytes,20,opt,name=rendered_subject,json=renderedSubject,proto3" json:"rendered_subject,omitempty"`
+	RenderedBody      string                 `protobuf:"bytes,21,opt,name=rendered_body,json=renderedBody,proto3" json:"rendered_body,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -211,11 +213,25 @@ func (x *NotificationLog) GetCreatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *NotificationLog) GetRenderedSubject() string {
+	if x != nil {
+		return x.RenderedSubject
+	}
+	return ""
+}
+
+func (x *NotificationLog) GetRenderedBody() string {
+	if x != nil {
+		return x.RenderedBody
+	}
+	return ""
+}
+
 var File_udb_core_notification_entity_v1_notification_log_proto protoreflect.FileDescriptor
 
 const file_udb_core_notification_entity_v1_notification_log_proto_rawDesc = "" +
 	"\n" +
-	"6udb/core/notification/entity/v1/notification_log.proto\x12\x1fudb.core.notification.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a+udb/core/notification/entity/v1/enums.proto\"\x88\x15\n" +
+	"6udb/core/notification/entity/v1/notification_log.proto\x12\x1fudb.core.notification.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a+udb/core/notification/entity/v1/enums.proto\"\x91\x16\n" +
 	"\x0fNotificationLog\x12@\n" +
 	"\x06log_id\x18\x01 \x01(\tB)\x82\xb7\x18%\n" +
 	"\x06log_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x05logId\x12\xc3\x01\n" +
@@ -272,7 +288,11 @@ const file_udb_core_notification_entity_v1_notification_log_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x13 \x01(\v2\x1a.google.protobuf.TimestampB6\x82\xb7\x182\n" +
 	"\n" +
-	"created_at\x12\vTIMESTAMPTZ\x18\x01:\x11CURRENT_TIMESTAMP`\x01h\x01R\tcreatedAt:\xfc\x03\xfa\xb6\x18\xdc\x02\n" +
+	"created_at\x12\vTIMESTAMPTZ\x18\x01:\x11CURRENT_TIMESTAMP`\x01h\x01R\tcreatedAt\x12G\n" +
+	"\x10rendered_subject\x18\x14 \x01(\tB\x1c\x82\xb7\x18\x18\n" +
+	"\x10rendered_subject\x12\x04TEXTR\x0frenderedSubject\x12>\n" +
+	"\rrendered_body\x18\x15 \x01(\tB\x19\x82\xb7\x18\x15\n" +
+	"\rrendered_body\x12\x04TEXTR\frenderedBody:\xfc\x03\xfa\xb6\x18\xdc\x02\n" +
 	"\x11notification_logs\x12\x10udb_notification\x18\x02 \x01*<Delivery audit log for every notification sent by the system@\x01H\x03R\n" +
 	"created_atXZb^\n" +
 	"\x10tenant_isolation\x1aH(tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\x8a\x01C\n" +

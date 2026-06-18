@@ -31,4 +31,30 @@ public interface ForgotPasswordResponseOrBuilder extends
    */
   com.google.protobuf.ByteString
       getOtpIdBytes();
+
+  /**
+   * <pre>
+   * Dev-only echo of the plaintext PASSWORD_RESET OTP code, populated ONLY when the
+   * broker runs with UDB_OTP_DEV_ECHO=1 (non-production posture). Empty in
+   * production. Lets conformance harnesses complete ResetPassword without a
+   * delivery channel. bug_report.md F/Lane-2.
+   * </pre>
+   *
+   * <code>string dev_otp_code = 2 [json_name = "devOtpCode"];</code>
+   * @return The devOtpCode.
+   */
+  java.lang.String getDevOtpCode();
+  /**
+   * <pre>
+   * Dev-only echo of the plaintext PASSWORD_RESET OTP code, populated ONLY when the
+   * broker runs with UDB_OTP_DEV_ECHO=1 (non-production posture). Empty in
+   * production. Lets conformance harnesses complete ResetPassword without a
+   * delivery channel. bug_report.md F/Lane-2.
+   * </pre>
+   *
+   * <code>string dev_otp_code = 2 [json_name = "devOtpCode"];</code>
+   * @return The bytes for devOtpCode.
+   */
+  com.google.protobuf.ByteString
+      getDevOtpCodeBytes();
 }

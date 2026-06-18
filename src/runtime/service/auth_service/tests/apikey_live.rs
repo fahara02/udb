@@ -284,6 +284,62 @@ async fn live_postgres_apikey_admin_lifecycle() {
     cleanup_native_auth_db(&pool).await;
 }
 
+/// §1 read-after-write (13.7.1.3): the `key_id` `CreateApiKey` returns is
+/// IMMEDIATELY gettable by `GetApiKey` on the SAME served path with the SAME
+/// validated claim context a client carries (the tenant-`acme` admin the transport
+/// layer installs from the bearer token). Reverting the create/get guarantee fails.
+#[tokio::test]
+#[ignore = "requires live Postgres; run with UDB_LIVE_AUTH_TESTS=1 cargo test --lib live_postgres_apikey_read_after_write -- --ignored --nocapture"]
+async fn live_postgres_apikey_read_after_write() {
+    let _guard = live_auth_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_auth_db(&pool).await;
+    let svc = api_key_service(pool.clone());
+    let owner_id = Uuid::new_v4().to_string();
+
+    let created = svc
+        .create_api_key(Request::new(apikey_pb::CreateApiKeyRequest {
+            name: "ryw-key".to_string(),
+            owner_id: owner_id.clone(),
+            scopes: vec!["data:read".to_string()],
+            context: Some(common_pb::RequestContext {
+                principal_id: owner_id.clone(),
+                tenant: Some(common_pb::TenantContext {
+                    tenant_id: "acme".to_string(),
+                    project_id: "billing".to_string(),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            }),
+            ..Default::default()
+        }))
+        .await
+        .expect("create_api_key")
+        .into_inner();
+    let key_id = created.key.expect("created key").key_id;
+
+    // CreateApiKey → GetApiKey, run as the same validated tenant-`acme` admin claim.
+    assert_create_then_get("CreateApiKey→GetApiKey", &key_id, |id| {
+        let svc = &svc;
+        let owner_id = owner_id.clone();
+        async move {
+            let got = scope_claim_context_for_test(
+                test_claim_context(&owner_id, "acme", "billing", &[], &[]),
+                svc.get_api_key(Request::new(apikey_pb::GetApiKeyRequest {
+                    key_id: id.clone(),
+                })),
+            )
+            .await?
+            .into_inner()
+            .key;
+            Ok(got.is_some_and(|k| k.key_id == id))
+        }
+    })
+    .await;
+
+    cleanup_native_auth_db(&pool).await;
+}
+
 #[tokio::test]
 #[ignore = "requires live Postgres; run with UDB_LIVE_AUTH_TESTS=1 cargo test --lib live_postgres_apikey_usage_stats_contract -- --ignored --nocapture"]
 async fn live_postgres_apikey_usage_stats_contract() {

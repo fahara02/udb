@@ -21,7 +21,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-// TestLivePerf measures per-RPC latency for the entire 262-RPC surface against a
+// TestLivePerf measures per-RPC latency for the entire 265-RPC surface against a
 // running broker and writes a sorted perf report. It is gated separately from the
 // conformance suite (UDB_LIVE_PERF=1) because it is a measurement run, not a
 // pass/fail gate: a slow RPC is reported, not failed.
@@ -556,6 +556,11 @@ func perfRealBody(rpc RPCInfo, tenant, project string, fix *perfFixtures) (proto
 		return &entityv1.CacheSetRequest{Context: rc, Resource: &entityv1.StoreResource{Backend: "redis"}, Key: "sdk-perf-cache", Value: []byte("perf"), ContentType: "text/plain", TtlSeconds: 60}, &entityv1.MutationResponse{}, true
 	case "CacheGet":
 		return &entityv1.CacheGetRequest{Context: rc, Resource: &entityv1.StoreResource{Backend: "redis"}, Key: "sdk-perf-cache"}, &entityv1.CacheGetResponse{}, true
+	case "EnsureBaseline":
+		// EnsureBaselineRequest carries ONLY context (field 1); tenant/project are
+		// derived from the verified principal server-side. Needs scope udb:admin,
+		// which rides the bearer JWT (RequestContext.Scopes is not authoritative).
+		return &servicesv1.EnsureBaselineRequest{Context: rc}, &servicesv1.EnsureBaselineResponse{}, true
 	}
 	return nil, nil, false
 }

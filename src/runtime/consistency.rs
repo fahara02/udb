@@ -327,6 +327,40 @@ impl ConsistencyPolicy {
 mod tests {
     use super::*;
 
+    fn consistency_golden_value() -> serde_json::Value {
+        let receipt = WriteReceipt {
+            source_lsn: "0/1A2B3C4D".to_string(),
+            outbox_seq: 42,
+            projection_task_ids: vec![
+                "projection-task-a".to_string(),
+                "projection-task-b".to_string(),
+            ],
+            manifest_checksum: "sha256:0123456789abcdef".to_string(),
+            written_at_unix_ms: 1_735_689_600_000,
+        };
+        let fence = ReadFence::from_receipt(&receipt, 2_500);
+        serde_json::json!({
+            "write_receipt": receipt,
+            "read_fence": fence,
+        })
+    }
+
+    #[test]
+    fn consistency_golden_json_matches_serde_contract() {
+        let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let committed: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(root.join("docs/generated/consistency-golden.json"))
+                .expect("consistency golden JSON should be readable"),
+        )
+        .expect("consistency golden JSON should parse");
+
+        assert_eq!(
+            committed,
+            consistency_golden_value(),
+            "docs/generated/consistency-golden.json drifted from WriteReceipt/ReadFence serde"
+        );
+    }
+
     /// Pinned wire tokens — SDKs and the `x-udb-consistency` header
     /// reference these by string. Changing one is a breaking change.
     #[test]

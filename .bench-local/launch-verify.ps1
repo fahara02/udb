@@ -25,9 +25,21 @@ $env:UDB_MINIO_REGION  = "us-east-1"
 $env:UDB_KAFKA_BROKERS = "127.0.0.1:59192"
 $env:UDB_REDIS_DSN     = "redis://127.0.0.1:56379"
 $env:UDB_QDRANT_URL    = "http://127.0.0.1:56333"
+# Neo4j graph executor (GraphQuery/GraphMutate). The runtime executor reads the
+# UDB_GRAPH_* names (HTTP tx API at :57474); password has no default, so without
+# these the executor fails to register → "backend executor 'neo4j:default' is not
+# registered". Creds match docker-compose.canonical.yml NEO4J_AUTH.
+$env:UDB_GRAPH_DSN      = "http://127.0.0.1:57474"
+$env:UDB_GRAPH_HTTP_URL = "http://127.0.0.1:57474"
+$env:UDB_GRAPH_USER     = "neo4j"
+$env:UDB_GRAPH_PASSWORD = "Udb_Strong#2026"
+$env:UDB_GRAPH_DATABASE = "neo4j"
 
 $env:UDB_ABAC_DEFAULT_ALLOW         = "true"
 $env:UDB_ALLOW_DEGRADED_BACKENDS    = "true"
+# EnsureBaseline (DataBroker admin baseline seed) is guarded behind this flag and
+# fails closed when unset; the perf sweep exercises it, so enable it here.
+$env:UDB_ENABLE_ADMIN_SEED          = "1"
 # CDC ON: the earlier "abort under CDC burst" was a harness kill-by-name artifact, not a
 # broker crash (harness_correction.md). PublishCDC needs the CDC tailer configured
 # (UDB_KAFKA_BROKERS below); enable it so PublishCDC runs its real publish path.

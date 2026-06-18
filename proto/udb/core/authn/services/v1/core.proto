@@ -947,6 +947,11 @@ message ForgotPasswordResponse {
   // Id of the PASSWORD_RESET OTP issued (empty when the account is unknown; the
   // response shape is uniform so it is not an account-enumeration oracle).
   string otp_id = 1;
+  // Dev-only echo of the plaintext PASSWORD_RESET OTP code, populated ONLY when the
+  // broker runs with UDB_OTP_DEV_ECHO=1 (non-production posture). Empty in
+  // production. Lets conformance harnesses complete ResetPassword without a
+  // delivery channel. bug_report.md F/Lane-2.
+  string dev_otp_code = 2;
 }
 
 message ResetPasswordRequest {
@@ -1068,6 +1073,11 @@ message SendPhoneVerificationResponse {
     generate_minimal_example: true
   };
   string otp_id = 1;
+  // Dev-only echo of the plaintext PHONE_VERIFICATION OTP code, populated ONLY when
+  // the broker runs with UDB_OTP_DEV_ECHO=1 (non-production posture). Empty in
+  // production. Lets conformance harnesses complete VerifyOTP without an SMS
+  // delivery channel. bug_report.md F/Lane-2.
+  string dev_otp_code = 2;
 }
 
 message StartWebAuthnRegistrationRequest {

@@ -170,6 +170,51 @@ class UdbClient
     }
 
     /**
+     * Bind a message type/table once, then `select/upsert/delete` with plain PHP
+     * arrays instead of hand-built proto requests. `$key` is the conflict
+     * (primary-key) field set used for upserts. Binds once; never fetches the
+     * catalog per request.
+     *
+     * @param  list<string>  $key
+     */
+    public function entity(string $messageType, array $key = []): BoundEntity
+    {
+        return new BoundEntity($this, $messageType, $key);
+    }
+
+    /** Table-shaped alias of {@see entity()} (`$udb->data()->table('invoice')`). */
+    public function table(string $name, array $key = []): BoundEntity
+    {
+        return $this->entity($name, $key);
+    }
+
+    /**
+     * Encode a PHP record array into the `record_json` bytes the broker expects
+     * (canonical JSON). Shared by {@see BoundEntity}.
+     *
+     * @param  array<string,mixed>  $record
+     */
+    public static function encodeRecordJson(array $record): string
+    {
+        return (string) json_encode($record);
+    }
+
+    /**
+     * Build a `google.protobuf.Struct` filter from a PHP array via its JSON form.
+     *
+     * @param  array<string,mixed>  $filter
+     */
+    public static function toStruct(array $filter): \Google\Protobuf\Struct
+    {
+        $struct = new \Google\Protobuf\Struct();
+        if ($filter !== []) {
+            $struct->mergeFromJsonString((string) json_encode($filter));
+        }
+
+        return $struct;
+    }
+
+    /**
      * Warm the underlying gRPC channel with a cheap metadata RPC.
      *
      * Call this once when a long-lived PHP worker starts (Laravel

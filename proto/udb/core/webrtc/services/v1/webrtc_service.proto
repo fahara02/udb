@@ -60,6 +60,16 @@ service RoomService {
   // Create a room
   rpc CreateRoom(CreateRoomRequest) returns (CreateRoomResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    // Verified: webrtc RoomService::create_room persists the room row (state
+    // ACTIVE) via native_entity_write_for_service before returning, and GetRoom
+    // reads it by (tenant_id, room_id). The returned room_id is immediately
+    // gettable. Primary read.
+    option (udb.core.common.v1.method_readback_contract) = {
+      returned_id_field: "room_id"
+      readback_rpc: "GetRoom"
+      readback_request_field: "room_id"
+      requires_primary_read: true
+    };
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:webrtc:room:create-room"
@@ -235,6 +245,15 @@ service RoomService {
   // Close a room
   rpc CloseRoom(CloseRoomRequest) returns (CloseRoomResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    // Verified: webrtc RoomService::close_room runs UPDATE ... SET state =
+    // 'CLOSED', participant_count = 0 WHERE room_id = ... — driving the room to
+    // the CLOSED terminal state. join_room_inner then refuses any join on a
+    // CLOSED room (WHERE state <> 'CLOSED'), so CLOSED is genuinely terminal.
+    option (udb.core.common.v1.method_lifecycle_contract) = {
+      entity: "Room"
+      target_state: "CLOSED"
+      terminal_states: "CLOSED"
+    };
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:webrtc:room:close-room"
@@ -396,6 +415,20 @@ service PeerService {
   // Join a room
   rpc JoinRoom(JoinRoomRequest) returns (JoinRoomResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    // Verified: join_room_inner does a capacity-CAS that only succeeds when the
+    // room is ACTIVE and not CLOSED and under capacity (WHERE state <> 'CLOSED'
+    // AND participant_count < max); it then inserts a Peer in state CONNECTED.
+    // The room ACTIVE state is the legal source; the peer reaches CONNECTED.
+    option (udb.core.common.v1.method_lifecycle_contract) = {
+      entity: "Peer"
+      legal_source_states: "ACTIVE"
+      target_state: "CONNECTED"
+    };
+    // Verified: when the CAS claims zero rows (room missing, CLOSED, or at
+    // capacity) join_room_inner returns failed_precondition_with_reason(ROOM_FULL).
+    option (udb.core.common.v1.method_error_contract) = {
+      cases: { canonical_code: "ROOM_FULL" grpc_status: "FAILED_PRECONDITION" retryable: false }
+    };
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:webrtc:peer:join-room"
@@ -450,6 +483,44 @@ service PeerService {
     option (google.api.http) = {
       post: "/v1/webrtc/rooms/{room_id}/peers"
       body: "*"
+    };
+  }
+
+  // Join a room and atomically mint TURN credentials for the freshly-inserted peer
+  rpc JoinSession(JoinSessionRequest) returns (JoinSessionResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    // Verified: join_session runs the SAME join_room_inner CAS+insert as JoinRoom
+    // (room must be ACTIVE/not CLOSED/under capacity; peer reaches CONNECTED),
+    // then mints TURN credentials for the freshly-inserted peer.
+    option (udb.core.common.v1.method_lifecycle_contract) = {
+      entity: "Peer"
+      legal_source_states: "ACTIVE"
+      target_state: "CONNECTED"
+    };
+    // Verified: ROOM_FULL from the join_room_inner CAS; TURN_NOT_CONFIGURED is
+    // returned fail-closed when no TURN secret is configured (UDB_TURN_SECRET).
+    option (udb.core.common.v1.method_error_contract) = {
+      cases: { canonical_code: "ROOM_FULL" grpc_status: "FAILED_PRECONDITION" retryable: false }
+      cases: { canonical_code: "TURN_NOT_CONFIGURED" grpc_status: "FAILED_PRECONDITION" retryable: false }
+    };
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:webrtc:peer:join-room"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "webrtc.peer.JoinSession"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "join_session"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "webrtc"
+      generate_minimal_example: true
     };
   }
 
@@ -1297,6 +1368,42 @@ message JoinRoomResponse {
   repeated entity.v1.Peer existing_peers = 2;
   // Error information if operation failed
   udb.core.common.v1.ApiError error = 3;
+}
+
+message JoinSessionRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string room_id = 2;
+  string display_name = 3;
+  string metadata = 4; // JSON
+  string user_agent = 5;
+  int32 ttl_seconds = 6;
+}
+
+message JoinSessionResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  entity.v1.Peer peer = 1;
+  repeated entity.v1.Peer existing_peers = 2;
+  repeated IceServer ice_servers = 3;
+  google.protobuf.Timestamp expires_at = 4;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 5;
 }
 
 message LeaveRoomRequest {

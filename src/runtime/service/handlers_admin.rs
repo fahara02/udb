@@ -791,6 +791,129 @@ impl DataBrokerService {
             Err(err) => self.record_grpc("MarkSagaReviewed", started, Err(err)),
         }
     }
+
+    /// Idempotently seed a baseline `manual_review` saga row and a retryable
+    /// DLQ row for the VERIFIED principal's tenant/project. This is
+    /// PRIVILEGE-CREATING admin tooling, so it is fail-closed: it requires the
+    /// `udb:admin` scope AND the `UDB_ENABLE_ADMIN_SEED` env switch, and it
+    /// derives tenant/project ONLY from `security` (never from the request
+    /// body). Inserts mirror `durable_dlq_insert_sql` (ON CONFLICT (event_id))
+    /// and the saga DDL (ON CONFLICT (saga_id)).
+    pub(crate) async fn ensure_baseline_inner(
+        &self,
+        request: Request<EnsureBaselineRequest>,
+    ) -> Result<Response<EnsureBaselineResponse>, Status> {
+        let (started, security) = authorized_call!(self, request, "EnsureBaseline");
+        if let Err(err) = require_admin_scope(&security) {
+            return self.record_grpc("EnsureBaseline", started, Err(err));
+        }
+        // Fail-closed: privilege-creating seed is disabled unless explicitly
+        // enabled by the operator. Default (unset) => failed_precondition. The env
+        // gate is read in service/mod.rs (allowlisted startup/config boundary), not
+        // here, so this handler stays free of direct env access.
+        let enabled = super::admin_seed_enabled();
+        if !enabled {
+            return self.record_grpc(
+                "EnsureBaseline",
+                started,
+                Err(Status::failed_precondition(
+                    "admin baseline seeding is disabled; set UDB_ENABLE_ADMIN_SEED=1 to enable",
+                )),
+            );
+        }
+        // Tenant/project come ONLY from the verified principal, never the body.
+        let tenant_id = security.tenant_id.clone();
+        let project_id = security.project_id.clone();
+
+        let runtime = self.runtime_snapshot();
+        let pool = match runtime.pg_pool() {
+            Ok(pool) => pool,
+            Err(err) => return self.record_grpc("EnsureBaseline", started, Err(err)),
+        };
+        let config = crate::runtime::system::SystemCatalogConfig::default();
+        let saga_rel = config.saga_relation();
+        let dlq_rel = config.dlq_relation();
+
+        let saga_id = Uuid::new_v4();
+        let dlq_event_id = Uuid::new_v4();
+
+        let result: Result<(), Status> = async {
+            // Idempotent manual-review saga row (mirrors the saga DDL columns).
+            sqlx::query(&format!(
+                "INSERT INTO {saga_rel} \
+                 (saga_id, tx_id, tenant_id, correlation_id, status, backend_instance, operation, \
+                  current_step, retry_count, recovery_attempts, compensation_status, steps, \
+                  compensations, last_error, created_at, updated_at) \
+                 VALUES ($1, '', $2, $3, 'manual_review', '', 'mutate', 0, 0, 0, 'manual_review', \
+                         '[]'::JSONB, '[]'::JSONB, 'baseline seed', NOW(), NOW()) \
+                 ON CONFLICT (saga_id) DO NOTHING"
+            ))
+            .bind(saga_id)
+            .bind(&tenant_id)
+            .bind(&security.correlation_id)
+            .execute(pool)
+            .await
+            .map_err(|err| Status::internal(format!("EnsureBaseline saga insert failed: {err}")))?;
+
+            // Retryable DLQ row mirroring `durable_dlq_insert_sql`: status
+            // RETRYING, ON CONFLICT (event_id) DO NOTHING (the conflict target
+            // is `event_id`, NOT `dlq_id`).
+            sqlx::query(&format!(
+                "INSERT INTO {dlq_rel} \
+                 (event_id, topic, tenant_id, project_id, error_type, error_message, payload, \
+                  status, next_retry_at, created_at) \
+                 VALUES ($1, $2, $3, $4, $5, $6, $7::JSONB, 'RETRYING', \
+                         NOW() + ($8::TEXT || ' seconds')::INTERVAL, NOW()) \
+                 ON CONFLICT (event_id) DO NOTHING"
+            ))
+            .bind(dlq_event_id)
+            .bind("udb.admin.baseline.seed")
+            .bind(&tenant_id)
+            .bind(&project_id)
+            .bind("baseline_seed")
+            .bind("baseline seed")
+            .bind(serde_json::json!({}))
+            .bind("60")
+            .execute(pool)
+            .await
+            .map_err(|err| Status::internal(format!("EnsureBaseline dlq insert failed: {err}")))?;
+            Ok(())
+        }
+        .await;
+
+        match result {
+            Ok(()) => {
+                if let Err(err) = runtime
+                    .write_audit_log(
+                        &security.service_identity,
+                        "EnsureBaseline",
+                        &saga_id.to_string(),
+                        &serde_json::json!({
+                            "saga_id": saga_id.to_string(),
+                            "dlq_event_id": dlq_event_id.to_string(),
+                        }),
+                        "ok",
+                        &tenant_id,
+                        "",
+                        &security.correlation_id,
+                    )
+                    .await
+                {
+                    tracing::warn!(error = %err, operation = "EnsureBaseline", "admin audit log write failed");
+                }
+                self.record_grpc(
+                    "EnsureBaseline",
+                    started,
+                    Ok(Response::new(EnsureBaselineResponse {
+                        saga_ids: vec![saga_id.to_string()],
+                        dlq_ids: vec![dlq_event_id.to_string()],
+                        device_id: String::new(),
+                    })),
+                )
+            }
+            Err(err) => self.record_grpc("EnsureBaseline", started, Err(err)),
+        }
+    }
 }
 
 fn projection_drift_scan_mode(

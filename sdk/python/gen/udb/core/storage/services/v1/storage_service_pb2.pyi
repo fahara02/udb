@@ -38,19 +38,21 @@ class RegisterUploadRequest(_message.Message):
     def __init__(self, tenant_id: _Optional[str] = ..., project_id: _Optional[str] = ..., filename: _Optional[str] = ..., content_type: _Optional[str] = ..., file_type: _Optional[str] = ..., reference_id: _Optional[str] = ..., reference_type: _Optional[str] = ..., is_public: bool = ..., expires_in_minutes: _Optional[int] = ..., size_bytes: _Optional[int] = ...) -> None: ...
 
 class RegisterUploadResponse(_message.Message):
-    __slots__ = ("file_id", "upload_url", "object_key", "error")
+    __slots__ = ("file_id", "upload_url", "object_key", "error", "expires_at")
     FILE_ID_FIELD_NUMBER: _ClassVar[int]
     UPLOAD_URL_FIELD_NUMBER: _ClassVar[int]
     OBJECT_KEY_FIELD_NUMBER: _ClassVar[int]
     ERROR_FIELD_NUMBER: _ClassVar[int]
+    EXPIRES_AT_FIELD_NUMBER: _ClassVar[int]
     file_id: str
     upload_url: str
     object_key: str
     error: _dto_pb2.ApiError
-    def __init__(self, file_id: _Optional[str] = ..., upload_url: _Optional[str] = ..., object_key: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
+    expires_at: int
+    def __init__(self, file_id: _Optional[str] = ..., upload_url: _Optional[str] = ..., object_key: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ..., expires_at: _Optional[int] = ...) -> None: ...
 
 class FinalizeUploadRequest(_message.Message):
-    __slots__ = ("tenant_id", "file_id", "content_type", "file_type", "reference_id", "reference_type", "is_public", "size_bytes")
+    __slots__ = ("tenant_id", "file_id", "content_type", "file_type", "reference_id", "reference_type", "is_public", "size_bytes", "checksum", "etag")
     TENANT_ID_FIELD_NUMBER: _ClassVar[int]
     FILE_ID_FIELD_NUMBER: _ClassVar[int]
     CONTENT_TYPE_FIELD_NUMBER: _ClassVar[int]
@@ -59,6 +61,8 @@ class FinalizeUploadRequest(_message.Message):
     REFERENCE_TYPE_FIELD_NUMBER: _ClassVar[int]
     IS_PUBLIC_FIELD_NUMBER: _ClassVar[int]
     SIZE_BYTES_FIELD_NUMBER: _ClassVar[int]
+    CHECKSUM_FIELD_NUMBER: _ClassVar[int]
+    ETAG_FIELD_NUMBER: _ClassVar[int]
     tenant_id: str
     file_id: str
     content_type: str
@@ -67,7 +71,9 @@ class FinalizeUploadRequest(_message.Message):
     reference_type: str
     is_public: bool
     size_bytes: int
-    def __init__(self, tenant_id: _Optional[str] = ..., file_id: _Optional[str] = ..., content_type: _Optional[str] = ..., file_type: _Optional[str] = ..., reference_id: _Optional[str] = ..., reference_type: _Optional[str] = ..., is_public: bool = ..., size_bytes: _Optional[int] = ...) -> None: ...
+    checksum: str
+    etag: str
+    def __init__(self, tenant_id: _Optional[str] = ..., file_id: _Optional[str] = ..., content_type: _Optional[str] = ..., file_type: _Optional[str] = ..., reference_id: _Optional[str] = ..., reference_type: _Optional[str] = ..., is_public: bool = ..., size_bytes: _Optional[int] = ..., checksum: _Optional[str] = ..., etag: _Optional[str] = ...) -> None: ...
 
 class FinalizeUploadResponse(_message.Message):
     __slots__ = ("file", "error")
@@ -96,6 +102,28 @@ class GetDownloadUrlResponse(_message.Message):
     expires_at: _timestamp_pb2.Timestamp
     error: _dto_pb2.ApiError
     def __init__(self, download_url: _Optional[str] = ..., expires_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
+
+class DownloadFileRequest(_message.Message):
+    __slots__ = ("tenant_id", "file_id", "chunk_size_bytes")
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    FILE_ID_FIELD_NUMBER: _ClassVar[int]
+    CHUNK_SIZE_BYTES_FIELD_NUMBER: _ClassVar[int]
+    tenant_id: str
+    file_id: str
+    chunk_size_bytes: int
+    def __init__(self, tenant_id: _Optional[str] = ..., file_id: _Optional[str] = ..., chunk_size_bytes: _Optional[int] = ...) -> None: ...
+
+class DownloadFileChunk(_message.Message):
+    __slots__ = ("data", "content_type", "total_size", "etag")
+    DATA_FIELD_NUMBER: _ClassVar[int]
+    CONTENT_TYPE_FIELD_NUMBER: _ClassVar[int]
+    TOTAL_SIZE_FIELD_NUMBER: _ClassVar[int]
+    ETAG_FIELD_NUMBER: _ClassVar[int]
+    data: bytes
+    content_type: str
+    total_size: int
+    etag: str
+    def __init__(self, data: _Optional[bytes] = ..., content_type: _Optional[str] = ..., total_size: _Optional[int] = ..., etag: _Optional[str] = ...) -> None: ...
 
 class GetFileRequest(_message.Message):
     __slots__ = ("tenant_id", "file_id")

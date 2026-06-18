@@ -67,6 +67,21 @@ final class GeneratedClient
         // @@UDB_RPC_END
     ];
 
+    /**
+     * Proto-derived replay-safe flag per RPC, keyed by method name (globally
+     * unique): from `method_idempotency_contract.replay_safe`. A mutation is
+     * eligible for auto-retry on a transient failure ONLY when it is replay-safe
+     * AND the caller supplied a non-empty idempotency key. RPCs absent from this
+     * map are treated as NOT replay-safe (fail-closed). Read-only RPCs ignore
+     * this map entirely (their retry safety comes from {@see OPERATION_KIND}).
+     *
+     * @var array<string, bool>
+     */
+    public const REPLAY_SAFE = [
+        "Delete" => true,
+        "Upsert" => true,
+    ];
+
     private ?UdbMetadata $boundContext = null;
 
     /** @var array<class-string, BaseStub> Lazily-built, channel-sharing stubs. */
@@ -156,6 +171,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->{{RPC_NAME}}($request, $md, $opts),
             $metadata,
             '{{RPC_OPERATION_KIND}}' === 'read_only',
+            $request,
         );
     }
     // @@UDB_RPC_END
@@ -345,10 +361,17 @@ final class GeneratedClient
         callable $invoker,
         ?UdbMetadata $metadata,
         bool $readOnly,
+        mixed $request = null,
     ) {
         $stub = $this->stubFor($serviceName, $servicePkg);
         $md = $this->headers($metadata);
         $opts = $this->callOptions();
+
+        // Mutation retry gate (read from the proto-derived maps, never the name):
+        //   replay-safe (REPLAY_SAFE[$rpcName]) AND a non-empty idempotency key on
+        //   the request. Both are mandatory; read-only RPCs ignore them.
+        $replaySafe = (bool) (self::REPLAY_SAFE[$rpcName] ?? false);
+        $hasIdempotencyKey = $this->hasIdempotencyKey($request);
 
         $retry = (array) ($this->config['retry'] ?? []);
         $maxAttempts = max(1, (int) ($retry['max_attempts'] ?? 4));
@@ -382,7 +405,8 @@ final class GeneratedClient
             }
 
             $lastStatus = $status;
-            if ($attempt < $maxAttempts && $this->isRetryable($code, $readOnly)) {
+            if ($attempt < $maxAttempts
+                && $this->isRetryable($code, $readOnly, $replaySafe, $hasIdempotencyKey)) {
                 $this->sleepBackoff($attempt, $baseDelayMs, $maxDelayMs);
                 continue;
             }
@@ -409,19 +433,58 @@ final class GeneratedClient
         return is_object($status) ? (int) ($status->code ?? -1) : (int) ($status['code'] ?? -1);
     }
 
-    private function isRetryable(int $code, bool $readOnly): bool
+    /**
+     * Decide whether a failed unary RPC may be auto-retried on the given gRPC
+     * code. Fail-safe by default: anything not explicitly allowed returns false.
+     *
+     *   - Read-only RPCs: retried on the configured transient codes plus
+     *     DEADLINE_EXCEEDED. Unchanged behaviour.
+     *   - Mutations: retried ONLY when the RPC is proto-declared replay-safe AND
+     *     the caller supplied a non-empty idempotency key. Both are mandatory.
+     *     DEADLINE_EXCEEDED is NOT retried for mutations — the server may have
+     *     applied the write before the deadline fired and the SDK cannot prove
+     *     the dedup record landed, so DEADLINE stays a fail-closed terminal and
+     *     only the configured transient codes (UNAVAILABLE / RESOURCE_EXHAUSTED,
+     *     which fail before any server-side effect) are eligible.
+     *   - Non-replay-safe mutations are NEVER retried, regardless of key.
+     */
+    private function isRetryable(int $code, bool $readOnly, bool $replaySafe, bool $hasIdempotencyKey): bool
     {
-        if (! $readOnly) {
-            return false;
+        if ($readOnly) {
+            if ($code === 4) { // DEADLINE_EXCEEDED
+                return true;
+            }
+            return in_array($code, self::RETRYABLE_CODES, true);
         }
-        if ($code === 4) { // DEADLINE_EXCEEDED
-            return true;
+        // Mutation: fail-closed unless proto-declared replay-safe AND idempotency-keyed.
+        if (! $replaySafe || ! $hasIdempotencyKey) {
+            return false;
         }
         return in_array($code, self::RETRYABLE_CODES, true);
     }
 
-    // Retry safety is read from the proto-derived operation_kind per RPC (each
-    // wrapper passes operation_kind === 'read_only') — never guessed from the name.
+    /**
+     * Whether the request proto carries a non-empty `idempotency_key`. Requests
+     * without the accessor (the field is absent) return false. This is the
+     * SDK-side gate that lets a replay-safe mutation be retried: without a key
+     * the broker cannot dedup a replay, so we must not retry. Read via the
+     * protoc-generated `getIdempotencyKey()` accessor — no per-message imports.
+     */
+    private function hasIdempotencyKey(mixed $request): bool
+    {
+        if (! is_object($request) || ! method_exists($request, 'getIdempotencyKey')) {
+            return false;
+        }
+        try {
+            return (string) $request->getIdempotencyKey() !== '';
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    // Retry safety is read from the proto-derived operation_kind + replay_safe
+    // per RPC (each wrapper passes operation_kind === 'read_only' and the request
+    // so REPLAY_SAFE / idempotency-key can be consulted) — never guessed from the name.
 
     /**
      * Exponential backoff with full jitter, capped at `max_delay_ms`. Sleeps

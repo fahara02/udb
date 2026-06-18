@@ -109,6 +109,7 @@ docs/generated/*
 !docs/generated/codebase-map.md
 # Phase 3: committed contract baseline (breaking-change gate) + descriptor-generated native-service docs.
 !docs/generated/contract-baseline.bin
+!docs/generated/consistency-golden.json
 !docs/generated/native-services.md
 docs/upgrade_todo.md
 
@@ -197,3 +198,12 @@ Thumbs.db
 # Brand images are synced into the published site from docs/assets by CI;
 # the canonical source stays in docs/assets (not duplicated in git).
 /docs/site/assets/
+
+# Swagger JSON is synced into the published site from api/ by CI;
+# the canonical source stays in api/ (not duplicated in git).
+/docs/site/api/
+
+# Local bench harness: the .ps1 launchers/grind scripts ARE versioned; only the
+# runtime artifacts are ignored (logs already covered by *.log above).
+.bench-local/*.pid
+.bench-local/audit.jsonl

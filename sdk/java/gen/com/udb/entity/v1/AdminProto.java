@@ -611,245 +611,248 @@ public final class AdminProto {
       ":\n\004runs\030\001 \003(\0132&.udb.entity.v1.MigrationS" +
       "tatusResponseR\004runs\022&\n\017next_page_token\030\002" +
       " \001(\tR\rnextPageToken\022\037\n\013total_count\030\003 \001(\005" +
-      "R\ntotalCount\"\255\002\n\027MigrationStatusResponse" +
+      "R\ntotalCount\"\235\003\n\027MigrationStatusResponse" +
       "\022\025\n\006run_id\030\001 \001(\tR\005runId\022\035\n\nproject_id\030\002 " +
       "\001(\tR\tprojectId\022\'\n\017catalog_version\030\003 \001(\tR" +
       "\016catalogVersion\022\024\n\005state\030\004 \001(\tR\005state\022\035\n" +
       "\nstarted_at\030\005 \001(\tR\tstartedAt\022\037\n\013finished" +
       "_at\030\006 \001(\tR\nfinishedAt\022G\n\noperations\030\007 \003(" +
       "\0132\'.udb.entity.v1.MigrationOperationStat" +
-      "usR\noperations\022\024\n\005error\030\010 \001(\tR\005error\"\302\001\n" +
-      "\030MigrationOperationStatus\022\024\n\005index\030\001 \001(\005" +
-      "R\005index\022\030\n\007backend\030\002 \001(\tR\007backend\022!\n\014res" +
-      "ource_uri\030\003 \001(\tR\013resourceUri\022%\n\016operatio" +
-      "n_kind\030\004 \001(\tR\roperationKind\022\026\n\006status\030\005 " +
-      "\001(\tR\006status\022\024\n\005error\030\006 \001(\tR\005error\"\271\001\n\016Dl" +
-      "qListRequest\0227\n\007context\030\001 \001(\0132\035.udb.enti" +
-      "ty.v1.RequestContextR\007context\022\024\n\005topic\030\002" +
-      " \001(\tR\005topic\022#\n\rstatus_filter\030\003 \001(\tR\014stat" +
-      "usFilter\022\024\n\005limit\030\004 \001(\005R\005limit\022\035\n\npage_t" +
-      "oken\030\005 \001(\tR\tpageToken\"\247\002\n\016DlqEventRecord" +
-      "\022\025\n\006dlq_id\030\001 \001(\tR\005dlqId\022\031\n\010event_id\030\002 \001(" +
-      "\tR\007eventId\022\024\n\005topic\030\003 \001(\tR\005topic\022!\n\014payl" +
-      "oad_json\030\004 \001(\014R\013payloadJson\022\035\n\nerror_typ" +
-      "e\030\005 \001(\tR\terrorType\022#\n\rerror_message\030\006 \001(" +
-      "\tR\014errorMessage\022\026\n\006status\030\007 \001(\tR\006status\022" +
-      "&\n\017created_at_unix\030\010 \001(\003R\rcreatedAtUnix\022" +
-      "&\n\017updated_at_unix\030\t \001(\003R\rupdatedAtUnix\"" +
-      "\221\001\n\017DlqListResponse\0225\n\006events\030\001 \003(\0132\035.ud" +
-      "b.entity.v1.DlqEventRecordR\006events\022&\n\017ne" +
-      "xt_page_token\030\002 \001(\tR\rnextPageToken\022\037\n\013to" +
-      "tal_count\030\003 \001(\005R\ntotalCount\"a\n\017DlqEventR" +
-      "equest\0227\n\007context\030\001 \001(\0132\035.udb.entity.v1." +
-      "RequestContextR\007context\022\025\n\006dlq_id\030\002 \001(\tR" +
-      "\005dlqId\"G\n\020DlqEventResponse\0223\n\005event\030\001 \001(" +
-      "\0132\035.udb.entity.v1.DlqEventRecordR\005event\"" +
-      "\246\001\n\020DlqActionRequest\0227\n\007context\030\001 \001(\0132\035." +
-      "udb.entity.v1.RequestContextR\007context\022\025\n" +
-      "\006dlq_id\030\002 \001(\tR\005dlqId\022*\n\021preserve_event_i" +
-      "d\030\003 \001(\010R\017preserveEventId\022\026\n\006reason\030\004 \001(\t" +
-      "R\006reason\"\244\002\n\032CdcRedactionPreviewRequest\022" +
-      "7\n\007context\030\001 \001(\0132\035.udb.entity.v1.Request" +
-      "ContextR\007context\022!\n\014message_type\030\002 \001(\tR\013" +
-      "messageType\022\024\n\005topic\030\003 \001(\tR\005topic\022\035\n\nsch" +
-      "ema_uri\030\004 \001(\tR\tschemaUri\022!\n\014payload_json" +
-      "\030\005 \001(\014R\013payloadJson\022%\n\016redaction_mode\030\006 " +
-      "\001(\tR\rredactionMode\022+\n\021redaction_version\030" +
-      "\007 \001(\005R\020redactionVersion\"\340\001\n\033CdcRedaction" +
-      "PreviewResponse\022!\n\014payload_json\030\001 \001(\014R\013p" +
-      "ayloadJson\022\'\n\017redacted_fields\030\002 \003(\tR\016red" +
-      "actedFields\022%\n\016redaction_mode\030\003 \001(\tR\rred" +
-      "actionMode\022+\n\021redaction_version\030\004 \001(\005R\020r" +
-      "edactionVersion\022!\n\014would_redact\030\005 \001(\010R\013w" +
-      "ouldRedact\"\212\002\n\032ProjectionDriftScanReques" +
-      "t\0227\n\007context\030\001 \001(\0132\035.udb.entity.v1.Reque" +
-      "stContextR\007context\022\035\n\nproject_id\030\002 \001(\tR\t" +
-      "projectId\022!\n\014message_type\030\003 \001(\tR\013message" +
-      "Type\022\033\n\tscan_mode\030\004 \001(\tR\010scanMode\022&\n\017row" +
-      "s_per_target\030\005 \001(\005R\rrowsPerTarget\022\026\n\006rep" +
-      "air\030\006 \001(\010R\006repair\022\024\n\005limit\030\007 \001(\005R\005limit\"" +
-      "\245\001\n\033ProjectionDriftDivergentRow\022 \n\014row_k" +
-      "ey_json\030\001 \001(\014R\nrowKeyJson\022\'\n\017source_chec" +
-      "ksum\030\002 \001(\tR\016sourceChecksum\022\'\n\017target_che" +
-      "cksum\030\003 \001(\tR\016targetChecksum\022\022\n\004kind\030\004 \001(" +
-      "\tR\004kind\"\301\003\n\033ProjectionDriftTargetReport\022" +
-      "%\n\016target_backend\030\001 \001(\tR\rtargetBackend\022\'" +
-      "\n\017target_instance\030\002 \001(\tR\016targetInstance\022" +
-      "\'\n\017target_resource\030\003 \001(\tR\016targetResource" +
-      "\022.\n\023source_rows_scanned\030\004 \001(\005R\021sourceRow" +
-      "sScanned\022Q\n\016divergent_rows\030\005 \003(\0132*.udb.e" +
-      "ntity.v1.ProjectionDriftDivergentRowR\rdi" +
-      "vergentRows\022$\n\016rows_to_repair\030\006 \001(\005R\014row" +
-      "sToRepair\0220\n\024estimated_cost_units\030\007 \001(\001R" +
-      "\022estimatedCostUnits\0222\n\025repair_tasks_enqu" +
-      "eued\030\010 \001(\003R\023repairTasksEnqueued\022\032\n\010warni" +
-      "ngs\030\t \003(\tR\010warnings\"\257\002\n\033ProjectionDriftS" +
-      "canResponse\022\035\n\nproject_id\030\001 \001(\tR\tproject" +
-      "Id\022!\n\014message_type\030\002 \001(\tR\013messageType\022\033\n" +
-      "\tscan_mode\030\003 \001(\tR\010scanMode\022,\n\022source_row" +
-      "s_loaded\030\004 \001(\005R\020sourceRowsLoaded\022D\n\007repo" +
-      "rts\030\005 \003(\0132*.udb.entity.v1.ProjectionDrif" +
-      "tTargetReportR\007reports\022!\n\014summary_json\030\006" +
-      " \001(\014R\013summaryJson\022\032\n\010warnings\030\007 \003(\tR\010war" +
-      "nings\"\244\002\n\017SagaListRequest\0227\n\007context\030\001 \001" +
-      "(\0132\035.udb.entity.v1.RequestContextR\007conte" +
-      "xt\022(\n\020tenant_id_filter\030\002 \001(\tR\016tenantIdFi" +
-      "lter\022#\n\rstatus_filter\030\003 \001(\tR\014statusFilte" +
-      "r\022 \n\014tx_id_filter\030\004 \001(\tR\ntxIdFilter\0222\n\025c" +
-      "orrelation_id_filter\030\005 \001(\tR\023correlationI" +
-      "dFilter\022\024\n\005limit\030\006 \001(\005R\005limit\022\035\n\npage_to" +
-      "ken\030\007 \001(\tR\tpageToken\"\366\002\n\nSagaRecord\022\027\n\007s" +
-      "aga_id\030\001 \001(\tR\006sagaId\022\023\n\005tx_id\030\002 \001(\tR\004txI" +
-      "d\022\033\n\ttenant_id\030\003 \001(\tR\010tenantId\022%\n\016correl" +
-      "ation_id\030\004 \001(\tR\rcorrelationId\022\026\n\006status\030" +
-      "\005 \001(\tR\006status\022!\n\014current_step\030\006 \001(\005R\013cur" +
-      "rentStep\022\035\n\nsteps_json\030\007 \001(\014R\tstepsJson\022" +
-      "-\n\022compensations_json\030\010 \001(\014R\021compensatio" +
-      "nsJson\022\035\n\nlast_error\030\t \001(\tR\tlastError\022&\n" +
-      "\017created_at_unix\030\n \001(\003R\rcreatedAtUnix\022&\n" +
-      "\017updated_at_unix\030\013 \001(\003R\rupdatedAtUnix\"\214\001" +
-      "\n\020SagaListResponse\022/\n\005sagas\030\001 \003(\0132\031.udb." +
-      "entity.v1.SagaRecordR\005sagas\022&\n\017next_page" +
-      "_token\030\002 \001(\tR\rnextPageToken\022\037\n\013total_cou" +
-      "nt\030\003 \001(\005R\ntotalCount\"\240\001\n\013SagaRequest\0227\n\007" +
-      "context\030\001 \001(\0132\035.udb.entity.v1.RequestCon" +
-      "textR\007context\022\027\n\007saga_id\030\002 \001(\tR\006sagaId\022\026" +
-      "\n\006reason\030\003 \001(\tR\006reason\022\'\n\017idempotency_ke" +
-      "y\030\004 \001(\tR\016idempotencyKey\"U\n\014SagaResponse\022" +
-      "-\n\004saga\030\001 \001(\0132\031.udb.entity.v1.SagaRecord" +
-      "R\004saga\022\026\n\006errors\030\002 \003(\tR\006errors\"\303\002\n\014Polic" +
-      "yRecord\022\033\n\tpolicy_id\030\001 \001(\003R\010policyId\022\026\n\006" +
-      "effect\030\002 \001(\tR\006effect\022)\n\020service_identity" +
-      "\030\003 \001(\tR\017serviceIdentity\022\033\n\ttenant_id\030\004 \001" +
-      "(\tR\010tenantId\022\030\n\007purpose\030\005 \001(\tR\007purpose\022!" +
-      "\n\014message_type\030\006 \001(\tR\013messageType\022\034\n\tope" +
-      "ration\030\007 \001(\tR\toperation\022%\n\016required_scop" +
-      "e\030\010 \001(\tR\rrequiredScope\022\032\n\010priority\030\t \001(\005" +
-      "R\010priority\022\030\n\007enabled\030\n \001(\010R\007enabled\"\254\001\n" +
-      "\021PolicyListRequest\0227\n\007context\030\001 \001(\0132\035.ud" +
-      "b.entity.v1.RequestContextR\007context\022)\n\020i" +
-      "nclude_disabled\030\002 \001(\010R\017includeDisabled\022\024" +
-      "\n\005limit\030\003 \001(\005R\005limit\022\035\n\npage_token\030\004 \001(\t" +
-      "R\tpageToken\"\226\001\n\022PolicyListResponse\0227\n\010po" +
-      "licies\030\001 \003(\0132\033.udb.entity.v1.PolicyRecor" +
-      "dR\010policies\022&\n\017next_page_token\030\002 \001(\tR\rne" +
-      "xtPageToken\022\037\n\013total_count\030\003 \001(\005R\ntotalC" +
-      "ount\"\200\001\n\020PutPolicyRequest\0227\n\007context\030\001 \001" +
-      "(\0132\035.udb.entity.v1.RequestContextR\007conte" +
-      "xt\0223\n\006policy\030\002 \001(\0132\033.udb.entity.v1.Polic" +
-      "yRecordR\006policy\"e\n\rPolicyRequest\0227\n\007cont" +
-      "ext\030\001 \001(\0132\035.udb.entity.v1.RequestContext" +
-      "R\007context\022\033\n\tpolicy_id\030\002 \001(\003R\010policyId\"H" +
-      "\n\022PolicyLintResponse\022\026\n\006passed\030\001 \001(\010R\006pa" +
-      "ssed\022\032\n\010findings\030\002 \003(\tR\010findings\"\254\001\n\024Ens" +
-      "ureProjectRequest\0227\n\007context\030\001 \001(\0132\035.udb" +
-      ".entity.v1.RequestContextR\007context\022\035\n\npr" +
-      "oject_id\030\002 \001(\tR\tprojectId\022\022\n\004name\030\003 \001(\tR" +
-      "\004name\022(\n\020cdc_topic_prefix\030\004 \001(\tR\016cdcTopi" +
-      "cPrefix\"\312\001\n\rProjectRecord\022\035\n\nproject_id\030" +
-      "\001 \001(\tR\tprojectId\022\022\n\004name\030\002 \001(\tR\004name\022(\n\020" +
-      "cdc_topic_prefix\030\003 \001(\tR\016cdcTopicPrefix\0224" +
-      "\n\026active_catalog_version\030\004 \001(\tR\024activeCa" +
-      "talogVersion\022&\n\017created_at_unix\030\005 \001(\003R\rc" +
-      "reatedAtUnix\"\202\001\n\022ProjectListRequest\0227\n\007c" +
-      "ontext\030\001 \001(\0132\035.udb.entity.v1.RequestCont" +
-      "extR\007context\022\024\n\005limit\030\002 \001(\005R\005limit\022\035\n\npa" +
-      "ge_token\030\003 \001(\tR\tpageToken\"\230\001\n\023ProjectLis" +
-      "tResponse\0228\n\010projects\030\001 \003(\0132\034.udb.entity" +
-      ".v1.ProjectRecordR\010projects\022&\n\017next_page" +
-      "_token\030\002 \001(\tR\rnextPageToken\022\037\n\013total_cou" +
-      "nt\030\003 \001(\005R\ntotalCount\"\246\001\n\023AdminSummaryReq" +
+      "usR\noperations\022\024\n\005error\030\010 \001(\tR\005error\022*\n\016" +
+      "approval_token\030\t \001(\tH\000R\rapprovalToken\210\001\001" +
+      "\022!\n\tapplyable\030\n \001(\010H\001R\tapplyable\210\001\001B\021\n\017_" +
+      "approval_tokenB\014\n\n_applyable\"\302\001\n\030Migrati" +
+      "onOperationStatus\022\024\n\005index\030\001 \001(\005R\005index\022" +
+      "\030\n\007backend\030\002 \001(\tR\007backend\022!\n\014resource_ur" +
+      "i\030\003 \001(\tR\013resourceUri\022%\n\016operation_kind\030\004" +
+      " \001(\tR\roperationKind\022\026\n\006status\030\005 \001(\tR\006sta" +
+      "tus\022\024\n\005error\030\006 \001(\tR\005error\"\271\001\n\016DlqListReq" +
       "uest\0227\n\007context\030\001 \001(\0132\035.udb.entity.v1.Re" +
-      "questContextR\007context\022\035\n\nproject_id\030\002 \001(" +
-      "\tR\tprojectId\022\037\n\013with_probes\030\003 \001(\010R\nwithP" +
-      "robes\022\026\n\006redact\030\004 \001(\010R\006redact\"\300\002\n\024AdminA" +
-      "uditLogRequest\0227\n\007context\030\001 \001(\0132\035.udb.en" +
-      "tity.v1.RequestContextR\007context\022)\n\020opera" +
-      "tion_filter\030\002 \001(\tR\017operationFilter\022!\n\014ac" +
-      "tor_filter\030\003 \001(\tR\013actorFilter\022(\n\020tenant_" +
-      "id_filter\030\004 \001(\tR\016tenantIdFilter\022*\n\021proje" +
-      "ct_id_filter\030\005 \001(\tR\017projectIdFilter\022\024\n\005l" +
-      "imit\030\006 \001(\005R\005limit\022\035\n\npage_token\030\007 \001(\tR\tp" +
-      "ageToken\022\026\n\006redact\030\010 \001(\010R\006redact\"\327\003\n\023Adm" +
-      "inAuditLogRecord\022\031\n\010audit_id\030\001 \001(\tR\007audi" +
-      "tId\022\024\n\005actor\030\002 \001(\tR\005actor\022\034\n\toperation\030\003" +
-      " \001(\tR\toperation\022\026\n\006target\030\004 \001(\tR\006target\022" +
-      "!\n\014request_json\030\005 \001(\014R\013requestJson\022\026\n\006re" +
-      "sult\030\006 \001(\tR\006result\022\033\n\ttenant_id\030\007 \001(\tR\010t" +
-      "enantId\022\035\n\nproject_id\030\010 \001(\tR\tprojectId\022%" +
-      "\n\016correlation_id\030\t \001(\tR\rcorrelationId\022&\n" +
-      "\017created_at_unix\030\n \001(\003R\rcreatedAtUnix\022#\n" +
-      "\rprevious_hash\030\013 \001(\tR\014previousHash\022!\n\014cu" +
-      "rrent_hash\030\014 \001(\tR\013currentHash\022\"\n\rsigner_" +
-      "key_id\030\r \001(\tR\013signerKeyId\022\'\n\017external_an" +
-      "chor\030\016 \001(\tR\016externalAnchor\"\230\001\n\025AdminAudi" +
-      "tLogResponse\0226\n\004logs\030\001 \003(\0132\".udb.entity." +
-      "v1.AdminAuditLogRecordR\004logs\022&\n\017next_pag" +
-      "e_token\030\002 \001(\tR\rnextPageToken\022\037\n\013total_co" +
-      "unt\030\003 \001(\005R\ntotalCount\"h\n\027AdminAuditVerif" +
-      "yRequest\0227\n\007context\030\001 \001(\0132\035.udb.entity.v" +
-      "1.RequestContextR\007context\022\024\n\005limit\030\002 \001(\005" +
-      "R\005limit\"\213\003\n\030AdminAuditVerifyResponse\022\026\n\006" +
-      "passed\030\001 \001(\010R\006passed\022#\n\rchecked_count\030\002 " +
-      "\001(\005R\014checkedCount\0221\n\025first_broken_audit_" +
-      "id\030\003 \001(\tR\022firstBrokenAuditId\022\026\n\006reason\030\004" +
-      " \001(\tR\006reason\0224\n\026expected_previous_hash\030\005" +
-      " \001(\tR\024expectedPreviousHash\0220\n\024actual_pre" +
-      "vious_hash\030\006 \001(\tR\022actualPreviousHash\0222\n\025" +
-      "expected_current_hash\030\007 \001(\tR\023expectedCur" +
-      "rentHash\022.\n\023actual_current_hash\030\010 \001(\tR\021a" +
-      "ctualCurrentHash\022\033\n\tlast_hash\030\t \001(\tR\010las" +
-      "tHash\"\303\005\n\023AdminBackendSummary\022\030\n\007backend" +
-      "\030\001 \001(\tR\007backend\022\026\n\006status\030\002 \001(\tR\006status\022" +
-      "\034\n\ttransport\030\003 \001(\tR\ttransport\022+\n\021consist" +
-      "ency_model\030\004 \001(\tR\020consistencyModel\0223\n\025su" +
-      "pports_transactions\030\005 \001(\010R\024supportsTrans" +
-      "actions\022:\n\031supports_schema_migration\030\006 \001",
-      "(\010R\027supportsSchemaMigration\0224\n\026supports_" +
-      "vector_search\030\007 \001(\010R\024supportsVectorSearc" +
-      "h\0224\n\026supports_hybrid_search\030\010 \001(\010R\024suppo" +
-      "rtsHybridSearch\022*\n\021max_payload_bytes\030\t \001" +
-      "(\003R\017maxPayloadBytes\022\031\n\010probe_ok\030\n \001(\010R\007p" +
-      "robeOk\022(\n\020probe_latency_ms\030\013 \001(\003R\016probeL" +
-      "atencyMs\022#\n\rinstance_name\030\014 \001(\tR\014instanc" +
-      "eName\022\022\n\004role\030\r \001(\tR\004role\022F\n\006labels\030\016 \003(" +
-      "\0132..udb.entity.v1.AdminBackendSummary.La" +
-      "belsEntryR\006labels\022%\n\016routing_status\030\017 \001(" +
-      "\tR\rroutingStatus\0329\n\013LabelsEntry\022\020\n\003key\030\001" +
-      " \001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005value:\0028\001\"\361\001\n\017" +
-      "AdminCdcSummary\022\033\n\tis_leader\030\001 \001(\010R\010isLe" +
-      "ader\022\026\n\006paused\030\002 \001(\010R\006paused\022\033\n\tslot_nam" +
-      "e\030\003 \001(\tR\010slotName\022\"\n\rlast_event_id\030\004 \001(\t" +
-      "R\013lastEventId\022\037\n\013lag_seconds\030\005 \001(\001R\nlagS" +
-      "econds\022!\n\014outbox_depth\030\006 \001(\003R\013outboxDept" +
-      "h\022$\n\016dlq_open_count\030\007 \001(\003R\014dlqOpenCount\"" +
-      "\310\001\n\020AdminSagaSummary\022\026\n\006active\030\001 \001(\003R\006ac" +
-      "tive\022 \n\013compensated\030\002 \001(\003R\013compensated\022/" +
-      "\n\023failed_compensation\030\003 \001(\003R\022failedCompe" +
-      "nsation\022#\n\rmanual_review\030\004 \001(\003R\014manualRe" +
-      "view\022$\n\rindeterminate\030\005 \001(\003R\rindetermina" +
-      "te\"\241\002\n\023AdminCatalogSummary\022\035\n\nproject_id" +
-      "\030\001 \001(\tR\tprojectId\022%\n\016active_version\030\002 \001(" +
-      "\tR\ractiveVersion\022\'\n\017active_checksum\030\003 \001(" +
-      "\tR\016activeChecksum\022!\n\014active_since\030\004 \001(\tR" +
-      "\013activeSince\022\037\n\013table_count\030\005 \001(\005R\ntable" +
-      "Count\022\037\n\013store_count\030\006 \001(\005R\nstoreCount\0226" +
-      "\n\027pending_migration_state\030\007 \001(\tR\025pending" +
-      "MigrationState\"\370\002\n\024AdminSummaryResponse\022" +
-      "<\n\007catalog\030\001 \003(\0132\".udb.entity.v1.AdminCa" +
-      "talogSummaryR\007catalog\0220\n\003cdc\030\002 \001(\0132\036.udb" +
-      ".entity.v1.AdminCdcSummaryR\003cdc\0225\n\005sagas" +
-      "\030\003 \001(\0132\037.udb.entity.v1.AdminSagaSummaryR" +
-      "\005sagas\022>\n\010backends\030\004 \003(\0132\".udb.entity.v1" +
-      ".AdminBackendSummaryR\010backends\022.\n\023active" +
-      "_policy_count\030\005 \001(\005R\021activePolicyCount\022-" +
-      "\n\023snapshot_at_unix_ms\030\006 \001(\003R\020snapshotAtU" +
-      "nixMs\022\032\n\010warnings\030\007 \003(\tR\010warningsB\260\001\n\021co" +
-      "m.udb.entity.v1B\nAdminProtoP\001Z9github.co" +
-      "m/fahara02/udb/sdk/go/gen/udb/entity/v1;" +
-      "entityv1\242\002\003UEX\252\002\rUdb.Entity.V1\312\002\rUdb\\Ent" +
-      "ity\\V1\342\002\031Udb\\GPBMetadata\\Entity\\V1\352\002\017Udb" +
-      "::Entity::V1b\006proto3"
+      "questContextR\007context\022\024\n\005topic\030\002 \001(\tR\005to" +
+      "pic\022#\n\rstatus_filter\030\003 \001(\tR\014statusFilter" +
+      "\022\024\n\005limit\030\004 \001(\005R\005limit\022\035\n\npage_token\030\005 \001" +
+      "(\tR\tpageToken\"\247\002\n\016DlqEventRecord\022\025\n\006dlq_" +
+      "id\030\001 \001(\tR\005dlqId\022\031\n\010event_id\030\002 \001(\tR\007event" +
+      "Id\022\024\n\005topic\030\003 \001(\tR\005topic\022!\n\014payload_json" +
+      "\030\004 \001(\014R\013payloadJson\022\035\n\nerror_type\030\005 \001(\tR" +
+      "\terrorType\022#\n\rerror_message\030\006 \001(\tR\014error" +
+      "Message\022\026\n\006status\030\007 \001(\tR\006status\022&\n\017creat" +
+      "ed_at_unix\030\010 \001(\003R\rcreatedAtUnix\022&\n\017updat" +
+      "ed_at_unix\030\t \001(\003R\rupdatedAtUnix\"\221\001\n\017DlqL" +
+      "istResponse\0225\n\006events\030\001 \003(\0132\035.udb.entity" +
+      ".v1.DlqEventRecordR\006events\022&\n\017next_page_" +
+      "token\030\002 \001(\tR\rnextPageToken\022\037\n\013total_coun" +
+      "t\030\003 \001(\005R\ntotalCount\"a\n\017DlqEventRequest\0227" +
+      "\n\007context\030\001 \001(\0132\035.udb.entity.v1.RequestC" +
+      "ontextR\007context\022\025\n\006dlq_id\030\002 \001(\tR\005dlqId\"G" +
+      "\n\020DlqEventResponse\0223\n\005event\030\001 \001(\0132\035.udb." +
+      "entity.v1.DlqEventRecordR\005event\"\246\001\n\020DlqA" +
+      "ctionRequest\0227\n\007context\030\001 \001(\0132\035.udb.enti" +
+      "ty.v1.RequestContextR\007context\022\025\n\006dlq_id\030" +
+      "\002 \001(\tR\005dlqId\022*\n\021preserve_event_id\030\003 \001(\010R" +
+      "\017preserveEventId\022\026\n\006reason\030\004 \001(\tR\006reason" +
+      "\"\244\002\n\032CdcRedactionPreviewRequest\0227\n\007conte" +
+      "xt\030\001 \001(\0132\035.udb.entity.v1.RequestContextR" +
+      "\007context\022!\n\014message_type\030\002 \001(\tR\013messageT" +
+      "ype\022\024\n\005topic\030\003 \001(\tR\005topic\022\035\n\nschema_uri\030" +
+      "\004 \001(\tR\tschemaUri\022!\n\014payload_json\030\005 \001(\014R\013" +
+      "payloadJson\022%\n\016redaction_mode\030\006 \001(\tR\rred" +
+      "actionMode\022+\n\021redaction_version\030\007 \001(\005R\020r" +
+      "edactionVersion\"\340\001\n\033CdcRedactionPreviewR" +
+      "esponse\022!\n\014payload_json\030\001 \001(\014R\013payloadJs" +
+      "on\022\'\n\017redacted_fields\030\002 \003(\tR\016redactedFie" +
+      "lds\022%\n\016redaction_mode\030\003 \001(\tR\rredactionMo" +
+      "de\022+\n\021redaction_version\030\004 \001(\005R\020redaction" +
+      "Version\022!\n\014would_redact\030\005 \001(\010R\013wouldReda" +
+      "ct\"\212\002\n\032ProjectionDriftScanRequest\0227\n\007con" +
+      "text\030\001 \001(\0132\035.udb.entity.v1.RequestContex" +
+      "tR\007context\022\035\n\nproject_id\030\002 \001(\tR\tprojectI" +
+      "d\022!\n\014message_type\030\003 \001(\tR\013messageType\022\033\n\t" +
+      "scan_mode\030\004 \001(\tR\010scanMode\022&\n\017rows_per_ta" +
+      "rget\030\005 \001(\005R\rrowsPerTarget\022\026\n\006repair\030\006 \001(" +
+      "\010R\006repair\022\024\n\005limit\030\007 \001(\005R\005limit\"\245\001\n\033Proj" +
+      "ectionDriftDivergentRow\022 \n\014row_key_json\030" +
+      "\001 \001(\014R\nrowKeyJson\022\'\n\017source_checksum\030\002 \001" +
+      "(\tR\016sourceChecksum\022\'\n\017target_checksum\030\003 " +
+      "\001(\tR\016targetChecksum\022\022\n\004kind\030\004 \001(\tR\004kind\"" +
+      "\301\003\n\033ProjectionDriftTargetReport\022%\n\016targe" +
+      "t_backend\030\001 \001(\tR\rtargetBackend\022\'\n\017target" +
+      "_instance\030\002 \001(\tR\016targetInstance\022\'\n\017targe" +
+      "t_resource\030\003 \001(\tR\016targetResource\022.\n\023sour" +
+      "ce_rows_scanned\030\004 \001(\005R\021sourceRowsScanned" +
+      "\022Q\n\016divergent_rows\030\005 \003(\0132*.udb.entity.v1" +
+      ".ProjectionDriftDivergentRowR\rdivergentR" +
+      "ows\022$\n\016rows_to_repair\030\006 \001(\005R\014rowsToRepai" +
+      "r\0220\n\024estimated_cost_units\030\007 \001(\001R\022estimat" +
+      "edCostUnits\0222\n\025repair_tasks_enqueued\030\010 \001" +
+      "(\003R\023repairTasksEnqueued\022\032\n\010warnings\030\t \003(" +
+      "\tR\010warnings\"\257\002\n\033ProjectionDriftScanRespo" +
+      "nse\022\035\n\nproject_id\030\001 \001(\tR\tprojectId\022!\n\014me" +
+      "ssage_type\030\002 \001(\tR\013messageType\022\033\n\tscan_mo" +
+      "de\030\003 \001(\tR\010scanMode\022,\n\022source_rows_loaded" +
+      "\030\004 \001(\005R\020sourceRowsLoaded\022D\n\007reports\030\005 \003(" +
+      "\0132*.udb.entity.v1.ProjectionDriftTargetR" +
+      "eportR\007reports\022!\n\014summary_json\030\006 \001(\014R\013su" +
+      "mmaryJson\022\032\n\010warnings\030\007 \003(\tR\010warnings\"\244\002" +
+      "\n\017SagaListRequest\0227\n\007context\030\001 \001(\0132\035.udb" +
+      ".entity.v1.RequestContextR\007context\022(\n\020te" +
+      "nant_id_filter\030\002 \001(\tR\016tenantIdFilter\022#\n\r" +
+      "status_filter\030\003 \001(\tR\014statusFilter\022 \n\014tx_" +
+      "id_filter\030\004 \001(\tR\ntxIdFilter\0222\n\025correlati" +
+      "on_id_filter\030\005 \001(\tR\023correlationIdFilter\022" +
+      "\024\n\005limit\030\006 \001(\005R\005limit\022\035\n\npage_token\030\007 \001(" +
+      "\tR\tpageToken\"\366\002\n\nSagaRecord\022\027\n\007saga_id\030\001" +
+      " \001(\tR\006sagaId\022\023\n\005tx_id\030\002 \001(\tR\004txId\022\033\n\tten" +
+      "ant_id\030\003 \001(\tR\010tenantId\022%\n\016correlation_id" +
+      "\030\004 \001(\tR\rcorrelationId\022\026\n\006status\030\005 \001(\tR\006s" +
+      "tatus\022!\n\014current_step\030\006 \001(\005R\013currentStep" +
+      "\022\035\n\nsteps_json\030\007 \001(\014R\tstepsJson\022-\n\022compe" +
+      "nsations_json\030\010 \001(\014R\021compensationsJson\022\035" +
+      "\n\nlast_error\030\t \001(\tR\tlastError\022&\n\017created" +
+      "_at_unix\030\n \001(\003R\rcreatedAtUnix\022&\n\017updated" +
+      "_at_unix\030\013 \001(\003R\rupdatedAtUnix\"\214\001\n\020SagaLi" +
+      "stResponse\022/\n\005sagas\030\001 \003(\0132\031.udb.entity.v" +
+      "1.SagaRecordR\005sagas\022&\n\017next_page_token\030\002" +
+      " \001(\tR\rnextPageToken\022\037\n\013total_count\030\003 \001(\005" +
+      "R\ntotalCount\"\240\001\n\013SagaRequest\0227\n\007context\030" +
+      "\001 \001(\0132\035.udb.entity.v1.RequestContextR\007co" +
+      "ntext\022\027\n\007saga_id\030\002 \001(\tR\006sagaId\022\026\n\006reason" +
+      "\030\003 \001(\tR\006reason\022\'\n\017idempotency_key\030\004 \001(\tR" +
+      "\016idempotencyKey\"U\n\014SagaResponse\022-\n\004saga\030" +
+      "\001 \001(\0132\031.udb.entity.v1.SagaRecordR\004saga\022\026" +
+      "\n\006errors\030\002 \003(\tR\006errors\"\303\002\n\014PolicyRecord\022" +
+      "\033\n\tpolicy_id\030\001 \001(\003R\010policyId\022\026\n\006effect\030\002" +
+      " \001(\tR\006effect\022)\n\020service_identity\030\003 \001(\tR\017" +
+      "serviceIdentity\022\033\n\ttenant_id\030\004 \001(\tR\010tena" +
+      "ntId\022\030\n\007purpose\030\005 \001(\tR\007purpose\022!\n\014messag" +
+      "e_type\030\006 \001(\tR\013messageType\022\034\n\toperation\030\007" +
+      " \001(\tR\toperation\022%\n\016required_scope\030\010 \001(\tR" +
+      "\rrequiredScope\022\032\n\010priority\030\t \001(\005R\010priori" +
+      "ty\022\030\n\007enabled\030\n \001(\010R\007enabled\"\254\001\n\021PolicyL" +
+      "istRequest\0227\n\007context\030\001 \001(\0132\035.udb.entity" +
+      ".v1.RequestContextR\007context\022)\n\020include_d" +
+      "isabled\030\002 \001(\010R\017includeDisabled\022\024\n\005limit\030" +
+      "\003 \001(\005R\005limit\022\035\n\npage_token\030\004 \001(\tR\tpageTo" +
+      "ken\"\226\001\n\022PolicyListResponse\0227\n\010policies\030\001" +
+      " \003(\0132\033.udb.entity.v1.PolicyRecordR\010polic" +
+      "ies\022&\n\017next_page_token\030\002 \001(\tR\rnextPageTo" +
+      "ken\022\037\n\013total_count\030\003 \001(\005R\ntotalCount\"\200\001\n" +
+      "\020PutPolicyRequest\0227\n\007context\030\001 \001(\0132\035.udb" +
+      ".entity.v1.RequestContextR\007context\0223\n\006po" +
+      "licy\030\002 \001(\0132\033.udb.entity.v1.PolicyRecordR" +
+      "\006policy\"e\n\rPolicyRequest\0227\n\007context\030\001 \001(" +
+      "\0132\035.udb.entity.v1.RequestContextR\007contex" +
+      "t\022\033\n\tpolicy_id\030\002 \001(\003R\010policyId\"H\n\022Policy" +
+      "LintResponse\022\026\n\006passed\030\001 \001(\010R\006passed\022\032\n\010" +
+      "findings\030\002 \003(\tR\010findings\"\254\001\n\024EnsureProje" +
+      "ctRequest\0227\n\007context\030\001 \001(\0132\035.udb.entity." +
+      "v1.RequestContextR\007context\022\035\n\nproject_id" +
+      "\030\002 \001(\tR\tprojectId\022\022\n\004name\030\003 \001(\tR\004name\022(\n" +
+      "\020cdc_topic_prefix\030\004 \001(\tR\016cdcTopicPrefix\"" +
+      "\312\001\n\rProjectRecord\022\035\n\nproject_id\030\001 \001(\tR\tp" +
+      "rojectId\022\022\n\004name\030\002 \001(\tR\004name\022(\n\020cdc_topi" +
+      "c_prefix\030\003 \001(\tR\016cdcTopicPrefix\0224\n\026active" +
+      "_catalog_version\030\004 \001(\tR\024activeCatalogVer" +
+      "sion\022&\n\017created_at_unix\030\005 \001(\003R\rcreatedAt" +
+      "Unix\"\202\001\n\022ProjectListRequest\0227\n\007context\030\001" +
+      " \001(\0132\035.udb.entity.v1.RequestContextR\007con" +
+      "text\022\024\n\005limit\030\002 \001(\005R\005limit\022\035\n\npage_token" +
+      "\030\003 \001(\tR\tpageToken\"\230\001\n\023ProjectListRespons" +
+      "e\0228\n\010projects\030\001 \003(\0132\034.udb.entity.v1.Proj" +
+      "ectRecordR\010projects\022&\n\017next_page_token\030\002" +
+      " \001(\tR\rnextPageToken\022\037\n\013total_count\030\003 \001(\005" +
+      "R\ntotalCount\"\246\001\n\023AdminSummaryRequest\0227\n\007" +
+      "context\030\001 \001(\0132\035.udb.entity.v1.RequestCon" +
+      "textR\007context\022\035\n\nproject_id\030\002 \001(\tR\tproje" +
+      "ctId\022\037\n\013with_probes\030\003 \001(\010R\nwithProbes\022\026\n" +
+      "\006redact\030\004 \001(\010R\006redact\"\300\002\n\024AdminAuditLogR" +
+      "equest\0227\n\007context\030\001 \001(\0132\035.udb.entity.v1." +
+      "RequestContextR\007context\022)\n\020operation_fil" +
+      "ter\030\002 \001(\tR\017operationFilter\022!\n\014actor_filt" +
+      "er\030\003 \001(\tR\013actorFilter\022(\n\020tenant_id_filte" +
+      "r\030\004 \001(\tR\016tenantIdFilter\022*\n\021project_id_fi" +
+      "lter\030\005 \001(\tR\017projectIdFilter\022\024\n\005limit\030\006 \001" +
+      "(\005R\005limit\022\035\n\npage_token\030\007 \001(\tR\tpageToken" +
+      "\022\026\n\006redact\030\010 \001(\010R\006redact\"\327\003\n\023AdminAuditL" +
+      "ogRecord\022\031\n\010audit_id\030\001 \001(\tR\007auditId\022\024\n\005a" +
+      "ctor\030\002 \001(\tR\005actor\022\034\n\toperation\030\003 \001(\tR\top" +
+      "eration\022\026\n\006target\030\004 \001(\tR\006target\022!\n\014reque" +
+      "st_json\030\005 \001(\014R\013requestJson\022\026\n\006result\030\006 \001" +
+      "(\tR\006result\022\033\n\ttenant_id\030\007 \001(\tR\010tenantId\022" +
+      "\035\n\nproject_id\030\010 \001(\tR\tprojectId\022%\n\016correl" +
+      "ation_id\030\t \001(\tR\rcorrelationId\022&\n\017created" +
+      "_at_unix\030\n \001(\003R\rcreatedAtUnix\022#\n\rpreviou" +
+      "s_hash\030\013 \001(\tR\014previousHash\022!\n\014current_ha" +
+      "sh\030\014 \001(\tR\013currentHash\022\"\n\rsigner_key_id\030\r" +
+      " \001(\tR\013signerKeyId\022\'\n\017external_anchor\030\016 \001" +
+      "(\tR\016externalAnchor\"\230\001\n\025AdminAuditLogResp" +
+      "onse\0226\n\004logs\030\001 \003(\0132\".udb.entity.v1.Admin" +
+      "AuditLogRecordR\004logs\022&\n\017next_page_token\030" +
+      "\002 \001(\tR\rnextPageToken\022\037\n\013total_count\030\003 \001(" +
+      "\005R\ntotalCount\"h\n\027AdminAuditVerifyRequest" +
+      "\0227\n\007context\030\001 \001(\0132\035.udb.entity.v1.Reques" +
+      "tContextR\007context\022\024\n\005limit\030\002 \001(\005R\005limit\"" +
+      "\213\003\n\030AdminAuditVerifyResponse\022\026\n\006passed\030\001" +
+      " \001(\010R\006passed\022#\n\rchecked_count\030\002 \001(\005R\014che" +
+      "ckedCount\0221\n\025first_broken_audit_id\030\003 \001(\t" +
+      "R\022firstBrokenAuditId\022\026\n\006reason\030\004 \001(\tR\006re" +
+      "ason\0224\n\026expected_previous_hash\030\005 \001(\tR\024ex" +
+      "pectedPreviousHash\0220\n\024actual_previous_ha" +
+      "sh\030\006 \001(\tR\022actualPreviousHash\0222\n\025expected" +
+      "_current_hash\030\007 \001(\tR\023expectedCurrentHash" +
+      "\022.\n\023actual_current_hash\030\010 \001(\tR\021actualCur" +
+      "rentHash\022\033\n\tlast_hash\030\t \001(\tR\010lastHash\"\303\005" +
+      "\n\023AdminBackendSummary\022\030\n\007backend\030\001 \001(\tR\007" +
+      "backend\022\026\n\006status\030\002 \001(\tR\006status\022\034\n\ttrans" +
+      "port\030\003 \001(\tR\ttransport\022+\n\021consistency_mod",
+      "el\030\004 \001(\tR\020consistencyModel\0223\n\025supports_t" +
+      "ransactions\030\005 \001(\010R\024supportsTransactions\022" +
+      ":\n\031supports_schema_migration\030\006 \001(\010R\027supp" +
+      "ortsSchemaMigration\0224\n\026supports_vector_s" +
+      "earch\030\007 \001(\010R\024supportsVectorSearch\0224\n\026sup" +
+      "ports_hybrid_search\030\010 \001(\010R\024supportsHybri" +
+      "dSearch\022*\n\021max_payload_bytes\030\t \001(\003R\017maxP" +
+      "ayloadBytes\022\031\n\010probe_ok\030\n \001(\010R\007probeOk\022(" +
+      "\n\020probe_latency_ms\030\013 \001(\003R\016probeLatencyMs" +
+      "\022#\n\rinstance_name\030\014 \001(\tR\014instanceName\022\022\n" +
+      "\004role\030\r \001(\tR\004role\022F\n\006labels\030\016 \003(\0132..udb." +
+      "entity.v1.AdminBackendSummary.LabelsEntr" +
+      "yR\006labels\022%\n\016routing_status\030\017 \001(\tR\rrouti" +
+      "ngStatus\0329\n\013LabelsEntry\022\020\n\003key\030\001 \001(\tR\003ke" +
+      "y\022\024\n\005value\030\002 \001(\tR\005value:\0028\001\"\361\001\n\017AdminCdc" +
+      "Summary\022\033\n\tis_leader\030\001 \001(\010R\010isLeader\022\026\n\006" +
+      "paused\030\002 \001(\010R\006paused\022\033\n\tslot_name\030\003 \001(\tR" +
+      "\010slotName\022\"\n\rlast_event_id\030\004 \001(\tR\013lastEv" +
+      "entId\022\037\n\013lag_seconds\030\005 \001(\001R\nlagSeconds\022!" +
+      "\n\014outbox_depth\030\006 \001(\003R\013outboxDepth\022$\n\016dlq" +
+      "_open_count\030\007 \001(\003R\014dlqOpenCount\"\310\001\n\020Admi" +
+      "nSagaSummary\022\026\n\006active\030\001 \001(\003R\006active\022 \n\013" +
+      "compensated\030\002 \001(\003R\013compensated\022/\n\023failed" +
+      "_compensation\030\003 \001(\003R\022failedCompensation\022" +
+      "#\n\rmanual_review\030\004 \001(\003R\014manualReview\022$\n\r" +
+      "indeterminate\030\005 \001(\003R\rindeterminate\"\241\002\n\023A" +
+      "dminCatalogSummary\022\035\n\nproject_id\030\001 \001(\tR\t" +
+      "projectId\022%\n\016active_version\030\002 \001(\tR\ractiv" +
+      "eVersion\022\'\n\017active_checksum\030\003 \001(\tR\016activ" +
+      "eChecksum\022!\n\014active_since\030\004 \001(\tR\013activeS" +
+      "ince\022\037\n\013table_count\030\005 \001(\005R\ntableCount\022\037\n" +
+      "\013store_count\030\006 \001(\005R\nstoreCount\0226\n\027pendin" +
+      "g_migration_state\030\007 \001(\tR\025pendingMigratio" +
+      "nState\"\370\002\n\024AdminSummaryResponse\022<\n\007catal" +
+      "og\030\001 \003(\0132\".udb.entity.v1.AdminCatalogSum" +
+      "maryR\007catalog\0220\n\003cdc\030\002 \001(\0132\036.udb.entity." +
+      "v1.AdminCdcSummaryR\003cdc\0225\n\005sagas\030\003 \001(\0132\037" +
+      ".udb.entity.v1.AdminSagaSummaryR\005sagas\022>" +
+      "\n\010backends\030\004 \003(\0132\".udb.entity.v1.AdminBa" +
+      "ckendSummaryR\010backends\022.\n\023active_policy_" +
+      "count\030\005 \001(\005R\021activePolicyCount\022-\n\023snapsh" +
+      "ot_at_unix_ms\030\006 \001(\003R\020snapshotAtUnixMs\022\032\n" +
+      "\010warnings\030\007 \003(\tR\010warningsB\260\001\n\021com.udb.en" +
+      "tity.v1B\nAdminProtoP\001Z9github.com/fahara" +
+      "02/udb/sdk/go/gen/udb/entity/v1;entityv1" +
+      "\242\002\003UEX\252\002\rUdb.Entity.V1\312\002\rUdb\\Entity\\V1\342\002" +
+      "\031Udb\\GPBMetadata\\Entity\\V1\352\002\017Udb::Entity" +
+      "::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -1059,7 +1062,7 @@ public final class AdminProto {
     internal_static_udb_entity_v1_MigrationStatusResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_MigrationStatusResponse_descriptor,
-        new java.lang.String[] { "RunId", "ProjectId", "CatalogVersion", "State", "StartedAt", "FinishedAt", "Operations", "Error", });
+        new java.lang.String[] { "RunId", "ProjectId", "CatalogVersion", "State", "StartedAt", "FinishedAt", "Operations", "Error", "ApprovalToken", "Applyable", });
     internal_static_udb_entity_v1_MigrationOperationStatus_descriptor =
       getDescriptor().getMessageTypes().get(33);
     internal_static_udb_entity_v1_MigrationOperationStatus_fieldAccessorTable = new

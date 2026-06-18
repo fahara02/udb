@@ -905,6 +905,23 @@ class DataBrokerClient extends \Grpc\BaseStub {
     }
 
     /**
+     * Idempotently seed a baseline manual-review saga row and a retryable DLQ row
+     * for the VERIFIED principal's tenant/project. Privilege-creating: fail-closed,
+     * env-gated (UDB_ENABLE_ADMIN_SEED) and requires scope: udb:admin.
+     * @param \Udb\Services\V1\EnsureBaselineRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Services\V1\EnsureBaselineResponse>
+     */
+    public function EnsureBaseline(\Udb\Services\V1\EnsureBaselineRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.services.v1.DataBroker/EnsureBaseline',
+        $argument,
+        ['\Udb\Services\V1\EnsureBaselineResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
      * Policy administration.
      * @param \Udb\Entity\V1\PolicyListRequest $argument input argument
      * @param array $metadata metadata

@@ -34,15 +34,18 @@ sync clients (documented on the class).
 
 from __future__ import annotations
 
+import time
+import urllib.request
 from dataclasses import dataclass, field, replace
-from typing import Any, Sequence
+from typing import Any, Callable, Sequence
 
 import grpc
 
 from ._channel import merge_channel_options
 from .auth import AuthzCache, UdbAuthClient, as_resource
 from .client import UdbAsyncClient, UdbClient
-from .exceptions import UdbConfigurationError
+from .exceptions import UdbConfigurationError, UdbRpcError
+from .generated_client import RPC_OPERATION_KIND, invoke_unary
 from .metadata import Metadata
 
 # Native control-plane stubs + request messages. Imported defensively so a
@@ -65,6 +68,7 @@ except ImportError:  # pragma: no cover
     _HAS_TENANT = False
 
 try:  # pragma: no cover
+    from udb.core.notification.entity.v1 import enums_pb2 as _notif_status
     from udb.core.notification.services.v1 import core_pb2 as _notif
     from udb.core.notification.services.v1 import notification_service_pb2_grpc as _notif_grpc
 
@@ -88,6 +92,7 @@ except ImportError:  # pragma: no cover
     _HAS_STORAGE = False
 
 try:  # pragma: no cover
+    from udb.core.asset.entity.v1 import enums_pb2 as _asset_status
     from udb.core.asset.services.v1 import asset_service_pb2 as _asset
     from udb.core.asset.services.v1 import asset_service_pb2_grpc as _asset_grpc
 
@@ -167,6 +172,21 @@ class UdbConfig:
         return self.webrtc_target or self.effective_auth_target()
 
 
+def _http_put(url: str, data: bytes, content_type: str) -> None:
+    """Default PUT of ``data`` to a presigned ``url`` (stdlib urllib, no new dep)."""
+    req = urllib.request.Request(  # noqa: S310 - presigned URL from the broker
+        url, data=data, method="PUT", headers={"Content-Type": content_type}
+    )
+    with urllib.request.urlopen(req):  # noqa: S310
+        pass
+
+
+def _http_get(url: str) -> bytes:
+    """Default GET of a presigned ``url`` returning the body bytes (stdlib urllib)."""
+    with urllib.request.urlopen(url) as resp:  # noqa: S310 - presigned URL from broker
+        return resp.read()
+
+
 class _StorageFacade:
     """``project.storage`` — StorageService file lifecycle + data-plane helpers.
 
@@ -213,14 +233,12 @@ class _StorageFacade:
         return self._data.vector_hybrid_search(*args, **kwargs)
 
     # ── StorageService file lifecycle ─────────────────────────────────────
+    _SERVICE_FULL = "udb.core.storage.services.v1.StorageService"
+
     def _call(self, rpc: str, request: Any, metadata: Metadata | None) -> Any:
         if self.stub is None or self._owner is None:
             raise UdbConfigurationError("StorageService stubs are not generated")
-        return getattr(self.stub, rpc)(
-            request,
-            metadata=self._owner._ctl_metadata(metadata),
-            timeout=self._owner.config.deadline,
-        )
+        return self._owner._invoke(self._SERVICE_FULL, rpc, self.stub, request, metadata)
 
     def _ids(self, metadata: Metadata | None) -> tuple[str, str]:
         meta = metadata or (self._owner._metadata if self._owner else None)
@@ -236,14 +254,19 @@ class _StorageFacade:
         file_type: str = "",
         reference_id: str = "",
         reference_type: str = "",
-        is_public: bool = False,
+        is_public: bool | None = None,
         expires_in_minutes: int = 0,
         size_bytes: int = 0,
         metadata: Metadata | None = None,
     ) -> Any:
-        """``StorageService.RegisterUpload`` — reserve a presigned PUT slot."""
+        """``StorageService.RegisterUpload`` — reserve a presigned PUT slot.
+
+        ``is_public`` is a proto3 ``optional bool``: left ``None`` (the default)
+        it stays UNSET on the wire (the broker keeps its own default); pass
+        ``True``/``False`` to set it explicitly.
+        """
         tenant_id, project_id = self._ids(metadata)
-        request = _storage.RegisterUploadRequest(
+        kwargs: dict[str, Any] = dict(
             tenant_id=tenant_id,
             project_id=project_id,
             filename=filename,
@@ -251,10 +274,12 @@ class _StorageFacade:
             file_type=file_type,
             reference_id=reference_id,
             reference_type=reference_type,
-            is_public=is_public,
             expires_in_minutes=expires_in_minutes,
             size_bytes=size_bytes,
         )
+        if is_public is not None:
+            kwargs["is_public"] = is_public
+        request = _storage.RegisterUploadRequest(**kwargs)
         return self._call("RegisterUpload", request, metadata)
 
     def finalize_upload(
@@ -265,23 +290,83 @@ class _StorageFacade:
         file_type: str = "",
         reference_id: str = "",
         reference_type: str = "",
-        is_public: bool = False,
+        is_public: bool | None = None,
         size_bytes: int = 0,
+        checksum: str = "",
+        etag: str = "",
         metadata: Metadata | None = None,
     ) -> Any:
-        """``StorageService.FinalizeUpload`` — mark a reserved upload complete."""
+        """``StorageService.FinalizeUpload`` — mark a reserved upload complete.
+
+        ``is_public`` is a proto3 ``optional bool`` — see :meth:`register_upload`.
+        """
         tenant_id, _ = self._ids(metadata)
-        request = _storage.FinalizeUploadRequest(
+        kwargs: dict[str, Any] = dict(
             tenant_id=tenant_id,
             file_id=file_id,
             content_type=content_type,
             file_type=file_type,
             reference_id=reference_id,
             reference_type=reference_type,
-            is_public=is_public,
             size_bytes=size_bytes,
         )
+        if is_public is not None:
+            kwargs["is_public"] = is_public
+        if checksum:
+            kwargs["checksum"] = checksum
+        if etag:
+            kwargs["etag"] = etag
+        request = _storage.FinalizeUploadRequest(**kwargs)
         return self._call("FinalizeUpload", request, metadata)
+
+    def upload_file(
+        self,
+        filename: str,
+        data: bytes,
+        opts: dict[str, Any] | None = None,
+        *,
+        metadata: Metadata | None = None,
+        http_put: Callable[[str, bytes, str], None] | None = None,
+    ) -> Any:
+        """One-call upload: RegisterUpload → HTTP PUT bytes → FinalizeUpload.
+
+        Canonical signature ``upload_file(filename, data, opts)`` (D13, parity
+        with Go/TS/PHP). ``opts`` carries ``content_type``/``is_public``/
+        ``file_type``/``reference_id``/``reference_type``/``expires_in_minutes``.
+        Exactly three honest ops with NO proof Get/List. Raises
+        :class:`UdbRpcError` when the broker returns no ``upload_url`` (degraded
+        mode — surfaced from the typed ``RegisterUploadResponse.error``).
+        """
+        opts = dict(opts or {})
+        content_type = str(opts.get("content_type", "") or "application/octet-stream")
+        register = self.register_upload(
+            filename,
+            content_type=content_type,
+            file_type=str(opts.get("file_type", "") or ""),
+            reference_id=str(opts.get("reference_id", "") or ""),
+            reference_type=str(opts.get("reference_type", "") or ""),
+            is_public=opts.get("is_public"),
+            expires_in_minutes=int(opts.get("expires_in_minutes", 0) or 0),
+            size_bytes=len(data),
+            metadata=metadata,
+        )
+        upload_url = getattr(register, "upload_url", "")
+        if not upload_url:
+            err = getattr(register, "error", None)
+            msg = getattr(err, "message", "") or "RegisterUpload returned no upload_url (storage degraded)"
+            raise UdbConfigurationError(f"upload_file: {msg}")
+        put = http_put or _http_put
+        put(upload_url, data, content_type)
+        return self.finalize_upload(
+            register.file_id,
+            content_type=content_type,
+            file_type=str(opts.get("file_type", "") or ""),
+            reference_id=str(opts.get("reference_id", "") or ""),
+            reference_type=str(opts.get("reference_type", "") or ""),
+            is_public=opts.get("is_public"),
+            size_bytes=len(data),
+            metadata=metadata,
+        )
 
     def get_download_url(
         self,
@@ -299,6 +384,89 @@ class _StorageFacade:
         )
         return self._call("GetDownloadUrl", request, metadata)
 
+    def download_stream(
+        self,
+        file_id: str,
+        *,
+        chunk_size_bytes: int = 0,
+        metadata: Metadata | None = None,
+    ) -> bytes:
+        """``StorageService.DownloadFile`` — stream object bytes THROUGH the broker.
+
+        Server-streaming fallback for clients that cannot egress to the object
+        store (no public download URL, corporate proxy, etc.). Issues EXACTLY one
+        ``DownloadFile`` RPC and reassembles every :class:`DownloadFileChunk`'s
+        ``data`` into the full file body. Prefer the presigned ``GetDownloadUrl``
+        path (no bytes through the broker) when egress is available.
+        """
+        if self.stub is None or self._owner is None:
+            raise UdbConfigurationError("StorageService stubs are not generated")
+        tenant_id, _ = self._ids(metadata)
+        request = _storage.DownloadFileRequest(
+            tenant_id=tenant_id,
+            file_id=file_id,
+            chunk_size_bytes=chunk_size_bytes,
+        )
+        chunks: list[bytes] = []
+        try:
+            for chunk in self.stub.DownloadFile(
+                request,
+                metadata=self._owner._ctl_metadata(metadata),
+                timeout=self._owner.config.deadline,
+            ):
+                chunks.append(chunk.data)
+        except grpc.RpcError as exc:  # pragma: no cover - mapped for parity with _invoke
+            raise UdbRpcError("DownloadFile", exc) from exc
+        return b"".join(chunks)
+
+    def download_file(
+        self,
+        file_id: str,
+        *,
+        expires_in_minutes: int = 0,
+        fetch: bool = False,
+        stream: bool = False,
+        chunk_size_bytes: int = 0,
+        http_get: Callable[[str], bytes] | None = None,
+        metadata: Metadata | None = None,
+    ) -> Any:
+        """Resolve a download for ``file_id`` (canonical naming-contract name).
+
+        PREFERS the presigned ``StorageService.GetDownloadUrl`` path (no bytes
+        through the broker): emits EXACTLY one ``GetDownloadUrl`` RPC (no proof
+        Get/List) and returns the ``GetDownloadUrlResponse`` (carrying the
+        presigned ``download_url``) by default.
+
+        When bytes are requested there are two fallbacks:
+
+        * ``fetch=True`` — resolve the presigned URL, then HTTP GET it and return
+          the raw bytes. The byte transfer is an HTTP GET against the presigned
+          URL, NOT an extra gRPC round trip.
+        * ``stream=True`` — bypass the presigned URL entirely and stream the
+          object bytes THROUGH the broker via the server-streaming
+          ``DownloadFile`` RPC (reassembled). For clients with no object-store
+          egress. ``stream`` wins if both are set.
+        """
+        if stream:
+            return self.download_stream(
+                file_id, chunk_size_bytes=chunk_size_bytes, metadata=metadata
+            )
+        response = self.get_download_url(
+            file_id, expires_in_minutes=expires_in_minutes, metadata=metadata
+        )
+        if not fetch:
+            return response
+        url = getattr(response, "download_url", "")
+        if not url:
+            err = getattr(response, "error", None)
+            msg = (
+                getattr(err, "message", "")
+                or "GetDownloadUrl returned no download_url (storage degraded)"
+            )
+            raise UdbConfigurationError(f"download_file: {msg}")
+        getter = http_get or _http_get
+        return getter(url)
+
     def get_file(self, file_id: str, *, metadata: Metadata | None = None) -> Any:
         """``StorageService.GetFile`` — file metadata record."""
         tenant_id, _ = self._ids(metadata)
@@ -314,12 +482,15 @@ class _StorageFacade:
         file_type: str = "",
         reference_id: str = "",
         reference_type: str = "",
-        is_public: bool = False,
+        is_public: bool | None = None,
         metadata: Metadata | None = None,
     ) -> Any:
-        """``StorageService.UpdateFile`` — mutate file metadata."""
+        """``StorageService.UpdateFile`` — mutate file metadata.
+
+        ``is_public`` is a proto3 ``optional bool`` — see :meth:`register_upload`.
+        """
         tenant_id, _ = self._ids(metadata)
-        request = _storage.UpdateFileRequest(
+        kwargs: dict[str, Any] = dict(
             tenant_id=tenant_id,
             file_id=file_id,
             filename=filename,
@@ -327,8 +498,10 @@ class _StorageFacade:
             file_type=file_type,
             reference_id=reference_id,
             reference_type=reference_type,
-            is_public=is_public,
         )
+        if is_public is not None:
+            kwargs["is_public"] = is_public
+        request = _storage.UpdateFileRequest(**kwargs)
         return self._call("UpdateFile", request, metadata)
 
     def delete_file(self, file_id: str, *, metadata: Metadata | None = None) -> Any:
@@ -370,6 +543,8 @@ class _AssetFacade:
     :attr:`stub`.
     """
 
+    _SERVICE_FULL = "udb.core.asset.services.v1.AssetService"
+
     def __init__(self, stub: Any, owner: "UdbProject"):
         self.stub = stub
         self._owner = owner
@@ -377,11 +552,7 @@ class _AssetFacade:
     def _call(self, rpc: str, request: Any, metadata: Metadata | None) -> Any:
         if self.stub is None:
             raise UdbConfigurationError("AssetService stubs are not generated")
-        return getattr(self.stub, rpc)(
-            request,
-            metadata=self._owner._ctl_metadata(metadata),
-            timeout=self._owner.config.deadline,
-        )
+        return self._owner._invoke(self._SERVICE_FULL, rpc, self.stub, request, metadata)
 
     def create_pipeline_definition(
         self,
@@ -520,9 +691,93 @@ class _AssetFacade:
         request = _asset.GetAssetRequest(tenant_id=meta.tenant_id, asset_id=asset_id)
         return self._call("GetAsset", request, metadata)
 
+    # ── workflow helpers (§2A asset SDK) ──────────────────────────────────
+    def define_pipeline(
+        self,
+        name: str,
+        steps: str,
+        *,
+        description: str = "",
+        media_type: str = "",
+        version: int = 0,
+        metadata: Metadata | None = None,
+    ) -> Any:
+        """Create a pipeline definition (alias of :meth:`create_pipeline_definition`).
+
+        ``steps`` is the JSON-encoded typed step list per the generated contract.
+        """
+        return self.create_pipeline_definition(
+            name,
+            description=description,
+            media_type=media_type,
+            steps=steps,
+            version=version,
+            metadata=metadata,
+        )
+
+    def register_from_storage_file(
+        self,
+        file_id: str,
+        *,
+        name: str = "",
+        media_type: str = "",
+        asset_metadata: str = "",
+        metadata: Metadata | None = None,
+    ) -> Any:
+        """Register a stored file as an asset (alias of :meth:`register_asset`)."""
+        return self.register_asset(
+            file_id,
+            name=name,
+            media_type=media_type,
+            asset_metadata=asset_metadata,
+            metadata=metadata,
+        )
+
+    def start_and_wait(
+        self,
+        definition_id: str,
+        asset_id: str,
+        *,
+        context: str = "",
+        correlation_id: str = "",
+        deadline_s: float = 60.0,
+        poll_interval_s: float = 0.5,
+        metadata: Metadata | None = None,
+    ) -> tuple[Any, Any]:
+        """StartPipeline (reading inline ``steps``) then poll instance to terminal.
+
+        Issues exactly one ``StartPipeline`` and reads the inline ``resp.steps``
+        (04.2.1) WITHOUT an immediate ``GetPipeline`` proof read. Then bounded,
+        status-driven polling via ``GetPipeline`` until status is
+        COMPLETED/FAILED or the deadline. Returns ``(start_response, last_get)``
+        where ``last_get`` is ``None`` if it terminated synchronously.
+        """
+        start = self.start_pipeline(
+            definition_id,
+            asset_id,
+            context=context,
+            correlation_id=correlation_id,
+            metadata=metadata,
+        )
+        # Inline steps are read from the StartPipeline response (no proof Get).
+        _ = list(getattr(start, "steps", []))
+        terminal = {
+            _asset_status.PIPELINE_STATUS_COMPLETED,
+            _asset_status.PIPELINE_STATUS_FAILED,
+        }
+        deadline = time.monotonic() + deadline_s
+        last = None
+        while True:
+            last = self.get_pipeline(start.instance_id, metadata=metadata)
+            if last.instance.status in terminal or time.monotonic() >= deadline:
+                return start, last
+            time.sleep(min(poll_interval_s, max(0.0, deadline - time.monotonic())))
+
 
 class _WebRtcRoomFacade:
     """``project.webrtc.room`` — RoomService."""
+
+    _SERVICE_FULL = "udb.core.webrtc.services.v1.RoomService"
 
     def __init__(self, stub: Any, owner: "UdbProject"):
         self.stub = stub
@@ -531,11 +786,7 @@ class _WebRtcRoomFacade:
     def _call(self, rpc: str, request: Any, metadata: Metadata | None) -> Any:
         if self.stub is None:
             raise UdbConfigurationError("RoomService stubs are not generated")
-        return getattr(self.stub, rpc)(
-            request,
-            metadata=self._owner._ctl_metadata(metadata),
-            timeout=self._owner.config.deadline,
-        )
+        return self._owner._invoke(self._SERVICE_FULL, rpc, self.stub, request, metadata)
 
     def create_room(
         self,
@@ -608,6 +859,8 @@ class _WebRtcRoomFacade:
 class _WebRtcPeerFacade:
     """``project.webrtc.peer`` — PeerService."""
 
+    _SERVICE_FULL = "udb.core.webrtc.services.v1.PeerService"
+
     def __init__(self, stub: Any, owner: "UdbProject"):
         self.stub = stub
         self._owner = owner
@@ -615,11 +868,7 @@ class _WebRtcPeerFacade:
     def _call(self, rpc: str, request: Any, metadata: Metadata | None) -> Any:
         if self.stub is None:
             raise UdbConfigurationError("PeerService stubs are not generated")
-        return getattr(self.stub, rpc)(
-            request,
-            metadata=self._owner._ctl_metadata(metadata),
-            timeout=self._owner.config.deadline,
-        )
+        return self._owner._invoke(self._SERVICE_FULL, rpc, self.stub, request, metadata)
 
     def join_room(
         self,
@@ -684,6 +933,8 @@ class _WebRtcPeerFacade:
 class _WebRtcTrackFacade:
     """``project.webrtc.track`` — TrackService."""
 
+    _SERVICE_FULL = "udb.core.webrtc.services.v1.TrackService"
+
     def __init__(self, stub: Any, owner: "UdbProject"):
         self.stub = stub
         self._owner = owner
@@ -691,11 +942,7 @@ class _WebRtcTrackFacade:
     def _call(self, rpc: str, request: Any, metadata: Metadata | None) -> Any:
         if self.stub is None:
             raise UdbConfigurationError("TrackService stubs are not generated")
-        return getattr(self.stub, rpc)(
-            request,
-            metadata=self._owner._ctl_metadata(metadata),
-            timeout=self._owner.config.deadline,
-        )
+        return self._owner._invoke(self._SERVICE_FULL, rpc, self.stub, request, metadata)
 
     def publish_track(
         self,
@@ -790,10 +1037,12 @@ class _WebRtcTurnFacade:
             peer_id=peer_id,
             ttl_seconds=ttl_seconds,
         )
-        return self.stub.IssueCredentials(
+        return self._owner._invoke(
+            "udb.core.webrtc.services.v1.TurnService",
+            "IssueCredentials",
+            self.stub,
             request,
-            metadata=self._owner._ctl_metadata(metadata),
-            timeout=self._owner.config.deadline,
+            metadata,
         )
 
 
@@ -870,6 +1119,227 @@ class _WebRtcFacade:
             timeout=self._owner.config.deadline,
         )
 
+    def join_session(
+        self,
+        room_id: str,
+        *,
+        display_name: str = "",
+        peer_metadata: str = "",
+        user_agent: str = "",
+        ttl_seconds: int = 0,
+        metadata: Metadata | None = None,
+    ) -> "_WebRtcSession":
+        """Atomic WebRTC join: ONE ``PeerService.JoinSession`` → session handle.
+
+        Consumes the atomic broker ``JoinSession`` RPC (04.3.1.x) which returns
+        ``{peer, existing_peers, ice_servers, expires_at}`` in a single call —
+        no SDK-side JoinRoom+IssueCredentials fan-out. The returned
+        :class:`_WebRtcSession` opens the bidi ``Signal`` stream on demand and
+        exposes ``leave()`` (closes the stream + ``LeaveRoom``).
+        """
+        if self.peer.stub is None:
+            raise UdbConfigurationError("PeerService stubs are not generated")
+        meta = metadata or self._owner._metadata
+        request = _webrtc.JoinSessionRequest(
+            tenant_id=meta.tenant_id,
+            room_id=room_id,
+            display_name=display_name,
+            metadata=peer_metadata,
+            user_agent=user_agent,
+            ttl_seconds=ttl_seconds,
+        )
+        response = self._owner._invoke(
+            "udb.core.webrtc.services.v1.PeerService",
+            "JoinSession",
+            self.peer.stub,
+            request,
+            metadata,
+        )
+        return _WebRtcSession(self, room_id, response, metadata)
+
+
+class _WebRtcSession:
+    """A live WebRTC session returned by :meth:`_WebRtcFacade.join_session`.
+
+    Wraps the atomic ``JoinSession`` result (``peer``/``existing_peers``/
+    ``ice_servers``/``expires_at``). The signaling stream is opened lazily by
+    :meth:`signal`; :meth:`leave` closes it and issues ``LeaveRoom``. Reconnect
+    is denied after the first observed signaling response (guardrail) — the
+    broker exposes no resume token yet.
+    """
+
+    def __init__(
+        self,
+        facade: "_WebRtcFacade",
+        room_id: str,
+        response: Any,
+        metadata: Metadata | None,
+    ):
+        self._facade = facade
+        self.room_id = room_id
+        self.response = response
+        self.peer = response.peer
+        self.peer_id = response.peer.peer_id
+        self.existing_peers = list(response.existing_peers)
+        self.ice_servers = list(response.ice_servers)
+        self.expires_at = response.expires_at
+        self._metadata = metadata
+        self._stream: Any = None
+        self._left = False
+
+    def signal(self, request_iterator: Any) -> Any:
+        """Open (once) the bidi ``Signal`` stream for this session."""
+        if self._stream is None:
+            self._stream = self._facade.signal(request_iterator, metadata=self._metadata)
+        return self._stream
+
+    def leave(self) -> Any:
+        """Close the signaling stream and issue ``PeerService.LeaveRoom``."""
+        if self._left:
+            return None
+        self._left = True
+        stream = self._stream
+        if stream is not None:
+            cancel = getattr(stream, "cancel", None)
+            if callable(cancel):
+                try:
+                    cancel()
+                except Exception:  # pragma: no cover - defensive
+                    pass
+            self._stream = None
+        return self._facade.peer.leave_room(
+            self.room_id, self.peer_id, metadata=self._metadata
+        )
+
+
+class _EventsSubscription:
+    """A live CDC subscription returned by :meth:`_EventsFacade.subscribe`.
+
+    Wraps the ``PublishCDC`` server-stream. :meth:`ready` resolves on the first
+    server signal (initial metadata or the first envelope) WITHOUT a timer;
+    iterating the subscription yields ``CDCEnvelope`` messages.
+    """
+
+    def __init__(self, stream: Any):
+        self._stream = stream
+        self._iter = iter(stream)
+        self._peeked: Any = None
+        self._has_peeked = False
+        self._ready = False
+
+    def ready(self) -> None:
+        """Block until the first server signal (no sleep)."""
+        if self._ready:
+            return
+        # Prefer the server's initial metadata as the readiness boundary; fall
+        # back to peeking the first streamed envelope (server-driven, no timer).
+        meta_fn = getattr(self._stream, "initial_metadata", None)
+        if callable(meta_fn):
+            try:
+                meta_fn()
+                self._ready = True
+                return
+            except Exception:  # pragma: no cover - defensive, fall through to peek
+                pass
+        if not self._has_peeked:
+            try:
+                self._peeked = next(self._iter)
+                self._has_peeked = True
+            except StopIteration:
+                self._peeked = None
+                self._has_peeked = True
+        self._ready = True
+
+    def __iter__(self) -> Any:
+        if self._has_peeked:
+            if self._peeked is not None:
+                yield self._peeked
+            self._peeked = None
+            self._has_peeked = False
+        for item in self._iter:
+            yield item
+
+    def cancel(self) -> None:
+        cancel = getattr(self._stream, "cancel", None)
+        if callable(cancel):
+            try:
+                cancel()
+            except Exception:  # pragma: no cover - defensive
+                pass
+
+
+class _EventsFacade:
+    """``project.events`` — CDC subscribe + publish-and-wait over ``DataBroker``.
+
+    Thin facade over the generated ``PublishCDC`` (server-stream) and
+    ``EnqueueOutboxEvent`` RPCs. ``subscribe(topic).ready()`` opens a
+    tenant-scoped stream and resolves on the first server signal;
+    ``publish_and_wait`` enqueues then reads the subscription until a match —
+    never a sleep.
+    """
+
+    def __init__(self, data: UdbClient, owner: "UdbProject"):
+        self._data = data
+        self._owner = owner
+
+    def subscribe(
+        self, topic: str, *, since_event_id: str = "", metadata: Metadata | None = None
+    ) -> _EventsSubscription:
+        """Open a tenant-scoped ``PublishCDC`` stream for ``topic``."""
+        from udb.entity.v1 import types_pb2 as _t
+
+        meta = metadata or self._owner._metadata
+        request = _t.CDCSubscriptionRequest(
+            context=meta.to_request_context(),
+            topic_pattern=topic,
+            since_event_id=since_event_id,
+        )
+        stream = self._data.stub.PublishCDC(
+            request,
+            metadata=self._owner._ctl_metadata(metadata),
+            timeout=None,
+        )
+        return _EventsSubscription(stream)
+
+    def publish_and_wait(
+        self,
+        topic: str,
+        payload: Any,
+        match: Any = None,
+        *,
+        partition_key: str = "",
+        schema_uri: str = "",
+        idempotency_key: str = "",
+        subscription: _EventsSubscription | None = None,
+        metadata: Metadata | None = None,
+    ) -> Any:
+        """Enqueue one event, then read the subscription until ``match`` matches.
+
+        Issues exactly one ``EnqueueOutboxEvent``; awaits the matching
+        ``CDCEnvelope`` on ``subscription`` (or a freshly opened one). ``match``
+        is ``callable(envelope) -> bool``; the default matches the enqueued
+        ``event_id``. No sleeps — purely stream-driven.
+        """
+        sub = subscription or self.subscribe(topic, metadata=metadata)
+        enqueued = self._data.enqueue_outbox_event(
+            topic=topic,
+            partition_key=partition_key,
+            payload=payload,
+            schema_uri=schema_uri,
+            idempotency_key=idempotency_key,
+            metadata=metadata,
+        )
+        if match is None:
+            target = enqueued.event_id
+
+            def match(envelope: Any) -> bool:  # noqa: ANN001
+                return getattr(envelope, "event_id", None) == target
+
+        for envelope in sub:
+            if match(envelope):
+                return envelope
+        return None
+
 
 class _AuthzFacade:
     """``project.authz`` — the cached authz decision surface.
@@ -903,6 +1373,14 @@ class _AuthzFacade:
 
     def get_policy_bundle(self, **kwargs: Any) -> Any:
         return self._auth.get_policy_bundle(**kwargs)
+
+    def allow_role(self, role: str, resource: Any, action: str, **kwargs: Any) -> Any:
+        """Grant ``role`` ``action`` on ``resource`` (one ``CreatePolicyRule``)."""
+        return self._auth.allow_role(role, resource, action, **kwargs)
+
+    def bind_role(self, subject: str, role: str, **kwargs: Any) -> Any:
+        """Bind ``subject`` to ``role`` (one ``AssignRole``)."""
+        return self._auth.bind_role(subject, role, **kwargs)
 
 
 def _make_channel(
@@ -1020,6 +1498,7 @@ class UdbProject:
             self,
         )
         self.webrtc = _WebRtcFacade(self)
+        self.events = _EventsFacade(self.data, self)
 
         # Native control-plane stubs (only when generated).
         self.apikey = (
@@ -1061,6 +1540,73 @@ class UdbProject:
             replace(self._metadata, bearer_token=bearer_token, api_key=api_key)
         )
 
+    def login_and_adopt_tenant(
+        self,
+        username: str,
+        password: str,
+        *,
+        totp_code: str = "",
+        mfa_otp_id: str = "",
+        max_wait_ms: int = 0,
+        metadata: Metadata | None = None,
+    ) -> Any:
+        """Login, then adopt the canonical tenant/project from the VERIFIED principal.
+
+        Canonical 2-RPC sequence (D11), ALWAYS two RPCs:
+        ``Login`` → ``Authenticate(bearer)`` → adopt ``{tenant_id, project_id}``
+        from the authenticated principal, then ``set_credentials`` +
+        ``bind_metadata`` to install the bearer and canonical tenant/project
+        atomically across every sub-client. Authenticate-bearer always runs (no
+        conditional skip). Returns the ``AuthnResponse`` (the verified principal).
+        """
+        login = self.auth.login(
+            username,
+            password,
+            totp_code=totp_code,
+            mfa_otp_id=mfa_otp_id,
+            metadata=metadata,
+        )
+        token = login.access_token
+        authn = self.auth.authenticate_bearer(token, metadata=metadata)
+        principal = authn.principal
+        # Adopt identity from the VERIFIED principal, never from the request body.
+        adopted = replace(
+            self._metadata,
+            tenant_id=principal.tenant_id or self._metadata.tenant_id,
+            project_id=principal.project_id or self._metadata.project_id,
+            bearer_token=token,
+            api_key="",
+        )
+        self.config.bearer_token = token
+        self.config.api_key = ""
+        self.config.tenant_id = adopted.tenant_id
+        self.config.project_id = adopted.project_id
+        self.bind_metadata(adopted)
+        return authn
+
+    def login_session(self, *args: Any, **kwargs: Any) -> Any:
+        """Return a :class:`TokenSession` over this project's auth client.
+
+        Canonical naming-contract accessor delegating to
+        :meth:`UdbAuthClient.login_session` (login/refresh session lifecycle).
+        """
+        return self.auth.login_session(*args, **kwargs)
+
+    @classmethod
+    def connect(cls, config: "UdbConfig | None" = None, /, **kwargs: Any) -> "UdbProject":
+        """Construct a :class:`UdbProject` (canonical naming-contract name).
+
+        Mirrors :func:`create_udb`: pass a :class:`UdbConfig` or the keyword
+        args for one. ``create_udb`` / ``UdbProject(config)`` remain as aliases.
+        """
+        if config is None:
+            config = UdbConfig(**kwargs)
+        elif kwargs:
+            raise UdbConfigurationError(
+                "pass either a UdbConfig or keyword args, not both"
+            )
+        return cls(config)
+
     def close(self) -> None:
         if self._owns_webrtc_channel:
             self._webrtc_channel.close()
@@ -1083,6 +1629,33 @@ class UdbProject:
         if bearer_token == metadata.bearer_token and api_key == metadata.api_key:
             return metadata
         return replace(metadata, bearer_token=bearer_token, api_key=api_key)
+
+    def _invoke(
+        self,
+        service_full: str,
+        rpc: str,
+        stub: Any,
+        request: Any,
+        metadata: Metadata | None,
+    ) -> Any:
+        """Funnel a control-plane unary RPC through the generated robustness layer.
+
+        Shares the generated client's retry (read-only-gated, from the proto
+        ``operation_kind``) and typed error mapping so facade calls behave like
+        :class:`udb_client.generated_client._ServiceClientBase` instead of
+        hitting the raw stub with a bare ``grpc.RpcError``.
+        """
+        rpc_path = f"/{service_full}/{rpc}"
+        op_kind = RPC_OPERATION_KIND.get(rpc_path, "mutation")
+        return invoke_unary(
+            getattr(stub, rpc),
+            rpc,
+            request,
+            call_metadata=self._ctl_metadata(metadata),
+            timeout=self.config.deadline,
+            read_only=(op_kind == "read_only"),
+            rpc_path=rpc_path,
+        )
 
     # ── notification convenience ──────────────────────────────────────────
     def send_notification(
@@ -1121,11 +1694,97 @@ class UdbProject:
             locale=locale,
             variables=dict(variables or {}),
             channels=list(channels),
-            context=meta.to_request_context(),
         )
-        return self.notification.SendNotification(
-            request, metadata=self._ctl_metadata(metadata), timeout=self.config.deadline
+        return self._invoke(
+            "udb.core.notification.services.v1.NotificationService",
+            "SendNotification",
+            self.notification,
+            request,
+            metadata,
         )
+
+    def send_template(
+        self,
+        event_type: str,
+        recipient_id: str,
+        variables: dict[str, str] | None = None,
+        *,
+        recipient_address: str = "",
+        channels: Sequence[Any] = (),
+        resource_type: str = "",
+        resource_id: str = "",
+        resource_name: str = "",
+        locale: str = "",
+        metadata: Metadata | None = None,
+    ) -> Any:
+        """Template send = one ``SendNotification`` (broker renders the template).
+
+        Delegates to :meth:`send_notification`; the broker resolves the template
+        for ``event_type`` and applies ``variables`` (04.4.1). Returns the
+        ``SendNotificationResponse`` whose ``logs`` carry the per-channel log ids.
+        """
+        return self.send_notification(
+            event_type,
+            recipient_id=recipient_id,
+            recipient_address=recipient_address,
+            channels=channels,
+            variables=variables,
+            resource_type=resource_type,
+            resource_id=resource_id,
+            resource_name=resource_name,
+            locale=locale,
+            metadata=metadata,
+        )
+
+    def retry_failed(self, log_id: str, *, metadata: Metadata | None = None) -> Any:
+        """Retry a FAILED notification log (``NotificationService.RetryNotification``)."""
+        if self.notification is None:
+            raise UdbConfigurationError("NotificationService stubs are not generated")
+        request = _notif.RetryNotificationRequest(log_id=log_id)
+        return self._invoke(
+            "udb.core.notification.services.v1.NotificationService",
+            "RetryNotification",
+            self.notification,
+            request,
+            metadata,
+        )
+
+    def wait_for_delivery(
+        self,
+        log_id: str,
+        *,
+        deadline_s: float = 30.0,
+        poll_interval_s: float = 0.5,
+        metadata: Metadata | None = None,
+    ) -> Any:
+        """Read the notification log until its status is terminal or the deadline.
+
+        Bounded, status-driven (NOT a fixed sleep loop): issues only
+        ``GetNotification`` reads until status is DELIVERED/FAILED/SUPPRESSED or
+        ``deadline_s`` elapses. Returns the last observed ``NotificationLog``.
+        """
+        if self.notification is None:
+            raise UdbConfigurationError("NotificationService stubs are not generated")
+        terminal = {
+            _notif_status.NOTIFICATION_STATUS_DELIVERED,
+            _notif_status.NOTIFICATION_STATUS_FAILED,
+            _notif_status.NOTIFICATION_STATUS_SUPPRESSED,
+        }
+        deadline = time.monotonic() + deadline_s
+        last = None
+        while True:
+            request = _notif.GetNotificationRequest(log_id=log_id)
+            resp = self._invoke(
+                "udb.core.notification.services.v1.NotificationService",
+                "GetNotification",
+                self.notification,
+                request,
+                metadata,
+            )
+            last = resp.log
+            if last.status in terminal or time.monotonic() >= deadline:
+                return last
+            time.sleep(min(poll_interval_s, max(0.0, deadline - time.monotonic())))
 
     # ── apikey convenience (only the RPCs the service actually exposes) ────
     def create_api_key(
@@ -1149,7 +1808,10 @@ class UdbProject:
         """
         if self.apikey is None:
             raise UdbConfigurationError("ApiKeyService stubs are not generated")
-        meta = metadata or self._metadata
+        # Identity (tenant/project/scopes) flows via the gRPC metadata headers
+        # (_ctl_metadata); the broker derives it from the verified claim context,
+        # so no redundant body RequestContext is sent (guardrail: SDKs never
+        # re-send body authority).
         kwargs: dict[str, Any] = dict(
             name=name,
             description=description,
@@ -1158,15 +1820,18 @@ class UdbProject:
             ip_allowlist=list(ip_allowlist),
             rate_limit_per_minute=rate_limit_per_minute,
             rate_limit_per_day=rate_limit_per_day,
-            context=meta.to_request_context(),
         )
         if owner_type is not None:
             kwargs["owner_type"] = owner_type
         if expires_at is not None:
             kwargs["expires_at"] = expires_at
         request = _apikey.CreateApiKeyRequest(**kwargs)
-        return self.apikey.CreateApiKey(
-            request, metadata=self._ctl_metadata(metadata), timeout=self.config.deadline
+        return self._invoke(
+            "udb.core.apikey.services.v1.ApiKeyService",
+            "CreateApiKey",
+            self.apikey,
+            request,
+            metadata,
         )
 
     def revoke_api_key(
@@ -1179,14 +1844,13 @@ class UdbProject:
         """Revoke an API key (``ApiKeyService.RevokeApiKey``)."""
         if self.apikey is None:
             raise UdbConfigurationError("ApiKeyService stubs are not generated")
-        meta = metadata or self._metadata
-        request = _apikey.RevokeApiKeyRequest(
-            key_id=key_id,
-            revoke_reason=reason,
-            context=meta.to_request_context(),
-        )
-        return self.apikey.RevokeApiKey(
-            request, metadata=self._ctl_metadata(metadata), timeout=self.config.deadline
+        request = _apikey.RevokeApiKeyRequest(key_id=key_id, revoke_reason=reason)
+        return self._invoke(
+            "udb.core.apikey.services.v1.ApiKeyService",
+            "RevokeApiKey",
+            self.apikey,
+            request,
+            metadata,
         )
 
     def rotate_api_key(
@@ -1243,8 +1907,12 @@ class UdbProject:
             config=config,
             branding=branding,
         )
-        return self.tenant.CreateTenant(
-            request, metadata=self._ctl_metadata(metadata), timeout=self.config.deadline
+        return self._invoke(
+            "udb.core.tenant.services.v1.TenantService",
+            "CreateTenant",
+            self.tenant,
+            request,
+            metadata,
         )
 
     # ``onboard_tenant`` reads as the intent; delegate to ``create_tenant``.

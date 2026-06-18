@@ -17,6 +17,8 @@ enhancement.
 | `security.html` | RLS, encryption, mTLS, fail-closed posture, compliance profiles |
 | `enterprise.html` | HA/leader election, recovery, backpressure, observability, runbooks |
 | `sdks.html` | Six SDKs, per-language quickstarts, conformance |
+| `api.html` | Swagger UI over `api/udb-broker.swagger.json`, copied into the Pages artifact |
+| `benchmarks.html` | Release-binary benchmark graph, worst performers, and full per-RPC explorer |
 | **`playground.html`** | **Interactive** — runs UDB's **real** proto parser, compiled to WebAssembly (`udb.wasm`), in the browser |
 
 Shared: `styles.css` (theme + components), `app.js` (scroll-reveal, count-up,
@@ -57,7 +59,9 @@ git (`docs/site/assets/` is `.gitignore`d).
 ## Deploy (GitHub Pages → GitHub Actions)
 
 This repo ships `.github/workflows/pages.yml`, which syncs the brand assets and
-publishes `docs/site/` as the Pages root.
+publishes `docs/site/` as the Pages root. The workflow also copies
+`api/*.json` into `docs/site/api/` so the Swagger UI can load the generated API
+contract from the same origin.
 
 1. Repo **Settings → Pages → Source: GitHub Actions**.
 2. Push to `main` (or run the workflow manually) — the site deploys to

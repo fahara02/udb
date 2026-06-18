@@ -20,3 +20,17 @@ if (! \function_exists('Fahara02\\UdbLaravel\\createUdb')) {
         return new UdbProject($config);
     }
 }
+
+if (! \function_exists('Fahara02\\UdbLaravel\\readFenceFromReceipt')) {
+    /**
+     * Build a {@see ReadFence} from a {@see WriteReceipt} — the naming-contract
+     * free-function form of {@see ReadFence::fromReceipt()} (parity with TS
+     * `readFenceFromReceipt(receipt, maxWaitMs)` / Python
+     * `read_fence_from_receipt`). Applies the load-bearing `source_lsn →
+     * min_outbox_lsn` mapping; empty fields are omitted on serialization.
+     */
+    function readFenceFromReceipt(WriteReceipt $receipt, int $maxWaitMs = ReadFence::DEFAULT_MAX_WAIT_MS): ReadFence
+    {
+        return ReadFence::fromReceipt($receipt, $maxWaitMs);
+    }
+}

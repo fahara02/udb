@@ -9,8 +9,10 @@ emitted alongside them.
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import hmac
+import struct
 import threading
 import time
 from contextlib import contextmanager
@@ -36,6 +38,27 @@ from .metadata import Metadata
 # Algorithm the broker stamps on a SignedPolicyBundle (see
 # src/runtime/authz/bundle.rs). Only HMAC-SHA256 is supported by this verifier.
 POLICY_BUNDLE_ALGORITHM = "HMAC-SHA256"
+
+# Sentinel credential JSON the dev soft-authenticator (webauthn_softauth.rs)
+# accepts to complete a Finish ceremony in test mode (mirrors
+# TEST_CREDENTIAL_SENTINEL). Used as the default Finish payload for the passkey
+# wrappers when the caller drives the dev authenticator.
+PASSKEY_TEST_CREDENTIAL_SENTINEL = "__udb_test_credential__"
+
+
+def totp_now(secret_base32: str, *, digits: int = 6, period: int = 30) -> str:
+    """Compute the current RFC-6238 TOTP code from a base32 ``totp_secret``.
+
+    Stdlib-only (hmac/struct), no new dependency. ``secret_base32`` is the
+    ``EnrollMFAResponse.totp_secret`` the broker returns; the SDK computes the
+    code itself (TOTP is never echoed by the broker).
+    """
+    key = base64.b32decode(secret_base32.strip().replace(" ", "").upper() + "=" * (-len(secret_base32.strip()) % 8))
+    counter = int(time.time()) // period
+    mac = hmac.new(key, struct.pack(">Q", counter), hashlib.sha1).digest()
+    offset = mac[-1] & 0x0F
+    code = (struct.unpack(">I", mac[offset : offset + 4])[0] & 0x7FFFFFFF) % (10**digits)
+    return str(code).zfill(digits)
 
 
 def verify_policy_bundle(
@@ -376,6 +399,90 @@ class UdbAuthClient:
     def check_access(self, request: authz.CheckAccessRequest, *, metadata: Metadata | None = None):
         return self._call(self.authz.CheckAccess, "CheckAccess", request, metadata)
 
+    # ── policy / role administration (raw mutating RPCs) ──────────────────
+    def create_policy_rule(
+        self,
+        request: authz.CreatePolicyRuleRequest,
+        *,
+        metadata: Metadata | None = None,
+    ) -> "authz.CreatePolicyRuleResponse":
+        """Raw ``AuthzService.CreatePolicyRule`` (one RPC, no implicit reads)."""
+        return self._call(
+            self.authz.CreatePolicyRule, "CreatePolicyRule", request, metadata
+        )
+
+    def assign_role(
+        self,
+        request: authz.AssignRoleRequest,
+        *,
+        metadata: Metadata | None = None,
+    ) -> "authz.AssignRoleResponse":
+        """Raw ``AuthzService.AssignRole`` (one RPC, no implicit reads)."""
+        return self._call(self.authz.AssignRole, "AssignRole", request, metadata)
+
+    def allow_role(
+        self,
+        role: str,
+        resource: "authz.ResourceRef | str",
+        action: str,
+        *,
+        effect: Any = None,
+        metadata: Metadata | None = None,
+    ) -> "authz.CreatePolicyRuleResponse":
+        """Grant ``role`` permission to perform ``action`` on ``resource``.
+
+        Canonical naming-contract accessor wrapping the raw
+        ``CreatePolicyRule`` RPC: the role is the policy ``subject``, the
+        resource key (``message_type``/``resource_name``/``table``) is the
+        ``object``, and the effect defaults to ALLOW. Emits EXACTLY one
+        ``CreatePolicyRule`` — no hidden Get/List. ``tenant_id``/``project_id``/
+        ``created_by`` are filled from the bound :class:`Metadata`.
+        """
+        from udb.core.authz.entity.v1 import enums_pb2 as _authz_enums
+
+        meta = self._effective_metadata(metadata)
+        obj = _resource_key(as_resource(resource))
+        request = authz.CreatePolicyRuleRequest(
+            subject=role,
+            domain=meta.tenant_id,
+            object=obj,
+            action=action,
+            effect=(
+                effect
+                if effect is not None
+                else _authz_enums.POLICY_EFFECT_ALLOW
+            ),
+            created_by=meta.user_id or meta.service_identity,
+            tenant_id=meta.tenant_id,
+            project_id=meta.project_id,
+        )
+        return self.create_policy_rule(request, metadata=metadata)
+
+    def bind_role(
+        self,
+        subject: str,
+        role: str,
+        *,
+        metadata: Metadata | None = None,
+    ) -> "authz.AssignRoleResponse":
+        """Bind ``subject`` (user/principal id) to ``role``.
+
+        Canonical naming-contract accessor wrapping the raw ``AssignRole`` RPC.
+        Emits EXACTLY one ``AssignRole`` — no hidden Get/List.
+        ``domain``/``tenant_id``/``project_id``/``assigned_by`` are filled from
+        the bound :class:`Metadata`.
+        """
+        meta = self._effective_metadata(metadata)
+        request = authz.AssignRoleRequest(
+            user_id=subject,
+            role_id=role,
+            domain=meta.tenant_id,
+            assigned_by=meta.user_id or meta.service_identity,
+            tenant_id=meta.tenant_id,
+            project_id=meta.project_id,
+        )
+        return self.assign_role(request, metadata=metadata)
+
     # ── Stage 2: native database fast-path access (item 138) ──────────────
     def get_native_access(
         self, request: authz.NativeAccessRequest, *, metadata: Metadata | None = None
@@ -453,6 +560,109 @@ class UdbAuthClient:
             verify_policy_bundle(bundle, self._policy_bundle_secret)
         return bundle
 
+    # ── conformance proof (§8A; consumes the gated dev-echo fields) ────────
+    def conformance_proof(
+        self,
+        kind: str,
+        *,
+        user_id: str = "",
+        phone: str = "",
+        identifier: str = "",
+        metadata: Metadata | None = None,
+    ) -> str:
+        """Return the broker's GATED proof material for a headless conformance run.
+
+        Does NOT bypass verification — it only surfaces what the broker exposes
+        under its dev-echo gate (prod-empty). ``kind`` is one of ``"otp"`` /
+        ``"password_reset"`` / ``"phone"`` / ``"totp"``:
+
+        * ``otp``            → ``SendOTP(...).dev_otp_code``
+        * ``password_reset`` → ``ForgotPassword(...).dev_otp_code``
+        * ``phone``          → ``SendPhoneVerification(...).dev_otp_code``
+        * ``totp``           → current code computed from ``EnrollMFA(...).totp_secret``
+
+        Raises :class:`UdbConfigurationError` when the proof field is empty (the
+        broker is not in conformance/dev-echo mode) so callers fail loud.
+        """
+        meta = self._effective_metadata(metadata)
+        # Identity flows via the gRPC metadata headers (mirrors the existing
+        # authenticate_*/login helpers, which send no body RequestContext).
+        k = kind.strip().lower()
+        if k == "otp":
+            resp = self._call(
+                self.authn.SendOTP,
+                "SendOTP",
+                authn.SendOTPRequest(user_id=user_id or meta.user_id),
+                metadata,
+            )
+            proof = resp.dev_otp_code
+        elif k == "password_reset":
+            resp = self._call(
+                self.authn.ForgotPassword,
+                "ForgotPassword",
+                authn.ForgotPasswordRequest(
+                    identifier=identifier or user_id or meta.user_id
+                ),
+                metadata,
+            )
+            proof = resp.dev_otp_code
+        elif k == "phone":
+            resp = self._call(
+                self.authn.SendPhoneVerification,
+                "SendPhoneVerification",
+                authn.SendPhoneVerificationRequest(
+                    user_id=user_id or meta.user_id, phone=phone
+                ),
+                metadata,
+            )
+            proof = resp.dev_otp_code
+        elif k == "totp":
+            resp = self._call(
+                self.authn.EnrollMFA,
+                "EnrollMFA",
+                authn.EnrollMFARequest(user_id=user_id or meta.user_id),
+                metadata,
+            )
+            secret = resp.totp_secret
+            if not secret:
+                raise UdbConfigurationError(
+                    "conformance_proof(totp): EnrollMFA returned no totp_secret"
+                )
+            return totp_now(secret)
+        else:
+            raise UdbConfigurationError(
+                f"conformance_proof: unknown kind {kind!r} "
+                "(expected otp|password_reset|phone|totp)"
+            )
+        if not proof:
+            raise UdbConfigurationError(
+                f"conformance_proof({k}): empty proof — broker not in conformance mode"
+            )
+        return proof
+
+    # ── session lifecycle (canonical accessor) ────────────────────────────
+    def login_session(
+        self,
+        store: "TokenStore | None" = None,
+        *,
+        skew_seconds: float = 30.0,
+    ) -> "TokenSession":
+        """Return a :class:`TokenSession` bound to this client (canonical name).
+
+        Naming-contract accessor for the login/refresh session lifecycle:
+        ``auth.login_session()`` constructs a :class:`TokenSession` over this
+        :class:`UdbAuthClient` (single-flight refresh, pluggable
+        :class:`TokenStore`). Call :meth:`TokenSession.login` on the result to
+        authenticate. No RPC is issued by this accessor itself.
+        """
+        return TokenSession(self, store=store, skew_seconds=skew_seconds)
+
+    # ── passkeys (§6 explicit WebAuthn register/authenticate flows) ────────
+    @property
+    def passkeys(self) -> "_Passkeys":
+        """``auth.passkeys.register(...)`` / ``.authenticate(...)`` (Start→Finish)."""
+        return _Passkeys(self)
+
     # ── internals ─────────────────────────────────────────────────────────
     def _effective_metadata(self, metadata: Metadata | None) -> Metadata:
         effective = metadata or self._metadata
@@ -471,6 +681,82 @@ class UdbAuthClient:
             )
         except grpc.RpcError as error:
             raise UdbRpcError(name, error) from error
+
+
+class _Passkeys:
+    """``auth.passkeys`` — WebAuthn register/authenticate as honest Start→Finish.
+
+    Each flow is exactly two RPCs; the ``challenge_id`` from Start is threaded
+    into Finish (single-use, no challenge reuse, no hidden Get). When the caller
+    supplies no ``credential_json`` the dev soft-authenticator sentinel is used
+    so a headless harness can complete Finish in test mode.
+    """
+
+    def __init__(self, client: "UdbAuthClient"):
+        self._client = client
+
+    def register(
+        self,
+        *,
+        user_id: str = "",
+        label: str = "",
+        credential_json: str = "",
+        metadata: Metadata | None = None,
+    ) -> "authn.FinishWebAuthnRegistrationResponse":
+        c = self._client
+        meta = c._effective_metadata(metadata)
+        start = c._call(
+            c.authn.StartWebAuthnRegistration,
+            "StartWebAuthnRegistration",
+            authn.StartWebAuthnRegistrationRequest(
+                user_id=user_id or meta.user_id,
+                label=label,
+                tenant_id=meta.tenant_id,
+                project_id=meta.project_id,
+            ),
+            metadata,
+        )
+        return c._call(
+            c.authn.FinishWebAuthnRegistration,
+            "FinishWebAuthnRegistration",
+            authn.FinishWebAuthnRegistrationRequest(
+                challenge_id=start.challenge_id,
+                public_key_credential_json=credential_json
+                or PASSKEY_TEST_CREDENTIAL_SENTINEL,
+                label=label,
+            ),
+            metadata,
+        )
+
+    def authenticate(
+        self,
+        *,
+        user_id: str = "",
+        credential_json: str = "",
+        metadata: Metadata | None = None,
+    ) -> "authn.FinishWebAuthnAuthenticationResponse":
+        c = self._client
+        meta = c._effective_metadata(metadata)
+        start = c._call(
+            c.authn.StartWebAuthnAuthentication,
+            "StartWebAuthnAuthentication",
+            authn.StartWebAuthnAuthenticationRequest(
+                user_id=user_id or meta.user_id,
+                tenant_id=meta.tenant_id,
+                project_id=meta.project_id,
+            ),
+            metadata,
+        )
+        return c._call(
+            c.authn.FinishWebAuthnAuthentication,
+            "FinishWebAuthnAuthentication",
+            authn.FinishWebAuthnAuthenticationRequest(
+                challenge_id=start.challenge_id,
+                public_key_credential_json=credential_json
+                or PASSKEY_TEST_CREDENTIAL_SENTINEL,
+            ),
+            metadata,
+        )
 
 
 @contextmanager

@@ -3,6 +3,7 @@ syntax = "proto3";
 package udb.services.v1;
 
 import "udb/entity/v1/admin.proto";
+import "udb/entity/v1/context.proto";
 import "udb/entity/v1/blob.proto";
 import "udb/entity/v1/cdc.proto";
 import "udb/entity/v1/mutation.proto";
@@ -39,6 +40,15 @@ service DataBroker {
   }
   rpc Upsert(udb.entity.v1.UpsertRequest) returns (udb.entity.v1.MutationResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    // KEYSTONE (lane 05): Upsert is durably replay-safe — a retried keyed Upsert
+    // is deduped in the write tx (fail-closed, tenant+project-scoped) and returns
+    // was_duplicate=true with the original body. SDKs may auto-retry ONLY when
+    // replay_safe=true.
+    option (udb.core.common.v1.method_idempotency_contract) = {
+      request_key_field: "idempotency_key"
+      duplicate_response_field: "was_duplicate"
+      replay_safe: true
+    };
   }
   rpc BatchUpsert(stream udb.entity.v1.UpsertRequest) returns (stream udb.entity.v1.MutationResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
@@ -46,6 +56,15 @@ service DataBroker {
   // Delete rows without raw SQL.
   rpc Delete(udb.entity.v1.DeleteRequest) returns (udb.entity.v1.MutationResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    // KEYSTONE (lane 05): Delete is durably replay-safe — a retried keyed Delete
+    // is deduped in the write tx (fail-closed, tenant+project-scoped) and returns
+    // was_duplicate=true with the original body. SDKs may auto-retry ONLY when
+    // replay_safe=true.
+    option (udb.core.common.v1.method_idempotency_contract) = {
+      request_key_field: "idempotency_key"
+      duplicate_response_field: "was_duplicate"
+      replay_safe: true
+    };
   }
 
   // ── Vector ──────────────────────────────────────────────────────────────────
@@ -194,11 +213,29 @@ service DataBroker {
   // Requires scope: udb:admin
   rpc PlanMigration(udb.entity.v1.MigrationPlanRequest) returns (udb.entity.v1.MigrationPlanResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.method_lifecycle_contract) = {
+      entity: "MigrationRun"
+      target_state: "DRY_RUN"
+      terminal_states: "COMPLETED"
+      terminal_states: "ERROR"
+      terminal_states: "DEAD_LETTER"
+    };
   }
   // Apply a previously planned (and optionally approved) migration.
   // Requires scope: udb:admin
   rpc ApplyMigration(udb.entity.v1.MigrationApplyRequest) returns (udb.entity.v1.MigrationStatusResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.method_lifecycle_contract) = {
+      entity: "MigrationRun"
+      legal_source_states: "DRY_RUN"
+      legal_source_states: "PREFLIGHT"
+      target_state: "APPLYING"
+      terminal_states: "COMPLETED"
+      terminal_states: "ERROR"
+      terminal_states: "DEAD_LETTER"
+      input_consumed: true
+      destructive: true
+    };
   }
   // Return the status of a migration run.
   // Requires scope: udb:admin
@@ -214,6 +251,14 @@ service DataBroker {
   // Requires scope: udb:admin
   rpc ApproveMigrationPlan(udb.entity.v1.MigrationRunRequest) returns (udb.entity.v1.MigrationStatusResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.method_lifecycle_contract) = {
+      entity: "MigrationRun"
+      legal_source_states: "DRY_RUN"
+      target_state: "PREFLIGHT"
+      terminal_states: "COMPLETED"
+      terminal_states: "ERROR"
+      terminal_states: "DEAD_LETTER"
+    };
   }
 
   // DLQ management.
@@ -264,6 +309,12 @@ service DataBroker {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
   }
   rpc MarkSagaReviewed(udb.entity.v1.SagaRequest) returns (udb.entity.v1.SagaResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+  }
+  // Idempotently seed a baseline manual-review saga row and a retryable DLQ row
+  // for the VERIFIED principal's tenant/project. Privilege-creating: fail-closed,
+  // env-gated (UDB_ENABLE_ADMIN_SEED) and requires scope: udb:admin.
+  rpc EnsureBaseline(EnsureBaselineRequest) returns (EnsureBaselineResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
   }
 
@@ -330,4 +381,18 @@ service DataBroker {
   rpc VerifyAdminAuditLog(udb.entity.v1.AdminAuditVerifyRequest) returns (udb.entity.v1.AdminAuditVerifyResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
   }
+}
+
+// Request to seed a baseline manual-review saga + retryable DLQ row. The
+// tenant/project are NEVER taken from this body; they are derived from the
+// VERIFIED principal (security.tenant_id / security.project_id) on the server.
+message EnsureBaselineRequest {
+  udb.entity.v1.RequestContext context = 1;
+}
+
+// Identifiers of the seeded (or already-present, idempotent) rows.
+message EnsureBaselineResponse {
+  repeated string saga_ids = 1;
+  repeated string dlq_ids = 2;
+  string device_id = 3;
 }

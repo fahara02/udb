@@ -685,10 +685,12 @@ class ForgotPasswordRequest(_message.Message):
     def __init__(self, identifier: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ...) -> None: ...
 
 class ForgotPasswordResponse(_message.Message):
-    __slots__ = ("otp_id",)
+    __slots__ = ("otp_id", "dev_otp_code")
     OTP_ID_FIELD_NUMBER: _ClassVar[int]
+    DEV_OTP_CODE_FIELD_NUMBER: _ClassVar[int]
     otp_id: str
-    def __init__(self, otp_id: _Optional[str] = ...) -> None: ...
+    dev_otp_code: str
+    def __init__(self, otp_id: _Optional[str] = ..., dev_otp_code: _Optional[str] = ...) -> None: ...
 
 class ResetPasswordRequest(_message.Message):
     __slots__ = ("otp_id", "code", "new_password", "context")
@@ -765,10 +767,12 @@ class SendPhoneVerificationRequest(_message.Message):
     def __init__(self, user_id: _Optional[str] = ..., phone: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ...) -> None: ...
 
 class SendPhoneVerificationResponse(_message.Message):
-    __slots__ = ("otp_id",)
+    __slots__ = ("otp_id", "dev_otp_code")
     OTP_ID_FIELD_NUMBER: _ClassVar[int]
+    DEV_OTP_CODE_FIELD_NUMBER: _ClassVar[int]
     otp_id: str
-    def __init__(self, otp_id: _Optional[str] = ...) -> None: ...
+    dev_otp_code: str
+    def __init__(self, otp_id: _Optional[str] = ..., dev_otp_code: _Optional[str] = ...) -> None: ...
 
 class StartWebAuthnRegistrationRequest(_message.Message):
     __slots__ = ("user_id", "label", "tenant_id", "project_id", "context")

@@ -14,9 +14,17 @@ on:
       - "sdk/go/udbclient/live_perf_bodies_test.go"
       - "sdk/go/udbclient/live_perf_seed_test.go"
       - "sdk/go/udbclient/live_perf_test.go"
+      - "sdk/go/udbclient/bench_manifest_test.go"
+      - "sdk/go/udbclient/upload_test.go"
+      - "sdk/go/udbclient/entity_test.go"
+      - "sdk/go/udbclient/media_test.go"
       - "sdk/python/tests/test_live_conformance.py"
+      - "sdk/python/tests/test_simple_client.py"
+      - "sdk/python/tests/test_media_facade.py"
       - "sdk/typescript/live-auth.test.ts"
+      - "sdk/typescript/facade.test.ts"
       - "sdk/php/tests/Live/GeneratedRpcSurfaceTest.php"
+      - "sdk/php/tests/Unit/**"
   workflow_dispatch:
     inputs:
       release_tag:
@@ -151,6 +159,27 @@ jobs:
           set -euo pipefail
           node --check docs/site/benchmarks.js
           python -m py_compile scripts/collect_sdk_bench_results.py
+      - name: Validate benchmark JSON collection
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/bench-status"
+          for sdk in go python typescript php; do
+            printf '{"exit_code":0}\n' > "$RUNNER_TEMP/bench-status/${sdk}.json"
+          done
+          python scripts/collect_sdk_bench_results.py \
+            --out "$RUNNER_TEMP/bench-results.json" \
+            --status-dir "$RUNNER_TEMP/bench-status"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          payload = json.loads(Path(os.environ["RUNNER_TEMP"], "bench-results.json").read_text())
+          sdks = payload.get("sdks", [])
+          assert payload.get("summary", {}).get("measured_rpc_count", 0) > 0
+          assert any(s.get("full_rpcs") for s in sdks), "collector did not preserve full per-RPC rows"
+          assert all("summary" in s for s in sdks), "SDK summary missing from benchmark JSON"
+          PY
       - name: Confirm release benchmark is gated
         shell: bash
         run: |
@@ -158,6 +187,42 @@ jobs:
           grep -q "github.event_name == 'workflow_dispatch'" .github/workflows/benchmark-sdks.yml
           grep -q "github.event.workflow_run.conclusion == 'success'" .github/workflows/benchmark-sdks.yml
           grep -q "startsWith(github.event.workflow_run.head_branch, 'v')" .github/workflows/benchmark-sdks.yml
+
+  mock-transport-gate:
+    name: Mock-transport RPC-sequence gate (offline, all SDKs)
+    # Runs on every push (NOT gated on the release workflow_run) so a hidden
+    # round trip in a workflow helper fails fast in Go / TypeScript / Python.
+    # The gates read the shared ordered-sequence fixture
+    # docs/bench-bodies/workflow-sequences.md, so a drift fails every language
+    # identically. (chapter 11.2.2.1)
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Go facade / sequence gate (offline)
+        run: |
+          set -euo pipefail
+          # The live perf/conformance tests are env-gated and skip without a
+          # broker; these offline gates assert the exact RPC sequences.
+          ( cd sdk/go && go test ./udbclient -run 'Facade|UploadFile|Entity|BenchBodyManifest' -count=1 )
+      - name: TypeScript facade sequence gate (offline)
+        run: |
+          set -euo pipefail
+          ( cd sdk/typescript && npm ci && npm run bundle-proto && npx tsc -p tsconfig.test.json && node --test dist-test/facade.test.js dist-test/sdkhelpers.test.js )
+      - name: Python facade / workflow-sequence gate (offline)
+        run: |
+          set -euo pipefail
+          ( cd sdk/python && python -m pip install -e ".[dev]" && python -m pytest tests/test_simple_client.py tests/test_media_facade.py -q )
 
   benchmark:
     name: Release binary + SDK live benchmarks
@@ -584,6 +649,38 @@ jobs:
         run: |
           mkdir -p docs/site/assets
           cp -v docs/assets/*.svg docs/site/assets/
+      - name: Publish Swagger API document
+        if: always()
+        run: |
+          mkdir -p docs/site/api
+          cp -v api/*.json docs/site/api/
+      - name: Verify benchmark Pages artifact contract
+        if: always()
+        run: |
+          test -f docs/site/index.html
+          test -f docs/site/benchmarks.html
+          test -f docs/site/benchmarks.js
+          test -f docs/site/bench-results.json
+          test -f docs/site/api.html
+          test -f docs/site/api/udb-broker.swagger.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          payload = json.loads(Path("docs/site/bench-results.json").read_text())
+          assert "sdks" in payload and isinstance(payload["sdks"], list)
+          assert "summary" in payload and isinstance(payload["summary"], dict)
+          swagger = json.loads(Path("docs/site/api/udb-broker.swagger.json").read_text())
+          assert swagger.get("swagger") == "2.0", "published Swagger JSON is not Swagger 2.0"
+          assert swagger.get("paths"), "published Swagger JSON has no API paths"
+          measured = {"go", "python", "typescript", "php"}
+          missing = [
+              s.get("id")
+              for s in payload["sdks"]
+              if s.get("id") in measured and s.get("status") == "ok" and not s.get("full_rpcs")
+          ]
+          assert not missing, f"successful SDK benchmark reports did not publish full per-RPC rows: {missing}"
+          PY
 
       - name: Upload benchmark report artifact
         if: always()

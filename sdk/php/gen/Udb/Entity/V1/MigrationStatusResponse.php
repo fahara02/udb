@@ -48,6 +48,14 @@ class MigrationStatusResponse extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string error = 8 [json_name = "error"];</code>
      */
     protected $error = '';
+    /**
+     * Generated from protobuf field <code>optional string approval_token = 9 [json_name = "approvalToken"];</code>
+     */
+    protected $approval_token = null;
+    /**
+     * Generated from protobuf field <code>optional bool applyable = 10 [json_name = "applyable"];</code>
+     */
+    protected $applyable = null;
 
     /**
      * Constructor.
@@ -64,6 +72,8 @@ class MigrationStatusResponse extends \Google\Protobuf\Internal\Message
      *     @type string $finished_at
      *     @type \Udb\Entity\V1\MigrationOperationStatus[] $operations
      *     @type string $error
+     *     @type string $approval_token
+     *     @type bool $applyable
      * }
      */
     public function __construct($data = NULL) {
@@ -247,6 +257,70 @@ class MigrationStatusResponse extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, True);
         $this->error = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>optional string approval_token = 9 [json_name = "approvalToken"];</code>
+     * @return string
+     */
+    public function getApprovalToken()
+    {
+        return isset($this->approval_token) ? $this->approval_token : '';
+    }
+
+    public function hasApprovalToken()
+    {
+        return isset($this->approval_token);
+    }
+
+    public function clearApprovalToken()
+    {
+        unset($this->approval_token);
+    }
+
+    /**
+     * Generated from protobuf field <code>optional string approval_token = 9 [json_name = "approvalToken"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setApprovalToken($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->approval_token = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>optional bool applyable = 10 [json_name = "applyable"];</code>
+     * @return bool
+     */
+    public function getApplyable()
+    {
+        return isset($this->applyable) ? $this->applyable : false;
+    }
+
+    public function hasApplyable()
+    {
+        return isset($this->applyable);
+    }
+
+    public function clearApplyable()
+    {
+        unset($this->applyable);
+    }
+
+    /**
+     * Generated from protobuf field <code>optional bool applyable = 10 [json_name = "applyable"];</code>
+     * @param bool $var
+     * @return $this
+     */
+    public function setApplyable($var)
+    {
+        GPBUtil::checkBool($var);
+        $this->applyable = $var;
 
         return $this;
     }

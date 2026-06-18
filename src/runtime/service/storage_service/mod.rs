@@ -26,6 +26,7 @@ use crate::metrics::{MetricsRecorder, NoopMetrics};
 use crate::runtime::DataBrokerRuntime;
 use crate::runtime::channels::{ChannelManager, ChannelPermit, OperationChannel};
 
+use crate::proto::udb::core::common::v1 as common_pb;
 use crate::proto::udb::core::storage::entity::v1 as storage_entity_pb;
 use crate::proto::udb::core::storage::services::v1 as storage_pb;
 use crate::proto::udb::core::storage::services::v1::storage_service_server::StorageService;
@@ -47,6 +48,79 @@ const TOPIC_UPLOAD_URL_ISSUED: &str = "udb.storage.file.upload_url_issued.v1";
 const TOPIC_FILE_FINALIZED: &str = "udb.storage.file.finalized.v1";
 const TOPIC_FILE_METADATA_UPDATED: &str = "udb.storage.file.metadata_updated.v1";
 const TOPIC_FILE_DELETED: &str = "udb.storage.file.deleted.v1";
+
+/// Stable machine-readable error codes for the storage service (§04.5). Emitted
+/// as `ApiError.code` on the OK-with-error register paths, or as the
+/// `error-reason` Status metadata trailer on non-OK gRPC statuses — a non-OK
+/// status is trailers-only and discards the body `ApiError`, so the sub-code must
+/// ride a trailer (mirrors the notification/webrtc services).
+const STORAGE_QUOTA_EXCEEDED: &str = "STORAGE_QUOTA_EXCEEDED";
+const UPLOAD_URL_UNAVAILABLE: &str = "UPLOAD_URL_UNAVAILABLE";
+const OBJECT_NOT_PRESENT: &str = "OBJECT_NOT_PRESENT";
+const UPLOAD_SIZE_MISMATCH: &str = "UPLOAD_SIZE_MISMATCH";
+const ALREADY_FINALIZED: &str = "ALREADY_FINALIZED";
+/// Soft-delete warn path only (bytes orphaned after a metadata delete) — emitted
+/// on the warn log, NOT part of the RPC error catalog.
+const OBJECT_DELETE_ORPHANED: &str = "OBJECT_DELETE_ORPHANED";
+/// Reserved: defined for the catalog but no live emit site on the in-process
+/// path yet (expiry/backend-unsupported are not surfaced as RPC errors today).
+#[allow(dead_code)]
+const UPLOAD_EXPIRED: &str = "UPLOAD_EXPIRED";
+#[allow(dead_code)]
+const UNSUPPORTED_OBJECT_BACKEND: &str = "UNSUPPORTED_OBJECT_BACKEND";
+
+/// Attach a stable machine-readable `reason` to a non-OK gRPC `Status` via the
+/// `error-reason` metadata trailer (the body is discarded on non-OK statuses).
+fn status_with_reason(mut status: Status, reason: &'static str) -> Status {
+    status.metadata_mut().insert(
+        "error-reason",
+        tonic::metadata::MetadataValue::from_static(reason),
+    );
+    status
+}
+
+/// Build an `ApiError` carrying `UPLOAD_URL_UNAVAILABLE` for the degraded/failed
+/// presign branches of `register_upload` (kept as `Response::Ok` so the persisted
+/// PENDING row + quota reservation survive).
+fn api_error_upload_url_unavailable(
+    message: impl Into<String>,
+    retryable: bool,
+) -> common_pb::ApiError {
+    common_pb::ApiError {
+        code: UPLOAD_URL_UNAVAILABLE.to_string(),
+        message: message.into(),
+        retryable,
+        ..Default::default()
+    }
+}
+
+/// Normalize an S3/HTTP ETag for comparison: strip a weak-validator `W/` prefix
+/// and the surrounding quotes S3 returns, then lowercase.
+fn normalize_etag(etag: &str) -> String {
+    etag.trim()
+        .trim_start_matches("W/")
+        .trim_matches('"')
+        .to_ascii_lowercase()
+}
+
+/// Outcome of minting a presigned URL: a real URL + unix-seconds expiry, a
+/// degraded deployment (no object runtime / object-store feature off), or a
+/// genuine presign failure — lets `register_upload` distinguish "no objectstore"
+/// from a real error on an empty `upload_url`.
+enum PresignOutcome {
+    Url { url: String, expires_at: i64 },
+    Degraded,
+    Failed(String),
+}
+
+/// Tri-state object-presence result from the storage `object_exists` wrapper:
+/// `Unchecked` (metadata-only mode, no runtime — skip verification), `Absent`
+/// (object not in the store), or `Present` with the HEAD content-length + ETag.
+enum ObjectCheck {
+    Unchecked,
+    Absent,
+    Present { size: i64, etag: String },
+}
 
 /// Postgres-backed `StorageService` handler.
 #[derive(Clone)]
@@ -139,6 +213,7 @@ impl StorageServiceImpl {
                 error = %err,
                 object_key,
                 bucket = %self.object_bucket,
+                code = OBJECT_DELETE_ORPHANED,
                 "storage object byte delete failed; metadata soft-deleted (auditable), bytes orphaned"
             );
         }
@@ -154,9 +229,9 @@ impl StorageServiceImpl {
         method: &str,
         content_type: &str,
         ttl_minutes: i32,
-    ) -> (String, i64) {
+    ) -> PresignOutcome {
         let Some(runtime) = self.runtime.as_ref() else {
-            return (String::new(), 0);
+            return PresignOutcome::Degraded;
         };
         let ttl_secs = (ttl_minutes.max(1) as i64 * 60).min(7 * 24 * 3600) as i32;
         match runtime
@@ -171,10 +246,21 @@ impl StorageServiceImpl {
             )
             .await
         {
-            Ok((url, expires_at_unix)) => (url, expires_at_unix),
+            Ok((url, expires_at_unix)) => PresignOutcome::Url {
+                url,
+                expires_at: expires_at_unix,
+            },
             Err(err) => {
                 tracing::warn!(error = %err, object_key, method, "storage presign failed; returning empty url");
-                (String::new(), 0)
+                // An object-store feature compiled out / no instance configured is a
+                // deployment-degraded state, not a transient error: surface Degraded
+                // (non-retryable) so the client falls back to the public object RPCs
+                // instead of retrying. Everything else is a real presign failure.
+                if err.message().contains("feature is not enabled") {
+                    PresignOutcome::Degraded
+                } else {
+                    PresignOutcome::Failed(err.message().to_string())
+                }
             }
         }
     }
@@ -273,12 +359,12 @@ impl StorageServiceImpl {
             .unwrap_or(0)
     }
 
-    async fn object_exists(&self, file: &storage_entity_pb::File) -> Result<bool, Status> {
+    async fn object_exists(&self, file: &storage_entity_pb::File) -> Result<ObjectCheck, Status> {
         let Some(runtime) = self.runtime.as_ref() else {
-            return Ok(true);
+            return Ok(ObjectCheck::Unchecked);
         };
         if file.object_key.trim().is_empty() {
-            return Ok(false);
+            return Ok(ObjectCheck::Absent);
         }
         let backend = if file.backend.trim().is_empty() {
             self.object_backend.as_str()
@@ -290,9 +376,13 @@ impl StorageServiceImpl {
         } else {
             file.bucket.as_str()
         };
-        runtime
+        match runtime
             .object_exists_backend_target(backend, &file.project_id, bucket, &file.object_key)
-            .await
+            .await?
+        {
+            Some((size, etag)) => Ok(ObjectCheck::Present { size, etag }),
+            None => Ok(ObjectCheck::Absent),
+        }
     }
 
     /// Hard-DELETE orphaned `PENDING` files older than `older_than_minutes`
@@ -867,9 +957,12 @@ impl StorageService for StorageServiceImpl {
                     )
                     .await?;
                 if used + declared_size > quota {
-                    return Err(Status::resource_exhausted(format!(
-                        "tenant storage quota exceeded: {used}+{declared_size} > {quota}"
-                    )));
+                    return Err(status_with_reason(
+                        Status::resource_exhausted(format!(
+                            "tenant storage quota exceeded: {used}+{declared_size} > {quota}"
+                        )),
+                        STORAGE_QUOTA_EXCEEDED,
+                    ));
                 }
             }
             runtime
@@ -924,7 +1017,11 @@ impl StorageService for StorageServiceImpl {
         } else {
             15
         };
-        let (upload_url, _) = self
+        // Distinguish a degraded deployment (no objectstore) from a real presign
+        // error so a client seeing an empty `upload_url` knows which it is. Stay
+        // `Response::Ok` either way (the PENDING row + quota reservation persist);
+        // the diagnostic rides `error` + `expires_at`.
+        let (upload_url, expires_at, error) = match self
             .presign(
                 &req.project_id,
                 &object_key,
@@ -932,12 +1029,32 @@ impl StorageService for StorageServiceImpl {
                 &req.content_type,
                 upload_minutes,
             )
-            .await;
+            .await
+        {
+            PresignOutcome::Url { url, expires_at } => (url, expires_at, None),
+            PresignOutcome::Degraded => (
+                String::new(),
+                0,
+                Some(api_error_upload_url_unavailable(
+                    "object store not configured (metadata-only mode); use the public object RPCs",
+                    false,
+                )),
+            ),
+            PresignOutcome::Failed(reason) => (
+                String::new(),
+                0,
+                Some(api_error_upload_url_unavailable(
+                    format!("presign failed: {reason}"),
+                    true,
+                )),
+            ),
+        };
         Ok(Response::new(storage_pb::RegisterUploadResponse {
             file_id,
             upload_url,
             object_key,
-            error: None,
+            error,
+            expires_at,
         }))
     }
 
@@ -971,10 +1088,57 @@ impl StorageService for StorageServiceImpl {
             Some(row) => file_from_json(row),
             None => return Err(Status::not_found("file not found")),
         };
-        if !self.object_exists(&prior).await? {
-            return Err(Status::failed_precondition(
-                "uploaded object is not present in the configured object store",
+        // Reject re-finalize of an already-ACTIVE row (zero extra round-trip —
+        // `prior` is in hand). Fail-closed lifecycle guard: avoids silently
+        // re-running the ACTIVE-transition upsert on a double finalize.
+        if file_status_to_short(prior.status) == "ACTIVE" {
+            return Err(status_with_reason(
+                Status::failed_precondition("upload already finalized"),
+                ALREADY_FINALIZED,
             ));
+        }
+        // Confirm the bytes landed and, when the client supplies them, verify the
+        // object's HEAD size/etag — fail-closed on a missing object or a
+        // supplied-vs-actual mismatch. The bench deliberately sends a wrong
+        // `size_bytes`, so unsupplied size is NEVER compared; size is only checked
+        // under a configured quota (strict mode). Metadata-only mode = unchecked.
+        let presence = self.object_exists(&prior).await?;
+        match &presence {
+            ObjectCheck::Absent => {
+                return Err(status_with_reason(
+                    Status::failed_precondition(
+                        "uploaded object is not present in the configured object store",
+                    ),
+                    OBJECT_NOT_PRESENT,
+                ));
+            }
+            ObjectCheck::Present {
+                size: head_size,
+                etag: head_etag,
+            } => {
+                if let Some(etag) = req.etag.as_deref().map(str::trim).filter(|e| !e.is_empty()) {
+                    if normalize_etag(etag) != normalize_etag(head_etag) {
+                        return Err(status_with_reason(
+                            Status::failed_precondition("uploaded object etag does not match"),
+                            UPLOAD_SIZE_MISMATCH,
+                        ));
+                    }
+                }
+                if Self::tenant_quota_bytes() > 0
+                    && req.size_bytes >= 0
+                    && *head_size >= 0
+                    && req.size_bytes != *head_size
+                {
+                    return Err(status_with_reason(
+                        Status::failed_precondition(format!(
+                            "uploaded object size {head_size} does not match declared {}",
+                            req.size_bytes
+                        )),
+                        UPLOAD_SIZE_MISMATCH,
+                    ));
+                }
+            }
+            ObjectCheck::Unchecked => {}
         }
 
         // Partial update onto a full record (NOT-NULL-safe upsert): ACTIVE
@@ -1017,6 +1181,18 @@ impl StorageService for StorageServiceImpl {
             record.insert("is_public".to_string(), LogicalValue::Bool(is_public));
             fields.push("is_public".to_string());
         }
+        // Persist a client-supplied content checksum into File.checksum (field 17,
+        // previously never written). Verification against the store is etag-based
+        // (above); the checksum is recorded for downstream integrity audits.
+        if let Some(checksum) = req
+            .checksum
+            .as_deref()
+            .map(str::trim)
+            .filter(|c| !c.is_empty())
+        {
+            record.insert("checksum".to_string(), logical_string(checksum));
+            fields.push("checksum".to_string());
+        }
 
         // Quota re-check against the size delta, serialized per tenant by the same
         // lease as register. Only matters when the size grows under a finite quota.
@@ -1044,9 +1220,12 @@ impl StorageService for StorageServiceImpl {
                     )
                     .await?;
                 if used + delta > quota {
-                    return Err(Status::resource_exhausted(format!(
-                        "tenant storage quota exceeded: {used}+{delta} > {quota}"
-                    )));
+                    return Err(status_with_reason(
+                        Status::resource_exhausted(format!(
+                            "tenant storage quota exceeded: {used}+{delta} > {quota}"
+                        )),
+                        STORAGE_QUOTA_EXCEEDED,
+                    ));
                 }
             }
             runtime
@@ -1141,9 +1320,16 @@ impl StorageService for StorageServiceImpl {
         };
         // Mint a presigned GET URL (empty in metadata-only mode / on error — the
         // client then uses the public GeneratePresignedUrl RPC with object_key).
-        let (download_url, expires_unix) = self
+        let (download_url, expires_unix) = match self
             .presign(&project_id, &object_key, "GET", "", minutes)
-            .await;
+            .await
+        {
+            PresignOutcome::Url { url, expires_at } => (url, expires_at),
+            // Degraded/failed → empty URL + 0 (the client falls back to the public
+            // GeneratePresignedUrl RPC); the response still carries a computed
+            // expiry window below.
+            PresignOutcome::Degraded | PresignOutcome::Failed(_) => (String::new(), 0),
+        };
         let expires_at = if expires_unix > 0 {
             prost_types::Timestamp {
                 seconds: expires_unix,
@@ -1161,6 +1347,165 @@ impl StorageService for StorageServiceImpl {
             expires_at: Some(expires_at),
             error: None,
         }))
+    }
+
+    type DownloadFileStream = std::pin::Pin<
+        Box<
+            dyn tokio_stream::Stream<Item = Result<storage_pb::DownloadFileChunk, Status>>
+                + Send
+                + 'static,
+        >,
+    >;
+
+    /// Stream a file's bytes directly through the broker — the FALLBACK for
+    /// clients that cannot reach the object store via the presigned
+    /// `GetDownloadUrl` HTTP GET.
+    ///
+    /// Identity comes from the verified claim (`validate_request_tenant`): the
+    /// body `file_id` is the only client-chosen target; the tenant is taken from
+    /// the claim and the row is resolved tenant-scoped + live-only, so a
+    /// cross-tenant `file_id` simply yields not-found (fail-closed). Presence is
+    /// confirmed via the SAME `object_exists` HEAD the finalize path uses (also
+    /// supplies the first-chunk content_type/total_size/etag), then the bytes are
+    /// streamed in BOUNDED chunks through `get_object_stream_backend_target` (the
+    /// data-plane `GetObject` streaming primitive) — the whole object is never
+    /// buffered in the broker.
+    async fn download_file(
+        &self,
+        request: Request<storage_pb::DownloadFileRequest>,
+    ) -> Result<Response<Self::DownloadFileStream>, Status> {
+        let metadata = request.metadata().clone();
+        let req = request.into_inner();
+        validate_request_tenant(&metadata, &req.tenant_id)?;
+        // Per-tenant fair admission: streaming object bytes is an Object-class op.
+        let _admit = self.admit(&req.tenant_id, "").await?;
+        let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
+        let file_id = parse_uuid("file_id", &req.file_id)?.to_string();
+        let context = native_service_context(&metadata, &tenant_id, "");
+        let runtime = self.require_runtime()?;
+        // Resolve the live file row scoped to the verified tenant (cross-tenant
+        // file_id → not-found, fail-closed).
+        let rows = runtime
+            .native_entity_read_for_service(
+                "storage",
+                &context,
+                file_read_by_id(&tenant_id, &file_id),
+            )
+            .await?;
+        let Some(file) = rows.first().map(file_from_json) else {
+            return Err(Status::not_found("file not found"));
+        };
+        if file.object_key.trim().is_empty() {
+            return Err(status_with_reason(
+                Status::failed_precondition("file has no object bytes"),
+                OBJECT_NOT_PRESENT,
+            ));
+        }
+        // Confirm the bytes are present (and capture first-chunk metadata) via the
+        // SAME HEAD primitive finalize uses. Metadata-only mode (no runtime/object
+        // store) cannot stream bytes → fail closed.
+        let (head_size, head_etag) = match self.object_exists(&file).await? {
+            ObjectCheck::Present { size, etag } => (size, etag),
+            ObjectCheck::Absent => {
+                return Err(status_with_reason(
+                    Status::failed_precondition(
+                        "object is not present in the configured object store",
+                    ),
+                    OBJECT_NOT_PRESENT,
+                ));
+            }
+            ObjectCheck::Unchecked => {
+                return Err(status_with_reason(
+                    Status::failed_precondition(
+                        "object byte streaming requires a configured object store",
+                    ),
+                    UNSUPPORTED_OBJECT_BACKEND,
+                ));
+            }
+        };
+        // Resolve the backend/bucket the file's bytes live in (same fallbacks as
+        // object_exists).
+        let backend = if file.backend.trim().is_empty() {
+            self.object_backend.clone()
+        } else {
+            file.backend.clone()
+        };
+        let bucket = if file.bucket.trim().is_empty() {
+            self.object_bucket.clone()
+        } else {
+            file.bucket.clone()
+        };
+        let request_json = crate::runtime::core::setup_data::object_request_json(
+            "get",
+            &bucket,
+            &file.object_key,
+            "",
+        );
+        let runtime = self
+            .runtime
+            .clone()
+            .ok_or_else(|| Status::failed_precondition("storage service requires runtime"))?;
+        // Bounded-memory byte stream from the object store (executor streams in
+        // its own frames; the broker never buffers the whole object).
+        let byte_stream = runtime
+            .get_object_stream_backend_target(&backend, None, &file.project_id, &request_json)
+            .await
+            .map_err(|status| match status.code() {
+                tonic::Code::FailedPrecondition => {
+                    status_with_reason(status, UNSUPPORTED_OBJECT_BACKEND)
+                }
+                _ => status,
+            })?;
+        // First-chunk metadata: content_type from the row, total_size + etag from
+        // the HEAD. Carried only on the first emitted DownloadFileChunk.
+        let content_type = if file.content_type.trim().is_empty() {
+            None
+        } else {
+            Some(file.content_type.clone())
+        };
+        let total_size = if head_size >= 0 {
+            Some(head_size)
+        } else {
+            None
+        };
+        let etag = if head_etag.trim().is_empty() {
+            None
+        } else {
+            Some(head_etag)
+        };
+        let out = async_stream::try_stream! {
+            use tokio_stream::StreamExt as _;
+            let mut byte_stream = byte_stream;
+            let mut first = true;
+            while let Some(chunk) = byte_stream.next().await {
+                let data = chunk?;
+                if first {
+                    first = false;
+                    yield storage_pb::DownloadFileChunk {
+                        data: data.to_vec(),
+                        content_type: content_type.clone(),
+                        total_size,
+                        etag: etag.clone(),
+                    };
+                } else {
+                    yield storage_pb::DownloadFileChunk {
+                        data: data.to_vec(),
+                        ..Default::default()
+                    };
+                }
+            }
+            // Zero-byte object: still emit a single (empty) first chunk so the
+            // caller receives the first-chunk metadata.
+            if first {
+                yield storage_pb::DownloadFileChunk {
+                    data: Vec::new(),
+                    content_type,
+                    total_size,
+                    etag,
+                };
+            }
+        };
+        Ok(Response::new(Box::pin(out) as Self::DownloadFileStream))
     }
 
     /// Fetch a single file's metadata.

@@ -120,3 +120,58 @@ async fn live_postgres_storage_crud_roundtrip() {
 
     cleanup_native_service_db(&pool).await;
 }
+
+/// §1 read-after-write (13.7.1.2): the id `RegisterUpload`→`FinalizeUpload` returns
+/// is IMMEDIATELY gettable by `GetFile` on the SAME served path with the SAME tenant
+/// metadata. Reverting the storage finalize/get guarantee fails this assertion.
+#[tokio::test]
+#[ignore = "requires live Postgres; run with UDB_LIVE_AUTH_TESTS=1 cargo test --lib live_postgres_storage_read_after_write -- --ignored --nocapture"]
+async fn live_postgres_storage_read_after_write() {
+    let _guard = live_native_service_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_service_db(&pool).await;
+    let svc = storage_service(pool.clone()).await;
+    let tenant_id = Uuid::new_v4().to_string();
+
+    let reg = svc
+        .register_upload(Request::new(storage_pb::RegisterUploadRequest {
+            tenant_id: tenant_id.clone(),
+            filename: "ryw.pdf".to_string(),
+            content_type: "application/pdf".to_string(),
+            file_type: "PDF".to_string(),
+            size_bytes: 16,
+            ..Default::default()
+        }))
+        .await
+        .expect("register_upload")
+        .into_inner();
+    put_storage_object(&reg.object_key, "application/pdf", b"%PDF-udb-ryw01").await;
+    svc.finalize_upload(Request::new(storage_pb::FinalizeUploadRequest {
+        tenant_id: tenant_id.clone(),
+        file_id: reg.file_id.clone(),
+        content_type: "application/pdf".to_string(),
+        size_bytes: 16,
+        ..Default::default()
+    }))
+    .await
+    .expect("finalize_upload");
+
+    assert_create_then_get("RegisterUpload→GetFile", &reg.file_id, |id| {
+        let svc = &svc;
+        let tenant_id = tenant_id.clone();
+        async move {
+            let file = svc
+                .get_file(Request::new(storage_pb::GetFileRequest {
+                    tenant_id,
+                    file_id: id.clone(),
+                }))
+                .await?
+                .into_inner()
+                .file;
+            Ok(file.is_some_and(|f| f.file_id == id))
+        }
+    })
+    .await;
+
+    cleanup_native_service_db(&pool).await;
+}

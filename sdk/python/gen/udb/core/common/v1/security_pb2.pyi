@@ -192,6 +192,16 @@ METHOD_DEPENDENCY_CONTRACT_FIELD_NUMBER: _ClassVar[int]
 method_dependency_contract: _descriptor.FieldDescriptor
 OPERATION_KIND_FIELD_NUMBER: _ClassVar[int]
 operation_kind: _descriptor.FieldDescriptor
+METHOD_PRECONDITION_CONTRACT_FIELD_NUMBER: _ClassVar[int]
+method_precondition_contract: _descriptor.FieldDescriptor
+METHOD_READBACK_CONTRACT_FIELD_NUMBER: _ClassVar[int]
+method_readback_contract: _descriptor.FieldDescriptor
+METHOD_LIFECYCLE_CONTRACT_FIELD_NUMBER: _ClassVar[int]
+method_lifecycle_contract: _descriptor.FieldDescriptor
+METHOD_IDEMPOTENCY_CONTRACT_FIELD_NUMBER: _ClassVar[int]
+method_idempotency_contract: _descriptor.FieldDescriptor
+METHOD_ERROR_CONTRACT_FIELD_NUMBER: _ClassVar[int]
+method_error_contract: _descriptor.FieldDescriptor
 DB_TABLE_SECURITY_FIELD_NUMBER: _ClassVar[int]
 db_table_security: _descriptor.FieldDescriptor
 MESSAGE_EVENT_CONTRACT_FIELD_NUMBER: _ClassVar[int]
@@ -248,6 +258,81 @@ class EndpointSecurity(_message.Message):
     idempotency_required: bool
     request_context_required: bool
     def __init__(self, mode: _Optional[_Union[AuthMode, str]] = ..., roles: _Optional[_Iterable[str]] = ..., scopes: _Optional[_Iterable[str]] = ..., tenant_required: bool = ..., csrf_required: bool = ..., policy_ref: _Optional[str] = ..., internal_grpc_only: bool = ..., required_assurance_level: _Optional[int] = ..., allowed_credential_types: _Optional[_Iterable[_Union[CredentialType, str]]] = ..., rate_limit_policy_ref: _Optional[str] = ..., abuse_policy_ref: _Optional[str] = ..., audit_event_type: _Optional[str] = ..., decision_resource: _Optional[str] = ..., owner_field: _Optional[str] = ..., tenant_field: _Optional[str] = ..., project_field: _Optional[str] = ..., idempotency_required: bool = ..., request_context_required: bool = ...) -> None: ...
+
+class MethodPreconditionContract(_message.Message):
+    __slots__ = ("required_resources", "required_prior_result_fields", "required_source_states", "missing_code", "wrong_state_code")
+    REQUIRED_RESOURCES_FIELD_NUMBER: _ClassVar[int]
+    REQUIRED_PRIOR_RESULT_FIELDS_FIELD_NUMBER: _ClassVar[int]
+    REQUIRED_SOURCE_STATES_FIELD_NUMBER: _ClassVar[int]
+    MISSING_CODE_FIELD_NUMBER: _ClassVar[int]
+    WRONG_STATE_CODE_FIELD_NUMBER: _ClassVar[int]
+    required_resources: _containers.RepeatedScalarFieldContainer[str]
+    required_prior_result_fields: _containers.RepeatedScalarFieldContainer[str]
+    required_source_states: _containers.RepeatedScalarFieldContainer[str]
+    missing_code: str
+    wrong_state_code: str
+    def __init__(self, required_resources: _Optional[_Iterable[str]] = ..., required_prior_result_fields: _Optional[_Iterable[str]] = ..., required_source_states: _Optional[_Iterable[str]] = ..., missing_code: _Optional[str] = ..., wrong_state_code: _Optional[str] = ...) -> None: ...
+
+class ReadAfterWriteContract(_message.Message):
+    __slots__ = ("returned_id_field", "readback_rpc", "readback_request_field", "requires_read_fence", "requires_primary_read", "no_readback_reason")
+    RETURNED_ID_FIELD_FIELD_NUMBER: _ClassVar[int]
+    READBACK_RPC_FIELD_NUMBER: _ClassVar[int]
+    READBACK_REQUEST_FIELD_FIELD_NUMBER: _ClassVar[int]
+    REQUIRES_READ_FENCE_FIELD_NUMBER: _ClassVar[int]
+    REQUIRES_PRIMARY_READ_FIELD_NUMBER: _ClassVar[int]
+    NO_READBACK_REASON_FIELD_NUMBER: _ClassVar[int]
+    returned_id_field: str
+    readback_rpc: str
+    readback_request_field: str
+    requires_read_fence: bool
+    requires_primary_read: bool
+    no_readback_reason: str
+    def __init__(self, returned_id_field: _Optional[str] = ..., readback_rpc: _Optional[str] = ..., readback_request_field: _Optional[str] = ..., requires_read_fence: bool = ..., requires_primary_read: bool = ..., no_readback_reason: _Optional[str] = ...) -> None: ...
+
+class LifecycleContract(_message.Message):
+    __slots__ = ("entity", "legal_source_states", "target_state", "terminal_states", "input_consumed", "destructive")
+    ENTITY_FIELD_NUMBER: _ClassVar[int]
+    LEGAL_SOURCE_STATES_FIELD_NUMBER: _ClassVar[int]
+    TARGET_STATE_FIELD_NUMBER: _ClassVar[int]
+    TERMINAL_STATES_FIELD_NUMBER: _ClassVar[int]
+    INPUT_CONSUMED_FIELD_NUMBER: _ClassVar[int]
+    DESTRUCTIVE_FIELD_NUMBER: _ClassVar[int]
+    entity: str
+    legal_source_states: _containers.RepeatedScalarFieldContainer[str]
+    target_state: str
+    terminal_states: _containers.RepeatedScalarFieldContainer[str]
+    input_consumed: bool
+    destructive: bool
+    def __init__(self, entity: _Optional[str] = ..., legal_source_states: _Optional[_Iterable[str]] = ..., target_state: _Optional[str] = ..., terminal_states: _Optional[_Iterable[str]] = ..., input_consumed: bool = ..., destructive: bool = ...) -> None: ...
+
+class IdempotencyContract(_message.Message):
+    __slots__ = ("request_key_field", "server_generated_key", "duplicate_response_field", "replay_safe")
+    REQUEST_KEY_FIELD_FIELD_NUMBER: _ClassVar[int]
+    SERVER_GENERATED_KEY_FIELD_NUMBER: _ClassVar[int]
+    DUPLICATE_RESPONSE_FIELD_FIELD_NUMBER: _ClassVar[int]
+    REPLAY_SAFE_FIELD_NUMBER: _ClassVar[int]
+    request_key_field: str
+    server_generated_key: bool
+    duplicate_response_field: str
+    replay_safe: bool
+    def __init__(self, request_key_field: _Optional[str] = ..., server_generated_key: bool = ..., duplicate_response_field: _Optional[str] = ..., replay_safe: bool = ...) -> None: ...
+
+class ErrorContract(_message.Message):
+    __slots__ = ("cases",)
+    class ErrorCase(_message.Message):
+        __slots__ = ("canonical_code", "grpc_status", "retryable", "details_type")
+        CANONICAL_CODE_FIELD_NUMBER: _ClassVar[int]
+        GRPC_STATUS_FIELD_NUMBER: _ClassVar[int]
+        RETRYABLE_FIELD_NUMBER: _ClassVar[int]
+        DETAILS_TYPE_FIELD_NUMBER: _ClassVar[int]
+        canonical_code: str
+        grpc_status: str
+        retryable: bool
+        details_type: str
+        def __init__(self, canonical_code: _Optional[str] = ..., grpc_status: _Optional[str] = ..., retryable: bool = ..., details_type: _Optional[str] = ...) -> None: ...
+    CASES_FIELD_NUMBER: _ClassVar[int]
+    cases: _containers.RepeatedCompositeFieldContainer[ErrorContract.ErrorCase]
+    def __init__(self, cases: _Optional[_Iterable[_Union[ErrorContract.ErrorCase, _Mapping]]] = ...) -> None: ...
 
 class RestContract(_message.Message):
     __slots__ = ("response_envelope", "api_error", "pagination_meta", "explicit_nulls")

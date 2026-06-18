@@ -7,7 +7,7 @@
 
 <p align="center">
   <strong>UDB :: Universal Data Broker</strong><br>
-  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.3.5 | protocol v1.0.0</sub>
+  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.3.6 | protocol v1.0.0</sub>
 </p>
 <!-- UDB_BRAND_HEADER_END -->
 
@@ -18,13 +18,13 @@ version-matched CLI launcher.
 ## Install
 
 ```bash
-go get github.com/fahara02/udb/sdk/go@v0.3.5
+go get github.com/fahara02/udb/sdk/go@v0.3.6
 ```
 
 Install the `udb` CLI launcher:
 
 ```bash
-go install github.com/fahara02/udb/sdk/go/cmd/udb@v0.3.5
+go install github.com/fahara02/udb/sdk/go/cmd/udb@v0.3.6
 ```
 
 The launcher finds or downloads the matching UDB release binary, then forwards
@@ -103,6 +103,55 @@ if err != nil {
     panic(err)
 }
 ```
+
+## Storage (Upload And Download Files)
+
+The `Udb` facade (`udbclient.NewUdb`) exposes a `Storage` client. `UploadFile`
+runs the register → presigned PUT → finalize sequence in one call; downloads come
+in two flavours — a presigned URL (the happy path, bytes never transit the broker)
+and a server-streaming byte fetch (the 0.3.6 fallback for callers that cannot use
+a presigned HTTP URL).
+
+```go
+udb, err := udbclient.NewUdb(ctx, udbclient.Config{Target: "localhost:50051"})
+if err != nil {
+    panic(err)
+}
+defer udb.Close()
+
+// Log in and adopt the verified principal's canonical tenant/project.
+_, err = udb.LoginAndAdoptTenant(ctx, &authnv1.LoginRequest{
+    Username: "admin",
+    Password: "admin",
+})
+
+// Upload bytes (register -> presigned PUT -> finalize).
+up, err := udb.Storage.UploadFile(ctx, "greeting.txt", []byte("hello"),
+    udbclient.WithContentType("text/plain"))
+fileID := up.GetFile().GetFileId()
+
+// Preferred: mint a time-limited presigned download URL (bytes stay out of the broker).
+url, err := udb.Storage.DownloadFile(ctx, fileID, 15) // valid 15 minutes; 0 = server default
+
+// 0.3.6 fallback: stream the bytes back through the broker when a presigned URL
+// can't be used. Reassembles the server-streaming DownloadFile chunk stream.
+res, err := udb.Storage.DownloadFileBytes(ctx, fileID)
+_ = res.Data // full file bytes; res.ContentType / res.TotalSize / res.ETag carry metadata
+```
+
+The facade signatures are:
+
+```go
+func (f *StorageFacade) UploadFile(ctx context.Context, filename string, data []byte, opts ...UploadOption) (*storagev1.FinalizeUploadResponse, error)
+func (f *StorageFacade) DownloadFile(ctx context.Context, fileID string, expiresInMinutes int32) (*storagev1.GetDownloadUrlResponse, error)
+func (f *StorageFacade) DownloadFileBytes(ctx context.Context, fileID string, opts ...DownloadOption) (*DownloadResult, error)
+```
+
+Upload options: `WithContentType`, `WithFileType`, `WithChecksum`, `WithETag`.
+Download options: `WithDownloadChunkSize` (advisory server chunk size) and
+`WithMaxDownloadBytes` (caps the reassembled payload, failing closed before the
+buffer can grow past it). A full runnable program is in
+[`examples/storage`](examples/storage/main.go).
 
 ## Notes For Users
 

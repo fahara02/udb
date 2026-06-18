@@ -877,6 +877,8 @@ impl DataBrokerService {
                     run_id: req.run_id,
                     project_id: req.project_id,
                     state: "APPROVED".into(),
+                    approval_token: Some(token.clone()),
+                    applyable: Some(true),
                     ..Default::default()
                 });
                 response.metadata_mut().insert(

@@ -17,6 +17,7 @@ mod authn_redis_live;
 mod authn_security_live;
 mod authn_session_live;
 mod authn_user_live;
+mod authn_webauthn_noleak_live;
 mod authz_admin_live;
 mod authz_rbac_live;
 mod authz_rebac_live;

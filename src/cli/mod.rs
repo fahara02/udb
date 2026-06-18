@@ -1104,6 +1104,27 @@ fn native_docs_markdown(
     out
 }
 
+/// Root schema version for the committed native-contract JSON
+/// (`docs/generated/udb-native-contract.json`). Bump only on a breaking change
+/// to the JSON shape so older consumers can detect incompatibility; `serde`
+/// defaults let older artifacts (which lack this key) deserialize as `"0"`.
+const NATIVE_CONTRACT_SCHEMA_VERSION: &str = "1";
+
+/// Hex-encoded SHA-256 over the embedded `FileDescriptorSet` that feeds the
+/// contract manifest. The descriptor bytes are a deterministic compile-time
+/// artifact, so this hash is stable across runs of the same binary and lets a
+/// consumer detect a stale contract JSON without re-decoding the descriptor.
+fn embedded_descriptor_sha256() -> String {
+    use sha2::{Digest, Sha256};
+    let bytes = udb::runtime::native_catalog::embedded_file_descriptor_set();
+    let digest = Sha256::digest(bytes);
+    let mut hex = String::with_capacity(digest.len() * 2);
+    for byte in digest {
+        hex.push_str(&format!("{byte:02x}"));
+    }
+    hex
+}
+
 fn native_manifest_json(
     manifest: &udb::runtime::descriptor_manifest::DescriptorContractManifest,
 ) -> serde_json::Value {
@@ -1121,6 +1142,8 @@ fn native_manifest_json(
                         "method": rpc.method,
                         "path": rpc.grpc_path(),
                         "kind": rpc.kind(),
+                        "operation_kind": udb::runtime::descriptor_manifest::operation_kind_name(rpc.operation_kind),
+                        "read_only": rpc.operation_kind == 1,
                         "input": rpc.input_type,
                         "output": rpc.output_type,
                         "auth_mode": security.map(|s| s.auth_mode_name()).unwrap_or("unspecified"),
@@ -1135,6 +1158,11 @@ fn native_manifest_json(
                         "emits": rpc.emits.iter().map(emitted_event_json).collect::<Vec<_>>(),
                         "sdk_surface": rpc.sdk_surface.as_ref().map(sdk_surface_json),
                         "dependency_contract": rpc.dependency_contract.as_ref().map(dependency_contract_json),
+                        "precondition_contract": rpc.precondition_contract.as_ref().map(precondition_contract_json),
+                        "readback_contract": rpc.readback_contract.as_ref().map(readback_contract_json),
+                        "lifecycle_contract": rpc.lifecycle_contract.as_ref().map(lifecycle_contract_json),
+                        "idempotency_contract": rpc.idempotency_contract.as_ref().map(idempotency_contract_json),
+                        "error_contract": rpc.error_contract.as_ref().map(error_contract_json),
                         "http": rpc.http_rule.as_ref().map(|http| serde_json::json!({
                             "verb": http.verb,
                             "path": http.path,
@@ -1260,6 +1288,8 @@ fn native_manifest_json(
     });
 
     serde_json::json!({
+        "schema_version": NATIVE_CONTRACT_SCHEMA_VERSION,
+        "descriptor_sha256": embedded_descriptor_sha256(),
         "contract_version": udb::runtime::descriptor_diff::NATIVE_CONTRACT_VERSION,
         "udb_version": env!("CARGO_PKG_VERSION"),
         "protocol_version": udb::runtime::native_catalog::protocol_version(),
@@ -1285,6 +1315,72 @@ fn dependency_contract_json(
         "required_features": dependency.required_features,
         "required_env": dependency.required_env,
         "degraded_when_missing": dependency.degraded_when_missing,
+    })
+}
+
+fn precondition_contract_json(
+    contract: &udb::runtime::descriptor_manifest::MethodPreconditionContract,
+) -> serde_json::Value {
+    serde_json::json!({
+        "required_resources": contract.required_resources,
+        "required_prior_result_fields": contract.required_prior_result_fields,
+        "required_source_states": contract.required_source_states,
+        "missing_code": contract.missing_code,
+        "wrong_state_code": contract.wrong_state_code,
+    })
+}
+
+fn readback_contract_json(
+    contract: &udb::runtime::descriptor_manifest::ReadAfterWriteContract,
+) -> serde_json::Value {
+    serde_json::json!({
+        "returned_id_field": contract.returned_id_field,
+        "readback_rpc": contract.readback_rpc,
+        "readback_request_field": contract.readback_request_field,
+        "requires_read_fence": contract.requires_read_fence,
+        "requires_primary_read": contract.requires_primary_read,
+        "no_readback_reason": contract.no_readback_reason,
+    })
+}
+
+fn lifecycle_contract_json(
+    contract: &udb::runtime::descriptor_manifest::LifecycleContract,
+) -> serde_json::Value {
+    serde_json::json!({
+        "entity": contract.entity,
+        "legal_source_states": contract.legal_source_states,
+        "target_state": contract.target_state,
+        "terminal_states": contract.terminal_states,
+        "input_consumed": contract.input_consumed,
+        "destructive": contract.destructive,
+    })
+}
+
+fn idempotency_contract_json(
+    contract: &udb::runtime::descriptor_manifest::IdempotencyContract,
+) -> serde_json::Value {
+    serde_json::json!({
+        "request_key_field": contract.request_key_field,
+        "server_generated_key": contract.server_generated_key,
+        "duplicate_response_field": contract.duplicate_response_field,
+        "replay_safe": contract.replay_safe,
+    })
+}
+
+fn error_contract_json(
+    contract: &udb::runtime::descriptor_manifest::ErrorContract,
+) -> serde_json::Value {
+    serde_json::json!({
+        "cases": contract.cases.iter().map(error_case_json).collect::<Vec<_>>(),
+    })
+}
+
+fn error_case_json(case: &udb::runtime::descriptor_manifest::ErrorCase) -> serde_json::Value {
+    serde_json::json!({
+        "canonical_code": case.canonical_code,
+        "grpc_status": case.grpc_status,
+        "retryable": case.retryable,
+        "details_type": case.details_type,
     })
 }
 
@@ -1539,6 +1635,13 @@ fn native_contract_findings(
                     findings.push(serde_json::json!({
                         "severity": "warning",
                         "kind": "method_dependency_contract_missing",
+                        "rpc": rpc.grpc_path(),
+                    }));
+                }
+                if matches!(rpc.operation_kind, 2 | 3) && rpc.lifecycle_contract.is_none() {
+                    findings.push(serde_json::json!({
+                        "severity": "warning",
+                        "kind": "method_lifecycle_contract_missing",
                         "rpc": rpc.grpc_path(),
                     }));
                 }

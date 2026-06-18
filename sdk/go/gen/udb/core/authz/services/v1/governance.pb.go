@@ -25,10 +25,13 @@ const (
 )
 
 // The governance actor whose authorization is checked under
-// `native.authz.governance` for every governance mutation. Carries the scopes
-// the broker resolved for the caller so the service can require an explicit
-// `authz:admin` / `authz:policy:write` / `authz:role:write` capability rather
-// than trusting a bare bearer token.
+// `native.authz.governance` for every governance mutation. The AUTHORITATIVE
+// caller identity and scopes come from the verified claim (the bearer token),
+// NOT from this message. The `subject` / `scopes` / `roles` fields here are
+// accepted ONLY as cross-tenant-admin / impersonation TARGET hints; they never
+// grant capability and are ignored for authorizing the caller. The
+// `break_glass*` fields below are the only authoritative body fields on this
+// message (a short-TTL emergency bypass with a recorded reason).
 type GovernanceActor struct {
 	state     protoimpl.MessageState `protogen:"open.v1"`
 	Subject   string                 `protobuf:"bytes,1,opt,name=subject,proto3" json:"subject,omitempty"`

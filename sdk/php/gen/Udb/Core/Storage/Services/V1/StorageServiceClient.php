@@ -62,6 +62,24 @@ class StorageServiceClient extends \Grpc\BaseStub {
     }
 
     /**
+     * Stream a file's bytes directly through the broker. FALLBACK for clients
+     * that cannot use the presigned `GetDownloadUrl` HTTP GET (no egress to the
+     * object store, corporate proxy, etc.). The broker streams the object bytes
+     * in bounded chunks server-side; it never buffers the whole object.
+     * @param \Udb\Core\Storage\Services\V1\DownloadFileRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\ServerStreamingCall
+     */
+    public function DownloadFile(\Udb\Core\Storage\Services\V1\DownloadFileRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_serverStreamRequest('/udb.core.storage.services.v1.StorageService/DownloadFile',
+        $argument,
+        ['\Udb\Core\Storage\Services\V1\DownloadFileChunk', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
      * Get file metadata
      * @param \Udb\Core\Storage\Services\V1\GetFileRequest $argument input argument
      * @param array $metadata metadata

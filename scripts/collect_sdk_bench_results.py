@@ -92,6 +92,7 @@ def _parse_report(path: Path) -> dict[str, Any]:
     services: list[dict[str, Any]] = []
     slowest: list[dict[str, Any]] = []
     failures: list[dict[str, Any]] = []
+    full_rpcs: list[dict[str, Any]] = []
     section = ""
     headers: list[str] = []
 
@@ -107,6 +108,10 @@ def _parse_report(path: Path) -> dict[str, Any]:
         low = line.lower()
         if low.startswith("## per-service mean"):
             section = "services"
+            headers = []
+            continue
+        if low.startswith("## full per-rpc table"):
+            section = "full"
             headers = []
             continue
         if low.startswith("## slowest"):
@@ -165,6 +170,31 @@ def _parse_report(path: Path) -> dict[str, Any]:
                 "p99_ms": _duration_ms(row.get("p99_ms") or row.get("p99") or ""),
                 "mean_ms": _duration_ms(row.get("mean_ms") or row.get("mean") or ""),
             })
+        elif section == "full":
+            service = row.get("service")
+            rpc = row.get("rpc")
+            if not service or not rpc:
+                continue
+            iters = None
+            try:
+                raw_iters = row.get("iters") or row.get("iterations") or ""
+                iters = int(raw_iters) if raw_iters.strip() else None
+            except ValueError:
+                iters = None
+            full_rpcs.append({
+                "service": service,
+                "rpc": rpc,
+                "api": f"{service}/{rpc}",
+                "kind": row.get("kind", ""),
+                "err_code": _norm_err(row.get("err")),
+                "p50_ms": _duration_ms(row.get("p50_ms") or row.get("p50") or ""),
+                "p99_ms": _duration_ms(row.get("p99_ms") or row.get("p99") or ""),
+                "mean_ms": _duration_ms(row.get("mean_ms") or row.get("mean") or ""),
+                "min_ms": _duration_ms(row.get("min_ms") or row.get("min") or ""),
+                "max_ms": _duration_ms(row.get("max_ms") or row.get("max") or ""),
+                "iters": iters,
+                "note": row.get("note", ""),
+            })
 
     service_means = [s["mean_ms"] for s in services if isinstance(s.get("mean_ms"), (int, float))]
     # Authoritative failure set = the Failures subsection, unioned (by rpc) with any
@@ -191,12 +221,18 @@ def _parse_report(path: Path) -> dict[str, Any]:
         summary["mean_service_latency_ms"] = sum(service_means) / len(service_means)
         summary["slowest_service_mean_ms"] = max(service_means)
 
+    try:
+        report_path = str(path.relative_to(ROOT)).replace("\\", "/")
+    except ValueError:
+        report_path = str(path)
+
     parsed = {
         "summary": summary,
         "services": services,
         "slowest": slowest,
         "failed_rpcs": failed_rpcs,
-        "report_path": str(path.relative_to(ROOT)).replace("\\", "/"),
+        "full_rpcs": full_rpcs,
+        "report_path": report_path,
     }
     if harness_error:
         parsed["harness_error"] = harness_error[:2000]
@@ -334,7 +370,11 @@ def main() -> int:
     out = (ROOT / args.out).resolve()
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
-    print(f"wrote {out.relative_to(ROOT)}")
+    try:
+        display_out = out.relative_to(ROOT)
+    except ValueError:
+        display_out = out
+    print(f"wrote {display_out}")
     print(json.dumps(payload["summary"], indent=2))
     # This is a REPORTING step: per-SDK and per-RPC failures are DATA — they are
     # written to the JSON above and rendered on the dashboard, so they must NOT fail

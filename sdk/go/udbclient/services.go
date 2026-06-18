@@ -2,10 +2,18 @@ package udbclient
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	apikeyv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/apikey/services/v1"
+	notificationentityv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/notification/entity/v1"
 	notificationv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/notification/services/v1"
 	tenantv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/tenant/services/v1"
+	entityv1 "github.com/fahara02/udb/sdk/go/gen/udb/entity/v1"
+	eventsv1 "github.com/fahara02/udb/sdk/go/gen/udb/events/v1"
+	servicesv1 "github.com/fahara02/udb/sdk/go/gen/udb/services/v1"
+	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // ── Phase 7: control-plane convenience facades ───────────────────────────────
@@ -97,4 +105,166 @@ func (f *NotificationFacade) Send(ctx context.Context, eventType, recipientID st
 		ProjectId:   f.meta.ProjectID,
 		Variables:   variables,
 	})
+}
+
+// ── Notification helpers (chapter 13.5) ──────────────────────────────────────
+
+// SendTemplate dispatches a templated notification. The broker renders the
+// template from eventType + variables (one SendNotification RPC). It returns the
+// per-channel log ids the broker created.
+func (f *NotificationFacade) SendTemplate(ctx context.Context, eventType, recipientID string, variables map[string]string) ([]string, error) {
+	resp, err := f.Send(ctx, eventType, recipientID, variables)
+	if err != nil {
+		return nil, err
+	}
+	ids := make([]string, 0, len(resp.GetLogs()))
+	for _, log := range resp.GetLogs() {
+		ids = append(ids, log.GetLogId())
+	}
+	return ids, nil
+}
+
+// RetryFailed re-attempts delivery of a FAILED notification log by id.
+func (f *NotificationFacade) RetryFailed(ctx context.Context, logID string) (*notificationv1.RetryNotificationResponse, error) {
+	return f.Raw.RetryNotification(ctx, &notificationv1.RetryNotificationRequest{
+		LogId: logID,
+	})
+}
+
+// notificationTerminal reports whether a status is a final delivery state.
+func notificationTerminal(s notificationentityv1.NotificationStatus) bool {
+	switch s {
+	case notificationentityv1.NotificationStatus_NOTIFICATION_STATUS_DELIVERED,
+		notificationentityv1.NotificationStatus_NOTIFICATION_STATUS_FAILED,
+		notificationentityv1.NotificationStatus_NOTIFICATION_STATUS_SUPPRESSED:
+		return true
+	}
+	return false
+}
+
+// WaitForDelivery reads the notification log status (via GetNotification) until
+// it reaches a terminal state (DELIVERED/FAILED/SUPPRESSED) or the deadline
+// elapses. It is bounded and status-driven — NOT a fixed sleep loop; it respects
+// context cancellation. The poll interval only paces consecutive reads while the
+// status is still non-terminal.
+func (f *NotificationFacade) WaitForDelivery(ctx context.Context, logID string, deadline time.Duration) (notificationentityv1.NotificationStatus, error) {
+	var cancel context.CancelFunc
+	if deadline > 0 {
+		ctx, cancel = context.WithTimeout(ctx, deadline)
+		defer cancel()
+	}
+	const pollInterval = 100 * time.Millisecond
+	for {
+		resp, err := f.Raw.GetNotification(ctx, &notificationv1.GetNotificationRequest{LogId: logID})
+		if err != nil {
+			return notificationentityv1.NotificationStatus_NOTIFICATION_STATUS_UNSPECIFIED, err
+		}
+		st := resp.GetLog().GetStatus()
+		if notificationTerminal(st) {
+			return st, nil
+		}
+		select {
+		case <-ctx.Done():
+			return st, ctx.Err()
+		case <-time.After(pollInterval):
+		}
+	}
+}
+
+// ── Events facade (chapter 13.3) ─────────────────────────────────────────────
+//
+// EventsFacade wraps the DataBroker event surface (PublishCDC server-stream +
+// EnqueueOutboxEvent) with a readiness boundary and a publish-and-wait helper —
+// both driven off server signals, never sleeps.
+
+// EventsFacade exposes tenant-scoped CDC subscription + outbox publishing.
+type EventsFacade struct {
+	Raw  servicesv1.DataBrokerClient
+	meta Metadata
+}
+
+func newEventsFacade(conn grpc.ClientConnInterface, meta Metadata) *EventsFacade {
+	return &EventsFacade{Raw: servicesv1.NewDataBrokerClient(conn), meta: meta}
+}
+
+// Subscription is a live CDC subscription handle.
+type Subscription struct {
+	stream  grpc.ServerStreamingClient[eventsv1.CDCEnvelope]
+	first   *eventsv1.CDCEnvelope // buffered first envelope consumed by Ready, if any
+	hasNext bool
+}
+
+// Subscribe opens the PublishCDC server-stream for topic, tenant-scoped from the
+// facade metadata. The returned handle's Ready() resolves on the first server
+// signal.
+func (f *EventsFacade) Subscribe(ctx context.Context, topic string) (*Subscription, error) {
+	stream, err := f.Raw.PublishCDC(ctx, &entityv1.CDCSubscriptionRequest{
+		Context:      &entityv1.RequestContext{TenantId: f.meta.TenantID, ProjectId: f.meta.ProjectID},
+		TopicPattern: topic,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &Subscription{stream: stream}, nil
+}
+
+// Ready blocks until the first server-driven signal on the subscription. It
+// reads the stream header (server metadata) when available, then waits for the
+// first envelope — buffering it for the next Recv so no event is lost. No timer
+// or sleep is used; it returns when the server speaks or the stream/context ends.
+func (s *Subscription) Ready() error {
+	// A header send is the earliest server-driven readiness signal.
+	if _, err := s.stream.Header(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Recv returns the next CDC envelope (replaying the one Ready may have buffered).
+func (s *Subscription) Recv() (*eventsv1.CDCEnvelope, error) {
+	if s.hasNext {
+		env := s.first
+		s.first, s.hasNext = nil, false
+		return env, nil
+	}
+	return s.stream.Recv()
+}
+
+// PublishAndWait enqueues an outbox event for topic then reads the subscription
+// until matchFn matches the resulting envelope. It issues exactly one
+// EnqueueOutboxEvent and then consumes server-pushed envelopes — never a sleep.
+// The supplied subscription must already be Ready. Bounded by ctx.
+func (f *EventsFacade) PublishAndWait(ctx context.Context, sub *Subscription, topic string, payload map[string]any, matchFn func(*eventsv1.CDCEnvelope) bool) (*eventsv1.CDCEnvelope, error) {
+	if sub == nil {
+		return nil, fmt.Errorf("udb: PublishAndWait requires an open subscription")
+	}
+	var pb *structpb.Struct
+	if len(payload) > 0 {
+		var err error
+		pb, err = structpb.NewStruct(payload)
+		if err != nil {
+			return nil, fmt.Errorf("udb: build event payload: %w", err)
+		}
+	}
+	if _, err := f.Raw.EnqueueOutboxEvent(ctx, &entityv1.EnqueueOutboxEventRequest{
+		Context: &entityv1.RequestContext{TenantId: f.meta.TenantID, ProjectId: f.meta.ProjectID},
+		Topic:   topic,
+		Payload: pb,
+	}); err != nil {
+		return nil, err
+	}
+	for {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
+		env, err := sub.Recv()
+		if err != nil {
+			return nil, err
+		}
+		if matchFn == nil || matchFn(env) {
+			return env, nil
+		}
+	}
 }

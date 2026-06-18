@@ -119,6 +119,8 @@ public interface EnqueueOutboxEventRequestOrBuilder extends
    * <pre>
    * Caller-supplied idempotency key. If provided and a recent matching key exists
    * in Redis, the event is not re-enqueued and was_duplicate = true is returned.
+   * If the dedup store is unavailable, a keyed enqueue is refused (UNAVAILABLE)
+   * rather than risking a duplicate (fail-closed).
    * </pre>
    *
    * <code>string idempotency_key = 6 [json_name = "idempotencyKey"];</code>
@@ -129,6 +131,8 @@ public interface EnqueueOutboxEventRequestOrBuilder extends
    * <pre>
    * Caller-supplied idempotency key. If provided and a recent matching key exists
    * in Redis, the event is not re-enqueued and was_duplicate = true is returned.
+   * If the dedup store is unavailable, a keyed enqueue is refused (UNAVAILABLE)
+   * rather than risking a duplicate (fail-closed).
    * </pre>
    *
    * <code>string idempotency_key = 6 [json_name = "idempotencyKey"];</code>

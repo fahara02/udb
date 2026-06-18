@@ -12,7 +12,7 @@
 │    UNIVERSAL DATA BROKER                                                   │
 │    gRPC data plane | native control plane | tenant/project scope guard     │
 │                                                                            │
-│    crate v0.3.5 | protocol v1.0.0                                          │
+│    crate v0.3.6 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -20,16 +20,21 @@ UDB SDKs are language clients for a running UDB broker. They attach request
 metadata, expose common DataBroker helpers, provide native auth/authz clients,
 and include a version-matched `udb` CLI launcher.
 
-Current SDK release: `0.3.5`
+Current SDK release: `0.3.6`
 
 Current wire protocol: [`1.0.0`](UDB_PROTOCOL_VERSION)
 
-## 0.3.5 SDK Focus
+## 0.3.6 SDK Focus
 
-The 0.3.5 SDK cut tracks the native-store control-plane release. Generated
-clients were refreshed for Go, Python, TypeScript/Node, Java, C#, and
-PHP/Laravel so each language sees the same DataBroker, native-service, metadata,
-and version contract.
+The 0.3.6 SDK cut adds a workflow-oriented simple-client facade over the
+0.3.5 native-store control-plane surface (265 RPCs). Application code uses one
+`connect` + `loginAndAdoptTenant`, then `storage.uploadFile` /
+`downloadFileBytes`, `data.table(name).select({ where })`,
+`authz.allowRole(role, { resource, action })`, and `metadata.afterWrite(receipt)`
+for read-after-write — with replay-safe typed retries and automatic idempotency
+keys. The raw generated RPC clients stay available for admin tools and advanced
+callers; the simple layer is a thin typed workflow over the same served RPCs, not
+a second protocol.
 
 The CI story has two layers:
 
@@ -38,17 +43,18 @@ The CI story has two layers:
 - deep live broker coverage for the Go, TypeScript, Python, and PHP harnesses,
   including DataBroker RPCs, native auth, tenant/authz/API key flows,
   notification/analytics/storage/asset/WebRTC facades, and backend capability
-  checks.
+  checks. All four run the full-surface live perf bench green (0 failures /
+  265 RPCs) against real backends.
 
 ## Install
 
 | Language | Package | Install |
 |---|---|---|
-| Go | `github.com/fahara02/udb/sdk/go` | `go get github.com/fahara02/udb/sdk/go@v0.3.5` |
-| Python | `udb-client` | `pip install udb-client==0.3.5` |
-| TypeScript / Node | `@udb_plus/sdk` | `npm i @udb_plus/sdk@0.3.5` |
-| PHP / Laravel | `fahara02/udb-laravel` | `composer require fahara02/udb-laravel:^0.3.5` |
-| C# | `Udb.Client` | `dotnet add package Udb.Client --version 0.3.5` |
+| Go | `github.com/fahara02/udb/sdk/go` | `go get github.com/fahara02/udb/sdk/go@v0.3.6` |
+| Python | `udb-client` | `pip install udb-client==0.3.6` |
+| TypeScript / Node | `@udb_plus/sdk` | `npm i @udb_plus/sdk@0.3.6` |
+| PHP / Laravel | `fahara02/udb-laravel` | `composer require fahara02/udb-laravel:^0.3.6` |
+| C# | `Udb.Client` | `dotnet add package Udb.Client --version 0.3.6` |
 | Java | `dev.udb:udb-java-client` | build from checkout until Maven Central publishing lands |
 
 ## What Every SDK Provides
@@ -150,7 +156,7 @@ udb sdk generate --lang all
 
 Generated code should stay tied to:
 
-- crate/package version `0.3.5`;
+- crate/package version `0.3.6`;
 - protocol version `1.0.0`;
 - descriptor-derived RPC and service metadata;
 - the shared metadata contract used by every SDK.
@@ -172,7 +178,7 @@ Release flow:
 Consumer install command:
 
 ```bash
-composer require fahara02/udb-laravel:^0.3.5
+composer require fahara02/udb-laravel:^0.3.6
 ```
 
 The monorepo remains the source of truth for generated PHP code, tests, and

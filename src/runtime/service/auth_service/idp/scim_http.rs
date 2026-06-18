@@ -587,14 +587,24 @@ fn group_to_json(g: &idp_pb::ScimGroup) -> Value {
 
 fn user_response(status: u16, user: Option<idp_pb::ScimUser>) -> String {
     match user {
-        Some(u) => http_response(status, &user_to_json(&u).to_string()),
+        Some(u) => {
+            // RFC-7644 §3.1: a 201 Created must carry a Location header.
+            let location =
+                (status == 201 && !u.id.is_empty()).then(|| format!("/scim/v2/Users/{}", u.id));
+            http_response_with_location(status, &user_to_json(&u).to_string(), location)
+        }
         None => http_response(500, &scim_error(500, "empty SCIM user response")),
     }
 }
 
 fn group_response(status: u16, group: Option<idp_pb::ScimGroup>) -> String {
     match group {
-        Some(g) => http_response(status, &group_to_json(&g).to_string()),
+        Some(g) => {
+            // RFC-7644 §3.3: a 201 Created must carry a Location header.
+            let location =
+                (status == 201 && !g.id.is_empty()).then(|| format!("/scim/v2/Groups/{}", g.id));
+            http_response_with_location(status, &group_to_json(&g).to_string(), location)
+        }
         None => http_response(500, &scim_error(500, "empty SCIM group response")),
     }
 }
@@ -689,6 +699,12 @@ fn schemas() -> String {
 // ── raw HTTP/1.1 response helpers ─────────────────────────────────────────────
 
 fn http_response(status: u16, body: &str) -> String {
+    http_response_with_location(status, body, None)
+}
+
+/// Like [`http_response`] but emits a `Location` header (RFC-7644 §3.1/§3.3) when
+/// `location` is set — used for 201 Created responses pointing at the new resource.
+fn http_response_with_location(status: u16, body: &str, location: Option<String>) -> String {
     let reason = match status {
         200 => "OK",
         201 => "Created",
@@ -708,6 +724,10 @@ fn http_response(status: u16, body: &str) -> String {
     // RFC-7644 §3.3: a 401 must carry a WWW-Authenticate challenge.
     if status == 401 {
         head.push_str("www-authenticate: Bearer\r\n");
+    }
+    // RFC-7644 §3.1/§3.3: a 201 Created points at the new resource via Location.
+    if let Some(loc) = location {
+        head.push_str(&format!("location: {loc}\r\n"));
     }
     head.push_str("\r\n");
     head.push_str(body);

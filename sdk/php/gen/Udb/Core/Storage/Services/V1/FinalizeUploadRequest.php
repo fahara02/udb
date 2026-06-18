@@ -50,6 +50,20 @@ class FinalizeUploadRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>int64 size_bytes = 8 [json_name = "sizeBytes"];</code>
      */
     protected $size_bytes = 0;
+    /**
+     * Optional client-computed content checksum; persisted into File.checksum.
+     * Only verified/stored when present.
+     *
+     * Generated from protobuf field <code>optional string checksum = 9 [json_name = "checksum"];</code>
+     */
+    protected $checksum = null;
+    /**
+     * Optional client-observed object ETag; compared against the store's HEAD
+     * ETag when present (mismatch → FailedPrecondition / UPLOAD_SIZE_MISMATCH).
+     *
+     * Generated from protobuf field <code>optional string etag = 10 [json_name = "etag"];</code>
+     */
+    protected $etag = null;
 
     /**
      * Constructor.
@@ -67,6 +81,12 @@ class FinalizeUploadRequest extends \Google\Protobuf\Internal\Message
      *           Proto3 explicit presence: absent leaves the stored visibility unchanged.
      *     @type int|string $size_bytes
      *           Actual uploaded size in bytes, persisted on finalize.
+     *     @type string $checksum
+     *           Optional client-computed content checksum; persisted into File.checksum.
+     *           Only verified/stored when present.
+     *     @type string $etag
+     *           Optional client-observed object ETag; compared against the store's HEAD
+     *           ETag when present (mismatch → FailedPrecondition / UPLOAD_SIZE_MISMATCH).
      * }
      */
     public function __construct($data = NULL) {
@@ -264,6 +284,82 @@ class FinalizeUploadRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkInt64($var);
         $this->size_bytes = $var;
+
+        return $this;
+    }
+
+    /**
+     * Optional client-computed content checksum; persisted into File.checksum.
+     * Only verified/stored when present.
+     *
+     * Generated from protobuf field <code>optional string checksum = 9 [json_name = "checksum"];</code>
+     * @return string
+     */
+    public function getChecksum()
+    {
+        return isset($this->checksum) ? $this->checksum : '';
+    }
+
+    public function hasChecksum()
+    {
+        return isset($this->checksum);
+    }
+
+    public function clearChecksum()
+    {
+        unset($this->checksum);
+    }
+
+    /**
+     * Optional client-computed content checksum; persisted into File.checksum.
+     * Only verified/stored when present.
+     *
+     * Generated from protobuf field <code>optional string checksum = 9 [json_name = "checksum"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setChecksum($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->checksum = $var;
+
+        return $this;
+    }
+
+    /**
+     * Optional client-observed object ETag; compared against the store's HEAD
+     * ETag when present (mismatch → FailedPrecondition / UPLOAD_SIZE_MISMATCH).
+     *
+     * Generated from protobuf field <code>optional string etag = 10 [json_name = "etag"];</code>
+     * @return string
+     */
+    public function getEtag()
+    {
+        return isset($this->etag) ? $this->etag : '';
+    }
+
+    public function hasEtag()
+    {
+        return isset($this->etag);
+    }
+
+    public function clearEtag()
+    {
+        unset($this->etag);
+    }
+
+    /**
+     * Optional client-observed object ETag; compared against the store's HEAD
+     * ETag when present (mismatch → FailedPrecondition / UPLOAD_SIZE_MISMATCH).
+     *
+     * Generated from protobuf field <code>optional string etag = 10 [json_name = "etag"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setEtag($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->etag = $var;
 
         return $this;
     }

@@ -22,6 +22,7 @@
       <a href="./enterprise.html">Enterprise</a>
       <a href="./sdks.html">SDKs</a>
       <a class="active" href="./benchmarks.html">Benchmarks</a>
+      <a href="./api.html">API</a>
       <a href="./playground.html">Playground</a>
       <a class="nav-cta" href="https://github.com/fahara02/udb">GitHub ↗</a>
     </nav>
@@ -50,50 +51,98 @@
         <div class="bench-kpis" id="bench-kpis"></div>
       </div>
 
-      <div class="bench-chart-card mt28">
+      <section class="bench-section mt28" aria-labelledby="main-performance-title">
         <div class="bench-chart-head">
           <div>
-            <h3>SDK latency trend</h3>
+            <h3 id="main-performance-title">Main performance graph</h3>
             <p>Mean service latency in milliseconds. Lower is better.</p>
           </div>
           <a class="btn ghost" href="./bench-results.json">Raw JSON</a>
         </div>
         <svg id="bench-curve" class="bench-curve" viewBox="0 0 980 360" role="img" aria-label="SDK benchmark latency curves"></svg>
-      </div>
+        <div id="bench-sdk-grid" class="bench-sdk-grid mt28"></div>
 
-      <div id="bench-sdk-grid" class="bench-sdk-grid mt28"></div>
+        <div class="tablewrap mt28">
+          <table>
+            <thead>
+              <tr>
+                <th>SDK</th>
+                <th>Status</th>
+                <th>RPCs</th>
+                <th>Services</th>
+                <th>Mean service latency</th>
+                <th>Slowest service mean</th>
+              </tr>
+            </thead>
+            <tbody id="bench-summary-rows"></tbody>
+          </table>
+        </div>
+      </section>
 
-      <div class="tablewrap mt28">
-        <table>
-          <thead>
-            <tr>
-              <th>SDK</th>
-              <th>Status</th>
-              <th>RPCs</th>
-              <th>Services</th>
-              <th>Mean service latency</th>
-              <th>Slowest service mean</th>
-            </tr>
-          </thead>
-          <tbody id="bench-summary-rows"></tbody>
-        </table>
-      </div>
+      <section class="bench-section mt28" aria-labelledby="worst-performance-title">
+        <div class="bench-chart-head">
+          <div>
+            <h3 id="worst-performance-title">Worst performer table</h3>
+            <p>Failures first, then highest p99 latency across published SDK reports.</p>
+          </div>
+        </div>
+        <div class="tablewrap">
+          <table>
+            <thead>
+              <tr>
+                <th>SDK</th>
+                <th>RPC</th>
+                <th>Kind</th>
+                <th>p50</th>
+                <th>p99</th>
+                <th>Mean</th>
+              </tr>
+            </thead>
+            <tbody id="bench-slowest-rows"></tbody>
+          </table>
+        </div>
+      </section>
 
-      <div class="tablewrap mt28">
-        <table>
-          <thead>
-            <tr>
-              <th>SDK</th>
-              <th>RPC</th>
-              <th>Kind</th>
-              <th>p50</th>
-              <th>p99</th>
-              <th>Mean</th>
-            </tr>
-          </thead>
-          <tbody id="bench-slowest-rows"></tbody>
-        </table>
-      </div>
+      <section class="bench-section mt28" aria-labelledby="full-performance-title">
+        <div class="bench-chart-head">
+          <div>
+            <h3 id="full-performance-title">Full performance data</h3>
+            <p>Select any number of SDK languages and APIs. Empty selections mean all rows.</p>
+          </div>
+        </div>
+        <div class="bench-controls">
+          <label>SDK language
+            <select id="bench-sdk-filter" multiple size="6"></select>
+          </label>
+          <label>API
+            <select id="bench-api-filter" multiple size="8"></select>
+          </label>
+          <label>Search
+            <input id="bench-search" type="search" placeholder="Filter service, RPC, kind, note">
+          </label>
+        </div>
+        <div class="bench-table-meta" id="bench-full-meta"></div>
+        <div class="tablewrap bench-full-table">
+          <table>
+            <thead>
+              <tr>
+                <th>SDK</th>
+                <th>API</th>
+                <th>Kind</th>
+                <th>Status</th>
+                <th>p50</th>
+                <th>p99</th>
+                <th>Mean</th>
+                <th>Min</th>
+                <th>Max</th>
+                <th>Iters</th>
+                <th>Note</th>
+              </tr>
+            </thead>
+            <tbody id="bench-full-rows"></tbody>
+          </table>
+        </div>
+      </section>
     </div>
   </section>
 </main>
@@ -102,7 +151,7 @@
   <div class="wrap foot">
     <div><b>UDB</b><br><small>Universal Data Broker</small></div>
     <div class="foot-links">
-      <a href="./architecture.html">Architecture</a><a href="./sdks.html">SDKs</a><a href="./benchmarks.html">Benchmarks</a><a href="./playground.html">Playground</a><a href="https://github.com/fahara02/udb">GitHub</a>
+      <a href="./architecture.html">Architecture</a><a href="./sdks.html">SDKs</a><a href="./benchmarks.html">Benchmarks</a><a href="./api.html">API</a><a href="./playground.html">Playground</a><a href="https://github.com/fahara02/udb">GitHub</a>
     </div>
   </div>
 </footer>

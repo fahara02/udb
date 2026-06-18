@@ -38,6 +38,38 @@ const PIPELINE_DEFINITION_MSG: &str = "udb.core.asset.entity.v1.PipelineDefiniti
 const PIPELINE_INSTANCE_MSG: &str = "udb.core.asset.entity.v1.PipelineInstance";
 const PIPELINE_STEP_MSG: &str = "udb.core.asset.entity.v1.PipelineStep";
 
+// ── stable machine-readable error reasons ─────────────────────────────────────
+// Attached to the matching pipeline failures so SDK callers can branch on a
+// stable code instead of parsing human text. The gRPC Status *code* is left
+// unchanged at each site. The repo has no `google.rpc.ErrorInfo` status-detail
+// infrastructure, so non-OK statuses carry the reason on the `error-reason`
+// metadata trailer (uniform with the storage/webrtc/notification services); the
+// OK "already started" return carries it in its response `message` body field.
+/// The pipeline definition is structurally invalid (e.g. its persisted step
+/// list is not valid JSON).
+const PIPELINE_DEFINITION_INVALID: &str = "PIPELINE_DEFINITION_INVALID";
+/// A definition step declares a `type` the runtime does not support.
+const STEP_TYPE_UNSUPPORTED: &str = "STEP_TYPE_UNSUPPORTED";
+/// Reserved: the source asset/file required by a step is missing. No hard
+/// failure site exists today (a missing asset yields empty step inputs), so this
+/// is held for the future byte-step "source object not found" path.
+#[allow(dead_code)]
+const ASSET_FILE_MISSING: &str = "ASSET_FILE_MISSING";
+/// A concurrent start with the same correlation id won the race; the existing
+/// instance is returned instead of starting a new pipeline.
+const PIPELINE_ALREADY_STARTED: &str = "PIPELINE_ALREADY_STARTED";
+
+/// Attach a stable machine-readable `reason` to a non-OK gRPC `Status` via the
+/// `error-reason` metadata trailer — uniform with the storage/webrtc/notification
+/// services (a non-OK status is trailers-only, so the sub-code rides a trailer).
+fn status_with_reason(mut status: Status, reason: &'static str) -> Status {
+    status.metadata_mut().insert(
+        "error-reason",
+        tonic::metadata::MetadataValue::from_static(reason),
+    );
+    status
+}
+
 /// Vector collection EMBED-step vectors are upserted into, when not overridden by
 /// `UDB_ASSET_VECTOR_COLLECTION`.
 const DEFAULT_VECTOR_COLLECTION: &str = "udb_asset_embeddings";
@@ -1487,8 +1519,12 @@ impl AssetService for AssetServiceImpl {
                     .map_err(|e| Status::internal(format!("decode instance id failed: {e}")))?;
                 return Ok(Response::new(asset_pb::StartPipelineResponse {
                     instance_id,
-                    message: "pipeline already started".to_string(),
+                    message: format!("pipeline already started [{PIPELINE_ALREADY_STARTED}]"),
                     error: None,
+                    // Idempotent hit: only the existing instance id is in scope.
+                    // Steps are left empty to avoid an extra round-trip; callers
+                    // wanting them for an already-running instance call GetPipeline.
+                    steps: Vec::new(),
                 }));
             }
         }
@@ -1510,8 +1546,12 @@ impl AssetService for AssetServiceImpl {
             Some(s) => s,
             None => return Err(Status::not_found("pipeline definition not found")),
         };
-        let parsed: serde_json::Value = serde_json::from_str(&steps_json)
-            .map_err(|e| Status::internal(format!("pipeline definition steps not JSON: {e}")))?;
+        let parsed: serde_json::Value = serde_json::from_str(&steps_json).map_err(|e| {
+            status_with_reason(
+                Status::internal(format!("pipeline definition steps not JSON: {e}")),
+                PIPELINE_DEFINITION_INVALID,
+            )
+        })?;
         let step_array: Vec<serde_json::Value> = match parsed {
             serde_json::Value::Array(a) => a,
             _ => Vec::new(),
@@ -1575,12 +1615,20 @@ impl AssetService for AssetServiceImpl {
                         .map_err(|e| Status::internal(format!("decode instance id failed: {e}")))?;
                     return Ok(Response::new(asset_pb::StartPipelineResponse {
                         instance_id: id,
-                        message: "pipeline already started".to_string(),
+                        message: format!("pipeline already started [{PIPELINE_ALREADY_STARTED}]"),
                         error: None,
+                        // Race branch: only the existing instance id is in scope.
+                        // Reading its steps would cost an extra round-trip, so the
+                        // step list is left empty here; callers wanting steps for an
+                        // already-running instance call GetPipeline.
+                        steps: Vec::new(),
                     }));
                 }
             }
-            return Err(Status::internal(format!("start pipeline failed: {err}")));
+            return Err(crate::runtime::executor_utils::sqlx_error_to_status(
+                "start pipeline failed",
+                &err,
+            ));
         }
 
         // Pipeline started → emit the lifecycle event.
@@ -1629,11 +1677,19 @@ impl AssetService for AssetServiceImpl {
             asset_inputs.unwrap_or_default();
         let asset_metadata = self.decrypt_native_json_state(&asset_metadata)?;
 
+        // Accumulate the materialized steps so the response can return them
+        // inline (mirrors GetPipelineResponse.steps) without a follow-up read.
+        let mut response_steps: Vec<asset_entity_pb::PipelineStep> =
+            Vec::with_capacity(step_array.len());
+
         // Materialize each step, RUN it in-process, and record the outcome.
         for el in &step_array {
             let step_name = el.get("name").and_then(|v| v.as_str()).unwrap_or("");
             let step_type_str = el.get("type").and_then(|v| v.as_str()).unwrap_or("");
-            let step_type = step_type_to_db(step_type_str, "EMBED")?;
+            let step_type = step_type_to_db(step_type_str, "EMBED").map_err(|e| {
+                // Same Status code; only add the stable reason for SDK branching.
+                status_with_reason(e, STEP_TYPE_UNSUPPORTED)
+            })?;
             let step_type_i32 = step_type_from_db(&step_type);
             let step_id = Uuid::new_v4().to_string();
 
@@ -1718,7 +1774,31 @@ impl AssetService for AssetServiceImpl {
             .bind(&error_text)
             .execute(pool)
             .await
-            .map_err(|err| Status::internal(format!("create pipeline step failed: {err}")))?;
+            .map_err(|err| {
+                crate::runtime::executor_utils::sqlx_error_to_status(
+                    "create pipeline step failed",
+                    &err,
+                )
+            })?;
+
+            // Mirror the persisted row into the response. The plaintext result /
+            // error come straight from `outcome` (the same values the row holds,
+            // pre-encryption), matching what GetPipeline returns after decrypt.
+            let (step_result_plain, step_error_plain) = match &outcome {
+                StepOutcome::Completed(v) => (v.to_string(), String::new()),
+                StepOutcome::Failed(msg) => ("{}".to_string(), msg.clone()),
+            };
+            response_steps.push(asset_entity_pb::PipelineStep {
+                step_id: step_id.clone(),
+                instance_id: instance_id.clone(),
+                tenant_id: req.tenant_id.clone(),
+                step_name: step_name.to_string(),
+                step_type: step_type_i32,
+                status: step_status_from_db(status_token),
+                result: step_result_plain,
+                error: step_error_plain,
+                ..Default::default()
+            });
 
             emit_payload_event(
                 pool,
@@ -1746,6 +1826,7 @@ impl AssetService for AssetServiceImpl {
             instance_id,
             message: "pipeline started".to_string(),
             error: None,
+            steps: response_steps,
         }))
     }
 

@@ -14,6 +14,7 @@ on:
     paths:
       - "docs/site/**"
       - "docs/assets/**"
+      - "api/**"
       - "crates/udb-portable/**"
       - "crates/udb-wasm/**"
       - "src/backend/kind.rs"
@@ -47,6 +48,10 @@ jobs:
         run: |
           mkdir -p docs/site/assets
           cp -v docs/assets/*.svg docs/site/assets/
+      - name: Publish Swagger API document
+        run: |
+          mkdir -p docs/site/api
+          cp -v api/*.json docs/site/api/
       - name: Preserve published benchmark results
         run: |
           curl -fsSL "https://${GITHUB_REPOSITORY_OWNER}.github.io/udb/bench-results.json" \
@@ -56,13 +61,23 @@ jobs:
           rustup target add wasm32-unknown-unknown
           cargo build -p udb-wasm --release --target wasm32-unknown-unknown
           cp -v target/wasm32-unknown-unknown/release/udb_wasm.wasm docs/site/udb.wasm
-      - name: Sanity-check the site
+      - name: Verify site artifact contract
         run: |
           test -f docs/site/index.html
           test -f docs/site/playground.html
           test -f docs/site/styles.css
           test -f docs/site/udb.wasm
           test -f docs/site/assets/udb_logo.svg
+          test -f docs/site/api.html
+          test -f docs/site/api/udb-broker.swagger.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          swagger = json.loads(Path("docs/site/api/udb-broker.swagger.json").read_text())
+          assert swagger.get("swagger") == "2.0", "published Swagger JSON is not Swagger 2.0"
+          assert swagger.get("paths"), "published Swagger JSON has no API paths"
+          PY
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

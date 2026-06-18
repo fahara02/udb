@@ -18,6 +18,15 @@ class SendPhoneVerificationResponse extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string otp_id = 1 [json_name = "otpId"];</code>
      */
     protected $otp_id = '';
+    /**
+     * Dev-only echo of the plaintext PHONE_VERIFICATION OTP code, populated ONLY when
+     * the broker runs with UDB_OTP_DEV_ECHO=1 (non-production posture). Empty in
+     * production. Lets conformance harnesses complete VerifyOTP without an SMS
+     * delivery channel. bug_report.md F/Lane-2.
+     *
+     * Generated from protobuf field <code>string dev_otp_code = 2 [json_name = "devOtpCode"];</code>
+     */
+    protected $dev_otp_code = '';
 
     /**
      * Constructor.
@@ -26,6 +35,11 @@ class SendPhoneVerificationResponse extends \Google\Protobuf\Internal\Message
      *     Optional. Data for populating the Message object.
      *
      *     @type string $otp_id
+     *     @type string $dev_otp_code
+     *           Dev-only echo of the plaintext PHONE_VERIFICATION OTP code, populated ONLY when
+     *           the broker runs with UDB_OTP_DEV_ECHO=1 (non-production posture). Empty in
+     *           production. Lets conformance harnesses complete VerifyOTP without an SMS
+     *           delivery channel. bug_report.md F/Lane-2.
      * }
      */
     public function __construct($data = NULL) {
@@ -51,6 +65,38 @@ class SendPhoneVerificationResponse extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, True);
         $this->otp_id = $var;
+
+        return $this;
+    }
+
+    /**
+     * Dev-only echo of the plaintext PHONE_VERIFICATION OTP code, populated ONLY when
+     * the broker runs with UDB_OTP_DEV_ECHO=1 (non-production posture). Empty in
+     * production. Lets conformance harnesses complete VerifyOTP without an SMS
+     * delivery channel. bug_report.md F/Lane-2.
+     *
+     * Generated from protobuf field <code>string dev_otp_code = 2 [json_name = "devOtpCode"];</code>
+     * @return string
+     */
+    public function getDevOtpCode()
+    {
+        return $this->dev_otp_code;
+    }
+
+    /**
+     * Dev-only echo of the plaintext PHONE_VERIFICATION OTP code, populated ONLY when
+     * the broker runs with UDB_OTP_DEV_ECHO=1 (non-production posture). Empty in
+     * production. Lets conformance harnesses complete VerifyOTP without an SMS
+     * delivery channel. bug_report.md F/Lane-2.
+     *
+     * Generated from protobuf field <code>string dev_otp_code = 2 [json_name = "devOtpCode"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setDevOtpCode($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->dev_otp_code = $var;
 
         return $this;
     }

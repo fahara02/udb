@@ -29,6 +29,11 @@ class StorageServiceStub(object):
                 request_serializer=udb_dot_core_dot_storage_dot_services_dot_v1_dot_storage__service__pb2.GetDownloadUrlRequest.SerializeToString,
                 response_deserializer=udb_dot_core_dot_storage_dot_services_dot_v1_dot_storage__service__pb2.GetDownloadUrlResponse.FromString,
                 _registered_method=True)
+        self.DownloadFile = channel.unary_stream(
+                '/udb.core.storage.services.v1.StorageService/DownloadFile',
+                request_serializer=udb_dot_core_dot_storage_dot_services_dot_v1_dot_storage__service__pb2.DownloadFileRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_storage_dot_services_dot_v1_dot_storage__service__pb2.DownloadFileChunk.FromString,
+                _registered_method=True)
         self.GetFile = channel.unary_unary(
                 '/udb.core.storage.services.v1.StorageService/GetFile',
                 request_serializer=udb_dot_core_dot_storage_dot_services_dot_v1_dot_storage__service__pb2.GetFileRequest.SerializeToString,
@@ -70,6 +75,16 @@ class StorageServiceServicer(object):
 
     def GetDownloadUrl(self, request, context):
         """Get a pre-signed download URL for a file
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def DownloadFile(self, request, context):
+        """Stream a file's bytes directly through the broker. FALLBACK for clients
+        that cannot use the presigned `GetDownloadUrl` HTTP GET (no egress to the
+        object store, corporate proxy, etc.). The broker streams the object bytes
+        in bounded chunks server-side; it never buffers the whole object.
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -120,6 +135,11 @@ def add_StorageServiceServicer_to_server(servicer, server):
                     servicer.GetDownloadUrl,
                     request_deserializer=udb_dot_core_dot_storage_dot_services_dot_v1_dot_storage__service__pb2.GetDownloadUrlRequest.FromString,
                     response_serializer=udb_dot_core_dot_storage_dot_services_dot_v1_dot_storage__service__pb2.GetDownloadUrlResponse.SerializeToString,
+            ),
+            'DownloadFile': grpc.unary_stream_rpc_method_handler(
+                    servicer.DownloadFile,
+                    request_deserializer=udb_dot_core_dot_storage_dot_services_dot_v1_dot_storage__service__pb2.DownloadFileRequest.FromString,
+                    response_serializer=udb_dot_core_dot_storage_dot_services_dot_v1_dot_storage__service__pb2.DownloadFileChunk.SerializeToString,
             ),
             'GetFile': grpc.unary_unary_rpc_method_handler(
                     servicer.GetFile,
@@ -223,6 +243,33 @@ class StorageService(object):
             '/udb.core.storage.services.v1.StorageService/GetDownloadUrl',
             udb_dot_core_dot_storage_dot_services_dot_v1_dot_storage__service__pb2.GetDownloadUrlRequest.SerializeToString,
             udb_dot_core_dot_storage_dot_services_dot_v1_dot_storage__service__pb2.GetDownloadUrlResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def DownloadFile(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_stream(
+            request,
+            target,
+            '/udb.core.storage.services.v1.StorageService/DownloadFile',
+            udb_dot_core_dot_storage_dot_services_dot_v1_dot_storage__service__pb2.DownloadFileRequest.SerializeToString,
+            udb_dot_core_dot_storage_dot_services_dot_v1_dot_storage__service__pb2.DownloadFileChunk.FromString,
             options,
             channel_credentials,
             insecure,

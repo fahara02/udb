@@ -42,6 +42,8 @@ pub struct SystemCatalogConfig {
     pub projects_table: String,
     // U3 — Projection materialization engine
     pub projection_tasks_table: String,
+    // KEYSTONE (lane 05) — durable idempotency dedup for keyed data-plane mutations
+    pub idempotency_keys_table: String,
 }
 
 impl Default for SystemCatalogConfig {
@@ -133,6 +135,14 @@ impl SystemCatalogConfig {
                 &config.system_catalog.projection_tasks_table,
                 &defaults.projection_tasks_table,
             ),
+            // KEYSTONE (lane 05): the dedup relation is not part of the legacy
+            // `SystemCatalogSettings` config block, so it is resolved straight
+            // from its env var / default here (single-sourced with
+            // `from_env_uninstalled`), avoiding a cross-lane config-struct edit.
+            idempotency_keys_table: env_identifier(
+                "UDB_IDEMPOTENCY_KEYS_TABLE",
+                "udb_idempotency_keys",
+            ),
         }
     }
 
@@ -177,6 +187,10 @@ impl SystemCatalogConfig {
                 "UDB_PROJECTION_TASKS_TABLE",
                 "udb_projection_tasks",
             ),
+            idempotency_keys_table: env_identifier(
+                "UDB_IDEMPOTENCY_KEYS_TABLE",
+                "udb_idempotency_keys",
+            ),
         }
     }
 
@@ -201,7 +215,7 @@ impl SystemCatalogConfig {
         relation(&self.abac_schema, &self.abac_table)
     }
 
-    fn saga_relation(&self) -> String {
+    pub(crate) fn saga_relation(&self) -> String {
         relation(&self.cdc.system_schema, &self.saga_table)
     }
 
@@ -260,6 +274,10 @@ impl SystemCatalogConfig {
 
     pub(crate) fn projection_tasks_relation(&self) -> String {
         relation(&self.cdc.system_schema, &self.projection_tasks_table)
+    }
+
+    pub(crate) fn idempotency_keys_relation(&self) -> String {
+        relation(&self.cdc.system_schema, &self.idempotency_keys_table)
     }
 }
 
@@ -473,6 +491,12 @@ fn expected_relations(config: &SystemCatalogConfig) -> Vec<ExpectedRelation> {
             "projection_tasks",
             &config.cdc.system_schema,
             &config.projection_tasks_table,
+        ),
+        // KEYSTONE (lane 05) — durable idempotency dedup keys
+        expected_relation(
+            "idempotency_keys",
+            &config.cdc.system_schema,
+            &config.idempotency_keys_table,
         ),
     ];
 
@@ -1171,6 +1195,29 @@ fn system_catalog_statements(config: &SystemCatalogConfig) -> Vec<String> {
             qi(&format!("idx_{}_next_retry", config.projection_tasks_table)),
             config.projection_tasks_relation()
         ),
+        // KEYSTONE (lane 05) — durable, tenant+project-scoped dedup for keyed
+        // data-plane mutations. `dedup_key` is the salted SHA-256 of
+        // (tenant_id, project_id, message_type, idempotency_key) so the PRIMARY KEY
+        // itself enforces per-tenant+project+type uniqueness; `response_json` carries
+        // the first writer's MutationResponse summary so a replay returns the
+        // original body (not an empty one) without re-running the write.
+        format!(
+            "CREATE TABLE IF NOT EXISTS {} (
+                dedup_key TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                project_id TEXT NOT NULL,
+                message_type TEXT NOT NULL,
+                operation TEXT NOT NULL,
+                response_json JSONB NOT NULL DEFAULT '{{}}'::jsonb,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )",
+            config.idempotency_keys_relation()
+        ),
+        format!(
+            "CREATE INDEX IF NOT EXISTS {} ON {} (tenant_id, project_id, created_at)",
+            qi(&format!("idx_{}_tenant_created", config.idempotency_keys_table)),
+            config.idempotency_keys_relation()
+        ),
     ]);
     // UDB-owned native-service tables are migrated through the normal proto →
     // manifest → diff/apply engine (see `run_startup_lifecycle`, which merges the
@@ -1281,6 +1328,7 @@ mod tests {
             "admin_audit_log",
             "projects",
             "projection_tasks",
+            "idempotency_keys",
             "native_udb_authn_users",
             "native_udb_authn_sessions",
             "native_udb_authn_otps",

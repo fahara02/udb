@@ -13,7 +13,7 @@
 │    UNIVERSAL DATA BROKER                                                   │
 │    gRPC data plane | native control plane | tenant/project scope guard     │
 │                                                                            │
-│    crate v0.3.5 | protocol v1.0.0                                          │
+│    crate v0.3.6 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 UDB is a Rust gRPC broker that turns protobuf domain schemas into a runtime
@@ -90,7 +90,7 @@ support that operation. Unsupported or degraded paths fail before side effects.
 
 ## Data Plane
 
-`DataBroker` exposes 76 RPCs for:
+`DataBroker` exposes 77 RPCs for:
 
 - relational CRUD and batch operations;
 - streaming record sets;
@@ -173,7 +173,7 @@ behind capability checks.
 ## Native Control Plane
 
 The native control plane is served on a separate listener. It contains 15
-services and 186 native RPCs for identity, access control, storage, assets,
+services and 187 native RPCs for identity, access control, storage, assets,
 WebRTC, tenancy, notifications, analytics, and policy distribution.
 
 See [native-services.md](native-services.md).

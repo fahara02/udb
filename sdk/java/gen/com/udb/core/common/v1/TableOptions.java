@@ -47,6 +47,7 @@ private static final long serialVersionUID = 0L;
     replicaHint_ = "";
     cdcTopic_ = "";
     requiredScope_ = "";
+    nativeServiceId_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -1208,6 +1209,53 @@ private static final long serialVersionUID = 0L;
     return vectorStore_ == null ? com.udb.core.common.v1.VectorStoreOptions.getDefaultInstance() : vectorStore_;
   }
 
+  public static final int NATIVE_SERVICE_ID_FIELD_NUMBER = 33;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object nativeServiceId_ = "";
+  /**
+   * <pre>
+   * native_service_id: which native service owns this internal table.
+   * </pre>
+   *
+   * <code>string native_service_id = 33 [json_name = "nativeServiceId"];</code>
+   * @return The nativeServiceId.
+   */
+  @java.lang.Override
+  public java.lang.String getNativeServiceId() {
+    java.lang.Object ref = nativeServiceId_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      nativeServiceId_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * native_service_id: which native service owns this internal table.
+   * </pre>
+   *
+   * <code>string native_service_id = 33 [json_name = "nativeServiceId"];</code>
+   * @return The bytes for nativeServiceId.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getNativeServiceIdBytes() {
+    java.lang.Object ref = nativeServiceId_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      nativeServiceId_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -1317,6 +1365,9 @@ private static final long serialVersionUID = 0L;
     }
     if (((bitField0_ & 0x00000001) != 0)) {
       output.writeMessage(32, getVectorStore());
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(nativeServiceId_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 33, nativeServiceId_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -1444,6 +1495,9 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(32, getVectorStore());
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(nativeServiceId_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(33, nativeServiceId_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -1525,6 +1579,8 @@ private static final long serialVersionUID = 0L;
       if (!getVectorStore()
           .equals(other.getVectorStore())) return false;
     }
+    if (!getNativeServiceId()
+        .equals(other.getNativeServiceId())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -1624,6 +1680,8 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + VECTOR_STORE_FIELD_NUMBER;
       hash = (53 * hash) + getVectorStore().hashCode();
     }
+    hash = (37 * hash) + NATIVE_SERVICE_ID_FIELD_NUMBER;
+    hash = (53 * hash) + getNativeServiceId().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -1768,6 +1826,7 @@ private static final long serialVersionUID = 0L;
     public Builder clear() {
       super.clear();
       bitField0_ = 0;
+      bitField1_ = 0;
       tableName_ = "";
       schemaName_ = "";
       migrationOrder_ = 0;
@@ -1846,6 +1905,7 @@ private static final long serialVersionUID = 0L;
         vectorStoreBuilder_.dispose();
         vectorStoreBuilder_ = null;
       }
+      nativeServiceId_ = "";
       return this;
     }
 
@@ -1874,6 +1934,7 @@ private static final long serialVersionUID = 0L;
       com.udb.core.common.v1.TableOptions result = new com.udb.core.common.v1.TableOptions(this);
       buildPartialRepeatedFields(result);
       if (bitField0_ != 0) { buildPartial0(result); }
+      if (bitField1_ != 0) { buildPartial1(result); }
       onBuilt();
       return result;
     }
@@ -2026,6 +2087,13 @@ private static final long serialVersionUID = 0L;
         to_bitField0_ |= 0x00000001;
       }
       result.bitField0_ |= to_bitField0_;
+    }
+
+    private void buildPartial1(com.udb.core.common.v1.TableOptions result) {
+      int from_bitField1_ = bitField1_;
+      if (((from_bitField1_ & 0x00000001) != 0)) {
+        result.nativeServiceId_ = nativeServiceId_;
+      }
     }
 
     @java.lang.Override
@@ -2319,6 +2387,11 @@ private static final long serialVersionUID = 0L;
       if (other.hasVectorStore()) {
         mergeVectorStore(other.getVectorStore());
       }
+      if (!other.getNativeServiceId().isEmpty()) {
+        nativeServiceId_ = other.nativeServiceId_;
+        bitField1_ |= 0x00000001;
+        onChanged();
+      }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
@@ -2563,6 +2636,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x80000000;
               break;
             } // case 258
+            case 266: {
+              nativeServiceId_ = input.readStringRequireUtf8();
+              bitField1_ |= 0x00000001;
+              break;
+            } // case 266
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -2579,6 +2657,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     private int bitField0_;
+    private int bitField1_;
 
     private java.lang.Object tableName_ = "";
     /**
@@ -6429,6 +6508,98 @@ private static final long serialVersionUID = 0L;
         vectorStore_ = null;
       }
       return vectorStoreBuilder_;
+    }
+
+    private java.lang.Object nativeServiceId_ = "";
+    /**
+     * <pre>
+     * native_service_id: which native service owns this internal table.
+     * </pre>
+     *
+     * <code>string native_service_id = 33 [json_name = "nativeServiceId"];</code>
+     * @return The nativeServiceId.
+     */
+    public java.lang.String getNativeServiceId() {
+      java.lang.Object ref = nativeServiceId_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        nativeServiceId_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * native_service_id: which native service owns this internal table.
+     * </pre>
+     *
+     * <code>string native_service_id = 33 [json_name = "nativeServiceId"];</code>
+     * @return The bytes for nativeServiceId.
+     */
+    public com.google.protobuf.ByteString
+        getNativeServiceIdBytes() {
+      java.lang.Object ref = nativeServiceId_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        nativeServiceId_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * native_service_id: which native service owns this internal table.
+     * </pre>
+     *
+     * <code>string native_service_id = 33 [json_name = "nativeServiceId"];</code>
+     * @param value The nativeServiceId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setNativeServiceId(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      nativeServiceId_ = value;
+      bitField1_ |= 0x00000001;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * native_service_id: which native service owns this internal table.
+     * </pre>
+     *
+     * <code>string native_service_id = 33 [json_name = "nativeServiceId"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearNativeServiceId() {
+      nativeServiceId_ = getDefaultInstance().getNativeServiceId();
+      bitField1_ = (bitField1_ & ~0x00000001);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * native_service_id: which native service owns this internal table.
+     * </pre>
+     *
+     * <code>string native_service_id = 33 [json_name = "nativeServiceId"];</code>
+     * @param value The bytes for nativeServiceId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setNativeServiceIdBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      nativeServiceId_ = value;
+      bitField1_ |= 0x00000001;
+      onChanged();
+      return this;
     }
 
     // @@protoc_insertion_point(builder_scope:udb.core.common.v1.TableOptions)

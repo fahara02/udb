@@ -431,7 +431,13 @@ impl AuthzServiceImpl {
         if req.draft_id.trim().is_empty() {
             return Err(Status::invalid_argument("draft_id is required"));
         }
-        let reviewer = if req.reviewer.trim().is_empty() {
+        // Separation of duties: derive the approving reviewer from the
+        // claim-derived actor (claim subject) so a single bearer cannot
+        // author-as-X then approve-as-Y. The body `reviewer` is only honored
+        // in the in-process fallback where no validated claim context exists.
+        let reviewer = if crate::runtime::service::method_security::claim_context_present() {
+            crate::runtime::service::method_security::current_claim_context().subject
+        } else if req.reviewer.trim().is_empty() {
             actor.clone()
         } else {
             req.reviewer.clone()

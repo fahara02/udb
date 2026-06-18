@@ -623,7 +623,12 @@ impl AnalyticsService for AnalyticsServiceImpl {
         .bind(req.latency_ms)
         .execute(pool)
         .await
-        .map_err(|err| Status::internal(format!("record pipeline metric failed: {err}")))?;
+        .map_err(|err| {
+            crate::runtime::executor_utils::sqlx_error_to_status(
+                "record pipeline metric failed",
+                &err,
+            )
+        })?;
         Ok(Response::new(ana_pb::RecordPipelineMetricResponse {
             accepted: true,
         }))

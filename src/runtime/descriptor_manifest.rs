@@ -58,6 +58,11 @@ pub struct RpcContract {
     /// kept for back-compat. See docs/event-contract-model.md.
     pub emits: Vec<EmittedEvent>,
     pub dependency_contract: Option<DependencyContract>,
+    pub precondition_contract: Option<MethodPreconditionContract>,
+    pub readback_contract: Option<ReadAfterWriteContract>,
+    pub lifecycle_contract: Option<LifecycleContract>,
+    pub idempotency_contract: Option<IdempotencyContract>,
+    pub error_contract: Option<ErrorContract>,
     /// `operation_kind` method option (proto OperationKind enum): 0=unspecified,
     /// 1=read_only, 2=mutation, 3=destructive. Authoritative state-change class —
     /// drives client retry safety + SDK probe classification (never the name).
@@ -253,6 +258,56 @@ pub struct DependencyContract {
     pub required_features: Vec<String>,
     pub required_env: Vec<String>,
     pub degraded_when_missing: Vec<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct MethodPreconditionContract {
+    pub required_resources: Vec<String>,
+    pub required_prior_result_fields: Vec<String>,
+    pub required_source_states: Vec<String>,
+    pub missing_code: String,
+    pub wrong_state_code: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ReadAfterWriteContract {
+    pub returned_id_field: String,
+    pub readback_rpc: String,
+    pub readback_request_field: String,
+    pub requires_read_fence: bool,
+    pub requires_primary_read: bool,
+    pub no_readback_reason: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LifecycleContract {
+    pub entity: String,
+    pub legal_source_states: Vec<String>,
+    pub target_state: String,
+    pub terminal_states: Vec<String>,
+    pub input_consumed: bool,
+    pub destructive: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct IdempotencyContract {
+    pub request_key_field: String,
+    pub server_generated_key: bool,
+    pub duplicate_response_field: String,
+    pub replay_safe: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ErrorContract {
+    pub cases: Vec<ErrorCase>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ErrorCase {
+    pub canonical_code: String,
+    pub grpc_status: String,
+    pub retryable: bool,
+    pub details_type: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -454,6 +509,31 @@ fn build_contract_manifest(set: &FdSet) -> DescriptorContractManifest {
                         .as_ref()
                         .and_then(|options| options.dependency_contract.as_ref())
                         .map(DependencyContract::from),
+                    precondition_contract: method
+                        .options
+                        .as_ref()
+                        .and_then(|options| options.precondition_contract.as_ref())
+                        .map(MethodPreconditionContract::from),
+                    readback_contract: method
+                        .options
+                        .as_ref()
+                        .and_then(|options| options.readback_contract.as_ref())
+                        .map(ReadAfterWriteContract::from),
+                    lifecycle_contract: method
+                        .options
+                        .as_ref()
+                        .and_then(|options| options.lifecycle_contract.as_ref())
+                        .map(LifecycleContract::from),
+                    idempotency_contract: method
+                        .options
+                        .as_ref()
+                        .and_then(|options| options.idempotency_contract.as_ref())
+                        .map(IdempotencyContract::from),
+                    error_contract: method
+                        .options
+                        .as_ref()
+                        .and_then(|options| options.error_contract.as_ref())
+                        .map(ErrorContract::from),
                     operation_kind: method
                         .options
                         .as_ref()
@@ -732,6 +812,74 @@ impl From<&DependencyContractOpts> for DependencyContract {
     }
 }
 
+impl From<&PreconditionContractOpts> for MethodPreconditionContract {
+    fn from(value: &PreconditionContractOpts) -> Self {
+        Self {
+            required_resources: value.required_resources.clone(),
+            required_prior_result_fields: value.required_prior_result_fields.clone(),
+            required_source_states: value.required_source_states.clone(),
+            missing_code: value.missing_code.clone(),
+            wrong_state_code: value.wrong_state_code.clone(),
+        }
+    }
+}
+
+impl From<&ReadAfterWriteContractOpts> for ReadAfterWriteContract {
+    fn from(value: &ReadAfterWriteContractOpts) -> Self {
+        Self {
+            returned_id_field: value.returned_id_field.clone(),
+            readback_rpc: value.readback_rpc.clone(),
+            readback_request_field: value.readback_request_field.clone(),
+            requires_read_fence: value.requires_read_fence,
+            requires_primary_read: value.requires_primary_read,
+            no_readback_reason: value.no_readback_reason.clone(),
+        }
+    }
+}
+
+impl From<&LifecycleContractOpts> for LifecycleContract {
+    fn from(value: &LifecycleContractOpts) -> Self {
+        Self {
+            entity: value.entity.clone(),
+            legal_source_states: value.legal_source_states.clone(),
+            target_state: value.target_state.clone(),
+            terminal_states: value.terminal_states.clone(),
+            input_consumed: value.input_consumed,
+            destructive: value.destructive,
+        }
+    }
+}
+
+impl From<&IdempotencyContractOpts> for IdempotencyContract {
+    fn from(value: &IdempotencyContractOpts) -> Self {
+        Self {
+            request_key_field: value.request_key_field.clone(),
+            server_generated_key: value.server_generated_key,
+            duplicate_response_field: value.duplicate_response_field.clone(),
+            replay_safe: value.replay_safe,
+        }
+    }
+}
+
+impl From<&ErrorContractOpts> for ErrorContract {
+    fn from(value: &ErrorContractOpts) -> Self {
+        Self {
+            cases: value.cases.iter().map(ErrorCase::from).collect(),
+        }
+    }
+}
+
+impl From<&ErrorCaseOpts> for ErrorCase {
+    fn from(value: &ErrorCaseOpts) -> Self {
+        Self {
+            canonical_code: value.canonical_code.clone(),
+            grpc_status: value.grpc_status.clone(),
+            retryable: value.retryable,
+            details_type: value.details_type.clone(),
+        }
+    }
+}
+
 impl From<&DbTableSecurityOpts> for DbTableSecurityContract {
     fn from(value: &DbTableSecurityOpts) -> Self {
         Self {
@@ -904,6 +1052,16 @@ struct MethodOpts {
     dependency_contract: Option<DependencyContractOpts>,
     #[prost(int32, tag = "51007")]
     operation_kind: i32,
+    #[prost(message, optional, tag = "51008")]
+    precondition_contract: Option<PreconditionContractOpts>,
+    #[prost(message, optional, tag = "51009")]
+    readback_contract: Option<ReadAfterWriteContractOpts>,
+    #[prost(message, optional, tag = "51010")]
+    lifecycle_contract: Option<LifecycleContractOpts>,
+    #[prost(message, optional, tag = "51011")]
+    idempotency_contract: Option<IdempotencyContractOpts>,
+    #[prost(message, optional, tag = "51012")]
+    error_contract: Option<ErrorContractOpts>,
     #[prost(message, optional, tag = "72295728")]
     http_rule: Option<HttpRuleOpts>,
 }
@@ -1142,6 +1300,82 @@ struct DependencyContractOpts {
     required_env: Vec<String>,
     #[prost(string, repeated, tag = "7")]
     degraded_when_missing: Vec<String>,
+}
+
+#[derive(Clone, PartialEq, Message)]
+struct PreconditionContractOpts {
+    #[prost(string, repeated, tag = "1")]
+    required_resources: Vec<String>,
+    #[prost(string, repeated, tag = "2")]
+    required_prior_result_fields: Vec<String>,
+    #[prost(string, repeated, tag = "3")]
+    required_source_states: Vec<String>,
+    #[prost(string, tag = "4")]
+    missing_code: String,
+    #[prost(string, tag = "5")]
+    wrong_state_code: String,
+}
+
+#[derive(Clone, PartialEq, Message)]
+struct ReadAfterWriteContractOpts {
+    #[prost(string, tag = "1")]
+    returned_id_field: String,
+    #[prost(string, tag = "2")]
+    readback_rpc: String,
+    #[prost(string, tag = "3")]
+    readback_request_field: String,
+    #[prost(bool, tag = "4")]
+    requires_read_fence: bool,
+    #[prost(bool, tag = "5")]
+    requires_primary_read: bool,
+    #[prost(string, tag = "6")]
+    no_readback_reason: String,
+}
+
+#[derive(Clone, PartialEq, Message)]
+struct LifecycleContractOpts {
+    #[prost(string, tag = "1")]
+    entity: String,
+    #[prost(string, repeated, tag = "2")]
+    legal_source_states: Vec<String>,
+    #[prost(string, tag = "3")]
+    target_state: String,
+    #[prost(string, repeated, tag = "4")]
+    terminal_states: Vec<String>,
+    #[prost(bool, tag = "5")]
+    input_consumed: bool,
+    #[prost(bool, tag = "6")]
+    destructive: bool,
+}
+
+#[derive(Clone, PartialEq, Message)]
+struct IdempotencyContractOpts {
+    #[prost(string, tag = "1")]
+    request_key_field: String,
+    #[prost(bool, tag = "2")]
+    server_generated_key: bool,
+    #[prost(string, tag = "3")]
+    duplicate_response_field: String,
+    #[prost(bool, tag = "4")]
+    replay_safe: bool,
+}
+
+#[derive(Clone, PartialEq, Message)]
+struct ErrorContractOpts {
+    #[prost(message, repeated, tag = "1")]
+    cases: Vec<ErrorCaseOpts>,
+}
+
+#[derive(Clone, PartialEq, Message)]
+struct ErrorCaseOpts {
+    #[prost(string, tag = "1")]
+    canonical_code: String,
+    #[prost(string, tag = "2")]
+    grpc_status: String,
+    #[prost(bool, tag = "3")]
+    retryable: bool,
+    #[prost(string, tag = "4")]
+    details_type: String,
 }
 
 #[derive(Clone, PartialEq, Message)]

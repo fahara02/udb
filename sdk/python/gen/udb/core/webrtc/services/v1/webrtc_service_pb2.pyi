@@ -139,6 +139,36 @@ class JoinRoomResponse(_message.Message):
     error: _dto_pb2.ApiError
     def __init__(self, peer: _Optional[_Union[_peer_pb2.Peer, _Mapping]] = ..., existing_peers: _Optional[_Iterable[_Union[_peer_pb2.Peer, _Mapping]]] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
 
+class JoinSessionRequest(_message.Message):
+    __slots__ = ("tenant_id", "room_id", "display_name", "metadata", "user_agent", "ttl_seconds")
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    ROOM_ID_FIELD_NUMBER: _ClassVar[int]
+    DISPLAY_NAME_FIELD_NUMBER: _ClassVar[int]
+    METADATA_FIELD_NUMBER: _ClassVar[int]
+    USER_AGENT_FIELD_NUMBER: _ClassVar[int]
+    TTL_SECONDS_FIELD_NUMBER: _ClassVar[int]
+    tenant_id: str
+    room_id: str
+    display_name: str
+    metadata: str
+    user_agent: str
+    ttl_seconds: int
+    def __init__(self, tenant_id: _Optional[str] = ..., room_id: _Optional[str] = ..., display_name: _Optional[str] = ..., metadata: _Optional[str] = ..., user_agent: _Optional[str] = ..., ttl_seconds: _Optional[int] = ...) -> None: ...
+
+class JoinSessionResponse(_message.Message):
+    __slots__ = ("peer", "existing_peers", "ice_servers", "expires_at", "error")
+    PEER_FIELD_NUMBER: _ClassVar[int]
+    EXISTING_PEERS_FIELD_NUMBER: _ClassVar[int]
+    ICE_SERVERS_FIELD_NUMBER: _ClassVar[int]
+    EXPIRES_AT_FIELD_NUMBER: _ClassVar[int]
+    ERROR_FIELD_NUMBER: _ClassVar[int]
+    peer: _peer_pb2.Peer
+    existing_peers: _containers.RepeatedCompositeFieldContainer[_peer_pb2.Peer]
+    ice_servers: _containers.RepeatedCompositeFieldContainer[IceServer]
+    expires_at: _timestamp_pb2.Timestamp
+    error: _dto_pb2.ApiError
+    def __init__(self, peer: _Optional[_Union[_peer_pb2.Peer, _Mapping]] = ..., existing_peers: _Optional[_Iterable[_Union[_peer_pb2.Peer, _Mapping]]] = ..., ice_servers: _Optional[_Iterable[_Union[IceServer, _Mapping]]] = ..., expires_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
+
 class LeaveRoomRequest(_message.Message):
     __slots__ = ("tenant_id", "room_id", "peer_id")
     TENANT_ID_FIELD_NUMBER: _ClassVar[int]

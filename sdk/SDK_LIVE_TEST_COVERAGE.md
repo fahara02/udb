@@ -1,6 +1,6 @@
 # UDB SDK live-test coverage — four live harnesses (Go · TypeScript · Python · PHP)
 
-**COVERAGE: 262/262 (100%) RPCs exercised in every SDK** — the full generated surface is probed, not one RPC and a guess. Of the 262: 241 non-destructive RPCs receive a **field-populated** typed request (real decode + tenant/validation + handler-entry across the whole message), and the 21 destructive RPCs (abac/catalog/revoke-all/emergency/reset family) are sent a **typed-empty** request so the handler's validation runs but the destructive action never executes (populating them would corrupt shared broker state).
+**COVERAGE: 264/264 (100%) RPCs exercised in every SDK** — the full generated surface is probed, not one RPC and a guess. Of the 264: 243 non-destructive RPCs receive a **field-populated** typed request (real decode + tenant/validation + handler-entry across the whole message), and the 21 destructive RPCs (abac/catalog/revoke-all/emergency/reset family) are sent a **typed-empty** request so the handler's validation runs but the destructive action never executes (populating them would corrupt shared broker state).
 
 This is not just a mount ping. Beyond the full-surface probe, each SDK drives real **create→read→assert** lifecycles against every backend and native service, a full **session lifecycle** (logout must invalidate the token + refresh family), and **fail-closed edge cases** (wrong password mints no token; a forged bearer never validates/introspects-active).
 
@@ -15,11 +15,11 @@ and PHP.
 
 ## Live-SDK parity matrix
 
-The four SDKs are at parity — each runs the same five layers against the same 262-RPC surface. The probe is **descriptor-driven** (Go/Python via proto reflection, TS via proto-loader field-stripping, PHP via setter reflection — never a hardcoded field/RPC list).
+The four SDKs are at parity — each runs the same five layers against the same 264-RPC surface. The probe is **descriptor-driven** (Go/Python via proto reflection, TS via proto-loader field-stripping, PHP via setter reflection — never a hardcoded field/RPC list).
 
 | Layer | Go | TypeScript | Python | PHP |
 |---|---|---|---|---|
-| Full-surface probe (262/262) | ✅ | ✅ | ✅ | ✅ |
+| Full-surface probe (264/264) | ✅ | ✅ | ✅ | ✅ |
 | Populated-request floor asserted | ≥230 | ≥200 | ≥230 | ≥230 |
 | Descriptor-equivalent field population (every scalar + context) | ✅ | ✅ | ✅ | ✅ (reflection over `set*`) |
 | Backend E2E round-trips (postgres/mongo/minio) | ✅ | ✅ | ✅ | ✅ |
@@ -81,12 +81,12 @@ Static verification (no broker required): `go vet` 0 · `python -m py_compile` c
 
 ---
 
-## The 262-RPC surface every SDK probes (Go-side classification)
+## The 264-RPC surface every SDK probes (Go-side classification)
 
 The list below is the canonical surface. The ✅/🟢/🟠 marks are the Go suite's per-RPC classification; the TS/Python/PHP suites probe the identical surface with the same destructive-suppression set (resolved from each SDK's proto-derived `operation_kind`, never a hardcoded name list).
 
 
-## DataBroker (76/76 covered)
+## DataBroker (77/77 covered)
 
 - [x] `ActivateCatalog` — 🟠 safe-typed-empty (dangerous mutation — validation exercised)
 - [x] `AnalyticalQuery` — 🟢 populated (typed request, handler exercised)
@@ -109,6 +109,7 @@ The list below is the canonical surface. The ✅/🟢/🟠 marks are the Go suit
 - [x] `DocumentUpsert` — ✅ deep (value asserted)
 - [x] `DropResource` — 🟠 safe-typed-empty (dangerous mutation — validation exercised)
 - [x] `EnqueueOutboxEvent` — 🟢 populated (typed request, handler exercised)
+- [x] `EnsureBaseline` — 🟢 populated (typed request, handler exercised)
 - [x] `EnsureProject` — ✅ deep (value asserted)
 - [x] `EnsureResource` — ✅ deep (value asserted)
 - [x] `GeneratePresignedUrl` — ✅ deep (value asserted)
@@ -366,10 +367,11 @@ The list below is the canonical surface. The ✅/🟢/🟠 marks are the Go suit
 - [x] `ListRooms` — ✅ deep (value asserted)
 - [x] `UpdateRoom` — ✅ deep (value asserted)
 
-## PeerService (4/4 covered)
+## PeerService (5/5 covered)
 
 - [x] `GetPeer` — ✅ deep (value asserted)
 - [x] `JoinRoom` — ✅ deep (value asserted)
+- [x] `JoinSession` — 🟢 populated (typed request, handler exercised)
 - [x] `LeaveRoom` — ✅ deep (value asserted)
 - [x] `ListPeers` — ✅ deep (value asserted)
 

@@ -15,9 +15,11 @@ option php_namespace = "Udb\\Core\\Common\\V1";
 // additive options never collide. protoc/`buf build` already rejects duplicate
 // extension numbers within an extended message, so a collision fails CI by
 // construction; this registry documents the allocation and upper bounds:
-//   FieldOptions   : 50010..50199  (50010..50020 scalar, 50033 structured; rest reserved)
-//   MethodOptions  : 51001..51199  (51001..51006 used; rest reserved)
-//   MessageOptions : 52001..52199  (52001..52004 used; rest reserved)
+//   FieldOptions   : 50002..50199  (50002/50006/50021/50032 db.proto-owned;
+//                                    50010..50020 scalar, 50033 structured)
+//   MethodOptions  : 51001..51199  (51001..51012 used)
+//   MessageOptions : 50001..52199  (50001..50013/50031 db.proto-owned;
+//                                    52001..52004 security.proto-owned)
 //   ServiceOptions : 53001..53199  (53001..53004 used; rest reserved)
 //   FileOptions    : 54001..54199  (reserved; no file-level options yet)
 // Do NOT reuse a retired number; bump into the reserved tail instead.
@@ -49,6 +51,11 @@ extend google.protobuf.MethodOptions {
   // Standalone (not in endpoint_security) so it is decoupled from auth and every
   // RPC can carry it, including the DataBroker data-plane RPCs.
   OperationKind operation_kind = 51007;
+  MethodPreconditionContract method_precondition_contract = 51008;
+  ReadAfterWriteContract method_readback_contract = 51009;
+  LifecycleContract method_lifecycle_contract = 51010;
+  IdempotencyContract method_idempotency_contract = 51011;
+  ErrorContract method_error_contract = 51012;
 }
 
 extend google.protobuf.MessageOptions {
@@ -100,6 +107,50 @@ enum OperationKind {
   OPERATION_KIND_READ_ONLY = 1;   // no state change; retry-safe
   OPERATION_KIND_MUTATION = 2;    // tenant/resource-scoped state change; not retry-safe
   OPERATION_KIND_DESTRUCTIVE = 3; // irreversible or cluster-global blast radius
+}
+
+message MethodPreconditionContract {
+  repeated string required_resources = 1;
+  repeated string required_prior_result_fields = 2;
+  repeated string required_source_states = 3;
+  string missing_code = 4;
+  string wrong_state_code = 5;
+}
+
+message ReadAfterWriteContract {
+  string returned_id_field = 1;
+  string readback_rpc = 2;
+  string readback_request_field = 3;
+  bool requires_read_fence = 4;
+  bool requires_primary_read = 5;
+  string no_readback_reason = 6;
+}
+
+message LifecycleContract {
+  string entity = 1;
+  repeated string legal_source_states = 2;
+  string target_state = 3;
+  repeated string terminal_states = 4;
+  bool input_consumed = 5;
+  bool destructive = 6;
+}
+
+message IdempotencyContract {
+  string request_key_field = 1;
+  bool server_generated_key = 2;
+  string duplicate_response_field = 3;
+  bool replay_safe = 4;
+}
+
+message ErrorContract {
+  repeated ErrorCase cases = 1;
+
+  message ErrorCase {
+    string canonical_code = 1;
+    string grpc_status = 2;
+    bool retryable = 3;
+    string details_type = 4;
+  }
 }
 
 message RestContract {

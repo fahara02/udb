@@ -43,6 +43,37 @@ public final class PeerServiceGrpc {
     return getJoinRoomMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.webrtc.services.v1.JoinSessionRequest,
+      com.udb.core.webrtc.services.v1.JoinSessionResponse> getJoinSessionMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "JoinSession",
+      requestType = com.udb.core.webrtc.services.v1.JoinSessionRequest.class,
+      responseType = com.udb.core.webrtc.services.v1.JoinSessionResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.webrtc.services.v1.JoinSessionRequest,
+      com.udb.core.webrtc.services.v1.JoinSessionResponse> getJoinSessionMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.webrtc.services.v1.JoinSessionRequest, com.udb.core.webrtc.services.v1.JoinSessionResponse> getJoinSessionMethod;
+    if ((getJoinSessionMethod = PeerServiceGrpc.getJoinSessionMethod) == null) {
+      synchronized (PeerServiceGrpc.class) {
+        if ((getJoinSessionMethod = PeerServiceGrpc.getJoinSessionMethod) == null) {
+          PeerServiceGrpc.getJoinSessionMethod = getJoinSessionMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.webrtc.services.v1.JoinSessionRequest, com.udb.core.webrtc.services.v1.JoinSessionResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "JoinSession"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.webrtc.services.v1.JoinSessionRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.webrtc.services.v1.JoinSessionResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new PeerServiceMethodDescriptorSupplier("JoinSession"))
+              .build();
+        }
+      }
+    }
+    return getJoinSessionMethod;
+  }
+
   private static volatile io.grpc.MethodDescriptor<com.udb.core.webrtc.services.v1.LeaveRoomRequest,
       com.udb.core.webrtc.services.v1.LeaveRoomResponse> getLeaveRoomMethod;
 
@@ -211,6 +242,16 @@ public final class PeerServiceGrpc {
 
     /**
      * <pre>
+     * Join a room and atomically mint TURN credentials for the freshly-inserted peer
+     * </pre>
+     */
+    default void joinSession(com.udb.core.webrtc.services.v1.JoinSessionRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.webrtc.services.v1.JoinSessionResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getJoinSessionMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
      * Leave a room
      * </pre>
      */
@@ -280,6 +321,17 @@ public final class PeerServiceGrpc {
 
     /**
      * <pre>
+     * Join a room and atomically mint TURN credentials for the freshly-inserted peer
+     * </pre>
+     */
+    public void joinSession(com.udb.core.webrtc.services.v1.JoinSessionRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.webrtc.services.v1.JoinSessionResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getJoinSessionMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
      * Leave a room
      * </pre>
      */
@@ -340,6 +392,16 @@ public final class PeerServiceGrpc {
 
     /**
      * <pre>
+     * Join a room and atomically mint TURN credentials for the freshly-inserted peer
+     * </pre>
+     */
+    public com.udb.core.webrtc.services.v1.JoinSessionResponse joinSession(com.udb.core.webrtc.services.v1.JoinSessionRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getJoinSessionMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
      * Leave a room
      * </pre>
      */
@@ -393,6 +455,16 @@ public final class PeerServiceGrpc {
     public com.udb.core.webrtc.services.v1.JoinRoomResponse joinRoom(com.udb.core.webrtc.services.v1.JoinRoomRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getJoinRoomMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Join a room and atomically mint TURN credentials for the freshly-inserted peer
+     * </pre>
+     */
+    public com.udb.core.webrtc.services.v1.JoinSessionResponse joinSession(com.udb.core.webrtc.services.v1.JoinSessionRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getJoinSessionMethod(), getCallOptions(), request);
     }
 
     /**
@@ -455,6 +527,17 @@ public final class PeerServiceGrpc {
 
     /**
      * <pre>
+     * Join a room and atomically mint TURN credentials for the freshly-inserted peer
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.webrtc.services.v1.JoinSessionResponse> joinSession(
+        com.udb.core.webrtc.services.v1.JoinSessionRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getJoinSessionMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
      * Leave a room
      * </pre>
      */
@@ -488,9 +571,10 @@ public final class PeerServiceGrpc {
   }
 
   private static final int METHODID_JOIN_ROOM = 0;
-  private static final int METHODID_LEAVE_ROOM = 1;
-  private static final int METHODID_GET_PEER = 2;
-  private static final int METHODID_LIST_PEERS = 3;
+  private static final int METHODID_JOIN_SESSION = 1;
+  private static final int METHODID_LEAVE_ROOM = 2;
+  private static final int METHODID_GET_PEER = 3;
+  private static final int METHODID_LIST_PEERS = 4;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -512,6 +596,10 @@ public final class PeerServiceGrpc {
         case METHODID_JOIN_ROOM:
           serviceImpl.joinRoom((com.udb.core.webrtc.services.v1.JoinRoomRequest) request,
               (io.grpc.stub.StreamObserver<com.udb.core.webrtc.services.v1.JoinRoomResponse>) responseObserver);
+          break;
+        case METHODID_JOIN_SESSION:
+          serviceImpl.joinSession((com.udb.core.webrtc.services.v1.JoinSessionRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.webrtc.services.v1.JoinSessionResponse>) responseObserver);
           break;
         case METHODID_LEAVE_ROOM:
           serviceImpl.leaveRoom((com.udb.core.webrtc.services.v1.LeaveRoomRequest) request,
@@ -550,6 +638,13 @@ public final class PeerServiceGrpc {
               com.udb.core.webrtc.services.v1.JoinRoomRequest,
               com.udb.core.webrtc.services.v1.JoinRoomResponse>(
                 service, METHODID_JOIN_ROOM)))
+        .addMethod(
+          getJoinSessionMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.webrtc.services.v1.JoinSessionRequest,
+              com.udb.core.webrtc.services.v1.JoinSessionResponse>(
+                service, METHODID_JOIN_SESSION)))
         .addMethod(
           getLeaveRoomMethod(),
           io.grpc.stub.ServerCalls.asyncUnaryCall(
@@ -620,6 +715,7 @@ public final class PeerServiceGrpc {
           serviceDescriptor = result = io.grpc.ServiceDescriptor.newBuilder(SERVICE_NAME)
               .setSchemaDescriptor(new PeerServiceFileDescriptorSupplier())
               .addMethod(getJoinRoomMethod())
+              .addMethod(getJoinSessionMethod())
               .addMethod(getLeaveRoomMethod())
               .addMethod(getGetPeerMethod())
               .addMethod(getListPeersMethod())

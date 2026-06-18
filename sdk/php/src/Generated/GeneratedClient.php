@@ -18,10 +18,10 @@ use Grpc\ChannelCredentials;
  * the embedded proto descriptor set by `udb sdk generate`, so its surface can
  * never drift from the wire contract.
  *
- *   UDB version ...... 0.3.5
+ *   UDB version ...... 0.3.6
  *   Protocol version . 1.0.0
  *   Services ......... 16
- *   RPCs ............. 262
+ *   RPCs ............. 265
  *
  * This class COMPOSES WITH the hand-written layer; it does not replace it:
  *   - it reuses {@see UdbMetadata} for the eight broker headers,
@@ -221,6 +221,7 @@ final class GeneratedClient
         "SetPreference" => "mutation",
         "UpsertTemplate" => "mutation",
         "DeleteFile" => "mutation",
+        "DownloadFile" => "read_only",
         "FinalizeUpload" => "mutation",
         "GetDownloadUrl" => "read_only",
         "GetFile" => "read_only",
@@ -235,6 +236,7 @@ final class GeneratedClient
         "UpdateTenantConfig" => "mutation",
         "GetPeer" => "read_only",
         "JoinRoom" => "mutation",
+        "JoinSession" => "mutation",
         "LeaveRoom" => "mutation",
         "ListPeers" => "read_only",
         "CloseRoom" => "mutation",
@@ -269,6 +271,7 @@ final class GeneratedClient
         "DocumentUpsert" => "mutation",
         "DropResource" => "destructive",
         "EnqueueOutboxEvent" => "mutation",
+        "EnsureBaseline" => "mutation",
         "EnsureProject" => "mutation",
         "EnsureResource" => "mutation",
         "GeneratePresignedUrl" => "mutation",
@@ -324,6 +327,21 @@ final class GeneratedClient
         "VectorSearch" => "read_only",
         "VectorUpsert" => "mutation",
         "VerifyAdminAuditLog" => "read_only",
+    ];
+
+    /**
+     * Proto-derived replay-safe flag per RPC, keyed by method name (globally
+     * unique): from `method_idempotency_contract.replay_safe`. A mutation is
+     * eligible for auto-retry on a transient failure ONLY when it is replay-safe
+     * AND the caller supplied a non-empty idempotency key. RPCs absent from this
+     * map are treated as NOT replay-safe (fail-closed). Read-only RPCs ignore
+     * this map entirely (their retry safety comes from {@see OPERATION_KIND}).
+     *
+     * @var array<string, bool>
+     */
+    public const REPLAY_SAFE = [
+        "Delete" => true,
+        "Upsert" => true,
     ];
 
     private ?UdbMetadata $boundContext = null;
@@ -414,6 +432,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetExecutorPerformance($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -434,6 +453,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetPipelineSummary($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -454,6 +474,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetReconciliationAnalytics($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -474,6 +495,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetSlaCompliance($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -494,6 +516,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetThroughput($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -514,6 +537,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->RecordPipelineMetric($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -534,6 +558,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->TriggerSnapshot($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -554,6 +579,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->CreateApiKey($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -574,6 +600,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->EmergencyRevokeApiKeys($request, $md, $opts),
             $metadata,
             'destructive' === 'read_only',
+            $request,
         );
     }
     /**
@@ -594,6 +621,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetApiKey($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -614,6 +642,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetApiKeyUsageStats($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -634,6 +663,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListApiKeys($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -654,6 +684,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->RevokeApiKey($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -674,6 +705,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->RotateApiKey($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -694,6 +726,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->UpdateApiKey($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -714,6 +747,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ValidateApiKey($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -734,6 +768,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->CompleteStep($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -754,6 +789,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->CreatePipelineDefinition($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -774,6 +810,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetAsset($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -794,6 +831,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetPipeline($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -814,6 +852,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetPipelineDefinition($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -834,6 +873,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListAssets($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -854,6 +894,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->RegisterAsset($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -874,6 +915,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->StartPipeline($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -894,6 +936,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->AdminResetMfa($request, $md, $opts),
             $metadata,
             'destructive' === 'read_only',
+            $request,
         );
     }
     /**
@@ -914,6 +957,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->AdminResetPassword($request, $md, $opts),
             $metadata,
             'destructive' === 'read_only',
+            $request,
         );
     }
     /**
@@ -934,6 +978,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->AdminRevokeAllTenantSessions($request, $md, $opts),
             $metadata,
             'destructive' === 'read_only',
+            $request,
         );
     }
     /**
@@ -954,6 +999,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->AdminRevokeAllUserSessions($request, $md, $opts),
             $metadata,
             'destructive' === 'read_only',
+            $request,
         );
     }
     /**
@@ -974,6 +1020,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->AdminRevokeSession($request, $md, $opts),
             $metadata,
             'destructive' === 'read_only',
+            $request,
         );
     }
     /**
@@ -994,6 +1041,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->Authenticate($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1014,6 +1062,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ChangePassword($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1034,6 +1083,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ChangeUserStatus($request, $md, $opts),
             $metadata,
             'destructive' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1054,6 +1104,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ConfirmMFAEnrollment($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1074,6 +1125,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->CreateSession($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1094,6 +1146,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->CreateUser($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1114,6 +1167,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->DeleteWebAuthnCredential($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1134,6 +1188,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->DisableMfaFactor($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1154,6 +1209,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->EmergencyRevoke($request, $md, $opts),
             $metadata,
             'destructive' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1174,6 +1230,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->EnrollMFA($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1194,6 +1251,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->FinishWebAuthnAuthentication($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1214,6 +1272,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->FinishWebAuthnRegistration($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1234,6 +1293,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ForgotPassword($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1254,6 +1314,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GenerateRecoveryCodes($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1274,6 +1335,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetJwks($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1294,6 +1356,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetMfaPolicy($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1314,6 +1377,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetSession($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1334,6 +1398,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetUser($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1354,6 +1419,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->IntrospectToken($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1374,6 +1440,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->IssueMfaChallenge($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1394,6 +1461,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListDevices($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1414,6 +1482,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListMfaFactors($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1434,6 +1503,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListSessions($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1454,6 +1524,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListUsers($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1474,6 +1545,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListWebAuthnCredentials($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1494,6 +1566,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->Login($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1514,6 +1587,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->Logout($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1534,6 +1608,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->PutMfaPolicy($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1554,6 +1629,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->RefreshSession($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1574,6 +1650,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->RefreshToken($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1594,6 +1671,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->RenamePasskey($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1614,6 +1692,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ResendOTP($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1634,6 +1713,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ResetPassword($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1654,6 +1734,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->RevokeDevice($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1674,6 +1755,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->RevokeRecoveryCodes($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1694,6 +1776,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->RevokeSession($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1714,6 +1797,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->SendOTP($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1734,6 +1818,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->SendPhoneVerification($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1754,6 +1839,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->StartWebAuthnAuthentication($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1774,6 +1860,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->StartWebAuthnRegistration($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1794,6 +1881,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->UpdateUser($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1814,6 +1902,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ValidateCSRF($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1834,6 +1923,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ValidateToken($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1854,6 +1944,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->VerifyMfaChallenge($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1874,6 +1965,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->VerifyOTP($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1894,6 +1986,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ActivateCanary($request, $md, $opts),
             $metadata,
             'destructive' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1914,6 +2007,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ActivatePolicyVersion($request, $md, $opts),
             $metadata,
             'destructive' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1934,6 +2028,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ApprovePolicyDraft($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1954,6 +2049,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->AssignRole($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1974,6 +2070,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->Authorize($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -1994,6 +2091,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->BatchCheckPermissions($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2014,6 +2112,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->CheckAccess($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2034,6 +2133,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->CreatePolicyDraft($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2054,6 +2154,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->CreatePolicyRule($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2074,6 +2175,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->CreateRole($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2094,6 +2196,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->DeletePolicyRule($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2114,6 +2217,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->DeleteRole($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2134,6 +2238,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->DiffPolicyDraft($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2154,6 +2259,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ExplainPolicy($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2174,6 +2280,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetAuthzRevision($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2194,6 +2301,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetCanaryStatus($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2214,6 +2322,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetNativeAccess($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2234,6 +2343,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetPolicyBundle($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2254,6 +2364,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetPolicyRule($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2274,6 +2385,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetRole($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2294,6 +2406,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->InvalidatePolicyBundles($request, $md, $opts),
             $metadata,
             'destructive' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2314,6 +2427,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->LintAuthzPolicies($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2334,6 +2448,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListAccessDecisionAudits($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2354,6 +2469,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListPolicyRules($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2374,6 +2490,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListPolicyVersions($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2394,6 +2511,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListRoles($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2414,6 +2532,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListUserPermissions($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2434,6 +2553,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListUserRoles($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2454,6 +2574,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->MigrateLegacyPolicies($request, $md, $opts),
             $metadata,
             'destructive' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2474,6 +2595,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->PromoteCanary($request, $md, $opts),
             $metadata,
             'destructive' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2494,6 +2616,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->PutAuthzPolicy($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2514,6 +2637,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->PutRelationship($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2534,6 +2658,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->PutRoleBinding($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2554,6 +2679,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->RejectPolicyDraft($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2574,6 +2700,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->RevokeRole($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2594,6 +2721,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->RollbackPolicyVersion($request, $md, $opts),
             $metadata,
             'destructive' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2614,6 +2742,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->SeedBuiltinRoles($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2634,6 +2763,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->SimulatePolicy($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2654,6 +2784,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->SubmitPolicyDraft($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2674,6 +2805,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->UpdatePolicyDraft($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2694,6 +2826,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->UpdateRole($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2714,6 +2847,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->AckStatus($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2734,6 +2868,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetResources($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2754,6 +2889,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListNodeStates($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2774,6 +2910,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->CreateProvider($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2794,6 +2931,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->DisableProvider($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2814,6 +2952,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ForceJwksRefresh($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2834,6 +2973,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetProvider($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2854,6 +2994,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ImportSamlMetadata($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2874,6 +3015,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->LinkIdentity($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2894,6 +3036,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListExternalIdentities($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2914,6 +3057,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListProviders($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2934,6 +3078,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->PreviewClaimMapping($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2954,6 +3099,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->PreviewGroupMapping($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2974,6 +3120,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ResolveExternalIdentity($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -2994,6 +3141,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->SamlAcs($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3014,6 +3162,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ScimCreateGroup($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3034,6 +3183,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ScimCreateUser($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3054,6 +3204,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ScimDeleteGroup($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3074,6 +3225,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ScimDeleteUser($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3094,6 +3246,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ScimGetGroup($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3114,6 +3267,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ScimGetUser($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3134,6 +3288,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ScimListGroups($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3154,6 +3309,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ScimListUsers($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3174,6 +3330,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ScimPatchGroup($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3194,6 +3351,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ScimPatchUser($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3214,6 +3372,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ScimReplaceUser($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3234,6 +3393,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->StartSamlLogin($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3254,6 +3414,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->TestProviderDiscovery($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3274,6 +3435,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->UnlinkIdentity($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3294,6 +3456,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->UpdateProvider($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3314,6 +3477,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetDeliveryStats($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3334,6 +3498,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetNotification($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3354,6 +3519,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetPreference($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3374,6 +3540,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetTemplate($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3394,6 +3561,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListNotifications($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3414,6 +3582,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListPreferences($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3434,6 +3603,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListTemplates($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3454,6 +3624,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->RetryNotification($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3474,6 +3645,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->SendNotification($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3494,6 +3666,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->SetPreference($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3514,6 +3687,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->UpsertTemplate($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3534,6 +3708,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->DeleteFile($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3554,6 +3729,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->FinalizeUpload($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3574,6 +3750,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetDownloadUrl($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3594,6 +3771,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetFile($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3614,6 +3792,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListFiles($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3634,6 +3813,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->RegisterUpload($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3654,6 +3834,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->UpdateFile($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3674,6 +3855,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->CreateTenant($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3694,6 +3876,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetTenant($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3714,6 +3897,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetTenantConfig($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3734,6 +3918,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListTenants($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3754,6 +3939,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->UpdateTenant($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3774,6 +3960,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->UpdateTenantConfig($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3794,6 +3981,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetPeer($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3814,6 +4002,28 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->JoinRoom($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.webrtc.services.v1.PeerService / JoinSession (unary).
+     *
+     * Forwards to {@see stubFor()}->JoinSession(); retries transient codes.
+     * Path: /udb.core.webrtc.services.v1.PeerService/JoinSession
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded JoinSessionResponse
+     */
+    public function join_session($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'JoinSession',
+            'PeerService',
+            'udb.core.webrtc.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->JoinSession($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3834,6 +4044,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->LeaveRoom($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3854,6 +4065,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListPeers($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3874,6 +4086,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->CloseRoom($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3894,6 +4107,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->CreateRoom($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3914,6 +4128,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetRoom($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3934,6 +4149,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListRooms($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3954,6 +4170,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->UpdateRoom($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3974,6 +4191,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListTracks($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -3994,6 +4212,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->MuteTrack($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4014,6 +4233,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->PublishTrack($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4034,6 +4254,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->UnpublishTrack($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4054,6 +4275,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->IssueCredentials($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4074,6 +4296,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ActivateCatalog($request, $md, $opts),
             $metadata,
             'destructive' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4094,6 +4317,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->AnalyticalQuery($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4114,6 +4338,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ApplyMigration($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4134,6 +4359,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ApproveMigrationPlan($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4154,6 +4380,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->CacheDelete($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4174,6 +4401,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->CacheGet($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4194,6 +4422,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->CacheScan($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4214,6 +4443,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->CacheSet($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4234,6 +4464,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->CreateMaterializedView($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4254,6 +4485,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->Delete($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4274,6 +4506,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->DeletePolicy($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4294,6 +4527,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->DismissDlqEvent($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4314,6 +4548,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->DocumentDelete($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4334,6 +4569,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->DocumentFind($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4354,6 +4590,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->DocumentGet($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4374,6 +4611,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->DocumentUpsert($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4394,6 +4632,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->DropResource($request, $md, $opts),
             $metadata,
             'destructive' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4414,6 +4653,28 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->EnqueueOutboxEvent($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.services.v1.DataBroker / EnsureBaseline (unary).
+     *
+     * Forwards to {@see stubFor()}->EnsureBaseline(); retries transient codes.
+     * Path: /udb.services.v1.DataBroker/EnsureBaseline
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded EnsureBaselineResponse
+     */
+    public function ensure_baseline($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'EnsureBaseline',
+            'DataBroker',
+            'udb.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->EnsureBaseline($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4434,6 +4695,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->EnsureProject($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4454,6 +4716,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->EnsureResource($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4474,6 +4737,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GeneratePresignedUrl($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4494,6 +4758,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GenericDispatch($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4514,6 +4779,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetAdminSummary($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4534,6 +4800,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetCapabilities($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4554,6 +4821,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetCatalogManifest($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4574,6 +4842,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetCatalogVersion($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4594,6 +4863,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetCatalogVersions($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4614,6 +4884,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetCdcStatus($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4634,6 +4905,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetDlqEvent($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4654,6 +4926,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetHealthReport($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4674,6 +4947,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetMigrationStatus($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4694,6 +4968,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetSaga($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4714,6 +4989,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GraphMutate($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4734,6 +5010,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GraphQuery($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4754,6 +5031,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->InitiateMultipartUpload($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4774,6 +5052,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->LintPolicies($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4794,6 +5073,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListAdminAuditLogs($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4814,6 +5094,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListDlqEvents($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4834,6 +5115,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListMessageSchemas($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4854,6 +5136,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListMigrationRuns($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4874,6 +5157,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListPolicies($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4894,6 +5178,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListProjects($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4914,6 +5199,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListResources($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4934,6 +5220,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListSagas($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4954,6 +5241,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->LookupMessageSchema($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4974,6 +5262,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->MarkSagaReviewed($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -4994,6 +5283,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->PauseCdc($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -5014,6 +5304,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->PlanMigration($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -5034,6 +5325,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->PreviewCdcRedaction($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -5054,6 +5346,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->PutPolicy($request, $md, $opts),
             $metadata,
             'destructive' === 'read_only',
+            $request,
         );
     }
     /**
@@ -5074,6 +5367,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->QuarantineDlqEvent($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -5094,6 +5388,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ReloadPolicies($request, $md, $opts),
             $metadata,
             'destructive' === 'read_only',
+            $request,
         );
     }
     /**
@@ -5114,6 +5409,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ReplayDlqEvent($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -5134,6 +5430,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ResumeCdc($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -5154,6 +5451,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->RetrySagaCompensation($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -5174,6 +5472,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->RollbackCatalog($request, $md, $opts),
             $metadata,
             'destructive' === 'read_only',
+            $request,
         );
     }
     /**
@@ -5194,6 +5493,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ScanProjectionDrift($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -5214,6 +5514,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->Select($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -5234,6 +5535,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->StageCatalog($request, $md, $opts),
             $metadata,
             'destructive' === 'read_only',
+            $request,
         );
     }
     /**
@@ -5254,6 +5556,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->StepDownCdcLeader($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -5274,6 +5577,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->TimeSeriesQuery($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -5294,6 +5598,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->TimeSeriesWrite($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -5314,6 +5619,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->Upsert($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -5334,6 +5640,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ValidateCatalog($request, $md, $opts),
             $metadata,
             'destructive' === 'read_only',
+            $request,
         );
     }
     /**
@@ -5354,6 +5661,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->VectorHybridSearch($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -5374,6 +5682,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->VectorSearch($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
     /**
@@ -5394,6 +5703,7 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->VectorUpsert($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
         );
     }
     /**
@@ -5414,9 +5724,24 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->VerifyAdminAuditLog($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
         );
     }
 
+    /**
+     * udb.core.storage.services.v1.StorageService / DownloadFile (server_streaming).
+     *
+     * Returns the live {@see \Grpc\ServerStreamingCall}; iterate
+     * `->responses()` then check `->getStatus()`. Path: /udb.core.storage.services.v1.StorageService/DownloadFile
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Grpc\ServerStreamingCall
+     */
+    public function download_file($request, ?UdbMetadata $metadata = null)
+    {
+        $stub = $this->stubFor('StorageService', 'udb.core.storage.services.v1');
+        return $stub->DownloadFile($request, $this->headers($metadata), $this->callOptions());
+    }
     /**
      * udb.services.v1.DataBroker / GetObject (server_streaming).
      *
@@ -5653,7 +5978,7 @@ final class GeneratedClient
         return $this->stubFor('NotificationService', 'udb.core.notification.services.v1');
     }
     /**
-     * Underlying buf-generated stub for udb.core.storage.services.v1.StorageService (7 RPC(s)).
+     * Underlying buf-generated stub for udb.core.storage.services.v1.StorageService (8 RPC(s)).
      * Channel is shared with every other service stub on this client.
      *
      * @return BaseStub  a StorageServiceClient
@@ -5673,7 +5998,7 @@ final class GeneratedClient
         return $this->stubFor('TenantService', 'udb.core.tenant.services.v1');
     }
     /**
-     * Underlying buf-generated stub for udb.core.webrtc.services.v1.PeerService (4 RPC(s)).
+     * Underlying buf-generated stub for udb.core.webrtc.services.v1.PeerService (5 RPC(s)).
      * Channel is shared with every other service stub on this client.
      *
      * @return BaseStub  a PeerServiceClient
@@ -5723,7 +6048,7 @@ final class GeneratedClient
         return $this->stubFor('TurnService', 'udb.core.webrtc.services.v1');
     }
     /**
-     * Underlying buf-generated stub for udb.services.v1.DataBroker (76 RPC(s)).
+     * Underlying buf-generated stub for udb.services.v1.DataBroker (77 RPC(s)).
      * Channel is shared with every other service stub on this client.
      *
      * @return BaseStub  a DataBrokerClient
@@ -5799,15 +6124,9 @@ final class GeneratedClient
         $options = (array) ($this->config['channel_options'] ?? []);
         $options['credentials'] = $credentials;
 
-        $endpoint = (string) $this->config['endpoint'];
-        $target = $tls['target'] ?? $endpoint;
-        if ($target !== $endpoint) {
+        $target = $tls['target'] ?? $this->config['endpoint'];
+        if ($target !== $this->config['endpoint']) {
             $options['grpc.default_authority'] = (string) $target;
-        } elseif (str_starts_with($endpoint, 'unix:') && ! isset($options['grpc.default_authority'])) {
-            // A `unix:` (Unix-domain-socket) target has no host, so default
-            // the `:authority` for servers that require a non-empty one.
-            // host:port endpoints keep gRPC's host-derived authority.
-            $options['grpc.default_authority'] = 'localhost';
         }
 
         $this->channelOptions = $options;
@@ -5856,10 +6175,17 @@ final class GeneratedClient
         callable $invoker,
         ?UdbMetadata $metadata,
         bool $readOnly,
+        mixed $request = null,
     ) {
         $stub = $this->stubFor($serviceName, $servicePkg);
         $md = $this->headers($metadata);
         $opts = $this->callOptions();
+
+        // Mutation retry gate (read from the proto-derived maps, never the name):
+        //   replay-safe (REPLAY_SAFE[$rpcName]) AND a non-empty idempotency key on
+        //   the request. Both are mandatory; read-only RPCs ignore them.
+        $replaySafe = (bool) (self::REPLAY_SAFE[$rpcName] ?? false);
+        $hasIdempotencyKey = $this->hasIdempotencyKey($request);
 
         $retry = (array) ($this->config['retry'] ?? []);
         $maxAttempts = max(1, (int) ($retry['max_attempts'] ?? 4));
@@ -5893,7 +6219,8 @@ final class GeneratedClient
             }
 
             $lastStatus = $status;
-            if ($attempt < $maxAttempts && $this->isRetryable($code, $readOnly)) {
+            if ($attempt < $maxAttempts
+                && $this->isRetryable($code, $readOnly, $replaySafe, $hasIdempotencyKey)) {
                 $this->sleepBackoff($attempt, $baseDelayMs, $maxDelayMs);
                 continue;
             }
@@ -5920,19 +6247,58 @@ final class GeneratedClient
         return is_object($status) ? (int) ($status->code ?? -1) : (int) ($status['code'] ?? -1);
     }
 
-    private function isRetryable(int $code, bool $readOnly): bool
+    /**
+     * Decide whether a failed unary RPC may be auto-retried on the given gRPC
+     * code. Fail-safe by default: anything not explicitly allowed returns false.
+     *
+     *   - Read-only RPCs: retried on the configured transient codes plus
+     *     DEADLINE_EXCEEDED. Unchanged behaviour.
+     *   - Mutations: retried ONLY when the RPC is proto-declared replay-safe AND
+     *     the caller supplied a non-empty idempotency key. Both are mandatory.
+     *     DEADLINE_EXCEEDED is NOT retried for mutations — the server may have
+     *     applied the write before the deadline fired and the SDK cannot prove
+     *     the dedup record landed, so DEADLINE stays a fail-closed terminal and
+     *     only the configured transient codes (UNAVAILABLE / RESOURCE_EXHAUSTED,
+     *     which fail before any server-side effect) are eligible.
+     *   - Non-replay-safe mutations are NEVER retried, regardless of key.
+     */
+    private function isRetryable(int $code, bool $readOnly, bool $replaySafe, bool $hasIdempotencyKey): bool
     {
-        if (! $readOnly) {
-            return false;
+        if ($readOnly) {
+            if ($code === 4) { // DEADLINE_EXCEEDED
+                return true;
+            }
+            return in_array($code, self::RETRYABLE_CODES, true);
         }
-        if ($code === 4) { // DEADLINE_EXCEEDED
-            return true;
+        // Mutation: fail-closed unless proto-declared replay-safe AND idempotency-keyed.
+        if (! $replaySafe || ! $hasIdempotencyKey) {
+            return false;
         }
         return in_array($code, self::RETRYABLE_CODES, true);
     }
 
-    // Retry safety is read from the proto-derived operation_kind per RPC (each
-    // wrapper passes operation_kind === 'read_only') — never guessed from the name.
+    /**
+     * Whether the request proto carries a non-empty `idempotency_key`. Requests
+     * without the accessor (the field is absent) return false. This is the
+     * SDK-side gate that lets a replay-safe mutation be retried: without a key
+     * the broker cannot dedup a replay, so we must not retry. Read via the
+     * protoc-generated `getIdempotencyKey()` accessor — no per-message imports.
+     */
+    private function hasIdempotencyKey(mixed $request): bool
+    {
+        if (! is_object($request) || ! method_exists($request, 'getIdempotencyKey')) {
+            return false;
+        }
+        try {
+            return (string) $request->getIdempotencyKey() !== '';
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    // Retry safety is read from the proto-derived operation_kind + replay_safe
+    // per RPC (each wrapper passes operation_kind === 'read_only' and the request
+    // so REPLAY_SAFE / idempotency-key can be consulted) — never guessed from the name.
 
     /**
      * Exponential backoff with full jitter, capped at `max_delay_ms`. Sleeps

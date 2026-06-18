@@ -30,6 +30,10 @@ pub(super) const SCOPE_POLICY_APPROVE: &str = "authz:policy:approve";
 pub(super) const SCOPE_POLICY_READ: &str = "authz:policy:read";
 /// Scope to write/assign roles.
 pub(super) const SCOPE_ROLE_WRITE: &str = "authz:role:write";
+/// Scope explicitly permitting a verified caller to act AS a different governance
+/// subject (impersonation). Without it (and absent a cross-tenant admin identity)
+/// a claim acting under a different `actor.subject` is rejected (fail closed).
+pub(super) const SCOPE_AUTHZ_IMPERSONATE: &str = "authz:impersonate";
 
 /// Maximum lifetime of a break-glass grant. A break-glass actor whose
 /// `break_glass_expires_at_unix` is unset or further out than this is rejected,
@@ -225,12 +229,75 @@ impl AuthzServiceImpl {
                 "{rpc} requires a governance actor with an explicit authz scope"
             ))
         })?;
-        let subject = if actor.subject.trim().is_empty() {
+        // Identity is bound to the VERIFIED claim when this call arrived over the
+        // authenticated control-plane transport. The `actor.*` body fields are
+        // request-supplied intent and MUST NOT be used to attribute audit/events
+        // or to satisfy the standing-scope gate when a claim is present (D1/D2).
+        // The `!claim_context_present()` fallback (in-process / test / trusted
+        // internal caller) keeps the legacy `actor.*`-derived behavior, matching
+        // `authorize_action`'s posture.
+        let claim_present = crate::runtime::service::method_security::claim_context_present();
+
+        // Claim-derived identity, computed ONCE and reused across the break-glass
+        // branch, the standing-scope gate, and the Casbin Principal build below.
+        let claim_subject = if claim_present {
+            crate::runtime::service::method_security::current_claim_context().subject
+        } else {
+            String::new()
+        };
+
+        // Impersonation gate (shared by both branches): a claim acting as a
+        // DIFFERENT body subject is rejected unless the claim is a cross-tenant
+        // admin or explicitly carries the `authz:impersonate` scope. When allowed,
+        // `actor.subject` stays the impersonation target and the audit stamps both
+        // the real and impersonated identities below.
+        let impersonating = if claim_present && !actor.subject.trim().is_empty() {
+            let ctx = crate::runtime::service::method_security::current_claim_context();
+            if !claim_subject.is_empty() && actor.subject != claim_subject {
+                let allowed = ctx.is_cross_tenant_admin()
+                    || ctx
+                        .scopes
+                        .iter()
+                        .any(|s| s.trim() == SCOPE_AUTHZ_IMPERSONATE);
+                if !allowed {
+                    return Err(Status::permission_denied(format!(
+                        "{rpc}: claim subject {claim_subject:?} may not act as {:?} without the {SCOPE_AUTHZ_IMPERSONATE} scope or a cross-tenant admin identity",
+                        actor.subject
+                    )));
+                }
+                true
+            } else {
+                false
+            }
+        } else {
+            false
+        };
+
+        // The effective audit/`changed_by` subject + tenant: the claim subject when
+        // present (impersonation keeps `actor.subject` as the target — see below),
+        // else the actor body fallback.
+        let subject = if claim_present {
+            // Under impersonation, attribute the action to the impersonated target
+            // (`actor.subject`); the real `claim_subject` is also stamped on the
+            // audit/event. Otherwise attribute to the claim subject directly.
+            let effective = if impersonating {
+                actor.subject.clone()
+            } else if claim_subject.trim().is_empty() {
+                "anonymous".to_string()
+            } else {
+                claim_subject.clone()
+            };
+            effective
+        } else if actor.subject.trim().is_empty() {
             "anonymous".to_string()
         } else {
             actor.subject.clone()
         };
-        let tenant = actor.tenant_id.clone();
+        let tenant = if claim_present {
+            crate::runtime::service::method_security::current_claim_context().tenant_id
+        } else {
+            actor.tenant_id.clone()
+        };
 
         // Break-glass: a short-TTL, reason-bearing emergency bypass. Still
         // audited as a governance resource; just not blocked on a standing scope.
@@ -258,6 +325,12 @@ impl AuthzServiceImpl {
                     serde_json::json!({
                         "subject": subject.clone(),
                         "tenant_id": tenant.clone(),
+                        // When impersonating, `subject` is the impersonated target;
+                        // record the REAL authenticated claim subject too so security
+                        // review sees who actually exercised the break-glass grant.
+                        "claim_subject": claim_subject.clone(),
+                        "impersonated_subject": if impersonating { actor.subject.clone() } else { String::new() },
+                        "impersonation": impersonating,
                         "rpc": rpc,
                         "resource": format!("native.authz.governance/{resource_action}"),
                         "reason": actor.break_glass_reason.clone(),
@@ -267,7 +340,14 @@ impl AuthzServiceImpl {
                 )
                 .with_correlation(format!("break_glass:{subject}:{rpc}"))
                 .with_compliance(events::ComplianceEnvelope {
-                    actor: subject.clone(),
+                    // Compliance attributes the action to the REAL authenticated
+                    // identity (the claim subject) when present, even under
+                    // impersonation; `subject`/event payload carry the target.
+                    actor: if claim_present && !claim_subject.trim().is_empty() {
+                        claim_subject.clone()
+                    } else {
+                        subject.clone()
+                    },
                     target_resource: format!("native.authz.governance/{resource_action}"),
                     operation: "break_glass_grant".to_string(),
                     outcome: "allow".to_string(),
@@ -284,9 +364,17 @@ impl AuthzServiceImpl {
             return Ok(subject);
         }
 
-        // Standing authority: the actor must carry at least one of the required
+        // Standing authority: the caller must carry at least one of the required
         // governance scopes. `authz:admin` is a superset that satisfies any gate.
-        let has_scope = actor.scopes.iter().any(|s| {
+        // When a verified claim is present the gate is evaluated against the CLAIM
+        // scopes (never request-supplied `actor.scopes`); the actor body scopes are
+        // the in-process/test fallback only.
+        let gate_scopes: Vec<String> = if claim_present {
+            crate::runtime::service::method_security::current_claim_context().scopes
+        } else {
+            actor.scopes.clone()
+        };
+        let has_scope = gate_scopes.iter().any(|s| {
             let s = s.trim();
             s == SCOPE_AUTHZ_ADMIN || required_scopes.iter().any(|req| *req == s)
         });
@@ -309,15 +397,24 @@ impl AuthzServiceImpl {
                 .iter()
                 .any(|p| p.resource.starts_with("native.authz.governance"))
             {
-                let principal = Principal {
-                    principal_id: subject.clone(),
-                    subject: subject.clone(),
-                    user_id: subject.clone(),
-                    tenant_id: tenant.clone(),
-                    project_id: actor.project_id.clone(),
-                    scopes: actor.scopes.clone(),
-                    roles: actor.roles.clone(),
-                    ..Default::default()
+                // Build the Casbin Principal from the VERIFIED claim when present
+                // (its subject/tenant/project/scopes/roles), so policy is evaluated
+                // against the authenticated identity — not request-supplied
+                // `actor.*` fields. The in-process/test fallback keeps the actor
+                // body identity.
+                let principal = if claim_present {
+                    crate::runtime::service::method_security::current_claim_context().to_principal()
+                } else {
+                    Principal {
+                        principal_id: subject.clone(),
+                        subject: subject.clone(),
+                        user_id: subject.clone(),
+                        tenant_id: tenant.clone(),
+                        project_id: actor.project_id.clone(),
+                        scopes: actor.scopes.clone(),
+                        roles: actor.roles.clone(),
+                        ..Default::default()
+                    }
                 };
                 let resource = ResourceRef {
                     resource_type: "governance".to_string(),

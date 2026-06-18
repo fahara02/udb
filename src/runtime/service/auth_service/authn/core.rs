@@ -673,11 +673,17 @@ impl AuthnServiceImpl {
         let decision_id = self
             .decide_action_native(&claim_ctx, AUTHN_CREATE_USER_PATH, "authn.user.create")
             .await?;
-        crate::runtime::service::method_security::enforce_body_tenant_matches_claim(
-            &claim_ctx,
-            &req.tenant_id,
-            &req.project_id,
-        )?;
+        // 01.4.2.1 — resolve the tenant/project to STORE from the verified claim
+        // (validate-equal on a non-empty body; inherit the claim tenant/project on
+        // an omitted body so the row is visible to claim-bound reads instead of
+        // being stored as ""). Same fail-closed semantics as the prior
+        // enforce_body_tenant_matches_claim call.
+        let (tenant_id, project_id) =
+            crate::runtime::service::method_security::resolve_body_tenant_scope(
+                &claim_ctx,
+                &req.tenant_id,
+                &req.project_id,
+            )?;
         // Externally-provisioned (SSO/OIDC) users have no local password to vet.
         if req.external_provider_id.trim().is_empty() {
             authn::PasswordPolicy::from_env()
@@ -694,11 +700,29 @@ impl AuthnServiceImpl {
             }
             kind => kind,
         };
-        let created_by = req
+        // 01.4.3.1 — attribution comes from the verified claim, not a forgeable body
+        // principal. Default an omitted `created_by` to the bearer subject; a body
+        // principal that disagrees with the bearer (and is not a cross-tenant /
+        // impersonation admin) is rejected so attribution cannot be forged. Skipped
+        // on the in-process loopback path where no claim context is installed.
+        let body_principal = req
             .context
             .as_ref()
-            .map(|ctx| ctx.principal_id.clone())
+            .map(|ctx| ctx.principal_id.trim().to_string())
             .unwrap_or_default();
+        let created_by = if !crate::runtime::service::method_security::claim_context_present() {
+            body_principal
+        } else if body_principal.is_empty() {
+            claim_ctx.subject.clone()
+        } else if body_principal.as_str() != claim_ctx.subject.trim()
+            && !claim_ctx.is_cross_tenant_admin()
+        {
+            return Err(Status::permission_denied(
+                "created_by principal must match the authenticated bearer subject",
+            ));
+        } else {
+            body_principal
+        };
         let rec = UserRecord {
             user_id: user_id.clone(),
             username: req.username.trim().to_ascii_lowercase(),
@@ -706,7 +730,7 @@ impl AuthnServiceImpl {
             password_hash: authn::hash_password(&req.password, &self.password_hash_key()),
             account_kind,
             status: crate::runtime::authn::AccountStatus::PendingVerification,
-            tenant_id: req.tenant_id,
+            tenant_id,
             full_name: req.full_name,
             totp_secret_hash: String::new(),
             mfa_enabled: false,
@@ -719,7 +743,7 @@ impl AuthnServiceImpl {
             updated_at_unix: now,
             deleted_at_unix: 0,
             deleted_by: String::new(),
-            project_id: req.project_id,
+            project_id,
             external_provider_id: req.external_provider_id,
             external_subject: req.external_subject,
             profile_attributes_json: serde_json::to_string(&req.profile_attributes)

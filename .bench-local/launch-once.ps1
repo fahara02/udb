@@ -29,9 +29,18 @@ $env:UDB_REDIS_DSN     = "redis://127.0.0.1:56379"
 $env:UDB_QDRANT_URL    = "http://127.0.0.1:56333"
 $env:UDB_COLUMN_DSN    = "http://udb:udb@127.0.0.1:58123/udb"
 $env:UDB_CLICKHOUSE_DSN = "http://udb:udb@127.0.0.1:58123/udb"
+# Neo4j graph executor (GraphQuery/GraphMutate). Runtime reads UDB_GRAPH_* (the
+# UDB_NEO4J_DSN cleared above is a DIFFERENT name); creds match canonical compose.
+$env:UDB_GRAPH_DSN      = "http://127.0.0.1:57474"
+$env:UDB_GRAPH_HTTP_URL = "http://127.0.0.1:57474"
+$env:UDB_GRAPH_USER     = "neo4j"
+$env:UDB_GRAPH_PASSWORD = "Udb_Strong#2026"
+$env:UDB_GRAPH_DATABASE = "neo4j"
 
 $env:UDB_ABAC_DEFAULT_ALLOW         = "true"
 $env:UDB_ALLOW_DEGRADED_BACKENDS    = "true"
+# EnsureBaseline (DataBroker admin baseline seed) is guarded; the sweep exercises it.
+$env:UDB_ENABLE_ADMIN_SEED          = "1"
 $env:UDB_CDC_ENABLED                = "true"   # PublishCDC needs the CDC tailer; §N abort was the kill-by-name artifact (harness_correction.md)
 $env:UDB_PROJECTION_WORKER_ENABLED  = "false"
 $env:UDB_RECONCILIATION_ENABLED     = "false"
@@ -61,6 +70,15 @@ $env:UDB_OTP_COOLDOWN_SECONDS      = "0"
 # Object backend config so StorageService.object_exists HEADs where PutObject writes.
 $env:UDB_OBJECT_BACKEND            = "minio"
 $env:UDB_OBJECT_BUCKET             = "udb-storage"
+# PHP lane runs the client IN DOCKER, where the presigned PUT (SigV4-bound to the broker's
+# minio host) can't be reached/rewritten, so the seed places storage object bytes via the
+# broker's PutObject into udb-live-sdk. The StorageService resolves its object bucket from
+# UDB_STORAGE_BUCKET / UDB_STORAGE_OBJECT_BACKEND (NOT UDB_OBJECT_BUCKET — that's the
+# data-plane object module), so point it at the same bucket the bytes land in, else
+# FinalizeUpload HEADs udb-storage and reports "object not present". Go/Python run natively
+# and use the presigned path against the default udb-storage bucket.
+$env:UDB_STORAGE_OBJECT_BACKEND    = "minio"
+$env:UDB_STORAGE_BUCKET            = "udb-live-sdk"
 
 # Capture the crash: full backtrace + DIRECT unbuffered file redirect (NOT Tee, which
 # buffers and loses the panic line before a panic=abort). bug_report.md C1/§H.

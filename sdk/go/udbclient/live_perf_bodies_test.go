@@ -364,12 +364,22 @@ func ctxField() bodyField {
 // actorF builds an authz governance `actor` (GovernanceActor) carrying the scope
 // the RPC re-checks under native.authz.governance — without it the call is
 // PERMISSION_DENIED even with an admin bearer.
+// actorF builds the GovernanceActor for a governance RPC. The `scope` arg names
+// the standing scope the RPC requires (kept for doc parity), but the live D1/D2
+// gate evaluates scopes from the VERIFIED claim, NOT request-body actor.scopes,
+// and no role projects to authz:* (tokens.rs ROLE_SCOPE_PROJECTIONS). So body
+// scopes can never satisfy the gate here; we use the body-authoritative
+// break-glass bypass instead (≤900s, reason-bearing, audited). gov_exp is seeded
+// to now+900 in live_perf_seed_test.go.
 func actorF(scope string) bodyField {
+	_ = scope
 	return fld("actor", sub(
 		fld("subject", seed("subject")),
 		fld("tenant_id", seed("tenant_id")),
 		fld("project_id", seed("project")),
-		fld("scopes", list(litS(scope))),
+		fld("break_glass", litB(true)),
+		fld("break_glass_reason", litS("sdk perf bench")),
+		fld("break_glass_expires_at_unix", seed("gov_exp")),
 	))
 }
 
@@ -488,7 +498,6 @@ var perfBodySpecs = map[string][]bodyField{
 	"udb.core.authn.services.v1.AuthnService/ResetPassword": {
 		fld("otp_id", seed("reset_otp_id")), fld("code", seed("reset_otp_code")), fld("new_password", litS("N3w!Passw0rd9")),
 	},
-	"udb.core.authn.services.v1.AuthnService/EnableMfa": {fld("user_id", seed("user_id"))},
 	"udb.core.authn.services.v1.AuthnService/DisableMfaFactor": {
 		fld("user_id", seed("user_id")), fld("factor_kind", enumV("AUTH_FACTOR_KIND_TOTP")),
 	},
@@ -740,7 +749,7 @@ var perfBodySpecs = map[string][]bodyField{
 		fld("operations", list(sub(fld("op", litS("replace")), fld("path", litS("active")), fld("value_json", litS("false"))))), ctxField(),
 	},
 	"udb.core.idp.services.v1.IdentityProviderService/ScimDeleteUser":  {fld("tenant_id", seed("tenant_id")), fld("provider_id", seed("provider_id")), fld("scim_user_id", seed("delete_scim_user_id")), ctxField()},
-	"udb.core.idp.services.v1.IdentityProviderService/ScimCreateGroup": {fld("tenant_id", seed("tenant_id")), fld("provider_id", seed("provider_id")), fld("scim_group_json", litS(`{"displayName":"admins"}`)), ctxField()},
+	"udb.core.idp.services.v1.IdentityProviderService/ScimCreateGroup": {fld("tenant_id", seed("tenant_id")), fld("provider_id", seed("provider_id")), fld("scim_group_json", litS(`{"displayName":"sdk-perf-group"}`)), ctxField()},
 	"udb.core.idp.services.v1.IdentityProviderService/ScimGetGroup":    {fld("tenant_id", seed("tenant_id")), fld("provider_id", seed("provider_id")), fld("scim_group_id", seed("scim_group_id"))},
 	"udb.core.idp.services.v1.IdentityProviderService/ScimListGroups":  {fld("tenant_id", seed("tenant_id")), fld("provider_id", seed("provider_id")), fld("filter", litS("")), fld("page", sub(fld("page", litI(1)), fld("page_size", litI(20))))},
 	"udb.core.idp.services.v1.IdentityProviderService/ScimPatchGroup": {
@@ -775,11 +784,14 @@ var perfBodySpecs = map[string][]bodyField{
 		fld("file_type", litS("DOCUMENT")), fld("reference_id", seed("file_id")), fld("reference_type", litS("document")), fld("expires_in_minutes", litI(15)), fld("size_bytes", litI(1024)),
 	},
 	"udb.core.storage.services.v1.StorageService/FinalizeUpload": {
-		fld("tenant_id", seed("tenant_id")), fld("file_id", seed("file_id")), fld("content_type", litS("application/pdf")), fld("file_type", litS("DOCUMENT")),
-		fld("reference_id", seed("file_id")), fld("reference_type", litS("document")), fld("size_bytes", litI(1024)),
+		fld("tenant_id", seed("tenant_id")), fld("file_id", seed("finalize_file_id")), fld("content_type", litS("application/pdf")), fld("file_type", litS("DOCUMENT")),
+		fld("reference_id", seed("finalize_file_id")), fld("reference_type", litS("document")), fld("size_bytes", litI(1024)),
 	},
 	"udb.core.storage.services.v1.StorageService/GetDownloadUrl": {fld("tenant_id", seed("tenant_id")), fld("file_id", seed("file_id")), fld("expires_in_minutes", litI(15))},
 	"udb.core.storage.services.v1.StorageService/GetFile":        {fld("tenant_id", seed("tenant_id")), fld("file_id", seed("file_id"))},
+	// Server-streaming download fallback: the primary file_id is finalized with
+	// object bytes present (seeded), so the first DownloadFileChunk delivers.
+	"udb.core.storage.services.v1.StorageService/DownloadFile":   {fld("tenant_id", seed("tenant_id")), fld("file_id", seed("file_id")), fld("chunk_size_bytes", litI(65536))},
 	"udb.core.storage.services.v1.StorageService/UpdateFile": {
 		fld("tenant_id", seed("tenant_id")), fld("file_id", seed("file_id")), fld("filename", litS("renamed.pdf")), fld("content_type", litS("application/pdf")),
 		fld("file_type", litS("DOCUMENT")), fld("reference_id", seed("file_id")), fld("reference_type", litS("document")), fld("is_public", litB(true)),
@@ -821,6 +833,7 @@ var perfBodySpecs = map[string][]bodyField{
 	"udb.core.webrtc.services.v1.RoomService/CloseRoom":        {fld("tenant_id", seed("tenant_id")), fld("room_id", seed("close_room_id"))},
 	"udb.core.webrtc.services.v1.RoomService/ListRooms":        {fld("tenant_id", seed("tenant_id")), fld("state", litS("active")), fld("page", litI(1)), fld("page_size", litI(20))},
 	"udb.core.webrtc.services.v1.PeerService/JoinRoom":         {fld("tenant_id", seed("tenant_id")), fld("room_id", seed("room_id")), fld("display_name", litS("Bench User")), fld("metadata", litS("{}")), fld("user_agent", litS("bench/1.0"))},
+	"udb.core.webrtc.services.v1.PeerService/JoinSession":      {fld("tenant_id", seed("tenant_id")), fld("room_id", seed("join_session_room_id")), fld("display_name", litS("Bench Session")), fld("metadata", litS("{}")), fld("user_agent", litS("bench/1.0")), fld("ttl_seconds", litI(3600))},
 	"udb.core.webrtc.services.v1.PeerService/LeaveRoom":        {fld("tenant_id", seed("tenant_id")), fld("room_id", seed("room_id")), fld("peer_id", seed("leave_peer_id"))},
 	"udb.core.webrtc.services.v1.PeerService/GetPeer":          {fld("tenant_id", seed("tenant_id")), fld("peer_id", seed("peer_id"))},
 	"udb.core.webrtc.services.v1.PeerService/ListPeers":        {fld("tenant_id", seed("tenant_id")), fld("room_id", seed("room_id")), fld("state", litS("connected"))},

@@ -29,7 +29,7 @@ namespace udb.core.Notification.Entity.V1 {
             "H2dvb2dsZS9wcm90b2J1Zi90aW1lc3RhbXAucHJvdG8aG3VkYi9jb3JlL2Nv",
             "bW1vbi92MS9kYi5wcm90bxohdWRiL2NvcmUvY29tbW9uL3YxL3NlY3VyaXR5",
             "LnByb3RvGit1ZGIvY29yZS9ub3RpZmljYXRpb24vZW50aXR5L3YxL2VudW1z",
-            "LnByb3RvIogVCg9Ob3RpZmljYXRpb25Mb2cSQAoGbG9nX2lkGAEgASgJQimC",
+            "LnByb3RvIpEWCg9Ob3RpZmljYXRpb25Mb2cSQAoGbG9nX2lkGAEgASgJQimC",
             "txglCgZsb2dfaWQSBFVVSUQYASgBOhFnZW5fcmFuZG9tX3V1aWQoKVIFbG9n",
             "SWQSwwEKC3RlbXBsYXRlX2lkGAIgASgJQqEBgrcYnAEKC3RlbXBsYXRlX2lk",
             "EgRVVUlESlsKFm5vdGlmaWNhdGlvbl90ZW1wbGF0ZXMSC3RlbXBsYXRlX2lk",
@@ -77,29 +77,32 @@ namespace udb.core.Notification.Entity.V1 {
             "aW1lc3RhbXBCH4K3GBsKDGRlbGl2ZXJlZF9hdBILVElNRVNUQU1QVFpSC2Rl",
             "bGl2ZXJlZEF0EnEKCmNyZWF0ZWRfYXQYEyABKAsyGi5nb29nbGUucHJvdG9i",
             "dWYuVGltZXN0YW1wQjaCtxgyCgpjcmVhdGVkX2F0EgtUSU1FU1RBTVBUWhgB",
-            "OhFDVVJSRU5UX1RJTUVTVEFNUGABaAFSCWNyZWF0ZWRBdDr8A/q2GNwCChFu",
-            "b3RpZmljYXRpb25fbG9ncxIQdWRiX25vdGlmaWNhdGlvbhgCIAEqPERlbGl2",
-            "ZXJ5IGF1ZGl0IGxvZyBmb3IgZXZlcnkgbm90aWZpY2F0aW9uIHNlbnQgYnkg",
-            "dGhlIHN5c3RlbUABSANSCmNyZWF0ZWRfYXRYWmJeChB0ZW5hbnRfaXNvbGF0",
-            "aW9uGkgodGVuYW50X2lkOjp0ZXh0ID0gY3VycmVudF9zZXR0aW5nKCdhcHAu",
-            "Y3VycmVudF90ZW5hbnRfaWQnLCB0cnVlKTo6dGV4dCkoAYoBQwoeaWR4X25s",
-            "b2dfdGVuYW50X2NoYW5uZWxfc3RhdHVzEgVCVFJFRVoJdGVuYW50X2lkWgdj",
-            "aGFubmVsWgZzdGF0dXOKASEKEGlkeF9ubG9nX3NlbnRfYXQSBEJSSU5aB3Nl",
-            "bnRfYXTyARZub3RpZmljYXRpb24uZmFpbGVkLnYxirIZlgEKBnRlbmFudBoJ",
-            "dGVuYW50X2lkKjR0ZW5hbnRfaWQgPSBjdXJyZW50X3NldHRpbmcoJ2FwcC5j",
-            "dXJyZW50X3RlbmFudF9pZCcpMgRub25lOhhub3RpZmljYXRpb24ub3BlcmF0",
-            "aW9uYWxAWkgCUgZ0ZW5hbnRaCHN0YW5kYXJkchV0ZW5hbnQuZGF0YV9yZXNp",
-            "ZGVuY3lCqQIKI2NvbS51ZGIuY29yZS5ub3RpZmljYXRpb24uZW50aXR5LnYx",
-            "QhROb3RpZmljYXRpb25Mb2dQcm90b1ABWktnaXRodWIuY29tL2ZhaGFyYTAy",
-            "L3VkYi9zZGsvZ28vZ2VuL3VkYi9jb3JlL25vdGlmaWNhdGlvbi9lbnRpdHkv",
-            "djE7ZW50aXR5djGiAgRVQ05FqgIfdWRiLmNvcmUuTm90aWZpY2F0aW9uLkVu",
-            "dGl0eS5WMcoCH1VkYlxDb3JlXE5vdGlmaWNhdGlvblxFbnRpdHlcVjHiAitV",
-            "ZGJcR1BCTWV0YWRhdGFcQ29yZVxOb3RpZmljYXRpb25cRW50aXR5XFYx6gIj",
-            "VWRiOjpDb3JlOjpOb3RpZmljYXRpb246OkVudGl0eTo6VjFiBnByb3RvMw=="));
+            "OhFDVVJSRU5UX1RJTUVTVEFNUGABaAFSCWNyZWF0ZWRBdBJHChByZW5kZXJl",
+            "ZF9zdWJqZWN0GBQgASgJQhyCtxgYChByZW5kZXJlZF9zdWJqZWN0EgRURVhU",
+            "Ug9yZW5kZXJlZFN1YmplY3QSPgoNcmVuZGVyZWRfYm9keRgVIAEoCUIZgrcY",
+            "FQoNcmVuZGVyZWRfYm9keRIEVEVYVFIMcmVuZGVyZWRCb2R5OvwD+rYY3AIK",
+            "EW5vdGlmaWNhdGlvbl9sb2dzEhB1ZGJfbm90aWZpY2F0aW9uGAIgASo8RGVs",
+            "aXZlcnkgYXVkaXQgbG9nIGZvciBldmVyeSBub3RpZmljYXRpb24gc2VudCBi",
+            "eSB0aGUgc3lzdGVtQAFIA1IKY3JlYXRlZF9hdFhaYl4KEHRlbmFudF9pc29s",
+            "YXRpb24aSCh0ZW5hbnRfaWQ6OnRleHQgPSBjdXJyZW50X3NldHRpbmcoJ2Fw",
+            "cC5jdXJyZW50X3RlbmFudF9pZCcsIHRydWUpOjp0ZXh0KSgBigFDCh5pZHhf",
+            "bmxvZ190ZW5hbnRfY2hhbm5lbF9zdGF0dXMSBUJUUkVFWgl0ZW5hbnRfaWRa",
+            "B2NoYW5uZWxaBnN0YXR1c4oBIQoQaWR4X25sb2dfc2VudF9hdBIEQlJJTloH",
+            "c2VudF9hdPIBFm5vdGlmaWNhdGlvbi5mYWlsZWQudjGKshmWAQoGdGVuYW50",
+            "Ggl0ZW5hbnRfaWQqNHRlbmFudF9pZCA9IGN1cnJlbnRfc2V0dGluZygnYXBw",
+            "LmN1cnJlbnRfdGVuYW50X2lkJykyBG5vbmU6GG5vdGlmaWNhdGlvbi5vcGVy",
+            "YXRpb25hbEBaSAJSBnRlbmFudFoIc3RhbmRhcmRyFXRlbmFudC5kYXRhX3Jl",
+            "c2lkZW5jeUKpAgojY29tLnVkYi5jb3JlLm5vdGlmaWNhdGlvbi5lbnRpdHku",
+            "djFCFE5vdGlmaWNhdGlvbkxvZ1Byb3RvUAFaS2dpdGh1Yi5jb20vZmFoYXJh",
+            "MDIvdWRiL3Nkay9nby9nZW4vdWRiL2NvcmUvbm90aWZpY2F0aW9uL2VudGl0",
+            "eS92MTtlbnRpdHl2MaICBFVDTkWqAh91ZGIuY29yZS5Ob3RpZmljYXRpb24u",
+            "RW50aXR5LlYxygIfVWRiXENvcmVcTm90aWZpY2F0aW9uXEVudGl0eVxWMeIC",
+            "K1VkYlxHUEJNZXRhZGF0YVxDb3JlXE5vdGlmaWNhdGlvblxFbnRpdHlcVjHq",
+            "AiNVZGI6OkNvcmU6Ok5vdGlmaWNhdGlvbjo6RW50aXR5OjpWMWIGcHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.TimestampReflection.Descriptor, global::udb.core.Common.V1.DbReflection.Descriptor, global::udb.core.Common.V1.SecurityReflection.Descriptor, global::udb.core.Notification.Entity.V1.EnumsReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Notification.Entity.V1.NotificationLog), global::udb.core.Notification.Entity.V1.NotificationLog.Parser, new[]{ "LogId", "TemplateId", "EventType", "Channel", "RecipientId", "RecipientAddress", "TenantId", "ProjectId", "ResourceType", "ResourceId", "ResourceName", "CorrelationId", "Status", "ErrorMessage", "ProviderMessageId", "RetryCount", "SentAt", "DeliveredAt", "CreatedAt" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Notification.Entity.V1.NotificationLog), global::udb.core.Notification.Entity.V1.NotificationLog.Parser, new[]{ "LogId", "TemplateId", "EventType", "Channel", "RecipientId", "RecipientAddress", "TenantId", "ProjectId", "ResourceType", "ResourceId", "ResourceName", "CorrelationId", "Status", "ErrorMessage", "ProviderMessageId", "RetryCount", "SentAt", "DeliveredAt", "CreatedAt", "RenderedSubject", "RenderedBody" }, null, null, null, null)
           }));
     }
     #endregion
@@ -160,6 +163,8 @@ namespace udb.core.Notification.Entity.V1 {
       sentAt_ = other.sentAt_ != null ? other.sentAt_.Clone() : null;
       deliveredAt_ = other.deliveredAt_ != null ? other.deliveredAt_.Clone() : null;
       createdAt_ = other.createdAt_ != null ? other.createdAt_.Clone() : null;
+      renderedSubject_ = other.renderedSubject_;
+      renderedBody_ = other.renderedBody_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -397,6 +402,30 @@ namespace udb.core.Notification.Entity.V1 {
       }
     }
 
+    /// <summary>Field number for the "rendered_subject" field.</summary>
+    public const int RenderedSubjectFieldNumber = 20;
+    private string renderedSubject_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string RenderedSubject {
+      get { return renderedSubject_; }
+      set {
+        renderedSubject_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "rendered_body" field.</summary>
+    public const int RenderedBodyFieldNumber = 21;
+    private string renderedBody_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string RenderedBody {
+      get { return renderedBody_; }
+      set {
+        renderedBody_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -431,6 +460,8 @@ namespace udb.core.Notification.Entity.V1 {
       if (!object.Equals(SentAt, other.SentAt)) return false;
       if (!object.Equals(DeliveredAt, other.DeliveredAt)) return false;
       if (!object.Equals(CreatedAt, other.CreatedAt)) return false;
+      if (RenderedSubject != other.RenderedSubject) return false;
+      if (RenderedBody != other.RenderedBody) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -457,6 +488,8 @@ namespace udb.core.Notification.Entity.V1 {
       if (sentAt_ != null) hash ^= SentAt.GetHashCode();
       if (deliveredAt_ != null) hash ^= DeliveredAt.GetHashCode();
       if (createdAt_ != null) hash ^= CreatedAt.GetHashCode();
+      if (RenderedSubject.Length != 0) hash ^= RenderedSubject.GetHashCode();
+      if (RenderedBody.Length != 0) hash ^= RenderedBody.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -551,6 +584,14 @@ namespace udb.core.Notification.Entity.V1 {
         output.WriteRawTag(154, 1);
         output.WriteMessage(CreatedAt);
       }
+      if (RenderedSubject.Length != 0) {
+        output.WriteRawTag(162, 1);
+        output.WriteString(RenderedSubject);
+      }
+      if (RenderedBody.Length != 0) {
+        output.WriteRawTag(170, 1);
+        output.WriteString(RenderedBody);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -637,6 +678,14 @@ namespace udb.core.Notification.Entity.V1 {
         output.WriteRawTag(154, 1);
         output.WriteMessage(CreatedAt);
       }
+      if (RenderedSubject.Length != 0) {
+        output.WriteRawTag(162, 1);
+        output.WriteString(RenderedSubject);
+      }
+      if (RenderedBody.Length != 0) {
+        output.WriteRawTag(170, 1);
+        output.WriteString(RenderedBody);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -703,6 +752,12 @@ namespace udb.core.Notification.Entity.V1 {
       }
       if (createdAt_ != null) {
         size += 2 + pb::CodedOutputStream.ComputeMessageSize(CreatedAt);
+      }
+      if (RenderedSubject.Length != 0) {
+        size += 2 + pb::CodedOutputStream.ComputeStringSize(RenderedSubject);
+      }
+      if (RenderedBody.Length != 0) {
+        size += 2 + pb::CodedOutputStream.ComputeStringSize(RenderedBody);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -781,6 +836,12 @@ namespace udb.core.Notification.Entity.V1 {
           CreatedAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
         }
         CreatedAt.MergeFrom(other.CreatedAt);
+      }
+      if (other.RenderedSubject.Length != 0) {
+        RenderedSubject = other.RenderedSubject;
+      }
+      if (other.RenderedBody.Length != 0) {
+        RenderedBody = other.RenderedBody;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -886,6 +947,14 @@ namespace udb.core.Notification.Entity.V1 {
             input.ReadMessage(CreatedAt);
             break;
           }
+          case 162: {
+            RenderedSubject = input.ReadString();
+            break;
+          }
+          case 170: {
+            RenderedBody = input.ReadString();
+            break;
+          }
         }
       }
     #endif
@@ -988,6 +1057,14 @@ namespace udb.core.Notification.Entity.V1 {
               CreatedAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
             }
             input.ReadMessage(CreatedAt);
+            break;
+          }
+          case 162: {
+            RenderedSubject = input.ReadString();
+            break;
+          }
+          case 170: {
+            RenderedBody = input.ReadString();
             break;
           }
         }

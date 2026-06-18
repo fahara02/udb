@@ -41,6 +41,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const node_assert_1 = require("node:assert");
 const node_test_1 = require("node:test");
 const node_fs_1 = require("node:fs");
+const path = __importStar(require("node:path"));
 const grpc = __importStar(require("@grpc/grpc-js"));
 const project_1 = require("./project");
 const generatedClient_1 = require("./generatedClient");
@@ -91,6 +92,8 @@ const SAML_IDP_METADATA_XML = `<md:EntityDescriptor xmlns:md="urn:oasis:names:tc
     `<md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://idp.example.com/sso"/>` +
     `</md:IDPSSODescriptor></md:EntityDescriptor>`;
 const NON_UNARY_METHODS = new Set([
+    "entity",
+    "table",
     "get_object",
     "publish_c_d_c",
     "select_v2",
@@ -102,6 +105,7 @@ const NON_UNARY_METHODS = new Set([
     "batch_upsert",
     "begin_tx",
     "vector_batch_upsert",
+    "download_file",
 ]);
 const FATAL_CONNECTIVITY_CODES = new Set([
     grpc.status.CANCELLED,
@@ -255,6 +259,147 @@ function snakeToPascal(s) {
 function operationKindOf(serviceFull, methodSnake) {
     return generatedClient_1.RPC_OPERATION_KIND[`/${serviceFull}/${snakeToPascal(methodSnake)}`];
 }
+// ── bench-body manifest consumer (chapter 11.1.3 / 11.1.5.2) ──────────────────
+// docs/bench-bodies/*.md is the cross-SDK SINGLE SOURCE OF TRUTH for the per-RPC
+// valid request body (Go/Python/PHP/TS each load it). Each `| done | RPC | … |`
+// row's col2 is the RPC name (bare PascalCase like `Select`, or `Service.Method`
+// like `PeerService.JoinRoom`) and col5 is the free-form body cell.
+//
+// HONEST RESIDUAL (11.1.3.2/.3): col5 is free-form markdown prose
+// (e.g. `` `username`=`<seed:username>`, `password`="X" ``), NOT clean JSON. The
+// 12 typed `*Body` switches below encode broker-required nested shapes a generic
+// markdown→object hydrator cannot faithfully reproduce (nested RequestContext /
+// TenantContext, GovernanceActor `actor{scopes}`, exact non-`*_UNSPECIFIED` enum
+// NAMEs, bytes-vs-Struct field choices). So we DO NOT delete the switches and we
+// DO NOT hand-parse col5 into request objects. Instead the manifest is the
+// ASSERTED CONTRACT: `benchManifestCoversSurface` (a `node --test` test) fails if
+// the manifest row count != 265 OR if any RPC on the generated surface
+// (RPC_OPERATION_KIND, exactly 265 paths) lacks a manifest row — so the typed
+// switches can never silently drift away from the documented contract.
+function benchBodiesDir() {
+    const candidates = [
+        path.resolve(__dirname, "../../../docs/bench-bodies"), // dev: dist-test/ -> repo/docs
+        path.resolve(__dirname, "../../docs/bench-bodies"),
+        path.resolve(__dirname, "../docs/bench-bodies"),
+    ];
+    for (const c of candidates) {
+        try {
+            if ((0, node_fs_1.readdirSync)(c).some((f) => f.endsWith(".md")))
+                return c;
+        }
+        catch {
+            /* not this candidate */
+        }
+    }
+    return candidates[0];
+}
+// benchBodiesJSONPath resolves the GENERATED machine-readable manifest
+// (scripts/gen-bench-bodies-json.mjs → docs/generated/bench-bodies.json), the new
+// consumer source of truth. The markdown corpus stays the human-editable source;
+// the drift test below proves the JSON equals a fresh markdown parse.
+function benchBodiesJSONPath() {
+    const candidates = [
+        path.resolve(__dirname, "../../../docs/generated/bench-bodies.json"),
+        path.resolve(__dirname, "../../docs/generated/bench-bodies.json"),
+        path.resolve(__dirname, "../docs/generated/bench-bodies.json"),
+    ];
+    for (const c of candidates) {
+        try {
+            (0, node_fs_1.readFileSync)(c);
+            return c;
+        }
+        catch {
+            /* not this candidate */
+        }
+    }
+    return candidates[0];
+}
+// Map of normalized RPC short name (PascalCase, service prefix stripped, e.g.
+// `JoinSession`) → body cell, read from the generated JSON manifest. Throws if the
+// total row count != 265 (11.1.5.2).
+function loadBenchBodyRows() {
+    const entries = JSON.parse((0, node_fs_1.readFileSync)(benchBodiesJSONPath(), "utf8"));
+    const rows = new Map();
+    for (const e of entries) {
+        if (!e.rpc)
+            continue;
+        const short = e.rpc.includes(".") ? e.rpc.slice(e.rpc.lastIndexOf(".") + 1) : e.rpc;
+        if (rows.has(short)) {
+            throw new Error(`bench-body manifest has a duplicate RPC short name "${short}"`);
+        }
+        rows.set(short, e.body ?? "");
+    }
+    if (rows.size !== 265) {
+        throw new Error(`bench-body manifest has ${rows.size} RPC rows in docs/generated/bench-bodies.json, want exactly 265 (11.1.5.2)`);
+    }
+    return rows;
+}
+// parseBenchBodyMarkdownRows re-parses the human-editable markdown corpus — the
+// LEGACY parse, kept ONLY to power the drift test that proves the generated JSON
+// still equals a fresh markdown parse.
+function parseBenchBodyMarkdownRows() {
+    const dir = benchBodiesDir();
+    const rows = new Map();
+    let total = 0;
+    for (const file of (0, node_fs_1.readdirSync)(dir)) {
+        if (!file.endsWith(".md") || file === "workflow-sequences.md")
+            continue;
+        const text = (0, node_fs_1.readFileSync)(path.join(dir, file), "utf8");
+        for (const line of text.split(/\r?\n/)) {
+            const cells = line.split("|").map((c) => c.trim());
+            if (cells.length < 6 || !/^\[.?\]$/.test(cells[1]))
+                continue;
+            const rpc = cells[2];
+            if (!rpc)
+                continue;
+            const short = rpc.includes(".") ? rpc.slice(rpc.lastIndexOf(".") + 1) : rpc;
+            total += 1;
+            rows.set(short, cells[5] ?? "");
+        }
+    }
+    if (total !== 265) {
+        throw new Error(`bench-body markdown has ${total} RPC rows, want exactly 265`);
+    }
+    return rows;
+}
+(0, node_test_1.test)("bench-bodies.json matches a fresh markdown parse (R6.1 drift gate)", () => {
+    const fromJSON = loadBenchBodyRows();
+    const fromMD = parseBenchBodyMarkdownRows();
+    node_assert_1.strict.equal(fromJSON.size, 265, `JSON manifest has ${fromJSON.size} rows, want 265`);
+    node_assert_1.strict.equal(fromMD.size, 265, `markdown manifest has ${fromMD.size} rows, want 265`);
+    const diffs = [];
+    for (const [name, body] of fromMD) {
+        if (!fromJSON.has(name))
+            diffs.push(`missing in JSON: ${name}`);
+        else if (fromJSON.get(name) !== body)
+            diffs.push(`body mismatch for ${name}`);
+    }
+    for (const name of fromJSON.keys()) {
+        if (!fromMD.has(name))
+            diffs.push(`stale in JSON (not in markdown): ${name}`);
+    }
+    node_assert_1.strict.equal(diffs.length, 0, `bench-bodies.json drifted from markdown (run \`node scripts/gen-bench-bodies-json.mjs\`):\n${diffs.sort().join("\n")}`);
+});
+(0, node_test_1.test)("bench-body manifest is the asserted 265-RPC contract for the typed perf bodies", () => {
+    // 11.1.5.2: row count must be exactly 265 (loadBenchBodyRows throws otherwise).
+    const rows = loadBenchBodyRows();
+    node_assert_1.strict.equal(rows.size, 265, `manifest has ${rows.size} unique RPC rows, want 265`);
+    // 11.1.3.x residual: every RPC the perf harness drives (the generated surface,
+    // realized by the typed *Body switches) MUST have a manifest row — the manifest
+    // is the contract the switches cannot drift away from.
+    const missing = [];
+    for (const fullPath of Object.keys(generatedClient_1.RPC_OPERATION_KIND)) {
+        const method = fullPath.slice(fullPath.lastIndexOf("/") + 1);
+        if (!rows.has(method))
+            missing.push(fullPath);
+    }
+    node_assert_1.strict.equal(missing.length, 0, `RPC(s) on the generated surface have no bench-body manifest row: ${missing.join(", ")}`);
+    // The bijection also holds the other way: a manifest row with no generated RPC
+    // is stale contract drift.
+    const surfaceShort = new Set(Object.keys(generatedClient_1.RPC_OPERATION_KIND).map((p) => p.slice(p.lastIndexOf("/") + 1)));
+    const orphan = [...rows.keys()].filter((m) => !surfaceShort.has(m));
+    node_assert_1.strict.equal(orphan.length, 0, `bench-body manifest row(s) have no generated RPC (stale contract): ${orphan.join(", ")}`);
+});
 // A "kitchen-sink" request: protobufjs (under proto-loader) drops keys that the
 // concrete request type doesn't declare, so every read RPC picks up exactly the
 // fields it has (tenant/project/context/message_type/…). This deepens the probe
@@ -277,7 +422,7 @@ function surfaceProbeRequest(tenantId, projectId) {
 // valid non-`*_UNSPECIFIED` enum NAMEs, seeded fixture values for `<seed:KEY>` ID
 // references, valid scalars). The bench then measures REAL handler work down the
 // SUCCESS path, not validation-rejection on a generic placeholder. Returns
-// It covers ALL 262 RPCs (every unary RPC AND every streaming first-message); the
+// It covers ALL 265 RPCs (every unary RPC AND every streaming first-message); the
 // perf caller treats a returned undefined as a HARD failure — there is no generic
 // fallback. proto-loader drops keys a request type does not declare, so
 // over-supplying within a body is safe.
@@ -494,6 +639,12 @@ function dataBrokerBody(methodName, tenantId, projectId, context, get) {
             return { context: { ...context, scopes: ["udb:admin"] }, limit: 50, redact: false };
         case "verify_admin_audit_log":
             return { context: { ...context, scopes: ["udb:admin"] }, limit: 0 };
+        case "ensure_baseline":
+            // EnsureBaselineRequest carries only `context` (field 1). Privilege-creating
+            // admin seed (env-gated UDB_ENABLE_ADMIN_SEED), requires scope `udb:admin`;
+            // idempotently seeds a baseline saga + DLQ row for the verified principal's
+            // tenant/project (bench-bodies/data_broker.md row EnsureBaseline).
+            return { context: { ...context, scopes: ["udb:admin"] } };
     }
     return undefined;
 }
@@ -629,7 +780,19 @@ function authzBody(methodName, tenantId, projectId, get) {
     // created_by / assigned_by / deleted_by / … are audit columns the broker validates
     // as bare UUIDs — the casbin `subject` ("user:<uuid>") is NOT a valid UUID there.
     const byId = get("user_id") || liveUuid();
-    const actor = (scope) => ({ subject, tenant_id: tenantId, project_id: projectId, scopes: [scope] });
+    // The `scope` arg names the standing scope the RPC requires (kept for doc
+    // parity), but the live D1/D2 governance gate evaluates scopes from the VERIFIED
+    // claim, NOT request-body actor.scopes, and no role projects to authz:*
+    // (tokens.rs ROLE_SCOPE_PROJECTIONS) — so body scopes can never satisfy the gate
+    // here. Use the body-authoritative break-glass bypass instead (≤900s,
+    // reason-bearing, audited). break_glass_expires_at_unix is int64; this SDK
+    // passes int64 as a plain JS number (cf. size_bytes), epoch seconds is well
+    // within Number.MAX_SAFE_INTEGER. Mirrors gov_exp seeded to now+900.
+    const actor = (_scope) => ({
+        subject, tenant_id: tenantId, project_id: projectId,
+        break_glass: true, break_glass_reason: "sdk perf bench",
+        break_glass_expires_at_unix: Math.floor(Date.now() / 1000) + 900,
+    });
     const principal = { subject, user_id: get("user_id"), tenant_id: tenantId, scopes: [] };
     const resource = { resource_type: get("resource") || "invoice", table: "invoice" };
     switch (methodName) {
@@ -814,7 +977,9 @@ function idpBody(methodName, tenantId, projectId, tctx, get) {
         case "scim_delete_user":
             return { tenant_id: tenantId, provider_id, scim_user_id: get("delete_scim_user_id") || get("record_id"), context };
         case "scim_create_group":
-            return { tenant_id: tenantId, provider_id, scim_group_json: JSON.stringify({ displayName: `grp-${liveUuid().slice(0, 8)}` }), context };
+            // displayName MUST equal a seeded provider group_mapping_json key — the
+            // provider seed maps "sdk-perf-group", so the group resolves against it.
+            return { tenant_id: tenantId, provider_id, scim_group_json: JSON.stringify({ displayName: "sdk-perf-group" }), context };
         case "scim_get_group":
             return { tenant_id: tenantId, provider_id, scim_group_id: get("scim_group_id") || get("record_id") };
         case "scim_list_groups":
@@ -897,8 +1062,14 @@ function storageBody(methodName, tenantId, get) {
     switch (methodName) {
         case "register_upload":
             return { tenant_id: tenantId, project_id: "", filename: "report.pdf", content_type: "application/pdf", file_type: "document", reference_id: liveUuid(), reference_type: "document", is_public: false, expires_in_minutes: 15, size_bytes: 1024 };
-        case "finalize_upload":
-            return { tenant_id: tenantId, file_id, content_type: "application/pdf", file_type: "document", reference_id: file_id, reference_type: "document", is_public: false, size_bytes: 1024 };
+        case "finalize_upload": {
+            // The primary file_id is already finalized by the seed (FinalizeUpload twice
+            // fails "upload already finalized"), so the measured Finalize targets a
+            // SEPARATE registered+uploaded-but-NOT-finalized file seeded as
+            // finalize_file_id.
+            const fin = get("finalize_file_id") || file_id;
+            return { tenant_id: tenantId, file_id: fin, content_type: "application/pdf", file_type: "document", reference_id: fin, reference_type: "document", is_public: false, size_bytes: 1024 };
+        }
         case "get_download_url":
             return { tenant_id: tenantId, file_id, expires_in_minutes: 15 };
         case "get_file":
@@ -919,7 +1090,7 @@ function notificationBody(methodName, tenantId, projectId, tctx, get) {
     const event_type = get("event_type");
     switch (methodName) {
         case "send_notification":
-            return { event_type, recipient_id: get("user_id"), recipient_address: "user@example.com", tenant_id: tenantId, project_id: projectId, locale: "en", variables: {}, channels: ["NOTIFICATION_CHANNEL_EMAIL"] };
+            return { event_type, recipient_id: get("user_id"), recipient_address: "user@example.com", tenant_id: tenantId, project_id: projectId, locale: "en", variables: { name: "SDK" }, channels: ["NOTIFICATION_CHANNEL_EMAIL"] };
         case "get_notification":
             return { log_id: get("log_id") };
         case "list_notifications":
@@ -964,6 +1135,14 @@ function webrtcBody(methodName, tenantId, get) {
             return { tenant_id: tenantId, state: "active", page: 1, page_size: 20 };
         case "join_room":
             return { tenant_id: tenantId, room_id, display_name: "Bench User", metadata: "{}", user_agent: "bench/1.0" };
+        case "join_session":
+            // Atomic join-room + mint-TURN-credentials (mirrors join_room body plus the
+            // ttl_seconds int32 TURN credential lifetime; bench-bodies/webrtc.md row
+            // PeerService.JoinSession). TURN config must be present (fail-closed). Uses
+            // its OWN high-capacity room (join_session_room_id) — the main room_id is
+            // filled to its cap of 8 by JoinRoom's iters, so JoinSession against it would
+            // hit "room ... at capacity".
+            return { tenant_id: tenantId, room_id: get("join_session_room_id") || room_id, display_name: "Bench Session", metadata: "{}", user_agent: "bench/1.0", ttl_seconds: 3600 };
         case "leave_room":
             // destructive — a throwaway peer id so the seeded peer stays for read RPCs.
             return { tenant_id: tenantId, room_id, peer_id: get("leave_peer_id") || liveUuid() };
@@ -1425,7 +1604,13 @@ async function seedPerfFixtures(gen, data, tenantId, projectId, uuidTenant) {
     // canary RPCs run their real success path. ──────────────────────────────────────
     {
         const subject = fix.lookup("subject") ?? `user:${fix.lookup("user_id") ?? liveUuid()}`;
-        const gActor = () => ({ subject, tenant_id: tenantId, project_id: projectId, scopes: ["authz:admin", "authz:policy:write", "authz:policy:approve", "policy:read"] });
+        // Body actor.scopes are ignored by the live D1/D2 gate (it reads claim scopes,
+        // and no role projects to authz:*), so the seed's own governance writes (incl.
+        // the first CreatePolicyDraft that stores policy_draft_id) must use the
+        // body-authoritative break-glass bypass — otherwise the drafts/versions/canary
+        // are never created and the governance RPCs that read them fail "<id> is
+        // required". break_glass_expires_at_unix is int64-as-number (epoch seconds).
+        const gActor = () => ({ subject, tenant_id: tenantId, project_id: projectId, break_glass: true, break_glass_reason: "sdk perf seed", break_glass_expires_at_unix: Math.floor(Date.now() / 1000) + 900 });
         const mkDraft = async (title, setName = "default") => {
             try {
                 const d = await gen.AuthzService.create_policy_draft({ actor: gActor(), tenant_id: tenantId, project_id: projectId, policy_set_name: setName, title: title + suffix, change_reason: "seed", document: {} }, opts);
@@ -1566,10 +1751,19 @@ async function seedPerfFixtures(gen, data, tenantId, projectId, uuidTenant) {
     // ── NotificationService: template + a sent notification → log_id, event_type ───
     const event = `sdk.perf.${suffix}`;
     await tryRun("UpsertTemplate", async () => {
-        await gen.NotificationService.upsert_template({ event_type: event, channel: 1, locale: "en", subject_template: "SDK {{n}}", body_template: "sdk-perf-body", is_active: true }, opts);
+        // No "{{n}}" placeholder: the seed SendNotification below passes no variables,
+        // so a placeholder subject would fail to render → no log_id → Get/Retry/Send
+        // notification RPCs fail. Plain "SDK perf" renders with zero variables.
+        await gen.NotificationService.upsert_template({ event_type: event, channel: 1, locale: "en", subject_template: "SDK perf", body_template: "sdk-perf-body", is_active: true }, opts);
     });
     fix.set("event_type", event);
     fix.set("locale", "en");
+    // Governance break-glass expiry: the D1/D2 governance gate reads scopes from the
+    // VERIFIED claim, not request-body actor.scopes, and no role projects to authz:*
+    // — so the governance RPCs are reached via the body-authoritative break-glass
+    // bypass (≤900s, reason-bearing, audited). Set at seed time; the governance RPCs
+    // measure shortly after. int64-as-number epoch seconds.
+    fix.set("gov_exp", String(Math.floor(Date.now() / 1000) + 900));
     const recipientId = fix.lookup("recipient_id");
     if (recipientId) {
         await tryRun("SendNotification", async () => {
@@ -1625,6 +1819,38 @@ async function seedPerfFixtures(gen, data, tenantId, projectId, uuidTenant) {
     await tryRun("RegisterDeleteFile", async () => {
         const dreg = await gen.StorageService.register_upload({ tenant_id: uuidTenant, project_id: "", filename: `perf-del-${suffix}.txt`, content_type: "text/plain", file_type: "DOCUMENT", reference_id: liveUuid(), reference_type: "sdk.perf", size_bytes: 64, expires_in_minutes: 30 }, opts);
         fix.set("delete_file_id", dreg.file_id);
+    });
+    // A SEPARATE registered+uploaded but NOT finalized file for the measured
+    // FinalizeUpload — finalizing the primary file_id again fails "already
+    // finalized", so the measured Finalize needs its own un-finalized target. Upload
+    // the bytes (so Finalize's object HEAD succeeds) but intentionally do NOT call
+    // FinalizeUpload — the measured RPC finalizes it.
+    await tryRun("RegisterFinalizeFile", async () => {
+        const freg = await gen.StorageService.register_upload({ tenant_id: uuidTenant, project_id: "", filename: `perf-fin-${suffix}.txt`, content_type: "text/plain", file_type: "DOCUMENT", reference_id: liveUuid(), reference_type: "sdk.perf", size_bytes: 64, expires_in_minutes: 30 }, opts);
+        const ffid = freg.file_id;
+        fix.set("finalize_file_id", ffid);
+        addCleanup(async () => {
+            try {
+                await gen.StorageService.delete_file({ tenant_id: uuidTenant, file_id: ffid }, opts);
+            }
+            catch { /* best-effort */ }
+        });
+        const fpayload = `sdk-perf-finalize-${suffix}`;
+        const fUploadUrl = freg.upload_url || "";
+        let fput200 = false;
+        if (fUploadUrl) {
+            try {
+                const res = await fetch(fUploadUrl, { method: "PUT", body: fpayload, headers: { "Content-Type": "text/plain" } });
+                fput200 = res.ok;
+            }
+            catch { /* fall through to PutObject */ }
+        }
+        if (!fput200) {
+            const put = data.put_object({ deadlineMs: 10_000, noRetry: true });
+            put.stream.write({ context: ctx, bucket: process.env.UDB_OBJECT_BUCKET || "udb-storage", object_key: freg.object_key, data: Buffer.from(fpayload, "utf8"), content_type: "text/plain", final_chunk: true });
+            put.stream.end();
+            await put.response;
+        }
     });
     // ── AssetService: pipeline definition + asset + a started instance ─────────────
     if (fileId) {
@@ -1687,6 +1913,21 @@ async function seedPerfFixtures(gen, data, tenantId, projectId, uuidTenant) {
         await tryRun("CreateCloseRoom", async () => {
             const cr = await gen.RoomService.create_room({ tenant_id: uuidTenant, name: `sdk-perf-close-room-${suffix}`, max_participants: 8, config: "{}", created_by: liveUuid() }, opts);
             fix.set("close_room_id", cr.room_id);
+        });
+        // A SEPARATE high-capacity room for the measured JoinSession. The main room_id
+        // is filled to its cap of 8 by JoinRoom's mutation iters, so JoinSession
+        // against it would hit "room ... at capacity". maxParticipants=64 leaves room
+        // for the 5 JoinSession iters.
+        await tryRun("CreateJoinSessionRoom", async () => {
+            const jsr = await gen.RoomService.create_room({ tenant_id: uuidTenant, name: `sdk-perf-joinsession-room-${suffix}`, max_participants: 64, config: "{}", created_by: liveUuid() }, opts);
+            const jsrId = jsr.room_id;
+            fix.set("join_session_room_id", jsrId);
+            addCleanup(async () => {
+                try {
+                    await gen.RoomService.close_room({ tenant_id: uuidTenant, room_id: jsrId }, opts);
+                }
+                catch { /* best-effort */ }
+            });
         });
     });
     // ── NotificationService: an EMAIL preference row so GetPreference resolves ─────
@@ -2491,7 +2732,11 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
     }, opts)).user;
     const event = `sdk.live.ts.${suffix}`;
     const body = `sdk-live-body-ts-${suffix}`;
-    await gen.NotificationService.upsert_template({ event_type: event, channel: 1, locale: "en", subject_template: "SDK {{n}}", body_template: body, is_active: true }, opts);
+    await gen.NotificationService.upsert_template(
+    // No "{{n}}" placeholder: send_notification below passes no variables, and the
+    // broker rejects rendering a template that omits a required variable. Plain text
+    // renders with zero variables.
+    { event_type: event, channel: 1, locale: "en", subject_template: "SDK notify", body_template: body, is_active: true }, opts);
     const template = (await gen.NotificationService.get_template({ event_type: event, channel: 1, locale: "en" }, opts)).template;
     node_assert_1.strict.equal(template.body_template, body);
     const sent = await gen.NotificationService.send_notification({ event_type: event, recipient_id: recipient.user_id, recipient_address: `sdk+${suffix}@example.com`, tenant_id: tenantId, channels: [1] }, opts);
@@ -2716,14 +2961,18 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
         await expectStreamMounted("authTarget.ControlPlaneService.delta_resources", () => authGenerated.ControlPlaneService.delta_resources({ deadlineMs: 2_000 }));
         await expectStreamMounted("authTarget.ControlPlaneService.stream_resources", () => authGenerated.ControlPlaneService.stream_resources({ deadlineMs: 2_000 }));
         await expectStreamMounted("authTarget.SignalingService.signal", () => authGenerated.SignalingService.signal({ deadlineMs: 2_000 }));
+        await expectStreamMounted("authTarget.StorageService.download_file", () => authGenerated.StorageService.download_file({}, { deadlineMs: 2_000 }));
         node_assert_1.strict.ok(nativeCount > 0, "native control-plane unary RPCs must be probed");
         node_assert_1.strict.ok(dataCount > 0, "DataBroker unary RPCs must be probed");
-        // Full-surface coverage like Go/Python/PHP: 262 RPCs total = 251 unary
-        // (nativeCount + dataCount) + the 11 streaming RPCs probed individually below.
-        const STREAMING_PROBED = 11; // get_object, publish_c_d_c, select_v2, put_object,
+        // Full-surface coverage like Go/Python/PHP: 265 RPCs total = 253 unary
+        // (nativeCount + dataCount) + the 12 streaming RPCs probed individually below.
+        // EnsureBaseline (DataBroker) + JoinSession (PeerService) are both unary, so the
+        // unary count rose 251→253. StorageService.DownloadFile is SERVER-STREAMING, so
+        // it adds to the streaming count (11→12), not the unary count (265 total).
+        const STREAMING_PROBED = 12; // get_object, publish_c_d_c, select_v2, put_object,
         //   batch_select, batch_upsert, begin_tx, vector_batch_upsert, delta_resources,
-        //   stream_resources, signal
-        node_assert_1.strict.equal(nativeCount + dataCount + STREAMING_PROBED, 262, `TS probed ${nativeCount + dataCount} unary + ${STREAMING_PROBED} streaming = ${nativeCount + dataCount + STREAMING_PROBED}, want 262 — full-surface coverage regressed`);
+        //   stream_resources, signal, download_file
+        node_assert_1.strict.equal(nativeCount + dataCount + STREAMING_PROBED, 265, `TS probed ${nativeCount + dataCount} unary + ${STREAMING_PROBED} streaming = ${nativeCount + dataCount + STREAMING_PROBED}, want 265 — full-surface coverage regressed`);
         node_assert_1.strict.ok(probeCounters.populated >= 200, `only ${probeCounters.populated} unary RPCs received a populated typed request; full-surface coverage regressed`);
     }
     finally {
@@ -2896,7 +3145,7 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
             topic_pattern: "*",
         });
         // Server-streaming reads that take a request and deliver a real first response.
-        const SERVER_STREAM_FIRST_RESPONSE = new Set(["select_v2", "get_object"]);
+        const SERVER_STREAM_FIRST_RESPONSE = new Set(["select_v2", "get_object", "download_file"]);
         const seededStreamRequest = (methodName) => {
             if (methodName === "select_v2") {
                 return { context: requestContext(tenantId, projectId, "ts.live.perf"), message_type: LIVE_MESSAGE_TYPE, filter: { tenant_id: tenantId, project_id: projectId }, limit: 1 };
@@ -2904,8 +3153,13 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
             if (methodName === "get_object") {
                 return { context: requestContext(tenantId, projectId, "ts.live.perf"), bucket: fixtures.lookup("bucket") ?? (process.env.UDB_LIVE_S3_BUCKET || "udb-live-sdk"), object_key: fixtures.lookup("object_key") ?? "" };
             }
-            // Only select_v2/get_object reach here; never a generic body.
-            return perfRealBody("DataBroker", methodName, tenantId, projectId, fixtures) ?? {};
+            if (methodName === "download_file") {
+                // StorageService server-streaming download of the seeded, finalized file:
+                // the first DownloadFileChunk carries object metadata + the first bytes.
+                return { tenant_id: tenantId, file_id: fixtures.lookup("file_id") ?? "", chunk_size_bytes: 65536 };
+            }
+            // Only select_v2/get_object/download_file reach here; never a generic body.
+            return perfRealBody("StorageService", methodName, tenantId, projectId, fixtures) ?? {};
         };
         // ── measureRpc: time ONE RPC (unary or streaming) and push its sample ─────────
         // Extracted from the old single-pass loop so the AUTH-ROUTE 3-phase ordering
@@ -3127,9 +3381,177 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
             lines.push(`| ${s.service} | ${s.rpc} | ${s.kind} | ${s.err} | ${s.p50.toFixed(2)} | ${s.p99.toFixed(2)} | ${s.mean.toFixed(2)} | ${s.note} |`);
         }
         (0, node_fs_1.writeFileSync)("perf_report_ts.md", lines.join("\n") + "\n");
-        node_assert_1.strict.ok(samples.length >= 260, `perf measured only ${samples.length} RPCs (want all 262)`);
+        node_assert_1.strict.ok(samples.length >= 262, `perf measured only ${samples.length} RPCs (want all 265)`);
         console.log(`\nTS perf: ${samples.length} RPCs measured, ${failed.length} FAILED (non-OK gRPC status) → sdk/typescript/perf_report_ts.md`);
         await seed.cleanup();
+    }
+    finally {
+        project.close();
+    }
+});
+// ── Scenario perf (gated on UDB_SCENARIO_PERF=1, SEPARATE from the full sweep) ──
+//
+// This is the SCENARIO bench: it times the user-facing WORKFLOW HELPERS the
+// simple-client docs prescribe (uploadFile, downloadFile, bound entity
+// upsert/select/delete, loginAndAdoptTenant, events subscribe-ready/publishAndWait,
+// webrtc joinSession) as end-to-end facade calls — NOT the raw 265-RPC surface
+// (that stays in the "live per-RPC perf" sweep above → perf_report_ts.md). It is
+// gated by its OWN flag (UDB_SCENARIO_PERF=1) and writes its OWN report
+// (scenario_perf_ts.md) so it can run/report independently. Each row's `seq` is the
+// documented helper RPC sequence (docs/bench-bodies/workflow-sequences.md).
+(0, node_test_1.test)("live scenario perf", {
+    skip: process.env.UDB_LIVE_SDK_TESTS === "1" && process.env.UDB_SCENARIO_PERF === "1"
+        ? false
+        : "requires live UDB broker + UDB_SCENARIO_PERF=1",
+}, async () => {
+    const target = requiredEnv("UDB_GRPC_TARGET");
+    const authTarget = process.env.UDB_AUTH_GRPC_TARGET?.trim() || target;
+    const username = requiredEnv("UDB_LIVE_USERNAME");
+    const password = requiredEnv("UDB_LIVE_PASSWORD");
+    const tenantHint = process.env.UDB_LIVE_TENANT || "sdk-live";
+    const projectId = process.env.UDB_LIVE_PROJECT || "default";
+    const project = new project_1.UdbProject({
+        target, authTarget, tenantId: tenantHint, projectId,
+        purpose: "ts.live.scenario.perf", tokenStore: memoryStore(), deadlineMs: 20_000,
+    });
+    const codeNameOf = (err) => {
+        const code = grpcCode(err);
+        if (code === undefined)
+            return "UNKNOWN";
+        return grpc.status[code] ?? String(code);
+    };
+    const pct = (sorted, p) => {
+        if (sorted.length === 0)
+            return 0;
+        const i = Math.min(sorted.length - 1, Math.floor((p * (sorted.length - 1)) / 100));
+        return sorted[i];
+    };
+    try {
+        const suffix = Date.now().toString(36);
+        const ENTITY = "udb.sdk.live.v1.SdkLiveRecord";
+        const entity = () => project.entity(ENTITY, { key: ["record_id"] });
+        // Track the adopted canonical tenant locally (the bootstrap login below resolves
+        // it from the verified principal; entity()/the facades already carry it on the
+        // wire, but the request bodies need the same value).
+        let adoptedTenant = tenantHint;
+        const tenant = () => adoptedTenant;
+        const scenarioRecord = (i) => ({
+            record_id: `ts-scn-${suffix}-${i}`, tenant_id: tenant(), project_id: projectId,
+            lookup_key: "ts-scn-lk", payload: "ts-scenario", revision: 1,
+        });
+        const scenarios = [
+            {
+                name: "loginAndAdoptTenant", seq: "Login, AuthenticateBearer", iters: 5, warmup: false,
+                fn: async () => { await project.loginAndAdoptTenant({ username, password, tenant_hint: tenantHint, project_hint: projectId, device_name: "ts-sdk-scenario" }); },
+            },
+        ];
+        // Adopt the canonical tenant before the data/native scenarios run, capturing the
+        // verified principal's tenant for the scenario request bodies.
+        await project.loginAndAdoptTenant({ username, password, tenant_hint: tenantHint, project_hint: projectId, device_name: "ts-sdk-scenario-bootstrap" });
+        try {
+            const tok = await project.currentToken();
+            if (tok?.accessToken) {
+                const who = await project.auth.authenticateBearer(tok.accessToken);
+                adoptedTenant = who?.principal?.tenant_id || adoptedTenant;
+            }
+        }
+        catch { /* fall back to the hint tenant */ }
+        scenarios.push({
+            name: "entity.upsert", seq: "Upsert", iters: 10, warmup: true,
+            fn: async () => { await entity().upsert(scenarioRecord(0), { returnRecord: false }); },
+        }, {
+            name: "entity.select", seq: "Select", iters: 25, warmup: true,
+            fn: async () => { await entity().select({ where: { tenant_id: tenant(), project_id: projectId } }); },
+        }, {
+            name: "entity.delete", seq: "Delete", iters: 5, warmup: true,
+            fn: async () => { await entity().delete({ record_id: "ts-scn-delete-noop", tenant_id: tenant(), project_id: projectId }); },
+        }, {
+            name: "uploadFile", seq: "RegisterUpload, PUT, FinalizeUpload", iters: 5, warmup: true,
+            fn: async () => { await project.storage.uploadFile("ts-scenario.txt", Buffer.from("ts-scenario-upload"), { contentType: "text/plain", fileType: "DOCUMENT" }); },
+        }, {
+            name: "events.publishAndWait", seq: "EnqueueOutboxEvent, PublishCDC first-event", iters: 3, warmup: false,
+            fn: async () => { await project.events.publishAndWait("sdk.scenario." + suffix, { event: "ts-scenario", n: suffix }, () => true, 20_000); },
+        });
+        // downloadFile / webrtc.joinSession need a pre-existing file / room — seed one
+        // of each (cost NOT measured) so the timed scenario is the pure helper path.
+        try {
+            const up = await project.storage.uploadFile("ts-scenario-dl.txt", Buffer.from("ts-scenario-download"), { contentType: "text/plain", fileType: "DOCUMENT" });
+            const fileId = up?.file?.file_id ?? up?.file_id ?? "";
+            if (fileId) {
+                scenarios.push({ name: "downloadFile", seq: "GetDownloadUrl", iters: 25, warmup: true, fn: async () => { await project.storage.downloadFile(fileId, { expires_in_minutes: 5 }); } });
+            }
+        }
+        catch (err) {
+            console.log(`scenario seed: download file upload failed, downloadFile scenario skipped: ${codeNameOf(err)}`);
+        }
+        try {
+            const room = await project.webrtc.room.createRoom({ name: "ts-scenario-room-" + suffix, max_participants: 8, config: "{}" });
+            const roomId = room?.room_id ?? room?.room?.room_id ?? "";
+            if (roomId) {
+                scenarios.push({
+                    name: "webrtc.joinSession", seq: "JoinSession, Signal(open)", iters: 5, warmup: false,
+                    fn: async () => { const s = await project.webrtc.joinSession(roomId, { displayName: "ts-scenario-peer", ttlSeconds: 60, heartbeatMs: 0 }); await s.leave(); },
+                });
+            }
+        }
+        catch (err) {
+            console.log(`scenario seed: webrtc room create failed, joinSession scenario skipped: ${codeNameOf(err)}`);
+        }
+        const samples = [];
+        for (const sc of scenarios) {
+            if (sc.warmup) {
+                try {
+                    await sc.fn();
+                }
+                catch { /* warm-up errors ignored */ }
+            }
+            const okMs = [];
+            const allMs = [];
+            let firstErr = "OK", firstDetail = "";
+            for (let i = 0; i < sc.iters; i++) {
+                const start = performance.now();
+                let err = "OK";
+                try {
+                    await sc.fn();
+                }
+                catch (e) {
+                    err = codeNameOf(e);
+                    if (i === 0)
+                        firstDetail = (e?.details || e?.message || String(e)).slice(0, 200);
+                }
+                const ms = performance.now() - start;
+                if (i === 0)
+                    firstErr = err;
+                if (err === "OK")
+                    okMs.push(ms);
+                allMs.push(ms);
+            }
+            const measured = (okMs.length > 0 ? okMs : allMs).sort((a, b) => a - b);
+            const errCode = okMs.length > 0 ? "OK" : firstErr;
+            if (errCode !== "OK")
+                console.log(`[SCENARIO-FAIL] ${sc.name} => ${errCode}: ${firstDetail}`);
+            const mean = measured.reduce((a, b) => a + b, 0) / measured.length;
+            samples.push({ name: sc.name, seq: sc.seq, err: errCode, p50: pct(measured, 50), p99: pct(measured, 99), mean, min: measured[0], max: measured[measured.length - 1], iters: sc.iters });
+        }
+        const lines = [];
+        lines.push("# UDB SDK Scenario Perf — TypeScript (localhost)", "");
+        lines.push(`Scenarios measured: ${samples.length}   tenant=${tenant()}`, "");
+        lines.push("This is the SCENARIO bench: it times the user-facing WORKFLOW HELPERS the " +
+            "simple-client docs prescribe (uploadFile, downloadFile, bound entity " +
+            "upsert/select/delete, loginAndAdoptTenant, events publishAndWait, webrtc " +
+            "joinSession) — measured as end-to-end facade calls, NOT the raw 265-RPC " +
+            "surface (that stays in perf_report_ts.md). Each `seq` is the documented helper " +
+            "RPC sequence (docs/bench-bodies/workflow-sequences.md).", "");
+        lines.push("| Scenario | seq | err | p50 ms | p99 ms | mean ms | min ms | max ms | iters |", "|---|---|---|--:|--:|--:|--:|--:|--:|");
+        for (const s of [...samples].sort((a, b) => a.name.localeCompare(b.name))) {
+            lines.push(`| ${s.name} | ${s.seq} | ${s.err} | ${s.p50.toFixed(2)} | ${s.p99.toFixed(2)} | ${s.mean.toFixed(2)} | ${s.min.toFixed(2)} | ${s.max.toFixed(2)} | ${s.iters} |`);
+        }
+        const failed = samples.filter((s) => s.err !== "OK");
+        lines.push("", failed.length === 0
+            ? "Every scenario ran its success path (no non-OK gRPC status)."
+            : `${failed.length} scenario(s) returned a non-OK gRPC status (see [SCENARIO-FAIL] log lines).`);
+        (0, node_fs_1.writeFileSync)("scenario_perf_ts.md", lines.join("\n") + "\n");
+        console.log(`\nTS scenario perf: ${samples.length} workflow helpers measured, ${failed.length} FAILED → sdk/typescript/scenario_perf_ts.md`);
     }
     finally {
         project.close();

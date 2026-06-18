@@ -238,4 +238,28 @@ public interface NotificationLogOrBuilder extends
    * <code>.google.protobuf.Timestamp created_at = 19 [json_name = "createdAt", (.udb.core.common.v1.pg_column) = { ... }</code>
    */
   com.google.protobuf.TimestampOrBuilder getCreatedAtOrBuilder();
+
+  /**
+   * <code>string rendered_subject = 20 [json_name = "renderedSubject", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The renderedSubject.
+   */
+  java.lang.String getRenderedSubject();
+  /**
+   * <code>string rendered_subject = 20 [json_name = "renderedSubject", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for renderedSubject.
+   */
+  com.google.protobuf.ByteString
+      getRenderedSubjectBytes();
+
+  /**
+   * <code>string rendered_body = 21 [json_name = "renderedBody", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The renderedBody.
+   */
+  java.lang.String getRenderedBody();
+  /**
+   * <code>string rendered_body = 21 [json_name = "renderedBody", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for renderedBody.
+   */
+  com.google.protobuf.ByteString
+      getRenderedBodyBytes();
 }

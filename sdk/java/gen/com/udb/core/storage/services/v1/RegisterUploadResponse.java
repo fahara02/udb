@@ -202,6 +202,23 @@ private static final long serialVersionUID = 0L;
     return error_ == null ? com.udb.core.common.v1.ApiError.getDefaultInstance() : error_;
   }
 
+  public static final int EXPIRES_AT_FIELD_NUMBER = 5;
+  private long expiresAt_ = 0L;
+  /**
+   * <pre>
+   * Unix-seconds expiry of the presigned PUT `upload_url`; 0 when no URL was
+   * minted (metadata-only mode / presign error). Lets the client know when the
+   * URL dies without a follow-up call.
+   * </pre>
+   *
+   * <code>int64 expires_at = 5 [json_name = "expiresAt"];</code>
+   * @return The expiresAt.
+   */
+  @java.lang.Override
+  public long getExpiresAt() {
+    return expiresAt_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -228,6 +245,9 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000001) != 0)) {
       output.writeMessage(4, getError());
     }
+    if (expiresAt_ != 0L) {
+      output.writeInt64(5, expiresAt_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -249,6 +269,10 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000001) != 0)) {
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(4, getError());
+    }
+    if (expiresAt_ != 0L) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeInt64Size(5, expiresAt_);
     }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
@@ -276,6 +300,8 @@ private static final long serialVersionUID = 0L;
       if (!getError()
           .equals(other.getError())) return false;
     }
+    if (getExpiresAt()
+        != other.getExpiresAt()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -297,6 +323,9 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + ERROR_FIELD_NUMBER;
       hash = (53 * hash) + getError().hashCode();
     }
+    hash = (37 * hash) + EXPIRES_AT_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+        getExpiresAt());
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -442,6 +471,7 @@ private static final long serialVersionUID = 0L;
         errorBuilder_.dispose();
         errorBuilder_ = null;
       }
+      expiresAt_ = 0L;
       return this;
     }
 
@@ -491,6 +521,9 @@ private static final long serialVersionUID = 0L;
             : errorBuilder_.build();
         to_bitField0_ |= 0x00000001;
       }
+      if (((from_bitField0_ & 0x00000010) != 0)) {
+        result.expiresAt_ = expiresAt_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -523,6 +556,9 @@ private static final long serialVersionUID = 0L;
       }
       if (other.hasError()) {
         mergeError(other.getError());
+      }
+      if (other.getExpiresAt() != 0L) {
+        setExpiresAt(other.getExpiresAt());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -572,6 +608,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000008;
               break;
             } // case 34
+            case 40: {
+              expiresAt_ = input.readInt64();
+              bitField0_ |= 0x00000010;
+              break;
+            } // case 40
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -960,6 +1001,56 @@ private static final long serialVersionUID = 0L;
         error_ = null;
       }
       return errorBuilder_;
+    }
+
+    private long expiresAt_ ;
+    /**
+     * <pre>
+     * Unix-seconds expiry of the presigned PUT `upload_url`; 0 when no URL was
+     * minted (metadata-only mode / presign error). Lets the client know when the
+     * URL dies without a follow-up call.
+     * </pre>
+     *
+     * <code>int64 expires_at = 5 [json_name = "expiresAt"];</code>
+     * @return The expiresAt.
+     */
+    @java.lang.Override
+    public long getExpiresAt() {
+      return expiresAt_;
+    }
+    /**
+     * <pre>
+     * Unix-seconds expiry of the presigned PUT `upload_url`; 0 when no URL was
+     * minted (metadata-only mode / presign error). Lets the client know when the
+     * URL dies without a follow-up call.
+     * </pre>
+     *
+     * <code>int64 expires_at = 5 [json_name = "expiresAt"];</code>
+     * @param value The expiresAt to set.
+     * @return This builder for chaining.
+     */
+    public Builder setExpiresAt(long value) {
+
+      expiresAt_ = value;
+      bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Unix-seconds expiry of the presigned PUT `upload_url`; 0 when no URL was
+     * minted (metadata-only mode / presign error). Lets the client know when the
+     * URL dies without a follow-up call.
+     * </pre>
+     *
+     * <code>int64 expires_at = 5 [json_name = "expiresAt"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearExpiresAt() {
+      bitField0_ = (bitField0_ & ~0x00000010);
+      expiresAt_ = 0L;
+      onChanged();
+      return this;
     }
 
     // @@protoc_insertion_point(builder_scope:udb.core.storage.services.v1.RegisterUploadResponse)

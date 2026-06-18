@@ -104,7 +104,7 @@ async fn live_minio_object_exists_missing_returns_false_not_error() {
     let bucket = std::env::var("UDB_STORAGE_BUCKET").unwrap_or_else(|_| "udb-storage".to_string());
     let key = format!("exists/{}.txt", Uuid::new_v4());
 
-    // A present object → Ok(true).
+    // A present object → Ok(Some((size, etag))).
     runtime
         .put_object_backend_target(
             "minio",
@@ -117,20 +117,18 @@ async fn live_minio_object_exists_missing_returns_false_not_error() {
     let present = runtime
         .object_exists_backend_target("minio", "", &bucket, &key)
         .await;
-    assert_eq!(
-        present.ok(),
-        Some(true),
-        "present object must HEAD as Ok(true)"
+    assert!(
+        matches!(present, Ok(Some(_))),
+        "present object must HEAD as Ok(Some((size, etag))): {present:?}"
     );
 
-    // A MISSING object → Ok(false) (the regression: must NOT be an Unavailable error).
+    // A MISSING object → Ok(None) (the regression: must NOT be an Unavailable error).
     let missing = runtime
         .object_exists_backend_target("minio", "", &bucket, "exists/does-not-exist.txt")
         .await;
-    assert_eq!(
-        missing.as_ref().ok(),
-        Some(&false),
-        "missing object must HEAD as Ok(false), not an error: {missing:?}"
+    assert!(
+        matches!(missing, Ok(None)),
+        "missing object must HEAD as Ok(None), not an error: {missing:?}"
     );
 
     // cleanup

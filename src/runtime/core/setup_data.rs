@@ -216,7 +216,7 @@ impl DataBrokerRuntime {
         }
         assert_pg_outbox_receipt_store_consistency(&runtime);
 
-        // S1 (luna): all store registration is done; record whether a FULL
+        // S1: all store registration is done; record whether a FULL
         // canonical system store (saga / admin-audit / migration / projection
         // tables) actually registered as the default. If a relational write
         // backend is configured but no full store registered, `udb_system` was
@@ -281,7 +281,13 @@ impl DataBrokerRuntime {
         manifest: &CatalogManifest,
         request: SelectRequest,
         metadata_context: RequestContext,
-    ) -> Result<RecordSet, tonic::Status> {
+    ) -> Result<
+        (
+            RecordSet,
+            Option<crate::runtime::consistency::StaleReadWarning>,
+        ),
+        tonic::Status,
+    > {
         let mut request = request;
         // GAP 16: Prevent unbounded SELECT queries that return millions of rows.
         let default_limit = if self.config.default_limit > 0 {
@@ -360,23 +366,25 @@ impl DataBrokerRuntime {
                 .cache_get_fresh(cache_key, &manifest.checksum_sha256, &context)
                 .await
         {
-            return Ok(cached_record_set(cached));
+            return Ok((cached_record_set(cached), None));
         }
 
         let table = table_for_message(manifest, &request.message_type)
             .ok_or_else(|| tonic::Status::invalid_argument("unknown message_type"))?;
         let pool = self.pg_select_pool_for_table(table, &context)?;
-        self.enforce_read_fence(
-            &context,
-            &pool,
-            "postgres",
-            if context.target_instance.trim().is_empty() {
-                "selected"
-            } else {
-                context.target_instance.trim()
-            },
-        )
-        .await?;
+        // 03.2.1.2: capture the typed stale-read warning side-channel (the proto
+        // `RecordSet` cannot carry it) so the handler can emit the response header.
+        let stale_warning = self
+            .enforce_read_fence(
+                &context,
+                "postgres",
+                if context.target_instance.trim().is_empty() {
+                    "selected"
+                } else {
+                    context.target_instance.trim()
+                },
+            )
+            .await?;
         // READ fast-path: a read-only SELECT does NOT need a transaction. We
         // acquire ONE pooled connection, install the RLS context as SESSION
         // settings (is_local=false) on it, run the SELECT on that SAME
@@ -442,7 +450,7 @@ impl DataBrokerRuntime {
                 )
                 .await;
         }
-        Ok(record_set)
+        Ok((record_set, stale_warning))
     }
 
     pub(crate) async fn select_join_fusion(
@@ -451,7 +459,13 @@ impl DataBrokerRuntime {
         request: SelectRequest,
         context: RequestContext,
         filter: JsonValue,
-    ) -> Result<RecordSet, tonic::Status> {
+    ) -> Result<
+        (
+            RecordSet,
+            Option<crate::runtime::consistency::StaleReadWarning>,
+        ),
+        tonic::Status,
+    > {
         let plan = build_join_fusion_sql(manifest, &request, &context, &filter)?;
         let mut query = sqlx::query(&plan.sql);
         for (column, value) in &plan.bindings {
@@ -460,17 +474,18 @@ impl DataBrokerRuntime {
         let pool = self
             .pg_read_pool_for_context(&context)
             .ok_or_else(|| tonic::Status::unavailable("PostgreSQL backend is not configured"))?;
-        self.enforce_read_fence(
-            &context,
-            &pool,
-            "postgres",
-            if context.target_instance.trim().is_empty() {
-                "selected"
-            } else {
-                context.target_instance.trim()
-            },
-        )
-        .await?;
+        // 03.2.1.3: same typed stale-read warning side-channel as `select`.
+        let stale_warning = self
+            .enforce_read_fence(
+                &context,
+                "postgres",
+                if context.target_instance.trim().is_empty() {
+                    "selected"
+                } else {
+                    context.target_instance.trim()
+                },
+            )
+            .await?;
         // READ fast-path (see `select`): no transaction. Acquire one pooled
         // connection, install RLS context as SESSION settings, run the join
         // SELECT, then ALWAYS reset the session GUCs before the connection
@@ -495,14 +510,15 @@ impl DataBrokerRuntime {
         }
         let rows = rows_result?;
         reset_result?;
-        rows_to_record_set(
+        let record_set = rows_to_record_set(
             rows,
             None,
             &[],
             &context,
             self.encryption.as_ref(),
             &self.encryption_metrics,
-        )
+        )?;
+        Ok((record_set, stale_warning))
     }
 
     pub async fn upsert(
@@ -533,6 +549,43 @@ impl DataBrokerRuntime {
             .await
             .map_err(|e| tonic::Status::internal(format!("PG transaction begin failed: {e}")))?;
         set_request_local_settings(&mut tx, &context).await?;
+        // KEYSTONE (lane 05): keyed-only durable dedup. Fires ONLY when an
+        // idempotency_key is supplied — keyless writes (the hot-path majority)
+        // take zero extra SQL and zero behavioral change. The claim runs in THIS
+        // write tx, so a dedup-store failure aborts the whole write (fail-closed).
+        let dedup_ctx = {
+            let key = request.idempotency_key.trim();
+            if key.is_empty() {
+                None
+            } else {
+                let config = crate::runtime::system::SystemCatalogConfig::current();
+                let dedup_key = idempotency_dedup_key(
+                    &context.tenant_id,
+                    &context.project_id,
+                    &request.message_type,
+                    key,
+                );
+                let claim = claim_idempotency_key_in_tx(
+                    &mut tx,
+                    &config,
+                    &dedup_key,
+                    &context.tenant_id,
+                    &context.project_id,
+                    &request.message_type,
+                    "upsert",
+                )
+                .await?;
+                if !claim.fresh {
+                    // Replay: do NOT run the write. Drop the tx (rolls back the
+                    // dedup re-read) and return the stored original response.
+                    drop(tx);
+                    return Ok(mutation_response_from_idempotency_json(
+                        &claim.prior_response_json,
+                    ));
+                }
+                Some((config, dedup_key))
+            }
+        };
         let table = table_for_message(manifest, &request.message_type)
             .ok_or_else(|| tonic::Status::invalid_argument("unknown message_type"))?;
         // #117: rewrite proto `field_name` record keys to physical `column_name`s
@@ -613,13 +666,6 @@ impl DataBrokerRuntime {
             )
             .await?;
         }
-        tx.commit().await.map_err(|err| {
-            tonic::Status::internal(format!("PostgreSQL upsert commit failed: {err}"))
-        })?;
-
-        let _ = self
-            .cache_delete_pattern(&cache_invalidation_pattern("select", &request.message_type))
-            .await;
         // NW1-3e: route through SystemStores trait.
         let receipt = match self.default_system_stores_clone() {
             Some(store) => {
@@ -638,16 +684,32 @@ impl DataBrokerRuntime {
                 written_at_unix_ms: unix_millis(),
             },
         };
-        Ok(MutationResponse {
+        let response = MutationResponse {
             mutation_id: Uuid::new_v4().to_string(),
             resource_uri: plan.resource_uri,
             checksum_sha256: checksum_json(&record),
             record_json,
             affected_rows,
+            // Fresh path only — the duplicate path returned early in the dedup
+            // block above, so `false` here is now truthful.
             was_duplicate: false,
             write_receipt_json: serde_json::to_string(&receipt).unwrap_or_default(),
             ..MutationResponse::default()
-        })
+        };
+        // KEYSTONE (lane 05): persist the first writer's response summary into the
+        // dedup row IN THE SAME TX, so a replay returns the original body (not an
+        // empty one). Keyed writes only.
+        if let Some((config, dedup_key)) = dedup_ctx.as_ref() {
+            persist_idempotency_response_in_tx(&mut tx, config, dedup_key, &response).await?;
+        }
+        tx.commit().await.map_err(|err| {
+            tonic::Status::internal(format!("PostgreSQL upsert commit failed: {err}"))
+        })?;
+
+        let _ = self
+            .cache_delete_pattern(&cache_invalidation_pattern("select", &request.message_type))
+            .await;
+        Ok(response)
     }
 
     /// mutations→CDC (bug_report.md §R "kafka is not used"): emit a transactional
@@ -728,6 +790,7 @@ impl DataBrokerRuntime {
         message_type: &str,
         filter: JsonValue,
         context: RequestContext,
+        idempotency_key: String,
     ) -> Result<MutationResponse, tonic::Status> {
         let plan = build_delete_plan(
             manifest,
@@ -753,6 +816,39 @@ impl DataBrokerRuntime {
             .await
             .map_err(|e| tonic::Status::internal(format!("PG transaction begin failed: {e}")))?;
         set_request_local_settings(&mut tx, &context).await?;
+        // KEYSTONE (lane 05): keyed-only durable dedup, same-tx, fail-closed.
+        // Keyless deletes are unaffected.
+        let dedup_ctx = {
+            let key = idempotency_key.trim();
+            if key.is_empty() {
+                None
+            } else {
+                let config = crate::runtime::system::SystemCatalogConfig::current();
+                let dedup_key = idempotency_dedup_key(
+                    &context.tenant_id,
+                    &context.project_id,
+                    message_type,
+                    key,
+                );
+                let claim = claim_idempotency_key_in_tx(
+                    &mut tx,
+                    &config,
+                    &dedup_key,
+                    &context.tenant_id,
+                    &context.project_id,
+                    message_type,
+                    "delete",
+                )
+                .await?;
+                if !claim.fresh {
+                    drop(tx);
+                    return Ok(mutation_response_from_idempotency_json(
+                        &claim.prior_response_json,
+                    ));
+                }
+                Some((config, dedup_key))
+            }
+        };
         let result = query
             .execute(&mut *tx)
             .await
@@ -787,12 +883,6 @@ impl DataBrokerRuntime {
             )
             .await?;
         }
-        tx.commit().await.map_err(|err| {
-            tonic::Status::internal(format!("PostgreSQL delete commit failed: {err}"))
-        })?;
-        let _ = self
-            .cache_delete_pattern(&cache_invalidation_pattern("select", message_type))
-            .await;
         // NW1-3e: route through SystemStores trait.
         let receipt = match self.default_system_stores_clone() {
             Some(store) => {
@@ -811,13 +901,28 @@ impl DataBrokerRuntime {
                 written_at_unix_ms: unix_millis(),
             },
         };
-        Ok(MutationResponse {
+        let response = MutationResponse {
             mutation_id: Uuid::new_v4().to_string(),
             resource_uri: plan.resource_uri,
             affected_rows: result.rows_affected() as i64,
+            // Fresh path only — a replayed keyed delete returned early above with
+            // was_duplicate=true, so the default `false` here is truthful.
+            was_duplicate: false,
             write_receipt_json: serde_json::to_string(&receipt).unwrap_or_default(),
             ..MutationResponse::default()
-        })
+        };
+        // KEYSTONE (lane 05): persist the first writer's response summary in-tx so
+        // a replay returns the original body. Keyed deletes only.
+        if let Some((config, dedup_key)) = dedup_ctx.as_ref() {
+            persist_idempotency_response_in_tx(&mut tx, config, dedup_key, &response).await?;
+        }
+        tx.commit().await.map_err(|err| {
+            tonic::Status::internal(format!("PostgreSQL delete commit failed: {err}"))
+        })?;
+        let _ = self
+            .cache_delete_pattern(&cache_invalidation_pattern("select", message_type))
+            .await;
+        Ok(response)
     }
 
     pub async fn vector_search(
@@ -869,6 +974,18 @@ impl DataBrokerRuntime {
             } else {
                 Some(context.target_instance.as_str())
             };
+            // 03.3.3.1: honour the read fence before vector dispatch. Vector
+            // backends are projection-backed, so the projection-task fence is the
+            // meaningful component. Empty fences short-circuit; a hard-fail mode
+            // errors; a soft stale warning is discarded (no warning channel on the
+            // VectorSet response).
+            let _ = self
+                .enforce_read_fence(
+                    &context,
+                    &target.backend,
+                    target_instance.unwrap_or("selected"),
+                )
+                .await?;
             if target.backend == "qdrant" {
                 let qdrant =
                     self.qdrant_for_instance_for_project(target_instance, &context.project_id)?;
@@ -924,6 +1041,14 @@ impl DataBrokerRuntime {
             } else {
                 Some(context.target_instance.as_str())
             };
+
+            // 03.3.4.1: honour the read fence before hybrid vector dispatch (same
+            // projection-task fence semantics as `vector_search`). Empty fences
+            // short-circuit; a hard-fail mode errors; a soft stale warning is
+            // discarded (no warning channel on the VectorSet response).
+            let _ = self
+                .enforce_read_fence(&context, "qdrant", target_instance.unwrap_or("selected"))
+                .await?;
 
             // When text_query is empty, delegate to standard dense search.
             if request.text_query.trim().is_empty() {
@@ -1272,6 +1397,22 @@ impl DataBrokerRuntime {
             reject_plan(&plan.errors)?;
             ensure_typed_object_backend(&plan.backend)?;
             let backend = plan.backend.trim().to_ascii_lowercase();
+            // 03.3.2.1: honour the read fence on the object read entrypoint.
+            // Empty fences short-circuit (no hot-path cost). A hard-fail mode
+            // (Strong/ReadYourWrites, or own un-projected write) propagates as an
+            // error; a soft stale warning is discarded — the object response is a
+            // byte stream with no warning channel.
+            let _ = self
+                .enforce_read_fence(
+                    &context,
+                    &backend,
+                    if context.target_instance.trim().is_empty() {
+                        "selected"
+                    } else {
+                        context.target_instance.trim()
+                    },
+                )
+                .await?;
             let bucket = request.bucket.clone();
             let object_key = request.object_key.clone();
             let request_json = object_request_json("get", &bucket, &object_key, "");
@@ -1586,13 +1727,17 @@ impl DataBrokerRuntime {
     /// Check object presence WITHOUT manifest/policy evaluation — the native
     /// storage finalize path uses this after a presigned upload before marking
     /// metadata ACTIVE. S3/MinIO only; metadata-only deployments skip the check.
+    ///
+    /// `Ok(None)` = object absent (a bodiless S3 404); `Ok(Some((size, etag)))` =
+    /// present, returning the HEAD `content_length` + `e_tag` so the finalize path
+    /// can verify a truncated/wrong upload.
     pub async fn object_exists_backend_target(
         &self,
         backend_target: &str,
         project_id: &str,
         bucket: &str,
         object_key: &str,
-    ) -> Result<bool, tonic::Status> {
+    ) -> Result<Option<(i64, String)>, tonic::Status> {
         #[cfg(not(feature = "s3"))]
         {
             let _ = (backend_target, project_id, bucket, object_key);
@@ -1622,7 +1767,14 @@ impl DataBrokerRuntime {
             };
             let s3 = self.s3_for_instance_for_project(target_instance, project)?;
             match s3.head_object().bucket(bucket).key(object_key).send().await {
-                Ok(_) => Ok(true),
+                Ok(head) => {
+                    // Surface the HEAD size + ETag so FinalizeUpload can verify a
+                    // truncated/wrong upload. `content_length`/`e_tag` are optional
+                    // on the SDK output; absent → 0 / "".
+                    let size = head.content_length().unwrap_or(0);
+                    let etag = head.e_tag().unwrap_or_default().to_string();
+                    Ok(Some((size, etag)))
+                }
                 Err(err) => {
                     // S3 answers a HEAD for a missing object (or bucket) with a
                     // BODILESS 404, so the SDK error's Display is a generic
@@ -1630,14 +1782,14 @@ impl DataBrokerRuntime {
                     // string-matching it misclassifies a plain absent object as a
                     // service failure (the FinalizeUpload bug). The NotFound signal
                     // lives ONLY in the typed service error, so classify on that:
-                    // a 404 → not present (Ok(false)); anything else (auth, network,
+                    // a 404 → not present (Ok(None)); anything else (auth, network,
                     // endpoint) → a real failure.
                     let not_found = err
                         .as_service_error()
                         .map(|svc| svc.is_not_found())
                         .unwrap_or(false);
                     if not_found {
-                        Ok(false)
+                        Ok(None)
                     } else {
                         Err(tonic::Status::unavailable(format!(
                             "S3 object head failed: {err}"
@@ -1729,6 +1881,164 @@ impl DataBrokerRuntime {
                 expires_at_unix: unix_now() + ttl as i64,
             })
         }
+    }
+}
+
+// ── KEYSTONE (lane 05): durable, fail-closed, tenant+project-scoped idempotency
+// dedup for keyed data-plane mutations ─────────────────────────────────────────
+
+/// Result of an atomic same-tx idempotency-key claim.
+///
+/// `fresh == true` means THIS caller inserted the row and owns the write; the
+/// caller must run the data write and then persist its response summary into the
+/// row before committing. `fresh == false` means the key already existed (a
+/// replay): the caller MUST NOT run the write and instead returns the stored
+/// `prior_response_json` with `was_duplicate = true`.
+struct IdempotencyClaim {
+    fresh: bool,
+    prior_response_json: JsonValue,
+}
+
+/// Tenant+project-scoped salted dedup key. Returns the hex SHA-256 of
+/// `"{tenant}\0{project}\0{message_type}\0{key}"` — NEVER the bare client key, so
+/// two tenants (or projects) reusing `"key-1"` cannot collide (RLS/tenant-scope
+/// guardrail). Mirrors the `checksum_str` hashing already used for receipts.
+fn idempotency_dedup_key(
+    tenant_id: &str,
+    project_id: &str,
+    message_type: &str,
+    key: &str,
+) -> String {
+    crate::runtime::executor_utils::checksum_str(&format!(
+        "{tenant_id}\0{project_id}\0{message_type}\0{key}"
+    ))
+}
+
+/// Atomically claim a dedup key INSIDE the caller's write transaction, mirroring
+/// the proven `projection/mod.rs::insert_task_if_absent_on` ON CONFLICT CTE.
+///
+/// Because the INSERT runs in the same `sqlx::Transaction` as the data write, a
+/// dedup-table failure naturally aborts the whole tx (fail-closed by
+/// construction): the write cannot commit without this INSERT succeeding, and a
+/// conflict means we never run the write. The `sqlx` error is mapped via
+/// `sqlx_error_to_status` so the caller surfaces a fail-closed status (the tx is
+/// dropped on Err).
+async fn claim_idempotency_key_in_tx(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    config: &crate::runtime::system::SystemCatalogConfig,
+    dedup_key: &str,
+    tenant_id: &str,
+    project_id: &str,
+    message_type: &str,
+    operation: &str,
+) -> Result<IdempotencyClaim, tonic::Status> {
+    let rel = config.idempotency_keys_relation();
+    let sql = format!(
+        "WITH ins AS (
+             INSERT INTO {rel}
+                 (dedup_key, tenant_id, project_id, message_type, operation, response_json)
+             VALUES ($1, $2, $3, $4, $5, '{{}}'::jsonb)
+             ON CONFLICT (dedup_key) DO NOTHING
+             RETURNING true AS inserted, response_json
+         )
+         SELECT inserted, response_json FROM ins
+         UNION ALL
+         SELECT false AS inserted, response_json FROM {rel} WHERE dedup_key = $1
+         LIMIT 1"
+    );
+    let row: (bool, JsonValue) = sqlx::query_as(&sql)
+        .bind(dedup_key)
+        .bind(tenant_id)
+        .bind(project_id)
+        .bind(message_type)
+        .bind(operation)
+        .fetch_one(&mut **tx)
+        .await
+        .map_err(|err| {
+            crate::runtime::executor_utils::sqlx_error_to_status(
+                "idempotency dedup claim failed",
+                &err,
+            )
+        })?;
+    Ok(IdempotencyClaim {
+        fresh: row.0,
+        prior_response_json: row.1,
+    })
+}
+
+/// Persist the first writer's `MutationResponse` summary into the dedup row,
+/// inside the same write tx, so a later replay returns the original body.
+/// `record_json` (the protobuf field) is `bytes` (a single blob); we base64 it
+/// for JSON-safe round-tripping.
+async fn persist_idempotency_response_in_tx(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    config: &crate::runtime::system::SystemCatalogConfig,
+    dedup_key: &str,
+    response: &MutationResponse,
+) -> Result<(), tonic::Status> {
+    use base64::Engine as _;
+    let record_json_b64 = base64::engine::general_purpose::STANDARD.encode(&response.record_json);
+    let summary = serde_json::json!({
+        "mutation_id": response.mutation_id,
+        "resource_uri": response.resource_uri,
+        "checksum_sha256": response.checksum_sha256,
+        "record_json": record_json_b64,
+        "affected_rows": response.affected_rows,
+        "write_receipt_json": response.write_receipt_json,
+    });
+    let rel = config.idempotency_keys_relation();
+    let sql = format!("UPDATE {rel} SET response_json = $1 WHERE dedup_key = $2");
+    sqlx::query(&sql)
+        .bind(&summary)
+        .bind(dedup_key)
+        .execute(&mut **tx)
+        .await
+        .map_err(|err| {
+            crate::runtime::executor_utils::sqlx_error_to_status(
+                "idempotency response persist failed",
+                &err,
+            )
+        })?;
+    Ok(())
+}
+
+/// Reconstruct a `MutationResponse` (with `was_duplicate = true`) from a dedup
+/// row's stored summary on the replay path.
+fn mutation_response_from_idempotency_json(prior: &JsonValue) -> MutationResponse {
+    use base64::Engine as _;
+    let record_json = prior
+        .get("record_json")
+        .and_then(|v| v.as_str())
+        .and_then(|s| base64::engine::general_purpose::STANDARD.decode(s).ok())
+        .unwrap_or_default();
+    MutationResponse {
+        mutation_id: prior
+            .get("mutation_id")
+            .and_then(|v| v.as_str())
+            .unwrap_or_default()
+            .to_string(),
+        resource_uri: prior
+            .get("resource_uri")
+            .and_then(|v| v.as_str())
+            .unwrap_or_default()
+            .to_string(),
+        checksum_sha256: prior
+            .get("checksum_sha256")
+            .and_then(|v| v.as_str())
+            .unwrap_or_default()
+            .to_string(),
+        record_json,
+        affected_rows: prior
+            .get("affected_rows")
+            .and_then(|v| v.as_i64())
+            .unwrap_or_default(),
+        was_duplicate: true,
+        write_receipt_json: prior
+            .get("write_receipt_json")
+            .and_then(|v| v.as_str())
+            .unwrap_or_default()
+            .to_string(),
+        ..MutationResponse::default()
     }
 }
 
@@ -1869,10 +2179,40 @@ fn assert_pg_outbox_receipt_store_consistency(runtime: &DataBrokerRuntime) {
 #[cfg(test)]
 mod setup_data_consistency_tests {
     use super::{
-        full_canonical_store_requires_opt_in, merge_runtime_backend_instances,
-        pg_outbox_receipt_store_mismatch, projection_system_store_opt_in_value,
+        full_canonical_store_requires_opt_in, idempotency_dedup_key,
+        merge_runtime_backend_instances, pg_outbox_receipt_store_mismatch,
+        projection_system_store_opt_in_value,
     };
     use crate::runtime::config::{BackendInstance, BackendInstanceConfig, BackendInstanceRole};
+
+    #[test]
+    fn idempotency_dedup_key_is_tenant_and_project_scoped() {
+        // KEYSTONE (lane 05): the salted dedup key MUST differ across tenants and
+        // projects for the same client key, or two tenants reusing "key-1" would
+        // collide (RLS/tenant-scope bypass). Verifies 05.1.4.2 / the scoping
+        // guarantee asserted served-path by 05.6.2.1.
+        let key = "key-1";
+        let mt = "Payment";
+        let a = idempotency_dedup_key("tenant-a", "proj-1", mt, key);
+        let b = idempotency_dedup_key("tenant-b", "proj-1", mt, key);
+        let c = idempotency_dedup_key("tenant-a", "proj-2", mt, key);
+        let d = idempotency_dedup_key("tenant-a", "proj-1", "Invoice", key);
+        assert_ne!(a, b, "distinct tenants must not collide");
+        assert_ne!(a, c, "distinct projects must not collide");
+        assert_ne!(a, d, "distinct message types must not collide");
+        // Same inputs are stable (deterministic) and never the bare client key.
+        assert_eq!(a, idempotency_dedup_key("tenant-a", "proj-1", mt, key));
+        assert!(a.starts_with("sha256:"));
+        assert!(!a.contains(key), "must never embed the bare client key");
+        // A NUL-boundary collision guard: ("a","bc",..) vs ("ab","c",..) must
+        // not hash equal (the \0 separators prevent field-shifting collisions).
+        let shift1 = idempotency_dedup_key("a", "bc", mt, key);
+        let shift2 = idempotency_dedup_key("ab", "c", mt, key);
+        assert_ne!(
+            shift1, shift2,
+            "NUL separators must prevent field-shift collisions"
+        );
+    }
 
     #[test]
     fn projection_system_store_opt_in_requires_literal_one() {

@@ -162,6 +162,30 @@ pub(super) async fn seed_storage_file(pool: &sqlx::PgPool, tenant_id: &str) -> S
         .file_id
 }
 
+/// §1 read-after-write served-path assertion (13.7.1.2). A create-returning-id RPC
+/// must return a NON-EMPTY id that is IMMEDIATELY gettable on the SAME served path
+/// with the SAME tenant/project metadata a client uses. `created_id` is the id the
+/// create RPC returned; `get` performs the served Get with that id and resolves
+/// `true` when the row is present. Reverting any read-after-write guarantee (a
+/// create that returns an id not gettable) fails this assertion.
+pub(super) async fn assert_create_then_get<F, Fut>(label: &str, created_id: &str, get: F)
+where
+    F: FnOnce(String) -> Fut,
+    Fut: std::future::Future<Output = Result<bool, tonic::Status>>,
+{
+    assert!(
+        !created_id.is_empty(),
+        "{label}: create RPC must return a non-empty id"
+    );
+    let present = get(created_id.to_string())
+        .await
+        .unwrap_or_else(|err| panic!("{label}: served Get for created id failed: {err}"));
+    assert!(
+        present,
+        "{label}: id returned by create ({created_id}) must be immediately gettable on the served path"
+    );
+}
+
 pub(super) async fn assert_native_table_columns(
     pool: &sqlx::PgPool,
     message_type: &str,

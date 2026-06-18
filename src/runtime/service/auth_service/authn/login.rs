@@ -640,8 +640,8 @@ impl AuthnServiceImpl {
                 .await
                 .map_err(Status::internal)?,
         };
-        let otp_id = if let Some(user) = user {
-            let (otp_id, _code) = self
+        let (otp_id, code) = if let Some(user) = user {
+            let (otp_id, code) = self
                 .issue_otp(
                     &user,
                     authn_entity_pb::OtpType::PasswordReset as i32,
@@ -674,11 +674,23 @@ impl AuthnServiceImpl {
                 }),
             )
             .await;
-            otp_id
+            (otp_id, code)
         } else {
-            Uuid::new_v4().to_string()
+            // Uniform (non-enumerating) miss branch: a throwaway otp_id and NO echo.
+            (Uuid::new_v4().to_string(), String::new())
         };
-        Ok(Response::new(authn_pb::ForgotPasswordResponse { otp_id }))
+        // Dev-only echo of the reset OTP under the single fail-closed gate (empty in
+        // production / when the env opt-in is unset). The miss branch already carries
+        // an empty `code`, so the response shape stays uniform.
+        let dev_otp_code = if super::mfa::otp_dev_echo_enabled() {
+            code
+        } else {
+            String::new()
+        };
+        Ok(Response::new(authn_pb::ForgotPasswordResponse {
+            otp_id,
+            dev_otp_code,
+        }))
     }
 
     pub(super) async fn reset_password_impl(

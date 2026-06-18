@@ -1907,6 +1907,37 @@ public final class DataBrokerGrpc {
     return getMarkSagaReviewedMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.udb.services.v1.EnsureBaselineRequest,
+      com.udb.services.v1.EnsureBaselineResponse> getEnsureBaselineMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "EnsureBaseline",
+      requestType = com.udb.services.v1.EnsureBaselineRequest.class,
+      responseType = com.udb.services.v1.EnsureBaselineResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.services.v1.EnsureBaselineRequest,
+      com.udb.services.v1.EnsureBaselineResponse> getEnsureBaselineMethod() {
+    io.grpc.MethodDescriptor<com.udb.services.v1.EnsureBaselineRequest, com.udb.services.v1.EnsureBaselineResponse> getEnsureBaselineMethod;
+    if ((getEnsureBaselineMethod = DataBrokerGrpc.getEnsureBaselineMethod) == null) {
+      synchronized (DataBrokerGrpc.class) {
+        if ((getEnsureBaselineMethod = DataBrokerGrpc.getEnsureBaselineMethod) == null) {
+          DataBrokerGrpc.getEnsureBaselineMethod = getEnsureBaselineMethod =
+              io.grpc.MethodDescriptor.<com.udb.services.v1.EnsureBaselineRequest, com.udb.services.v1.EnsureBaselineResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "EnsureBaseline"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.services.v1.EnsureBaselineRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.services.v1.EnsureBaselineResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new DataBrokerMethodDescriptorSupplier("EnsureBaseline"))
+              .build();
+        }
+      }
+    }
+    return getEnsureBaselineMethod;
+  }
+
   private static volatile io.grpc.MethodDescriptor<com.udb.entity.v1.PolicyListRequest,
       com.udb.entity.v1.PolicyListResponse> getListPoliciesMethod;
 
@@ -2969,6 +3000,18 @@ public final class DataBrokerGrpc {
 
     /**
      * <pre>
+     * Idempotently seed a baseline manual-review saga row and a retryable DLQ row
+     * for the VERIFIED principal's tenant/project. Privilege-creating: fail-closed,
+     * env-gated (UDB_ENABLE_ADMIN_SEED) and requires scope: udb:admin.
+     * </pre>
+     */
+    default void ensureBaseline(com.udb.services.v1.EnsureBaselineRequest request,
+        io.grpc.stub.StreamObserver<com.udb.services.v1.EnsureBaselineResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getEnsureBaselineMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
      * Policy administration.
      * </pre>
      */
@@ -3730,6 +3773,19 @@ public final class DataBrokerGrpc {
 
     /**
      * <pre>
+     * Idempotently seed a baseline manual-review saga row and a retryable DLQ row
+     * for the VERIFIED principal's tenant/project. Privilege-creating: fail-closed,
+     * env-gated (UDB_ENABLE_ADMIN_SEED) and requires scope: udb:admin.
+     * </pre>
+     */
+    public void ensureBaseline(com.udb.services.v1.EnsureBaselineRequest request,
+        io.grpc.stub.StreamObserver<com.udb.services.v1.EnsureBaselineResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getEnsureBaselineMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
      * Policy administration.
      * </pre>
      */
@@ -4446,6 +4502,18 @@ public final class DataBrokerGrpc {
 
     /**
      * <pre>
+     * Idempotently seed a baseline manual-review saga row and a retryable DLQ row
+     * for the VERIFIED principal's tenant/project. Privilege-creating: fail-closed,
+     * env-gated (UDB_ENABLE_ADMIN_SEED) and requires scope: udb:admin.
+     * </pre>
+     */
+    public com.udb.services.v1.EnsureBaselineResponse ensureBaseline(com.udb.services.v1.EnsureBaselineRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getEnsureBaselineMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
      * Policy administration.
      * </pre>
      */
@@ -5089,6 +5157,18 @@ public final class DataBrokerGrpc {
     public com.udb.entity.v1.SagaResponse markSagaReviewed(com.udb.entity.v1.SagaRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getMarkSagaReviewedMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Idempotently seed a baseline manual-review saga row and a retryable DLQ row
+     * for the VERIFIED principal's tenant/project. Privilege-creating: fail-closed,
+     * env-gated (UDB_ENABLE_ADMIN_SEED) and requires scope: udb:admin.
+     * </pre>
+     */
+    public com.udb.services.v1.EnsureBaselineResponse ensureBaseline(com.udb.services.v1.EnsureBaselineRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getEnsureBaselineMethod(), getCallOptions(), request);
     }
 
     /**
@@ -5764,6 +5844,19 @@ public final class DataBrokerGrpc {
 
     /**
      * <pre>
+     * Idempotently seed a baseline manual-review saga row and a retryable DLQ row
+     * for the VERIFIED principal's tenant/project. Privilege-creating: fail-closed,
+     * env-gated (UDB_ENABLE_ADMIN_SEED) and requires scope: udb:admin.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.services.v1.EnsureBaselineResponse> ensureBaseline(
+        com.udb.services.v1.EnsureBaselineRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getEnsureBaselineMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
      * Policy administration.
      * </pre>
      */
@@ -5970,26 +6063,27 @@ public final class DataBrokerGrpc {
   private static final int METHODID_GET_SAGA = 53;
   private static final int METHODID_RETRY_SAGA_COMPENSATION = 54;
   private static final int METHODID_MARK_SAGA_REVIEWED = 55;
-  private static final int METHODID_LIST_POLICIES = 56;
-  private static final int METHODID_PUT_POLICY = 57;
-  private static final int METHODID_DELETE_POLICY = 58;
-  private static final int METHODID_RELOAD_POLICIES = 59;
-  private static final int METHODID_LINT_POLICIES = 60;
-  private static final int METHODID_GET_CAPABILITIES = 61;
-  private static final int METHODID_GET_CATALOG_MANIFEST = 62;
-  private static final int METHODID_LOOKUP_MESSAGE_SCHEMA = 63;
-  private static final int METHODID_LIST_MESSAGE_SCHEMAS = 64;
-  private static final int METHODID_GET_HEALTH_REPORT = 65;
-  private static final int METHODID_ENSURE_PROJECT = 66;
-  private static final int METHODID_LIST_PROJECTS = 67;
-  private static final int METHODID_GET_ADMIN_SUMMARY = 68;
-  private static final int METHODID_LIST_ADMIN_AUDIT_LOGS = 69;
-  private static final int METHODID_VERIFY_ADMIN_AUDIT_LOG = 70;
-  private static final int METHODID_BATCH_SELECT = 71;
-  private static final int METHODID_BATCH_UPSERT = 72;
-  private static final int METHODID_VECTOR_BATCH_UPSERT = 73;
-  private static final int METHODID_PUT_OBJECT = 74;
-  private static final int METHODID_BEGIN_TX = 75;
+  private static final int METHODID_ENSURE_BASELINE = 56;
+  private static final int METHODID_LIST_POLICIES = 57;
+  private static final int METHODID_PUT_POLICY = 58;
+  private static final int METHODID_DELETE_POLICY = 59;
+  private static final int METHODID_RELOAD_POLICIES = 60;
+  private static final int METHODID_LINT_POLICIES = 61;
+  private static final int METHODID_GET_CAPABILITIES = 62;
+  private static final int METHODID_GET_CATALOG_MANIFEST = 63;
+  private static final int METHODID_LOOKUP_MESSAGE_SCHEMA = 64;
+  private static final int METHODID_LIST_MESSAGE_SCHEMAS = 65;
+  private static final int METHODID_GET_HEALTH_REPORT = 66;
+  private static final int METHODID_ENSURE_PROJECT = 67;
+  private static final int METHODID_LIST_PROJECTS = 68;
+  private static final int METHODID_GET_ADMIN_SUMMARY = 69;
+  private static final int METHODID_LIST_ADMIN_AUDIT_LOGS = 70;
+  private static final int METHODID_VERIFY_ADMIN_AUDIT_LOG = 71;
+  private static final int METHODID_BATCH_SELECT = 72;
+  private static final int METHODID_BATCH_UPSERT = 73;
+  private static final int METHODID_VECTOR_BATCH_UPSERT = 74;
+  private static final int METHODID_PUT_OBJECT = 75;
+  private static final int METHODID_BEGIN_TX = 76;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -6231,6 +6325,10 @@ public final class DataBrokerGrpc {
         case METHODID_MARK_SAGA_REVIEWED:
           serviceImpl.markSagaReviewed((com.udb.entity.v1.SagaRequest) request,
               (io.grpc.stub.StreamObserver<com.udb.entity.v1.SagaResponse>) responseObserver);
+          break;
+        case METHODID_ENSURE_BASELINE:
+          serviceImpl.ensureBaseline((com.udb.services.v1.EnsureBaselineRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.services.v1.EnsureBaselineResponse>) responseObserver);
           break;
         case METHODID_LIST_POLICIES:
           serviceImpl.listPolicies((com.udb.entity.v1.PolicyListRequest) request,
@@ -6753,6 +6851,13 @@ public final class DataBrokerGrpc {
               com.udb.entity.v1.SagaResponse>(
                 service, METHODID_MARK_SAGA_REVIEWED)))
         .addMethod(
+          getEnsureBaselineMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.services.v1.EnsureBaselineRequest,
+              com.udb.services.v1.EnsureBaselineResponse>(
+                service, METHODID_ENSURE_BASELINE)))
+        .addMethod(
           getListPoliciesMethod(),
           io.grpc.stub.ServerCalls.asyncUnaryCall(
             new MethodHandlers<
@@ -6966,6 +7071,7 @@ public final class DataBrokerGrpc {
               .addMethod(getGetSagaMethod())
               .addMethod(getRetrySagaCompensationMethod())
               .addMethod(getMarkSagaReviewedMethod())
+              .addMethod(getEnsureBaselineMethod())
               .addMethod(getListPoliciesMethod())
               .addMethod(getPutPolicyMethod())
               .addMethod(getDeletePolicyMethod())

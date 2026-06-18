@@ -49,7 +49,7 @@ use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 use std::process::Command as ProcessCommand;
 
-use udb::runtime::sdk_manifest::{RpcDescriptor, rpc_manifest};
+use udb::runtime::sdk_manifest::{EntityDescriptor, RpcDescriptor, entity_manifest, rpc_manifest};
 
 use super::{SdkAction, SdkSelector};
 
@@ -608,6 +608,15 @@ fn rpc_to_json(rpc: &RpcDescriptor) -> serde_json::Value {
         "peer_listener_allowed".to_string(),
         serde_json::json!(rpc.peer_listener_allowed),
     );
+    obj.insert(
+        "operation_kind".to_string(),
+        serde_json::json!(&rpc.operation_kind),
+    );
+    obj.insert("read_only".to_string(), serde_json::json!(rpc.read_only));
+    obj.insert(
+        "replay_safe".to_string(),
+        serde_json::json!(rpc.replay_safe),
+    );
     serde_json::Value::Object(obj)
 }
 
@@ -660,6 +669,7 @@ fn generate(lang: &str, templates_dir: &str, out_dir: &str, selector: &SdkSelect
         Ok(filtered) => filtered,
         Err(err) => return fsm.fail(err),
     };
+    let entities = entity_manifest();
     if manifest.is_empty() {
         return fsm.fail(
             "selectors matched no RPCs — relax --surface/--service/--native-services".to_string(),
@@ -725,7 +735,13 @@ fn generate(lang: &str, templates_dir: &str, out_dir: &str, selector: &SdkSelect
         let lang_out_dir = Path::new(out_dir).join(lang_name);
         let mut lang_scalars = scalars.clone();
         lang_scalars.push(("LANG".to_string(), lang_name.clone()));
-        match render_language(&lang_tmpl_dir, &lang_out_dir, &manifest, &lang_scalars) {
+        match render_language(
+            &lang_tmpl_dir,
+            &lang_out_dir,
+            &manifest,
+            &entities,
+            &lang_scalars,
+        ) {
             Ok((rendered, copied)) => {
                 total_rendered += rendered;
                 total_copied += copied;
@@ -883,6 +899,7 @@ fn render_language(
     tmpl_dir: &Path,
     out_dir: &Path,
     manifest: &[RpcDescriptor],
+    entities: &[EntityDescriptor],
     scalars: &[(String, String)],
 ) -> Result<(usize, usize), String> {
     let mut files: Vec<PathBuf> = Vec::new();
@@ -901,7 +918,7 @@ fn render_language(
         if rel_str.ends_with(".tmpl") {
             let raw =
                 std::fs::read_to_string(src).map_err(|e| format!("read {}: {e}", src.display()))?;
-            let body = render_text(&raw, manifest, scalars);
+            let body = render_text(&raw, manifest, entities, scalars);
             let dest_rel = rel_str.trim_end_matches(".tmpl");
             let dest = out_dir.join(dest_rel);
             write_file(&dest, body.as_bytes())?;
@@ -952,8 +969,13 @@ fn write_file(dest: &Path, contents: &[u8]) -> Result<(), String> {
 
 /// Render a template: expand per-RPC and per-service blocks, then substitute
 /// scalar placeholders across the whole result.
-fn render_text(template: &str, manifest: &[RpcDescriptor], scalars: &[(String, String)]) -> String {
-    let expanded = expand_blocks(template, manifest);
+fn render_text(
+    template: &str,
+    manifest: &[RpcDescriptor],
+    entities: &[EntityDescriptor],
+    scalars: &[(String, String)],
+) -> String {
+    let expanded = expand_blocks(template, manifest, entities);
     apply_scalars(&expanded, scalars)
 }
 
@@ -961,15 +983,18 @@ const RPC_BEGIN: &str = "@@UDB_RPC_BEGIN";
 const RPC_END: &str = "@@UDB_RPC_END";
 const SVC_BEGIN: &str = "@@UDB_SERVICE_BEGIN";
 const SVC_END: &str = "@@UDB_SERVICE_END";
+const ENTITY_BEGIN: &str = "@@UDB_ENTITY_BEGIN";
+const ENTITY_END: &str = "@@UDB_ENTITY_END";
 
 /// Expand all template blocks: service blocks first (recursing into any RPC
 /// blocks NESTED inside each service body, scoped to that service), then any
 /// remaining top-level RPC blocks. Nesting matters because the idiomatic shape
 /// is "one client class per service, one method per RPC" — i.e. an RPC block
 /// inside a service block.
-fn expand_blocks(text: &str, manifest: &[RpcDescriptor]) -> String {
+fn expand_blocks(text: &str, manifest: &[RpcDescriptor], entities: &[EntityDescriptor]) -> String {
     let after_services = expand_service_blocks(text, manifest);
-    expand_rpc_blocks(&after_services, manifest)
+    let after_entities = expand_entity_blocks(&after_services, entities);
+    expand_rpc_blocks(&after_entities, manifest)
 }
 
 /// Expand `@@UDB_SERVICE_BEGIN…@@UDB_SERVICE_END` blocks once per service. Each
@@ -1014,6 +1039,28 @@ fn expand_rpc_blocks(text: &str, manifest: &[RpcDescriptor]) -> String {
             let (body, next) = collect_body(&lines, i + 1, RPC_END);
             for rpc in manifest.iter().filter(|r| rpc_matches(r, &filter)) {
                 out.push_str(&substitute_rpc(&body, rpc));
+            }
+            i = next;
+        } else {
+            out.push_str(line);
+            out.push('\n');
+            i += 1;
+        }
+    }
+    out
+}
+
+/// Expand `@@UDB_ENTITY_BEGIN…@@UDB_ENTITY_END` blocks once per entity.
+fn expand_entity_blocks(text: &str, entities: &[EntityDescriptor]) -> String {
+    let lines: Vec<&str> = text.lines().collect();
+    let mut out = String::with_capacity(text.len());
+    let mut i = 0usize;
+    while i < lines.len() {
+        let line = lines[i];
+        if line.contains(ENTITY_BEGIN) {
+            let (body, next) = collect_body(&lines, i + 1, ENTITY_END);
+            for entity in entities {
+                out.push_str(&substitute_entity(&body, entity));
             }
             i = next;
         } else {
@@ -1167,7 +1214,7 @@ fn service_matches(svc: &ServiceInfo, filter: &str) -> bool {
 }
 
 fn substitute_rpc(body: &str, rpc: &RpcDescriptor) -> String {
-    let pairs: [(&str, String); 20] = [
+    let pairs: [(&str, String); 21] = [
         ("{{RPC_NAME}}", rpc.method.clone()),
         ("{{RPC_SNAKE}}", rpc.method_snake.clone()),
         ("{{RPC_INPUT}}", rpc.input_short.clone()),
@@ -1200,12 +1247,60 @@ fn substitute_rpc(body: &str, rpc: &RpcDescriptor) -> String {
         ),
         ("{{RPC_READ_ONLY}}", rpc.read_only.to_string()),
         ("{{RPC_OPERATION_KIND}}", rpc.operation_kind.clone()),
+        ("{{RPC_REPLAY_SAFE}}", rpc.replay_safe.to_string()),
     ];
     let mut text = body.to_string();
     for (key, value) in &pairs {
         text = text.replace(key, value);
     }
     text
+}
+
+fn substitute_entity(body: &str, entity: &EntityDescriptor) -> String {
+    let primary_keys = entity
+        .primary_keys
+        .iter()
+        .map(|key| format!("\"{key}\""))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let pairs: [(&str, String); 8] = [
+        ("{{ENTITY_MESSAGE_TYPE}}", entity.message_type.clone()),
+        ("{{ENTITY_TABLE}}", entity.table.clone()),
+        ("{{ENTITY_PRIMARY_KEYS}}", primary_keys),
+        ("{{ENTITY_TENANT_FIELD}}", entity.tenant_field.clone()),
+        ("{{ENTITY_PROJECT_FIELD}}", entity.project_field.clone()),
+        (
+            "{{ENTITY_SOFT_DELETE_FIELD}}",
+            entity.soft_delete_field.clone(),
+        ),
+        (
+            "{{ENTITY_TS_TYPE}}",
+            entity
+                .language_classes
+                .get("ts")
+                .cloned()
+                .unwrap_or_default(),
+        ),
+        (
+            "{{ENTITY_GO_TYPE}}",
+            entity
+                .language_classes
+                .get("go")
+                .cloned()
+                .unwrap_or_default(),
+        ),
+    ];
+    let mut text = body.to_string();
+    for (key, value) in &pairs {
+        text = text.replace(key, value);
+    }
+    let py_import = entity
+        .language_classes
+        .get("py")
+        .or_else(|| entity.language_classes.get("python"))
+        .cloned()
+        .unwrap_or_default();
+    text.replace("{{ENTITY_PY_IMPORT}}", &py_import)
 }
 
 fn substitute_service(body: &str, svc: &ServiceInfo, manifest: &[RpcDescriptor]) -> String {
@@ -1331,6 +1426,8 @@ mod tests {
                 peer_listener_allowed: false,
                 operation_kind: "read_only".to_string(),
                 read_only: true,
+                // Idempotency-annotated RPC: renders replay-safe `true`.
+                replay_safe: true,
             },
             RpcDescriptor {
                 service_name: "DataBroker".into(),
@@ -1378,6 +1475,7 @@ mod tests {
                 peer_listener_allowed: false,
                 operation_kind: "read_only".to_string(),
                 read_only: true,
+                replay_safe: false,
             },
         ]
     }
@@ -1388,7 +1486,7 @@ mod tests {
             ("UDB_VERSION".to_string(), "9.9.9".to_string()),
             ("LANG".to_string(), "python".to_string()),
         ];
-        let out = render_text("v={{UDB_VERSION}} lang={{LANG}}", &[], &scalars);
+        let out = render_text("v={{UDB_VERSION}} lang={{LANG}}", &[], &[], &scalars);
         assert_eq!(out.trim_end(), "v=9.9.9 lang=python");
     }
 
@@ -1396,7 +1494,7 @@ mod tests {
     fn per_rpc_block_expands_once_per_rpc() {
         let tmpl =
             "# @@UDB_RPC_BEGIN\ndef {{RPC_SNAKE}}(): path = \"{{RPC_PATH}}\"\n# @@UDB_RPC_END\n";
-        let out = render_text(tmpl, &sample_manifest(), &[]);
+        let out = render_text(tmpl, &sample_manifest(), &[], &[]);
         assert!(out.contains("def select(): path = \"/udb.services.v1.DataBroker/Select\""));
         assert!(out.contains("def select_v2(): path = \"/udb.services.v1.DataBroker/SelectV2\""));
         // Marker lines must be gone.
@@ -1404,9 +1502,37 @@ mod tests {
     }
 
     #[test]
+    fn replay_safe_placeholder_reflects_idempotency_contract() {
+        let tmpl = "# @@UDB_RPC_BEGIN\n{{RPC_NAME}}={{RPC_REPLAY_SAFE}}\n# @@UDB_RPC_END\n";
+        let out = render_text(tmpl, &sample_manifest(), &[], &[]);
+        // The idempotency-annotated RPC renders replay-safe `true`...
+        assert!(
+            out.contains("Select=true\n"),
+            "idempotency-annotated RPC should render replay-safe true: {out}"
+        );
+        // ...while a non-idempotent RPC renders `false`.
+        assert!(
+            out.contains("SelectV2=false"),
+            "non-idempotent RPC should render replay-safe false: {out}"
+        );
+    }
+
+    #[test]
+    fn sdk_manifest_json_exposes_template_token_fields() {
+        let manifest = sample_manifest();
+        let rpc = &manifest[0];
+        let value = rpc_to_json(rpc);
+        assert_eq!(
+            value.get("operation_kind").and_then(|v| v.as_str()),
+            Some("read_only")
+        );
+        assert_eq!(value.get("read_only").and_then(|v| v.as_bool()), Some(true));
+    }
+
+    #[test]
     fn rpc_block_kind_filter_selects_streaming_only() {
         let tmpl = "// @@UDB_RPC_BEGIN kind=server_streaming\n{{RPC_NAME}}\n// @@UDB_RPC_END\n";
-        let out = render_text(tmpl, &sample_manifest(), &[]);
+        let out = render_text(tmpl, &sample_manifest(), &[], &[]);
         assert!(out.contains("SelectV2"));
         assert!(!out.contains("Select\n") || out.contains("SelectV2"));
         // Only the streaming RPC should survive.
@@ -1417,8 +1543,38 @@ mod tests {
     #[test]
     fn service_block_expands_per_service_with_count() {
         let tmpl = "// @@UDB_SERVICE_BEGIN\n{{SERVICE_FULL}} has {{SERVICE_RPC_COUNT}}\n// @@UDB_SERVICE_END\n";
-        let out = render_text(tmpl, &sample_manifest(), &[]);
+        let out = render_text(tmpl, &sample_manifest(), &[], &[]);
         assert!(out.contains("udb.services.v1.DataBroker has 2"));
+    }
+
+    #[test]
+    fn entity_block_substitutes_canonical_placeholders() {
+        let mut language_classes = std::collections::BTreeMap::new();
+        language_classes.insert("go".to_string(), "entityv1.Policy".to_string());
+        language_classes.insert("ts".to_string(), "Policy".to_string());
+        language_classes.insert("python".to_string(), "udb.entity.v1.Policy".to_string());
+        let entities = vec![EntityDescriptor {
+            message_type: "Policy".to_string(),
+            short_name: "Policy".to_string(),
+            table: "policies".to_string(),
+            primary_keys: vec!["id".to_string(), "tenant_id".to_string()],
+            tenant_field: "tenant_id".to_string(),
+            project_field: "project_id".to_string(),
+            soft_delete_field: "deleted_at".to_string(),
+            proto_package: "udb.entity.v1".to_string(),
+            language_classes,
+            json_field_names: vec!["id".to_string(), "tenant_id".to_string()],
+        }];
+        let tmpl = "// @@UDB_ENTITY_BEGIN\n\
+                    {{ENTITY_MESSAGE_TYPE}} {{ENTITY_TABLE}} []string{ {{ENTITY_PRIMARY_KEYS}} } \
+                    {{ENTITY_TENANT_FIELD}} {{ENTITY_PROJECT_FIELD}} {{ENTITY_SOFT_DELETE_FIELD}} \
+                    {{ENTITY_GO_TYPE}} {{ENTITY_TS_TYPE}} {{ENTITY_PY_IMPORT}}\n\
+                    // @@UDB_ENTITY_END\n";
+        let out = render_text(tmpl, &[], &entities, &[]);
+        assert!(out.contains("Policy policies []string{ \"id\", \"tenant_id\" }"));
+        assert!(out.contains("tenant_id project_id deleted_at"));
+        assert!(out.contains("entityv1.Policy Policy udb.entity.v1.Policy"));
+        assert!(!out.contains("@@UDB_ENTITY"));
     }
 
     #[test]
@@ -1430,7 +1586,7 @@ mod tests {
                     \x20\x20\x20\x20def {{RPC_SNAKE}}(self): pass  # {{SERVICE_NAME}}\n\
                     # @@UDB_RPC_END\n\
                     # @@UDB_SERVICE_END\n";
-        let out = render_text(tmpl, &sample_manifest(), &[]);
+        let out = render_text(tmpl, &sample_manifest(), &[], &[]);
         // DataBroker class with both RPCs counted, but only the unary one emitted.
         assert!(
             out.contains("class DataBrokerClient:  # 2 rpcs"),
@@ -1456,13 +1612,13 @@ mod tests {
     #[test]
     fn surface_filter_selects_public_listener_rpcs() {
         let tmpl = "// @@UDB_RPC_BEGIN surface=public\n{{RPC_NAME}}\n// @@UDB_RPC_END\n";
-        let out = render_text(tmpl, &sample_manifest(), &[]);
+        let out = render_text(tmpl, &sample_manifest(), &[], &[]);
         // Both sample RPCs allow the public listener.
         assert!(out.contains("Select"));
         assert!(out.contains("SelectV2"));
 
         let tmpl_cp = "// @@UDB_RPC_BEGIN surface=control_plane\n{{RPC_NAME}}\n// @@UDB_RPC_END\n";
-        let out_cp = render_text(tmpl_cp, &sample_manifest(), &[]);
+        let out_cp = render_text(tmpl_cp, &sample_manifest(), &[], &[]);
         // Neither sample RPC allows the control-plane listener.
         assert!(!out_cp.lines().any(|l| l.trim() == "Select"));
         assert!(!out_cp.contains("SelectV2"));

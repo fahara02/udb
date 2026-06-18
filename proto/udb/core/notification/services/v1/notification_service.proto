@@ -65,6 +65,24 @@ service NotificationService {
   // Send a notification (or enqueue it for async delivery).
   rpc SendNotification(SendNotificationRequest) returns (SendNotificationResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    // Verified: notification_service::send_notification writes one
+    // NotificationLog per channel, each persisted (ConflictStrategy::Error)
+    // before the response is built. channel_send_decision sets the initial
+    // status to PENDING (queued for delivery) or SUPPRESSED (recipient opted
+    // out). No single returned-id readback contract: the response carries
+    // repeated logs, not one id (each log_id is gettable via GetNotification).
+    option (udb.core.common.v1.method_lifecycle_contract) = {
+      entity: "NotificationLog"
+      target_state: "PENDING"
+      terminal_states: "SUPPRESSED"
+    };
+    // Verified against the status_with_reason(...) call sites in
+    // notification_service::send_notification. VARIABLE_MISSING also attaches an
+    // error-variable trailer naming the missing field.
+    option (udb.core.common.v1.method_error_contract) = {
+      cases: { canonical_code: "TEMPLATE_NOT_FOUND" grpc_status: "NOT_FOUND" retryable: false }
+      cases: { canonical_code: "VARIABLE_MISSING" grpc_status: "INVALID_ARGUMENT" retryable: false }
+    };
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:notification:send-notification"
@@ -240,6 +258,21 @@ service NotificationService {
   // Retry a failed notification.
   rpc RetryNotification(RetryNotificationRequest) returns (RetryNotificationResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    // Verified: notification_service::retry_notification runs UPDATE ... SET
+    // status = 'PENDING', retry_count = retry_count + 1 WHERE ... AND status IN
+    // ('FAILED','SUPPRESSED'); a row in any other status is rejected. So FAILED
+    // and SUPPRESSED are the only legal source states and PENDING is the target.
+    option (udb.core.common.v1.method_lifecycle_contract) = {
+      entity: "NotificationLog"
+      legal_source_states: "FAILED"
+      legal_source_states: "SUPPRESSED"
+      target_state: "PENDING"
+    };
+    // Verified: when the row is not in a retryable status the UPDATE matches no
+    // row and retry_notification returns NOT_RETRYABLE_STATE.
+    option (udb.core.common.v1.method_error_contract) = {
+      cases: { canonical_code: "NOT_RETRYABLE_STATE" grpc_status: "FAILED_PRECONDITION" retryable: false }
+    };
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:notification:retry-notification"

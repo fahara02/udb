@@ -32,6 +32,21 @@ class PeerServiceClient extends \Grpc\BaseStub {
     }
 
     /**
+     * Join a room and atomically mint TURN credentials for the freshly-inserted peer
+     * @param \Udb\Core\Webrtc\Services\V1\JoinSessionRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Webrtc\Services\V1\JoinSessionResponse>
+     */
+    public function JoinSession(\Udb\Core\Webrtc\Services\V1\JoinSessionRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.webrtc.services.v1.PeerService/JoinSession',
+        $argument,
+        ['\Udb\Core\Webrtc\Services\V1\JoinSessionResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
      * Leave a room
      * @param \Udb\Core\Webrtc\Services\V1\LeaveRoomRequest $argument input argument
      * @param array $metadata metadata

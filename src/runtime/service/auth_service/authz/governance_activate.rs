@@ -243,6 +243,22 @@ impl AuthzServiceImpl {
         .execute(&mut *tx)
         .await
         .map_err(|err| Status::internal(format!("clear policies failed: {err}")))?;
+        // Fail closed on duplicate non-empty policy ids within the document: each
+        // policy's own id is bound on re-insert (below), so two policies sharing
+        // a non-empty id would collide on the primary key / lose identity.
+        let mut seen_policy_ids = std::collections::HashSet::new();
+        for p in &document.policies {
+            if !p.id.trim().is_empty() && !seen_policy_ids.insert(p.id.as_str()) {
+                return Err(Status::invalid_argument(format!(
+                    "duplicate policy id in version document: {}",
+                    p.id
+                )));
+            }
+        }
+        // NOTE: the atomic DELETE-all above is load-bearing and intentionally
+        // retained — it preserves the "live set == version document" invariant, so
+        // a manual rule NOT present in the activated document is still (correctly)
+        // removed here even though we now preserve each document policy's own id.
         for p in &document.policies {
             let mut attrs = serde_json::Map::new();
             for (k, v) in &p.conditions {
@@ -271,7 +287,7 @@ impl AuthzServiceImpl {
             );
             sqlx::query(&format!(
                 "INSERT INTO {rel} ({policy_id}, {subject}, {domain_col}, {object_col}, {action_col}, {effect_col}, {condition}, {description}, {is_active}, {tenant_id}, {project_id}, {attributes_json}) \
-                 VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, '', '', $6, $2, $7, $8::JSONB)",
+                 VALUES (COALESCE(NULLIF($1,'')::uuid, gen_random_uuid()), $2, $3, $4, $5, $6, '', '', $7, $3, $8, $9::JSONB)",
                 rel = pm.relation,
                 policy_id = pm.q("policy_id"),
                 subject = pm.q("subject"),
@@ -286,6 +302,7 @@ impl AuthzServiceImpl {
                 project_id = pm.q("project_id"),
                 attributes_json = pm.q("attributes_json"),
             ))
+            .bind(&p.id)
             .bind(&p.subject)
             .bind(if p.tenant.trim().is_empty() { &tenant } else { &p.tenant })
             .bind(&p.resource)

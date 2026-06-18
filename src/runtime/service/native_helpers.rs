@@ -232,13 +232,32 @@ fn metadata_value<'a>(metadata: &'a MetadataMap, name: &str) -> Option<&'a str> 
         .filter(|value| !value.is_empty())
 }
 
-fn bearer_claims(metadata: &MetadataMap) -> Option<crate::runtime::security::SecurityClaims> {
-    let token = metadata_value(metadata, "authorization")?.strip_prefix("Bearer ")?;
-    crate::runtime::security::validate_bearer_token(
-        &crate::runtime::security::SecurityConfig::current(),
-        token,
-    )
-    .ok()
+/// 01.6.1.2 — the validated claim tenant, sourced ONLY from the method-security
+/// context (no bearer re-parse). `None` when no context is installed (loopback) or
+/// the claim carries no tenant.
+fn claim_context_tenant_id() -> Option<String> {
+    if !crate::runtime::service::method_security::claim_context_present() {
+        return None;
+    }
+    let tenant = crate::runtime::service::method_security::current_claim_context()
+        .tenant_id
+        .trim()
+        .to_string();
+    (!tenant.is_empty()).then_some(tenant)
+}
+
+/// 01.6.1.2 — the validated claim project, sourced ONLY from the method-security
+/// context (no bearer re-parse). `None` when no context is installed or the claim
+/// carries no project.
+fn claim_context_project_id() -> Option<String> {
+    if !crate::runtime::service::method_security::claim_context_present() {
+        return None;
+    }
+    let project = crate::runtime::service::method_security::current_claim_context()
+        .project_id
+        .trim()
+        .to_string();
+    (!project.is_empty()).then_some(project)
 }
 
 /// Descriptor-driven native services carry tenant/project ids in decoded request
@@ -276,17 +295,21 @@ pub(crate) fn validate_request_scope(
         ));
     }
 
-    if let Some(claims) = bearer_claims(metadata) {
-        if let Some(claim_tenant) = claims.tenant_id.as_deref().map(str::trim)
-            && !claim_tenant.is_empty()
-            && claim_tenant != request_tenant_id
-        {
+    // 01.6.1.2 — identity comes from the SINGLE validated claim the method-security
+    // tower already installed for this request; do NOT re-parse the bearer here
+    // (that was a second JWT-parse site outside method-security). On the in-process
+    // loopback path no claim context is installed and there is no bearer to smuggle,
+    // so the header checks above suffice.
+    if crate::runtime::service::method_security::claim_context_present() {
+        let claim = crate::runtime::service::method_security::current_claim_context();
+        let claim_tenant = claim.tenant_id.trim();
+        if !claim_tenant.is_empty() && claim_tenant != request_tenant_id {
             return Err(Status::permission_denied(
                 "request tenant_id must match bearer token tenant",
             ));
         }
-        if let Some(claim_project) = claims.project_id.as_deref().map(str::trim)
-            && !claim_project.is_empty()
+        let claim_project = claim.project_id.trim();
+        if !claim_project.is_empty()
             && !request_project_id.is_empty()
             && claim_project != request_project_id
         {
@@ -308,24 +331,14 @@ pub(crate) fn validate_request_tenant(
 pub(crate) fn metadata_tenant_id(metadata: &MetadataMap) -> Option<String> {
     metadata_value(metadata, "x-tenant-id")
         .map(ToString::to_string)
-        .or_else(|| {
-            bearer_claims(metadata)
-                .and_then(|claims| claims.tenant_id)
-                .map(|tenant| tenant.trim().to_string())
-                .filter(|tenant| !tenant.is_empty())
-        })
+        .or_else(claim_context_tenant_id)
 }
 
 pub(crate) fn metadata_project_id(metadata: &MetadataMap) -> Option<String> {
     metadata_value(metadata, "x-udb-project-id")
         .or_else(|| metadata_value(metadata, "x-project-id"))
         .map(ToString::to_string)
-        .or_else(|| {
-            bearer_claims(metadata)
-                .and_then(|claims| claims.project_id)
-                .map(|project| project.trim().to_string())
-                .filter(|project| !project.is_empty())
-        })
+        .or_else(claim_context_project_id)
 }
 
 /// The one request-context builder for native services (P6.1). Empty `project_id`

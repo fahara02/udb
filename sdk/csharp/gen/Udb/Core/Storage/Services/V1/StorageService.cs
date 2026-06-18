@@ -38,192 +38,226 @@ namespace udb.core.Storage.Services.V1 {
             "Y2VUeXBlEiAKCWlzX3B1YmxpYxgIIAEoCEgAUghpc1B1YmxpY4gBARIsChJl",
             "eHBpcmVzX2luX21pbnV0ZXMYCSABKAVSEGV4cGlyZXNJbk1pbnV0ZXMSHQoK",
             "c2l6ZV9ieXRlcxgKIAEoA1IJc2l6ZUJ5dGVzOh6ashkaCAEaA3VkYiiw6gEw",
-            "A0ABSgdzdG9yYWdlUAFCDAoKX2lzX3B1YmxpYyLDAQoWUmVnaXN0ZXJVcGxv",
+            "A0ABSgdzdG9yYWdlUAFCDAoKX2lzX3B1YmxpYyLiAQoWUmVnaXN0ZXJVcGxv",
             "YWRSZXNwb25zZRIXCgdmaWxlX2lkGAEgASgJUgZmaWxlSWQSHQoKdXBsb2Fk",
             "X3VybBgCIAEoCVIJdXBsb2FkVXJsEh0KCm9iamVjdF9rZXkYAyABKAlSCW9i",
             "amVjdEtleRIyCgVlcnJvchgEIAEoCzIcLnVkYi5jb3JlLmNvbW1vbi52MS5B",
-            "cGlFcnJvclIFZXJyb3I6HpqyGRoIARoDdWRiKLDqATADQAFKB3N0b3JhZ2VQ",
-            "ASLGAgoVRmluYWxpemVVcGxvYWRSZXF1ZXN0EhsKCXRlbmFudF9pZBgBIAEo",
-            "CVIIdGVuYW50SWQSFwoHZmlsZV9pZBgCIAEoCVIGZmlsZUlkEiEKDGNvbnRl",
-            "bnRfdHlwZRgDIAEoCVILY29udGVudFR5cGUSGwoJZmlsZV90eXBlGAQgASgJ",
-            "UghmaWxlVHlwZRIhCgxyZWZlcmVuY2VfaWQYBSABKAlSC3JlZmVyZW5jZUlk",
-            "EiUKDnJlZmVyZW5jZV90eXBlGAYgASgJUg1yZWZlcmVuY2VUeXBlEiAKCWlz",
-            "X3B1YmxpYxgHIAEoCEgAUghpc1B1YmxpY4gBARIdCgpzaXplX2J5dGVzGAgg",
-            "ASgDUglzaXplQnl0ZXM6HpqyGRoIARoDdWRiKLDqATADQAFKB3N0b3JhZ2VQ",
-            "AUIMCgpfaXNfcHVibGljIqIBChZGaW5hbGl6ZVVwbG9hZFJlc3BvbnNlEjQK",
-            "BGZpbGUYASABKAsyIC51ZGIuY29yZS5zdG9yYWdlLmVudGl0eS52MS5GaWxl",
-            "UgRmaWxlEjIKBWVycm9yGAIgASgLMhwudWRiLmNvcmUuY29tbW9uLnYxLkFw",
-            "aUVycm9yUgVlcnJvcjoemrIZGggBGgN1ZGIosOoBMANAAUoHc3RvcmFnZVAB",
-            "IpsBChVHZXREb3dubG9hZFVybFJlcXVlc3QSGwoJdGVuYW50X2lkGAEgASgJ",
-            "Ugh0ZW5hbnRJZBIXCgdmaWxlX2lkGAIgASgJUgZmaWxlSWQSLAoSZXhwaXJl",
-            "c19pbl9taW51dGVzGAMgASgFUhBleHBpcmVzSW5NaW51dGVzOh6ashkaCAEa",
-            "A3VkYiiw6gEwA0ABSgdzdG9yYWdlUAEiygEKFkdldERvd25sb2FkVXJsUmVz",
-            "cG9uc2USIQoMZG93bmxvYWRfdXJsGAEgASgJUgtkb3dubG9hZFVybBI5Cgpl",
-            "eHBpcmVzX2F0GAIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcFIJ",
-            "ZXhwaXJlc0F0EjIKBWVycm9yGAMgASgLMhwudWRiLmNvcmUuY29tbW9uLnYx",
-            "LkFwaUVycm9yUgVlcnJvcjoemrIZGggBGgN1ZGIosOoBMANAAUoHc3RvcmFn",
-            "ZVABImYKDkdldEZpbGVSZXF1ZXN0EhsKCXRlbmFudF9pZBgBIAEoCVIIdGVu",
-            "YW50SWQSFwoHZmlsZV9pZBgCIAEoCVIGZmlsZUlkOh6ashkaCAEaA3VkYiiw",
-            "6gEwA0ABSgdzdG9yYWdlUAEimwEKD0dldEZpbGVSZXNwb25zZRI0CgRmaWxl",
-            "GAEgASgLMiAudWRiLmNvcmUuc3RvcmFnZS5lbnRpdHkudjEuRmlsZVIEZmls",
-            "ZRIyCgVlcnJvchgCIAEoCzIcLnVkYi5jb3JlLmNvbW1vbi52MS5BcGlFcnJv",
-            "clIFZXJyb3I6HpqyGRoIARoDdWRiKLDqATADQAFKB3N0b3JhZ2VQASK/AgoR",
-            "VXBkYXRlRmlsZVJlcXVlc3QSGwoJdGVuYW50X2lkGAEgASgJUgh0ZW5hbnRJ",
-            "ZBIXCgdmaWxlX2lkGAIgASgJUgZmaWxlSWQSGgoIZmlsZW5hbWUYAyABKAlS",
-            "CGZpbGVuYW1lEiEKDGNvbnRlbnRfdHlwZRgEIAEoCVILY29udGVudFR5cGUS",
-            "GwoJZmlsZV90eXBlGAUgASgJUghmaWxlVHlwZRIhCgxyZWZlcmVuY2VfaWQY",
-            "BiABKAlSC3JlZmVyZW5jZUlkEiUKDnJlZmVyZW5jZV90eXBlGAcgASgJUg1y",
-            "ZWZlcmVuY2VUeXBlEiAKCWlzX3B1YmxpYxgIIAEoCEgAUghpc1B1YmxpY4gB",
-            "AToemrIZGggBGgN1ZGIosOoBMANAAUoHc3RvcmFnZVABQgwKCl9pc19wdWJs",
-            "aWMiggEKElVwZGF0ZUZpbGVSZXNwb25zZRIYCgdtZXNzYWdlGAEgASgJUgdt",
-            "ZXNzYWdlEjIKBWVycm9yGAIgASgLMhwudWRiLmNvcmUuY29tbW9uLnYxLkFw",
-            "aUVycm9yUgVlcnJvcjoemrIZGggBGgN1ZGIosOoBMANAAUoHc3RvcmFnZVAB",
-            "ImkKEURlbGV0ZUZpbGVSZXF1ZXN0EhsKCXRlbmFudF9pZBgBIAEoCVIIdGVu",
-            "YW50SWQSFwoHZmlsZV9pZBgCIAEoCVIGZmlsZUlkOh6ashkaCAEaA3VkYiiw",
-            "6gEwA0ABSgdzdG9yYWdlUAEiggEKEkRlbGV0ZUZpbGVSZXNwb25zZRIYCgdz",
-            "dWNjZXNzGAEgASgIUgdzdWNjZXNzEjIKBWVycm9yGAIgASgLMhwudWRiLmNv",
-            "cmUuY29tbW9uLnYxLkFwaUVycm9yUgVlcnJvcjoemrIZGggBGgN1ZGIosOoB",
-            "MANAAUoHc3RvcmFnZVABIogCChBMaXN0RmlsZXNSZXF1ZXN0EhsKCXRlbmFu",
-            "dF9pZBgBIAEoCVIIdGVuYW50SWQSGwoJZmlsZV90eXBlGAIgASgJUghmaWxl",
-            "VHlwZRIhCgxyZWZlcmVuY2VfaWQYAyABKAlSC3JlZmVyZW5jZUlkEiUKDnJl",
-            "ZmVyZW5jZV90eXBlGAQgASgJUg1yZWZlcmVuY2VUeXBlEh8KC3VwbG9hZGVk",
-            "X2J5GAUgASgJUgp1cGxvYWRlZEJ5EhIKBHBhZ2UYBiABKAVSBHBhZ2USGwoJ",
-            "cGFnZV9zaXplGAcgASgFUghwYWdlU2l6ZToemrIZGggBGgN1ZGIosOoBMANA",
-            "AUoHc3RvcmFnZVABIsABChFMaXN0RmlsZXNSZXNwb25zZRI2CgVmaWxlcxgB",
-            "IAMoCzIgLnVkYi5jb3JlLnN0b3JhZ2UuZW50aXR5LnYxLkZpbGVSBWZpbGVz",
-            "Eh8KC3RvdGFsX2NvdW50GAIgASgFUgp0b3RhbENvdW50EjIKBWVycm9yGAMg",
-            "ASgLMhwudWRiLmNvcmUuY29tbW9uLnYxLkFwaUVycm9yUgVlcnJvcjoemrIZ",
-            "GggBGgN1ZGIosOoBMANAAUoHc3RvcmFnZVABMqsoCg5TdG9yYWdlU2Vydmlj",
-            "ZRLaBQoOUmVnaXN0ZXJVcGxvYWQSMy51ZGIuY29yZS5zdG9yYWdlLnNlcnZp",
-            "Y2VzLnYxLlJlZ2lzdGVyVXBsb2FkUmVxdWVzdBo0LnVkYi5jb3JlLnN0b3Jh",
-            "Z2Uuc2VydmljZXMudjEuUmVnaXN0ZXJVcGxvYWRSZXNwb25zZSLcBMrzGEAI",
-            "AhobdWRiOnN0b3JhZ2U6cmVnaXN0ZXItdXBsb2FkIAFKAgECahZzdG9yYWdl",
-            "LlJlZ2lzdGVyVXBsb2FkkAEB0vMYBggBEAEgAdrzGCsIARIPcmVnaXN0ZXJf",
-            "dXBsb2FkGgN1ZGIosOoBMANAAUoHc3RvcmFnZVAB4vMYwQEKB3N0b3JhZ2US",
-            "EnVkYi9uYXRpdmUvc3RvcmFnZRobVURCX05BVElWRV9TRVJWSUNFU19FTkFC",
-            "TEVEGg9VREJfR1JQQ19UQVJHRVQiLnVkYi5uYXRpdmUuc3RvcmFnZS5yZWdp",
-            "c3Rlcl91cGxvYWQuYm9pbGVycGxhdGUqD3JlZ2lzdGVyX3VwbG9hZDILdWRi",
-            "X3N0b3JhZ2U6B3N0b3JhZ2VKC1VEQl9BUElfS0VZWhB1ZGIgbmF0aXZlIHNt",
-            "b2tl6vMYnwEKFnN0b3JhZ2UuUmVnaXN0ZXJVcGxvYWQSDnN0b3JhZ2UuZXZl",
-            "bnRzGgl0ZW5hbnRfaWQiCHN0YW5kYXJkKg1hdF9sZWFzdF9vbmNlMgZzdGFi",
-            "bGU6SQoldWRiLnN0b3JhZ2UuZmlsZS51cGxvYWRfdXJsX2lzc3VlZC52MRIH",
-            "ZmlsZV9pZBoNYXRfbGVhc3Rfb25jZSIIc3RhbmRhcmTy8xhPCgdzdG9yYWdl",
-            "Gghwb3N0Z3JlcxoMb2JqZWN0X3N0b3JlMhtVREJfTkFUSVZFX1NFUlZJQ0VT",
-            "X0VOQUJMRUQyD1VEQl9HUlBDX1RBUkdFVPjzGAKC0+STAhgiEy92MS9zdG9y",
-            "YWdlL3VwbG9hZHM6ASoS5wUKDkZpbmFsaXplVXBsb2FkEjMudWRiLmNvcmUu",
-            "c3RvcmFnZS5zZXJ2aWNlcy52MS5GaW5hbGl6ZVVwbG9hZFJlcXVlc3QaNC51",
-            "ZGIuY29yZS5zdG9yYWdlLnNlcnZpY2VzLnYxLkZpbmFsaXplVXBsb2FkUmVz",
-            "cG9uc2Ui6QTK8xhACAIaG3VkYjpzdG9yYWdlOmZpbmFsaXplLXVwbG9hZCAB",
-            "SgIBAmoWc3RvcmFnZS5GaW5hbGl6ZVVwbG9hZJABAdLzGAYIARABIAHa8xgr",
-            "CAESD2ZpbmFsaXplX3VwbG9hZBoDdWRiKLDqATADQAFKB3N0b3JhZ2VQAeLz",
-            "GMEBCgdzdG9yYWdlEhJ1ZGIvbmF0aXZlL3N0b3JhZ2UaG1VEQl9OQVRJVkVf",
-            "U0VSVklDRVNfRU5BQkxFRBoPVURCX0dSUENfVEFSR0VUIi51ZGIubmF0aXZl",
-            "LnN0b3JhZ2UuZmluYWxpemVfdXBsb2FkLmJvaWxlcnBsYXRlKg9maW5hbGl6",
-            "ZV91cGxvYWQyC3VkYl9zdG9yYWdlOgdzdG9yYWdlSgtVREJfQVBJX0tFWVoQ",
-            "dWRiIG5hdGl2ZSBzbW9rZerzGJkBChZzdG9yYWdlLkZpbmFsaXplVXBsb2Fk",
-            "Eg5zdG9yYWdlLmV2ZW50cxoJdGVuYW50X2lkIghzdGFuZGFyZCoNYXRfbGVh",
-            "c3Rfb25jZTIGc3RhYmxlOkMKHXVkYi5zdG9yYWdlLmZpbGUuZmluYWxpemVk",
-            "LnYxEgdmaWxlX2lkGg1hdF9sZWFzdF9vbmNlIghzdGFuZGFyZCgB8vMYTwoH",
-            "c3RvcmFnZRoIcG9zdGdyZXMaDG9iamVjdF9zdG9yZTIbVURCX05BVElWRV9T",
-            "RVJWSUNFU19FTkFCTEVEMg9VREJfR1JQQ19UQVJHRVT48xgCgtPkkwIrIiYv",
-            "djEvc3RvcmFnZS91cGxvYWRzL3tmaWxlX2lkfS9maW5hbGl6ZToBKhKkBQoO",
-            "R2V0RG93bmxvYWRVcmwSMy51ZGIuY29yZS5zdG9yYWdlLnNlcnZpY2VzLnYx",
-            "LkdldERvd25sb2FkVXJsUmVxdWVzdBo0LnVkYi5jb3JlLnN0b3JhZ2Uuc2Vy",
-            "dmljZXMudjEuR2V0RG93bmxvYWRVcmxSZXNwb25zZSKmBMrzGEEIAhocdWRi",
-            "OnN0b3JhZ2U6Z2V0LWRvd25sb2FkLXVybCABSgIBAmoWc3RvcmFnZS5HZXRE",
-            "b3dubG9hZFVybJABAdLzGAYIARABIAHa8xgsCAESEGdldF9kb3dubG9hZF91",
-            "cmwaA3VkYiiw6gEwA0ABSgdzdG9yYWdlUAHi8xjDAQoHc3RvcmFnZRISdWRi",
-            "L25hdGl2ZS9zdG9yYWdlGhtVREJfTkFUSVZFX1NFUlZJQ0VTX0VOQUJMRUQa",
-            "D1VEQl9HUlBDX1RBUkdFVCIvdWRiLm5hdGl2ZS5zdG9yYWdlLmdldF9kb3du",
-            "bG9hZF91cmwuYm9pbGVycGxhdGUqEGdldF9kb3dubG9hZF91cmwyC3VkYl9z",
-            "dG9yYWdlOgdzdG9yYWdlSgtVREJfQVBJX0tFWVoQdWRiIG5hdGl2ZSBzbW9r",
-            "ZerzGFQKFnN0b3JhZ2UuR2V0RG93bmxvYWRVcmwSDnN0b3JhZ2UuZXZlbnRz",
-            "Ggl0ZW5hbnRfaWQiCHN0YW5kYXJkKg1hdF9sZWFzdF9vbmNlMgZzdGFibGXy",
-            "8xhPCgdzdG9yYWdlGghwb3N0Z3JlcxoMb2JqZWN0X3N0b3JlMhtVREJfTkFU",
-            "SVZFX1NFUlZJQ0VTX0VOQUJMRUQyD1VEQl9HUlBDX1RBUkdFVPjzGAGC0+ST",
-            "AioSKC92MS9zdG9yYWdlL2ZpbGVzL3tmaWxlX2lkfS9kb3dubG9hZC11cmwS",
-            "1AQKB0dldEZpbGUSLC51ZGIuY29yZS5zdG9yYWdlLnNlcnZpY2VzLnYxLkdl",
-            "dEZpbGVSZXF1ZXN0Gi0udWRiLmNvcmUuc3RvcmFnZS5zZXJ2aWNlcy52MS5H",
-            "ZXRGaWxlUmVzcG9uc2Ui6wPK8xgyCAIaFHVkYjpzdG9yYWdlOmdldC1maWxl",
-            "IAFKAgECag9zdG9yYWdlLkdldEZpbGWQAQHS8xgGCAEQASAB2vMYJAgBEghn",
-            "ZXRfZmlsZRoDdWRiKLDqATADQAFKB3N0b3JhZ2VQAeLzGLMBCgdzdG9yYWdl",
-            "EhJ1ZGIvbmF0aXZlL3N0b3JhZ2UaG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5B",
-            "QkxFRBoPVURCX0dSUENfVEFSR0VUIid1ZGIubmF0aXZlLnN0b3JhZ2UuZ2V0",
-            "X2ZpbGUuYm9pbGVycGxhdGUqCGdldF9maWxlMgt1ZGJfc3RvcmFnZToHc3Rv",
-            "cmFnZUoLVURCX0FQSV9LRVlaEHVkYiBuYXRpdmUgc21va2Xq8xhNCg9zdG9y",
-            "YWdlLkdldEZpbGUSDnN0b3JhZ2UuZXZlbnRzGgl0ZW5hbnRfaWQiCHN0YW5k",
-            "YXJkKg1hdF9sZWFzdF9vbmNlMgZzdGFibGXy8xhPCgdzdG9yYWdlGghwb3N0",
-            "Z3JlcxoMb2JqZWN0X3N0b3JlMhtVREJfTkFUSVZFX1NFUlZJQ0VTX0VOQUJM",
-            "RUQyD1VEQl9HUlBDX1RBUkdFVPjzGAGC0+STAh0SGy92MS9zdG9yYWdlL2Zp",
-            "bGVzL3tmaWxlX2lkfRK9BQoKVXBkYXRlRmlsZRIvLnVkYi5jb3JlLnN0b3Jh",
-            "Z2Uuc2VydmljZXMudjEuVXBkYXRlRmlsZVJlcXVlc3QaMC51ZGIuY29yZS5z",
-            "dG9yYWdlLnNlcnZpY2VzLnYxLlVwZGF0ZUZpbGVSZXNwb25zZSLLBMrzGDgI",
-            "AhoXdWRiOnN0b3JhZ2U6dXBkYXRlLWZpbGUgAUoCAQJqEnN0b3JhZ2UuVXBk",
-            "YXRlRmlsZZABAdLzGAYIARABIAHa8xgnCAESC3VwZGF0ZV9maWxlGgN1ZGIo",
-            "sOoBMANAAUoHc3RvcmFnZVAB4vMYuQEKB3N0b3JhZ2USEnVkYi9uYXRpdmUv",
-            "c3RvcmFnZRobVURCX05BVElWRV9TRVJWSUNFU19FTkFCTEVEGg9VREJfR1JQ",
-            "Q19UQVJHRVQiKnVkYi5uYXRpdmUuc3RvcmFnZS51cGRhdGVfZmlsZS5ib2ls",
-            "ZXJwbGF0ZSoLdXBkYXRlX2ZpbGUyC3VkYl9zdG9yYWdlOgdzdG9yYWdlSgtV",
-            "REJfQVBJX0tFWVoQdWRiIG5hdGl2ZSBzbW9rZerzGJoBChJzdG9yYWdlLlVw",
-            "ZGF0ZUZpbGUSDnN0b3JhZ2UuZXZlbnRzGgl0ZW5hbnRfaWQiCHN0YW5kYXJk",
-            "Kg1hdF9sZWFzdF9vbmNlMgZzdGFibGU6SAokdWRiLnN0b3JhZ2UuZmlsZS5t",
-            "ZXRhZGF0YV91cGRhdGVkLnYxEgdmaWxlX2lkGg1hdF9sZWFzdF9vbmNlIghz",
-            "dGFuZGFyZPLzGE8KB3N0b3JhZ2UaCHBvc3RncmVzGgxvYmplY3Rfc3RvcmUy",
-            "G1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VU",
-            "+PMYAoLT5JMCIDIbL3YxL3N0b3JhZ2UvZmlsZXMve2ZpbGVfaWR9OgEqErEF",
-            "CgpEZWxldGVGaWxlEi8udWRiLmNvcmUuc3RvcmFnZS5zZXJ2aWNlcy52MS5E",
-            "ZWxldGVGaWxlUmVxdWVzdBowLnVkYi5jb3JlLnN0b3JhZ2Uuc2VydmljZXMu",
-            "djEuRGVsZXRlRmlsZVJlc3BvbnNlIr8EyvMYOAgCGhd1ZGI6c3RvcmFnZTpk",
-            "ZWxldGUtZmlsZSABSgIBAmoSc3RvcmFnZS5EZWxldGVGaWxlkAEB0vMYBggB",
-            "EAEgAdrzGCcIARILZGVsZXRlX2ZpbGUaA3VkYiiw6gEwA0ABSgdzdG9yYWdl",
-            "UAHi8xi5AQoHc3RvcmFnZRISdWRiL25hdGl2ZS9zdG9yYWdlGhtVREJfTkFU",
-            "SVZFX1NFUlZJQ0VTX0VOQUJMRUQaD1VEQl9HUlBDX1RBUkdFVCIqdWRiLm5h",
-            "dGl2ZS5zdG9yYWdlLmRlbGV0ZV9maWxlLmJvaWxlcnBsYXRlKgtkZWxldGVf",
-            "ZmlsZTILdWRiX3N0b3JhZ2U6B3N0b3JhZ2VKC1VEQl9BUElfS0VZWhB1ZGIg",
-            "bmF0aXZlIHNtb2tl6vMYkQEKEnN0b3JhZ2UuRGVsZXRlRmlsZRIOc3RvcmFn",
-            "ZS5ldmVudHMaCXRlbmFudF9pZCIIc3RhbmRhcmQqDWF0X2xlYXN0X29uY2Uy",
-            "BnN0YWJsZTo/Cht1ZGIuc3RvcmFnZS5maWxlLmRlbGV0ZWQudjESB2ZpbGVf",
-            "aWQaDWF0X2xlYXN0X29uY2UiCHN0YW5kYXJk8vMYTwoHc3RvcmFnZRoIcG9z",
-            "dGdyZXMaDG9iamVjdF9zdG9yZTIbVURCX05BVElWRV9TRVJWSUNFU19FTkFC",
-            "TEVEMg9VREJfR1JQQ19UQVJHRVT48xgCgtPkkwIdKhsvdjEvc3RvcmFnZS9m",
-            "aWxlcy97ZmlsZV9pZH0S3AQKCUxpc3RGaWxlcxIuLnVkYi5jb3JlLnN0b3Jh",
-            "Z2Uuc2VydmljZXMudjEuTGlzdEZpbGVzUmVxdWVzdBovLnVkYi5jb3JlLnN0",
-            "b3JhZ2Uuc2VydmljZXMudjEuTGlzdEZpbGVzUmVzcG9uc2Ui7QPK8xg2CAIa",
-            "FnVkYjpzdG9yYWdlOmxpc3QtZmlsZXMgAUoCAQJqEXN0b3JhZ2UuTGlzdEZp",
-            "bGVzkAEB0vMYBggBEAEgAdrzGCYIARIKbGlzdF9maWxlcxoDdWRiKLDqATAD",
-            "QAFKB3N0b3JhZ2VQAeLzGLcBCgdzdG9yYWdlEhJ1ZGIvbmF0aXZlL3N0b3Jh",
-            "Z2UaG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRBoPVURCX0dSUENfVEFS",
-            "R0VUIil1ZGIubmF0aXZlLnN0b3JhZ2UubGlzdF9maWxlcy5ib2lsZXJwbGF0",
-            "ZSoKbGlzdF9maWxlczILdWRiX3N0b3JhZ2U6B3N0b3JhZ2VKC1VEQl9BUElf",
-            "S0VZWhB1ZGIgbmF0aXZlIHNtb2tl6vMYTwoRc3RvcmFnZS5MaXN0RmlsZXMS",
+            "cGlFcnJvclIFZXJyb3ISHQoKZXhwaXJlc19hdBgFIAEoA1IJZXhwaXJlc0F0",
+            "Oh6ashkaCAEaA3VkYiiw6gEwA0ABSgdzdG9yYWdlUAEilgMKFUZpbmFsaXpl",
+            "VXBsb2FkUmVxdWVzdBIbCgl0ZW5hbnRfaWQYASABKAlSCHRlbmFudElkEhcK",
+            "B2ZpbGVfaWQYAiABKAlSBmZpbGVJZBIhCgxjb250ZW50X3R5cGUYAyABKAlS",
+            "C2NvbnRlbnRUeXBlEhsKCWZpbGVfdHlwZRgEIAEoCVIIZmlsZVR5cGUSIQoM",
+            "cmVmZXJlbmNlX2lkGAUgASgJUgtyZWZlcmVuY2VJZBIlCg5yZWZlcmVuY2Vf",
+            "dHlwZRgGIAEoCVINcmVmZXJlbmNlVHlwZRIgCglpc19wdWJsaWMYByABKAhI",
+            "AFIIaXNQdWJsaWOIAQESHQoKc2l6ZV9ieXRlcxgIIAEoA1IJc2l6ZUJ5dGVz",
+            "Eh8KCGNoZWNrc3VtGAkgASgJSAFSCGNoZWNrc3VtiAEBEhcKBGV0YWcYCiAB",
+            "KAlIAlIEZXRhZ4gBAToemrIZGggBGgN1ZGIosOoBMANAAUoHc3RvcmFnZVAB",
+            "QgwKCl9pc19wdWJsaWNCCwoJX2NoZWNrc3VtQgcKBV9ldGFnIqIBChZGaW5h",
+            "bGl6ZVVwbG9hZFJlc3BvbnNlEjQKBGZpbGUYASABKAsyIC51ZGIuY29yZS5z",
+            "dG9yYWdlLmVudGl0eS52MS5GaWxlUgRmaWxlEjIKBWVycm9yGAIgASgLMhwu",
+            "dWRiLmNvcmUuY29tbW9uLnYxLkFwaUVycm9yUgVlcnJvcjoemrIZGggBGgN1",
+            "ZGIosOoBMANAAUoHc3RvcmFnZVABIpsBChVHZXREb3dubG9hZFVybFJlcXVl",
+            "c3QSGwoJdGVuYW50X2lkGAEgASgJUgh0ZW5hbnRJZBIXCgdmaWxlX2lkGAIg",
+            "ASgJUgZmaWxlSWQSLAoSZXhwaXJlc19pbl9taW51dGVzGAMgASgFUhBleHBp",
+            "cmVzSW5NaW51dGVzOh6ashkaCAEaA3VkYiiw6gEwA0ABSgdzdG9yYWdlUAEi",
+            "ygEKFkdldERvd25sb2FkVXJsUmVzcG9uc2USIQoMZG93bmxvYWRfdXJsGAEg",
+            "ASgJUgtkb3dubG9hZFVybBI5CgpleHBpcmVzX2F0GAIgASgLMhouZ29vZ2xl",
+            "LnByb3RvYnVmLlRpbWVzdGFtcFIJZXhwaXJlc0F0EjIKBWVycm9yGAMgASgL",
+            "MhwudWRiLmNvcmUuY29tbW9uLnYxLkFwaUVycm9yUgVlcnJvcjoemrIZGggB",
+            "GgN1ZGIosOoBMANAAUoHc3RvcmFnZVABIq8BChNEb3dubG9hZEZpbGVSZXF1",
+            "ZXN0EhsKCXRlbmFudF9pZBgBIAEoCVIIdGVuYW50SWQSFwoHZmlsZV9pZBgC",
+            "IAEoCVIGZmlsZUlkEi0KEGNodW5rX3NpemVfYnl0ZXMYAyABKAVIAFIOY2h1",
+            "bmtTaXplQnl0ZXOIAQE6HpqyGRoIARoDdWRiKLDqATADQAFKB3N0b3JhZ2VQ",
+            "AUITChFfY2h1bmtfc2l6ZV9ieXRlcyLVAQoRRG93bmxvYWRGaWxlQ2h1bmsS",
+            "EgoEZGF0YRgBIAEoDFIEZGF0YRImCgxjb250ZW50X3R5cGUYAiABKAlIAFIL",
+            "Y29udGVudFR5cGWIAQESIgoKdG90YWxfc2l6ZRgDIAEoA0gBUgl0b3RhbFNp",
+            "emWIAQESFwoEZXRhZxgEIAEoCUgCUgRldGFniAEBOh6ashkaCAEaA3VkYiiw",
+            "6gEwA0ABSgdzdG9yYWdlUAFCDwoNX2NvbnRlbnRfdHlwZUINCgtfdG90YWxf",
+            "c2l6ZUIHCgVfZXRhZyJmCg5HZXRGaWxlUmVxdWVzdBIbCgl0ZW5hbnRfaWQY",
+            "ASABKAlSCHRlbmFudElkEhcKB2ZpbGVfaWQYAiABKAlSBmZpbGVJZDoemrIZ",
+            "GggBGgN1ZGIosOoBMANAAUoHc3RvcmFnZVABIpsBCg9HZXRGaWxlUmVzcG9u",
+            "c2USNAoEZmlsZRgBIAEoCzIgLnVkYi5jb3JlLnN0b3JhZ2UuZW50aXR5LnYx",
+            "LkZpbGVSBGZpbGUSMgoFZXJyb3IYAiABKAsyHC51ZGIuY29yZS5jb21tb24u",
+            "djEuQXBpRXJyb3JSBWVycm9yOh6ashkaCAEaA3VkYiiw6gEwA0ABSgdzdG9y",
+            "YWdlUAEivwIKEVVwZGF0ZUZpbGVSZXF1ZXN0EhsKCXRlbmFudF9pZBgBIAEo",
+            "CVIIdGVuYW50SWQSFwoHZmlsZV9pZBgCIAEoCVIGZmlsZUlkEhoKCGZpbGVu",
+            "YW1lGAMgASgJUghmaWxlbmFtZRIhCgxjb250ZW50X3R5cGUYBCABKAlSC2Nv",
+            "bnRlbnRUeXBlEhsKCWZpbGVfdHlwZRgFIAEoCVIIZmlsZVR5cGUSIQoMcmVm",
+            "ZXJlbmNlX2lkGAYgASgJUgtyZWZlcmVuY2VJZBIlCg5yZWZlcmVuY2VfdHlw",
+            "ZRgHIAEoCVINcmVmZXJlbmNlVHlwZRIgCglpc19wdWJsaWMYCCABKAhIAFII",
+            "aXNQdWJsaWOIAQE6HpqyGRoIARoDdWRiKLDqATADQAFKB3N0b3JhZ2VQAUIM",
+            "CgpfaXNfcHVibGljIoIBChJVcGRhdGVGaWxlUmVzcG9uc2USGAoHbWVzc2Fn",
+            "ZRgBIAEoCVIHbWVzc2FnZRIyCgVlcnJvchgCIAEoCzIcLnVkYi5jb3JlLmNv",
+            "bW1vbi52MS5BcGlFcnJvclIFZXJyb3I6HpqyGRoIARoDdWRiKLDqATADQAFK",
+            "B3N0b3JhZ2VQASJpChFEZWxldGVGaWxlUmVxdWVzdBIbCgl0ZW5hbnRfaWQY",
+            "ASABKAlSCHRlbmFudElkEhcKB2ZpbGVfaWQYAiABKAlSBmZpbGVJZDoemrIZ",
+            "GggBGgN1ZGIosOoBMANAAUoHc3RvcmFnZVABIoIBChJEZWxldGVGaWxlUmVz",
+            "cG9uc2USGAoHc3VjY2VzcxgBIAEoCFIHc3VjY2VzcxIyCgVlcnJvchgCIAEo",
+            "CzIcLnVkYi5jb3JlLmNvbW1vbi52MS5BcGlFcnJvclIFZXJyb3I6HpqyGRoI",
+            "ARoDdWRiKLDqATADQAFKB3N0b3JhZ2VQASKIAgoQTGlzdEZpbGVzUmVxdWVz",
+            "dBIbCgl0ZW5hbnRfaWQYASABKAlSCHRlbmFudElkEhsKCWZpbGVfdHlwZRgC",
+            "IAEoCVIIZmlsZVR5cGUSIQoMcmVmZXJlbmNlX2lkGAMgASgJUgtyZWZlcmVu",
+            "Y2VJZBIlCg5yZWZlcmVuY2VfdHlwZRgEIAEoCVINcmVmZXJlbmNlVHlwZRIf",
+            "Cgt1cGxvYWRlZF9ieRgFIAEoCVIKdXBsb2FkZWRCeRISCgRwYWdlGAYgASgF",
+            "UgRwYWdlEhsKCXBhZ2Vfc2l6ZRgHIAEoBVIIcGFnZVNpemU6HpqyGRoIARoD",
+            "dWRiKLDqATADQAFKB3N0b3JhZ2VQASLAAQoRTGlzdEZpbGVzUmVzcG9uc2US",
+            "NgoFZmlsZXMYASADKAsyIC51ZGIuY29yZS5zdG9yYWdlLmVudGl0eS52MS5G",
+            "aWxlUgVmaWxlcxIfCgt0b3RhbF9jb3VudBgCIAEoBVIKdG90YWxDb3VudBIy",
+            "CgVlcnJvchgDIAEoCzIcLnVkYi5jb3JlLmNvbW1vbi52MS5BcGlFcnJvclIF",
+            "ZXJyb3I6HpqyGRoIARoDdWRiKLDqATADQAFKB3N0b3JhZ2VQATLNLwoOU3Rv",
+            "cmFnZVNlcnZpY2US+wUKDlJlZ2lzdGVyVXBsb2FkEjMudWRiLmNvcmUuc3Rv",
+            "cmFnZS5zZXJ2aWNlcy52MS5SZWdpc3RlclVwbG9hZFJlcXVlc3QaNC51ZGIu",
+            "Y29yZS5zdG9yYWdlLnNlcnZpY2VzLnYxLlJlZ2lzdGVyVXBsb2FkUmVzcG9u",
+            "c2Ui/QTK8xhACAIaG3VkYjpzdG9yYWdlOnJlZ2lzdGVyLXVwbG9hZCABSgIB",
+            "AmoWc3RvcmFnZS5SZWdpc3RlclVwbG9hZJABAdLzGAYIARABIAHa8xgrCAES",
+            "D3JlZ2lzdGVyX3VwbG9hZBoDdWRiKLDqATADQAFKB3N0b3JhZ2VQAeLzGMEB",
+            "CgdzdG9yYWdlEhJ1ZGIvbmF0aXZlL3N0b3JhZ2UaG1VEQl9OQVRJVkVfU0VS",
+            "VklDRVNfRU5BQkxFRBoPVURCX0dSUENfVEFSR0VUIi51ZGIubmF0aXZlLnN0",
+            "b3JhZ2UucmVnaXN0ZXJfdXBsb2FkLmJvaWxlcnBsYXRlKg9yZWdpc3Rlcl91",
+            "cGxvYWQyC3VkYl9zdG9yYWdlOgdzdG9yYWdlSgtVREJfQVBJX0tFWVoQdWRi",
+            "IG5hdGl2ZSBzbW9rZerzGJ8BChZzdG9yYWdlLlJlZ2lzdGVyVXBsb2FkEg5z",
+            "dG9yYWdlLmV2ZW50cxoJdGVuYW50X2lkIghzdGFuZGFyZCoNYXRfbGVhc3Rf",
+            "b25jZTIGc3RhYmxlOkkKJXVkYi5zdG9yYWdlLmZpbGUudXBsb2FkX3VybF9p",
+            "c3N1ZWQudjESB2ZpbGVfaWQaDWF0X2xlYXN0X29uY2UiCHN0YW5kYXJk8vMY",
+            "TwoHc3RvcmFnZRoIcG9zdGdyZXMaDG9iamVjdF9zdG9yZTIbVURCX05BVElW",
+            "RV9TRVJWSUNFU19FTkFCTEVEMg9VREJfR1JQQ19UQVJHRVT48xgCivQYHQoH",
+            "ZmlsZV9pZBIHR2V0RmlsZRoHZmlsZV9pZCgBgtPkkwIYIhMvdjEvc3RvcmFn",
+            "ZS91cGxvYWRzOgEqEtkHCg5GaW5hbGl6ZVVwbG9hZBIzLnVkYi5jb3JlLnN0",
+            "b3JhZ2Uuc2VydmljZXMudjEuRmluYWxpemVVcGxvYWRSZXF1ZXN0GjQudWRi",
+            "LmNvcmUuc3RvcmFnZS5zZXJ2aWNlcy52MS5GaW5hbGl6ZVVwbG9hZFJlc3Bv",
+            "bnNlItsGyvMYQAgCGht1ZGI6c3RvcmFnZTpmaW5hbGl6ZS11cGxvYWQgAUoC",
+            "AQJqFnN0b3JhZ2UuRmluYWxpemVVcGxvYWSQAQHS8xgGCAEQASAB2vMYKwgB",
+            "Eg9maW5hbGl6ZV91cGxvYWQaA3VkYiiw6gEwA0ABSgdzdG9yYWdlUAHi8xjB",
+            "AQoHc3RvcmFnZRISdWRiL25hdGl2ZS9zdG9yYWdlGhtVREJfTkFUSVZFX1NF",
+            "UlZJQ0VTX0VOQUJMRUQaD1VEQl9HUlBDX1RBUkdFVCIudWRiLm5hdGl2ZS5z",
+            "dG9yYWdlLmZpbmFsaXplX3VwbG9hZC5ib2lsZXJwbGF0ZSoPZmluYWxpemVf",
+            "dXBsb2FkMgt1ZGJfc3RvcmFnZToHc3RvcmFnZUoLVURCX0FQSV9LRVlaEHVk",
+            "YiBuYXRpdmUgc21va2Xq8xiZAQoWc3RvcmFnZS5GaW5hbGl6ZVVwbG9hZBIO",
+            "c3RvcmFnZS5ldmVudHMaCXRlbmFudF9pZCIIc3RhbmRhcmQqDWF0X2xlYXN0",
+            "X29uY2UyBnN0YWJsZTpDCh11ZGIuc3RvcmFnZS5maWxlLmZpbmFsaXplZC52",
+            "MRIHZmlsZV9pZBoNYXRfbGVhc3Rfb25jZSIIc3RhbmRhcmQoAfLzGE8KB3N0",
+            "b3JhZ2UaCHBvc3RncmVzGgxvYmplY3Rfc3RvcmUyG1VEQl9OQVRJVkVfU0VS",
+            "VklDRVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VU+PMYAor0GBQSB0dldEZp",
+            "bGUaB2ZpbGVfaWQoAZL0GCEKBEZpbGUSB1BFTkRJTkcaBkFDVElWRSIGQUNU",
+            "SVZFKAGi9BiwAQosChZTVE9SQUdFX1FVT1RBX0VYQ0VFREVEEhJSRVNPVVJD",
+            "RV9FWEhBVVNURUQKKAoRQUxSRUFEWV9GSU5BTElaRUQSE0ZBSUxFRF9QUkVD",
+            "T05ESVRJT04KKQoST0JKRUNUX05PVF9QUkVTRU5UEhNGQUlMRURfUFJFQ09O",
+            "RElUSU9OCisKFFVQTE9BRF9TSVpFX01JU01BVENIEhNGQUlMRURfUFJFQ09O",
+            "RElUSU9OgtPkkwIrIiYvdjEvc3RvcmFnZS91cGxvYWRzL3tmaWxlX2lkfS9m",
+            "aW5hbGl6ZToBKhKkBQoOR2V0RG93bmxvYWRVcmwSMy51ZGIuY29yZS5zdG9y",
+            "YWdlLnNlcnZpY2VzLnYxLkdldERvd25sb2FkVXJsUmVxdWVzdBo0LnVkYi5j",
+            "b3JlLnN0b3JhZ2Uuc2VydmljZXMudjEuR2V0RG93bmxvYWRVcmxSZXNwb25z",
+            "ZSKmBMrzGEEIAhocdWRiOnN0b3JhZ2U6Z2V0LWRvd25sb2FkLXVybCABSgIB",
+            "AmoWc3RvcmFnZS5HZXREb3dubG9hZFVybJABAdLzGAYIARABIAHa8xgsCAES",
+            "EGdldF9kb3dubG9hZF91cmwaA3VkYiiw6gEwA0ABSgdzdG9yYWdlUAHi8xjD",
+            "AQoHc3RvcmFnZRISdWRiL25hdGl2ZS9zdG9yYWdlGhtVREJfTkFUSVZFX1NF",
+            "UlZJQ0VTX0VOQUJMRUQaD1VEQl9HUlBDX1RBUkdFVCIvdWRiLm5hdGl2ZS5z",
+            "dG9yYWdlLmdldF9kb3dubG9hZF91cmwuYm9pbGVycGxhdGUqEGdldF9kb3du",
+            "bG9hZF91cmwyC3VkYl9zdG9yYWdlOgdzdG9yYWdlSgtVREJfQVBJX0tFWVoQ",
+            "dWRiIG5hdGl2ZSBzbW9rZerzGFQKFnN0b3JhZ2UuR2V0RG93bmxvYWRVcmwS",
             "DnN0b3JhZ2UuZXZlbnRzGgl0ZW5hbnRfaWQiCHN0YW5kYXJkKg1hdF9sZWFz",
             "dF9vbmNlMgZzdGFibGXy8xhPCgdzdG9yYWdlGghwb3N0Z3JlcxoMb2JqZWN0",
             "X3N0b3JlMhtVREJfTkFUSVZFX1NFUlZJQ0VTX0VOQUJMRUQyD1VEQl9HUlBD",
-            "X1RBUkdFVPjzGAGC0+STAhMSES92MS9zdG9yYWdlL2ZpbGVzGoADyvAZZgoH",
-            "c3RvcmFnZRIHc3RvcmFnZRoHc3RvcmFnZSIHU3RvcmFnZSoHc3RvcmFnZTAB",
-            "OAFIAWgBegdzdG9yYWdlggEHc3RvcmFnZYoBB3N0b3JhZ2WSAQ5uYXRpdmUu",
-            "c3RvcmFnZZgBAdLwGRoIARoDdWRiKLDqATADQAFKB3N0b3JhZ2VQAdrwGZIB",
-            "CgdzdG9yYWdlEhJ1ZGIvbmF0aXZlL3N0b3JhZ2UaG1VEQl9OQVRJVkVfU0VS",
-            "VklDRVNfRU5BQkxFRBoPVURCX0dSUENfVEFSR0VUIh51ZGIubmF0aXZlLnN0",
-            "b3JhZ2UuY29uZmlnLmpzb246B3N0b3JhZ2VKC1VEQl9BUElfS0VZWg91ZGIg",
-            "bmF0aXZlIGxpbnTi8BldCgdzdG9yYWdlGghwb3N0Z3JlcxoMb2JqZWN0X3N0",
-            "b3JlMhtVREJfTkFUSVZFX1NFUlZJQ0VTX0VOQUJMRUQyD1VEQl9HUlBDX1RB",
-            "UkdFVDoMb2JqZWN0X3N0b3JlQpgCCiBjb20udWRiLmNvcmUuc3RvcmFnZS5z",
-            "ZXJ2aWNlcy52MUITU3RvcmFnZVNlcnZpY2VQcm90b1ABWkpnaXRodWIuY29t",
-            "L2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9jb3JlL3N0b3JhZ2Uvc2Vy",
-            "dmljZXMvdjE7c2VydmljZXN2MaICBFVDU1OqAhx1ZGIuY29yZS5TdG9yYWdl",
-            "LlNlcnZpY2VzLlYxygIcVWRiXENvcmVcU3RvcmFnZVxTZXJ2aWNlc1xWMeIC",
-            "KFVkYlxHUEJNZXRhZGF0YVxDb3JlXFN0b3JhZ2VcU2VydmljZXNcVjHqAiBV",
-            "ZGI6OkNvcmU6OlN0b3JhZ2U6OlNlcnZpY2VzOjpWMWIGcHJvdG8z"));
+            "X1RBUkdFVPjzGAGC0+STAioSKC92MS9zdG9yYWdlL2ZpbGVzL3tmaWxlX2lk",
+            "fS9kb3dubG9hZC11cmwSjAUKDERvd25sb2FkRmlsZRIxLnVkYi5jb3JlLnN0",
+            "b3JhZ2Uuc2VydmljZXMudjEuRG93bmxvYWRGaWxlUmVxdWVzdBovLnVkYi5j",
+            "b3JlLnN0b3JhZ2Uuc2VydmljZXMudjEuRG93bmxvYWRGaWxlQ2h1bmsilQTK",
+            "8xg/CAIaHHVkYjpzdG9yYWdlOmdldC1kb3dubG9hZC11cmwgAUoCAQJqFHN0",
+            "b3JhZ2UuRG93bmxvYWRGaWxlkAEB0vMYBggBEAEgAdrzGCkIARINZG93bmxv",
+            "YWRfZmlsZRoDdWRiKLDqATADQAFKB3N0b3JhZ2VQAeLzGL0BCgdzdG9yYWdl",
+            "EhJ1ZGIvbmF0aXZlL3N0b3JhZ2UaG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5B",
+            "QkxFRBoPVURCX0dSUENfVEFSR0VUIix1ZGIubmF0aXZlLnN0b3JhZ2UuZG93",
+            "bmxvYWRfZmlsZS5ib2lsZXJwbGF0ZSoNZG93bmxvYWRfZmlsZTILdWRiX3N0",
+            "b3JhZ2U6B3N0b3JhZ2VKC1VEQl9BUElfS0VZWhB1ZGIgbmF0aXZlIHNtb2tl",
+            "6vMYUgoUc3RvcmFnZS5Eb3dubG9hZEZpbGUSDnN0b3JhZ2UuZXZlbnRzGgl0",
+            "ZW5hbnRfaWQiCHN0YW5kYXJkKg1hdF9sZWFzdF9vbmNlMgZzdGFibGXy8xhP",
+            "CgdzdG9yYWdlGghwb3N0Z3JlcxoMb2JqZWN0X3N0b3JlMhtVREJfTkFUSVZF",
+            "X1NFUlZJQ0VTX0VOQUJMRUQyD1VEQl9HUlBDX1RBUkdFVPjzGAGC0+STAiYS",
+            "JC92MS9zdG9yYWdlL2ZpbGVzL3tmaWxlX2lkfS9kb3dubG9hZDABEtQECgdH",
+            "ZXRGaWxlEiwudWRiLmNvcmUuc3RvcmFnZS5zZXJ2aWNlcy52MS5HZXRGaWxl",
+            "UmVxdWVzdBotLnVkYi5jb3JlLnN0b3JhZ2Uuc2VydmljZXMudjEuR2V0Rmls",
+            "ZVJlc3BvbnNlIusDyvMYMggCGhR1ZGI6c3RvcmFnZTpnZXQtZmlsZSABSgIB",
+            "AmoPc3RvcmFnZS5HZXRGaWxlkAEB0vMYBggBEAEgAdrzGCQIARIIZ2V0X2Zp",
+            "bGUaA3VkYiiw6gEwA0ABSgdzdG9yYWdlUAHi8xizAQoHc3RvcmFnZRISdWRi",
+            "L25hdGl2ZS9zdG9yYWdlGhtVREJfTkFUSVZFX1NFUlZJQ0VTX0VOQUJMRUQa",
+            "D1VEQl9HUlBDX1RBUkdFVCIndWRiLm5hdGl2ZS5zdG9yYWdlLmdldF9maWxl",
+            "LmJvaWxlcnBsYXRlKghnZXRfZmlsZTILdWRiX3N0b3JhZ2U6B3N0b3JhZ2VK",
+            "C1VEQl9BUElfS0VZWhB1ZGIgbmF0aXZlIHNtb2tl6vMYTQoPc3RvcmFnZS5H",
+            "ZXRGaWxlEg5zdG9yYWdlLmV2ZW50cxoJdGVuYW50X2lkIghzdGFuZGFyZCoN",
+            "YXRfbGVhc3Rfb25jZTIGc3RhYmxl8vMYTwoHc3RvcmFnZRoIcG9zdGdyZXMa",
+            "DG9iamVjdF9zdG9yZTIbVURCX05BVElWRV9TRVJWSUNFU19FTkFCTEVEMg9V",
+            "REJfR1JQQ19UQVJHRVT48xgBgtPkkwIdEhsvdjEvc3RvcmFnZS9maWxlcy97",
+            "ZmlsZV9pZH0SvQUKClVwZGF0ZUZpbGUSLy51ZGIuY29yZS5zdG9yYWdlLnNl",
+            "cnZpY2VzLnYxLlVwZGF0ZUZpbGVSZXF1ZXN0GjAudWRiLmNvcmUuc3RvcmFn",
+            "ZS5zZXJ2aWNlcy52MS5VcGRhdGVGaWxlUmVzcG9uc2UiywTK8xg4CAIaF3Vk",
+            "YjpzdG9yYWdlOnVwZGF0ZS1maWxlIAFKAgECahJzdG9yYWdlLlVwZGF0ZUZp",
+            "bGWQAQHS8xgGCAEQASAB2vMYJwgBEgt1cGRhdGVfZmlsZRoDdWRiKLDqATAD",
+            "QAFKB3N0b3JhZ2VQAeLzGLkBCgdzdG9yYWdlEhJ1ZGIvbmF0aXZlL3N0b3Jh",
+            "Z2UaG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRBoPVURCX0dSUENfVEFS",
+            "R0VUIip1ZGIubmF0aXZlLnN0b3JhZ2UudXBkYXRlX2ZpbGUuYm9pbGVycGxh",
+            "dGUqC3VwZGF0ZV9maWxlMgt1ZGJfc3RvcmFnZToHc3RvcmFnZUoLVURCX0FQ",
+            "SV9LRVlaEHVkYiBuYXRpdmUgc21va2Xq8xiaAQoSc3RvcmFnZS5VcGRhdGVG",
+            "aWxlEg5zdG9yYWdlLmV2ZW50cxoJdGVuYW50X2lkIghzdGFuZGFyZCoNYXRf",
+            "bGVhc3Rfb25jZTIGc3RhYmxlOkgKJHVkYi5zdG9yYWdlLmZpbGUubWV0YWRh",
+            "dGFfdXBkYXRlZC52MRIHZmlsZV9pZBoNYXRfbGVhc3Rfb25jZSIIc3RhbmRh",
+            "cmTy8xhPCgdzdG9yYWdlGghwb3N0Z3JlcxoMb2JqZWN0X3N0b3JlMhtVREJf",
+            "TkFUSVZFX1NFUlZJQ0VTX0VOQUJMRUQyD1VEQl9HUlBDX1RBUkdFVPjzGAKC",
+            "0+STAiAyGy92MS9zdG9yYWdlL2ZpbGVzL3tmaWxlX2lkfToBKhKxBQoKRGVs",
+            "ZXRlRmlsZRIvLnVkYi5jb3JlLnN0b3JhZ2Uuc2VydmljZXMudjEuRGVsZXRl",
+            "RmlsZVJlcXVlc3QaMC51ZGIuY29yZS5zdG9yYWdlLnNlcnZpY2VzLnYxLkRl",
+            "bGV0ZUZpbGVSZXNwb25zZSK/BMrzGDgIAhoXdWRiOnN0b3JhZ2U6ZGVsZXRl",
+            "LWZpbGUgAUoCAQJqEnN0b3JhZ2UuRGVsZXRlRmlsZZABAdLzGAYIARABIAHa",
+            "8xgnCAESC2RlbGV0ZV9maWxlGgN1ZGIosOoBMANAAUoHc3RvcmFnZVAB4vMY",
+            "uQEKB3N0b3JhZ2USEnVkYi9uYXRpdmUvc3RvcmFnZRobVURCX05BVElWRV9T",
+            "RVJWSUNFU19FTkFCTEVEGg9VREJfR1JQQ19UQVJHRVQiKnVkYi5uYXRpdmUu",
+            "c3RvcmFnZS5kZWxldGVfZmlsZS5ib2lsZXJwbGF0ZSoLZGVsZXRlX2ZpbGUy",
+            "C3VkYl9zdG9yYWdlOgdzdG9yYWdlSgtVREJfQVBJX0tFWVoQdWRiIG5hdGl2",
+            "ZSBzbW9rZerzGJEBChJzdG9yYWdlLkRlbGV0ZUZpbGUSDnN0b3JhZ2UuZXZl",
+            "bnRzGgl0ZW5hbnRfaWQiCHN0YW5kYXJkKg1hdF9sZWFzdF9vbmNlMgZzdGFi",
+            "bGU6PwobdWRiLnN0b3JhZ2UuZmlsZS5kZWxldGVkLnYxEgdmaWxlX2lkGg1h",
+            "dF9sZWFzdF9vbmNlIghzdGFuZGFyZPLzGE8KB3N0b3JhZ2UaCHBvc3RncmVz",
+            "GgxvYmplY3Rfc3RvcmUyG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRDIP",
+            "VURCX0dSUENfVEFSR0VU+PMYAoLT5JMCHSobL3YxL3N0b3JhZ2UvZmlsZXMv",
+            "e2ZpbGVfaWR9EtwECglMaXN0RmlsZXMSLi51ZGIuY29yZS5zdG9yYWdlLnNl",
+            "cnZpY2VzLnYxLkxpc3RGaWxlc1JlcXVlc3QaLy51ZGIuY29yZS5zdG9yYWdl",
+            "LnNlcnZpY2VzLnYxLkxpc3RGaWxlc1Jlc3BvbnNlIu0DyvMYNggCGhZ1ZGI6",
+            "c3RvcmFnZTpsaXN0LWZpbGVzIAFKAgECahFzdG9yYWdlLkxpc3RGaWxlc5AB",
+            "AdLzGAYIARABIAHa8xgmCAESCmxpc3RfZmlsZXMaA3VkYiiw6gEwA0ABSgdz",
+            "dG9yYWdlUAHi8xi3AQoHc3RvcmFnZRISdWRiL25hdGl2ZS9zdG9yYWdlGhtV",
+            "REJfTkFUSVZFX1NFUlZJQ0VTX0VOQUJMRUQaD1VEQl9HUlBDX1RBUkdFVCIp",
+            "dWRiLm5hdGl2ZS5zdG9yYWdlLmxpc3RfZmlsZXMuYm9pbGVycGxhdGUqCmxp",
+            "c3RfZmlsZXMyC3VkYl9zdG9yYWdlOgdzdG9yYWdlSgtVREJfQVBJX0tFWVoQ",
+            "dWRiIG5hdGl2ZSBzbW9rZerzGE8KEXN0b3JhZ2UuTGlzdEZpbGVzEg5zdG9y",
+            "YWdlLmV2ZW50cxoJdGVuYW50X2lkIghzdGFuZGFyZCoNYXRfbGVhc3Rfb25j",
+            "ZTIGc3RhYmxl8vMYTwoHc3RvcmFnZRoIcG9zdGdyZXMaDG9iamVjdF9zdG9y",
+            "ZTIbVURCX05BVElWRV9TRVJWSUNFU19FTkFCTEVEMg9VREJfR1JQQ19UQVJH",
+            "RVT48xgBgtPkkwITEhEvdjEvc3RvcmFnZS9maWxlcxqAA8rwGWYKB3N0b3Jh",
+            "Z2USB3N0b3JhZ2UaB3N0b3JhZ2UiB1N0b3JhZ2UqB3N0b3JhZ2UwATgBSAFo",
+            "AXoHc3RvcmFnZYIBB3N0b3JhZ2WKAQdzdG9yYWdlkgEObmF0aXZlLnN0b3Jh",
+            "Z2WYAQHS8BkaCAEaA3VkYiiw6gEwA0ABSgdzdG9yYWdlUAHa8BmSAQoHc3Rv",
+            "cmFnZRISdWRiL25hdGl2ZS9zdG9yYWdlGhtVREJfTkFUSVZFX1NFUlZJQ0VT",
+            "X0VOQUJMRUQaD1VEQl9HUlBDX1RBUkdFVCIedWRiLm5hdGl2ZS5zdG9yYWdl",
+            "LmNvbmZpZy5qc29uOgdzdG9yYWdlSgtVREJfQVBJX0tFWVoPdWRiIG5hdGl2",
+            "ZSBsaW504vAZXQoHc3RvcmFnZRoIcG9zdGdyZXMaDG9iamVjdF9zdG9yZTIb",
+            "VURCX05BVElWRV9TRVJWSUNFU19FTkFCTEVEMg9VREJfR1JQQ19UQVJHRVQ6",
+            "DG9iamVjdF9zdG9yZUKYAgogY29tLnVkYi5jb3JlLnN0b3JhZ2Uuc2Vydmlj",
+            "ZXMudjFCE1N0b3JhZ2VTZXJ2aWNlUHJvdG9QAVpKZ2l0aHViLmNvbS9mYWhh",
+            "cmEwMi91ZGIvc2RrL2dvL2dlbi91ZGIvY29yZS9zdG9yYWdlL3NlcnZpY2Vz",
+            "L3YxO3NlcnZpY2VzdjGiAgRVQ1NTqgIcdWRiLmNvcmUuU3RvcmFnZS5TZXJ2",
+            "aWNlcy5WMcoCHFVkYlxDb3JlXFN0b3JhZ2VcU2VydmljZXNcVjHiAihVZGJc",
+            "R1BCTWV0YWRhdGFcQ29yZVxTdG9yYWdlXFNlcnZpY2VzXFYx6gIgVWRiOjpD",
+            "b3JlOjpTdG9yYWdlOjpTZXJ2aWNlczo6VjFiBnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Api.AnnotationsReflection.Descriptor, global::Google.Protobuf.WellKnownTypes.TimestampReflection.Descriptor, global::udb.core.Common.V1.DtoReflection.Descriptor, global::udb.core.Common.V1.SecurityReflection.Descriptor, global::udb.core.Storage.Entity.V1.FileReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Storage.Services.V1.RegisterUploadRequest), global::udb.core.Storage.Services.V1.RegisterUploadRequest.Parser, new[]{ "TenantId", "ProjectId", "Filename", "ContentType", "FileType", "ReferenceId", "ReferenceType", "IsPublic", "ExpiresInMinutes", "SizeBytes" }, new[]{ "IsPublic" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Storage.Services.V1.RegisterUploadResponse), global::udb.core.Storage.Services.V1.RegisterUploadResponse.Parser, new[]{ "FileId", "UploadUrl", "ObjectKey", "Error" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Storage.Services.V1.FinalizeUploadRequest), global::udb.core.Storage.Services.V1.FinalizeUploadRequest.Parser, new[]{ "TenantId", "FileId", "ContentType", "FileType", "ReferenceId", "ReferenceType", "IsPublic", "SizeBytes" }, new[]{ "IsPublic" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Storage.Services.V1.RegisterUploadResponse), global::udb.core.Storage.Services.V1.RegisterUploadResponse.Parser, new[]{ "FileId", "UploadUrl", "ObjectKey", "Error", "ExpiresAt" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Storage.Services.V1.FinalizeUploadRequest), global::udb.core.Storage.Services.V1.FinalizeUploadRequest.Parser, new[]{ "TenantId", "FileId", "ContentType", "FileType", "ReferenceId", "ReferenceType", "IsPublic", "SizeBytes", "Checksum", "Etag" }, new[]{ "IsPublic", "Checksum", "Etag" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Storage.Services.V1.FinalizeUploadResponse), global::udb.core.Storage.Services.V1.FinalizeUploadResponse.Parser, new[]{ "File", "Error" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Storage.Services.V1.GetDownloadUrlRequest), global::udb.core.Storage.Services.V1.GetDownloadUrlRequest.Parser, new[]{ "TenantId", "FileId", "ExpiresInMinutes" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Storage.Services.V1.GetDownloadUrlResponse), global::udb.core.Storage.Services.V1.GetDownloadUrlResponse.Parser, new[]{ "DownloadUrl", "ExpiresAt", "Error" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Storage.Services.V1.DownloadFileRequest), global::udb.core.Storage.Services.V1.DownloadFileRequest.Parser, new[]{ "TenantId", "FileId", "ChunkSizeBytes" }, new[]{ "ChunkSizeBytes" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Storage.Services.V1.DownloadFileChunk), global::udb.core.Storage.Services.V1.DownloadFileChunk.Parser, new[]{ "Data", "ContentType", "TotalSize", "Etag" }, new[]{ "ContentType", "TotalSize", "Etag" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Storage.Services.V1.GetFileRequest), global::udb.core.Storage.Services.V1.GetFileRequest.Parser, new[]{ "TenantId", "FileId" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Storage.Services.V1.GetFileResponse), global::udb.core.Storage.Services.V1.GetFileResponse.Parser, new[]{ "File", "Error" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Storage.Services.V1.UpdateFileRequest), global::udb.core.Storage.Services.V1.UpdateFileRequest.Parser, new[]{ "TenantId", "FileId", "Filename", "ContentType", "FileType", "ReferenceId", "ReferenceType", "IsPublic" }, new[]{ "IsPublic" }, null, null, null),
@@ -831,6 +865,7 @@ namespace udb.core.Storage.Services.V1 {
       uploadUrl_ = other.uploadUrl_;
       objectKey_ = other.objectKey_;
       error_ = other.error_ != null ? other.error_.Clone() : null;
+      expiresAt_ = other.expiresAt_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -891,6 +926,23 @@ namespace udb.core.Storage.Services.V1 {
       }
     }
 
+    /// <summary>Field number for the "expires_at" field.</summary>
+    public const int ExpiresAtFieldNumber = 5;
+    private long expiresAt_;
+    /// <summary>
+    /// Unix-seconds expiry of the presigned PUT `upload_url`; 0 when no URL was
+    /// minted (metadata-only mode / presign error). Lets the client know when the
+    /// URL dies without a follow-up call.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public long ExpiresAt {
+      get { return expiresAt_; }
+      set {
+        expiresAt_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -910,6 +962,7 @@ namespace udb.core.Storage.Services.V1 {
       if (UploadUrl != other.UploadUrl) return false;
       if (ObjectKey != other.ObjectKey) return false;
       if (!object.Equals(Error, other.Error)) return false;
+      if (ExpiresAt != other.ExpiresAt) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -921,6 +974,7 @@ namespace udb.core.Storage.Services.V1 {
       if (UploadUrl.Length != 0) hash ^= UploadUrl.GetHashCode();
       if (ObjectKey.Length != 0) hash ^= ObjectKey.GetHashCode();
       if (error_ != null) hash ^= Error.GetHashCode();
+      if (ExpiresAt != 0L) hash ^= ExpiresAt.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -955,6 +1009,10 @@ namespace udb.core.Storage.Services.V1 {
         output.WriteRawTag(34);
         output.WriteMessage(Error);
       }
+      if (ExpiresAt != 0L) {
+        output.WriteRawTag(40);
+        output.WriteInt64(ExpiresAt);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -981,6 +1039,10 @@ namespace udb.core.Storage.Services.V1 {
         output.WriteRawTag(34);
         output.WriteMessage(Error);
       }
+      if (ExpiresAt != 0L) {
+        output.WriteRawTag(40);
+        output.WriteInt64(ExpiresAt);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -1002,6 +1064,9 @@ namespace udb.core.Storage.Services.V1 {
       }
       if (error_ != null) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(Error);
+      }
+      if (ExpiresAt != 0L) {
+        size += 1 + pb::CodedOutputStream.ComputeInt64Size(ExpiresAt);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -1029,6 +1094,9 @@ namespace udb.core.Storage.Services.V1 {
           Error = new global::udb.core.Common.V1.ApiError();
         }
         Error.MergeFrom(other.Error);
+      }
+      if (other.ExpiresAt != 0L) {
+        ExpiresAt = other.ExpiresAt;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -1068,6 +1136,10 @@ namespace udb.core.Storage.Services.V1 {
             input.ReadMessage(Error);
             break;
           }
+          case 40: {
+            ExpiresAt = input.ReadInt64();
+            break;
+          }
         }
       }
     #endif
@@ -1104,6 +1176,10 @@ namespace udb.core.Storage.Services.V1 {
               Error = new global::udb.core.Common.V1.ApiError();
             }
             input.ReadMessage(Error);
+            break;
+          }
+          case 40: {
+            ExpiresAt = input.ReadInt64();
             break;
           }
         }
@@ -1158,6 +1234,8 @@ namespace udb.core.Storage.Services.V1 {
       referenceType_ = other.referenceType_;
       isPublic_ = other.isPublic_;
       sizeBytes_ = other.sizeBytes_;
+      checksum_ = other.checksum_;
+      etag_ = other.etag_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -1284,6 +1362,66 @@ namespace udb.core.Storage.Services.V1 {
       }
     }
 
+    /// <summary>Field number for the "checksum" field.</summary>
+    public const int ChecksumFieldNumber = 9;
+    private readonly static string ChecksumDefaultValue = "";
+
+    private string checksum_;
+    /// <summary>
+    /// Optional client-computed content checksum; persisted into File.checksum.
+    /// Only verified/stored when present.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Checksum {
+      get { return checksum_ ?? ChecksumDefaultValue; }
+      set {
+        checksum_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+    /// <summary>Gets whether the "checksum" field is set</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool HasChecksum {
+      get { return checksum_ != null; }
+    }
+    /// <summary>Clears the value of the "checksum" field</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void ClearChecksum() {
+      checksum_ = null;
+    }
+
+    /// <summary>Field number for the "etag" field.</summary>
+    public const int EtagFieldNumber = 10;
+    private readonly static string EtagDefaultValue = "";
+
+    private string etag_;
+    /// <summary>
+    /// Optional client-observed object ETag; compared against the store's HEAD
+    /// ETag when present (mismatch → FailedPrecondition / UPLOAD_SIZE_MISMATCH).
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Etag {
+      get { return etag_ ?? EtagDefaultValue; }
+      set {
+        etag_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+    /// <summary>Gets whether the "etag" field is set</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool HasEtag {
+      get { return etag_ != null; }
+    }
+    /// <summary>Clears the value of the "etag" field</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void ClearEtag() {
+      etag_ = null;
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -1307,6 +1445,8 @@ namespace udb.core.Storage.Services.V1 {
       if (ReferenceType != other.ReferenceType) return false;
       if (IsPublic != other.IsPublic) return false;
       if (SizeBytes != other.SizeBytes) return false;
+      if (Checksum != other.Checksum) return false;
+      if (Etag != other.Etag) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -1322,6 +1462,8 @@ namespace udb.core.Storage.Services.V1 {
       if (ReferenceType.Length != 0) hash ^= ReferenceType.GetHashCode();
       if (HasIsPublic) hash ^= IsPublic.GetHashCode();
       if (SizeBytes != 0L) hash ^= SizeBytes.GetHashCode();
+      if (HasChecksum) hash ^= Checksum.GetHashCode();
+      if (HasEtag) hash ^= Etag.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -1372,6 +1514,14 @@ namespace udb.core.Storage.Services.V1 {
         output.WriteRawTag(64);
         output.WriteInt64(SizeBytes);
       }
+      if (HasChecksum) {
+        output.WriteRawTag(74);
+        output.WriteString(Checksum);
+      }
+      if (HasEtag) {
+        output.WriteRawTag(82);
+        output.WriteString(Etag);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -1414,6 +1564,14 @@ namespace udb.core.Storage.Services.V1 {
         output.WriteRawTag(64);
         output.WriteInt64(SizeBytes);
       }
+      if (HasChecksum) {
+        output.WriteRawTag(74);
+        output.WriteString(Checksum);
+      }
+      if (HasEtag) {
+        output.WriteRawTag(82);
+        output.WriteString(Etag);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -1447,6 +1605,12 @@ namespace udb.core.Storage.Services.V1 {
       }
       if (SizeBytes != 0L) {
         size += 1 + pb::CodedOutputStream.ComputeInt64Size(SizeBytes);
+      }
+      if (HasChecksum) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Checksum);
+      }
+      if (HasEtag) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Etag);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -1483,6 +1647,12 @@ namespace udb.core.Storage.Services.V1 {
       }
       if (other.SizeBytes != 0L) {
         SizeBytes = other.SizeBytes;
+      }
+      if (other.HasChecksum) {
+        Checksum = other.Checksum;
+      }
+      if (other.HasEtag) {
+        Etag = other.Etag;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -1535,6 +1705,14 @@ namespace udb.core.Storage.Services.V1 {
             SizeBytes = input.ReadInt64();
             break;
           }
+          case 74: {
+            Checksum = input.ReadString();
+            break;
+          }
+          case 82: {
+            Etag = input.ReadString();
+            break;
+          }
         }
       }
     #endif
@@ -1584,6 +1762,14 @@ namespace udb.core.Storage.Services.V1 {
           }
           case 64: {
             SizeBytes = input.ReadInt64();
+            break;
+          }
+          case 74: {
+            Checksum = input.ReadString();
+            break;
+          }
+          case 82: {
+            Etag = input.ReadString();
             break;
           }
         }
@@ -2415,6 +2601,660 @@ namespace udb.core.Storage.Services.V1 {
   }
 
   [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class DownloadFileRequest : pb::IMessage<DownloadFileRequest>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<DownloadFileRequest> _parser = new pb::MessageParser<DownloadFileRequest>(() => new DownloadFileRequest());
+    private pb::UnknownFieldSet _unknownFields;
+    private int _hasBits0;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<DownloadFileRequest> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::udb.core.Storage.Services.V1.StorageServiceReflection.Descriptor.MessageTypes[6]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public DownloadFileRequest() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public DownloadFileRequest(DownloadFileRequest other) : this() {
+      _hasBits0 = other._hasBits0;
+      tenantId_ = other.tenantId_;
+      fileId_ = other.fileId_;
+      chunkSizeBytes_ = other.chunkSizeBytes_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public DownloadFileRequest Clone() {
+      return new DownloadFileRequest(this);
+    }
+
+    /// <summary>Field number for the "tenant_id" field.</summary>
+    public const int TenantIdFieldNumber = 1;
+    private string tenantId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string TenantId {
+      get { return tenantId_; }
+      set {
+        tenantId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "file_id" field.</summary>
+    public const int FileIdFieldNumber = 2;
+    private string fileId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string FileId {
+      get { return fileId_; }
+      set {
+        fileId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "chunk_size_bytes" field.</summary>
+    public const int ChunkSizeBytesFieldNumber = 3;
+    private readonly static int ChunkSizeBytesDefaultValue = 0;
+
+    private int chunkSizeBytes_;
+    /// <summary>
+    /// Optional preferred chunk size in bytes. Absent/0 → server default; the
+    /// server clamps to a safe bound so a client cannot force an unbounded frame.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int ChunkSizeBytes {
+      get { if ((_hasBits0 & 1) != 0) { return chunkSizeBytes_; } else { return ChunkSizeBytesDefaultValue; } }
+      set {
+        _hasBits0 |= 1;
+        chunkSizeBytes_ = value;
+      }
+    }
+    /// <summary>Gets whether the "chunk_size_bytes" field is set</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool HasChunkSizeBytes {
+      get { return (_hasBits0 & 1) != 0; }
+    }
+    /// <summary>Clears the value of the "chunk_size_bytes" field</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void ClearChunkSizeBytes() {
+      _hasBits0 &= ~1;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as DownloadFileRequest);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(DownloadFileRequest other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (TenantId != other.TenantId) return false;
+      if (FileId != other.FileId) return false;
+      if (ChunkSizeBytes != other.ChunkSizeBytes) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (TenantId.Length != 0) hash ^= TenantId.GetHashCode();
+      if (FileId.Length != 0) hash ^= FileId.GetHashCode();
+      if (HasChunkSizeBytes) hash ^= ChunkSizeBytes.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (TenantId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(TenantId);
+      }
+      if (FileId.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(FileId);
+      }
+      if (HasChunkSizeBytes) {
+        output.WriteRawTag(24);
+        output.WriteInt32(ChunkSizeBytes);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (TenantId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(TenantId);
+      }
+      if (FileId.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(FileId);
+      }
+      if (HasChunkSizeBytes) {
+        output.WriteRawTag(24);
+        output.WriteInt32(ChunkSizeBytes);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (TenantId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(TenantId);
+      }
+      if (FileId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(FileId);
+      }
+      if (HasChunkSizeBytes) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(ChunkSizeBytes);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(DownloadFileRequest other) {
+      if (other == null) {
+        return;
+      }
+      if (other.TenantId.Length != 0) {
+        TenantId = other.TenantId;
+      }
+      if (other.FileId.Length != 0) {
+        FileId = other.FileId;
+      }
+      if (other.HasChunkSizeBytes) {
+        ChunkSizeBytes = other.ChunkSizeBytes;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            TenantId = input.ReadString();
+            break;
+          }
+          case 18: {
+            FileId = input.ReadString();
+            break;
+          }
+          case 24: {
+            ChunkSizeBytes = input.ReadInt32();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            TenantId = input.ReadString();
+            break;
+          }
+          case 18: {
+            FileId = input.ReadString();
+            break;
+          }
+          case 24: {
+            ChunkSizeBytes = input.ReadInt32();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class DownloadFileChunk : pb::IMessage<DownloadFileChunk>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<DownloadFileChunk> _parser = new pb::MessageParser<DownloadFileChunk>(() => new DownloadFileChunk());
+    private pb::UnknownFieldSet _unknownFields;
+    private int _hasBits0;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<DownloadFileChunk> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::udb.core.Storage.Services.V1.StorageServiceReflection.Descriptor.MessageTypes[7]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public DownloadFileChunk() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public DownloadFileChunk(DownloadFileChunk other) : this() {
+      _hasBits0 = other._hasBits0;
+      data_ = other.data_;
+      contentType_ = other.contentType_;
+      totalSize_ = other.totalSize_;
+      etag_ = other.etag_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public DownloadFileChunk Clone() {
+      return new DownloadFileChunk(this);
+    }
+
+    /// <summary>Field number for the "data" field.</summary>
+    public const int DataFieldNumber = 1;
+    private pb::ByteString data_ = pb::ByteString.Empty;
+    /// <summary>
+    /// Raw object bytes for this frame.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pb::ByteString Data {
+      get { return data_; }
+      set {
+        data_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "content_type" field.</summary>
+    public const int ContentTypeFieldNumber = 2;
+    private readonly static string ContentTypeDefaultValue = "";
+
+    private string contentType_;
+    /// <summary>
+    /// First-chunk-only object metadata (absent on subsequent chunks): the file's
+    /// content type, total size in bytes, and object ETag.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ContentType {
+      get { return contentType_ ?? ContentTypeDefaultValue; }
+      set {
+        contentType_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+    /// <summary>Gets whether the "content_type" field is set</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool HasContentType {
+      get { return contentType_ != null; }
+    }
+    /// <summary>Clears the value of the "content_type" field</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void ClearContentType() {
+      contentType_ = null;
+    }
+
+    /// <summary>Field number for the "total_size" field.</summary>
+    public const int TotalSizeFieldNumber = 3;
+    private readonly static long TotalSizeDefaultValue = 0L;
+
+    private long totalSize_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public long TotalSize {
+      get { if ((_hasBits0 & 1) != 0) { return totalSize_; } else { return TotalSizeDefaultValue; } }
+      set {
+        _hasBits0 |= 1;
+        totalSize_ = value;
+      }
+    }
+    /// <summary>Gets whether the "total_size" field is set</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool HasTotalSize {
+      get { return (_hasBits0 & 1) != 0; }
+    }
+    /// <summary>Clears the value of the "total_size" field</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void ClearTotalSize() {
+      _hasBits0 &= ~1;
+    }
+
+    /// <summary>Field number for the "etag" field.</summary>
+    public const int EtagFieldNumber = 4;
+    private readonly static string EtagDefaultValue = "";
+
+    private string etag_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Etag {
+      get { return etag_ ?? EtagDefaultValue; }
+      set {
+        etag_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+    /// <summary>Gets whether the "etag" field is set</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool HasEtag {
+      get { return etag_ != null; }
+    }
+    /// <summary>Clears the value of the "etag" field</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void ClearEtag() {
+      etag_ = null;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as DownloadFileChunk);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(DownloadFileChunk other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (Data != other.Data) return false;
+      if (ContentType != other.ContentType) return false;
+      if (TotalSize != other.TotalSize) return false;
+      if (Etag != other.Etag) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (Data.Length != 0) hash ^= Data.GetHashCode();
+      if (HasContentType) hash ^= ContentType.GetHashCode();
+      if (HasTotalSize) hash ^= TotalSize.GetHashCode();
+      if (HasEtag) hash ^= Etag.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (Data.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteBytes(Data);
+      }
+      if (HasContentType) {
+        output.WriteRawTag(18);
+        output.WriteString(ContentType);
+      }
+      if (HasTotalSize) {
+        output.WriteRawTag(24);
+        output.WriteInt64(TotalSize);
+      }
+      if (HasEtag) {
+        output.WriteRawTag(34);
+        output.WriteString(Etag);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (Data.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteBytes(Data);
+      }
+      if (HasContentType) {
+        output.WriteRawTag(18);
+        output.WriteString(ContentType);
+      }
+      if (HasTotalSize) {
+        output.WriteRawTag(24);
+        output.WriteInt64(TotalSize);
+      }
+      if (HasEtag) {
+        output.WriteRawTag(34);
+        output.WriteString(Etag);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (Data.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeBytesSize(Data);
+      }
+      if (HasContentType) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ContentType);
+      }
+      if (HasTotalSize) {
+        size += 1 + pb::CodedOutputStream.ComputeInt64Size(TotalSize);
+      }
+      if (HasEtag) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Etag);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(DownloadFileChunk other) {
+      if (other == null) {
+        return;
+      }
+      if (other.Data.Length != 0) {
+        Data = other.Data;
+      }
+      if (other.HasContentType) {
+        ContentType = other.ContentType;
+      }
+      if (other.HasTotalSize) {
+        TotalSize = other.TotalSize;
+      }
+      if (other.HasEtag) {
+        Etag = other.Etag;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            Data = input.ReadBytes();
+            break;
+          }
+          case 18: {
+            ContentType = input.ReadString();
+            break;
+          }
+          case 24: {
+            TotalSize = input.ReadInt64();
+            break;
+          }
+          case 34: {
+            Etag = input.ReadString();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            Data = input.ReadBytes();
+            break;
+          }
+          case 18: {
+            ContentType = input.ReadString();
+            break;
+          }
+          case 24: {
+            TotalSize = input.ReadInt64();
+            break;
+          }
+          case 34: {
+            Etag = input.ReadString();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
   public sealed partial class GetFileRequest : pb::IMessage<GetFileRequest>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
@@ -2429,7 +3269,7 @@ namespace udb.core.Storage.Services.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::udb.core.Storage.Services.V1.StorageServiceReflection.Descriptor.MessageTypes[6]; }
+      get { return global::udb.core.Storage.Services.V1.StorageServiceReflection.Descriptor.MessageTypes[8]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -2664,7 +3504,7 @@ namespace udb.core.Storage.Services.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::udb.core.Storage.Services.V1.StorageServiceReflection.Descriptor.MessageTypes[7]; }
+      get { return global::udb.core.Storage.Services.V1.StorageServiceReflection.Descriptor.MessageTypes[9]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -2921,7 +3761,7 @@ namespace udb.core.Storage.Services.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::udb.core.Storage.Services.V1.StorageServiceReflection.Descriptor.MessageTypes[8]; }
+      get { return global::udb.core.Storage.Services.V1.StorageServiceReflection.Descriptor.MessageTypes[10]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -3398,7 +4238,7 @@ namespace udb.core.Storage.Services.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::udb.core.Storage.Services.V1.StorageServiceReflection.Descriptor.MessageTypes[9]; }
+      get { return global::udb.core.Storage.Services.V1.StorageServiceReflection.Descriptor.MessageTypes[11]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -3645,7 +4485,7 @@ namespace udb.core.Storage.Services.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::udb.core.Storage.Services.V1.StorageServiceReflection.Descriptor.MessageTypes[10]; }
+      get { return global::udb.core.Storage.Services.V1.StorageServiceReflection.Descriptor.MessageTypes[12]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -3880,7 +4720,7 @@ namespace udb.core.Storage.Services.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::udb.core.Storage.Services.V1.StorageServiceReflection.Descriptor.MessageTypes[11]; }
+      get { return global::udb.core.Storage.Services.V1.StorageServiceReflection.Descriptor.MessageTypes[13]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -4127,7 +4967,7 @@ namespace udb.core.Storage.Services.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::udb.core.Storage.Services.V1.StorageServiceReflection.Descriptor.MessageTypes[12]; }
+      get { return global::udb.core.Storage.Services.V1.StorageServiceReflection.Descriptor.MessageTypes[14]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -4547,7 +5387,7 @@ namespace udb.core.Storage.Services.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::udb.core.Storage.Services.V1.StorageServiceReflection.Descriptor.MessageTypes[13]; }
+      get { return global::udb.core.Storage.Services.V1.StorageServiceReflection.Descriptor.MessageTypes[15]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]

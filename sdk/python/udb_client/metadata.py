@@ -1,12 +1,119 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
+import json
 import os
-from typing import Iterable, Sequence
+from typing import Any, Iterable, Sequence
 
 from udb.entity.v1 import types_pb2
 
 UDB_PROTOCOL_VERSION = "1.0.0"
+
+
+@dataclass(frozen=True)
+class WriteReceipt:
+    """The durability receipt a mutation returns (``MutationResponse.write_receipt_json``).
+
+    Mirrors the Rust ``WriteReceipt`` serde shape: all five fields are always
+    emitted. ``source_lsn`` is the load-bearing field mapped into a
+    :class:`ReadFence`'s ``min_outbox_lsn`` by :meth:`ReadFence.from_receipt`.
+    """
+
+    source_lsn: str = ""
+    outbox_seq: int = 0
+    projection_task_ids: Sequence[str] = field(default_factory=tuple)
+    manifest_checksum: str = ""
+    written_at_unix_ms: int = 0
+
+    @classmethod
+    def from_json(cls, raw: str | bytes | dict[str, Any] | None) -> "WriteReceipt":
+        """Parse a ``write_receipt_json`` string/bytes/dict into a typed receipt."""
+        if raw is None or raw == "" or raw == b"":
+            return cls()
+        if isinstance(raw, (str, bytes)):
+            data = json.loads(raw)
+        else:
+            data = dict(raw)
+        return cls(
+            source_lsn=str(data.get("source_lsn", "") or ""),
+            outbox_seq=int(data.get("outbox_seq", 0) or 0),
+            projection_task_ids=tuple(data.get("projection_task_ids", []) or []),
+            manifest_checksum=str(data.get("manifest_checksum", "") or ""),
+            written_at_unix_ms=int(data.get("written_at_unix_ms", 0) or 0),
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        """All five fields, always present (matches the Rust serde shape)."""
+        return {
+            "source_lsn": self.source_lsn,
+            "outbox_seq": self.outbox_seq,
+            "projection_task_ids": list(self.projection_task_ids),
+            "manifest_checksum": self.manifest_checksum,
+            "written_at_unix_ms": self.written_at_unix_ms,
+        }
+
+    def to_json(self) -> str:
+        return json.dumps(self.to_dict(), sort_keys=True, separators=(",", ":"))
+
+
+# Default fence wait when a caller does not specify one (matches the golden
+# fixture's max_wait_ms and the other SDKs).
+DEFAULT_READ_FENCE_MAX_WAIT_MS = 2500
+
+
+def read_fence_from_receipt(
+    receipt: "WriteReceipt",
+    max_wait_ms: int = DEFAULT_READ_FENCE_MAX_WAIT_MS,
+) -> "ReadFence":
+    """Build a :class:`ReadFence` from a :class:`WriteReceipt` (canonical name).
+
+    Naming-contract free-function alias of :meth:`ReadFence.from_receipt`
+    (the spec's ``readFenceFromReceipt``). ``ReadFence.from_receipt`` remains as
+    the existing alias. Maps the receipt's ``source_lsn`` into the fence's
+    ``min_outbox_lsn`` and copies the projection task ids through.
+    """
+    return ReadFence.from_receipt(receipt, max_wait_ms)
+
+
+@dataclass(frozen=True)
+class ReadFence:
+    """The read-your-writes fence a subsequent read carries (``x-udb-read-fence``).
+
+    Mirrors the Rust ``ReadFence`` serde shape: ``max_wait_ms`` is ALWAYS
+    serialized; ``min_outbox_lsn`` and ``projection_task_ids`` are skipped when
+    empty (serde ``skip_serializing_if``).
+    """
+
+    min_outbox_lsn: str = ""
+    projection_task_ids: Sequence[str] = field(default_factory=tuple)
+    max_wait_ms: int = DEFAULT_READ_FENCE_MAX_WAIT_MS
+
+    @classmethod
+    def from_receipt(
+        cls, receipt: WriteReceipt, max_wait_ms: int = DEFAULT_READ_FENCE_MAX_WAIT_MS
+    ) -> "ReadFence":
+        """Build a fence from a receipt, mapping ``source_lsn → min_outbox_lsn``.
+
+        This is the load-bearing cross-type mapping (not a field rename): the
+        receipt's ``source_lsn`` becomes the fence's ``min_outbox_lsn`` and the
+        projection task ids are copied through.
+        """
+        return cls(
+            min_outbox_lsn=receipt.source_lsn,
+            projection_task_ids=tuple(receipt.projection_task_ids),
+            max_wait_ms=max_wait_ms,
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        out: dict[str, Any] = {"max_wait_ms": self.max_wait_ms}
+        if self.min_outbox_lsn:
+            out["min_outbox_lsn"] = self.min_outbox_lsn
+        if self.projection_task_ids:
+            out["projection_task_ids"] = list(self.projection_task_ids)
+        return out
+
+    def to_json(self) -> str:
+        return json.dumps(self.to_dict(), sort_keys=True, separators=(",", ":"))
 
 
 @dataclass(frozen=True)
@@ -149,3 +256,15 @@ class Metadata:
 
     def with_read_fence(self, read_fence_json: str) -> "Metadata":
         return replace(self, read_fence_json=read_fence_json)
+
+    def after_write(
+        self, receipt: WriteReceipt, max_wait_ms: int = DEFAULT_READ_FENCE_MAX_WAIT_MS
+    ) -> "Metadata":
+        """Return metadata carrying a read fence derived from a write receipt.
+
+        Read-your-writes helper: ``udb.after_write(receipt)`` produces metadata
+        whose ``read_fence_json`` maps the receipt's ``source_lsn`` into the
+        fence's ``min_outbox_lsn`` (see :meth:`ReadFence.from_receipt`).
+        """
+        fence = ReadFence.from_receipt(receipt, max_wait_ms)
+        return replace(self, read_fence_json=fence.to_json())

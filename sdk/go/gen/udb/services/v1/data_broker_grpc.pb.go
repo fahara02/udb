@@ -82,6 +82,7 @@ const (
 	DataBroker_GetSaga_FullMethodName                 = "/udb.services.v1.DataBroker/GetSaga"
 	DataBroker_RetrySagaCompensation_FullMethodName   = "/udb.services.v1.DataBroker/RetrySagaCompensation"
 	DataBroker_MarkSagaReviewed_FullMethodName        = "/udb.services.v1.DataBroker/MarkSagaReviewed"
+	DataBroker_EnsureBaseline_FullMethodName          = "/udb.services.v1.DataBroker/EnsureBaseline"
 	DataBroker_ListPolicies_FullMethodName            = "/udb.services.v1.DataBroker/ListPolicies"
 	DataBroker_PutPolicy_FullMethodName               = "/udb.services.v1.DataBroker/PutPolicy"
 	DataBroker_DeletePolicy_FullMethodName            = "/udb.services.v1.DataBroker/DeletePolicy"
@@ -214,6 +215,10 @@ type DataBrokerClient interface {
 	GetSaga(ctx context.Context, in *v1.SagaRequest, opts ...grpc.CallOption) (*v1.SagaResponse, error)
 	RetrySagaCompensation(ctx context.Context, in *v1.SagaRequest, opts ...grpc.CallOption) (*v1.SagaResponse, error)
 	MarkSagaReviewed(ctx context.Context, in *v1.SagaRequest, opts ...grpc.CallOption) (*v1.SagaResponse, error)
+	// Idempotently seed a baseline manual-review saga row and a retryable DLQ row
+	// for the VERIFIED principal's tenant/project. Privilege-creating: fail-closed,
+	// env-gated (UDB_ENABLE_ADMIN_SEED) and requires scope: udb:admin.
+	EnsureBaseline(ctx context.Context, in *EnsureBaselineRequest, opts ...grpc.CallOption) (*EnsureBaselineResponse, error)
 	// Policy administration.
 	ListPolicies(ctx context.Context, in *v1.PolicyListRequest, opts ...grpc.CallOption) (*v1.PolicyListResponse, error)
 	PutPolicy(ctx context.Context, in *v1.PutPolicyRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error)
@@ -906,6 +911,16 @@ func (c *dataBrokerClient) MarkSagaReviewed(ctx context.Context, in *v1.SagaRequ
 	return out, nil
 }
 
+func (c *dataBrokerClient) EnsureBaseline(ctx context.Context, in *EnsureBaselineRequest, opts ...grpc.CallOption) (*EnsureBaselineResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(EnsureBaselineResponse)
+	err := c.cc.Invoke(ctx, DataBroker_EnsureBaseline_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *dataBrokerClient) ListPolicies(ctx context.Context, in *v1.PolicyListRequest, opts ...grpc.CallOption) (*v1.PolicyListResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.PolicyListResponse)
@@ -1171,6 +1186,10 @@ type DataBrokerServer interface {
 	GetSaga(context.Context, *v1.SagaRequest) (*v1.SagaResponse, error)
 	RetrySagaCompensation(context.Context, *v1.SagaRequest) (*v1.SagaResponse, error)
 	MarkSagaReviewed(context.Context, *v1.SagaRequest) (*v1.SagaResponse, error)
+	// Idempotently seed a baseline manual-review saga row and a retryable DLQ row
+	// for the VERIFIED principal's tenant/project. Privilege-creating: fail-closed,
+	// env-gated (UDB_ENABLE_ADMIN_SEED) and requires scope: udb:admin.
+	EnsureBaseline(context.Context, *EnsureBaselineRequest) (*EnsureBaselineResponse, error)
 	// Policy administration.
 	ListPolicies(context.Context, *v1.PolicyListRequest) (*v1.PolicyListResponse, error)
 	PutPolicy(context.Context, *v1.PutPolicyRequest) (*v1.MutationResponse, error)
@@ -1392,6 +1411,9 @@ func (UnimplementedDataBrokerServer) RetrySagaCompensation(context.Context, *v1.
 }
 func (UnimplementedDataBrokerServer) MarkSagaReviewed(context.Context, *v1.SagaRequest) (*v1.SagaResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method MarkSagaReviewed not implemented")
+}
+func (UnimplementedDataBrokerServer) EnsureBaseline(context.Context, *EnsureBaselineRequest) (*EnsureBaselineResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method EnsureBaseline not implemented")
 }
 func (UnimplementedDataBrokerServer) ListPolicies(context.Context, *v1.PolicyListRequest) (*v1.PolicyListResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListPolicies not implemented")
@@ -2480,6 +2502,24 @@ func _DataBroker_MarkSagaReviewed_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _DataBroker_EnsureBaseline_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EnsureBaselineRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataBrokerServer).EnsureBaseline(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DataBroker_EnsureBaseline_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataBrokerServer).EnsureBaseline(ctx, req.(*EnsureBaselineRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _DataBroker_ListPolicies_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(v1.PolicyListRequest)
 	if err := dec(in); err != nil {
@@ -2968,6 +3008,10 @@ var DataBroker_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "MarkSagaReviewed",
 			Handler:    _DataBroker_MarkSagaReviewed_Handler,
+		},
+		{
+			MethodName: "EnsureBaseline",
+			Handler:    _DataBroker_EnsureBaseline_Handler,
 		},
 		{
 			MethodName: "ListPolicies",

@@ -110,4 +110,68 @@ public interface FinalizeUploadRequestOrBuilder extends
    * @return The sizeBytes.
    */
   long getSizeBytes();
+
+  /**
+   * <pre>
+   * Optional client-computed content checksum; persisted into File.checksum.
+   * Only verified/stored when present.
+   * </pre>
+   *
+   * <code>optional string checksum = 9 [json_name = "checksum"];</code>
+   * @return Whether the checksum field is set.
+   */
+  boolean hasChecksum();
+  /**
+   * <pre>
+   * Optional client-computed content checksum; persisted into File.checksum.
+   * Only verified/stored when present.
+   * </pre>
+   *
+   * <code>optional string checksum = 9 [json_name = "checksum"];</code>
+   * @return The checksum.
+   */
+  java.lang.String getChecksum();
+  /**
+   * <pre>
+   * Optional client-computed content checksum; persisted into File.checksum.
+   * Only verified/stored when present.
+   * </pre>
+   *
+   * <code>optional string checksum = 9 [json_name = "checksum"];</code>
+   * @return The bytes for checksum.
+   */
+  com.google.protobuf.ByteString
+      getChecksumBytes();
+
+  /**
+   * <pre>
+   * Optional client-observed object ETag; compared against the store's HEAD
+   * ETag when present (mismatch → FailedPrecondition / UPLOAD_SIZE_MISMATCH).
+   * </pre>
+   *
+   * <code>optional string etag = 10 [json_name = "etag"];</code>
+   * @return Whether the etag field is set.
+   */
+  boolean hasEtag();
+  /**
+   * <pre>
+   * Optional client-observed object ETag; compared against the store's HEAD
+   * ETag when present (mismatch → FailedPrecondition / UPLOAD_SIZE_MISMATCH).
+   * </pre>
+   *
+   * <code>optional string etag = 10 [json_name = "etag"];</code>
+   * @return The etag.
+   */
+  java.lang.String getEtag();
+  /**
+   * <pre>
+   * Optional client-observed object ETag; compared against the store's HEAD
+   * ETag when present (mismatch → FailedPrecondition / UPLOAD_SIZE_MISMATCH).
+   * </pre>
+   *
+   * <code>optional string etag = 10 [json_name = "etag"];</code>
+   * @return The bytes for etag.
+   */
+  com.google.protobuf.ByteString
+      getEtagBytes();
 }

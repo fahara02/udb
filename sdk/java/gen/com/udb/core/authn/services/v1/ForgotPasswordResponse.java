@@ -29,6 +29,7 @@ private static final long serialVersionUID = 0L;
   }
   private ForgotPasswordResponse() {
     otpId_ = "";
+    devOtpCode_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -93,6 +94,59 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int DEV_OTP_CODE_FIELD_NUMBER = 2;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object devOtpCode_ = "";
+  /**
+   * <pre>
+   * Dev-only echo of the plaintext PASSWORD_RESET OTP code, populated ONLY when the
+   * broker runs with UDB_OTP_DEV_ECHO=1 (non-production posture). Empty in
+   * production. Lets conformance harnesses complete ResetPassword without a
+   * delivery channel. bug_report.md F/Lane-2.
+   * </pre>
+   *
+   * <code>string dev_otp_code = 2 [json_name = "devOtpCode"];</code>
+   * @return The devOtpCode.
+   */
+  @java.lang.Override
+  public java.lang.String getDevOtpCode() {
+    java.lang.Object ref = devOtpCode_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      devOtpCode_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Dev-only echo of the plaintext PASSWORD_RESET OTP code, populated ONLY when the
+   * broker runs with UDB_OTP_DEV_ECHO=1 (non-production posture). Empty in
+   * production. Lets conformance harnesses complete ResetPassword without a
+   * delivery channel. bug_report.md F/Lane-2.
+   * </pre>
+   *
+   * <code>string dev_otp_code = 2 [json_name = "devOtpCode"];</code>
+   * @return The bytes for devOtpCode.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getDevOtpCodeBytes() {
+    java.lang.Object ref = devOtpCode_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      devOtpCode_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -110,6 +164,9 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(otpId_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 1, otpId_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(devOtpCode_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 2, devOtpCode_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -121,6 +178,9 @@ private static final long serialVersionUID = 0L;
     size = 0;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(otpId_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(1, otpId_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(devOtpCode_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(2, devOtpCode_);
     }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
@@ -139,6 +199,8 @@ private static final long serialVersionUID = 0L;
 
     if (!getOtpId()
         .equals(other.getOtpId())) return false;
+    if (!getDevOtpCode()
+        .equals(other.getDevOtpCode())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -152,6 +214,8 @@ private static final long serialVersionUID = 0L;
     hash = (19 * hash) + getDescriptor().hashCode();
     hash = (37 * hash) + OTP_ID_FIELD_NUMBER;
     hash = (53 * hash) + getOtpId().hashCode();
+    hash = (37 * hash) + DEV_OTP_CODE_FIELD_NUMBER;
+    hash = (53 * hash) + getDevOtpCode().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -284,6 +348,7 @@ private static final long serialVersionUID = 0L;
       super.clear();
       bitField0_ = 0;
       otpId_ = "";
+      devOtpCode_ = "";
       return this;
     }
 
@@ -320,6 +385,9 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000001) != 0)) {
         result.otpId_ = otpId_;
       }
+      if (((from_bitField0_ & 0x00000002) != 0)) {
+        result.devOtpCode_ = devOtpCode_;
+      }
     }
 
     @java.lang.Override
@@ -337,6 +405,11 @@ private static final long serialVersionUID = 0L;
       if (!other.getOtpId().isEmpty()) {
         otpId_ = other.otpId_;
         bitField0_ |= 0x00000001;
+        onChanged();
+      }
+      if (!other.getDevOtpCode().isEmpty()) {
+        devOtpCode_ = other.devOtpCode_;
+        bitField0_ |= 0x00000002;
         onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
@@ -370,6 +443,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000001;
               break;
             } // case 10
+            case 18: {
+              devOtpCode_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000002;
+              break;
+            } // case 18
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -480,6 +558,113 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       otpId_ = value;
       bitField0_ |= 0x00000001;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object devOtpCode_ = "";
+    /**
+     * <pre>
+     * Dev-only echo of the plaintext PASSWORD_RESET OTP code, populated ONLY when the
+     * broker runs with UDB_OTP_DEV_ECHO=1 (non-production posture). Empty in
+     * production. Lets conformance harnesses complete ResetPassword without a
+     * delivery channel. bug_report.md F/Lane-2.
+     * </pre>
+     *
+     * <code>string dev_otp_code = 2 [json_name = "devOtpCode"];</code>
+     * @return The devOtpCode.
+     */
+    public java.lang.String getDevOtpCode() {
+      java.lang.Object ref = devOtpCode_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        devOtpCode_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Dev-only echo of the plaintext PASSWORD_RESET OTP code, populated ONLY when the
+     * broker runs with UDB_OTP_DEV_ECHO=1 (non-production posture). Empty in
+     * production. Lets conformance harnesses complete ResetPassword without a
+     * delivery channel. bug_report.md F/Lane-2.
+     * </pre>
+     *
+     * <code>string dev_otp_code = 2 [json_name = "devOtpCode"];</code>
+     * @return The bytes for devOtpCode.
+     */
+    public com.google.protobuf.ByteString
+        getDevOtpCodeBytes() {
+      java.lang.Object ref = devOtpCode_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        devOtpCode_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Dev-only echo of the plaintext PASSWORD_RESET OTP code, populated ONLY when the
+     * broker runs with UDB_OTP_DEV_ECHO=1 (non-production posture). Empty in
+     * production. Lets conformance harnesses complete ResetPassword without a
+     * delivery channel. bug_report.md F/Lane-2.
+     * </pre>
+     *
+     * <code>string dev_otp_code = 2 [json_name = "devOtpCode"];</code>
+     * @param value The devOtpCode to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDevOtpCode(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      devOtpCode_ = value;
+      bitField0_ |= 0x00000002;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Dev-only echo of the plaintext PASSWORD_RESET OTP code, populated ONLY when the
+     * broker runs with UDB_OTP_DEV_ECHO=1 (non-production posture). Empty in
+     * production. Lets conformance harnesses complete ResetPassword without a
+     * delivery channel. bug_report.md F/Lane-2.
+     * </pre>
+     *
+     * <code>string dev_otp_code = 2 [json_name = "devOtpCode"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearDevOtpCode() {
+      devOtpCode_ = getDefaultInstance().getDevOtpCode();
+      bitField0_ = (bitField0_ & ~0x00000002);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Dev-only echo of the plaintext PASSWORD_RESET OTP code, populated ONLY when the
+     * broker runs with UDB_OTP_DEV_ECHO=1 (non-production posture). Empty in
+     * production. Lets conformance harnesses complete ResetPassword without a
+     * delivery channel. bug_report.md F/Lane-2.
+     * </pre>
+     *
+     * <code>string dev_otp_code = 2 [json_name = "devOtpCode"];</code>
+     * @param value The bytes for devOtpCode to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDevOtpCodeBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      devOtpCode_ = value;
+      bitField0_ |= 0x00000002;
       onChanged();
       return this;
     }

@@ -566,14 +566,14 @@ fn baseline_generated_authn_authz_inventory_docs_are_present() {
     let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let rpc = std::fs::read_to_string(root.join("docs/generated/authn-authz-rpc-inventory.md"))
         .expect("RPC inventory doc must be generated for Phase E");
-    assert!(rpc.contains("- Native RPCs inventoried: 186"));
+    assert!(rpc.contains("- Native RPCs inventoried: 188"));
     assert!(rpc.contains("- RPCs without endpoint_security: 0"));
     assert!(rpc.contains("- WebRTC SignalingService.Signal endpoint security: present"));
 
     let fields =
         std::fs::read_to_string(root.join("docs/generated/authn-authz-sensitive-fields.md"))
             .expect("sensitive field inventory doc must be generated for Phase E");
-    assert!(fields.contains("- Sensitive-looking or annotated fields inventoried: 223"));
+    assert!(fields.contains("- Sensitive-looking or annotated fields inventoried: 226"));
     assert!(fields.contains("password_hash"));
     assert!(fields.contains("session_token_hash"));
     assert!(fields.contains("plain_key"));
@@ -688,6 +688,22 @@ fn generated_native_contract_json_matches_embedded_descriptor() {
         committed, rendered,
         "docs/generated/udb-native-contract.json is stale; run `udb native manifest` (the JSON it prints is this file's content) and commit the descriptor-derived output"
     );
+
+    for rpc in rendered["services"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .flat_map(|service| service["rpcs"].as_array().into_iter().flatten())
+    {
+        assert!(
+            rpc.get("operation_kind").is_some(),
+            "contract JSON RPC node missing operation_kind: {rpc:#}"
+        );
+        assert!(
+            rpc.get("read_only").is_some(),
+            "contract JSON RPC node missing read_only: {rpc:#}"
+        );
+    }
 }
 
 #[test]

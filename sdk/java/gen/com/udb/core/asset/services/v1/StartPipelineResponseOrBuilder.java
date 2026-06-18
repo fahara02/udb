@@ -60,4 +60,28 @@ public interface StartPipelineResponseOrBuilder extends
    * <code>.udb.core.common.v1.ApiError error = 3 [json_name = "error"];</code>
    */
   com.udb.core.common.v1.ApiErrorOrBuilder getErrorOrBuilder();
+
+  /**
+   * <code>repeated .udb.core.asset.entity.v1.PipelineStep steps = 4 [json_name = "steps"];</code>
+   */
+  java.util.List<com.udb.core.asset.entity.v1.PipelineStep>
+      getStepsList();
+  /**
+   * <code>repeated .udb.core.asset.entity.v1.PipelineStep steps = 4 [json_name = "steps"];</code>
+   */
+  com.udb.core.asset.entity.v1.PipelineStep getSteps(int index);
+  /**
+   * <code>repeated .udb.core.asset.entity.v1.PipelineStep steps = 4 [json_name = "steps"];</code>
+   */
+  int getStepsCount();
+  /**
+   * <code>repeated .udb.core.asset.entity.v1.PipelineStep steps = 4 [json_name = "steps"];</code>
+   */
+  java.util.List<? extends com.udb.core.asset.entity.v1.PipelineStepOrBuilder>
+      getStepsOrBuilderList();
+  /**
+   * <code>repeated .udb.core.asset.entity.v1.PipelineStep steps = 4 [json_name = "steps"];</code>
+   */
+  com.udb.core.asset.entity.v1.PipelineStepOrBuilder getStepsOrBuilder(
+      int index);
 }

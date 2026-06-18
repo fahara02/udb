@@ -1,8 +1,11 @@
 package udbclient
 
 import (
+	"bytes"
 	"context"
+	"io"
 	"net"
+	"reflect"
 	"testing"
 	"time"
 
@@ -203,6 +206,106 @@ func TestNewUdbRoutesNotificationFacadeToAuthTarget(t *testing.T) {
 	}
 	if !authSrv.called {
 		t.Fatal("auth-target NotificationService was not called")
+	}
+}
+
+// fakeDownloadStream is a hand-rolled ServerStreamingClient[DownloadFileChunk]
+// that replays a fixed slice of chunks then EOF. Only Recv is exercised; the
+// other ClientStream methods satisfy the interface but are never called.
+type fakeDownloadStream struct {
+	grpc.ClientStream
+	chunks []*storagev1.DownloadFileChunk
+	i      int
+}
+
+func (s *fakeDownloadStream) Recv() (*storagev1.DownloadFileChunk, error) {
+	if s.i >= len(s.chunks) {
+		return nil, io.EOF
+	}
+	c := s.chunks[s.i]
+	s.i++
+	return c, nil
+}
+
+// fakeStreamingStorage records the DownloadFile streaming request and the call
+// sequence so the streaming path can be proven to issue EXACTLY the DownloadFile
+// RPC (and never the presigned GetDownloadUrl).
+type fakeStreamingStorage struct {
+	storagev1.StorageServiceClient
+	seq         []string
+	lastDownReq *storagev1.DownloadFileRequest
+	chunks      []*storagev1.DownloadFileChunk
+}
+
+func (f *fakeStreamingStorage) DownloadFile(_ context.Context, in *storagev1.DownloadFileRequest, _ ...grpc.CallOption) (grpc.ServerStreamingClient[storagev1.DownloadFileChunk], error) {
+	f.seq = append(f.seq, "DownloadFile")
+	f.lastDownReq = in
+	return &fakeDownloadStream{chunks: f.chunks}, nil
+}
+
+func (f *fakeStreamingStorage) GetDownloadUrl(_ context.Context, _ *storagev1.GetDownloadUrlRequest, _ ...grpc.CallOption) (*storagev1.GetDownloadUrlResponse, error) {
+	f.seq = append(f.seq, "GetDownloadUrl")
+	return &storagev1.GetDownloadUrlResponse{}, nil
+}
+
+// TestStorageDownloadFileBytesStreams proves DownloadFileBytes issues EXACTLY the
+// server-streaming DownloadFile RPC (no presigned GetDownloadUrl), threads the
+// file id + advisory chunk size + tenant, and reassembles the bounded chunk
+// stream into the full payload with first-chunk metadata.
+func TestStorageDownloadFileBytesStreams(t *testing.T) {
+	ct, et := "text/plain", "etag-1"
+	var ts int64 = 11
+	fs := &fakeStreamingStorage{
+		chunks: []*storagev1.DownloadFileChunk{
+			{Data: []byte("hello "), ContentType: &ct, TotalSize: &ts, Etag: &et},
+			{Data: []byte("world")},
+		},
+	}
+	sf := &StorageFacade{Raw: fs, meta: Metadata{TenantID: "tenant-7"}}
+
+	res, err := sf.DownloadFileBytes(context.Background(), "file-9", WithDownloadChunkSize(65536))
+	if err != nil {
+		t.Fatalf("DownloadFileBytes: %v", err)
+	}
+	if !reflect.DeepEqual(fs.seq, []string{"DownloadFile"}) {
+		t.Fatalf("streaming path must emit EXACTLY one DownloadFile RPC (no presigned GetDownloadUrl): %v", fs.seq)
+	}
+	if got := fs.lastDownReq; got.GetFileId() != "file-9" || got.GetTenantId() != "tenant-7" || got.GetChunkSizeBytes() != 65536 {
+		t.Fatalf("request fields not threaded: %+v", got)
+	}
+	if !bytes.Equal(res.Data, []byte("hello world")) {
+		t.Fatalf("chunks not reassembled: %q", res.Data)
+	}
+	if res.ContentType != "text/plain" || res.TotalSize != 11 || res.ETag != "etag-1" {
+		t.Fatalf("first-chunk metadata not captured: %+v", res)
+	}
+}
+
+// TestStorageDownloadFileBytesMaxBytes proves the MaxBytes cap fails closed once
+// reassembly would exceed it.
+func TestStorageDownloadFileBytesMaxBytes(t *testing.T) {
+	fs := &fakeStreamingStorage{
+		chunks: []*storagev1.DownloadFileChunk{
+			{Data: []byte("0123456789")},
+			{Data: []byte("0123456789")},
+		},
+	}
+	sf := &StorageFacade{Raw: fs, meta: Metadata{TenantID: "t"}}
+	if _, err := sf.DownloadFileBytes(context.Background(), "f", WithMaxDownloadBytes(15)); err == nil {
+		t.Fatal("DownloadFileBytes should fail when reassembly exceeds MaxBytes")
+	}
+}
+
+// TestStorageDownloadFilePresignedUnchanged proves the presigned DownloadFile
+// accessor still emits exactly one GetDownloadUrl and never the streaming RPC.
+func TestStorageDownloadFilePresignedUnchanged(t *testing.T) {
+	fs := &fakeStreamingStorage{}
+	sf := &StorageFacade{Raw: fs, meta: Metadata{TenantID: "t"}}
+	if _, err := sf.DownloadFile(context.Background(), "file-1", 10); err != nil {
+		t.Fatalf("DownloadFile: %v", err)
+	}
+	if !reflect.DeepEqual(fs.seq, []string{"GetDownloadUrl"}) {
+		t.Fatalf("presigned path must emit EXACTLY one GetDownloadUrl (no streaming DownloadFile): %v", fs.seq)
 	}
 }
 

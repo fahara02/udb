@@ -709,7 +709,7 @@ def run_native_service_e2e(auth_channel, meta: Metadata, uuid_meta: Metadata | N
     notif_stub.UpsertTemplate(
         notif_pb.UpsertTemplateRequest(
             event_type=event, channel=NOTIFICATION_CHANNEL_EMAIL, locale="en",
-            subject_template="SDK {{n}}", body_template=body, is_active=True,
+            subject_template="SDK notify", body_template=body, is_active=True,
         ),
         metadata=md, timeout=8.0,
     )
@@ -1254,20 +1254,52 @@ DOC_ROWS: dict[tuple[str, str], str] | None = None
 
 
 def bench_body_rows() -> dict[tuple[str, str], str]:
+    """Consume the GENERATED machine-readable manifest
+    docs/generated/bench-bodies.json (scripts/gen-bench-bodies-json.mjs). The
+    markdown corpus stays the human-editable source; the drift test
+    (test_bench_bodies_json_matches_markdown) proves the JSON equals a fresh
+    markdown parse, so the two can never diverge. Key is (file, rpc) to match the
+    prior markdown-parse shape consumed by doc_body_text."""
     global DOC_ROWS
     if DOC_ROWS is not None:
         return DOC_ROWS
     root = Path(__file__).resolve().parents[3]
+    entries = json.loads((root / "docs" / "generated" / "bench-bodies.json").read_text(encoding="utf-8"))
+    rows: dict[tuple[str, str], str] = {}
+    for e in entries:
+        rows[(e["file"], e["rpc"])] = e["body"]
+    DOC_ROWS = rows
+    return rows
+
+
+def _parse_bench_body_markdown() -> dict[tuple[str, str], str]:
+    """LEGACY markdown parse, retained ONLY to power the drift test that proves the
+    generated JSON still equals a fresh parse of the human-editable markdown."""
+    root = Path(__file__).resolve().parents[3]
     rows: dict[tuple[str, str], str] = {}
     for path in sorted((root / "docs" / "bench-bodies").glob("*.md")):
+        if path.name == "workflow-sequences.md":
+            continue
         for line in path.read_text(encoding="utf-8").splitlines():
             if not line.startswith("| ["):
                 continue
             parts = [part.strip() for part in line.strip().strip("|").split("|")]
             if len(parts) >= 5 and parts[1] != "RPC":
                 rows[(path.name, parts[1])] = parts[4]
-    DOC_ROWS = rows
     return rows
+
+
+def test_bench_bodies_json_matches_markdown() -> None:
+    """R6.1 DRIFT gate: docs/generated/bench-bodies.json must equal a fresh parse of
+    the human-editable docs/bench-bodies/*.md. Edit markdown without regenerating
+    (`node scripts/gen-bench-bodies-json.mjs`) and this fails."""
+    from_json = bench_body_rows()
+    from_md = _parse_bench_body_markdown()
+    assert len(from_json) == 265, f"JSON manifest has {len(from_json)} rows, want 265"
+    assert len(from_md) == 265, f"markdown manifest has {len(from_md)} rows, want 265"
+    assert from_json == from_md, (
+        "bench-bodies.json drifted from markdown (run `node scripts/gen-bench-bodies-json.mjs`)"
+    )
 
 
 def doc_body_text(client_cls, method) -> str | None:
@@ -1406,11 +1438,21 @@ def postprocess_perf_body(client_cls, method, request, meta: Metadata, fix: "Per
         request.reference_id = str(uuid.uuid4())
         request.reference_type = "document"
     elif client_cls is StorageServiceClient and method.name == "FinalizeUpload":
+        # Finalizing the already-finalized primary file_id again fails "upload already
+        # finalized", so the measured FinalizeUpload targets a SEPARATE registered+
+        # uploaded-but-NOT-finalized file seeded as finalize_file_id.
+        request.file_id = _fixture(fix, "finalize_file_id", request.file_id)
+        request.reference_id = _fixture(fix, "finalize_file_id", request.reference_id)
         if hasattr(request, "size_bytes"):
             request.size_bytes = int(_fixture(fix, "file_size_bytes", "17"))
         request.content_type = "text/plain"
         request.file_type = STORAGE_FILE_TYPE
         request.reference_type = "sdk.perf"
+    elif client_cls is StorageServiceClient and method.name == "DownloadFile":
+        # Server-streaming download fallback: the primary file_id is finalized with
+        # object bytes present (seeded), so the first DownloadFileChunk delivers.
+        request.file_id = _fixture(fix, "file_id", request.file_id)
+        request.chunk_size_bytes = 65536
     elif client_cls is AssetServiceClient and method.name == "RegisterAsset":
         if hasattr(request, "project_id"):
             request.project_id = ""
@@ -1435,6 +1477,11 @@ def postprocess_perf_body(client_cls, method, request, meta: Metadata, fix: "Per
         request.scim_group_id = _fixture(fix, "scim_group_id", request.scim_group_id)
     elif client_cls is TrackServiceClient and method.name == "UnpublishTrack":
         request.track_id = _fixture(fix, "unpublish_track_id", request.track_id)
+    elif client_cls is PeerServiceClient and method.name == "JoinSession":
+        # The main room_id is filled to capacity (8) by JoinRoom's mutation iters, so
+        # JoinSession there hits "room ... at capacity". Use a SEPARATE high-capacity
+        # room seeded as join_session_room_id.
+        request.room_id = _fixture(fix, "join_session_room_id", request.room_id)
     elif client_cls is PeerServiceClient and method.name == "LeaveRoom":
         request.peer_id = _fixture(fix, "leave_peer_id", request.peer_id)
     elif client_cls is RoomServiceClient and method.name == "CloseRoom":
@@ -1770,7 +1817,7 @@ def _field_seed(field_name: str, meta: Metadata, fix, body: str = "") -> str:
         "jit_policy_json": "{}",
         "account_linking_policy": "explicit",
         "scim_user_json": '{"userName":"a@x.com","active":true}',
-        "scim_group_json": '{"displayName":"admins"}',
+        "scim_group_json": '{"displayName":"sdk-perf-group"}',
         "public_key_credential_json": '{"id":"bench","rawId":"bench","type":"public-key","response":{}}',
         "metadata": "{}",
         "settings": "{}",
@@ -1856,10 +1903,17 @@ def _fill_message(msg, field_name: str, body: str, meta: Metadata, fix) -> None:
         _fill_entity_context(msg, meta)
         return
     if full == "udb.core.authz.services.v1.GovernanceActor":
+        # The live D1/D2 governance gate evaluates scopes from the VERIFIED claim,
+        # NOT request-body actor.scopes, and no role projects to authz:*
+        # (tokens.rs ROLE_SCOPE_PROJECTIONS). So body scopes can never satisfy the
+        # gate here; use the body-authoritative break-glass bypass instead (≤900s,
+        # reason-bearing, audited). gov_exp is seeded to now+900 in perf_seed.
         msg.subject = _fixture(fix, "subject", f"user:{_fixture(fix, 'user_id', 'python-live-user')}")
         msg.tenant_id = meta.tenant_id
         msg.project_id = meta.project_id
-        msg.scopes.extend(_scope_values_for_body(body, "scopes"))
+        msg.break_glass = True
+        msg.break_glass_reason = "sdk perf bench"
+        msg.break_glass_expires_at_unix = int(_fixture(fix, "gov_exp", str(int(time.time()) + 900)))
         return
     if full.endswith(".StoreResource"):
         low = body.lower()
@@ -2444,7 +2498,7 @@ def perf_seed(clients: dict, meta: Metadata):
     try:
         draft = authz.CreatePolicyDraft(
             authz_gov_pb.CreatePolicyDraftRequest(
-                actor=authz_gov_pb.GovernanceActor(subject=_fixture(fix, "subject"), tenant_id=tenant, project_id=project, scopes=["authz:policy:write"]),
+                actor=authz_gov_pb.GovernanceActor(subject=_fixture(fix, "subject"), tenant_id=tenant, project_id=project, break_glass=True, break_glass_reason="sdk perf seed", break_glass_expires_at_unix=int(time.time()) + 900),
                 tenant_id=tenant,
                 project_id=project,
                 policy_set_name="default",
@@ -2458,11 +2512,17 @@ def perf_seed(clients: dict, meta: Metadata):
     except grpc.RpcError:
         pass
     def governance_actor() -> authz_gov_pb.GovernanceActor:
+        # Body actor.scopes are ignored by the live D1/D2 gate (it reads claim scopes,
+        # and no role projects to authz:*), so the seed's own governance writes must use
+        # the body-authoritative break-glass bypass — otherwise the drafts/versions/canary
+        # are never created and the governance RPCs that read them fail "<id> is required".
         return authz_gov_pb.GovernanceActor(
             subject=_fixture(fix, "subject", f"user:{uid}"),
             tenant_id=tenant,
             project_id=project,
-            scopes=["authz:admin", "authz:policy:write", "authz:policy:approve", "policy:read"],
+            break_glass=True,
+            break_glass_reason="sdk perf seed",
+            break_glass_expires_at_unix=int(time.time()) + 900,
         )
 
     def make_policy_draft(title: str) -> str:
@@ -2742,12 +2802,18 @@ def perf_seed(clients: dict, meta: Metadata):
     event = f"sdk.perf.{suffix}"
     try:
         notif.UpsertTemplate(
-            notif_pb.UpsertTemplateRequest(event_type=event, channel=NOTIFICATION_CHANNEL_EMAIL, locale="en", subject_template="SDK {{n}}", body_template="sdk-perf-body", is_active=True),
+            notif_pb.UpsertTemplateRequest(event_type=event, channel=NOTIFICATION_CHANNEL_EMAIL, locale="en", subject_template="SDK perf", body_template="sdk-perf-body", is_active=True),
             metadata=md, timeout=8.0,
         )
     except grpc.RpcError:
         pass
     fix.set("event_type", event)
+    # Governance break-glass expiry: the D1/D2 governance gate reads scopes from the
+    # VERIFIED claim, not request-body actor.scopes, and no role projects to authz:*
+    # (tokens.rs ROLE_SCOPE_PROJECTIONS) — so the governance RPCs are reached via the
+    # body-authoritative break-glass bypass (≤900s, reason-bearing, audited). Set at
+    # seed time; the governance RPCs measure shortly after.
+    fix.set("gov_exp", str(int(time.time()) + 900))
     if uid:
         try:
             sent = notif.SendNotification(
@@ -2837,6 +2903,37 @@ def perf_seed(clients: dict, meta: Metadata):
             fix.set("delete_file_id", delete_reg.file_id)
         except grpc.RpcError:
             pass
+        # A SEPARATE registered+uploaded but NOT finalized file for the measured
+        # FinalizeUpload — finalizing the primary file_id again fails "already
+        # finalized", so the measured Finalize needs its own un-finalized target.
+        try:
+            fin_reg = storage.RegisterUpload(
+                storage_pb.RegisterUploadRequest(tenant_id=tenant, project_id="", filename=f"perf-fin-{suffix}.txt", content_type="text/plain", file_type=STORAGE_FILE_TYPE, reference_id=str(uuid.uuid4()), reference_type="sdk.perf", size_bytes=64, expires_in_minutes=30),
+                metadata=md, timeout=8.0,
+            )
+            fin_file_id = fin_reg.file_id
+            fix.set("finalize_file_id", fin_file_id)
+            fin_body = f"sdk-perf-finalize-{suffix}".encode()
+            fin_uploaded = False
+            if fin_reg.upload_url:
+                try:
+                    put_presigned_storage_object(fin_reg.upload_url, fin_body, "text/plain")
+                    fin_uploaded = True
+                except Exception as exc:  # noqa: BLE001 — log + fall back, never fail the seed
+                    print(f"perf seed: finalize presigned storage PUT failed: {exc}")
+            if not fin_uploaded:
+                storage_bucket = os.getenv("UDB_STORAGE_BUCKET", "udb-storage")
+                try:
+                    broker.PutObject(
+                        iter([blob_pb2.Chunk(context=rc, bucket=storage_bucket, object_key=fin_reg.object_key, data=fin_body, content_type="text/plain", final_chunk=True)]),
+                        metadata=md, timeout=8.0,
+                    )
+                except grpc.RpcError:
+                    pass
+            # NB: intentionally NOT finalized — the measured FinalizeUpload finalizes it.
+            cleanups.append(lambda: storage.DeleteFile(storage_pb.DeleteFileRequest(tenant_id=tenant, file_id=fin_file_id), metadata=md, timeout=8.0))
+        except grpc.RpcError:
+            pass
         cleanups.append(lambda: storage.DeleteFile(storage_pb.DeleteFileRequest(tenant_id=tenant, file_id=file_id), metadata=md, timeout=8.0))
     except grpc.RpcError:
         pass
@@ -2922,6 +3019,19 @@ def perf_seed(clients: dict, meta: Metadata):
                 metadata=md, timeout=8.0,
             )
             fix.set("close_room_id", close_room.room_id)
+        except grpc.RpcError:
+            pass
+        # A SEPARATE high-capacity room for the measured JoinSession. The main room_id
+        # is filled to capacity by JoinRoom's mutation iters (seeded peers + joins = the
+        # cap of 8), so JoinSession against it would hit "room ... at capacity".
+        try:
+            js_room = rooms.CreateRoom(
+                webrtc_pb.CreateRoomRequest(tenant_id=tenant, name=f"sdk-perf-joinsession-room-{suffix}", max_participants=64, config="{}", created_by=str(uuid.uuid4())),
+                metadata=md, timeout=8.0,
+            )
+            js_room_id = js_room.room_id
+            fix.set("join_session_room_id", js_room_id)
+            cleanups.append(lambda: rooms.CloseRoom(webrtc_pb.CloseRoomRequest(tenant_id=tenant, room_id=js_room_id), metadata=md, timeout=8.0))
         except grpc.RpcError:
             pass
     except grpc.RpcError:
@@ -3109,6 +3219,9 @@ def write_python_perf_report(samples, fixtures, authed_meta: Metadata, error: Ex
     lines += ["", "## Slowest 20 by p99", "", "| RPC | kind | err | p50 ms | p99 ms | mean ms |", "|---|---|---|--:|--:|--:|"]
     for s in sorted(samples, key=lambda x: -x["p99"])[:20]:
         lines.append(f"| {s['service']}/{s['rpc']} | {s['kind']} | {s['err']} | {s['p50']:.2f} | {s['p99']:.2f} | {s['mean']:.2f} |")
+    lines += ["", "## Full per-RPC table (sorted by service, then RPC)", "", "| Service | RPC | kind | err | p50 ms | p99 ms | mean ms | iters |", "|---|---|---|---|--:|--:|--:|--:|"]
+    for s in sorted(samples, key=lambda x: (x["service"], x["rpc"])):
+        lines.append(f"| {s['service']} | {s['rpc']} | {s['kind']} | {s['err']} | {s['p50']:.2f} | {s['p99']:.2f} | {s['mean']:.2f} | {s['iters']} |")
     report = "\n".join(lines) + "\n"
     report_path = Path(__file__).resolve().parents[1] / "perf_report_python.md"
     report_path.write_text(report, encoding="utf-8")
@@ -3153,7 +3266,7 @@ def test_live_generated_rpc_surface():
     # CANONICAL UUID, so the Login JWT tenant claim is a UUID — not the human code.
     # Discover it from our own authenticated principal and use it for every request
     # body, so the body tenant matches the claim and the UUID-strict services
-    # (storage/webrtc/asset) accept it. ONE admin now serves all 262 RPCs.
+    # (storage/webrtc/asset) accept it. ONE admin now serves all 265 RPCs.
     canonical_tenant = principal_resp.principal.tenant_id
     assert canonical_tenant, "authenticated principal must carry a tenant_id (the canonical UUID)"
     refreshed = auth.refresh_token(login.refresh_token)
@@ -3211,7 +3324,7 @@ def test_live_generated_rpc_surface():
     finally:
         auth_channel.close()
 
-    # The full-surface 262-RPC probe is now ONE parametrized test case per RPC
+    # The full-surface 265-RPC probe is now ONE parametrized test case per RPC
     # (`test_rpc_surface[...]`, below) so the runner reports per-RPC pass/fail like
     # the Go suite's sub-tests — not a single opaque "1 passed". This monolithic test
     # keeps the deep, value-asserted E2E (backend matrix, native-service CRUD, session
@@ -3221,7 +3334,7 @@ def test_live_generated_rpc_surface():
 
 
 # --------------------------------------------------------------------------------
-# Per-RPC surface coverage — one parametrized pytest case PER RPC (262 total), so
+# Per-RPC surface coverage — one parametrized pytest case PER RPC (265 total), so
 # the runner shows granular per-RPC results (like Go's sub-tests). Each case sends a
 # descriptor-derived, field-populated typed request and asserts the RPC REACHED a
 # live handler (no Unimplemented/Unavailable/Unknown mount failure) — i.e. it is
@@ -3238,7 +3351,7 @@ def _all_rpcs():
 
 
 ALL_RPCS = _all_rpcs()
-assert len(ALL_RPCS) == 262, f"expected 262 RPCs from the descriptor set, found {len(ALL_RPCS)}"
+assert len(ALL_RPCS) == 265, f"expected 265 RPCs from the descriptor set, found {len(ALL_RPCS)}"
 RPC_ORDER_INDEX = {(client_cls, method.name): idx for idx, (client_cls, method) in enumerate(ALL_RPCS)}
 
 
@@ -3254,7 +3367,7 @@ def assert_explicit_perf_body_coverage() -> None:
         fields = doc_field_names(client_cls, method)
         if method.input_type.fields and not fields and method.name != "GetJwks":
             empty_bodies.append(f"{client_cls._SERVICE_FULL}/{method.name}")
-    assert len(rows) == 262, f"docs/bench-bodies must have exactly 262 RPC rows, found {len(rows)}"
+    assert len(rows) == 265, f"docs/bench-bodies must have exactly 265 RPC rows, found {len(rows)}"
     assert not missing_rows, "missing docs/bench-bodies rows: " + ", ".join(missing_rows)
     assert not empty_bodies, "docs rows did not name any real request fields: " + ", ".join(empty_bodies)
 
@@ -3494,7 +3607,7 @@ def test_live_perf():
                     pass
             return (time.perf_counter() - start) * 1000.0, err_code, err_detail
 
-        # All 262 RPCs are measured down their SUCCESS path. Unary = full round-trip;
+        # All 265 RPCs are measured down their SUCCESS path. Unary = full round-trip;
         # non-CDC streaming = time-to-first-response (seeded inputs); CDC subscription
         # (PublishCDC) = time-to-first-event (subscribe, fire a real Upsert, time delivery).
         for client_cls, method in sorted(ALL_RPCS, key=perf_rpc_order_key):

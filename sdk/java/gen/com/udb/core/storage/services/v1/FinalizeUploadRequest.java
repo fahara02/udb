@@ -34,6 +34,8 @@ private static final long serialVersionUID = 0L;
     fileType_ = "";
     referenceId_ = "";
     referenceType_ = "";
+    checksum_ = "";
+    etag_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -326,6 +328,130 @@ private static final long serialVersionUID = 0L;
     return sizeBytes_;
   }
 
+  public static final int CHECKSUM_FIELD_NUMBER = 9;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object checksum_ = "";
+  /**
+   * <pre>
+   * Optional client-computed content checksum; persisted into File.checksum.
+   * Only verified/stored when present.
+   * </pre>
+   *
+   * <code>optional string checksum = 9 [json_name = "checksum"];</code>
+   * @return Whether the checksum field is set.
+   */
+  @java.lang.Override
+  public boolean hasChecksum() {
+    return ((bitField0_ & 0x00000002) != 0);
+  }
+  /**
+   * <pre>
+   * Optional client-computed content checksum; persisted into File.checksum.
+   * Only verified/stored when present.
+   * </pre>
+   *
+   * <code>optional string checksum = 9 [json_name = "checksum"];</code>
+   * @return The checksum.
+   */
+  @java.lang.Override
+  public java.lang.String getChecksum() {
+    java.lang.Object ref = checksum_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      checksum_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Optional client-computed content checksum; persisted into File.checksum.
+   * Only verified/stored when present.
+   * </pre>
+   *
+   * <code>optional string checksum = 9 [json_name = "checksum"];</code>
+   * @return The bytes for checksum.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getChecksumBytes() {
+    java.lang.Object ref = checksum_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      checksum_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int ETAG_FIELD_NUMBER = 10;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object etag_ = "";
+  /**
+   * <pre>
+   * Optional client-observed object ETag; compared against the store's HEAD
+   * ETag when present (mismatch → FailedPrecondition / UPLOAD_SIZE_MISMATCH).
+   * </pre>
+   *
+   * <code>optional string etag = 10 [json_name = "etag"];</code>
+   * @return Whether the etag field is set.
+   */
+  @java.lang.Override
+  public boolean hasEtag() {
+    return ((bitField0_ & 0x00000004) != 0);
+  }
+  /**
+   * <pre>
+   * Optional client-observed object ETag; compared against the store's HEAD
+   * ETag when present (mismatch → FailedPrecondition / UPLOAD_SIZE_MISMATCH).
+   * </pre>
+   *
+   * <code>optional string etag = 10 [json_name = "etag"];</code>
+   * @return The etag.
+   */
+  @java.lang.Override
+  public java.lang.String getEtag() {
+    java.lang.Object ref = etag_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      etag_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Optional client-observed object ETag; compared against the store's HEAD
+   * ETag when present (mismatch → FailedPrecondition / UPLOAD_SIZE_MISMATCH).
+   * </pre>
+   *
+   * <code>optional string etag = 10 [json_name = "etag"];</code>
+   * @return The bytes for etag.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getEtagBytes() {
+    java.lang.Object ref = etag_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      etag_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -364,6 +490,12 @@ private static final long serialVersionUID = 0L;
     if (sizeBytes_ != 0L) {
       output.writeInt64(8, sizeBytes_);
     }
+    if (((bitField0_ & 0x00000002) != 0)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 9, checksum_);
+    }
+    if (((bitField0_ & 0x00000004) != 0)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 10, etag_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -399,6 +531,12 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeInt64Size(8, sizeBytes_);
     }
+    if (((bitField0_ & 0x00000002) != 0)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(9, checksum_);
+    }
+    if (((bitField0_ & 0x00000004) != 0)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(10, etag_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -433,6 +571,16 @@ private static final long serialVersionUID = 0L;
     }
     if (getSizeBytes()
         != other.getSizeBytes()) return false;
+    if (hasChecksum() != other.hasChecksum()) return false;
+    if (hasChecksum()) {
+      if (!getChecksum()
+          .equals(other.getChecksum())) return false;
+    }
+    if (hasEtag() != other.hasEtag()) return false;
+    if (hasEtag()) {
+      if (!getEtag()
+          .equals(other.getEtag())) return false;
+    }
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -464,6 +612,14 @@ private static final long serialVersionUID = 0L;
     hash = (37 * hash) + SIZE_BYTES_FIELD_NUMBER;
     hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
         getSizeBytes());
+    if (hasChecksum()) {
+      hash = (37 * hash) + CHECKSUM_FIELD_NUMBER;
+      hash = (53 * hash) + getChecksum().hashCode();
+    }
+    if (hasEtag()) {
+      hash = (37 * hash) + ETAG_FIELD_NUMBER;
+      hash = (53 * hash) + getEtag().hashCode();
+    }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -603,6 +759,8 @@ private static final long serialVersionUID = 0L;
       referenceType_ = "";
       isPublic_ = false;
       sizeBytes_ = 0L;
+      checksum_ = "";
+      etag_ = "";
       return this;
     }
 
@@ -662,6 +820,14 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000080) != 0)) {
         result.sizeBytes_ = sizeBytes_;
       }
+      if (((from_bitField0_ & 0x00000100) != 0)) {
+        result.checksum_ = checksum_;
+        to_bitField0_ |= 0x00000002;
+      }
+      if (((from_bitField0_ & 0x00000200) != 0)) {
+        result.etag_ = etag_;
+        to_bitField0_ |= 0x00000004;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -712,6 +878,16 @@ private static final long serialVersionUID = 0L;
       }
       if (other.getSizeBytes() != 0L) {
         setSizeBytes(other.getSizeBytes());
+      }
+      if (other.hasChecksum()) {
+        checksum_ = other.checksum_;
+        bitField0_ |= 0x00000100;
+        onChanged();
+      }
+      if (other.hasEtag()) {
+        etag_ = other.etag_;
+        bitField0_ |= 0x00000200;
+        onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -779,6 +955,16 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000080;
               break;
             } // case 64
+            case 74: {
+              checksum_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000100;
+              break;
+            } // case 74
+            case 82: {
+              etag_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000200;
+              break;
+            } // case 82
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1324,6 +1510,224 @@ private static final long serialVersionUID = 0L;
     public Builder clearSizeBytes() {
       bitField0_ = (bitField0_ & ~0x00000080);
       sizeBytes_ = 0L;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object checksum_ = "";
+    /**
+     * <pre>
+     * Optional client-computed content checksum; persisted into File.checksum.
+     * Only verified/stored when present.
+     * </pre>
+     *
+     * <code>optional string checksum = 9 [json_name = "checksum"];</code>
+     * @return Whether the checksum field is set.
+     */
+    public boolean hasChecksum() {
+      return ((bitField0_ & 0x00000100) != 0);
+    }
+    /**
+     * <pre>
+     * Optional client-computed content checksum; persisted into File.checksum.
+     * Only verified/stored when present.
+     * </pre>
+     *
+     * <code>optional string checksum = 9 [json_name = "checksum"];</code>
+     * @return The checksum.
+     */
+    public java.lang.String getChecksum() {
+      java.lang.Object ref = checksum_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        checksum_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Optional client-computed content checksum; persisted into File.checksum.
+     * Only verified/stored when present.
+     * </pre>
+     *
+     * <code>optional string checksum = 9 [json_name = "checksum"];</code>
+     * @return The bytes for checksum.
+     */
+    public com.google.protobuf.ByteString
+        getChecksumBytes() {
+      java.lang.Object ref = checksum_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        checksum_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Optional client-computed content checksum; persisted into File.checksum.
+     * Only verified/stored when present.
+     * </pre>
+     *
+     * <code>optional string checksum = 9 [json_name = "checksum"];</code>
+     * @param value The checksum to set.
+     * @return This builder for chaining.
+     */
+    public Builder setChecksum(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      checksum_ = value;
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Optional client-computed content checksum; persisted into File.checksum.
+     * Only verified/stored when present.
+     * </pre>
+     *
+     * <code>optional string checksum = 9 [json_name = "checksum"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearChecksum() {
+      checksum_ = getDefaultInstance().getChecksum();
+      bitField0_ = (bitField0_ & ~0x00000100);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Optional client-computed content checksum; persisted into File.checksum.
+     * Only verified/stored when present.
+     * </pre>
+     *
+     * <code>optional string checksum = 9 [json_name = "checksum"];</code>
+     * @param value The bytes for checksum to set.
+     * @return This builder for chaining.
+     */
+    public Builder setChecksumBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      checksum_ = value;
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object etag_ = "";
+    /**
+     * <pre>
+     * Optional client-observed object ETag; compared against the store's HEAD
+     * ETag when present (mismatch → FailedPrecondition / UPLOAD_SIZE_MISMATCH).
+     * </pre>
+     *
+     * <code>optional string etag = 10 [json_name = "etag"];</code>
+     * @return Whether the etag field is set.
+     */
+    public boolean hasEtag() {
+      return ((bitField0_ & 0x00000200) != 0);
+    }
+    /**
+     * <pre>
+     * Optional client-observed object ETag; compared against the store's HEAD
+     * ETag when present (mismatch → FailedPrecondition / UPLOAD_SIZE_MISMATCH).
+     * </pre>
+     *
+     * <code>optional string etag = 10 [json_name = "etag"];</code>
+     * @return The etag.
+     */
+    public java.lang.String getEtag() {
+      java.lang.Object ref = etag_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        etag_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Optional client-observed object ETag; compared against the store's HEAD
+     * ETag when present (mismatch → FailedPrecondition / UPLOAD_SIZE_MISMATCH).
+     * </pre>
+     *
+     * <code>optional string etag = 10 [json_name = "etag"];</code>
+     * @return The bytes for etag.
+     */
+    public com.google.protobuf.ByteString
+        getEtagBytes() {
+      java.lang.Object ref = etag_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        etag_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Optional client-observed object ETag; compared against the store's HEAD
+     * ETag when present (mismatch → FailedPrecondition / UPLOAD_SIZE_MISMATCH).
+     * </pre>
+     *
+     * <code>optional string etag = 10 [json_name = "etag"];</code>
+     * @param value The etag to set.
+     * @return This builder for chaining.
+     */
+    public Builder setEtag(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      etag_ = value;
+      bitField0_ |= 0x00000200;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Optional client-observed object ETag; compared against the store's HEAD
+     * ETag when present (mismatch → FailedPrecondition / UPLOAD_SIZE_MISMATCH).
+     * </pre>
+     *
+     * <code>optional string etag = 10 [json_name = "etag"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearEtag() {
+      etag_ = getDefaultInstance().getEtag();
+      bitField0_ = (bitField0_ & ~0x00000200);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Optional client-observed object ETag; compared against the store's HEAD
+     * ETag when present (mismatch → FailedPrecondition / UPLOAD_SIZE_MISMATCH).
+     * </pre>
+     *
+     * <code>optional string etag = 10 [json_name = "etag"];</code>
+     * @param value The bytes for etag to set.
+     * @return This builder for chaining.
+     */
+    public Builder setEtagBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      etag_ = value;
+      bitField0_ |= 0x00000200;
       onChanged();
       return this;
     }

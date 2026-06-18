@@ -103,6 +103,15 @@ func NewTokenManager(auth *AuthClient, store TokenStore) *TokenManager {
 	}
 }
 
+// LoginSession is the canonical naming-contract accessor for the login/refresh
+// session lifecycle: it constructs a TokenManager bound to this AuthClient
+// (single-flight refresh, pluggable TokenStore — a nil store defaults to an
+// in-memory one). It issues NO RPC itself; call Login/LoginWithDevice on the
+// returned manager to authenticate. Alias of NewTokenManager(c, store).
+func (c *AuthClient) LoginSession(store TokenStore) *TokenManager {
+	return NewTokenManager(c, store)
+}
+
 // Login authenticates with a fully-formed AuthnRequest (use AuthClient's typed
 // helpers to build it), stores the resulting Token, and returns it. The access
 // token + session id + absolute expiry are derived from AuthnResponse.
@@ -116,6 +125,35 @@ func (m *TokenManager) Login(ctx context.Context, req *authnv1.AuthnRequest) (To
 		return Token{}, err
 	}
 	return tok, nil
+}
+
+// LoginWithDevice authenticates via the native AuthnService.Login RPC (rather
+// than the generic Authenticate path), so a stable LoginRequest.DeviceId is sent
+// to the broker — which mints a LISTABLE device row only when device_id is
+// non-empty. This removes the need for a GenericDispatch device-seed workaround
+// without any SDK-side proof read. The resulting Token is stored and returned.
+func (m *TokenManager) LoginWithDevice(ctx context.Context, req *authnv1.LoginRequest) (Token, error) {
+	resp, err := m.auth.Authn.Login(m.auth.Context(ctx), req)
+	if err != nil {
+		return Token{}, err
+	}
+	tok := tokenFromLogin(resp, m.now())
+	if err := m.store.Save(ctx, tok); err != nil {
+		return Token{}, err
+	}
+	return tok, nil
+}
+
+func tokenFromLogin(resp *authnv1.LoginResponse, now time.Time) Token {
+	tok := Token{
+		AccessToken:  resp.GetAccessToken(),
+		RefreshToken: resp.GetRefreshToken(),
+		SessionID:    resp.GetSessionId(),
+	}
+	if secs := resp.GetAccessTokenExpiresIn(); secs > 0 {
+		tok.ExpiresAt = now.Add(time.Duration(secs) * time.Second)
+	}
+	return tok
 }
 
 func tokenFromAuthn(resp *authnv1.AuthnResponse, now time.Time) Token {

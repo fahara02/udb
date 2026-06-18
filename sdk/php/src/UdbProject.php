@@ -9,6 +9,7 @@ use Fahara02\UdbLaravel\Exceptions\UdbRpcException;
 use Fahara02\UdbLaravel\Services\AnalyticsService;
 use Fahara02\UdbLaravel\Services\ApiKeyService;
 use Fahara02\UdbLaravel\Services\AssetService;
+use Fahara02\UdbLaravel\Services\EventsService;
 use Fahara02\UdbLaravel\Services\NotificationService;
 use Fahara02\UdbLaravel\Services\StorageService;
 use Fahara02\UdbLaravel\Services\TenantService;
@@ -90,6 +91,7 @@ final class UdbProject
     private ?StorageService $storage = null;
     private ?AssetService $asset = null;
     private ?WebRtcService $webRtc = null;
+    private ?EventsService $events = null;
 
     private ?NotificationServiceClient $notificationStub = null;
     private ?ApiKeyServiceClient $apiKeyStub = null;
@@ -102,6 +104,19 @@ final class UdbProject
     private ?TrackServiceClient $trackStub = null;
     private ?TurnServiceClient $turnStub = null;
     private ?SignalingServiceClient $signalingStub = null;
+
+    /**
+     * Canonical static factory (naming-contract `UdbProject::connect($config)`,
+     * parity with TS `UdbProject.connect`, Python `UdbProject.connect`, Go
+     * `udbclient.Connect`). Equivalent to `new UdbProject($config)` /
+     * {@see createUdb()}; the constructor + `createUdb()` stay as aliases.
+     *
+     * @param  ProjectConfig  $config
+     */
+    public static function connect(array $config): UdbProject
+    {
+        return new self($config);
+    }
 
     /** @param ProjectConfig $config */
     public function __construct(array $config)
@@ -158,6 +173,64 @@ final class UdbProject
         $updated = $this->metadata()->withCredentials($bearerToken, $apiKey);
 
         return $this->bindContext($updated);
+    }
+
+    /**
+     * Login, then adopt the canonical tenant/project from the VERIFIED principal.
+     *
+     * Canonical 2-RPC sequence (D11), ALWAYS two RPCs: `Login` →
+     * `Authenticate(bearer)` → adopt `{tenant_id, project_id}` from the
+     * authenticated principal, then one atomic context swap via
+     * {@see setCredentials()} + a tenant/project rebind. Authenticate-bearer
+     * always runs (no conditional skip). Returns the `AuthnResponse` (the
+     * verified principal).
+     */
+    public function loginAndAdoptTenant(
+        string $username,
+        string $password,
+        string $totpCode = '',
+        string $mfaOtpId = '',
+        ?UdbMetadata $metadata = null,
+    ): \Udb\Core\Authn\Services\V1\AuthnResponse {
+        $login = $this->auth()->login($username, $password, $totpCode, $mfaOtpId, $metadata);
+        $token = $login->getAccessToken();
+        $authn = $this->auth()->authenticateBearer($token, $metadata);
+        $principal = $authn->getPrincipal();
+
+        $current = $this->metadata();
+        $tenantId = ($principal !== null && $principal->getTenantId() !== '')
+            ? $principal->getTenantId()
+            : $current->tenantId;
+        $projectId = ($principal !== null && $principal->getProjectId() !== '')
+            ? $principal->getProjectId()
+            : $current->projectId;
+
+        // One atomic context swap: install the bearer + adopted tenant/project
+        // across every sub-client.
+        $adopted = $current
+            ->withCredentials($token, '')
+            ->withProjectId($projectId);
+        // tenantId is readonly; rebuild via withCredentials chain + a tenant set.
+        $adopted = new UdbMetadata(
+            tenantId: $tenantId,
+            userId: $adopted->userId,
+            purpose: $adopted->purpose,
+            correlationId: $adopted->correlationId,
+            scopes: $adopted->scopes,
+            serviceIdentity: $adopted->serviceIdentity,
+            projectId: $adopted->projectId,
+            clientCatalogVersion: $adopted->clientCatalogVersion,
+            bearerToken: $token,
+            apiKey: '',
+            consistency: $adopted->consistency,
+            primaryRead: $adopted->primaryRead,
+            maxReplicaLagMs: $adopted->maxReplicaLagMs,
+            eventualConsistencyAllowed: $adopted->eventualConsistencyAllowed,
+            readFenceJson: $adopted->readFenceJson,
+        );
+        $this->bindContext($adopted);
+
+        return $authn;
     }
 
     // ── Service accessors ────────────────────────────────────────────────────
@@ -258,6 +331,17 @@ final class UdbProject
         );
     }
 
+    /**
+     * CDC events facade ({@see EventsService}): `events()->subscribe($topic)->ready()`
+     * + `events()->publishAndWait(...)` over the DataBroker `PublishCDC`
+     * (server-stream) and `EnqueueOutboxEvent` RPCs. Parity with the TS/Python
+     * `events` namespace. Reuses the data-plane channel via {@see data()}.
+     */
+    public function events(): EventsService
+    {
+        return $this->events ??= new EventsService($this, $this->data());
+    }
+
     // ── Shared invoke (used by the service wrappers) ──────────────────────────
 
     /**
@@ -275,18 +359,60 @@ final class UdbProject
         $meta = $this->metadata($metadata);
         $deadlineMs = $this->deadlineMs();
         $opts = $deadlineMs > 0 ? ['timeout' => $deadlineMs * 1000] : [];
+        $md = $meta->toGrpcMetadata();
 
-        /** @var \Grpc\UnaryCall $call */
-        $call = $invoker($meta->toGrpcMetadata(), $opts);
-        [$response, $status] = $call->wait();
-        $code = is_object($status) ? ($status->code ?? -1) : ($status['code'] ?? -1);
-        if ($code !== 0) {
-            throw UdbRpcException::fromGrpcStatus($status, $rpcName);
+        // Unify with GeneratedClient's robustness: read-only RPCs (from the
+        // proto-derived operation_kind) are retried with exponential backoff on
+        // transient codes; mutations are never retried. Non-OK status is mapped
+        // to a typed UdbRpcException carrying the decoded `udb-error-detail-bin`.
+        $readOnly = (\Fahara02\UdbLaravel\Generated\GeneratedClient::OPERATION_KIND[$rpcName] ?? 'mutation') === 'read_only';
+        $retry = (array) ($this->config['retry'] ?? []);
+        $maxAttempts = max(1, (int) ($retry['max_attempts'] ?? 4));
+        $baseDelayMs = max(1, (int) ($retry['base_delay_ms'] ?? 50));
+        $maxDelayMs = max($baseDelayMs, (int) ($retry['max_delay_ms'] ?? 2_000));
+
+        $status = null;
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            /** @var \Grpc\UnaryCall $call */
+            $call = $invoker($md, $opts);
+            [$response, $status] = $call->wait();
+            $code = is_object($status) ? (int) ($status->code ?? -1) : (int) ($status['code'] ?? -1);
+            if ($code === 0) {
+                if (! $response instanceof $responseClass) {
+                    throw new UdbRpcException(status: 13, details: "UDB {$rpcName} returned an unexpected response type", raw: $status, rpcName: $rpcName);
+                }
+
+                return $response;
+            }
+            if ($attempt < $maxAttempts && $this->isRetryableStatus($code, $readOnly)) {
+                $this->sleepBackoff($attempt, $baseDelayMs, $maxDelayMs);
+
+                continue;
+            }
+            break;
         }
-        if (! $response instanceof $responseClass) {
-            throw new UdbRpcException(status: 13, details: "UDB {$rpcName} returned an unexpected response type", raw: $status, rpcName: $rpcName);
+
+        throw UdbRpcException::fromGrpcStatus($status, $rpcName);
+    }
+
+    /** Transient codes are retried only for read-only RPCs. */
+    private function isRetryableStatus(int $code, bool $readOnly): bool
+    {
+        if (! $readOnly) {
+            return false;
         }
-        return $response;
+        // 4=DEADLINE_EXCEEDED, 14=UNAVAILABLE, 8=RESOURCE_EXHAUSTED.
+        return in_array($code, [4, 14, 8], true);
+    }
+
+    /** Exponential backoff with full jitter, capped at max_delay_ms. */
+    private function sleepBackoff(int $attempt, int $baseDelayMs, int $maxDelayMs): void
+    {
+        $ceil = (int) min($maxDelayMs, $baseDelayMs * (2 ** ($attempt - 1)));
+        $jittered = random_int(0, max(0, $ceil));
+        if ($jittered > 0) {
+            usleep($jittered * 1000);
+        }
     }
 
     // ── Internals ─────────────────────────────────────────────────────────────

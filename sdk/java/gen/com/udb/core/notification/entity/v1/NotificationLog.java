@@ -43,6 +43,8 @@ private static final long serialVersionUID = 0L;
     status_ = 0;
     errorMessage_ = "";
     providerMessageId_ = "";
+    renderedSubject_ = "";
+    renderedBody_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -691,6 +693,84 @@ private static final long serialVersionUID = 0L;
     return createdAt_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : createdAt_;
   }
 
+  public static final int RENDERED_SUBJECT_FIELD_NUMBER = 20;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object renderedSubject_ = "";
+  /**
+   * <code>string rendered_subject = 20 [json_name = "renderedSubject", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The renderedSubject.
+   */
+  @java.lang.Override
+  public java.lang.String getRenderedSubject() {
+    java.lang.Object ref = renderedSubject_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      renderedSubject_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string rendered_subject = 20 [json_name = "renderedSubject", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for renderedSubject.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getRenderedSubjectBytes() {
+    java.lang.Object ref = renderedSubject_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      renderedSubject_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int RENDERED_BODY_FIELD_NUMBER = 21;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object renderedBody_ = "";
+  /**
+   * <code>string rendered_body = 21 [json_name = "renderedBody", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The renderedBody.
+   */
+  @java.lang.Override
+  public java.lang.String getRenderedBody() {
+    java.lang.Object ref = renderedBody_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      renderedBody_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string rendered_body = 21 [json_name = "renderedBody", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for renderedBody.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getRenderedBodyBytes() {
+    java.lang.Object ref = renderedBody_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      renderedBody_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -761,6 +841,12 @@ private static final long serialVersionUID = 0L;
     }
     if (((bitField0_ & 0x00000004) != 0)) {
       output.writeMessage(19, getCreatedAt());
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(renderedSubject_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 20, renderedSubject_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(renderedBody_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 21, renderedBody_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -834,6 +920,12 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(19, getCreatedAt());
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(renderedSubject_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(20, renderedSubject_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(renderedBody_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(21, renderedBody_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -894,6 +986,10 @@ private static final long serialVersionUID = 0L;
       if (!getCreatedAt()
           .equals(other.getCreatedAt())) return false;
     }
+    if (!getRenderedSubject()
+        .equals(other.getRenderedSubject())) return false;
+    if (!getRenderedBody()
+        .equals(other.getRenderedBody())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -949,6 +1045,10 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + CREATED_AT_FIELD_NUMBER;
       hash = (53 * hash) + getCreatedAt().hashCode();
     }
+    hash = (37 * hash) + RENDERED_SUBJECT_FIELD_NUMBER;
+    hash = (53 * hash) + getRenderedSubject().hashCode();
+    hash = (37 * hash) + RENDERED_BODY_FIELD_NUMBER;
+    hash = (53 * hash) + getRenderedBody().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -1119,6 +1219,8 @@ private static final long serialVersionUID = 0L;
         createdAtBuilder_.dispose();
         createdAtBuilder_ = null;
       }
+      renderedSubject_ = "";
+      renderedBody_ = "";
       return this;
     }
 
@@ -1219,6 +1321,12 @@ private static final long serialVersionUID = 0L;
             : createdAtBuilder_.build();
         to_bitField0_ |= 0x00000004;
       }
+      if (((from_bitField0_ & 0x00080000) != 0)) {
+        result.renderedSubject_ = renderedSubject_;
+      }
+      if (((from_bitField0_ & 0x00100000) != 0)) {
+        result.renderedBody_ = renderedBody_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -1316,6 +1424,16 @@ private static final long serialVersionUID = 0L;
       }
       if (other.hasCreatedAt()) {
         mergeCreatedAt(other.getCreatedAt());
+      }
+      if (!other.getRenderedSubject().isEmpty()) {
+        renderedSubject_ = other.renderedSubject_;
+        bitField0_ |= 0x00080000;
+        onChanged();
+      }
+      if (!other.getRenderedBody().isEmpty()) {
+        renderedBody_ = other.renderedBody_;
+        bitField0_ |= 0x00100000;
+        onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -1444,6 +1562,16 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00040000;
               break;
             } // case 154
+            case 162: {
+              renderedSubject_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00080000;
+              break;
+            } // case 162
+            case 170: {
+              renderedBody_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00100000;
+              break;
+            } // case 170
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -2892,6 +3020,150 @@ private static final long serialVersionUID = 0L;
         createdAt_ = null;
       }
       return createdAtBuilder_;
+    }
+
+    private java.lang.Object renderedSubject_ = "";
+    /**
+     * <code>string rendered_subject = 20 [json_name = "renderedSubject", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The renderedSubject.
+     */
+    public java.lang.String getRenderedSubject() {
+      java.lang.Object ref = renderedSubject_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        renderedSubject_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string rendered_subject = 20 [json_name = "renderedSubject", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The bytes for renderedSubject.
+     */
+    public com.google.protobuf.ByteString
+        getRenderedSubjectBytes() {
+      java.lang.Object ref = renderedSubject_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        renderedSubject_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string rendered_subject = 20 [json_name = "renderedSubject", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The renderedSubject to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRenderedSubject(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      renderedSubject_ = value;
+      bitField0_ |= 0x00080000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string rendered_subject = 20 [json_name = "renderedSubject", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearRenderedSubject() {
+      renderedSubject_ = getDefaultInstance().getRenderedSubject();
+      bitField0_ = (bitField0_ & ~0x00080000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string rendered_subject = 20 [json_name = "renderedSubject", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The bytes for renderedSubject to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRenderedSubjectBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      renderedSubject_ = value;
+      bitField0_ |= 0x00080000;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object renderedBody_ = "";
+    /**
+     * <code>string rendered_body = 21 [json_name = "renderedBody", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The renderedBody.
+     */
+    public java.lang.String getRenderedBody() {
+      java.lang.Object ref = renderedBody_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        renderedBody_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string rendered_body = 21 [json_name = "renderedBody", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The bytes for renderedBody.
+     */
+    public com.google.protobuf.ByteString
+        getRenderedBodyBytes() {
+      java.lang.Object ref = renderedBody_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        renderedBody_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string rendered_body = 21 [json_name = "renderedBody", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The renderedBody to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRenderedBody(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      renderedBody_ = value;
+      bitField0_ |= 0x00100000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string rendered_body = 21 [json_name = "renderedBody", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearRenderedBody() {
+      renderedBody_ = getDefaultInstance().getRenderedBody();
+      bitField0_ = (bitField0_ & ~0x00100000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string rendered_body = 21 [json_name = "renderedBody", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The bytes for renderedBody to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRenderedBodyBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      renderedBody_ = value;
+      bitField0_ |= 0x00100000;
+      onChanged();
+      return this;
     }
 
     // @@protoc_insertion_point(builder_scope:udb.core.notification.entity.v1.NotificationLog)

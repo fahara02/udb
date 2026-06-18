@@ -1,0 +1,2122 @@
+[
+  {
+    "file": "analytics.md",
+    "rpc": "GetExecutorPerformance",
+    "op_kind": "READ_ONLY",
+    "request_msg": "GetExecutorPerformanceRequest",
+    "body": "`{ \"executor_identity\": \"\", \"workload_kind\": \"\", \"date_from\": \"2026-06-01\", \"date_to\": \"2026-06-14\" }`",
+    "notes": "Fields: `executor_identity` string(1, empty=all executors), `workload_kind` string(2), `date_from` string(3, ISO date), `date_to` string(4). No tenant_id field on body (tenant comes from auth/RequestContext metadata). Provide `date_from`+`date_to` to avoid INTERNAL on empty/unparseable date input."
+  },
+  {
+    "file": "analytics.md",
+    "rpc": "GetPipelineSummary",
+    "op_kind": "READ_ONLY",
+    "request_msg": "GetPipelineSummaryRequest",
+    "body": "`{ \"stage_name\": \"<seed:stage_name>\", \"tenant_id\": \"<seed:tenant_id>\", \"hour_from\": \"2026-06-01T00\", \"hour_to\": \"2026-06-14T23\", \"page\": { \"page\": 1, \"page_size\": 50 } }`",
+    "notes": "Fields: `stage_name` string(1, empty=all stages), `tenant_id` string(2), `hour_from` string(3, ISO-8601 hour), `hour_to` string(4), `page` PageRequest(5){page int32, page_size int32, page_token string}. Provide `tenant_id` + ISO hour range to avoid INTERNAL; `stage_name` may be empty."
+  },
+  {
+    "file": "analytics.md",
+    "rpc": "GetReconciliationAnalytics",
+    "op_kind": "READ_ONLY",
+    "request_msg": "GetReconciliationAnalyticsRequest",
+    "body": "`{ \"date_from\": \"2026-06-01\", \"date_to\": \"2026-06-14\" }`",
+    "notes": "Fields: `date_from` string(1, ISO date), `date_to` string(2). Only two fields; tenant from auth context. Provide valid date strings to avoid INTERNAL."
+  },
+  {
+    "file": "analytics.md",
+    "rpc": "GetSlaCompliance",
+    "op_kind": "READ_ONLY",
+    "request_msg": "GetSlaComplianceRequest",
+    "body": "`{ \"stage_name\": \"<seed:stage_name>\", \"date_from\": \"2026-06-01\", \"date_to\": \"2026-06-14\", \"p99_threshold_ms\": 250.0, \"error_rate_threshold\": 0.01 }`",
+    "notes": "Fields: `stage_name` string(1), `date_from` string(2, ISO date), `date_to` string(3), `p99_threshold_ms` double(4), `error_rate_threshold` double(5). Provide `stage_name`+date range+thresholds to avoid INTERNAL; thresholds default 0 if omitted (everything fails SLA)."
+  },
+  {
+    "file": "analytics.md",
+    "rpc": "GetThroughput",
+    "op_kind": "READ_ONLY",
+    "request_msg": "GetThroughputRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"hour_from\": \"2026-06-01T00\", \"hour_to\": \"2026-06-14T23\" }`",
+    "notes": "Fields: `tenant_id` string(1), `hour_from` string(2, ISO-8601 hour), `hour_to` string(3). Provide `tenant_id` + ISO hour range to avoid INTERNAL."
+  },
+  {
+    "file": "analytics.md",
+    "rpc": "RecordPipelineMetric",
+    "op_kind": "MUTATION",
+    "request_msg": "RecordPipelineMetricRequest",
+    "body": "`{ \"stage_name\": \"<seed:stage_name>\", \"tenant_id\": \"<seed:tenant_id>\", \"latency_ms\": 12.5, \"is_success\": true, \"context\": { \"tenant\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\" }, \"request_id\": \"...\" } }`",
+    "notes": "Fields: `stage_name` string(1), `tenant_id` string(2), `latency_ms` double(3), `is_success` bool(4), `context` RequestContext(5). Set `stage_name`+`tenant_id` non-empty to avoid INTERNAL on empty input. `context.tenant.tenant_id` should match `tenant_id`. POST body `*`."
+  },
+  {
+    "file": "analytics.md",
+    "rpc": "TriggerSnapshot",
+    "op_kind": "MUTATION",
+    "request_msg": "TriggerSnapshotRequest",
+    "body": "`{ \"stage_name\": \"<seed:stage_name>\", \"hour\": \"2026-06-14T10\", \"context\": { \"tenant\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\" }, \"request_id\": \"...\" } }`",
+    "notes": "Fields: `stage_name` string(1, empty=all stages), `hour` string(2, ISO-8601 hour; empty=previous complete hour), `context` RequestContext(3). Both `stage_name` and `hour` may be empty (defaults), but `context.tenant.tenant_id` should be set. POST body `*`."
+  },
+  {
+    "file": "apikey.md",
+    "rpc": "CreateApiKey",
+    "op_kind": "MUTATION",
+    "request_msg": "CreateApiKeyRequest",
+    "body": "`name`=\"bench-key\" (string), `description`=\"bench\" (string), `owner_type`=`API_KEY_OWNER_TYPE_SERVICE_ACCOUNT` (enum), `owner_id`=`<seed:owner_id>` (string), `scopes`=[\"resource:read\"] (repeated string), `ip_allowlist`=[] (repeated string CIDR; empty=unrestricted), `rate_limit_per_minute`=0 (int32; 0=default 60), `rate_limit_per_day`=0 (int64; 0=default 10000), `expires_at`=null (Timestamp; null=never), `context.tenant.tenant_id`=`<seed:tenant_id>` (RequestContext)",
+    "notes": "Returns `plain_key` ONCE — capture it as `<seed:plain_key>` and the returned `key.key_id` as `<seed:key_id>` for downstream RPCs."
+  },
+  {
+    "file": "apikey.md",
+    "rpc": "EmergencyRevokeApiKeys",
+    "op_kind": "DESTRUCTIVE",
+    "request_msg": "EmergencyRevokeApiKeysRequest",
+    "body": "At least one selector required: `key_prefix`=\"\" (string), `owner_id`=`<seed:owner_id>` (string), `tenant_id`=`<seed:tenant_id>` (string), `project_id`=`<seed:project>` (string), `scope`=\"resource:read\" (string), `created_before`=null (Timestamp), `reason`=\"bench emergency\" (string), `context.tenant.tenant_id`=`<seed:tenant_id>`",
+    "notes": "Per-record tenant/owner authority enforced. Set `owner_id`=`<seed:owner_id>` to scope to bench-created keys only. Truly destructive — run last."
+  },
+  {
+    "file": "apikey.md",
+    "rpc": "GetApiKey",
+    "op_kind": "READ_ONLY",
+    "request_msg": "GetApiKeyRequest",
+    "body": "`key_id`=`<seed:key_id>` (string)",
+    "notes": "No `context` field on this msg. NOT_FOUND without a real seeded key_id."
+  },
+  {
+    "file": "apikey.md",
+    "rpc": "GetApiKeyUsageStats",
+    "op_kind": "READ_ONLY",
+    "request_msg": "GetApiKeyUsageStatsRequest",
+    "body": "`key_id`=`<seed:key_id>` (string), `from`=null (Timestamp), `to`=null (Timestamp)",
+    "notes": "No `context` field. Needs real seeded key_id."
+  },
+  {
+    "file": "apikey.md",
+    "rpc": "ListApiKeys",
+    "op_kind": "READ_ONLY",
+    "request_msg": "ListApiKeysRequest",
+    "body": "`owner_id`=`<seed:owner_id>` (string), `owner_type`=`API_KEY_OWNER_TYPE_SERVICE_ACCOUNT` (enum), `status`=`API_KEY_STATUS_ACTIVE` (enum), `page.page`=1, `page.page_size`=50 (PageRequest)",
+    "notes": "All fields optional filters; empty body also valid. No `context` field."
+  },
+  {
+    "file": "apikey.md",
+    "rpc": "RevokeApiKey",
+    "op_kind": "MUTATION",
+    "request_msg": "RevokeApiKeyRequest",
+    "body": "`key_id`=`<seed:key_id>` (string), `revoke_reason`=\"bench cleanup\" (string), `context.tenant.tenant_id`=`<seed:tenant_id>`",
+    "notes": "Needs a real seeded key_id (NOT_FOUND otherwise). Destructive — run after Get/List/Stats."
+  },
+  {
+    "file": "apikey.md",
+    "rpc": "RotateApiKey",
+    "op_kind": "MUTATION",
+    "request_msg": "RotateApiKeyRequest",
+    "body": "`key_id`=`<seed:key_id>` (string), `rotation_reason`=\"bench rotate\" (string), `context.tenant.tenant_id`=`<seed:tenant_id>`",
+    "notes": "Needs a real seeded key_id. Returns a NEW `plain_key` ONCE; old secret invalidated."
+  },
+  {
+    "file": "apikey.md",
+    "rpc": "UpdateApiKey",
+    "op_kind": "MUTATION",
+    "request_msg": "UpdateApiKeyRequest",
+    "body": "`key_id`=`<seed:key_id>` (string), `name`=\"bench-key-2\" (string), `description`=\"updated\" (string), `scopes`=[\"resource:read\"] (repeated string), `ip_allowlist`=[] (repeated string), `rate_limit_per_minute`=0 (int32), `rate_limit_per_day`=0 (int64), `expires_at`=null (Timestamp), `context.tenant.tenant_id`=`<seed:tenant_id>`",
+    "notes": "NOT_FOUND without real seeded key_id."
+  },
+  {
+    "file": "apikey.md",
+    "rpc": "ValidateApiKey",
+    "op_kind": "READ_ONLY",
+    "request_msg": "ValidateApiKeyRequest",
+    "body": "`plain_key`=`<seed:plain_key>` (string, raw key from CreateApiKey), `endpoint`=\"/v1/test\" (string), `required_scope`=\"resource:read\" (string), `ip_address`=\"127.0.0.1\" (string)",
+    "notes": "No `context` field. Needs the real plain_key captured at create time; returns `valid=false` (not error) for an unknown key."
+  },
+  {
+    "file": "asset.md",
+    "rpc": "CompleteStep",
+    "op_kind": "MUTATION",
+    "request_msg": "CompleteStepRequest",
+    "body": "`tenant_id=<seed:tenant_id>`, `step_id=<seed:step_id>`, `status=\"COMPLETED\"`, `result=\"{}\"` (JSON string), `error_message=\"\"`",
+    "notes": "`status` is a STRING field (not a proto enum); valid values per proto comment: `COMPLETED` \\|`SKIPPED` \\|`FAILED`. `step_id` must be a real step from a started pipeline (GetPipeline response `steps[].id`) or INVALID_ARGUMENT. `error_message` only meaningful when status=FAILED."
+  },
+  {
+    "file": "asset.md",
+    "rpc": "CreatePipelineDefinition",
+    "op_kind": "MUTATION",
+    "request_msg": "CreatePipelineDefinitionRequest",
+    "body": "`tenant_id=<seed:tenant_id>`, `name=\"thumbnail-pipeline\"`, `description=\"Generate thumbnails\"`, `media_type=\"image/png\"`, `steps=\"[{\\\"name\\\":\\\"resize\\\",\\\"type\\\":\\\"TRANSFORM\\\"}]\"` (JSON string), `version=1` (int32)",
+    "notes": "`steps` is a JSON string (field 5), not a list. Returns `definition_id` — capture as `<seed:definition_id>`."
+  },
+  {
+    "file": "asset.md",
+    "rpc": "GetAsset",
+    "op_kind": "READ_ONLY",
+    "request_msg": "GetAssetRequest",
+    "body": "`tenant_id=<seed:tenant_id>`, `asset_id=<seed:asset_id>`",
+    "notes": "asset_id from RegisterAsset or NOT_FOUND."
+  },
+  {
+    "file": "asset.md",
+    "rpc": "GetPipeline",
+    "op_kind": "READ_ONLY",
+    "request_msg": "GetPipelineRequest",
+    "body": "`tenant_id=<seed:tenant_id>`, `instance_id=<seed:instance_id>`",
+    "notes": "instance_id from StartPipeline. Response carries instance + repeated steps."
+  },
+  {
+    "file": "asset.md",
+    "rpc": "GetPipelineDefinition",
+    "op_kind": "READ_ONLY",
+    "request_msg": "GetPipelineDefinitionRequest",
+    "body": "`tenant_id=<seed:tenant_id>`, `definition_id=<seed:definition_id>`",
+    "notes": "definition_id must exist (from CreatePipelineDefinition) or NOT_FOUND."
+  },
+  {
+    "file": "asset.md",
+    "rpc": "ListAssets",
+    "op_kind": "READ_ONLY",
+    "request_msg": "ListAssetsRequest",
+    "body": "`tenant_id=<seed:tenant_id>`, `media_type=\"image/png\"` (optional filter), `status=\"\"` (optional filter), `page=1` (int32), `page_size=20` (int32)",
+    "notes": "`media_type`/`status` are optional string filters; omit (empty) to list all."
+  },
+  {
+    "file": "asset.md",
+    "rpc": "RegisterAsset",
+    "op_kind": "MUTATION",
+    "request_msg": "RegisterAssetRequest",
+    "body": "`tenant_id=<seed:tenant_id>`, `project_id=<seed:project>`, `file_id=<seed:file_id>`, `name=\"logo.png\"`, `media_type=\"image/png\"`, `metadata=\"{\\\"source\\\":\\\"upload\\\"}\"` (JSON string)",
+    "notes": "`file_id` references an existing StorageService file (`<seed:file_id>`). Returns `asset_id` — capture as `<seed:asset_id>`."
+  },
+  {
+    "file": "asset.md",
+    "rpc": "StartPipeline",
+    "op_kind": "MUTATION",
+    "request_msg": "StartPipelineRequest",
+    "body": "`tenant_id=<seed:tenant_id>`, `definition_id=<seed:definition_id>`, `asset_id=<seed:asset_id>`, `context=\"{}\"` (JSON string), `correlation_id=\"run-001\"`",
+    "notes": "Needs a real `definition_id` AND `asset_id` or INVALID_ARGUMENT/NOT_FOUND. Returns `instance_id` — capture as `<seed:instance_id>`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "AdminResetMfa",
+    "op_kind": "DESTRUCTIVE",
+    "request_msg": "AdminResetMfaRequest",
+    "body": "`user_id: \"<seed:user_id>\"`, `reason: \"lost device\"`",
+    "notes": "Optional `context`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "AdminResetPassword",
+    "op_kind": "DESTRUCTIVE",
+    "request_msg": "AdminResetPasswordRequest",
+    "body": "`user_id: \"<seed:user_id>\"`",
+    "notes": "Sends email OTP; response returns `otp_id`. Optional `context`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "AdminRevokeAllTenantSessions",
+    "op_kind": "DESTRUCTIVE",
+    "request_msg": "AdminRevokeAllTenantSessionsRequest",
+    "body": "`tenant_id: \"<seed:tenant_id>\"`, `reason: \"incident\"`",
+    "notes": "Optional `context`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "AdminRevokeAllUserSessions",
+    "op_kind": "DESTRUCTIVE",
+    "request_msg": "AdminRevokeAllUserSessionsRequest",
+    "body": "`user_id: \"<seed:user_id>\"`, `reason: \"compromised\"`",
+    "notes": "Optional `context`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "AdminRevokeSession",
+    "op_kind": "DESTRUCTIVE",
+    "request_msg": "AdminRevokeSessionRequest",
+    "body": "`user_id: \"<seed:user_id>\"`, `session_id: \"<seed:session_id>\"`, `reason: \"compromised\"`",
+    "notes": "Optional `context`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "Authenticate",
+    "op_kind": "READ_ONLY",
+    "request_msg": "AuthnRequest",
+    "body": "`bearer_token: \"<seed:token>\"`, `credential_type: AUTH_CREDENTIAL_TYPE_BEARER_TOKEN`",
+    "notes": "PUBLIC. Provide ONE proof: `bearer_token` / `session_id` / `api_key` / (`external_provider_id`+`external_token`). `credential_type` enum (AuthCredentialType). Optional `tenant_hint`, `project_hint`, `requested_scopes`, `client_id`, `audience`, `issuer`, `attributes`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "ChangePassword",
+    "op_kind": "MUTATION",
+    "request_msg": "ChangePasswordRequest",
+    "body": "`user_id: \"<seed:user_id>\"`, `current_password: \"Str0ng!Passw0rd\"`, `new_password: \"N3w!Passw0rd9\"`, `otp_id: \"<seed:code>\"`",
+    "notes": "`otp_id` = 2FA OTP confirming the change (runtime-issued). Optional `context`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "ChangeUserStatus",
+    "op_kind": "DESTRUCTIVE",
+    "request_msg": "ChangeUserStatusRequest",
+    "body": "`user_id: \"<seed:user_id>\"`, `new_status: USER_STATUS_SUSPENDED`, `reason: \"admin action\"`",
+    "notes": "`new_status` enum (UserStatus, non-UNSPECIFIED). Optional `context`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "ConfirmMFAEnrollment",
+    "op_kind": "MUTATION",
+    "request_msg": "ConfirmMFAEnrollmentRequest",
+    "body": "`user_id: \"<seed:user_id>\"`, `otp_id: \"<seed:code>\"`, `code: \"123456\"`",
+    "notes": "`otp_id` = verify_otp_id from EnrollMFA; `code` = TOTP/email code. NOTE: correct TOTP code not groundable from proto (computed from totp_secret at runtime)."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "CreateSession",
+    "op_kind": "MUTATION",
+    "request_msg": "CreateSessionRequest",
+    "body": "`principal: { principal_id: \"<seed:user_id>\", subject: \"<seed:subject>\", user_id: \"<seed:user_id>\", tenant_id: \"<seed:tenant_id>\" }`, `ttl_seconds: 3600`",
+    "notes": "Nested `Principal` message (expand required ids). Optional `client_fingerprint`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "CreateUser",
+    "op_kind": "MUTATION",
+    "request_msg": "CreateUserRequest",
+    "body": "`username: \"alice\"`, `email: \"alice@acme.test\"`, `password: \"Str0ng!Passw0rd\"`, `tenant_id: \"<seed:tenant_id>\"`, `full_name: \"Alice A\"`, `account_kind: ACCOUNT_KIND_PERSON`",
+    "notes": "password policy: min 10, 1 upper/lower/digit/special. `account_kind` enum (AccountKind). Optional: `project_id`, `external_provider_id`, `external_subject`, `profile_attributes` map, `context`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "DeleteWebAuthnCredential",
+    "op_kind": "MUTATION",
+    "request_msg": "DeleteWebAuthnCredentialRequest",
+    "body": "`user_id: \"<seed:user_id>\"`, `credential_id: \"<seed:record_id>\"`",
+    "notes": "`credential_id` ref (WebAuthn credential id; no dedicated seed key — use record_id). Optional `context`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "DisableMfaFactor",
+    "op_kind": "MUTATION",
+    "request_msg": "DisableMfaFactorRequest",
+    "body": "`user_id: \"<seed:user_id>\"`, `factor_kind: AUTH_FACTOR_KIND_TOTP`",
+    "notes": "`factor_kind` enum (AuthFactorKind, non-UNSPECIFIED). Optional `context`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "EmergencyRevoke",
+    "op_kind": "DESTRUCTIVE",
+    "request_msg": "EmergencyRevokeRequest",
+    "body": "`tenant_id: \"<seed:tenant_id>\"`, `reason: \"incident\"`",
+    "notes": "Provide at least one revoke target: `signing_key_id` (<seed:key_id>) / `token_family_id` / `tenant_id` / `principal_id` (<seed:subject>). Optional `context`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "EnrollMFA",
+    "op_kind": "MUTATION",
+    "request_msg": "EnrollMFARequest",
+    "body": "`user_id: \"<seed:user_id>\"`, `mfa_type: AUTH_FACTOR_KIND_TOTP`",
+    "notes": "`mfa_type` enum (AuthFactorKind, non-UNSPECIFIED). Optional `context`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "FinishWebAuthnAuthentication",
+    "op_kind": "MUTATION",
+    "request_msg": "FinishWebAuthnAuthenticationRequest",
+    "body": "`challenge_id: \"<seed:code>\"`, `public_key_credential_json: \"{...}\"`",
+    "notes": "PUBLIC. `challenge_id` from Start...; assertion JSON requires a real authenticator — not groundable from proto. Optional `context`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "FinishWebAuthnRegistration",
+    "op_kind": "MUTATION",
+    "request_msg": "FinishWebAuthnRegistrationRequest",
+    "body": "`challenge_id: \"<seed:code>\"`, `public_key_credential_json: \"{...}\"`, `label: \"yubikey\"`",
+    "notes": "`challenge_id` from Start...; `public_key_credential_json` = WebAuthn attestation JSON. NOTE: a valid credential JSON requires a real authenticator/browser — not groundable from proto. Optional `context`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "ForgotPassword",
+    "op_kind": "MUTATION",
+    "request_msg": "ForgotPasswordRequest",
+    "body": "`identifier: \"alice@acme.test\"`",
+    "notes": "PUBLIC. `identifier` = username or email. Optional `context`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "GenerateRecoveryCodes",
+    "op_kind": "MUTATION",
+    "request_msg": "GenerateRecoveryCodesRequest",
+    "body": "`user_id: \"<seed:user_id>\"`, `count: 10`",
+    "notes": "`count` clamped server-side (default 10). Optional `context`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "GetJwks",
+    "op_kind": "READ_ONLY",
+    "request_msg": "GetJwksRequest",
+    "body": "`{}` (empty)",
+    "notes": "PUBLIC. Only optional `context`; no required fields."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "GetMfaPolicy",
+    "op_kind": "READ_ONLY",
+    "request_msg": "GetMfaPolicyRequest",
+    "body": "`tenant_id: \"<seed:tenant_id>\"`",
+    "notes": "Optional `context`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "GetSession",
+    "op_kind": "READ_ONLY",
+    "request_msg": "GetSessionRequest",
+    "body": "`session_id: \"<seed:session_id>\"`",
+    "notes": "session_id ref."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "GetUser",
+    "op_kind": "READ_ONLY",
+    "request_msg": "GetUserRequest",
+    "body": "`user_id: \"<seed:user_id>\"`",
+    "notes": "Lookup-by oneof-style: provide ONE of `user_id` / `username` / `email` (not a proto oneof, but only one needed)."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "IntrospectToken",
+    "op_kind": "READ_ONLY",
+    "request_msg": "IntrospectTokenRequest",
+    "body": "`token: \"<seed:token>\"`",
+    "notes": "Optional `context`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "IssueMfaChallenge",
+    "op_kind": "MUTATION",
+    "request_msg": "IssueMfaChallengeRequest",
+    "body": "`user_id: \"<seed:user_id>\"`, `factor_kind: AUTH_FACTOR_KIND_TOTP`, `purpose: MFA_CHALLENGE_PURPOSE_SENSITIVE_OPERATION`",
+    "notes": "`factor_kind` enum (AuthFactorKind), `purpose` enum (MfaChallengePurpose), both non-UNSPECIFIED. Optional `device_fingerprint`, `ip_address`, `context`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "ListDevices",
+    "op_kind": "READ_ONLY",
+    "request_msg": "ListDevicesRequest",
+    "body": "`user_id: \"<seed:user_id>\"`",
+    "notes": "Optional `page` (PageRequest), `context`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "ListMfaFactors",
+    "op_kind": "READ_ONLY",
+    "request_msg": "ListMfaFactorsRequest",
+    "body": "`user_id: \"<seed:user_id>\"`",
+    "notes": "Optional `context`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "ListSessions",
+    "op_kind": "READ_ONLY",
+    "request_msg": "ListSessionsRequest",
+    "body": "`user_id: \"<seed:user_id>\"`",
+    "notes": "Optional `active_only: true`, `page` (PageRequest)."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "ListUsers",
+    "op_kind": "READ_ONLY",
+    "request_msg": "ListUsersRequest",
+    "body": "`tenant_id: \"<seed:tenant_id>\"`",
+    "notes": "Optional filters: `account_kind` (AccountKind), `status` (UserStatus), `page` (PageRequest)."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "ListWebAuthnCredentials",
+    "op_kind": "READ_ONLY",
+    "request_msg": "ListWebAuthnCredentialsRequest",
+    "body": "`user_id: \"<seed:user_id>\"`",
+    "notes": "Optional `context`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "Login",
+    "op_kind": "MUTATION",
+    "request_msg": "LoginRequest",
+    "body": "`username: \"alice\"`, `password: \"Str0ng!Passw0rd\"`, `device_type: DEVICE_TYPE_API`, `device_name: \"cli\"`",
+    "notes": "PUBLIC. `device_type` enum (DeviceType, non-UNSPECIFIED). MFA step-2 fields (`mfa_otp_id`,`totp_code`,`recovery_code`) only on second call after `mfa_required=true`. Optional `ip_address`,`user_agent`,`device_id`,`tenant_hint`,`project_hint`,`access_surface`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "Logout",
+    "op_kind": "MUTATION",
+    "request_msg": "LogoutRequest",
+    "body": "`session_id: \"<seed:session_id>\"`",
+    "notes": "Optional `all_sessions: true` to revoke all, `revoke_reason`, `context`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "PutMfaPolicy",
+    "op_kind": "MUTATION",
+    "request_msg": "PutMfaPolicyRequest",
+    "body": "`tenant_id: \"<seed:tenant_id>\"`, `require_mfa: true`",
+    "notes": "Optional `context`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "RefreshSession",
+    "op_kind": "MUTATION",
+    "request_msg": "RefreshSessionRequest",
+    "body": "`session_id: \"<seed:session_id>\"`, `ttl_seconds: 3600`",
+    "notes": "session_id ref."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "RefreshToken",
+    "op_kind": "MUTATION",
+    "request_msg": "RefreshTokenRequest",
+    "body": "`refresh_token: \"<seed:refresh_token>\"`",
+    "notes": "PUBLIC. Provide `refresh_token` (token-family credential) OR legacy `session_id`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "RenamePasskey",
+    "op_kind": "MUTATION",
+    "request_msg": "RenamePasskeyRequest",
+    "body": "`user_id: \"<seed:user_id>\"`, `credential_id: \"<seed:record_id>\"`, `new_label: \"work key\"`",
+    "notes": "`credential_id` ref (WebAuthn credential id; no dedicated seed key — use record_id). Optional `context`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "ResendOTP",
+    "op_kind": "MUTATION",
+    "request_msg": "ResendOTPRequest",
+    "body": "`original_otp_id: \"<seed:code>\"`, `reason: \"not_received\"`",
+    "notes": "`original_otp_id` refs a prior OTP id. `reason` is free string (suggested: not_received \\|expired \\|delivery_failed)."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "ResetPassword",
+    "op_kind": "MUTATION",
+    "request_msg": "ResetPasswordRequest",
+    "body": "`otp_id: \"<seed:reset_otp_id>\"`, `code: \"<seed:reset_otp_code>\"`, `new_password: \"N3w!Passw0rd9\"`",
+    "notes": "PUBLIC. `otp_id`/`code` from a runtime-issued PASSWORD_RESET OTP. Optional `context`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "RevokeDevice",
+    "op_kind": "MUTATION",
+    "request_msg": "RevokeDeviceRequest",
+    "body": "`device_id: \"<seed:device_id>\"`, `reason: \"lost device\"`",
+    "notes": "`device_id` ref from a real Login-created Device row. Optional `context`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "RevokeRecoveryCodes",
+    "op_kind": "MUTATION",
+    "request_msg": "RevokeRecoveryCodesRequest",
+    "body": "`user_id: \"<seed:user_id>\"`",
+    "notes": "Optional `context`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "RevokeSession",
+    "op_kind": "MUTATION",
+    "request_msg": "RevokeSessionRequest",
+    "body": "`session_id: \"<seed:session_id>\"`, `revoke_reason: \"user logout\"`",
+    "notes": "Or revoke all for a principal: `principal_id: \"<seed:subject>\"`, `all_for_principal: true`. Optional `context`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "SendOTP",
+    "op_kind": "MUTATION",
+    "request_msg": "SendOTPRequest",
+    "body": "`user_id: \"<seed:user_id>\"`, `otp_type: OTP_TYPE_EMAIL_VERIFICATION`",
+    "notes": "`otp_type` enum (OTPType, non-UNSPECIFIED). Optional `correlation_id`, `context`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "SendPhoneVerification",
+    "op_kind": "MUTATION",
+    "request_msg": "SendPhoneVerificationRequest",
+    "body": "`user_id: \"<seed:user_id>\"`, `phone: \"+15551234567\"`",
+    "notes": "`phone` = E.164. Complete with VerifyOTP. Optional `context`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "StartWebAuthnAuthentication",
+    "op_kind": "MUTATION",
+    "request_msg": "StartWebAuthnAuthenticationRequest",
+    "body": "`user_id: \"<seed:user_id>\"`, `tenant_id: \"<seed:tenant_id>\"`",
+    "notes": "PUBLIC. Optional `project_id`, `context`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "StartWebAuthnRegistration",
+    "op_kind": "MUTATION",
+    "request_msg": "StartWebAuthnRegistrationRequest",
+    "body": "`user_id: \"<seed:user_id>\"`, `label: \"yubikey\"`, `tenant_id: \"<seed:tenant_id>\"`",
+    "notes": "Optional `project_id`, `context`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "UpdateUser",
+    "op_kind": "MUTATION",
+    "request_msg": "UpdateUserRequest",
+    "body": "`user_id: \"<seed:user_id>\"`, `full_name: \"Alice B\"`, `email: \"alice2@acme.test\"`, `tenant_id: \"<seed:tenant_id>\"`",
+    "notes": "Optional: `account_kind` (AccountKind), `project_id`, `profile_attributes`, `external_provider_id`, `external_subject`, `context`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "ValidateCSRF",
+    "op_kind": "READ_ONLY",
+    "request_msg": "ValidateCSRFRequest",
+    "body": "`session_id: \"<seed:session_id>\"`, `csrf_token: \"<seed:csrf_token>\"`",
+    "notes": "Server-side sessions only. csrf_token = value from csrf cookie/header (runtime-issued at Login)."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "ValidateToken",
+    "op_kind": "READ_ONLY",
+    "request_msg": "ValidateTokenRequest",
+    "body": "`token: \"<seed:token>\"`, `token_type: TOKEN_TYPE_JWT_ACCESS`",
+    "notes": "`token_type` enum (TokenType, non-UNSPECIFIED). `token` = raw JWT or session_token."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "VerifyMfaChallenge",
+    "op_kind": "READ_ONLY",
+    "request_msg": "VerifyMfaChallengeRequest",
+    "body": "`challenge_id: \"<seed:code>\"`, `code: \"123456\"`",
+    "notes": "`challenge_id` from IssueMfaChallenge; `code` = TOTP/OTP/recovery proof (runtime-dependent). Optional `device_fingerprint`, `context`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "VerifyOTP",
+    "op_kind": "READ_ONLY",
+    "request_msg": "VerifyOTPRequest",
+    "body": "`otp_id: \"<seed:code>\"` (the OTP id from SendOTP), `code: \"123456\"`",
+    "notes": "`otp_id` is an OTP-handle ref (depends on a prior SendOTP); `code` is the 6-digit plaintext. NOTE: a *correct* code cannot be grounded from proto alone — depends on the OTP issued at runtime."
+  },
+  {
+    "file": "authz.md",
+    "rpc": "ActivateCanary",
+    "op_kind": "DESTRUCTIVE",
+    "request_msg": "ActivateCanaryRequest",
+    "body": "`{actor:{subject:\"<seed:subject>\",break_glass:true,break_glass_reason:\"sdk perf bench\",break_glass_expires_at_unix:<seed:gov_exp>}, policy_version_id:\"<seed:policy_id>\", scope_kind:\"CANARY_SCOPE_KIND_PERCENT\", scope_values:[\"10\"], success_window_secs:300, metric_threshold:0.99, min_samples:100, expected_revision:<n>}`",
+    "notes": "scope `udb:authz:admin`. scope_kind enum→NAME; PERCENT → scope_values=[1..100]; NODE/TENANT → id list."
+  },
+  {
+    "file": "authz.md",
+    "rpc": "ActivatePolicyVersion",
+    "op_kind": "DESTRUCTIVE",
+    "request_msg": "ActivatePolicyVersionRequest",
+    "body": "`{actor:{subject:\"<seed:subject>\",break_glass:true,break_glass_reason:\"sdk perf bench\",break_glass_expires_at_unix:<seed:gov_exp>}, policy_version_id:\"<seed:policy_id>\", expected_revision:<n>, expected_policy_revision:<n>, expected_relationship_revision:<n>}`",
+    "notes": "scope `udb:authz:admin`. Mutates live snapshot. revisions = optimistic concurrency (use values from GetAuthzRevision)."
+  },
+  {
+    "file": "authz.md",
+    "rpc": "ApprovePolicyDraft",
+    "op_kind": "MUTATION",
+    "request_msg": "ApprovePolicyDraftRequest",
+    "body": "`{actor:{subject:\"<seed:subject>\",break_glass:true,break_glass_reason:\"sdk perf bench\",break_glass_expires_at_unix:<seed:gov_exp>}, draft_id:\"<seed:policy_draft_id>\", reviewer:\"<seed:subject>\", reason:\"ok\"}`",
+    "notes": "scope `udb:authz:policy:approve`. Reviewer should differ from submitter (separation of duties)."
+  },
+  {
+    "file": "authz.md",
+    "rpc": "AssignRole",
+    "op_kind": "MUTATION",
+    "request_msg": "AssignRoleRequest",
+    "body": "`{user_id:\"<seed:user_id>\", role_id:\"<seed:role_id>\", domain:\"<seed:tenant_id>\", assigned_by:\"<seed:subject>\", principal_kind:\"PRINCIPAL_KIND_USER\", tenant_id:\"<seed:tenant_id>\"}`",
+    "notes": "scope `udb:authz:assign-role`. REQUIRED: user_id, role_id, domain, assigned_by. expires_at = google.protobuf.Timestamp (optional). role_id must reference an existing role."
+  },
+  {
+    "file": "authz.md",
+    "rpc": "Authorize",
+    "op_kind": "READ_ONLY",
+    "request_msg": "AuthzRequest",
+    "body": "`{principal:{subject:\"<seed:subject>\",user_id:\"<seed:user_id>\",tenant_id:\"<seed:tenant_id>\",scopes:[...]}, tenant_id:\"<seed:tenant_id>\", project_id:\"<seed:project>\", resource:{resource_type:\"<seed:resource>\",table:\"<table>\"}, action:\"<seed:action>\", domain:\"<seed:tenant_id>\", requested_scopes:[\"<scope>\"]}`",
+    "notes": "scope `udb:authz:authorize`. All fields proto-optional; principal+resource+action+domain are the decision inputs."
+  },
+  {
+    "file": "authz.md",
+    "rpc": "BatchCheckPermissions",
+    "op_kind": "READ_ONLY",
+    "request_msg": "BatchCheckPermissionsRequest",
+    "body": "`{user_id:\"<seed:user_id>\", domain:\"<seed:tenant_id>\", checks:[{object:\"<seed:object>\",action:\"<seed:action>\"}], context:{ip_address:\"127.0.0.1\"}}`",
+    "notes": "scope `udb:authz:batch-check-permissions`. checks = repeated PermissionCheck{object,action}."
+  },
+  {
+    "file": "authz.md",
+    "rpc": "CheckAccess",
+    "op_kind": "READ_ONLY",
+    "request_msg": "CheckAccessRequest",
+    "body": "`{user_id:\"<seed:user_id>\", domain:\"<seed:tenant_id>\", object:\"<seed:object>\", action:\"<seed:action>\"}`",
+    "notes": "scope `udb:authz:check-access`. REQUIRED: user_id, domain, object, action. optional: context, principal, resource, purpose, tenant_id, project_id, attributes."
+  },
+  {
+    "file": "authz.md",
+    "rpc": "CreatePolicyDraft",
+    "op_kind": "MUTATION",
+    "request_msg": "CreatePolicyDraftRequest",
+    "body": "`{actor:{subject:\"<seed:subject>\",tenant_id:\"<seed:tenant_id>\",break_glass:true,break_glass_reason:\"sdk perf bench\",break_glass_expires_at_unix:<seed:gov_exp>}, tenant_id:\"<seed:tenant_id>\", project_id:\"<seed:project>\", policy_set_name:\"default\", title:\"draft 1\", change_reason:\"init\", document:{policies:[...]}}` or `{...,branch_from_active:true}` to clone active.",
+    "notes": "scope `udb:authz:policy:write`. actor must carry `authz:policy:write`. document = PolicyDocument."
+  },
+  {
+    "file": "authz.md",
+    "rpc": "CreatePolicyRule",
+    "op_kind": "MUTATION",
+    "request_msg": "CreatePolicyRuleRequest",
+    "body": "`{subject:\"<seed:subject>\", domain:\"<seed:tenant_id>\", object:\"<seed:object>\", action:\"<seed:action>\", effect:\"POLICY_EFFECT_ALLOW\", created_by:\"<seed:subject>\", tenant_id:\"<seed:tenant_id>\"}`",
+    "notes": "scope `udb:authz:create-policy-rule`. REQUIRED: subject, domain, object, action, effect, created_by."
+  },
+  {
+    "file": "authz.md",
+    "rpc": "CreateRole",
+    "op_kind": "MUTATION",
+    "request_msg": "CreateRoleRequest",
+    "body": "`{name:\"reader\", created_by:\"<seed:subject>\", role_code:\"<seed:role_code>\", domain:\"<seed:tenant_id>\", tenant_id:\"<seed:tenant_id>\", scope_type:\"ROLE_SCOPE_TYPE_TENANT\"}`",
+    "notes": "scope `udb:authz:create-role`. REQUIRED: name, created_by. scope_type enum→NAME."
+  },
+  {
+    "file": "authz.md",
+    "rpc": "DeletePolicyRule",
+    "op_kind": "MUTATION",
+    "request_msg": "DeletePolicyRuleRequest",
+    "body": "`{policy_id:\"<seed:policy_id>\", deleted_by:\"<seed:subject>\"}`",
+    "notes": "scope `udb:authz:delete-policy-rule`."
+  },
+  {
+    "file": "authz.md",
+    "rpc": "DeleteRole",
+    "op_kind": "MUTATION",
+    "request_msg": "DeleteRoleRequest",
+    "body": "`{role_id:\"<seed:role_id>\", deleted_by:\"<seed:subject>\"}`",
+    "notes": "scope `udb:authz:delete-role`. Both REQUIRED. Soft-delete; assignments revoked."
+  },
+  {
+    "file": "authz.md",
+    "rpc": "DiffPolicyDraft",
+    "op_kind": "READ_ONLY",
+    "request_msg": "DiffPolicyDraftRequest",
+    "body": "`{actor:{subject:\"<seed:subject>\",break_glass:true,break_glass_reason:\"sdk perf bench\",break_glass_expires_at_unix:<seed:gov_exp>}, draft_id:\"<seed:policy_draft_id>\"}` (optional `against_version_id`)",
+    "notes": "scope `udb:authz:policy:read`."
+  },
+  {
+    "file": "authz.md",
+    "rpc": "ExplainPolicy",
+    "op_kind": "READ_ONLY",
+    "request_msg": "ExplainPolicyRequest",
+    "body": "`{actor:{subject:\"<seed:subject>\",break_glass:true,break_glass_reason:\"sdk perf bench\",break_glass_expires_at_unix:<seed:gov_exp>}, tenant_id:\"<seed:tenant_id>\", project_id:\"<seed:project>\", test_case:{principal:{subject:\"<seed:subject>\"}, resource:{resource_type:\"<seed:resource>\"}, action:\"<seed:action>\"}}` (empty draft_id = active snapshot)",
+    "notes": "scope `udb:authz:policy:read`. test_case = single SimulationCase."
+  },
+  {
+    "file": "authz.md",
+    "rpc": "GetAuthzRevision",
+    "op_kind": "READ_ONLY",
+    "request_msg": "GetAuthzRevisionRequest",
+    "body": "`{tenant_id:\"<seed:tenant_id>\", project_id:\"<seed:project>\"}`",
+    "notes": "scope `udb:authz:policy:read`. No actor field."
+  },
+  {
+    "file": "authz.md",
+    "rpc": "GetCanaryStatus",
+    "op_kind": "READ_ONLY",
+    "request_msg": "GetCanaryStatusRequest",
+    "body": "`{actor:{subject:\"<seed:subject>\",break_glass:true,break_glass_reason:\"sdk perf bench\",break_glass_expires_at_unix:<seed:gov_exp>}, canary_id:\"<seed:policy_id>\"}`",
+    "notes": "scope `udb:authz:policy:read`."
+  },
+  {
+    "file": "authz.md",
+    "rpc": "GetNativeAccess",
+    "op_kind": "READ_ONLY",
+    "request_msg": "NativeAccessRequest",
+    "body": "`{principal:{subject:\"<seed:subject>\",user_id:\"<seed:user_id>\",tenant_id:\"<seed:tenant_id>\"}, tenant_id:\"<seed:tenant_id>\", project_id:\"<seed:project>\", resource:{resource_type:\"<seed:resource>\",table:\"<table>\"}, action:\"<seed:action>\", backend:\"postgres\", requested_scopes:[\"<scope>\"]}`",
+    "notes": "scope `udb:authz:get-native-access`. Mints DSN only when decision allows; backend defaults \"postgres\"."
+  },
+  {
+    "file": "authz.md",
+    "rpc": "GetPolicyBundle",
+    "op_kind": "READ_ONLY",
+    "request_msg": "PolicyBundleRequest",
+    "body": "`{tenant_id:\"<seed:tenant_id>\", project_id:\"<seed:project>\", domain:\"<seed:tenant_id>\"}`",
+    "notes": "scope `udb:authz:get-policy-bundle`."
+  },
+  {
+    "file": "authz.md",
+    "rpc": "GetPolicyRule",
+    "op_kind": "READ_ONLY",
+    "request_msg": "GetPolicyRuleRequest",
+    "body": "`{policy_id:\"<seed:policy_id>\"}`",
+    "notes": "scope `udb:authz:get-policy-rule`."
+  },
+  {
+    "file": "authz.md",
+    "rpc": "GetRole",
+    "op_kind": "READ_ONLY",
+    "request_msg": "GetRoleRequest",
+    "body": "`{role_id:\"<seed:role_id>\"}` or `{role_code:\"<seed:role_code>\", domain:\"<seed:tenant_id>\"}`",
+    "notes": "scope `udb:authz:get-role`. role_code is alternative lookup."
+  },
+  {
+    "file": "authz.md",
+    "rpc": "InvalidatePolicyBundles",
+    "op_kind": "DESTRUCTIVE",
+    "request_msg": "InvalidatePolicyBundlesRequest",
+    "body": "`{actor:{subject:\"<seed:subject>\",break_glass:true,break_glass_reason:\"sdk perf bench\",break_glass_expires_at_unix:<seed:gov_exp>}, tenant_id:\"<seed:tenant_id>\", project_id:\"<seed:project>\", reason:\"rotate\"}`",
+    "notes": "scope `udb:authz:admin`."
+  },
+  {
+    "file": "authz.md",
+    "rpc": "LintAuthzPolicies",
+    "op_kind": "READ_ONLY",
+    "request_msg": "LintAuthzPoliciesRequest",
+    "body": "`{}` (no fields)",
+    "notes": "scope `udb:authz:lint-authz-policies`. Empty request message."
+  },
+  {
+    "file": "authz.md",
+    "rpc": "ListAccessDecisionAudits",
+    "op_kind": "READ_ONLY",
+    "request_msg": "ListAccessDecisionAuditsRequest",
+    "body": "`{user_id:\"<seed:user_id>\", domain:\"<seed:tenant_id>\", page:{page_size:50}}`",
+    "notes": "scope `udb:authz:list-access-decision-audits`. all OPTIONAL: user_id, domain, correlation_id, page (PageRequest)."
+  },
+  {
+    "file": "authz.md",
+    "rpc": "ListPolicyRules",
+    "op_kind": "READ_ONLY",
+    "request_msg": "ListPolicyRulesRequest",
+    "body": "`{domain:\"<seed:tenant_id>\", subject:\"<seed:subject>\", object:\"<seed:object>\", active_only:true, page:{page_size:50}}`",
+    "notes": "scope `udb:authz:list-policy-rules`. all filters optional."
+  },
+  {
+    "file": "authz.md",
+    "rpc": "ListPolicyVersions",
+    "op_kind": "READ_ONLY",
+    "request_msg": "ListPolicyVersionsRequest",
+    "body": "`{actor:{subject:\"<seed:subject>\",break_glass:true,break_glass_reason:\"sdk perf bench\",break_glass_expires_at_unix:<seed:gov_exp>}, tenant_id:\"<seed:tenant_id>\", project_id:\"<seed:project>\", policy_set_id:\"<seed:policy_id>\", state:\"POLICY_VERSION_STATE_ACTIVE\", page:{page_size:50}}`",
+    "notes": "scope `udb:authz:policy:read`. state enum→NAME."
+  },
+  {
+    "file": "authz.md",
+    "rpc": "ListRoles",
+    "op_kind": "READ_ONLY",
+    "request_msg": "ListRolesRequest",
+    "body": "`{domain:\"<seed:tenant_id>\", active_only:true, page:{page_size:50}}`",
+    "notes": "scope `udb:authz:list-roles`."
+  },
+  {
+    "file": "authz.md",
+    "rpc": "ListUserPermissions",
+    "op_kind": "READ_ONLY",
+    "request_msg": "ListUserPermissionsRequest",
+    "body": "`{user_id:\"<seed:user_id>\", domain:\"<seed:tenant_id>\"}`",
+    "notes": "scope `udb:authz:list-user-permissions`. Both REQUIRED."
+  },
+  {
+    "file": "authz.md",
+    "rpc": "ListUserRoles",
+    "op_kind": "READ_ONLY",
+    "request_msg": "ListUserRolesRequest",
+    "body": "`{user_id:\"<seed:user_id>\", domain:\"<seed:tenant_id>\", active_only:true}`",
+    "notes": "scope `udb:authz:list-user-roles`."
+  },
+  {
+    "file": "authz.md",
+    "rpc": "MigrateLegacyPolicies",
+    "op_kind": "DESTRUCTIVE",
+    "request_msg": "MigrateLegacyPoliciesRequest",
+    "body": "`{actor:{subject:\"<seed:subject>\",break_glass:true,break_glass_reason:\"sdk perf bench\",break_glass_expires_at_unix:<seed:gov_exp>}, tenant_id:\"<seed:tenant_id>\", project_id:\"<seed:project>\", apply:false, policy_set_name:\"default\"}`",
+    "notes": "scope `udb:authz:admin`. apply=false → report only; apply=true → writes governed draft."
+  },
+  {
+    "file": "authz.md",
+    "rpc": "PromoteCanary",
+    "op_kind": "DESTRUCTIVE",
+    "request_msg": "PromoteCanaryRequest",
+    "body": "`{actor:{subject:\"<seed:subject>\",break_glass:true,break_glass_reason:\"sdk perf bench\",break_glass_expires_at_unix:<seed:gov_exp>}, canary_id:\"<seed:policy_id>\", expected_revision:<n>}`",
+    "notes": "scope `udb:authz:admin`. Fails unless canary promote-eligible."
+  },
+  {
+    "file": "authz.md",
+    "rpc": "PutAuthzPolicy",
+    "op_kind": "MUTATION",
+    "request_msg": "PutAuthzPolicyRequest",
+    "body": "`{policy:{id:\"<seed:policy_id>\", priority:100, enabled:true, effect:\"allow\", tenant:\"<seed:tenant_id>\", subject:\"<seed:subject>\", action:\"<seed:action>\", resource:\"<seed:resource>\", required_scopes:[\"<scope>\"]}}`",
+    "notes": "scope `udb:authz:put-authz-policy`. policy = AuthzPolicyRecord; effect is a string field here (\"allow\"/\"deny\")."
+  },
+  {
+    "file": "authz.md",
+    "rpc": "PutRelationship",
+    "op_kind": "MUTATION",
+    "request_msg": "PutRelationshipRequest",
+    "body": "`{tuple:{subject:\"<seed:subject>\", relation:\"<seed:relation>\", object:\"<seed:object>\", tenant:\"<seed:tenant_id>\", project:\"<seed:project>\", source:\"manual\"}}`",
+    "notes": "scope `udb:authz:put-relationship`. tuple = RelationshipTuple."
+  },
+  {
+    "file": "authz.md",
+    "rpc": "PutRoleBinding",
+    "op_kind": "MUTATION",
+    "request_msg": "PutRoleBindingRequest",
+    "body": "`{binding:{subject:\"<seed:subject>\", role:\"<seed:role>\", tenant:\"<seed:tenant_id>\", project:\"<seed:project>\", source:\"manual\"}}`",
+    "notes": "scope `udb:authz:put-role-binding`. binding = RoleBinding. Returns AuthMutationResponse."
+  },
+  {
+    "file": "authz.md",
+    "rpc": "RejectPolicyDraft",
+    "op_kind": "MUTATION",
+    "request_msg": "RejectPolicyDraftRequest",
+    "body": "`{actor:{subject:\"<seed:subject>\",break_glass:true,break_glass_reason:\"sdk perf bench\",break_glass_expires_at_unix:<seed:gov_exp>}, draft_id:\"<seed:policy_draft_id>\", reviewer:\"<seed:subject>\", reason:\"nack\"}`",
+    "notes": "scope `udb:authz:policy:approve`."
+  },
+  {
+    "file": "authz.md",
+    "rpc": "RevokeRole",
+    "op_kind": "MUTATION",
+    "request_msg": "RevokeRoleRequest",
+    "body": "`{user_id:\"<seed:user_id>\", user_role_id:\"<seed:user_role_id>\", reason:\"rotation\", revoked_by:\"<seed:subject>\"}`",
+    "notes": "scope `udb:authz:revoke-role`. user_role_id is the assignment id (from AssignRole/ListUserRoles), not role_id."
+  },
+  {
+    "file": "authz.md",
+    "rpc": "RollbackPolicyVersion",
+    "op_kind": "DESTRUCTIVE",
+    "request_msg": "RollbackPolicyVersionRequest",
+    "body": "`{actor:{subject:\"<seed:subject>\",break_glass:true,break_glass_reason:\"sdk perf bench\",break_glass_expires_at_unix:<seed:gov_exp>}, policy_set_id:\"<seed:policy_id>\", target_version_id:\"<seed:policy_id>\", change_reason:\"revert\"}`",
+    "notes": "scope `udb:authz:admin`. target_version_id empty = policy set's rollback_version_id."
+  },
+  {
+    "file": "authz.md",
+    "rpc": "SeedBuiltinRoles",
+    "op_kind": "MUTATION",
+    "request_msg": "SeedBuiltinRolesRequest",
+    "body": "`{actor:{subject:\"<seed:subject>\",break_glass:true,break_glass_reason:\"sdk perf bench\",break_glass_expires_at_unix:<seed:gov_exp>}, tenant_id:\"<seed:tenant_id>\", project_id:\"<seed:project>\"}`",
+    "notes": "scope `udb:authz:admin`."
+  },
+  {
+    "file": "authz.md",
+    "rpc": "SimulatePolicy",
+    "op_kind": "MUTATION",
+    "request_msg": "SimulatePolicyRequest",
+    "body": "`{actor:{subject:\"<seed:subject>\",break_glass:true,break_glass_reason:\"sdk perf bench\",break_glass_expires_at_unix:<seed:gov_exp>}, tenant_id:\"<seed:tenant_id>\", project_id:\"<seed:project>\", draft_id:\"<seed:policy_draft_id>\", cases:[{principal:{subject:\"<seed:subject>\"}, resource:{resource_type:\"<seed:resource>\"}, action:\"<seed:action>\", label:\"c1\"}], persist:false}`",
+    "notes": "scope `udb:authz:policy:read` (note op_kind=MUTATION but scope is read). cases = repeated SimulationCase. Empty draft_id + candidate = ad-hoc PolicyDocument. Never mutates durable state."
+  },
+  {
+    "file": "authz.md",
+    "rpc": "SubmitPolicyDraft",
+    "op_kind": "MUTATION",
+    "request_msg": "SubmitPolicyDraftRequest",
+    "body": "`{actor:{subject:\"<seed:subject>\",break_glass:true,break_glass_reason:\"sdk perf bench\",break_glass_expires_at_unix:<seed:gov_exp>}, draft_id:\"<seed:policy_draft_id>\", expected_updated_at_unix:<epoch>}`",
+    "notes": "scope `udb:authz:policy:write`."
+  },
+  {
+    "file": "authz.md",
+    "rpc": "UpdatePolicyDraft",
+    "op_kind": "MUTATION",
+    "request_msg": "UpdatePolicyDraftRequest",
+    "body": "`{actor:{subject:\"<seed:subject>\",break_glass:true,break_glass_reason:\"sdk perf bench\",break_glass_expires_at_unix:<seed:gov_exp>}, draft_id:\"<seed:policy_draft_id>\", document:{...}, change_reason:\"edit\", expected_updated_at_unix:<epoch>, title:\"draft 1\"}`",
+    "notes": "scope `udb:authz:policy:write`. expected_updated_at_unix = optimistic-concurrency token (must equal draft's current updated_at)."
+  },
+  {
+    "file": "authz.md",
+    "rpc": "UpdateRole",
+    "op_kind": "MUTATION",
+    "request_msg": "UpdateRoleRequest",
+    "body": "`{role_id:\"<seed:role_id>\", updated_by:\"<seed:subject>\", name:\"reader-2\", description:\"...\", is_active:true}`",
+    "notes": "scope `udb:authz:update-role`. REQUIRED: role_id, updated_by. is_active is `optional bool`."
+  },
+  {
+    "file": "control_plane.md",
+    "rpc": "AckStatus",
+    "op_kind": "MUTATION",
+    "request_msg": "`AckStatusRequest`",
+    "body": "`{ node_id: \"<seed:node_id>\", resource_type: \"RESOURCE_TYPE_BACKEND_TARGET_DEFINITION\", context: { tenant: { tenant_id: \"<seed:tenant_id>\" } } }`",
+    "notes": "Per-node ack visibility (named MUTATION but returns read-only status). Requires a real `node_id` (a node that has connected) + a concrete `resource_type` (not UNSPECIFIED). Fields: node_id(string), resource_type(enum), context(RequestContext). HTTP GET /v1/control/node-states/{node_id}:ack-status."
+  },
+  {
+    "file": "control_plane.md",
+    "rpc": "DeltaResources",
+    "op_kind": "MUTATION",
+    "request_msg": "`stream DeltaDiscoveryRequest`",
+    "body": "First stream message (initial subscribe): `{ node_id: \"<seed:node_id>\", resource_type: \"RESOURCE_TYPE_BACKEND_TARGET_DEFINITION\", response_nonce: \"\", resource_names_subscribe: [\"<seed:resource_name>\"], resource_names_unsubscribe: [], initial_resource_versions: {}, context: { tenant: { tenant_id: \"<seed:tenant_id>\" } } }`",
+    "notes": "**Bidi stream.** Valid first request = initial delta subscription: `response_nonce` empty, `initial_resource_versions` empty (node holds nothing yet), `error_detail` absent. `resource_names_subscribe` empty == wildcard/all. Later ACK echoes server `nonce` in `response_nonce`; NACK sets `error_detail`. Fields: node_id(string), resource_type(enum), response_nonce(string), resource_names_subscribe(repeated string), resource_names_unsubscribe(repeated string), initial_resource_versions(map<string,string>), error_detail(ErrorDetail), context(RequestContext)."
+  },
+  {
+    "file": "control_plane.md",
+    "rpc": "GetResources",
+    "op_kind": "READ_ONLY",
+    "request_msg": "`GetResourcesRequest`",
+    "body": "`{ resource_type: \"RESOURCE_TYPE_BACKEND_TARGET_DEFINITION\", tenant_id: \"<seed:tenant_id>\", resource_names: [], page: { page: 1, page_size: 50 }, context: { tenant: { tenant_id: \"<seed:tenant_id>\" } } }`",
+    "notes": "Unary on-demand fetch. `tenant_id` empty == fleet-wide (NULL-tenant) rows only; set == fleet-wide + that tenant's rows. `resource_names` empty == all matching type/tenant. Fields: resource_type(enum), tenant_id(string), resource_names(repeated string), page(PageRequest{page:int32,page_size:int32,page_token:string}), context(RequestContext). HTTP GET /v1/control/resources."
+  },
+  {
+    "file": "control_plane.md",
+    "rpc": "ListNodeStates",
+    "op_kind": "READ_ONLY",
+    "request_msg": "`ListNodeStatesRequest`",
+    "body": "`{ node_id: \"\", resource_type: \"RESOURCE_TYPE_UNSPECIFIED\", page: { page: 1, page_size: 50 }, context: { tenant: { tenant_id: \"<seed:tenant_id>\" } } }`",
+    "notes": "Admin visibility. `node_id` empty == all nodes; `resource_type` UNSPECIFIED == all types. To filter: node_id \"<seed:node_id>\". Fields: node_id(string), resource_type(enum), page(PageRequest), context(RequestContext). HTTP GET /v1/control/node-states."
+  },
+  {
+    "file": "control_plane.md",
+    "rpc": "StreamResources",
+    "op_kind": "MUTATION",
+    "request_msg": "`stream DiscoveryRequest`",
+    "body": "First stream message (subscribe, not yet ACKing): `{ node_id: \"<seed:node_id>\", resource_type: \"RESOURCE_TYPE_BACKEND_TARGET_DEFINITION\", version_info: \"\", response_nonce: \"\", resource_names: [], context: { tenant: { tenant_id: \"<seed:tenant_id>\" } } }`",
+    "notes": "**Bidi stream.** Valid first request = a subscription: `version_info` and `response_nonce` empty, `error_detail` absent (empty == not an ACK/NACK yet, just open the SotW subscription). Push definitions (`RESOURCE_TYPE_BACKEND_TARGET_DEFINITION`) before referencing policies (make-before-break). Subsequent ACK echoes server `version_info`+`response_nonce`; NACK sets `error_detail`. Fields: node_id(string), resource_type(enum), version_info(string), response_nonce(string), resource_names(repeated string), error_detail(ErrorDetail{code:int32,message:string}), context(RequestContext)."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "ActivateCatalog",
+    "op_kind": "DEST",
+    "request_msg": "CatalogVersionRequest",
+    "body": "`ctx (scopes:[udb:admin])`, `project_id:\"<seed:project>\"`, `version:\"<staged version>\"`",
+    "notes": "version from a prior StageCatalog (empty = latest STAGED). `reason`,`idempotency_key` optional."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "AnalyticalQuery",
+    "op_kind": "RO",
+    "request_msg": "AnalyticalQueryRequest",
+    "body": "`ctx`, `resource:StoreResource{backend:\"clickhouse\"}`, `query:\"SELECT 1\"`, `limit:100`",
+    "notes": "`parameters`(Struct),`dry_run`,`page_token` optional."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "ApplyMigration",
+    "op_kind": "MUT",
+    "request_msg": "MigrationApplyRequest",
+    "body": "`ctx (scopes:[udb:admin])`, `run_id:\"<seed:apply_run_id>\"`, `project_id:\"<seed:project>\"`, `approval_token:\"<seed:approval_token>\"`",
+    "notes": "run_id from a pre-approved PlanMigration run. `approval_token` from ApproveMigrationPlan is required for blocked ops. `idempotency_key` optional."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "ApproveMigrationPlan",
+    "op_kind": "MUT",
+    "request_msg": "MigrationRunRequest",
+    "body": "`ctx (scopes:[udb:admin])`, `run_id:\"<seed:approve_run_id>\"`, `project_id:\"<seed:project>\"`",
+    "notes": "run_id must be a non-dry-run plan awaiting review."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "BatchSelect",
+    "op_kind": "MUT",
+    "request_msg": "stream SelectRequest",
+    "body": "one stream element = same as Select body",
+    "notes": "client-streaming; send ≥1 SelectRequest. op_kind=MUT in proto despite read."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "BatchUpsert",
+    "op_kind": "MUT",
+    "request_msg": "stream UpsertRequest",
+    "body": "one stream element = same as Upsert body",
+    "notes": "client-streaming; send ≥1."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "BeginTx",
+    "op_kind": "MUT",
+    "request_msg": "stream Mutation",
+    "body": "stream of Mutation = `{ctx, operation:\"upsert\", message_type:\"<seed:message_type>\", payload:{...} }` then final `{commit:true}`",
+    "notes": "bidi-stream. Mutation fields: operation/message_type/record_json/payload/filter/collection/vector_points/commit/rollback/bucket/object_key/object_data/content_type/idempotency_key/tx_id. Send commit:true to finalize."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "CacheDelete",
+    "op_kind": "MUT",
+    "request_msg": "CacheDeleteRequest",
+    "body": "`ctx`, `resource:StoreResource{backend:\"redis\"}`, `key:\"<seed:object_key>\"`",
+    "notes": "`idempotency_key` optional."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "CacheGet",
+    "op_kind": "RO",
+    "request_msg": "CacheGetRequest",
+    "body": "`ctx`, `resource:StoreResource{backend:\"redis\"}`, `key:\"<seed:object_key>\"`, `touch:false`",
+    "notes": "key must have been CacheSet first for found=true."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "CacheScan",
+    "op_kind": "RO",
+    "request_msg": "CacheScanRequest",
+    "body": "`ctx`, `resource:StoreResource{backend:\"redis\"}`, `key_pattern:\"*\"`, `limit:50`",
+    "notes": "`page_token` optional."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "CacheSet",
+    "op_kind": "MUT",
+    "request_msg": "CacheSetRequest",
+    "body": "`ctx`, `resource:StoreResource{backend:\"redis\"}`, `key:\"<seed:object_key>\"`, `value:<bytes>`, `content_type:\"text/plain\"`, `ttl_seconds:60`",
+    "notes": "`only_if_absent`/`only_if_present`/`idempotency_key`/`metadata` optional."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "CreateMaterializedView",
+    "op_kind": "MUT",
+    "request_msg": "ViewDefinition",
+    "body": "`ctx`, `schema:\"public\"`, `name:\"mv_test\"`, `query:\"SELECT 1\"`, `with_data:true`",
+    "notes": "`ttl_days` optional."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "Delete",
+    "op_kind": "MUT",
+    "request_msg": "DeleteRequest",
+    "body": "`ctx`, `message_type:\"<seed:message_type>\"`, `filter:{id:\"<seed:record_id>\"}` (Struct)",
+    "notes": "`idempotency_key` optional. record_id must exist for affected_rows>0."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "DeletePolicy",
+    "op_kind": "MUT",
+    "request_msg": "PolicyRequest",
+    "body": "`ctx`, `policy_id:<seed:ds_policy_id>` (int64)",
+    "notes": "policy_id must exist."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "DismissDlqEvent",
+    "op_kind": "MUT",
+    "request_msg": "DlqActionRequest",
+    "body": "`ctx`, `dlq_id:\"<seed:dismiss_dlq_id>\"`",
+    "notes": "`reason` optional."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "DocumentDelete",
+    "op_kind": "MUT",
+    "request_msg": "DocumentDeleteRequest",
+    "body": "`ctx`, `resource:StoreResource{backend:\"mongodb\", resource_name:\"<seed:mongo_collection>\"}`, `document_id:\"<seed:document_id>\"`",
+    "notes": "`filter`(Struct) alternative to document_id. `idempotency_key` optional."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "DocumentFind",
+    "op_kind": "RO",
+    "request_msg": "DocumentFindRequest",
+    "body": "`ctx`, `resource:StoreResource{backend:\"mongodb\", resource_name:\"<seed:mongo_collection>\"}`, `filter:{}` (Struct), `limit:10`",
+    "notes": "empty filter matches all. `fields`,`sort`,`page_token` optional."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "DocumentGet",
+    "op_kind": "RO",
+    "request_msg": "DocumentGetRequest",
+    "body": "`ctx`, `resource:StoreResource{backend:\"mongodb\", resource_name:\"<seed:mongo_collection>\"}`, `document_id:\"<seed:document_id>\"`",
+    "notes": "`fields` optional. document must exist."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "DocumentUpsert",
+    "op_kind": "MUT",
+    "request_msg": "DocumentUpsertRequest",
+    "body": "`ctx`, `resource:StoreResource{backend:\"mongodb\", resource_name:\"<seed:mongo_collection>\"}`, `document_id:\"<seed:document_id>\"`, `document:{name:\"x\"}` (Struct)",
+    "notes": "`merge_fields`,`replace`,`idempotency_key` optional."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "DropResource",
+    "op_kind": "DEST",
+    "request_msg": "ResourceAdminRequest",
+    "body": "`ctx (scopes:[udb:admin])`, `backend:\"mongodb\"`, `resource_name:\"<seed:mongo_collection>\"`",
+    "notes": "destructive; resource must exist."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "EnqueueOutboxEvent",
+    "op_kind": "MUT",
+    "request_msg": "EnqueueOutboxEventRequest",
+    "body": "`ctx`, `topic:\"<seed:event_type>\"`, `partition_key:\"<seed:document_id>\"`, `payload:{event_id:\"<uuid>\", event_type:\"<seed:event_type>\", correlation_id:\"<uuid>\", document_id:\"<seed:document_id>\"}` (Struct)",
+    "notes": "payload Struct MUST contain event_id/event_type/correlation_id/document_id (per proto comment). `schema_uri`,`idempotency_key` optional."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "EnsureBaseline",
+    "op_kind": "MUT",
+    "request_msg": "EnsureBaselineRequest",
+    "body": "`ctx (scopes:[udb:admin])`",
+    "notes": "request carries only `context` (field 1). Idempotently seeds a baseline manual-review saga + retryable DLQ row for the VERIFIED principal's tenant/project. Privilege-creating: fail-closed, env-gated (UDB_ENABLE_ADMIN_SEED) and requires scope `udb:admin`. Returns `saga_ids`/`dlq_ids`/`device_id`."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "EnsureProject",
+    "op_kind": "MUT",
+    "request_msg": "EnsureProjectRequest",
+    "body": "`ctx (scopes:[udb:admin])`, `project_id:\"<seed:project>\"`, `name:\"My Project\"`, `cdc_topic_prefix:\"<seed:project>.\"`",
+    "notes": "idempotent. cdc_topic_prefix dot-terminated."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "EnsureResource",
+    "op_kind": "MUT",
+    "request_msg": "ResourceAdminRequest",
+    "body": "`ctx (scopes:[udb:admin])`, `backend:\"mongodb\"`, `resource_name:\"<seed:mongo_collection>\"`",
+    "notes": "`spec_json`(JSON),`idempotency_key`,`dry_run` optional."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "GeneratePresignedUrl",
+    "op_kind": "MUT",
+    "request_msg": "UrlRequest",
+    "body": "`ctx`, `bucket:\"<seed:bucket>\"`, `object_key:\"<seed:object_key>\"`, `method:\"GET\"`, `ttl_seconds:300`",
+    "notes": "`method` is HTTP verb string (GET/PUT). `content_type` optional."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "GenericDispatch",
+    "op_kind": "MUT",
+    "request_msg": "GenericDispatchRequest",
+    "body": "`ctx (scopes:[udb:dispatch])`, `backend:\"mongodb\"`, `operation:\"ping\"`",
+    "notes": "operation ∈ {ping, ensure_resource, drop_resource, list_resources}. resource_kind/resource_name/resource_uri/spec_json/idempotency_key/dry_run optional depending on op."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "GetAdminSummary",
+    "op_kind": "RO",
+    "request_msg": "AdminSummaryRequest",
+    "body": "`ctx (scopes:[udb:admin])`, `project_id:\"<seed:project>\"`, `with_probes:false`, `redact:false`",
+    "notes": "project_id optional (empty = all)."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "GetCapabilities",
+    "op_kind": "RO",
+    "request_msg": "CapabilitiesRequest",
+    "body": "`ctx`, `project_id:\"<seed:project>\"`",
+    "notes": "project_id optional (empty = default)."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "GetCatalogManifest",
+    "op_kind": "RO",
+    "request_msg": "CatalogManifestRequest",
+    "body": "`ctx`, `redact:false`",
+    "notes": "project from context."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "GetCatalogVersion",
+    "op_kind": "RO",
+    "request_msg": "CatalogVersionRequest",
+    "body": "`ctx (scopes:[udb:admin])`, `project_id:\"<seed:project>\"`, `version:\"\"`",
+    "notes": "empty version = active."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "GetCatalogVersions",
+    "op_kind": "RO",
+    "request_msg": "CatalogManifestRequest",
+    "body": "`ctx (scopes:[udb:admin])`, `redact:false`",
+    "notes": "note: uses CatalogManifestRequest `{context, redact}` — no project field; project from context."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "GetCdcStatus",
+    "op_kind": "RO",
+    "request_msg": "CdcControlRequest",
+    "body": "`ctx`, `slot_name:\"<cdc slot>\"`",
+    "notes": "slot_name = a configured CDC slot name (no dedicated seed key). `reason` optional."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "GetDlqEvent",
+    "op_kind": "RO",
+    "request_msg": "DlqEventRequest",
+    "body": "`ctx`, `dlq_id:\"<seed:dlq_id>\"`",
+    "notes": "dlq_id = an existing DLQ row id."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "GetHealthReport",
+    "op_kind": "RO",
+    "request_msg": "HealthReportRequest",
+    "body": "`ctx`, `with_probes:false`, `project_id:\"<seed:project>\"`",
+    "notes": "with_probes:true sends live backend probes."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "GetMigrationStatus",
+    "op_kind": "RO",
+    "request_msg": "MigrationRunRequest",
+    "body": "`ctx (scopes:[udb:admin])`, `run_id:\"<seed:migration_id>\"`, `project_id:\"<seed:project>\"`",
+    "notes": "run_id must exist. `idempotency_key` optional."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "GetObject",
+    "op_kind": "RO",
+    "request_msg": "ObjectRequest",
+    "body": "`ctx`, `bucket:\"<seed:bucket>\"`, `object_key:\"<seed:object_key>\"`",
+    "notes": "object must have been Put first. server-streams Chunk."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "GetSaga",
+    "op_kind": "RO",
+    "request_msg": "SagaRequest",
+    "body": "`ctx`, `saga_id:\"<seed:saga_id>\"`",
+    "notes": "saga_id must exist. `reason`,`idempotency_key` optional."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "GraphMutate",
+    "op_kind": "MUT",
+    "request_msg": "GraphMutationRequest",
+    "body": "`ctx`, `resource:StoreResource{backend:\"neo4j\"}`, `query:\"CREATE (n:Node {id:$id})\"`, `parameters:{id:\"<seed:record_id>\"}` (Struct)",
+    "notes": "`idempotency_key` optional."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "GraphQuery",
+    "op_kind": "RO",
+    "request_msg": "GraphQueryRequest",
+    "body": "`ctx`, `resource:StoreResource{backend:\"neo4j\"}`, `query:\"MATCH (n) RETURN n LIMIT 1\"`, `read_only:true`, `limit:10`",
+    "notes": "`parameters`(Struct),`page_token` optional. query syntax = backend (Cypher)."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "InitiateMultipartUpload",
+    "op_kind": "MUT",
+    "request_msg": "MultipartUploadRequest",
+    "body": "`ctx`, `bucket:\"<seed:bucket>\"`, `object_key:\"<seed:object_key>\"`, `content_type:\"application/octet-stream\"`, `part_count:1`, `ttl_seconds:300`",
+    "notes": "`idempotency_key` optional."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "LintPolicies",
+    "op_kind": "RO",
+    "request_msg": "CapabilitiesRequest",
+    "body": "`ctx`, `project_id:\"<seed:project>\"`",
+    "notes": "reuses CapabilitiesRequest."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "ListAdminAuditLogs",
+    "op_kind": "RO",
+    "request_msg": "AdminAuditLogRequest",
+    "body": "`ctx (scopes:[udb:admin or udb:admin:viewer])`, `limit:50`, `redact:false`",
+    "notes": "`operation_filter`,`actor_filter`,`tenant_id_filter`,`project_id_filter`,`page_token` optional."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "ListDlqEvents",
+    "op_kind": "RO",
+    "request_msg": "DlqListRequest",
+    "body": "`ctx`, `limit:50`",
+    "notes": "`topic`,`status_filter`(OPEN/REPLAYED/DISMISSED/QUARANTINED),`page_token` optional."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "ListMessageSchemas",
+    "op_kind": "RO",
+    "request_msg": "MessageSchemaListRequest",
+    "body": "`ctx`, `project_id:\"<seed:project>\"`",
+    "notes": "`client_catalog_version` optional."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "ListMigrationRuns",
+    "op_kind": "RO",
+    "request_msg": "MigrationRunListRequest",
+    "body": "`ctx (scopes:[udb:admin or udb:admin:viewer])`, `project_id:\"<seed:project>\"`, `limit:50`",
+    "notes": "`state_filter`,`page_token` optional."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "ListPolicies",
+    "op_kind": "RO",
+    "request_msg": "PolicyListRequest",
+    "body": "`ctx`, `include_disabled:false`, `limit:50`",
+    "notes": "`page_token` optional."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "ListProjects",
+    "op_kind": "RO",
+    "request_msg": "ProjectListRequest",
+    "body": "`ctx (scopes:[udb:admin])`, `limit:50`",
+    "notes": "`page_token` optional."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "ListResources",
+    "op_kind": "RO",
+    "request_msg": "ResourceAdminRequest",
+    "body": "`ctx (scopes:[udb:admin])`, `backend:\"mongodb\"`",
+    "notes": "`resource_name` ignored for list."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "ListSagas",
+    "op_kind": "RO",
+    "request_msg": "SagaListRequest",
+    "body": "`ctx`, `limit:50`",
+    "notes": "`tenant_id_filter`,`status_filter`(pending/in_progress/committed/compensated/failed_compensation/manual_review),`tx_id_filter`,`correlation_id_filter`,`page_token` optional."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "LookupMessageSchema",
+    "op_kind": "RO",
+    "request_msg": "MessageSchemaLookupRequest",
+    "body": "`ctx`, `project_id:\"<seed:project>\"`, `message_type:\"<seed:message_type>\"`",
+    "notes": "`client_catalog_version` optional (empty = active)."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "MarkSagaReviewed",
+    "op_kind": "MUT",
+    "request_msg": "SagaRequest",
+    "body": "`ctx`, `saga_id:\"<seed:mark_saga_id>\"`, `reason:\"reviewed\"`",
+    "notes": "saga must be in manual_review."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "PauseCdc",
+    "op_kind": "MUT",
+    "request_msg": "CdcControlRequest",
+    "body": "`ctx`, `slot_name:\"<cdc slot>\"`, `reason:\"maintenance\"`",
+    "notes": "slot_name must be a live slot."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "PlanMigration",
+    "op_kind": "MUT",
+    "request_msg": "MigrationPlanRequest",
+    "body": "`ctx (scopes:[udb:admin])`, `project_id:\"<seed:project>\"`, `dry_run:true`",
+    "notes": "returns run_id."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "PreviewCdcRedaction",
+    "op_kind": "RO",
+    "request_msg": "CdcRedactionPreviewRequest",
+    "body": "`ctx`, `message_type:\"<seed:message_type>\"`, `topic:\"<seed:event_type>\"`, `payload_json:<bytes JSON>`, `redaction_mode:\"mask\"`, `redaction_version:1`",
+    "notes": "`schema_uri` optional. payload_json = sample event JSON."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "PublishCDC",
+    "op_kind": "MUT",
+    "request_msg": "CDCSubscriptionRequest",
+    "body": "`ctx`, `topic_pattern:\"*\"`",
+    "notes": "`since_event_id` optional (resume). server-streams CDCEnvelope."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "PutObject",
+    "op_kind": "MUT",
+    "request_msg": "stream Chunk",
+    "body": "stream of Chunk = `{ctx, bucket:\"<seed:bucket>\", object_key:\"<seed:object_key>\", data:<bytes>, content_type:\"application/octet-stream\", final_chunk:true(on last)}`",
+    "notes": "client-streaming; set `final_chunk:true` on terminal chunk. `idempotency_key` optional. bucket must exist."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "PutPolicy",
+    "op_kind": "DEST",
+    "request_msg": "PutPolicyRequest",
+    "body": "`ctx`, `policy:PolicyRecord{effect:\"allow\", service_identity:\"<seed:user_id>\", tenant_id:\"<seed:tenant_id>\", message_type:\"<seed:message_type>\", operation:\"read\", required_scope:\"udb:read\", priority:100, enabled:true}`",
+    "notes": "PolicyRecord.policy_id omit/0 for create; set `<seed:policy_id>` to update. effect=allow/deny."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "QuarantineDlqEvent",
+    "op_kind": "MUT",
+    "request_msg": "DlqActionRequest",
+    "body": "`ctx`, `dlq_id:\"<seed:quarantine_dlq_id>\"`",
+    "notes": "`reason` optional."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "ReloadPolicies",
+    "op_kind": "DEST",
+    "request_msg": "CapabilitiesRequest",
+    "body": "`ctx`, `project_id:\"<seed:project>\"`",
+    "notes": "reuses CapabilitiesRequest `{context, project_id}`."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "ReplayDlqEvent",
+    "op_kind": "MUT",
+    "request_msg": "DlqActionRequest",
+    "body": "`ctx`, `dlq_id:\"<seed:replay_dlq_id>\"`, `preserve_event_id:false`",
+    "notes": "`reason` optional. dlq_id must exist."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "ResumeCdc",
+    "op_kind": "MUT",
+    "request_msg": "CdcControlRequest",
+    "body": "`ctx`, `slot_name:\"<cdc slot>\"`, `reason:\"resume\"`",
+    "notes": "slot must be paused."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "RetrySagaCompensation",
+    "op_kind": "MUT",
+    "request_msg": "SagaRequest",
+    "body": "`ctx`, `saga_id:\"<seed:retry_saga_id>\"`, `reason:\"retry\"`",
+    "notes": "saga must be in failed_compensation."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "RollbackCatalog",
+    "op_kind": "DEST",
+    "request_msg": "CatalogVersionRequest",
+    "body": "`ctx (scopes:[udb:admin])`, `project_id:\"<seed:project>\"`",
+    "notes": "rolls back to previous ACTIVE. `version`/`reason`/`idempotency_key` optional. Needs ≥2 catalog versions."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "ScanProjectionDrift",
+    "op_kind": "RO",
+    "request_msg": "ProjectionDriftScanRequest",
+    "body": "`ctx`, `project_id:\"<seed:project>\"`, `message_type:\"<seed:message_type>\"`, `scan_mode:\"sample\"`, `rows_per_target:100`, `limit:10`",
+    "notes": "`repair:false` to scan only."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "Select",
+    "op_kind": "RO",
+    "request_msg": "SelectRequest",
+    "body": "`ctx`, `message_type:\"<seed:message_type>\"`, `filter:{record_id:\"<seed:record_id>\"}` (Struct), `limit:10`",
+    "notes": "filter/fields/sort/page_token/cache all optional; empty filter selects all. message_type must be a seeded entity."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "SelectV2",
+    "op_kind": "RO",
+    "request_msg": "SelectRequest",
+    "body": "same as Select",
+    "notes": "server-streams RecordBatchV2; only call when ProtocolSupport.encodings advertises `record_batch_v2`."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "StageCatalog",
+    "op_kind": "DEST",
+    "request_msg": "StageCatalogRequest",
+    "body": "`ctx (scopes:[udb:admin])`, `manifest_json:<bytes valid CatalogManifest JSON>` (field 1000), `project_id:\"<seed:project>\"`, `reason:\"stage\"`",
+    "notes": "manifest_json is field 1000 (not 2). Needs a real serialized CatalogManifest. `idempotency_key` optional."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "StepDownCdcLeader",
+    "op_kind": "MUT",
+    "request_msg": "CdcControlRequest",
+    "body": "`ctx`, `slot_name:\"<cdc slot>\"`, `reason:\"failover\"`",
+    "notes": "only effective on the leader node."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "TimeSeriesQuery",
+    "op_kind": "RO",
+    "request_msg": "TimeSeriesQueryRequest",
+    "body": "`ctx`, `resource:StoreResource{backend:\"clickhouse\"}`, `from:<Timestamp>`, `to:<Timestamp>`, `limit:100`",
+    "notes": "`filter`,`fields`,`group_by`,`aggregate`,`window`,`page_token` optional."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "TimeSeriesWrite",
+    "op_kind": "MUT",
+    "request_msg": "TimeSeriesWriteRequest",
+    "body": "`ctx`, `resource:StoreResource{backend:\"clickhouse\"}`, `points:[{timestamp:<now Timestamp>, tags:{host:\"a\"}, values:{cpu:0.5}}]`",
+    "notes": "TimeSeriesPoint = `{timestamp(Timestamp), tags<map str,str>, values<map str,double>, fields(Struct)}`. `idempotency_key` optional."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "Upsert",
+    "op_kind": "MUT",
+    "request_msg": "UpsertRequest",
+    "body": "`ctx`, `message_type:\"<seed:message_type>\"`, `payload:{<entity fields incl id>}` (Struct) OR `record_json:<bytes JSON>`, `return_record:true`",
+    "notes": "supply either `payload` (Struct) or `record_json` (bytes), not both required; `conflict_fields`,`idempotency_key`,`cache` optional. id field in payload → `<seed:record_id>`."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "ValidateCatalog",
+    "op_kind": "DEST",
+    "request_msg": "StageCatalogRequest",
+    "body": "`ctx (scopes:[udb:admin])`, `manifest_json:<bytes CatalogManifest JSON>`, `project_id:\"<seed:project>\"`",
+    "notes": "same shape as StageCatalog; validates only."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "VectorBatchUpsert",
+    "op_kind": "MUT",
+    "request_msg": "stream VectorUpsertRequest",
+    "body": "`ctx`, `collection:\"<seed:vector_collection>\"`, `points:[{id:\"<seed:record_id>\", vector:[0.1,0.2,0.3], payload:{}}]`",
+    "notes": "client-streaming; send ≥1."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "VectorHybridSearch",
+    "op_kind": "RO",
+    "request_msg": "VectorHybridSearchRequest",
+    "body": "`ctx`, `collection:\"<seed:vector_collection>\"`, `vector:[0.1,0.2,0.3]`, `text_query:\"hello\"`, `limit:5`, `with_payload:true`",
+    "notes": "`fusion_weights` (repeated float) & `filter` optional. dim must match collection."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "VectorSearch",
+    "op_kind": "RO",
+    "request_msg": "VectorSearchRequest",
+    "body": "`ctx`, `collection:\"<seed:vector_collection>\"`, `vector:[0.1,0.2,0.3]` (repeated float, len=collection dim), `limit:5`, `with_payload:true`",
+    "notes": "vector length MUST equal the collection's configured dimension. `filter`,`score_threshold` optional. Needs a seeded vector collection."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "VectorUpsert",
+    "op_kind": "MUT",
+    "request_msg": "VectorUpsertRequest",
+    "body": "`ctx`, `collection:\"<seed:vector_collection>\"`, `points:[{id:\"<seed:record_id>\", vector:[0.1,0.2,0.3], payload:{}}]`",
+    "notes": "each VectorPointMutation = `{id, vector(repeated float), payload(Struct)}`; vector dim must match collection. `idempotency_key` optional."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "VerifyAdminAuditLog",
+    "op_kind": "RO",
+    "request_msg": "AdminAuditVerifyRequest",
+    "body": "`ctx (scopes:[udb:admin or udb:admin:viewer])`, `limit:0`",
+    "notes": "limit<=0 verifies full local chain."
+  },
+  {
+    "file": "idp.md",
+    "rpc": "CreateProvider",
+    "op_kind": "MUTATION",
+    "request_msg": "CreateProviderRequest",
+    "body": "`{ tenant_id, kind: IDP_KIND_OIDC, display_name: \"Acme OIDC\", issuer: \"https://idp.example.com\", jwks_url: \"https://idp.example.com/jwks\", client_ids: [\"client-1\"], audiences: [\"udb\"], claim_mapping_json: \"{}\", group_mapping_json: \"{}\", jit_policy_json: \"{}\", account_linking_policy: \"explicit\", enabled: true, created_by: \"<seed:user_id>\", context: {tenant:{tenant_id}} }`",
+    "notes": "tenant_id=`<seed:tenant_id>`. **kind must be ≤24-char name (use IDP_KIND_OIDC, NOT IDP_KIND_EXTERNAL_SESSION=25ch → VARCHAR(24) overflow).** display_name unique per tenant. client_secret/saml_signing_key_pem write-only optional."
+  },
+  {
+    "file": "idp.md",
+    "rpc": "DisableProvider",
+    "op_kind": "MUTATION",
+    "request_msg": "DisableProviderRequest",
+    "body": "`{ provider_id, tenant_id, updated_by: \"<seed:user_id>\", context: {tenant:{tenant_id}} }`",
+    "notes": "provider_id=`<seed:provider_id>`, tenant_id=`<seed:tenant_id>`."
+  },
+  {
+    "file": "idp.md",
+    "rpc": "ForceJwksRefresh",
+    "op_kind": "MUTATION",
+    "request_msg": "ForceJwksRefreshRequest",
+    "body": "`{ provider_id, tenant_id }`",
+    "notes": "provider_id=`<seed:provider_id>`, tenant_id=`<seed:tenant_id>`. Needs the provider's external jwks_url reachable."
+  },
+  {
+    "file": "idp.md",
+    "rpc": "GetProvider",
+    "op_kind": "READ_ONLY",
+    "request_msg": "GetProviderRequest",
+    "body": "`{ provider_id, tenant_id }`",
+    "notes": "provider_id=`<seed:provider_id>`, tenant_id=`<seed:tenant_id>`. No context field."
+  },
+  {
+    "file": "idp.md",
+    "rpc": "ImportSamlMetadata",
+    "op_kind": "MUTATION",
+    "request_msg": "ImportSamlMetadataRequest",
+    "body": "`{ provider_id, tenant_id, metadata_xml: \"<EntityDescriptor ...>...</EntityDescriptor>\", updated_by: \"<seed:user_id>\", context: {tenant:{tenant_id}} }`",
+    "notes": "provider_id=`<seed:provider_id>` (must be a SAML provider, IDP_KIND_SAML). metadata_xml = real SAML 2.0 IdP metadata XML; if empty, stored saml_metadata_url is fetched (needs external IdP). **Needs external SAML IdP metadata.**"
+  },
+  {
+    "file": "idp.md",
+    "rpc": "LinkIdentity",
+    "op_kind": "MUTATION",
+    "request_msg": "LinkIdentityRequest",
+    "body": "`{ tenant_id, provider_id, subject: \"ext-subject-1\", user_id, email: \"a@x.com\", email_verified: true, context: {tenant:{tenant_id}} }`",
+    "notes": "tenant_id=`<seed:tenant_id>`, provider_id=`<seed:provider_id>`, user_id=`<seed:user_id>`."
+  },
+  {
+    "file": "idp.md",
+    "rpc": "ListExternalIdentities",
+    "op_kind": "READ_ONLY",
+    "request_msg": "ListExternalIdentitiesRequest",
+    "body": "`{ tenant_id, provider_id: \"\", user_id: \"\", page: {page:1,page_size:20} }`",
+    "notes": "tenant_id=`<seed:tenant_id>`. provider_id/user_id empty = all; optionally `<seed:provider_id>` / `<seed:user_id>`."
+  },
+  {
+    "file": "idp.md",
+    "rpc": "ListProviders",
+    "op_kind": "READ_ONLY",
+    "request_msg": "ListProvidersRequest",
+    "body": "`{ tenant_id, kind: IDP_KIND_UNSPECIFIED, enabled_only: false, page: {page:1,page_size:20} }`",
+    "notes": "tenant_id=`<seed:tenant_id>`. kind unspecified = all."
+  },
+  {
+    "file": "idp.md",
+    "rpc": "PreviewClaimMapping",
+    "op_kind": "READ_ONLY",
+    "request_msg": "PreviewClaimMappingRequest",
+    "body": "`{ provider_id, tenant_id, claims_json: \"{\\\"sub\\\":\\\"abc\\\",\\\"email\\\":\\\"a@x.com\\\"}\", claim_mapping_json: \"\" }`",
+    "notes": "provider_id=`<seed:provider_id>`, tenant_id=`<seed:tenant_id>`. claims_json = raw IdP token payload JSON object. claim_mapping_json empty = use stored mapping. No external call."
+  },
+  {
+    "file": "idp.md",
+    "rpc": "PreviewGroupMapping",
+    "op_kind": "READ_ONLY",
+    "request_msg": "PreviewGroupMappingRequest",
+    "body": "`{ provider_id, tenant_id, groups: [\"admins\"], group_mapping_json: \"\" }`",
+    "notes": "provider_id=`<seed:provider_id>`, tenant_id=`<seed:tenant_id>`. group_mapping_json empty = use stored mapping. No external call."
+  },
+  {
+    "file": "idp.md",
+    "rpc": "ResolveExternalIdentity",
+    "op_kind": "MUTATION",
+    "request_msg": "ResolveExternalIdentityRequest",
+    "body": "`{ provider_id, tenant_id, claims_json: \"{\\\"sub\\\":\\\"abc\\\",\\\"email\\\":\\\"a@x.com\\\",\\\"email_verified\\\":true}\" }`",
+    "notes": "provider_id=`<seed:provider_id>`, tenant_id=`<seed:tenant_id>`. claims_json = already-verified external claims JSON. JIT-provisions/links a user (depends on provider jit_policy)."
+  },
+  {
+    "file": "idp.md",
+    "rpc": "SamlAcs",
+    "op_kind": "MUTATION",
+    "request_msg": "SamlAcsRequest",
+    "body": "`{ provider_id, tenant_id, saml_response: \"<base64 SAMLResponse>\", relay_state: \"state-1\", context: {tenant:{tenant_id}} }`",
+    "notes": "provider_id=`<seed:provider_id>`. saml_response = base64 IdP-signed SAMLResponse. **Needs a real signed SAMLResponse from an external SAML IdP; ungroundable without external IdP round-trip.**"
+  },
+  {
+    "file": "idp.md",
+    "rpc": "ScimCreateGroup",
+    "op_kind": "MUTATION",
+    "request_msg": "ScimCreateGroupRequest",
+    "body": "`{ tenant_id, provider_id, scim_group_json: \"{\\\"displayName\\\":\\\"sdk-perf-group\\\"}\", context: {tenant:{tenant_id}} }`",
+    "notes": "tenant_id=`<seed:tenant_id>`, provider_id=`<seed:provider_id>`. displayName MUST equal a group_mapping_json key (seed maps `sdk-perf-group`→admin; groups are mapping-driven, not persisted)."
+  },
+  {
+    "file": "idp.md",
+    "rpc": "ScimCreateUser",
+    "op_kind": "MUTATION",
+    "request_msg": "ScimCreateUserRequest",
+    "body": "`{ tenant_id, provider_id, scim_user_json: \"{\\\"userName\\\":\\\"a@x.com\\\",\\\"active\\\":true}\", context: {tenant:{tenant_id}} }`",
+    "notes": "tenant_id=`<seed:tenant_id>`, provider_id=`<seed:provider_id>`. scim_user_json = SCIM 2.0 User JSON. Provider should be SCIM-capable (external provisioning connector)."
+  },
+  {
+    "file": "idp.md",
+    "rpc": "ScimDeleteGroup",
+    "op_kind": "MUTATION",
+    "request_msg": "ScimDeleteGroupRequest",
+    "body": "`{ tenant_id, provider_id, scim_group_id, context: {tenant:{tenant_id}} }`",
+    "notes": "tenant_id=`<seed:tenant_id>`, provider_id=`<seed:provider_id>`. scim_group_id chained."
+  },
+  {
+    "file": "idp.md",
+    "rpc": "ScimDeleteUser",
+    "op_kind": "MUTATION",
+    "request_msg": "ScimDeleteUserRequest",
+    "body": "`{ tenant_id, provider_id, scim_user_id, context: {tenant:{tenant_id}} }`",
+    "notes": "tenant_id=`<seed:tenant_id>`, provider_id=`<seed:provider_id>`. scim_user_id chained. Maps to deactivate + session revoke."
+  },
+  {
+    "file": "idp.md",
+    "rpc": "ScimGetGroup",
+    "op_kind": "MUTATION",
+    "request_msg": "ScimGetGroupRequest",
+    "body": "`{ tenant_id, provider_id, scim_group_id }`",
+    "notes": "tenant_id=`<seed:tenant_id>`, provider_id=`<seed:provider_id>`. scim_group_id chained from ScimCreateGroup. op_kind=MUTATION per proto."
+  },
+  {
+    "file": "idp.md",
+    "rpc": "ScimGetUser",
+    "op_kind": "MUTATION",
+    "request_msg": "ScimGetUserRequest",
+    "body": "`{ tenant_id, provider_id, scim_user_id }`",
+    "notes": "tenant_id=`<seed:tenant_id>`, provider_id=`<seed:provider_id>`. scim_user_id from a prior ScimCreateUser (chain; no dedicated seed). op_kind=MUTATION (proto declares MUTATION despite GET verb)."
+  },
+  {
+    "file": "idp.md",
+    "rpc": "ScimListGroups",
+    "op_kind": "MUTATION",
+    "request_msg": "ScimListGroupsRequest",
+    "body": "`{ tenant_id, provider_id, filter: \"\", page: {page:1,page_size:20} }`",
+    "notes": "tenant_id=`<seed:tenant_id>`, provider_id=`<seed:provider_id>`. op_kind=MUTATION per proto."
+  },
+  {
+    "file": "idp.md",
+    "rpc": "ScimListUsers",
+    "op_kind": "MUTATION",
+    "request_msg": "ScimListUsersRequest",
+    "body": "`{ tenant_id, provider_id, filter: \"\", page: {page:1,page_size:20} }`",
+    "notes": "tenant_id=`<seed:tenant_id>`, provider_id=`<seed:provider_id>`. filter = SCIM filter, e.g. `userName eq \"x\"`. op_kind=MUTATION per proto."
+  },
+  {
+    "file": "idp.md",
+    "rpc": "ScimPatchGroup",
+    "op_kind": "MUTATION",
+    "request_msg": "ScimPatchGroupRequest",
+    "body": "`{ tenant_id, provider_id, scim_group_id, operations: [{op:\"add\", path:\"members\", value_json:\"[\\\"scim-user-id\\\"]\"}], context: {tenant:{tenant_id}} }`",
+    "notes": "tenant_id=`<seed:tenant_id>`, provider_id=`<seed:provider_id>`. scim_group_id chained."
+  },
+  {
+    "file": "idp.md",
+    "rpc": "ScimPatchUser",
+    "op_kind": "MUTATION",
+    "request_msg": "ScimPatchUserRequest",
+    "body": "`{ tenant_id, provider_id, scim_user_id, operations: [{op:\"replace\", path:\"active\", value_json:\"false\"}], context: {tenant:{tenant_id}} }`",
+    "notes": "tenant_id=`<seed:tenant_id>`, provider_id=`<seed:provider_id>`. operations = repeated ScimPatchOp{op(add|replace|remove), path, value_json}. scim_user_id chained."
+  },
+  {
+    "file": "idp.md",
+    "rpc": "ScimReplaceUser",
+    "op_kind": "MUTATION",
+    "request_msg": "ScimReplaceUserRequest",
+    "body": "`{ tenant_id, provider_id, scim_user_id, scim_user_json: \"{\\\"userName\\\":\\\"a@x.com\\\",\\\"active\\\":true}\", context: {tenant:{tenant_id}} }`",
+    "notes": "tenant_id=`<seed:tenant_id>`, provider_id=`<seed:provider_id>`. scim_user_id chained from ScimCreateUser."
+  },
+  {
+    "file": "idp.md",
+    "rpc": "StartSamlLogin",
+    "op_kind": "MUTATION",
+    "request_msg": "StartSamlLoginRequest",
+    "body": "`{ provider_id, tenant_id, relay_state: \"state-1\" }`",
+    "notes": "provider_id=`<seed:provider_id>` (SAML provider with imported metadata/SSO URL). **Needs a configured SAML provider (entity_id + SSO URL imported).**"
+  },
+  {
+    "file": "idp.md",
+    "rpc": "TestProviderDiscovery",
+    "op_kind": "READ_ONLY",
+    "request_msg": "TestProviderDiscoveryRequest",
+    "body": "`{ provider_id, tenant_id }`",
+    "notes": "provider_id=`<seed:provider_id>`, tenant_id=`<seed:tenant_id>`. Needs reachable external OIDC/SAML discovery endpoint to return reachable=true."
+  },
+  {
+    "file": "idp.md",
+    "rpc": "UnlinkIdentity",
+    "op_kind": "MUTATION",
+    "request_msg": "UnlinkIdentityRequest",
+    "body": "`{ tenant_id, external_identity_id, context: {tenant:{tenant_id}} }`",
+    "notes": "tenant_id=`<seed:tenant_id>`. external_identity_id = id from a prior LinkIdentity/ListExternalIdentities (no dedicated seed; chain from LinkIdentity)."
+  },
+  {
+    "file": "idp.md",
+    "rpc": "UpdateProvider",
+    "op_kind": "MUTATION",
+    "request_msg": "UpdateProviderRequest",
+    "body": "`{ provider_id, tenant_id, display_name: \"Acme OIDC v2\", claim_mapping_json: \"{}\", group_mapping_json: \"{}\", jit_policy_json: \"{}\", account_linking_policy: \"explicit\", updated_by: \"<seed:user_id>\", context: {tenant:{tenant_id}} }`",
+    "notes": "provider_id=`<seed:provider_id>`, tenant_id=`<seed:tenant_id>`. client_secret/saml_signing_key_pem empty = unchanged."
+  },
+  {
+    "file": "notification.md",
+    "rpc": "GetDeliveryStats",
+    "op_kind": "READ_ONLY",
+    "request_msg": "GetDeliveryStatsRequest",
+    "body": "`tenant_id:\"<seed:tenant_id>\"`, `event_type:\"<seed:event_type>\"`, `date_from:\"2026-01-01\"`, `date_to:\"2026-12-31\"`",
+    "notes": "date_from/date_to format YYYY-MM-DD; event_type optional."
+  },
+  {
+    "file": "notification.md",
+    "rpc": "GetNotification",
+    "op_kind": "READ_ONLY",
+    "request_msg": "GetNotificationRequest",
+    "body": "`log_id:\"<seed:log_id>\"`",
+    "notes": "only field is log_id (1)."
+  },
+  {
+    "file": "notification.md",
+    "rpc": "GetPreference",
+    "op_kind": "READ_ONLY",
+    "request_msg": "GetPreferenceRequest",
+    "body": "`user_id:\"<seed:user_id>\"`, `tenant_id:\"<seed:tenant_id>\"`, `channel:\"NOTIFICATION_CHANNEL_EMAIL\"`, `event_type:\"\"`",
+    "notes": "keyed by user_id+tenant_id+channel+event_type."
+  },
+  {
+    "file": "notification.md",
+    "rpc": "GetTemplate",
+    "op_kind": "READ_ONLY",
+    "request_msg": "GetTemplateRequest",
+    "body": "`event_type:\"<seed:event_type>\"`, `channel:\"NOTIFICATION_CHANNEL_EMAIL\"`, `locale:\"en\"`",
+    "notes": "keyed by event_type+channel+locale."
+  },
+  {
+    "file": "notification.md",
+    "rpc": "ListNotifications",
+    "op_kind": "READ_ONLY",
+    "request_msg": "ListNotificationsRequest",
+    "body": "`tenant_id:\"<seed:tenant_id>\"`, `page:{page:1,page_size:20}`",
+    "notes": "all filters optional: recipient_id, project_id, resource_type, resource_id, event_type, channel(enum), status(NotificationStatus enum)."
+  },
+  {
+    "file": "notification.md",
+    "rpc": "ListPreferences",
+    "op_kind": "READ_ONLY",
+    "request_msg": "ListPreferencesRequest",
+    "body": "`user_id:\"<seed:user_id>\"`, `tenant_id:\"<seed:tenant_id>\"`, `page:{page:1,page_size:20}`",
+    "notes": "lists all preferences for a user."
+  },
+  {
+    "file": "notification.md",
+    "rpc": "ListTemplates",
+    "op_kind": "READ_ONLY",
+    "request_msg": "ListTemplatesRequest",
+    "body": "`page:{page:1,page_size:20}`",
+    "notes": "all optional: event_type, channel(enum), active_only(bool)."
+  },
+  {
+    "file": "notification.md",
+    "rpc": "RetryNotification",
+    "op_kind": "MUTATION",
+    "request_msg": "RetryNotificationRequest",
+    "body": "`log_id:\"<seed:log_id>\"`",
+    "notes": "log_id (1) must reference a FAILED log; field 2 = RequestContext context."
+  },
+  {
+    "file": "notification.md",
+    "rpc": "SendNotification",
+    "op_kind": "MUTATION",
+    "request_msg": "SendNotificationRequest",
+    "body": "`event_type:\"<seed:event_type>\"`, `recipient_id:\"<seed:user_id>\"`, `recipient_address:\"user@example.com\"`, `tenant_id:\"<seed:tenant_id>\"`, `project_id:\"<seed:project>\"`, `locale:\"en\"`, `variables:{}`, `channels:[\"NOTIFICATION_CHANNEL_EMAIL\"]`",
+    "notes": "event_type must match a template. channels empty = template-default. Optional: resource_type/resource_id/resource_name/correlation_id. Field 13 = RequestContext context."
+  },
+  {
+    "file": "notification.md",
+    "rpc": "SetPreference",
+    "op_kind": "MUTATION",
+    "request_msg": "SetPreferenceRequest",
+    "body": "`user_id:\"<seed:user_id>\"`, `tenant_id:\"<seed:tenant_id>\"`, `channel:\"NOTIFICATION_CHANNEL_EMAIL\"`, `event_type:\"\"`, `is_opted_out:true`",
+    "notes": "event_type empty = channel-wide opt-out; field 6 = RequestContext context."
+  },
+  {
+    "file": "notification.md",
+    "rpc": "UpsertTemplate",
+    "op_kind": "MUTATION",
+    "request_msg": "UpsertTemplateRequest",
+    "body": "`event_type:\"<seed:event_type>\"`, `channel:\"NOTIFICATION_CHANNEL_EMAIL\"`, `locale:\"en\"`, `subject_template:\"Hello {name}\"`, `body_template:\"Body {name}\"`, `is_active:true`",
+    "notes": "field 7 = RequestContext context."
+  },
+  {
+    "file": "storage.md",
+    "rpc": "DeleteFile",
+    "op_kind": "MUTATION",
+    "request_msg": "DeleteFileRequest",
+    "body": "`{ tenant_id: <seed:tenant_id>, file_id: <seed:delete_file_id> }`",
+    "notes": "fields: tenant_id(str), file_id(str). Soft delete; uses a disposable file so read/update/finalize keep the primary `file_id`."
+  },
+  {
+    "file": "storage.md",
+    "rpc": "DownloadFile",
+    "op_kind": "READ_ONLY",
+    "request_msg": "DownloadFileRequest",
+    "body": "`{ tenant_id: <seed:tenant_id>, file_id: <seed:file_id>, chunk_size_bytes: 65536 }`",
+    "notes": "fields: tenant_id(str), file_id(str), chunk_size_bytes(optional int32, advisory). Server-STREAMING fallback for clients without presigned-HTTP access; file_id must be a finalized file with a present object. Probe reads the first DownloadFileChunk."
+  },
+  {
+    "file": "storage.md",
+    "rpc": "FinalizeUpload",
+    "op_kind": "MUTATION",
+    "request_msg": "FinalizeUploadRequest",
+    "body": "`{ tenant_id: <seed:tenant_id>, file_id: <seed:finalize_file_id>, content_type: \"application/pdf\", file_type: \"document\", reference_id: <seed:finalize_file_id>, reference_type: \"document\", is_public: false, size_bytes: 1024 }`",
+    "notes": "fields: tenant_id(str), file_id(str), content_type(str), file_type(str), reference_id(str), reference_type(str), is_public(optional bool), size_bytes(int64). file_id MUST be a registered-but-NOT-yet-finalized upload (seed: `finalize_file_id`) — finalizing the primary `file_id` twice fails \"already finalized\". size_bytes = actual uploaded size, persisted on finalize."
+  },
+  {
+    "file": "storage.md",
+    "rpc": "GetDownloadUrl",
+    "op_kind": "READ_ONLY",
+    "request_msg": "GetDownloadUrlRequest",
+    "body": "`{ tenant_id: <seed:tenant_id>, file_id: <seed:file_id>, expires_in_minutes: 15 }`",
+    "notes": "fields: tenant_id(str), file_id(str), expires_in_minutes(int32). file_id must be a finalized file."
+  },
+  {
+    "file": "storage.md",
+    "rpc": "GetFile",
+    "op_kind": "READ_ONLY",
+    "request_msg": "GetFileRequest",
+    "body": "`{ tenant_id: <seed:tenant_id>, file_id: <seed:file_id> }`",
+    "notes": "fields: tenant_id(str), file_id(str)."
+  },
+  {
+    "file": "storage.md",
+    "rpc": "ListFiles",
+    "op_kind": "READ_ONLY",
+    "request_msg": "ListFilesRequest",
+    "body": "`{ tenant_id: <seed:tenant_id>, file_type: \"document\", reference_id: <seed:file_id>, reference_type: \"document\", uploaded_by: <seed:user_id>, page: 1, page_size: 20 }`",
+    "notes": "fields: tenant_id(str), file_type(str), reference_id(str), reference_type(str), uploaded_by(str), page(int32), page_size(int32). file_type/reference_id/reference_type/uploaded_by are optional filters (empty → no filter). uploaded_by filters by uploader user id."
+  },
+  {
+    "file": "storage.md",
+    "rpc": "RegisterUpload",
+    "op_kind": "MUTATION",
+    "request_msg": "RegisterUploadRequest",
+    "body": "`{ tenant_id: <seed:tenant_id>, project_id: <seed:project>, filename: \"report.pdf\", content_type: \"application/pdf\", file_type: \"document\", reference_id: <seed:file_id>, reference_type: \"document\", is_public: false, expires_in_minutes: 15, size_bytes: 1024 }`",
+    "notes": "fields: tenant_id(str), project_id(str), filename(str), content_type(str), file_type(str), reference_id(str), reference_type(str), is_public(optional bool), expires_in_minutes(int32), size_bytes(int64). All plain strings/scalars; is_public is proto3 optional (absent → defaults private). reference_id/reference_type are free-form app linkage, not a storage seed. size_bytes drives pre-upload tenant quota check."
+  },
+  {
+    "file": "storage.md",
+    "rpc": "UpdateFile",
+    "op_kind": "MUTATION",
+    "request_msg": "UpdateFileRequest",
+    "body": "`{ tenant_id: <seed:tenant_id>, file_id: <seed:file_id>, filename: \"renamed.pdf\", content_type: \"application/pdf\", file_type: \"document\", reference_id: <seed:file_id>, reference_type: \"document\", is_public: true }`",
+    "notes": "fields: tenant_id(str), file_id(str), filename(str), content_type(str), file_type(str), reference_id(str), reference_type(str), is_public(optional bool). Partial update: empty string fields leave value unchanged; is_public absent leaves visibility unchanged (never silently flips public/private)."
+  },
+  {
+    "file": "tenant.md",
+    "rpc": "CreateTenant",
+    "op_kind": "MUTATION",
+    "request_msg": "CreateTenantRequest",
+    "body": "`code` (string, e.g. `\"acme-bench\"`), `name` (string, e.g. `\"Acme Bench\"`), `type` (string, e.g. `\"organization\"`), `parent_tenant_id` (string, optional — `<seed:tenant_id>` or empty for root), `config` (string JSON, e.g. `\"{}\"`), `branding` (string JSON, e.g. `\"{}\"`)",
+    "notes": "Only `code`+`name` are realistically load-bearing; `config`/`branding` are JSON strings — send `\"{}\"`, not bare `\"\"`, to be safe. `parent_tenant_id` must reference an existing tenant if set. Creates a new tenant row each call → use a unique `code` per bench iteration to avoid uniqueness conflicts."
+  },
+  {
+    "file": "tenant.md",
+    "rpc": "GetTenant",
+    "op_kind": "READ_ONLY",
+    "request_msg": "GetTenantRequest",
+    "body": "`tenant_id` (string) = `<seed:tenant_id>`",
+    "notes": "Single lookup by id."
+  },
+  {
+    "file": "tenant.md",
+    "rpc": "GetTenantConfig",
+    "op_kind": "READ_ONLY",
+    "request_msg": "GetTenantConfigRequest",
+    "body": "`tenant_id` (string) = `<seed:tenant_id>`",
+    "notes": "Returns repeated TenantConfig rows for the tenant."
+  },
+  {
+    "file": "tenant.md",
+    "rpc": "ListTenants",
+    "op_kind": "READ_ONLY",
+    "request_msg": "ListTenantsRequest",
+    "body": "`type` (string filter, optional), `status` (string filter, optional), `page` (int32, e.g. `1`), `page_size` (int32, e.g. `20`)",
+    "notes": "All fields optional filters/pagination; empty `type`/`status` = no filter. Keep `page_size` modest (e.g. 20) for bench stability."
+  },
+  {
+    "file": "tenant.md",
+    "rpc": "UpdateTenant",
+    "op_kind": "MUTATION",
+    "request_msg": "UpdateTenantRequest",
+    "body": "`tenant_id` (string) = `<seed:tenant_id>`, `name` (string), `status` (string, e.g. `\"active\"`), `config` (string JSON `\"{}\"`), `branding` (string JSON `\"{}\"`)",
+    "notes": "`tenant_id` must reference an existing tenant. `status` is a free-form string column (no enum)."
+  },
+  {
+    "file": "tenant.md",
+    "rpc": "UpdateTenantConfig",
+    "op_kind": "MUTATION",
+    "request_msg": "UpdateTenantConfigRequest",
+    "body": "`tenant_id` (string) = `<seed:tenant_id>`, `config_key` (string, e.g. `\"feature.flag\"`), `config_value` (string, e.g. `\"on\"`), `type` (string, e.g. `\"string\"`)",
+    "notes": "Upserts one config key/value for the tenant. `tenant_id` must reference an existing tenant."
+  },
+  {
+    "file": "webrtc.md",
+    "rpc": "PeerService.GetPeer",
+    "op_kind": "READ_ONLY",
+    "request_msg": "GetPeerRequest",
+    "body": "`tenant_id`=`<seed:tenant_id>`, `peer_id`=`<seed:peer_id>`",
+    "notes": "no room_id; peer looked up by id within tenant."
+  },
+  {
+    "file": "webrtc.md",
+    "rpc": "PeerService.JoinRoom",
+    "op_kind": "MUTATION",
+    "request_msg": "JoinRoomRequest",
+    "body": "`tenant_id`=`<seed:tenant_id>`, `room_id`=`<seed:room_id>`, `display_name`=\"Bench User\", `metadata`=`{}`, `user_agent`=\"bench/1.0\"",
+    "notes": "room must exist+open. metadata JSON string. Returns new `peer_id` + existing_peers."
+  },
+  {
+    "file": "webrtc.md",
+    "rpc": "PeerService.JoinSession",
+    "op_kind": "MUTATION",
+    "request_msg": "JoinSessionRequest",
+    "body": "`tenant_id`=`<seed:tenant_id>`, `room_id`=`<seed:join_session_room_id>`, `display_name`=\"Bench Session\", `metadata`=`{}`, `user_agent`=\"bench/1.0\", `ttl_seconds`=3600",
+    "notes": "atomic: joins the room (mirrors JoinRoom) AND mints TURN credentials for the freshly-inserted peer in one RPC. Uses a DEDICATED high-capacity room (`join_session_room_id`) — the main `room_id` is filled to its cap by JoinRoom's iters. `ttl_seconds` int32 = TURN credential lifetime; TURN config must be present (fail-closed). Returns new `peer_id` + ICE servers."
+  },
+  {
+    "file": "webrtc.md",
+    "rpc": "PeerService.LeaveRoom",
+    "op_kind": "MUTATION",
+    "request_msg": "LeaveRoomRequest",
+    "body": "`tenant_id`=`<seed:tenant_id>`, `room_id`=`<seed:room_id>`, `peer_id`=`<seed:leave_peer_id>`",
+    "notes": "peer must be in room. Uses a disposable peer so the main active peer remains usable."
+  },
+  {
+    "file": "webrtc.md",
+    "rpc": "PeerService.ListPeers",
+    "op_kind": "READ_ONLY",
+    "request_msg": "ListPeersRequest",
+    "body": "`tenant_id`=`<seed:tenant_id>`, `room_id`=`<seed:room_id>`, `state`=\"connected\"",
+    "notes": "`state` optional free-form string filter."
+  },
+  {
+    "file": "webrtc.md",
+    "rpc": "RoomService.CloseRoom",
+    "op_kind": "MUTATION",
+    "request_msg": "CloseRoomRequest",
+    "body": "`tenant_id`=`<seed:tenant_id>`, `room_id`=`<seed:close_room_id>`",
+    "notes": "room must exist; cascades peer.left/track.ended emits. Uses a disposable room so the main active room remains usable."
+  },
+  {
+    "file": "webrtc.md",
+    "rpc": "RoomService.CreateRoom",
+    "op_kind": "MUTATION",
+    "request_msg": "CreateRoomRequest",
+    "body": "`tenant_id`=`<seed:tenant_id>`, `name`=\"bench-room\", `max_participants`=10, `config`=`{}`, `created_by`=`<seed:user_id>`",
+    "notes": "name free text; max_participants int32; config JSON string; created_by user ref. Returns new `room_id`."
+  },
+  {
+    "file": "webrtc.md",
+    "rpc": "RoomService.GetRoom",
+    "op_kind": "READ_ONLY",
+    "request_msg": "GetRoomRequest",
+    "body": "`tenant_id`=`<seed:tenant_id>`, `room_id`=`<seed:room_id>`",
+    "notes": "room must exist."
+  },
+  {
+    "file": "webrtc.md",
+    "rpc": "RoomService.ListRooms",
+    "op_kind": "READ_ONLY",
+    "request_msg": "ListRoomsRequest",
+    "body": "`tenant_id`=`<seed:tenant_id>`, `state`=\"active\", `page`=1, `page_size`=20",
+    "notes": "`state` filter is optional free-form string; page/page_size int32."
+  },
+  {
+    "file": "webrtc.md",
+    "rpc": "RoomService.UpdateRoom",
+    "op_kind": "MUTATION",
+    "request_msg": "UpdateRoomRequest",
+    "body": "`tenant_id`=`<seed:tenant_id>`, `room_id`=`<seed:room_id>`, `name`=\"bench-room-2\", `state`=\"active\", `config`=`{}`",
+    "notes": "all fields string; `state` is a free-form string column (not a proto enum); config JSON."
+  },
+  {
+    "file": "webrtc.md",
+    "rpc": "SignalingService.Signal",
+    "op_kind": "MUTATION",
+    "request_msg": "SignalRequest (stream)",
+    "body": "per-message: `room_id`=`<seed:room_id>`, `peer_id`=`<seed:signal_peer_id>`, `tenant_id`=`<seed:tenant_id>` + ONE oneof payload: `ping`=true \\",
+    "notes": "`offer_sdp`=\"<sdp>\" \\|`answer_sdp`=\"<sdp>\" \\|`ice_candidate`=\"<candidate>\"|BIDI stream — uses a disposable joined peer because closing the stream disconnects that peer. Simplest valid frame: set `ping`=true. Server replies SignalResponse oneof (offer_sdp/answer_sdp/ice_candidate/peer_joined/peer_left/track_published/pong)."
+  },
+  {
+    "file": "webrtc.md",
+    "rpc": "TrackService.ListTracks",
+    "op_kind": "READ_ONLY",
+    "request_msg": "ListTracksRequest",
+    "body": "`tenant_id`=`<seed:tenant_id>`, `room_id`=`<seed:room_id>`, `peer_id`=`<seed:peer_id>`, `kind`=\"audio\"",
+    "notes": "peer_id + kind are optional free-form filters."
+  },
+  {
+    "file": "webrtc.md",
+    "rpc": "TrackService.MuteTrack",
+    "op_kind": "MUTATION",
+    "request_msg": "MuteTrackRequest",
+    "body": "`tenant_id`=`<seed:tenant_id>`, `track_id`=`<seed:track_id>`, `muted`=true",
+    "notes": "`muted` bool toggles mute state."
+  },
+  {
+    "file": "webrtc.md",
+    "rpc": "TrackService.PublishTrack",
+    "op_kind": "MUTATION",
+    "request_msg": "PublishTrackRequest",
+    "body": "`tenant_id`=`<seed:tenant_id>`, `room_id`=`<seed:room_id>`, `peer_id`=`<seed:peer_id>`, `kind`=\"audio\", `label`=\"mic\", `settings`=`{}`, `metadata`=`{}`",
+    "notes": "`kind` free-form string (e.g. \"audio\"/\"video\"); settings+metadata JSON. peer must exist. Returns new `track_id`."
+  },
+  {
+    "file": "webrtc.md",
+    "rpc": "TrackService.UnpublishTrack",
+    "op_kind": "MUTATION",
+    "request_msg": "UnpublishTrackRequest",
+    "body": "`tenant_id`=`<seed:tenant_id>`, `track_id`=`<seed:unpublish_track_id>`",
+    "notes": "track must exist (no room_id needed). Uses a disposable track so `MuteTrack` keeps a live `track_id`."
+  },
+  {
+    "file": "webrtc.md",
+    "rpc": "TurnService.IssueCredentials",
+    "op_kind": "MUTATION",
+    "request_msg": "IssueCredentialsRequest",
+    "body": "`tenant_id`=`<seed:tenant_id>`, `room_id`=`<seed:room_id>`, `peer_id`=`<seed:peer_id>`, `ttl_seconds`=3600",
+    "notes": "ttl_seconds int32. Returns ephemeral ICE servers + signed username/credential. TURN config must be present (fail-closed)."
+  }
+]

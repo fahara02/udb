@@ -2,7 +2,7 @@
   "swagger": "2.0",
   "info": {
     "title": "UDB Control-Plane API",
-    "version": "0.3.5",
+    "version": "0.3.6",
     "description": "HTTP/JSON (gRPC-gateway) surface for UDB control-plane services. The core DataBroker data-plane RPCs are gRPC-native and are not represented here."
   },
   "tags": [
@@ -8968,6 +8968,60 @@
         ]
       }
     },
+    "/v1/storage/files/{fileId}/download": {
+      "get": {
+        "summary": "Stream a file's bytes directly through the broker. FALLBACK for clients\nthat cannot use the presigned `GetDownloadUrl` HTTP GET (no egress to the\nobject store, corporate proxy, etc.). The broker streams the object bytes\nin bounded chunks server-side; it never buffers the whole object.",
+        "operationId": "StorageService_DownloadFile",
+        "responses": {
+          "200": {
+            "description": "A successful response.(streaming responses)",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "result": {
+                  "$ref": "#/definitions/v1DownloadFileChunk"
+                },
+                "error": {
+                  "$ref": "#/definitions/rpcStatus"
+                }
+              },
+              "title": "Stream result of v1DownloadFileChunk"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "fileId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "chunkSizeBytes",
+            "description": "Optional preferred chunk size in bytes. Absent/0 → server default; the\nserver clamps to a safe bound so a client cannot force an unbounded frame.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "StorageService"
+        ]
+      }
+    },
     "/v1/storage/files/{fileId}/download-url": {
       "get": {
         "summary": "Get a pre-signed download URL for a file",
@@ -10622,6 +10676,14 @@
           "type": "string",
           "format": "int64",
           "description": "Actual uploaded size in bytes, persisted on finalize."
+        },
+        "checksum": {
+          "type": "string",
+          "description": "Optional client-computed content checksum; persisted into File.checksum.\nOnly verified/stored when present."
+        },
+        "etag": {
+          "type": "string",
+          "description": "Optional client-observed object ETag; compared against the store's HEAD\nETag when present (mismatch → FailedPrecondition / UPLOAD_SIZE_MISMATCH)."
         }
       }
     },
@@ -12670,6 +12732,27 @@
         }
       }
     },
+    "v1DownloadFileChunk": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "string",
+          "format": "byte",
+          "description": "Raw object bytes for this frame."
+        },
+        "contentType": {
+          "type": "string",
+          "description": "First-chunk-only object metadata (absent on subsequent chunks): the file's\ncontent type, total size in bytes, and object ETag."
+        },
+        "totalSize": {
+          "type": "string",
+          "format": "int64"
+        },
+        "etag": {
+          "type": "string"
+        }
+      }
+    },
     "v1EffectivePermission": {
       "type": "object",
       "properties": {
@@ -13202,6 +13285,10 @@
         "otpId": {
           "type": "string",
           "description": "Id of the PASSWORD_RESET OTP issued (empty when the account is unknown; the\nresponse shape is uniform so it is not an account-enumeration oracle)."
+        },
+        "devOtpCode": {
+          "type": "string",
+          "description": "Dev-only echo of the plaintext PASSWORD_RESET OTP code, populated ONLY when the\nbroker runs with UDB_OTP_DEV_ECHO=1 (non-production posture). Empty in\nproduction. Lets conformance harnesses complete ResetPassword without a\ndelivery channel. bug_report.md F/Lane-2."
         }
       }
     },
@@ -13682,7 +13769,7 @@
           "format": "int64"
         }
       },
-      "description": "The governance actor whose authorization is checked under\n`native.authz.governance` for every governance mutation. Carries the scopes\nthe broker resolved for the caller so the service can require an explicit\n`authz:admin` / `authz:policy:write` / `authz:role:write` capability rather\nthan trusting a bare bearer token."
+      "description": "The governance actor whose authorization is checked under\n`native.authz.governance` for every governance mutation. The AUTHORITATIVE\ncaller identity and scopes come from the verified claim (the bearer token),\nNOT from this message. The `subject` / `scopes` / `roles` fields here are\naccepted ONLY as cross-tenant-admin / impersonation TARGET hints; they never\ngrant capability and are ignored for authorizing the caller. The\n`break_glass*` fields below are the only authoritative body fields on this\nmessage (a short-TTL emergency bypass with a recorded reason)."
     },
     "v1IceServer": {
       "type": "object",
@@ -14906,6 +14993,12 @@
         "createdAt": {
           "type": "string",
           "format": "date-time"
+        },
+        "renderedSubject": {
+          "type": "string"
+        },
+        "renderedBody": {
+          "type": "string"
         }
       }
     },
@@ -16194,6 +16287,11 @@
         "error": {
           "$ref": "#/definitions/v1ApiError",
           "title": "Error information if operation failed"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "int64",
+          "description": "Unix-seconds expiry of the presigned PUT `upload_url`; 0 when no URL was\nminted (metadata-only mode / presign error). Lets the client know when the\nURL dies without a follow-up call."
         }
       }
     },
@@ -17075,6 +17173,10 @@
       "properties": {
         "otpId": {
           "type": "string"
+        },
+        "devOtpCode": {
+          "type": "string",
+          "description": "Dev-only echo of the plaintext PHONE_VERIFICATION OTP code, populated ONLY when\nthe broker runs with UDB_OTP_DEV_ECHO=1 (non-production posture). Empty in\nproduction. Lets conformance harnesses complete VerifyOTP without an SMS\ndelivery channel. bug_report.md F/Lane-2."
         }
       }
     },
@@ -17388,6 +17490,13 @@
         "error": {
           "$ref": "#/definitions/v1ApiError",
           "title": "Error information if operation failed"
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PipelineStep"
+          }
         }
       }
     },

@@ -39,6 +39,34 @@ type fakeAuthz struct {
 	decision       *authzv1.Decision
 	nativeGrant    *authzv1.NativeAccessGrant
 	authorizeCalls int
+
+	// rpcSeq records the ordered method names for the RPC-sequence gate; the
+	// AllowRole/BindRole alias tests assert exactly one declared RPC, no probes.
+	rpcSeq           *[]string
+	lastPolicyRule   *authzv1.CreatePolicyRuleRequest
+	lastAssignRole   *authzv1.AssignRoleRequest
+	createdPolicyID  string
+	assignedRoleName string
+}
+
+func (f *fakeAuthz) rec(m string) {
+	if f.rpcSeq != nil {
+		*f.rpcSeq = append(*f.rpcSeq, m)
+	}
+}
+
+func (f *fakeAuthz) CreatePolicyRule(ctx context.Context, in *authzv1.CreatePolicyRuleRequest, _ ...grpc.CallOption) (*authzv1.CreatePolicyRuleResponse, error) {
+	f.rec("CreatePolicyRule")
+	f.lastCtx = ctx
+	f.lastPolicyRule = in
+	return &authzv1.CreatePolicyRuleResponse{}, nil
+}
+
+func (f *fakeAuthz) AssignRole(ctx context.Context, in *authzv1.AssignRoleRequest, _ ...grpc.CallOption) (*authzv1.AssignRoleResponse, error) {
+	f.rec("AssignRole")
+	f.lastCtx = ctx
+	f.lastAssignRole = in
+	return &authzv1.AssignRoleResponse{}, nil
 }
 
 func TestAuthnAuthzResponseJSONFixturesDoNotExposePersistedCredentials(t *testing.T) {

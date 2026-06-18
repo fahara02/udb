@@ -43,11 +43,21 @@ impl DataBrokerService {
             .await;
 
         match result {
-            Ok(res) => self.record_grpc(
-                "Select",
-                started,
-                Ok(self.with_catalog_response_headers(Response::new(res), &metadata_context)),
-            ),
+            Ok((record_set, stale_warning)) => {
+                let mut response = self
+                    .with_catalog_response_headers(Response::new(record_set), &metadata_context);
+                // 03.2.1.4: surface the typed stale-read warning the runtime
+                // served on the soft path (Eventual/BoundedStaleness, or
+                // ProjectionOk non-own-write) as a response header. Reuses the
+                // same `insert_ascii_header` path as the other consistency
+                // headers; absent when the fence cleared or hard-failed.
+                if let Some(warning) = stale_warning
+                    && let Ok(json) = serde_json::to_string(&warning)
+                {
+                    insert_ascii_header(response.metadata_mut(), "x-udb-stale-read-warning", &json);
+                }
+                self.record_grpc("Select", started, Ok(response))
+            }
             Err(err) => self.record_grpc("Select", started, Err(err)),
         }
     }
@@ -104,9 +114,12 @@ impl DataBrokerService {
             .await;
 
         match result {
-            Ok(res) => {
+            // 03.2.1.4: the V2 columnar stream has no per-batch warning channel;
+            // the typed stale-read warning is surfaced only on the V1 `Select`
+            // handler, so discard it here (hard-fail modes already errored).
+            Ok((record_set, _stale_warning)) => {
                 let batch = crate::runtime::executor_utils::record_batch_v2_from_record_set(
-                    &res,
+                    &record_set,
                     &schema_version,
                 );
                 let stream: ResponseStream<crate::proto::RecordBatchV2> =
@@ -178,7 +191,10 @@ impl DataBrokerService {
                     &metadata_context,
                     crate::runtime::channels::OperationChannel::Read,
                     "postgres",
-                    runtime.select(&manifest, item, item_context),
+                    // 03.2.1.4: drop the typed stale-warning side-channel — the
+                    // batch stream yields bare `RecordSet`s (hard-fail modes
+                    // already errored inside `select`).
+                    async { runtime.select(&manifest, item, item_context).await.map(|(rs, _)| rs) },
                 )
                 .await?;
                 yield val;
@@ -312,6 +328,10 @@ impl DataBrokerService {
         };
         let req = request.into_inner();
         let message_type = req.message_type.clone();
+        // KEYSTONE (lane 05): capture the idempotency_key before the moved closure
+        // so it threads into setup_data::delete for durable keyed dedup. Empty key
+        // = keyless delete (no dedup, hot path unaffected).
+        let idempotency_key = req.idempotency_key.clone();
         // Authorize against the concrete target table (not "*"), so per-table
         // ABAC Allow/Deny policies actually match — matching Select/Upsert.
         let decision_id = match self.authorize(&security, &message_type, "Delete").await {
@@ -332,7 +352,7 @@ impl DataBrokerService {
                 crate::runtime::channels::OperationChannel::Write,
                 || async move {
                     runtime
-                        .delete(manifest, &message_type, filter, context)
+                        .delete(manifest, &message_type, filter, context, idempotency_key)
                         .await
                 },
             )
@@ -512,6 +532,26 @@ impl DataBrokerService {
         let mut admission_context = context.clone();
         admission_context.target_backend = target.backend.clone();
         admission_context.target_instance = target.instance.clone().unwrap_or_default();
+        // 03.3.5.1: honour the read fence on the generic non-PG read chokepoint.
+        // Gate on `!write` so mutations (mutate/put_object/ensure_resource/...)
+        // never pay the wait, and restrict to the read operations. Empty fences
+        // short-circuit (keyless reads stay free); a hard-fail mode errors; a
+        // soft stale warning is discarded (raw-JSON dispatch has no warning
+        // channel).
+        if !write
+            && matches!(
+                operation.as_str(),
+                "query" | "search" | "get_object" | "list_resources"
+            )
+        {
+            let _ = runtime
+                .enforce_read_fence(
+                    &admission_context,
+                    &target.backend,
+                    target.instance.as_deref().unwrap_or("selected"),
+                )
+                .await?;
+        }
         let executor = runtime.resolve_dispatch_executor(
             &target.backend,
             target.instance.as_deref(),

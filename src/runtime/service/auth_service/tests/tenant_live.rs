@@ -147,3 +147,43 @@ async fn live_postgres_tenant_service_crud_roundtrip() {
 
     cleanup_native_auth_db(&pool).await;
 }
+
+/// §1 read-after-write (13.7.1.3): the `tenant_id` `CreateTenant` returns is
+/// IMMEDIATELY gettable by `GetTenant` on the SAME served path. Reverting the
+/// create/get guarantee fails this assertion.
+#[tokio::test]
+#[ignore = "requires live Postgres; run with UDB_LIVE_AUTH_TESTS=1 cargo test --lib live_postgres_tenant_read_after_write -- --ignored --nocapture"]
+async fn live_postgres_tenant_read_after_write() {
+    let _guard = live_auth_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_auth_db(&pool).await;
+    let svc = tenant_service(pool.clone()).await;
+
+    let created = svc
+        .create_tenant(Request::new(tenant_pb::CreateTenantRequest {
+            code: format!("ryw_{}", Uuid::new_v4().simple()),
+            name: "RYW Tenant".to_string(),
+            r#type: "ORGANIZATION".to_string(),
+            ..Default::default()
+        }))
+        .await
+        .expect("create_tenant")
+        .into_inner();
+
+    assert_create_then_get("CreateTenant→GetTenant", &created.tenant_id, |id| {
+        let svc = &svc;
+        async move {
+            let got = svc
+                .get_tenant(Request::new(tenant_pb::GetTenantRequest {
+                    tenant_id: id.clone(),
+                }))
+                .await?
+                .into_inner()
+                .tenant;
+            Ok(got.is_some_and(|t| t.tenant_id == id))
+        }
+    })
+    .await;
+
+    cleanup_native_auth_db(&pool).await;
+}

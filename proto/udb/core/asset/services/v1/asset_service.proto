@@ -180,6 +180,16 @@ service AssetService {
   // Register a managed asset wrapping a storage file
   rpc RegisterAsset(RegisterAssetRequest) returns (RegisterAssetResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    // Verified: asset_service::register_asset persists the asset row via
+    // native_entity_write_for_service (ConflictStrategy::Error) BEFORE returning,
+    // and GetAsset reads it by (tenant_id, asset_id). The returned asset_id is
+    // immediately gettable. Primary read.
+    option (udb.core.common.v1.method_readback_contract) = {
+      returned_id_field: "asset_id"
+      readback_rpc: "GetAsset"
+      readback_request_field: "asset_id"
+      requires_primary_read: true
+    };
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:asset:register-asset"
@@ -241,6 +251,44 @@ service AssetService {
   // Start a pipeline instance for an asset
   rpc StartPipeline(StartPipelineRequest) returns (StartPipelineResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    // Verified: asset_service::start_pipeline inserts the PipelineInstance row
+    // synchronously before returning, and GetPipeline reads it by
+    // (tenant_id, instance_id). The returned instance_id is immediately gettable.
+    option (udb.core.common.v1.method_readback_contract) = {
+      returned_id_field: "instance_id"
+      readback_rpc: "GetPipeline"
+      readback_request_field: "instance_id"
+      requires_primary_read: true
+    };
+    // Verified: the instance is inserted in state RUNNING; once its steps finish
+    // (synchronous in-process execution in start_pipeline) the instance is
+    // advanced to COMPLETED (all steps done, none failed) or FAILED (any step
+    // failed) before the RPC returns. RUNNING is the only initial state the impl
+    // writes (proto PENDING is unused by the broker).
+    option (udb.core.common.v1.method_lifecycle_contract) = {
+      entity: "PipelineInstance"
+      target_state: "RUNNING"
+      terminal_states: "COMPLETED"
+      terminal_states: "FAILED"
+    };
+    // Verified: GENUINE keyed dedup. start_pipeline pre-flight-checks for an
+    // existing instance with the same (tenant_id, correlation_id) and returns it
+    // without re-triggering; a concurrent racer that loses the unique-index
+    // insert (idx_pipeline_instance_correlation_unique) also returns the winner's
+    // instance_id. The duplicate-hit message carries PIPELINE_ALREADY_STARTED.
+    // Dedup only applies when correlation_id is non-empty (server-keyed otherwise
+    // = a fresh instance per call), so server_generated_key=false.
+    option (udb.core.common.v1.method_idempotency_contract) = {
+      request_key_field: "correlation_id"
+      server_generated_key: false
+      replay_safe: true
+    };
+    // Verified against the status_with_reason(...) call sites in
+    // asset_service::start_pipeline.
+    option (udb.core.common.v1.method_error_contract) = {
+      cases: { canonical_code: "PIPELINE_DEFINITION_INVALID" grpc_status: "INTERNAL" retryable: false }
+      cases: { canonical_code: "STEP_TYPE_UNSUPPORTED" grpc_status: "INVALID_ARGUMENT" retryable: false }
+    };
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:asset:start-pipeline"
@@ -662,6 +710,7 @@ message StartPipelineResponse {
   string message = 2;
   // Error information if operation failed
   udb.core.common.v1.ApiError error = 3;
+  repeated entity.v1.PipelineStep steps = 4;
 }
 
 message GetPipelineRequest {

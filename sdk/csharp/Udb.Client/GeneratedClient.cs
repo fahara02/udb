@@ -3,10 +3,10 @@
 //
 // UDB C# SDK — generated robustness/forwarding layer.
 //   Language:         csharp
-//   UDB version:      0.3.5
+//   UDB version:      0.3.6
 //   Protocol version: 1.0.0
 //   Services:         16
-//   RPCs:             262
+//   RPCs:             265
 //
 // This file is RENDERED by `udb sdk generate` from
 //   sdk-templates/csharp/Udb.Client/GeneratedClient.cs.tmpl
@@ -257,7 +257,7 @@ public sealed partial class GeneratedNotificationServiceClient : GeneratedServic
 }
 /// <summary>
 /// Robustness wrapper for the <c>udb.core.storage.services.v1.StorageService</c> service
-/// (7 RPCs). Forwards to the buf-generated
+/// (8 RPCs). Forwards to the buf-generated
 /// <c>StorageServiceClient</c> stub.
 /// </summary>
 public sealed partial class GeneratedStorageServiceClient : GeneratedServiceBase
@@ -311,7 +311,7 @@ public sealed partial class GeneratedTenantServiceClient : GeneratedServiceBase
 }
 /// <summary>
 /// Robustness wrapper for the <c>udb.core.webrtc.services.v1.PeerService</c> service
-/// (4 RPCs). Forwards to the buf-generated
+/// (5 RPCs). Forwards to the buf-generated
 /// <c>PeerServiceClient</c> stub.
 /// </summary>
 public sealed partial class GeneratedPeerServiceClient : GeneratedServiceBase
@@ -446,7 +446,7 @@ public sealed partial class GeneratedTurnServiceClient : GeneratedServiceBase
 }
 /// <summary>
 /// Robustness wrapper for the <c>udb.services.v1.DataBroker</c> service
-/// (76 RPCs). Forwards to the buf-generated
+/// (77 RPCs). Forwards to the buf-generated
 /// <c>DataBrokerClient</c> stub.
 /// </summary>
 public sealed partial class GeneratedDataBrokerClient : GeneratedServiceBase
@@ -4067,6 +4067,27 @@ public sealed partial class GeneratedPeerServiceClient
 public sealed partial class GeneratedPeerServiceClient
 {
     /// <summary>
+    /// <c>JoinSession</c> (unary) — forwards to <c>PeerServiceClient.JoinSessionAsync</c>.
+    /// gRPC path: <c>/udb.core.webrtc.services.v1.PeerService/JoinSession</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> JoinSessionAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.JoinSessionAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.webrtc.services.v1.PeerService/JoinSession",
+            co => (object)_stub.JoinSessionAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only");
+    }
+}
+public sealed partial class GeneratedPeerServiceClient
+{
+    /// <summary>
     /// <c>LeaveRoom</c> (unary) — forwards to <c>PeerServiceClient.LeaveRoomAsync</c>.
     /// gRPC path: <c>/udb.core.webrtc.services.v1.PeerService/LeaveRoom</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
@@ -4689,6 +4710,27 @@ public sealed partial class GeneratedDataBrokerClient
         return InvokeUnaryAsync(
             "/udb.services.v1.DataBroker/EnqueueOutboxEvent",
             co => (object)_stub.EnqueueOutboxEventAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only");
+    }
+}
+public sealed partial class GeneratedDataBrokerClient
+{
+    /// <summary>
+    /// <c>EnsureBaseline</c> (unary) — forwards to <c>DataBrokerClient.EnsureBaselineAsync</c>.
+    /// gRPC path: <c>/udb.services.v1.DataBroker/EnsureBaseline</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> EnsureBaselineAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.EnsureBaselineAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.services.v1.DataBroker/EnsureBaseline",
+            co => (object)_stub.EnsureBaselineAsync(request, co),
             deadline,
             cancellationToken,
             "mutation" == "read_only");
@@ -5746,6 +5788,27 @@ public sealed partial class GeneratedDataBrokerClient
 }
 
 // ── Server-streaming RPC wrappers (single attempt) ──────────────────────────
+public sealed partial class GeneratedStorageServiceClient
+{
+    /// <summary>
+    /// <c>DownloadFile</c> (server-streaming) — forwards to
+    /// <c>StorageServiceClient.DownloadFile</c>. gRPC path: <c>/udb.core.storage.services.v1.StorageService/DownloadFile</c>.
+    /// Not retried mid-stream; drain the returned stream and map errors with
+    /// <see cref="GeneratedServiceBase.MapStreamError"/>.
+    /// </summary>
+    public dynamic DownloadFile(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // Returns the concrete AsyncServerStreamingCall<TResp> as dynamic.
+        return InvokeStreaming(
+            "/udb.core.storage.services.v1.StorageService/DownloadFile",
+            co => (object)_stub.DownloadFile(request, co),
+            deadline,
+            cancellationToken);
+    }
+}
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>

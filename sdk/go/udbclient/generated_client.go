@@ -25,8 +25,8 @@ package udbclient
 // connection (interceptors) those wrappers run on, plus low-level escape
 // hatches for RPCs that don't yet have a typed helper.
 //
-// Covers 262 RPCs across 16 services
-// (UDB v0.3.5, wire protocol 1.0.0).
+// Covers 265 RPCs across 16 services
+// (UDB v0.3.6, wire protocol 1.0.0).
 
 import (
 	"context"
@@ -34,6 +34,7 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"sync/atomic"
 	"time"
 
 	"google.golang.org/grpc"
@@ -55,7 +56,7 @@ const (
 // SDKVersion is the UDB release this generated layer was rendered from. It is
 // baked at generation time and is the version the bundled `udb` CLI launcher
 // (cmd/udb) will resolve.
-const SDKVersion = "0.3.5"
+const SDKVersion = "0.3.6"
 
 // GeneratedProtocolVersion mirrors the wire protocol this layer targets. It is
 // the generated companion to the hand-written udbclient.ProtocolVersion and is
@@ -103,12 +104,32 @@ func (rc RetryConfig) retryable(code codes.Code) bool {
 	return false
 }
 
-func (rc RetryConfig) retryableForRPC(code codes.Code, readOnly bool) bool {
-	if !readOnly {
-		return false
+// retryableForRPC decides whether a failed unary RPC may be auto-retried on the
+// given transient code. It is fail-safe by default: anything not explicitly
+// allowed below returns false.
+//
+//   - Read-only RPCs (readOnly): retried on the configured transient codes plus
+//     DEADLINE_EXCEEDED. Unchanged behavior.
+//   - Mutations: retried ONLY when the RPC is proto-declared replay-safe
+//     (RPCInfo.ReplaySafe, from method_idempotency_contract.replay_safe) AND the
+//     caller supplied a non-empty idempotency key on the request. Both conditions
+//     are mandatory; missing either means no retry. A replay-safe mutation that
+//     times out (DEADLINE_EXCEEDED) is NOT retried here, because the server may
+//     have applied the write before the deadline fired and the SDK cannot prove
+//     the dedup record landed — so DEADLINE stays a fail-closed terminal for
+//     mutations and only the configured transient codes (UNAVAILABLE /
+//     RESOURCE_EXHAUSTED, which fail before any server-side effect) are retried.
+//   - Non-replay-safe mutations are NEVER retried, regardless of idempotency key.
+func (rc RetryConfig) retryableForRPC(code codes.Code, readOnly, replaySafe, hasIdempotencyKey bool) bool {
+	if readOnly {
+		if code == codes.DeadlineExceeded {
+			return true
+		}
+		return rc.retryable(code)
 	}
-	if code == codes.DeadlineExceeded {
-		return true
+	// Mutation: fail-closed unless proto-declared replay-safe AND idempotency-keyed.
+	if !replaySafe || !hasIdempotencyKey {
+		return false
 	}
 	return rc.retryable(code)
 }
@@ -208,14 +229,41 @@ func (o Options) withDefaults() Options {
 //     without a typed helper.
 type GeneratedClient struct {
 	conn grpc.ClientConnInterface
-	opt  Options
+	// opt is swapped atomically (all-or-nothing) so a mid-flight metadata/auth
+	// adoption (SetMeta/SetAuthorization) can never expose a half-updated
+	// tenant/authorization header pair to a concurrent call. Reads go through
+	// options() (a single atomic load); the read-mostly path stays lock-free.
+	opt atomic.Pointer[Options]
 }
 
 // NewGenerated wraps an existing connection. The connection's transport
 // security (TLS/insecure) and credentials are whatever you configured when you
 // dialed it; this layer never downgrades them.
 func NewGenerated(conn grpc.ClientConnInterface, opt Options) *GeneratedClient {
-	return &GeneratedClient{conn: conn, opt: opt.withDefaults()}
+	g := &GeneratedClient{conn: conn}
+	o := opt.withDefaults()
+	g.opt.Store(&o)
+	return g
+}
+
+// options atomically loads the current snapshot of this client's options.
+func (g *GeneratedClient) options() Options { return *g.opt.Load() }
+
+// SetMeta atomically swaps the caller Metadata used on every subsequent call. A
+// concurrent in-flight call observes either the old or the new metadata in full,
+// never a mix.
+func (g *GeneratedClient) SetMeta(meta Metadata) {
+	o := g.options()
+	o.Meta = meta
+	g.opt.Store(&o)
+}
+
+// SetAuthorization atomically swaps the `authorization` header value (e.g.
+// "Bearer <jwt>") used on every subsequent call.
+func (g *GeneratedClient) SetAuthorization(authorization string) {
+	o := g.options()
+	o.Authorization = authorization
+	g.opt.Store(&o)
 }
 
 // Conn exposes the underlying connection so the hand-written typed wrappers can
@@ -223,12 +271,14 @@ func NewGenerated(conn grpc.ClientConnInterface, opt Options) *GeneratedClient {
 func (g *GeneratedClient) Conn() grpc.ClientConnInterface { return g.conn }
 
 // Meta returns the configured caller Metadata.
-func (g *GeneratedClient) Meta() Metadata { return g.opt.Meta }
+func (g *GeneratedClient) Meta() Metadata { return g.options().Meta }
 
 // outgoingContext attaches the 8 UDB headers plus optional auth / api-key /
 // request-id, reusing joinScopes from the hand-written client.go.
 func (g *GeneratedClient) outgoingContext(ctx context.Context) context.Context {
-	m := g.opt.Meta
+	// Single atomic snapshot so meta + auth + api-key are read all-or-nothing.
+	o := g.options()
+	m := o.Meta
 	pairs := []string{
 		"x-tenant-id", m.TenantID,
 		"x-user-id", m.UserID,
@@ -241,13 +291,13 @@ func (g *GeneratedClient) outgoingContext(ctx context.Context) context.Context {
 	if len(m.Scopes) > 0 {
 		pairs = append(pairs, "x-scopes", joinScopes(m.Scopes))
 	}
-	if g.opt.Authorization != "" {
-		pairs = append(pairs, "authorization", g.opt.Authorization)
+	if o.Authorization != "" {
+		pairs = append(pairs, "authorization", o.Authorization)
 	}
-	if g.opt.APIKey != "" {
-		pairs = append(pairs, "x-api-key", g.opt.APIKey)
+	if o.APIKey != "" {
+		pairs = append(pairs, "x-api-key", o.APIKey)
 	}
-	if rid := g.opt.RequestID; rid != "" {
+	if rid := o.RequestID; rid != "" {
 		pairs = append(pairs, "x-request-id", rid)
 	} else if m.CorrelationID != "" {
 		pairs = append(pairs, "x-request-id", m.CorrelationID)
@@ -256,13 +306,14 @@ func (g *GeneratedClient) outgoingContext(ctx context.Context) context.Context {
 }
 
 func (g *GeneratedClient) withDeadline(ctx context.Context) (context.Context, context.CancelFunc) {
-	if g.opt.CallTimeout <= 0 {
+	timeout := g.options().CallTimeout
+	if timeout <= 0 {
 		return ctx, func() {}
 	}
 	if _, ok := ctx.Deadline(); ok {
 		return ctx, func() {}
 	}
-	return context.WithTimeout(ctx, g.opt.CallTimeout)
+	return context.WithTimeout(ctx, timeout)
 }
 
 // InvokeUnary performs a unary RPC by full method path with metadata injection,
@@ -270,8 +321,10 @@ func (g *GeneratedClient) withDeadline(ctx context.Context) (context.Context, co
 // proto.Message values (the generated request/response types from ./gen). This
 // is the engine the typed wrappers below delegate to.
 func (g *GeneratedClient) InvokeUnary(ctx context.Context, fullMethod string, req, reply any, opts ...grpc.CallOption) error {
-	rc := g.opt.Retry
+	rc := g.options().Retry
 	readOnly := isReadOnlyUnaryRPC(fullMethod)
+	replaySafe := isReplaySafeRPC(fullMethod)
+	idemKeyed := hasIdempotencyKey(req)
 	var lastErr error
 	for attempt := 0; attempt < max(1, rc.MaxAttempts); attempt++ {
 		if attempt > 0 {
@@ -290,7 +343,7 @@ func (g *GeneratedClient) InvokeUnary(ctx context.Context, fullMethod string, re
 			return nil
 		}
 		lastErr = mapError(fullMethod, err, trailer)
-		if !rc.retryableForRPC(status.Code(err), readOnly) {
+		if !rc.retryableForRPC(status.Code(err), readOnly, replaySafe, idemKeyed) {
 			return lastErr
 		}
 	}
@@ -387,8 +440,10 @@ func (g *GeneratedClient) DialOptions() []grpc.DialOption {
 
 func (g *GeneratedClient) unaryInterceptor() grpc.UnaryClientInterceptor {
 	return func(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
-		rc := g.opt.Retry
+		rc := g.options().Retry
 		readOnly := isReadOnlyUnaryRPC(method)
+		replaySafe := isReplaySafeRPC(method)
+		idemKeyed := hasIdempotencyKey(req)
 		var lastErr error
 		for attempt := 0; attempt < max(1, rc.MaxAttempts); attempt++ {
 			if attempt > 0 {
@@ -407,7 +462,7 @@ func (g *GeneratedClient) unaryInterceptor() grpc.UnaryClientInterceptor {
 				return nil
 			}
 			lastErr = mapError(method, err, trailer)
-			if !readOnly || !rc.retryableForRPC(status.Code(err), readOnly) {
+			if !rc.retryableForRPC(status.Code(err), readOnly, replaySafe, idemKeyed) {
 				return lastErr
 			}
 		}
@@ -464,292 +519,357 @@ type RPCInfo struct {
 	ReadOnly   bool    // proto EndpointSecurity.operation_kind == READ_ONLY; the
 	// authoritative retry-safety flag (never guessed from the name)
 	OperationKind string // "read_only" | "mutation" | "destructive"
+	ReplaySafe    bool   // proto method_idempotency_contract.replay_safe; whether a
+	// mutation is safe to replay once durable dedup lands.
+	// Metadata-only today (mutation retry stays inert; see
+	// retryableForRPC) — false for all RPCs until the keystone.
 }
 
 // AllRPCs lists every RPC across every UDB service in this build.
 var AllRPCs = []RPCInfo{
-	{Service: "AnalyticsService", ServicePkg: "udb.core.analytics.services.v1", FullMethod: "/udb.core.analytics.services.v1.AnalyticsService/GetExecutorPerformance", Name: "GetExecutorPerformance", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "AnalyticsService", ServicePkg: "udb.core.analytics.services.v1", FullMethod: "/udb.core.analytics.services.v1.AnalyticsService/GetPipelineSummary", Name: "GetPipelineSummary", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "AnalyticsService", ServicePkg: "udb.core.analytics.services.v1", FullMethod: "/udb.core.analytics.services.v1.AnalyticsService/GetReconciliationAnalytics", Name: "GetReconciliationAnalytics", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "AnalyticsService", ServicePkg: "udb.core.analytics.services.v1", FullMethod: "/udb.core.analytics.services.v1.AnalyticsService/GetSlaCompliance", Name: "GetSlaCompliance", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "AnalyticsService", ServicePkg: "udb.core.analytics.services.v1", FullMethod: "/udb.core.analytics.services.v1.AnalyticsService/GetThroughput", Name: "GetThroughput", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "AnalyticsService", ServicePkg: "udb.core.analytics.services.v1", FullMethod: "/udb.core.analytics.services.v1.AnalyticsService/RecordPipelineMetric", Name: "RecordPipelineMetric", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AnalyticsService", ServicePkg: "udb.core.analytics.services.v1", FullMethod: "/udb.core.analytics.services.v1.AnalyticsService/TriggerSnapshot", Name: "TriggerSnapshot", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "ApiKeyService", ServicePkg: "udb.core.apikey.services.v1", FullMethod: "/udb.core.apikey.services.v1.ApiKeyService/CreateApiKey", Name: "CreateApiKey", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "ApiKeyService", ServicePkg: "udb.core.apikey.services.v1", FullMethod: "/udb.core.apikey.services.v1.ApiKeyService/EmergencyRevokeApiKeys", Name: "EmergencyRevokeApiKeys", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive"},
-	{Service: "ApiKeyService", ServicePkg: "udb.core.apikey.services.v1", FullMethod: "/udb.core.apikey.services.v1.ApiKeyService/GetApiKey", Name: "GetApiKey", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "ApiKeyService", ServicePkg: "udb.core.apikey.services.v1", FullMethod: "/udb.core.apikey.services.v1.ApiKeyService/GetApiKeyUsageStats", Name: "GetApiKeyUsageStats", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "ApiKeyService", ServicePkg: "udb.core.apikey.services.v1", FullMethod: "/udb.core.apikey.services.v1.ApiKeyService/ListApiKeys", Name: "ListApiKeys", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "ApiKeyService", ServicePkg: "udb.core.apikey.services.v1", FullMethod: "/udb.core.apikey.services.v1.ApiKeyService/RevokeApiKey", Name: "RevokeApiKey", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "ApiKeyService", ServicePkg: "udb.core.apikey.services.v1", FullMethod: "/udb.core.apikey.services.v1.ApiKeyService/RotateApiKey", Name: "RotateApiKey", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "ApiKeyService", ServicePkg: "udb.core.apikey.services.v1", FullMethod: "/udb.core.apikey.services.v1.ApiKeyService/UpdateApiKey", Name: "UpdateApiKey", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "ApiKeyService", ServicePkg: "udb.core.apikey.services.v1", FullMethod: "/udb.core.apikey.services.v1.ApiKeyService/ValidateApiKey", Name: "ValidateApiKey", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "AssetService", ServicePkg: "udb.core.asset.services.v1", FullMethod: "/udb.core.asset.services.v1.AssetService/CompleteStep", Name: "CompleteStep", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AssetService", ServicePkg: "udb.core.asset.services.v1", FullMethod: "/udb.core.asset.services.v1.AssetService/CreatePipelineDefinition", Name: "CreatePipelineDefinition", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AssetService", ServicePkg: "udb.core.asset.services.v1", FullMethod: "/udb.core.asset.services.v1.AssetService/GetAsset", Name: "GetAsset", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "AssetService", ServicePkg: "udb.core.asset.services.v1", FullMethod: "/udb.core.asset.services.v1.AssetService/GetPipeline", Name: "GetPipeline", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "AssetService", ServicePkg: "udb.core.asset.services.v1", FullMethod: "/udb.core.asset.services.v1.AssetService/GetPipelineDefinition", Name: "GetPipelineDefinition", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "AssetService", ServicePkg: "udb.core.asset.services.v1", FullMethod: "/udb.core.asset.services.v1.AssetService/ListAssets", Name: "ListAssets", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "AssetService", ServicePkg: "udb.core.asset.services.v1", FullMethod: "/udb.core.asset.services.v1.AssetService/RegisterAsset", Name: "RegisterAsset", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AssetService", ServicePkg: "udb.core.asset.services.v1", FullMethod: "/udb.core.asset.services.v1.AssetService/StartPipeline", Name: "StartPipeline", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/AdminResetMfa", Name: "AdminResetMfa", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/AdminResetPassword", Name: "AdminResetPassword", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/AdminRevokeAllTenantSessions", Name: "AdminRevokeAllTenantSessions", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/AdminRevokeAllUserSessions", Name: "AdminRevokeAllUserSessions", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/AdminRevokeSession", Name: "AdminRevokeSession", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/Authenticate", Name: "Authenticate", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/ChangePassword", Name: "ChangePassword", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/ChangeUserStatus", Name: "ChangeUserStatus", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/ConfirmMFAEnrollment", Name: "ConfirmMFAEnrollment", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/CreateSession", Name: "CreateSession", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/CreateUser", Name: "CreateUser", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/DeleteWebAuthnCredential", Name: "DeleteWebAuthnCredential", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/DisableMfaFactor", Name: "DisableMfaFactor", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/EmergencyRevoke", Name: "EmergencyRevoke", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/EnrollMFA", Name: "EnrollMFA", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/FinishWebAuthnAuthentication", Name: "FinishWebAuthnAuthentication", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/FinishWebAuthnRegistration", Name: "FinishWebAuthnRegistration", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/ForgotPassword", Name: "ForgotPassword", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/GenerateRecoveryCodes", Name: "GenerateRecoveryCodes", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/GetJwks", Name: "GetJwks", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/GetMfaPolicy", Name: "GetMfaPolicy", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/GetSession", Name: "GetSession", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/GetUser", Name: "GetUser", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/IntrospectToken", Name: "IntrospectToken", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/IssueMfaChallenge", Name: "IssueMfaChallenge", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/ListDevices", Name: "ListDevices", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/ListMfaFactors", Name: "ListMfaFactors", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/ListSessions", Name: "ListSessions", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/ListUsers", Name: "ListUsers", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/ListWebAuthnCredentials", Name: "ListWebAuthnCredentials", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/Login", Name: "Login", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/Logout", Name: "Logout", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/PutMfaPolicy", Name: "PutMfaPolicy", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/RefreshSession", Name: "RefreshSession", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/RefreshToken", Name: "RefreshToken", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/RenamePasskey", Name: "RenamePasskey", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/ResendOTP", Name: "ResendOTP", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/ResetPassword", Name: "ResetPassword", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/RevokeDevice", Name: "RevokeDevice", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/RevokeRecoveryCodes", Name: "RevokeRecoveryCodes", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/RevokeSession", Name: "RevokeSession", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/SendOTP", Name: "SendOTP", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/SendPhoneVerification", Name: "SendPhoneVerification", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/StartWebAuthnAuthentication", Name: "StartWebAuthnAuthentication", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/StartWebAuthnRegistration", Name: "StartWebAuthnRegistration", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/UpdateUser", Name: "UpdateUser", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/ValidateCSRF", Name: "ValidateCSRF", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/ValidateToken", Name: "ValidateToken", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/VerifyMfaChallenge", Name: "VerifyMfaChallenge", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/VerifyOTP", Name: "VerifyOTP", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/ActivateCanary", Name: "ActivateCanary", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive"},
-	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/ActivatePolicyVersion", Name: "ActivatePolicyVersion", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive"},
-	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/ApprovePolicyDraft", Name: "ApprovePolicyDraft", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/AssignRole", Name: "AssignRole", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/Authorize", Name: "Authorize", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/BatchCheckPermissions", Name: "BatchCheckPermissions", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/CheckAccess", Name: "CheckAccess", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/CreatePolicyDraft", Name: "CreatePolicyDraft", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/CreatePolicyRule", Name: "CreatePolicyRule", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/CreateRole", Name: "CreateRole", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/DeletePolicyRule", Name: "DeletePolicyRule", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/DeleteRole", Name: "DeleteRole", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/DiffPolicyDraft", Name: "DiffPolicyDraft", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/ExplainPolicy", Name: "ExplainPolicy", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/GetAuthzRevision", Name: "GetAuthzRevision", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/GetCanaryStatus", Name: "GetCanaryStatus", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/GetNativeAccess", Name: "GetNativeAccess", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/GetPolicyBundle", Name: "GetPolicyBundle", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/GetPolicyRule", Name: "GetPolicyRule", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/GetRole", Name: "GetRole", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/InvalidatePolicyBundles", Name: "InvalidatePolicyBundles", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive"},
-	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/LintAuthzPolicies", Name: "LintAuthzPolicies", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/ListAccessDecisionAudits", Name: "ListAccessDecisionAudits", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/ListPolicyRules", Name: "ListPolicyRules", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/ListPolicyVersions", Name: "ListPolicyVersions", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/ListRoles", Name: "ListRoles", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/ListUserPermissions", Name: "ListUserPermissions", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/ListUserRoles", Name: "ListUserRoles", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/MigrateLegacyPolicies", Name: "MigrateLegacyPolicies", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive"},
-	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/PromoteCanary", Name: "PromoteCanary", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive"},
-	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/PutAuthzPolicy", Name: "PutAuthzPolicy", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/PutRelationship", Name: "PutRelationship", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/PutRoleBinding", Name: "PutRoleBinding", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/RejectPolicyDraft", Name: "RejectPolicyDraft", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/RevokeRole", Name: "RevokeRole", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/RollbackPolicyVersion", Name: "RollbackPolicyVersion", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive"},
-	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/SeedBuiltinRoles", Name: "SeedBuiltinRoles", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/SimulatePolicy", Name: "SimulatePolicy", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/SubmitPolicyDraft", Name: "SubmitPolicyDraft", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/UpdatePolicyDraft", Name: "UpdatePolicyDraft", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/UpdateRole", Name: "UpdateRole", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "ControlPlaneService", ServicePkg: "udb.core.control.services.v1", FullMethod: "/udb.core.control.services.v1.ControlPlaneService/AckStatus", Name: "AckStatus", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "ControlPlaneService", ServicePkg: "udb.core.control.services.v1", FullMethod: "/udb.core.control.services.v1.ControlPlaneService/DeltaResources", Name: "DeltaResources", Kind: RPCKind("bidi"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "ControlPlaneService", ServicePkg: "udb.core.control.services.v1", FullMethod: "/udb.core.control.services.v1.ControlPlaneService/GetResources", Name: "GetResources", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "ControlPlaneService", ServicePkg: "udb.core.control.services.v1", FullMethod: "/udb.core.control.services.v1.ControlPlaneService/ListNodeStates", Name: "ListNodeStates", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "ControlPlaneService", ServicePkg: "udb.core.control.services.v1", FullMethod: "/udb.core.control.services.v1.ControlPlaneService/StreamResources", Name: "StreamResources", Kind: RPCKind("bidi"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/CreateProvider", Name: "CreateProvider", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/DisableProvider", Name: "DisableProvider", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/ForceJwksRefresh", Name: "ForceJwksRefresh", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/GetProvider", Name: "GetProvider", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/ImportSamlMetadata", Name: "ImportSamlMetadata", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/LinkIdentity", Name: "LinkIdentity", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/ListExternalIdentities", Name: "ListExternalIdentities", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/ListProviders", Name: "ListProviders", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/PreviewClaimMapping", Name: "PreviewClaimMapping", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/PreviewGroupMapping", Name: "PreviewGroupMapping", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/ResolveExternalIdentity", Name: "ResolveExternalIdentity", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/SamlAcs", Name: "SamlAcs", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/ScimCreateGroup", Name: "ScimCreateGroup", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/ScimCreateUser", Name: "ScimCreateUser", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/ScimDeleteGroup", Name: "ScimDeleteGroup", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/ScimDeleteUser", Name: "ScimDeleteUser", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/ScimGetGroup", Name: "ScimGetGroup", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/ScimGetUser", Name: "ScimGetUser", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/ScimListGroups", Name: "ScimListGroups", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/ScimListUsers", Name: "ScimListUsers", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/ScimPatchGroup", Name: "ScimPatchGroup", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/ScimPatchUser", Name: "ScimPatchUser", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/ScimReplaceUser", Name: "ScimReplaceUser", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/StartSamlLogin", Name: "StartSamlLogin", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/TestProviderDiscovery", Name: "TestProviderDiscovery", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/UnlinkIdentity", Name: "UnlinkIdentity", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/UpdateProvider", Name: "UpdateProvider", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "NotificationService", ServicePkg: "udb.core.notification.services.v1", FullMethod: "/udb.core.notification.services.v1.NotificationService/GetDeliveryStats", Name: "GetDeliveryStats", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "NotificationService", ServicePkg: "udb.core.notification.services.v1", FullMethod: "/udb.core.notification.services.v1.NotificationService/GetNotification", Name: "GetNotification", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "NotificationService", ServicePkg: "udb.core.notification.services.v1", FullMethod: "/udb.core.notification.services.v1.NotificationService/GetPreference", Name: "GetPreference", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "NotificationService", ServicePkg: "udb.core.notification.services.v1", FullMethod: "/udb.core.notification.services.v1.NotificationService/GetTemplate", Name: "GetTemplate", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "NotificationService", ServicePkg: "udb.core.notification.services.v1", FullMethod: "/udb.core.notification.services.v1.NotificationService/ListNotifications", Name: "ListNotifications", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "NotificationService", ServicePkg: "udb.core.notification.services.v1", FullMethod: "/udb.core.notification.services.v1.NotificationService/ListPreferences", Name: "ListPreferences", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "NotificationService", ServicePkg: "udb.core.notification.services.v1", FullMethod: "/udb.core.notification.services.v1.NotificationService/ListTemplates", Name: "ListTemplates", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "NotificationService", ServicePkg: "udb.core.notification.services.v1", FullMethod: "/udb.core.notification.services.v1.NotificationService/RetryNotification", Name: "RetryNotification", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "NotificationService", ServicePkg: "udb.core.notification.services.v1", FullMethod: "/udb.core.notification.services.v1.NotificationService/SendNotification", Name: "SendNotification", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "NotificationService", ServicePkg: "udb.core.notification.services.v1", FullMethod: "/udb.core.notification.services.v1.NotificationService/SetPreference", Name: "SetPreference", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "NotificationService", ServicePkg: "udb.core.notification.services.v1", FullMethod: "/udb.core.notification.services.v1.NotificationService/UpsertTemplate", Name: "UpsertTemplate", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "StorageService", ServicePkg: "udb.core.storage.services.v1", FullMethod: "/udb.core.storage.services.v1.StorageService/DeleteFile", Name: "DeleteFile", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "StorageService", ServicePkg: "udb.core.storage.services.v1", FullMethod: "/udb.core.storage.services.v1.StorageService/FinalizeUpload", Name: "FinalizeUpload", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "StorageService", ServicePkg: "udb.core.storage.services.v1", FullMethod: "/udb.core.storage.services.v1.StorageService/GetDownloadUrl", Name: "GetDownloadUrl", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "StorageService", ServicePkg: "udb.core.storage.services.v1", FullMethod: "/udb.core.storage.services.v1.StorageService/GetFile", Name: "GetFile", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "StorageService", ServicePkg: "udb.core.storage.services.v1", FullMethod: "/udb.core.storage.services.v1.StorageService/ListFiles", Name: "ListFiles", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "StorageService", ServicePkg: "udb.core.storage.services.v1", FullMethod: "/udb.core.storage.services.v1.StorageService/RegisterUpload", Name: "RegisterUpload", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "StorageService", ServicePkg: "udb.core.storage.services.v1", FullMethod: "/udb.core.storage.services.v1.StorageService/UpdateFile", Name: "UpdateFile", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "TenantService", ServicePkg: "udb.core.tenant.services.v1", FullMethod: "/udb.core.tenant.services.v1.TenantService/CreateTenant", Name: "CreateTenant", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "TenantService", ServicePkg: "udb.core.tenant.services.v1", FullMethod: "/udb.core.tenant.services.v1.TenantService/GetTenant", Name: "GetTenant", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "TenantService", ServicePkg: "udb.core.tenant.services.v1", FullMethod: "/udb.core.tenant.services.v1.TenantService/GetTenantConfig", Name: "GetTenantConfig", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "TenantService", ServicePkg: "udb.core.tenant.services.v1", FullMethod: "/udb.core.tenant.services.v1.TenantService/ListTenants", Name: "ListTenants", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "TenantService", ServicePkg: "udb.core.tenant.services.v1", FullMethod: "/udb.core.tenant.services.v1.TenantService/UpdateTenant", Name: "UpdateTenant", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "TenantService", ServicePkg: "udb.core.tenant.services.v1", FullMethod: "/udb.core.tenant.services.v1.TenantService/UpdateTenantConfig", Name: "UpdateTenantConfig", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "PeerService", ServicePkg: "udb.core.webrtc.services.v1", FullMethod: "/udb.core.webrtc.services.v1.PeerService/GetPeer", Name: "GetPeer", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "PeerService", ServicePkg: "udb.core.webrtc.services.v1", FullMethod: "/udb.core.webrtc.services.v1.PeerService/JoinRoom", Name: "JoinRoom", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "PeerService", ServicePkg: "udb.core.webrtc.services.v1", FullMethod: "/udb.core.webrtc.services.v1.PeerService/LeaveRoom", Name: "LeaveRoom", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "PeerService", ServicePkg: "udb.core.webrtc.services.v1", FullMethod: "/udb.core.webrtc.services.v1.PeerService/ListPeers", Name: "ListPeers", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "RoomService", ServicePkg: "udb.core.webrtc.services.v1", FullMethod: "/udb.core.webrtc.services.v1.RoomService/CloseRoom", Name: "CloseRoom", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "RoomService", ServicePkg: "udb.core.webrtc.services.v1", FullMethod: "/udb.core.webrtc.services.v1.RoomService/CreateRoom", Name: "CreateRoom", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "RoomService", ServicePkg: "udb.core.webrtc.services.v1", FullMethod: "/udb.core.webrtc.services.v1.RoomService/GetRoom", Name: "GetRoom", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "RoomService", ServicePkg: "udb.core.webrtc.services.v1", FullMethod: "/udb.core.webrtc.services.v1.RoomService/ListRooms", Name: "ListRooms", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "RoomService", ServicePkg: "udb.core.webrtc.services.v1", FullMethod: "/udb.core.webrtc.services.v1.RoomService/UpdateRoom", Name: "UpdateRoom", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "SignalingService", ServicePkg: "udb.core.webrtc.services.v1", FullMethod: "/udb.core.webrtc.services.v1.SignalingService/Signal", Name: "Signal", Kind: RPCKind("bidi"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "TrackService", ServicePkg: "udb.core.webrtc.services.v1", FullMethod: "/udb.core.webrtc.services.v1.TrackService/ListTracks", Name: "ListTracks", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "TrackService", ServicePkg: "udb.core.webrtc.services.v1", FullMethod: "/udb.core.webrtc.services.v1.TrackService/MuteTrack", Name: "MuteTrack", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "TrackService", ServicePkg: "udb.core.webrtc.services.v1", FullMethod: "/udb.core.webrtc.services.v1.TrackService/PublishTrack", Name: "PublishTrack", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "TrackService", ServicePkg: "udb.core.webrtc.services.v1", FullMethod: "/udb.core.webrtc.services.v1.TrackService/UnpublishTrack", Name: "UnpublishTrack", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "TurnService", ServicePkg: "udb.core.webrtc.services.v1", FullMethod: "/udb.core.webrtc.services.v1.TurnService/IssueCredentials", Name: "IssueCredentials", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/ActivateCatalog", Name: "ActivateCatalog", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/AnalyticalQuery", Name: "AnalyticalQuery", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/ApplyMigration", Name: "ApplyMigration", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/ApproveMigrationPlan", Name: "ApproveMigrationPlan", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/BatchSelect", Name: "BatchSelect", Kind: RPCKind("bidi"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/BatchUpsert", Name: "BatchUpsert", Kind: RPCKind("bidi"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/BeginTx", Name: "BeginTx", Kind: RPCKind("bidi"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/CacheDelete", Name: "CacheDelete", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/CacheGet", Name: "CacheGet", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/CacheScan", Name: "CacheScan", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/CacheSet", Name: "CacheSet", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/CreateMaterializedView", Name: "CreateMaterializedView", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/Delete", Name: "Delete", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/DeletePolicy", Name: "DeletePolicy", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/DismissDlqEvent", Name: "DismissDlqEvent", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/DocumentDelete", Name: "DocumentDelete", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/DocumentFind", Name: "DocumentFind", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/DocumentGet", Name: "DocumentGet", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/DocumentUpsert", Name: "DocumentUpsert", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/DropResource", Name: "DropResource", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/EnqueueOutboxEvent", Name: "EnqueueOutboxEvent", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/EnsureProject", Name: "EnsureProject", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/EnsureResource", Name: "EnsureResource", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/GeneratePresignedUrl", Name: "GeneratePresignedUrl", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/GenericDispatch", Name: "GenericDispatch", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/GetAdminSummary", Name: "GetAdminSummary", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/GetCapabilities", Name: "GetCapabilities", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/GetCatalogManifest", Name: "GetCatalogManifest", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/GetCatalogVersion", Name: "GetCatalogVersion", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/GetCatalogVersions", Name: "GetCatalogVersions", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/GetCdcStatus", Name: "GetCdcStatus", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/GetDlqEvent", Name: "GetDlqEvent", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/GetHealthReport", Name: "GetHealthReport", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/GetMigrationStatus", Name: "GetMigrationStatus", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/GetObject", Name: "GetObject", Kind: RPCKind("server_streaming"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/GetSaga", Name: "GetSaga", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/GraphMutate", Name: "GraphMutate", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/GraphQuery", Name: "GraphQuery", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/InitiateMultipartUpload", Name: "InitiateMultipartUpload", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/LintPolicies", Name: "LintPolicies", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/ListAdminAuditLogs", Name: "ListAdminAuditLogs", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/ListDlqEvents", Name: "ListDlqEvents", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/ListMessageSchemas", Name: "ListMessageSchemas", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/ListMigrationRuns", Name: "ListMigrationRuns", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/ListPolicies", Name: "ListPolicies", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/ListProjects", Name: "ListProjects", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/ListResources", Name: "ListResources", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/ListSagas", Name: "ListSagas", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/LookupMessageSchema", Name: "LookupMessageSchema", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/MarkSagaReviewed", Name: "MarkSagaReviewed", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/PauseCdc", Name: "PauseCdc", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/PlanMigration", Name: "PlanMigration", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/PreviewCdcRedaction", Name: "PreviewCdcRedaction", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/PublishCDC", Name: "PublishCDC", Kind: RPCKind("server_streaming"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/PutObject", Name: "PutObject", Kind: RPCKind("client_streaming"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/PutPolicy", Name: "PutPolicy", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/QuarantineDlqEvent", Name: "QuarantineDlqEvent", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/ReloadPolicies", Name: "ReloadPolicies", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/ReplayDlqEvent", Name: "ReplayDlqEvent", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/ResumeCdc", Name: "ResumeCdc", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/RetrySagaCompensation", Name: "RetrySagaCompensation", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/RollbackCatalog", Name: "RollbackCatalog", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/ScanProjectionDrift", Name: "ScanProjectionDrift", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/Select", Name: "Select", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/SelectV2", Name: "SelectV2", Kind: RPCKind("server_streaming"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/StageCatalog", Name: "StageCatalog", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/StepDownCdcLeader", Name: "StepDownCdcLeader", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/TimeSeriesQuery", Name: "TimeSeriesQuery", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/TimeSeriesWrite", Name: "TimeSeriesWrite", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/Upsert", Name: "Upsert", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/ValidateCatalog", Name: "ValidateCatalog", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/VectorBatchUpsert", Name: "VectorBatchUpsert", Kind: RPCKind("bidi"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/VectorHybridSearch", Name: "VectorHybridSearch", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/VectorSearch", Name: "VectorSearch", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/VectorUpsert", Name: "VectorUpsert", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation"},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/VerifyAdminAuditLog", Name: "VerifyAdminAuditLog", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only"},
+	{Service: "AnalyticsService", ServicePkg: "udb.core.analytics.services.v1", FullMethod: "/udb.core.analytics.services.v1.AnalyticsService/GetExecutorPerformance", Name: "GetExecutorPerformance", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "AnalyticsService", ServicePkg: "udb.core.analytics.services.v1", FullMethod: "/udb.core.analytics.services.v1.AnalyticsService/GetPipelineSummary", Name: "GetPipelineSummary", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "AnalyticsService", ServicePkg: "udb.core.analytics.services.v1", FullMethod: "/udb.core.analytics.services.v1.AnalyticsService/GetReconciliationAnalytics", Name: "GetReconciliationAnalytics", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "AnalyticsService", ServicePkg: "udb.core.analytics.services.v1", FullMethod: "/udb.core.analytics.services.v1.AnalyticsService/GetSlaCompliance", Name: "GetSlaCompliance", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "AnalyticsService", ServicePkg: "udb.core.analytics.services.v1", FullMethod: "/udb.core.analytics.services.v1.AnalyticsService/GetThroughput", Name: "GetThroughput", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "AnalyticsService", ServicePkg: "udb.core.analytics.services.v1", FullMethod: "/udb.core.analytics.services.v1.AnalyticsService/RecordPipelineMetric", Name: "RecordPipelineMetric", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AnalyticsService", ServicePkg: "udb.core.analytics.services.v1", FullMethod: "/udb.core.analytics.services.v1.AnalyticsService/TriggerSnapshot", Name: "TriggerSnapshot", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "ApiKeyService", ServicePkg: "udb.core.apikey.services.v1", FullMethod: "/udb.core.apikey.services.v1.ApiKeyService/CreateApiKey", Name: "CreateApiKey", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "ApiKeyService", ServicePkg: "udb.core.apikey.services.v1", FullMethod: "/udb.core.apikey.services.v1.ApiKeyService/EmergencyRevokeApiKeys", Name: "EmergencyRevokeApiKeys", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive", ReplaySafe: false},
+	{Service: "ApiKeyService", ServicePkg: "udb.core.apikey.services.v1", FullMethod: "/udb.core.apikey.services.v1.ApiKeyService/GetApiKey", Name: "GetApiKey", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "ApiKeyService", ServicePkg: "udb.core.apikey.services.v1", FullMethod: "/udb.core.apikey.services.v1.ApiKeyService/GetApiKeyUsageStats", Name: "GetApiKeyUsageStats", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "ApiKeyService", ServicePkg: "udb.core.apikey.services.v1", FullMethod: "/udb.core.apikey.services.v1.ApiKeyService/ListApiKeys", Name: "ListApiKeys", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "ApiKeyService", ServicePkg: "udb.core.apikey.services.v1", FullMethod: "/udb.core.apikey.services.v1.ApiKeyService/RevokeApiKey", Name: "RevokeApiKey", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "ApiKeyService", ServicePkg: "udb.core.apikey.services.v1", FullMethod: "/udb.core.apikey.services.v1.ApiKeyService/RotateApiKey", Name: "RotateApiKey", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "ApiKeyService", ServicePkg: "udb.core.apikey.services.v1", FullMethod: "/udb.core.apikey.services.v1.ApiKeyService/UpdateApiKey", Name: "UpdateApiKey", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "ApiKeyService", ServicePkg: "udb.core.apikey.services.v1", FullMethod: "/udb.core.apikey.services.v1.ApiKeyService/ValidateApiKey", Name: "ValidateApiKey", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "AssetService", ServicePkg: "udb.core.asset.services.v1", FullMethod: "/udb.core.asset.services.v1.AssetService/CompleteStep", Name: "CompleteStep", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AssetService", ServicePkg: "udb.core.asset.services.v1", FullMethod: "/udb.core.asset.services.v1.AssetService/CreatePipelineDefinition", Name: "CreatePipelineDefinition", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AssetService", ServicePkg: "udb.core.asset.services.v1", FullMethod: "/udb.core.asset.services.v1.AssetService/GetAsset", Name: "GetAsset", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "AssetService", ServicePkg: "udb.core.asset.services.v1", FullMethod: "/udb.core.asset.services.v1.AssetService/GetPipeline", Name: "GetPipeline", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "AssetService", ServicePkg: "udb.core.asset.services.v1", FullMethod: "/udb.core.asset.services.v1.AssetService/GetPipelineDefinition", Name: "GetPipelineDefinition", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "AssetService", ServicePkg: "udb.core.asset.services.v1", FullMethod: "/udb.core.asset.services.v1.AssetService/ListAssets", Name: "ListAssets", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "AssetService", ServicePkg: "udb.core.asset.services.v1", FullMethod: "/udb.core.asset.services.v1.AssetService/RegisterAsset", Name: "RegisterAsset", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AssetService", ServicePkg: "udb.core.asset.services.v1", FullMethod: "/udb.core.asset.services.v1.AssetService/StartPipeline", Name: "StartPipeline", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/AdminResetMfa", Name: "AdminResetMfa", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/AdminResetPassword", Name: "AdminResetPassword", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/AdminRevokeAllTenantSessions", Name: "AdminRevokeAllTenantSessions", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/AdminRevokeAllUserSessions", Name: "AdminRevokeAllUserSessions", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/AdminRevokeSession", Name: "AdminRevokeSession", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/Authenticate", Name: "Authenticate", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/ChangePassword", Name: "ChangePassword", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/ChangeUserStatus", Name: "ChangeUserStatus", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/ConfirmMFAEnrollment", Name: "ConfirmMFAEnrollment", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/CreateSession", Name: "CreateSession", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/CreateUser", Name: "CreateUser", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/DeleteWebAuthnCredential", Name: "DeleteWebAuthnCredential", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/DisableMfaFactor", Name: "DisableMfaFactor", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/EmergencyRevoke", Name: "EmergencyRevoke", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/EnrollMFA", Name: "EnrollMFA", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/FinishWebAuthnAuthentication", Name: "FinishWebAuthnAuthentication", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/FinishWebAuthnRegistration", Name: "FinishWebAuthnRegistration", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/ForgotPassword", Name: "ForgotPassword", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/GenerateRecoveryCodes", Name: "GenerateRecoveryCodes", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/GetJwks", Name: "GetJwks", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/GetMfaPolicy", Name: "GetMfaPolicy", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/GetSession", Name: "GetSession", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/GetUser", Name: "GetUser", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/IntrospectToken", Name: "IntrospectToken", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/IssueMfaChallenge", Name: "IssueMfaChallenge", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/ListDevices", Name: "ListDevices", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/ListMfaFactors", Name: "ListMfaFactors", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/ListSessions", Name: "ListSessions", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/ListUsers", Name: "ListUsers", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/ListWebAuthnCredentials", Name: "ListWebAuthnCredentials", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/Login", Name: "Login", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/Logout", Name: "Logout", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/PutMfaPolicy", Name: "PutMfaPolicy", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/RefreshSession", Name: "RefreshSession", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/RefreshToken", Name: "RefreshToken", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/RenamePasskey", Name: "RenamePasskey", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/ResendOTP", Name: "ResendOTP", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/ResetPassword", Name: "ResetPassword", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/RevokeDevice", Name: "RevokeDevice", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/RevokeRecoveryCodes", Name: "RevokeRecoveryCodes", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/RevokeSession", Name: "RevokeSession", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/SendOTP", Name: "SendOTP", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/SendPhoneVerification", Name: "SendPhoneVerification", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/StartWebAuthnAuthentication", Name: "StartWebAuthnAuthentication", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/StartWebAuthnRegistration", Name: "StartWebAuthnRegistration", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/UpdateUser", Name: "UpdateUser", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/ValidateCSRF", Name: "ValidateCSRF", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/ValidateToken", Name: "ValidateToken", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/VerifyMfaChallenge", Name: "VerifyMfaChallenge", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/VerifyOTP", Name: "VerifyOTP", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/ActivateCanary", Name: "ActivateCanary", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive", ReplaySafe: false},
+	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/ActivatePolicyVersion", Name: "ActivatePolicyVersion", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive", ReplaySafe: false},
+	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/ApprovePolicyDraft", Name: "ApprovePolicyDraft", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/AssignRole", Name: "AssignRole", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/Authorize", Name: "Authorize", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/BatchCheckPermissions", Name: "BatchCheckPermissions", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/CheckAccess", Name: "CheckAccess", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/CreatePolicyDraft", Name: "CreatePolicyDraft", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/CreatePolicyRule", Name: "CreatePolicyRule", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/CreateRole", Name: "CreateRole", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/DeletePolicyRule", Name: "DeletePolicyRule", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/DeleteRole", Name: "DeleteRole", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/DiffPolicyDraft", Name: "DiffPolicyDraft", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/ExplainPolicy", Name: "ExplainPolicy", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/GetAuthzRevision", Name: "GetAuthzRevision", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/GetCanaryStatus", Name: "GetCanaryStatus", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/GetNativeAccess", Name: "GetNativeAccess", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/GetPolicyBundle", Name: "GetPolicyBundle", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/GetPolicyRule", Name: "GetPolicyRule", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/GetRole", Name: "GetRole", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/InvalidatePolicyBundles", Name: "InvalidatePolicyBundles", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive", ReplaySafe: false},
+	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/LintAuthzPolicies", Name: "LintAuthzPolicies", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/ListAccessDecisionAudits", Name: "ListAccessDecisionAudits", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/ListPolicyRules", Name: "ListPolicyRules", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/ListPolicyVersions", Name: "ListPolicyVersions", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/ListRoles", Name: "ListRoles", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/ListUserPermissions", Name: "ListUserPermissions", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/ListUserRoles", Name: "ListUserRoles", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/MigrateLegacyPolicies", Name: "MigrateLegacyPolicies", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive", ReplaySafe: false},
+	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/PromoteCanary", Name: "PromoteCanary", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive", ReplaySafe: false},
+	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/PutAuthzPolicy", Name: "PutAuthzPolicy", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/PutRelationship", Name: "PutRelationship", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/PutRoleBinding", Name: "PutRoleBinding", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/RejectPolicyDraft", Name: "RejectPolicyDraft", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/RevokeRole", Name: "RevokeRole", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/RollbackPolicyVersion", Name: "RollbackPolicyVersion", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive", ReplaySafe: false},
+	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/SeedBuiltinRoles", Name: "SeedBuiltinRoles", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/SimulatePolicy", Name: "SimulatePolicy", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/SubmitPolicyDraft", Name: "SubmitPolicyDraft", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/UpdatePolicyDraft", Name: "UpdatePolicyDraft", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthzService", ServicePkg: "udb.core.authz.services.v1", FullMethod: "/udb.core.authz.services.v1.AuthzService/UpdateRole", Name: "UpdateRole", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "ControlPlaneService", ServicePkg: "udb.core.control.services.v1", FullMethod: "/udb.core.control.services.v1.ControlPlaneService/AckStatus", Name: "AckStatus", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "ControlPlaneService", ServicePkg: "udb.core.control.services.v1", FullMethod: "/udb.core.control.services.v1.ControlPlaneService/DeltaResources", Name: "DeltaResources", Kind: RPCKind("bidi"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "ControlPlaneService", ServicePkg: "udb.core.control.services.v1", FullMethod: "/udb.core.control.services.v1.ControlPlaneService/GetResources", Name: "GetResources", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "ControlPlaneService", ServicePkg: "udb.core.control.services.v1", FullMethod: "/udb.core.control.services.v1.ControlPlaneService/ListNodeStates", Name: "ListNodeStates", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "ControlPlaneService", ServicePkg: "udb.core.control.services.v1", FullMethod: "/udb.core.control.services.v1.ControlPlaneService/StreamResources", Name: "StreamResources", Kind: RPCKind("bidi"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/CreateProvider", Name: "CreateProvider", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/DisableProvider", Name: "DisableProvider", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/ForceJwksRefresh", Name: "ForceJwksRefresh", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/GetProvider", Name: "GetProvider", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/ImportSamlMetadata", Name: "ImportSamlMetadata", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/LinkIdentity", Name: "LinkIdentity", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/ListExternalIdentities", Name: "ListExternalIdentities", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/ListProviders", Name: "ListProviders", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/PreviewClaimMapping", Name: "PreviewClaimMapping", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/PreviewGroupMapping", Name: "PreviewGroupMapping", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/ResolveExternalIdentity", Name: "ResolveExternalIdentity", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/SamlAcs", Name: "SamlAcs", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/ScimCreateGroup", Name: "ScimCreateGroup", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/ScimCreateUser", Name: "ScimCreateUser", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/ScimDeleteGroup", Name: "ScimDeleteGroup", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/ScimDeleteUser", Name: "ScimDeleteUser", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/ScimGetGroup", Name: "ScimGetGroup", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/ScimGetUser", Name: "ScimGetUser", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/ScimListGroups", Name: "ScimListGroups", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/ScimListUsers", Name: "ScimListUsers", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/ScimPatchGroup", Name: "ScimPatchGroup", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/ScimPatchUser", Name: "ScimPatchUser", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/ScimReplaceUser", Name: "ScimReplaceUser", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/StartSamlLogin", Name: "StartSamlLogin", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/TestProviderDiscovery", Name: "TestProviderDiscovery", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/UnlinkIdentity", Name: "UnlinkIdentity", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "IdentityProviderService", ServicePkg: "udb.core.idp.services.v1", FullMethod: "/udb.core.idp.services.v1.IdentityProviderService/UpdateProvider", Name: "UpdateProvider", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "NotificationService", ServicePkg: "udb.core.notification.services.v1", FullMethod: "/udb.core.notification.services.v1.NotificationService/GetDeliveryStats", Name: "GetDeliveryStats", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "NotificationService", ServicePkg: "udb.core.notification.services.v1", FullMethod: "/udb.core.notification.services.v1.NotificationService/GetNotification", Name: "GetNotification", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "NotificationService", ServicePkg: "udb.core.notification.services.v1", FullMethod: "/udb.core.notification.services.v1.NotificationService/GetPreference", Name: "GetPreference", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "NotificationService", ServicePkg: "udb.core.notification.services.v1", FullMethod: "/udb.core.notification.services.v1.NotificationService/GetTemplate", Name: "GetTemplate", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "NotificationService", ServicePkg: "udb.core.notification.services.v1", FullMethod: "/udb.core.notification.services.v1.NotificationService/ListNotifications", Name: "ListNotifications", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "NotificationService", ServicePkg: "udb.core.notification.services.v1", FullMethod: "/udb.core.notification.services.v1.NotificationService/ListPreferences", Name: "ListPreferences", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "NotificationService", ServicePkg: "udb.core.notification.services.v1", FullMethod: "/udb.core.notification.services.v1.NotificationService/ListTemplates", Name: "ListTemplates", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "NotificationService", ServicePkg: "udb.core.notification.services.v1", FullMethod: "/udb.core.notification.services.v1.NotificationService/RetryNotification", Name: "RetryNotification", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "NotificationService", ServicePkg: "udb.core.notification.services.v1", FullMethod: "/udb.core.notification.services.v1.NotificationService/SendNotification", Name: "SendNotification", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "NotificationService", ServicePkg: "udb.core.notification.services.v1", FullMethod: "/udb.core.notification.services.v1.NotificationService/SetPreference", Name: "SetPreference", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "NotificationService", ServicePkg: "udb.core.notification.services.v1", FullMethod: "/udb.core.notification.services.v1.NotificationService/UpsertTemplate", Name: "UpsertTemplate", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "StorageService", ServicePkg: "udb.core.storage.services.v1", FullMethod: "/udb.core.storage.services.v1.StorageService/DeleteFile", Name: "DeleteFile", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "StorageService", ServicePkg: "udb.core.storage.services.v1", FullMethod: "/udb.core.storage.services.v1.StorageService/DownloadFile", Name: "DownloadFile", Kind: RPCKind("server_streaming"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "StorageService", ServicePkg: "udb.core.storage.services.v1", FullMethod: "/udb.core.storage.services.v1.StorageService/FinalizeUpload", Name: "FinalizeUpload", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "StorageService", ServicePkg: "udb.core.storage.services.v1", FullMethod: "/udb.core.storage.services.v1.StorageService/GetDownloadUrl", Name: "GetDownloadUrl", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "StorageService", ServicePkg: "udb.core.storage.services.v1", FullMethod: "/udb.core.storage.services.v1.StorageService/GetFile", Name: "GetFile", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "StorageService", ServicePkg: "udb.core.storage.services.v1", FullMethod: "/udb.core.storage.services.v1.StorageService/ListFiles", Name: "ListFiles", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "StorageService", ServicePkg: "udb.core.storage.services.v1", FullMethod: "/udb.core.storage.services.v1.StorageService/RegisterUpload", Name: "RegisterUpload", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "StorageService", ServicePkg: "udb.core.storage.services.v1", FullMethod: "/udb.core.storage.services.v1.StorageService/UpdateFile", Name: "UpdateFile", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "TenantService", ServicePkg: "udb.core.tenant.services.v1", FullMethod: "/udb.core.tenant.services.v1.TenantService/CreateTenant", Name: "CreateTenant", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "TenantService", ServicePkg: "udb.core.tenant.services.v1", FullMethod: "/udb.core.tenant.services.v1.TenantService/GetTenant", Name: "GetTenant", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "TenantService", ServicePkg: "udb.core.tenant.services.v1", FullMethod: "/udb.core.tenant.services.v1.TenantService/GetTenantConfig", Name: "GetTenantConfig", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "TenantService", ServicePkg: "udb.core.tenant.services.v1", FullMethod: "/udb.core.tenant.services.v1.TenantService/ListTenants", Name: "ListTenants", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "TenantService", ServicePkg: "udb.core.tenant.services.v1", FullMethod: "/udb.core.tenant.services.v1.TenantService/UpdateTenant", Name: "UpdateTenant", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "TenantService", ServicePkg: "udb.core.tenant.services.v1", FullMethod: "/udb.core.tenant.services.v1.TenantService/UpdateTenantConfig", Name: "UpdateTenantConfig", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "PeerService", ServicePkg: "udb.core.webrtc.services.v1", FullMethod: "/udb.core.webrtc.services.v1.PeerService/GetPeer", Name: "GetPeer", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "PeerService", ServicePkg: "udb.core.webrtc.services.v1", FullMethod: "/udb.core.webrtc.services.v1.PeerService/JoinRoom", Name: "JoinRoom", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "PeerService", ServicePkg: "udb.core.webrtc.services.v1", FullMethod: "/udb.core.webrtc.services.v1.PeerService/JoinSession", Name: "JoinSession", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "PeerService", ServicePkg: "udb.core.webrtc.services.v1", FullMethod: "/udb.core.webrtc.services.v1.PeerService/LeaveRoom", Name: "LeaveRoom", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "PeerService", ServicePkg: "udb.core.webrtc.services.v1", FullMethod: "/udb.core.webrtc.services.v1.PeerService/ListPeers", Name: "ListPeers", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "RoomService", ServicePkg: "udb.core.webrtc.services.v1", FullMethod: "/udb.core.webrtc.services.v1.RoomService/CloseRoom", Name: "CloseRoom", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "RoomService", ServicePkg: "udb.core.webrtc.services.v1", FullMethod: "/udb.core.webrtc.services.v1.RoomService/CreateRoom", Name: "CreateRoom", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "RoomService", ServicePkg: "udb.core.webrtc.services.v1", FullMethod: "/udb.core.webrtc.services.v1.RoomService/GetRoom", Name: "GetRoom", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "RoomService", ServicePkg: "udb.core.webrtc.services.v1", FullMethod: "/udb.core.webrtc.services.v1.RoomService/ListRooms", Name: "ListRooms", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "RoomService", ServicePkg: "udb.core.webrtc.services.v1", FullMethod: "/udb.core.webrtc.services.v1.RoomService/UpdateRoom", Name: "UpdateRoom", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "SignalingService", ServicePkg: "udb.core.webrtc.services.v1", FullMethod: "/udb.core.webrtc.services.v1.SignalingService/Signal", Name: "Signal", Kind: RPCKind("bidi"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "TrackService", ServicePkg: "udb.core.webrtc.services.v1", FullMethod: "/udb.core.webrtc.services.v1.TrackService/ListTracks", Name: "ListTracks", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "TrackService", ServicePkg: "udb.core.webrtc.services.v1", FullMethod: "/udb.core.webrtc.services.v1.TrackService/MuteTrack", Name: "MuteTrack", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "TrackService", ServicePkg: "udb.core.webrtc.services.v1", FullMethod: "/udb.core.webrtc.services.v1.TrackService/PublishTrack", Name: "PublishTrack", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "TrackService", ServicePkg: "udb.core.webrtc.services.v1", FullMethod: "/udb.core.webrtc.services.v1.TrackService/UnpublishTrack", Name: "UnpublishTrack", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "TurnService", ServicePkg: "udb.core.webrtc.services.v1", FullMethod: "/udb.core.webrtc.services.v1.TurnService/IssueCredentials", Name: "IssueCredentials", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/ActivateCatalog", Name: "ActivateCatalog", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/AnalyticalQuery", Name: "AnalyticalQuery", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/ApplyMigration", Name: "ApplyMigration", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/ApproveMigrationPlan", Name: "ApproveMigrationPlan", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/BatchSelect", Name: "BatchSelect", Kind: RPCKind("bidi"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/BatchUpsert", Name: "BatchUpsert", Kind: RPCKind("bidi"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/BeginTx", Name: "BeginTx", Kind: RPCKind("bidi"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/CacheDelete", Name: "CacheDelete", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/CacheGet", Name: "CacheGet", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/CacheScan", Name: "CacheScan", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/CacheSet", Name: "CacheSet", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/CreateMaterializedView", Name: "CreateMaterializedView", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/Delete", Name: "Delete", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: true},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/DeletePolicy", Name: "DeletePolicy", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/DismissDlqEvent", Name: "DismissDlqEvent", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/DocumentDelete", Name: "DocumentDelete", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/DocumentFind", Name: "DocumentFind", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/DocumentGet", Name: "DocumentGet", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/DocumentUpsert", Name: "DocumentUpsert", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/DropResource", Name: "DropResource", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/EnqueueOutboxEvent", Name: "EnqueueOutboxEvent", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/EnsureBaseline", Name: "EnsureBaseline", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/EnsureProject", Name: "EnsureProject", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/EnsureResource", Name: "EnsureResource", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/GeneratePresignedUrl", Name: "GeneratePresignedUrl", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/GenericDispatch", Name: "GenericDispatch", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/GetAdminSummary", Name: "GetAdminSummary", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/GetCapabilities", Name: "GetCapabilities", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/GetCatalogManifest", Name: "GetCatalogManifest", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/GetCatalogVersion", Name: "GetCatalogVersion", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/GetCatalogVersions", Name: "GetCatalogVersions", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/GetCdcStatus", Name: "GetCdcStatus", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/GetDlqEvent", Name: "GetDlqEvent", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/GetHealthReport", Name: "GetHealthReport", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/GetMigrationStatus", Name: "GetMigrationStatus", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/GetObject", Name: "GetObject", Kind: RPCKind("server_streaming"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/GetSaga", Name: "GetSaga", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/GraphMutate", Name: "GraphMutate", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/GraphQuery", Name: "GraphQuery", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/InitiateMultipartUpload", Name: "InitiateMultipartUpload", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/LintPolicies", Name: "LintPolicies", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/ListAdminAuditLogs", Name: "ListAdminAuditLogs", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/ListDlqEvents", Name: "ListDlqEvents", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/ListMessageSchemas", Name: "ListMessageSchemas", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/ListMigrationRuns", Name: "ListMigrationRuns", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/ListPolicies", Name: "ListPolicies", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/ListProjects", Name: "ListProjects", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/ListResources", Name: "ListResources", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/ListSagas", Name: "ListSagas", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/LookupMessageSchema", Name: "LookupMessageSchema", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/MarkSagaReviewed", Name: "MarkSagaReviewed", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/PauseCdc", Name: "PauseCdc", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/PlanMigration", Name: "PlanMigration", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/PreviewCdcRedaction", Name: "PreviewCdcRedaction", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/PublishCDC", Name: "PublishCDC", Kind: RPCKind("server_streaming"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/PutObject", Name: "PutObject", Kind: RPCKind("client_streaming"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/PutPolicy", Name: "PutPolicy", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/QuarantineDlqEvent", Name: "QuarantineDlqEvent", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/ReloadPolicies", Name: "ReloadPolicies", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/ReplayDlqEvent", Name: "ReplayDlqEvent", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/ResumeCdc", Name: "ResumeCdc", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/RetrySagaCompensation", Name: "RetrySagaCompensation", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/RollbackCatalog", Name: "RollbackCatalog", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/ScanProjectionDrift", Name: "ScanProjectionDrift", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/Select", Name: "Select", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/SelectV2", Name: "SelectV2", Kind: RPCKind("server_streaming"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/StageCatalog", Name: "StageCatalog", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/StepDownCdcLeader", Name: "StepDownCdcLeader", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/TimeSeriesQuery", Name: "TimeSeriesQuery", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/TimeSeriesWrite", Name: "TimeSeriesWrite", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/Upsert", Name: "Upsert", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: true},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/ValidateCatalog", Name: "ValidateCatalog", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/VectorBatchUpsert", Name: "VectorBatchUpsert", Kind: RPCKind("bidi"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/VectorHybridSearch", Name: "VectorHybridSearch", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/VectorSearch", Name: "VectorSearch", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/VectorUpsert", Name: "VectorUpsert", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/VerifyAdminAuditLog", Name: "VerifyAdminAuditLog", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
 }
 
 // ServiceRPCCounts maps each service's full name to its RPC count.
 var ServiceRPCCounts = map[string]int{
-	"udb.core.analytics.services.v1.AnalyticsService":       7,
-	"udb.core.apikey.services.v1.ApiKeyService":             9,
-	"udb.core.asset.services.v1.AssetService":               8,
-	"udb.core.authn.services.v1.AuthnService":               50,
-	"udb.core.authz.services.v1.AuthzService":               41,
-	"udb.core.control.services.v1.ControlPlaneService":      5,
-	"udb.core.idp.services.v1.IdentityProviderService":      27,
+	"udb.core.analytics.services.v1.AnalyticsService": 7,
+	"udb.core.apikey.services.v1.ApiKeyService": 9,
+	"udb.core.asset.services.v1.AssetService": 8,
+	"udb.core.authn.services.v1.AuthnService": 50,
+	"udb.core.authz.services.v1.AuthzService": 41,
+	"udb.core.control.services.v1.ControlPlaneService": 5,
+	"udb.core.idp.services.v1.IdentityProviderService": 27,
 	"udb.core.notification.services.v1.NotificationService": 11,
-	"udb.core.storage.services.v1.StorageService":           7,
-	"udb.core.tenant.services.v1.TenantService":             6,
-	"udb.core.webrtc.services.v1.PeerService":               4,
-	"udb.core.webrtc.services.v1.RoomService":               5,
-	"udb.core.webrtc.services.v1.SignalingService":          1,
-	"udb.core.webrtc.services.v1.TrackService":              4,
-	"udb.core.webrtc.services.v1.TurnService":               1,
-	"udb.services.v1.DataBroker":                            76,
+	"udb.core.storage.services.v1.StorageService": 8,
+	"udb.core.tenant.services.v1.TenantService": 6,
+	"udb.core.webrtc.services.v1.PeerService": 5,
+	"udb.core.webrtc.services.v1.RoomService": 5,
+	"udb.core.webrtc.services.v1.SignalingService": 1,
+	"udb.core.webrtc.services.v1.TrackService": 4,
+	"udb.core.webrtc.services.v1.TurnService": 1,
+	"udb.services.v1.DataBroker": 77,
+}
+
+// Entities is the catalog-derived entity registry, generated from the annotated
+// entity messages so (*Client).Entity can default conflict_fields / primary keys
+// from the manifest instead of the caller always passing Key(...). The
+// EntityDescriptor type is hand-written in entity.go (this block only emits the
+// map). {{ENTITY_PRIMARY_KEYS}} arrives PRE-QUOTED + comma-separated from the
+// generator, so it drops straight inside the []string{...} literal.
+var Entities = map[string]EntityDescriptor{
+	"AccessDecisionAudit": {Table: "access_decision_audits", PrimaryKeys: []string{"decision_audit_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/authz/entity/v1;authzv1.AccessDecisionAudit"},
+	"ApiKey": {Table: "api_keys", PrimaryKeys: []string{"key_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/apikey/entity/v1;apikeyv1.ApiKey"},
+	"ApiKeyUsage": {Table: "api_key_usages", PrimaryKeys: []string{"usage_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/apikey/entity/v1;apikeyv1.ApiKeyUsage"},
+	"Asset": {Table: "assets", PrimaryKeys: []string{"asset_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/asset/entity/v1;assetv1.Asset"},
+	"AuthzRevision": {Table: "authz_revisions", PrimaryKeys: []string{"revision_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/authz/entity/v1;authzv1.AuthzRevision"},
+	"ControlPlaneNodeState": {Table: "control_plane_node_states", PrimaryKeys: []string{"node_state_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/control/entity/v1;controlv1.ControlPlaneNodeState"},
+	"ControlPlaneResource": {Table: "control_plane_resources", PrimaryKeys: []string{"resource_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/control/entity/v1;controlv1.ControlPlaneResource"},
+	"Device": {Table: "devices", PrimaryKeys: []string{"device_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/authn/entity/v1;authnv1.Device"},
+	"ExecutorPerformanceSummary": {Table: "executor_performance_summaries", PrimaryKeys: []string{"summary_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/analytics/entity/v1;analyticsv1.ExecutorPerformanceSummary"},
+	"ExternalIdentity": {Table: "external_identities", PrimaryKeys: []string{"external_identity_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/idp/entity/v1;idpv1.ExternalIdentity"},
+	"File": {Table: "files", PrimaryKeys: []string{"file_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/storage/entity/v1;storagev1.File"},
+	"IdentityProvider": {Table: "identity_providers", PrimaryKeys: []string{"provider_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/idp/entity/v1;idpv1.IdentityProvider"},
+	"MfaChallenge": {Table: "mfa_challenges", PrimaryKeys: []string{"challenge_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/authn/entity/v1;authnv1.MfaChallenge"},
+	"MfaPolicy": {Table: "mfa_policies", PrimaryKeys: []string{"policy_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/authn/entity/v1;authnv1.MfaPolicy"},
+	"Notification": {Table: "notifications", PrimaryKeys: []string{"notification_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/notification/entity/v1;notificationv1.Notification"},
+	"NotificationLog": {Table: "notification_logs", PrimaryKeys: []string{"log_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/notification/entity/v1;notificationv1.NotificationLog"},
+	"NotificationPreference": {Table: "notification_preferences", PrimaryKeys: []string{"preference_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/notification/entity/v1;notificationv1.NotificationPreference"},
+	"NotificationTemplate": {Table: "notification_templates", PrimaryKeys: []string{"template_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/notification/entity/v1;notificationv1.NotificationTemplate"},
+	"OTP": {Table: "otps", PrimaryKeys: []string{"otp_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/authn/entity/v1;authnv1.OTP"},
+	"Peer": {Table: "peers", PrimaryKeys: []string{"peer_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/webrtc/entity/v1;webrtcv1.Peer"},
+	"PipelineDefinition": {Table: "pipeline_definitions", PrimaryKeys: []string{"definition_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/asset/entity/v1;assetv1.PipelineDefinition"},
+	"PipelineInstance": {Table: "pipeline_instances", PrimaryKeys: []string{"instance_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/asset/entity/v1;assetv1.PipelineInstance"},
+	"PipelineMetricSnapshot": {Table: "pipeline_metric_snapshots", PrimaryKeys: []string{"snapshot_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/analytics/entity/v1;analyticsv1.PipelineMetricSnapshot"},
+	"PipelineStep": {Table: "pipeline_steps", PrimaryKeys: []string{"step_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/asset/entity/v1;assetv1.PipelineStep"},
+	"PolicyApproval": {Table: "policy_approvals", PrimaryKeys: []string{"approval_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/authz/entity/v1;authzv1.PolicyApproval"},
+	"PolicyCanary": {Table: "policy_canaries", PrimaryKeys: []string{"canary_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/authz/entity/v1;authzv1.PolicyCanary"},
+	"PolicyDraft": {Table: "policy_drafts", PrimaryKeys: []string{"draft_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/authz/entity/v1;authzv1.PolicyDraft"},
+	"PolicyRule": {Table: "policy_rules", PrimaryKeys: []string{"policy_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/authz/entity/v1;authzv1.PolicyRule"},
+	"PolicySet": {Table: "policy_sets", PrimaryKeys: []string{"policy_set_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/authz/entity/v1;authzv1.PolicySet"},
+	"PolicySimulation": {Table: "policy_simulations", PrimaryKeys: []string{"simulation_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/authz/entity/v1;authzv1.PolicySimulation"},
+	"PolicyTuple": {Table: "policy_tuples", PrimaryKeys: []string{"policy_tuple_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/authz/entity/v1;authzv1.PolicyTuple"},
+	"PolicyVersion": {Table: "policy_versions", PrimaryKeys: []string{"policy_version_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/authz/entity/v1;authzv1.PolicyVersion"},
+	"ReconciliationAnalyticsSummary": {Table: "reconciliation_analytics_summaries", PrimaryKeys: []string{"summary_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/analytics/entity/v1;analyticsv1.ReconciliationAnalyticsSummary"},
+	"RecoveryCode": {Table: "recovery_codes", PrimaryKeys: []string{"recovery_code_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/authn/entity/v1;authnv1.RecoveryCode"},
+	"Role": {Table: "roles", PrimaryKeys: []string{"role_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/authz/entity/v1;authzv1.Role"},
+	"RolePermission": {Table: "role_permissions", PrimaryKeys: []string{"role_permission_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/authz/entity/v1;authzv1.RolePermission"},
+	"Room": {Table: "rooms", PrimaryKeys: []string{"room_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/webrtc/entity/v1;webrtcv1.Room"},
+	"SamlReplayEntry": {Table: "saml_replay_entries", PrimaryKeys: []string{"saml_replay_entry_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/idp/entity/v1;idpv1.SamlReplayEntry"},
+	"ScimDirectoryState": {Table: "scim_directory_state", PrimaryKeys: []string{"scim_directory_state_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/idp/entity/v1;idpv1.ScimDirectoryState"},
+	"Session": {Table: "sessions", PrimaryKeys: []string{"session_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/authn/entity/v1;authnv1.Session"},
+	"SigningKey": {Table: "signing_keys", PrimaryKeys: []string{"key_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/authn/entity/v1;authnv1.SigningKey"},
+	"Tenant": {Table: "tenants", PrimaryKeys: []string{"tenant_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/tenant/entity/v1;tenantv1.Tenant"},
+	"TenantConfig": {Table: "tenant_configs", PrimaryKeys: []string{"config_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/tenant/entity/v1;tenantv1.TenantConfig"},
+	"TokenFamily": {Table: "token_families", PrimaryKeys: []string{"family_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/authn/entity/v1;authnv1.TokenFamily"},
+	"TokenRevocation": {Table: "token_revocations", PrimaryKeys: []string{"jti_hash"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/authn/entity/v1;authnv1.TokenRevocation"},
+	"Track": {Table: "tracks", PrimaryKeys: []string{"track_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/webrtc/entity/v1;webrtcv1.Track"},
+	"User": {Table: "users", PrimaryKeys: []string{"user_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/authn/entity/v1;authnv1.User"},
+	"UserRole": {Table: "user_roles", PrimaryKeys: []string{"user_role_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/authz/entity/v1;authzv1.UserRole"},
+	"WebAuthnCredential": {Table: "webauthn_credentials", PrimaryKeys: []string{"credential_id"}, GoType: "github.com/udb-project/udb/gen/go/udb/core/authn/entity/v1;authnv1.WebAuthnCredential"},
 }
 
 // rpcIndex is a fast Name->RPCInfo lookup built from AllRPCs at init.
@@ -777,6 +897,35 @@ func isReadOnlyUnaryRPC(method string) bool {
 		return false
 	}
 	return r.Kind == KindUnary && r.ReadOnly
+}
+
+// isReplaySafeRPC reports whether a unary RPC is proto-declared replay-safe
+// (RPCInfo.ReplaySafe, from method_idempotency_contract.replay_safe). Unknown
+// methods are treated as NOT replay-safe (fail-closed).
+func isReplaySafeRPC(method string) bool {
+	r, ok := LookupRPC(method)
+	if !ok {
+		return false
+	}
+	return r.Kind == KindUnary && r.ReplaySafe
+}
+
+// idempotencyKeyed is satisfied by any generated request message that carries an
+// `idempotency_key` field (e.g. UpsertRequest, DeleteRequest, Mutation). protoc
+// generates the GetIdempotencyKey accessor for every such message, so this
+// interface lets the generic Invoke path read the key with no per-message type
+// imports and no reflection.
+type idempotencyKeyed interface {
+	GetIdempotencyKey() string
+}
+
+// hasIdempotencyKey reports whether the request proto carries a non-empty
+// idempotency key. Requests without the field (the accessor is absent) return
+// false. This is the SDK-side gate that lets a replay-safe mutation be retried:
+// without a key the broker cannot dedup a replay, so we must not retry.
+func hasIdempotencyKey(req any) bool {
+	k, ok := req.(idempotencyKeyed)
+	return ok && k.GetIdempotencyKey() != ""
 }
 
 func init() {

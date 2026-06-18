@@ -1,11 +1,13 @@
 ## DataBroker
-_proto: services/v1/data_broker.proto · 76 RPCs_
+_proto: services/v1/data_broker.proto · 77 RPCs_
 
 Every request type embeds `RequestContext context` (field 1) — defined in `udb/entity/v1/context.proto`. The
 load-bearing context fields for a successful call are `tenant_id` = `<seed:tenant_id>`, `scopes` = the scope(s)
 the method requires (e.g. `["udb:admin"]`), and optionally `project_id` = `<seed:project>`. In the table below
 `ctx` is shorthand for `context{tenant_id:<seed:tenant_id>, scopes:[...]}`. All other context fields
 (correlation_id, purpose, routing_policy, consistency, etc.) are optional and may be omitted.
+
+Column contract: col1=done, col2=RPC, col3=op_kind, col4=request msg, col5=valid body (with `<seed:KEY>` refs), col6=notes — consumers MUST key on col2/col5. This contract is shared by all four language bench-body consumers (Go `loadBenchBodyRows`, TS `loadBenchBodyRows`, PHP `loadBenchBodyRows`, Python `bench_body_rows`); the manifest is the single source of truth and must total 265 RPC rows across `docs/bench-bodies/*.md`.
 
 `op_kind` enum (from `udb/core/common/v1/security.proto` `operation_kind` method option):
 `OPERATION_KIND_READ_ONLY` = RO, `OPERATION_KIND_MUTATION` = MUT, `OPERATION_KIND_DESTRUCTIVE` = DEST.
@@ -75,6 +77,7 @@ Reusable nested message: **StoreResource** (`operation.proto`) = `{backend, inst
 | [ ] | GetSaga | RO | SagaRequest | `ctx`, `saga_id:"<seed:saga_id>"` | saga_id must exist. `reason`,`idempotency_key` optional. |
 | [ ] | RetrySagaCompensation | MUT | SagaRequest | `ctx`, `saga_id:"<seed:retry_saga_id>"`, `reason:"retry"` | saga must be in failed_compensation. |
 | [ ] | MarkSagaReviewed | MUT | SagaRequest | `ctx`, `saga_id:"<seed:mark_saga_id>"`, `reason:"reviewed"` | saga must be in manual_review. |
+| [ ] | EnsureBaseline | MUT | EnsureBaselineRequest | `ctx (scopes:[udb:admin])` | request carries only `context` (field 1). Idempotently seeds a baseline manual-review saga + retryable DLQ row for the VERIFIED principal's tenant/project. Privilege-creating: fail-closed, env-gated (UDB_ENABLE_ADMIN_SEED) and requires scope `udb:admin`. Returns `saga_ids`/`dlq_ids`/`device_id`. |
 | [ ] | ListPolicies | RO | PolicyListRequest | `ctx`, `include_disabled:false`, `limit:50` | `page_token` optional. |
 | [ ] | PutPolicy | DEST | PutPolicyRequest | `ctx`, `policy:PolicyRecord{effect:"allow", service_identity:"<seed:user_id>", tenant_id:"<seed:tenant_id>", message_type:"<seed:message_type>", operation:"read", required_scope:"udb:read", priority:100, enabled:true}` | PolicyRecord.policy_id omit/0 for create; set `<seed:policy_id>` to update. effect=allow/deny. |
 | [ ] | DeletePolicy | MUT | PolicyRequest | `ctx`, `policy_id:<seed:ds_policy_id>` (int64) | policy_id must exist. |

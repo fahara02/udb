@@ -116,6 +116,53 @@ function bundleBytes(bundle) {
         return Buffer.from(bundle, "utf8");
     return Buffer.isBuffer(bundle) ? bundle : Buffer.from(bundle);
 }
+/** Throw a loud, typed error when a gated conformance-proof field is empty
+ *  (broker not in conformance mode). */
+function requireProof(value, field) {
+    const s = typeof value === "string" ? value : "";
+    if (!s) {
+        throw new Error(`udb: conformanceProof: empty ${field} — broker is not in conformance/dev-echo mode`);
+    }
+    return s;
+}
+/** Decode an RFC-4648 base32 secret (TOTP `totp_secret`) to bytes. Tolerates
+ *  lowercase + padding. */
+function base32Decode(secret) {
+    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+    const clean = secret.replace(/=+$/, "").toUpperCase().replace(/\s+/g, "");
+    let bits = 0;
+    let value = 0;
+    const out = [];
+    for (const ch of clean) {
+        const idx = alphabet.indexOf(ch);
+        if (idx === -1)
+            continue;
+        value = (value << 5) | idx;
+        bits += 5;
+        if (bits >= 8) {
+            bits -= 8;
+            out.push((value >>> bits) & 0xff);
+        }
+    }
+    return Buffer.from(out);
+}
+/** Compute the current 6-digit RFC-6238 TOTP code (SHA-1, 30s step) from a
+ *  base32 `totp_secret`. Stdlib `crypto` only — no new dependency. */
+function totpNow(secret, stepSeconds = 30, digits = 6) {
+    const key = base32Decode(secret);
+    const counter = Math.floor(Date.now() / 1000 / stepSeconds);
+    const buf = Buffer.alloc(8);
+    // 64-bit big-endian counter (high 32 bits are ~0 for current epochs).
+    buf.writeUInt32BE(Math.floor(counter / 0x100000000), 0);
+    buf.writeUInt32BE(counter >>> 0, 4);
+    const hmac = crypto.createHmac("sha1", key).update(buf).digest();
+    const offset = hmac[hmac.length - 1] & 0x0f;
+    const code = ((hmac[offset] & 0x7f) << 24) |
+        ((hmac[offset + 1] & 0xff) << 16) |
+        ((hmac[offset + 2] & 0xff) << 8) |
+        (hmac[offset + 3] & 0xff);
+    return (code % Math.pow(10, digits)).toString().padStart(digits, "0");
+}
 /**
  * Recompute the HMAC-SHA256 (lowercase hex) of `signed.bundle` keyed by `secret`
  * and compare it constant-time against `signed.signature`. Returns `true` on a
@@ -203,6 +250,13 @@ class UdbAuthClient {
     login(request) {
         return this.call(this.authn, "Login", request);
     }
+    /** Canonical login accessor (naming contract): start an authenticated session
+     *  via `AuthnService.Login`. Thin alias of {@link login} — EXACTLY one Login
+     *  RPC, no hidden round trip. For automatic token-store persistence + refresh,
+     *  use `UdbProject.login` / `UdbProject.loginAndAdoptTenant`. */
+    loginSession(creds) {
+        return this.login(creds);
+    }
     refreshToken(request) {
         return this.call(this.authn, "RefreshToken", request);
     }
@@ -217,10 +271,107 @@ class UdbAuthClient {
             project_hint: this.meta.projectId ?? "",
         });
     }
+    // ── Conformance proof (dev/test only) ─────────────────────────────────────
+    /**
+     * Surface the gated proof material a HEADLESS conformance harness needs — it
+     * does NOT bypass verification, it only reads what the broker's prod-guarded
+     * dev-echo gate already exposes:
+     *   - "otp"            → `SendOTP(...).dev_otp_code`
+     *   - "password_reset" → `ForgotPassword(...).dev_otp_code`
+     *   - "phone"          → `SendPhoneVerification(...).dev_otp_code`
+     *   - "totp"           → compute the current RFC-6238 code from
+     *                        `EnrollMFA(...).totp_secret` (no broker echo for TOTP)
+     *
+     * Rejects when the proof field is empty (broker NOT in conformance mode) so
+     * callers fail loud, not silent. `args` carries the per-kind request fields
+     * (e.g. `{ user_id }` / `{ identifier }` / `{ user_id, phone }`).
+     */
+    async conformanceProof(kind, args = {}) {
+        const ctx = { context: args.context, ...args };
+        switch (kind) {
+            case "otp": {
+                const resp = await this.call(this.authn, "SendOTP", ctx);
+                return requireProof(resp?.dev_otp_code, "SendOTP.dev_otp_code");
+            }
+            case "password_reset": {
+                const resp = await this.call(this.authn, "ForgotPassword", ctx);
+                return requireProof(resp?.dev_otp_code, "ForgotPassword.dev_otp_code");
+            }
+            case "phone": {
+                const resp = await this.call(this.authn, "SendPhoneVerification", ctx);
+                return requireProof(resp?.dev_otp_code, "SendPhoneVerification.dev_otp_code");
+            }
+            case "totp": {
+                const resp = await this.call(this.authn, "EnrollMFA", ctx);
+                const secret = resp?.totp_secret ?? "";
+                if (!secret) {
+                    throw new Error("udb: conformanceProof(totp): EnrollMFA returned no totp_secret");
+                }
+                return totpNow(secret);
+            }
+        }
+    }
+    /** Explicit WebAuthn passkey flows. Each sequences Start → Finish over the
+     *  generated ceremony RPCs, threading the single-use Start challenge into
+     *  Finish — exactly two RPCs per flow, no hidden Get. */
+    passkeys = {
+        /** Register a passkey: StartWebAuthnRegistration → FinishWebAuthnRegistration.
+         *  `credentialJson` is the authenticator's credential (or the dev soft-auth
+         *  `TEST_CREDENTIAL_SENTINEL` when driving the test authenticator). */
+        register: async (args, credentialJson) => {
+            const start = await this.call(this.authn, "StartWebAuthnRegistration", {
+                user_id: args.user_id,
+                label: args.label ?? "",
+                tenant_id: args.tenant_id ?? this.meta.tenantId,
+                project_id: args.project_id ?? this.meta.projectId ?? "",
+                context: args.context,
+            });
+            return this.call(this.authn, "FinishWebAuthnRegistration", {
+                challenge_id: start?.challenge_id ?? "",
+                public_key_credential_json: credentialJson,
+                label: args.label ?? "",
+                context: args.context,
+            });
+        },
+        /** Authenticate with a passkey: StartWebAuthnAuthentication →
+         *  FinishWebAuthnAuthentication. */
+        authenticate: async (args, credentialJson) => {
+            const start = await this.call(this.authn, "StartWebAuthnAuthentication", {
+                user_id: args.user_id ?? this.meta.userId ?? "",
+                tenant_id: args.tenant_id ?? this.meta.tenantId,
+                project_id: args.project_id ?? this.meta.projectId ?? "",
+                context: args.context,
+            });
+            return this.call(this.authn, "FinishWebAuthnAuthentication", {
+                challenge_id: start?.challenge_id ?? "",
+                public_key_credential_json: credentialJson,
+                context: args.context,
+            });
+        },
+    };
     // ── Authorization ─────────────────────────────────────────────────────────
     async authorize(request) {
         const resp = await this.call(this.authz, "Authorize", request);
         return resp.decision;
+    }
+    /** Raw `AuthzService.CreatePolicyRule` (one RPC, no hidden List/Get). Tenant
+     *  defaults to the bound metadata when omitted. */
+    createPolicyRule(request) {
+        return this.call(this.authz, "CreatePolicyRule", {
+            tenant_id: this.meta.tenantId,
+            project_id: this.meta.projectId ?? "",
+            ...request,
+        });
+    }
+    /** Raw `AuthzService.AssignRole` (one RPC, no hidden List/Get). Tenant/domain
+     *  default to the bound metadata when omitted. */
+    assignRole(request) {
+        return this.call(this.authz, "AssignRole", {
+            tenant_id: this.meta.tenantId,
+            project_id: this.meta.projectId ?? "",
+            domain: this.meta.tenantId,
+            ...request,
+        });
     }
     /** Returns `[allowed, decision]` for the bound principal acting on a resource. */
     async can(resource, action, purpose = "") {

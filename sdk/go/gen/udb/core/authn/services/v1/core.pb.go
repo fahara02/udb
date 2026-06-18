@@ -3663,7 +3663,12 @@ type ForgotPasswordResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Id of the PASSWORD_RESET OTP issued (empty when the account is unknown; the
 	// response shape is uniform so it is not an account-enumeration oracle).
-	OtpId         string `protobuf:"bytes,1,opt,name=otp_id,json=otpId,proto3" json:"otp_id,omitempty"`
+	OtpId string `protobuf:"bytes,1,opt,name=otp_id,json=otpId,proto3" json:"otp_id,omitempty"`
+	// Dev-only echo of the plaintext PASSWORD_RESET OTP code, populated ONLY when the
+	// broker runs with UDB_OTP_DEV_ECHO=1 (non-production posture). Empty in
+	// production. Lets conformance harnesses complete ResetPassword without a
+	// delivery channel. bug_report.md F/Lane-2.
+	DevOtpCode    string `protobuf:"bytes,2,opt,name=dev_otp_code,json=devOtpCode,proto3" json:"dev_otp_code,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3701,6 +3706,13 @@ func (*ForgotPasswordResponse) Descriptor() ([]byte, []int) {
 func (x *ForgotPasswordResponse) GetOtpId() string {
 	if x != nil {
 		return x.OtpId
+	}
+	return ""
+}
+
+func (x *ForgotPasswordResponse) GetDevOtpCode() string {
+	if x != nil {
+		return x.DevOtpCode
 	}
 	return ""
 }
@@ -4143,8 +4155,13 @@ func (x *SendPhoneVerificationRequest) GetContext() *v1.RequestContext {
 }
 
 type SendPhoneVerificationResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	OtpId         string                 `protobuf:"bytes,1,opt,name=otp_id,json=otpId,proto3" json:"otp_id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	OtpId string                 `protobuf:"bytes,1,opt,name=otp_id,json=otpId,proto3" json:"otp_id,omitempty"`
+	// Dev-only echo of the plaintext PHONE_VERIFICATION OTP code, populated ONLY when
+	// the broker runs with UDB_OTP_DEV_ECHO=1 (non-production posture). Empty in
+	// production. Lets conformance harnesses complete VerifyOTP without an SMS
+	// delivery channel. bug_report.md F/Lane-2.
+	DevOtpCode    string `protobuf:"bytes,2,opt,name=dev_otp_code,json=devOtpCode,proto3" json:"dev_otp_code,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -4182,6 +4199,13 @@ func (*SendPhoneVerificationResponse) Descriptor() ([]byte, []int) {
 func (x *SendPhoneVerificationResponse) GetOtpId() string {
 	if x != nil {
 		return x.OtpId
+	}
+	return ""
+}
+
+func (x *SendPhoneVerificationResponse) GetDevOtpCode() string {
+	if x != nil {
+		return x.DevOtpCode
 	}
 	return ""
 }
@@ -6868,9 +6892,11 @@ const file_udb_core_authn_services_v1_core_proto_rawDesc = "" +
 	"\n" +
 	"identifier\x18\x01 \x01(\tR\n" +
 	"identifier\x12<\n" +
-	"\acontext\x18\x02 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"M\n" +
+	"\acontext\x18\x02 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"o\n" +
 	"\x16ForgotPasswordResponse\x12\x15\n" +
-	"\x06otp_id\x18\x01 \x01(\tR\x05otpId:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xc0\x01\n" +
+	"\x06otp_id\x18\x01 \x01(\tR\x05otpId\x12 \n" +
+	"\fdev_otp_code\x18\x02 \x01(\tR\n" +
+	"devOtpCode:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xc0\x01\n" +
 	"\x14ResetPasswordRequest\x12\x15\n" +
 	"\x06otp_id\x18\x01 \x01(\tR\x05otpId\x12\x12\n" +
 	"\x04code\x18\x02 \x01(\tR\x04code\x12!\n" +
@@ -6903,9 +6929,11 @@ const file_udb_core_authn_services_v1_core_proto_rawDesc = "" +
 	"\x1cSendPhoneVerificationRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x14\n" +
 	"\x05phone\x18\x02 \x01(\tR\x05phone\x12<\n" +
-	"\acontext\x18\x03 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"T\n" +
+	"\acontext\x18\x03 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"v\n" +
 	"\x1dSendPhoneVerificationResponse\x12\x15\n" +
-	"\x06otp_id\x18\x01 \x01(\tR\x05otpId:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xe9\x01\n" +
+	"\x06otp_id\x18\x01 \x01(\tR\x05otpId\x12 \n" +
+	"\fdev_otp_code\x18\x02 \x01(\tR\n" +
+	"devOtpCode:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xe9\x01\n" +
 	" StartWebAuthnRegistrationRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x14\n" +
 	"\x05label\x18\x02 \x01(\tR\x05label\x12\x1b\n" +

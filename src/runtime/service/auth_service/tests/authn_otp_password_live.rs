@@ -235,6 +235,156 @@ async fn live_postgres_forgot_and_reset_password() {
     cleanup_native_auth_db(&pool).await;
 }
 
+/// §8A acceptance: production builds do not expose bypass material. Pins that the
+/// single dev-echo chokepoint (`mfa::otp_dev_echo_enabled`) is prod-closed for ALL
+/// three OTP issuance sites and, when the dev gate is on, every site DOES surface
+/// the proof so a headless conformance harness can complete verification.
+///
+/// The prod-closed property is asserted deterministically through the pure
+/// `otp_dev_echo_resolved(env_opt_in, is_production)` decision (the process-wide
+/// `OnceLock` posture cannot be toggled mid-run). The dev-on, served-path half runs
+/// only when the gate actually resolved enabled in this process
+/// (`UDB_OTP_DEV_ECHO=1` + non-production posture), exactly mirroring how a live
+/// conformance harness is launched.
+#[tokio::test]
+#[ignore = "requires live Postgres; run with UDB_OTP_DEV_ECHO=1 UDB_LIVE_AUTH_TESTS=1 cargo test --lib live_postgres_otp_dev_echo_prod_closed -- --ignored --nocapture"]
+async fn live_postgres_otp_dev_echo_prod_closed() {
+    use crate::runtime::service::auth_service::authn::{
+        otp_dev_echo_enabled, otp_dev_echo_resolved,
+    };
+
+    // Production posture closes the echo for every site regardless of the env
+    // opt-in; dev posture honours it. Reverting 13.1.1.1 (dropping the
+    // `!is_production` AND) flips the first assertion and fails the test.
+    assert!(
+        !otp_dev_echo_resolved(true, true),
+        "production posture must close the OTP dev-echo even with UDB_OTP_DEV_ECHO=1 (proof-material leak)"
+    );
+    assert!(
+        otp_dev_echo_resolved(true, false),
+        "non-production posture with the env opt-in must permit the dev-echo"
+    );
+    assert!(
+        !otp_dev_echo_resolved(false, false),
+        "without the env opt-in the dev-echo stays closed"
+    );
+
+    let _guard = live_auth_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_auth_db(&pool).await;
+    let authn = authn_service(pool.clone());
+
+    if !otp_dev_echo_enabled() {
+        // The process resolved the gate OFF (no env opt-in or production posture):
+        // every served site must return an EMPTY echo — proving prod/no-opt-in
+        // builds never leak proof material on the served path.
+        let user = create_verified_user(&authn, "echo_off", "CorrectHorse1!").await;
+        let sent = authn
+            .send_otp(Request::new(authn_pb::SendOtpRequest {
+                user_id: user.user_id.clone(),
+                otp_type: authn_entity_pb::OtpType::SensitiveOperation as i32,
+                correlation_id: "echo-off".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect("send OTP")
+            .into_inner();
+        assert!(
+            sent.dev_otp_code.is_empty(),
+            "SendOTP must NOT echo when the dev gate is closed"
+        );
+        let forgot = authn
+            .forgot_password(Request::new(authn_pb::ForgotPasswordRequest {
+                identifier: user.email.clone(),
+                ..Default::default()
+            }))
+            .await
+            .expect("forgot password")
+            .into_inner();
+        assert!(
+            forgot.dev_otp_code.is_empty(),
+            "ForgotPassword must NOT echo when the dev gate is closed"
+        );
+        let phone = authn
+            .send_phone_verification(Request::new(authn_pb::SendPhoneVerificationRequest {
+                user_id: user.user_id.clone(),
+                phone: "+15557654321".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect("send phone verification")
+            .into_inner();
+        assert!(
+            phone.dev_otp_code.is_empty(),
+            "SendPhoneVerification must NOT echo when the dev gate is closed"
+        );
+        cleanup_native_auth_db(&pool).await;
+        return;
+    }
+
+    // Dev gate ON: every site must surface the real plaintext code AND that code
+    // must verify, proving the echo is genuine conformance proof, not noise.
+    let user = create_verified_user(&authn, "echo_on", "CorrectHorse1!").await;
+
+    let sent = authn
+        .send_otp(Request::new(authn_pb::SendOtpRequest {
+            user_id: user.user_id.clone(),
+            otp_type: authn_entity_pb::OtpType::SensitiveOperation as i32,
+            correlation_id: "echo-on".to_string(),
+            ..Default::default()
+        }))
+        .await
+        .expect("send OTP")
+        .into_inner();
+    assert!(
+        !sent.dev_otp_code.is_empty(),
+        "SendOTP must echo the code under the dev gate"
+    );
+    assert_eq!(sent.dev_otp_code, issued_test_otp_code(&sent.otp_id));
+
+    let forgot = authn
+        .forgot_password(Request::new(authn_pb::ForgotPasswordRequest {
+            identifier: user.email.clone(),
+            ..Default::default()
+        }))
+        .await
+        .expect("forgot password")
+        .into_inner();
+    assert!(
+        !forgot.dev_otp_code.is_empty(),
+        "ForgotPassword must echo the reset code under the dev gate"
+    );
+    assert_eq!(forgot.dev_otp_code, issued_test_otp_code(&forgot.otp_id));
+
+    let phone = authn
+        .send_phone_verification(Request::new(authn_pb::SendPhoneVerificationRequest {
+            user_id: user.user_id.clone(),
+            phone: "+15557654321".to_string(),
+            ..Default::default()
+        }))
+        .await
+        .expect("send phone verification")
+        .into_inner();
+    assert!(
+        !phone.dev_otp_code.is_empty(),
+        "SendPhoneVerification must echo the code under the dev gate"
+    );
+    assert_eq!(phone.dev_otp_code, issued_test_otp_code(&phone.otp_id));
+
+    // The echoed phone code actually verifies the PHONE_VERIFICATION row.
+    let verified = authn
+        .verify_otp(Request::new(authn_pb::VerifyOtpRequest {
+            otp_id: phone.otp_id.clone(),
+            code: phone.dev_otp_code.clone(),
+        }))
+        .await
+        .expect("verify echoed phone code")
+        .into_inner();
+    assert!(verified.verified);
+
+    cleanup_native_auth_db(&pool).await;
+}
+
 #[tokio::test]
 #[ignore = "requires live Postgres; run with UDB_LIVE_AUTH_TESTS=1 cargo test --lib live_postgres_authn_resend_otp_and_admin_reset -- --ignored --nocapture"]
 async fn live_postgres_authn_resend_otp_and_admin_reset() {

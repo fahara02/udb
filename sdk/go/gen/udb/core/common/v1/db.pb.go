@@ -766,9 +766,11 @@ type TableOptions struct {
 	// required_scope seeds broker-level ABAC policy requirements for this table.
 	RequiredScope string `protobuf:"bytes,31,opt,name=required_scope,json=requiredScope,proto3" json:"required_scope,omitempty"`
 	// Optional table-local vector projection; message-level vector_store remains supported.
-	VectorStore   *VectorStoreOptions `protobuf:"bytes,32,opt,name=vector_store,json=vectorStore,proto3" json:"vector_store,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	VectorStore *VectorStoreOptions `protobuf:"bytes,32,opt,name=vector_store,json=vectorStore,proto3" json:"vector_store,omitempty"`
+	// native_service_id: which native service owns this internal table.
+	NativeServiceId string `protobuf:"bytes,33,opt,name=native_service_id,json=nativeServiceId,proto3" json:"native_service_id,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *TableOptions) Reset() {
@@ -1023,6 +1025,13 @@ func (x *TableOptions) GetVectorStore() *VectorStoreOptions {
 		return x.VectorStore
 	}
 	return nil
+}
+
+func (x *TableOptions) GetNativeServiceId() string {
+	if x != nil {
+		return x.NativeServiceId
+	}
+	return ""
 }
 
 // RlsPolicy defines a single PostgreSQL Row-Level Security policy.
@@ -3393,7 +3402,7 @@ var File_udb_core_common_v1_db_proto protoreflect.FileDescriptor
 
 const file_udb_core_common_v1_db_proto_rawDesc = "" +
 	"\n" +
-	"\x1budb/core/common/v1/db.proto\x12\x12udb.core.common.v1\x1a google/protobuf/descriptor.proto\"\xe3\v\n" +
+	"\x1budb/core/common/v1/db.proto\x12\x12udb.core.common.v1\x1a google/protobuf/descriptor.proto\"\x8f\f\n" +
 	"\fTableOptions\x12\x1d\n" +
 	"\n" +
 	"table_name\x18\x01 \x01(\tR\ttableName\x12\x1f\n" +
@@ -3436,7 +3445,8 @@ const file_udb_core_common_v1_db_proto_rawDesc = "" +
 	"\freplica_hint\x18\x1d \x01(\tR\vreplicaHint\x12\x1b\n" +
 	"\tcdc_topic\x18\x1e \x01(\tR\bcdcTopic\x12%\n" +
 	"\x0erequired_scope\x18\x1f \x01(\tR\rrequiredScope\x12I\n" +
-	"\fvector_store\x18  \x01(\v2&.udb.core.common.v1.VectorStoreOptionsR\vvectorStore\"\x9b\x01\n" +
+	"\fvector_store\x18  \x01(\v2&.udb.core.common.v1.VectorStoreOptionsR\vvectorStore\x12*\n" +
+	"\x11native_service_id\x18! \x01(\tR\x0fnativeServiceId\"\x9b\x01\n" +
 	"\tRlsPolicy\x12\x1f\n" +
 	"\vpolicy_name\x18\x01 \x01(\tR\n" +
 	"policyName\x12\x18\n" +

@@ -7,7 +7,14 @@ from .exceptions import (
     UdbPolicyBundleError,
     UdbRpcError,
 )
-from .metadata import Metadata, UDB_PROTOCOL_VERSION
+from .metadata import (
+    DEFAULT_READ_FENCE_MAX_WAIT_MS,
+    Metadata,
+    ReadFence,
+    UDB_PROTOCOL_VERSION,
+    WriteReceipt,
+    read_fence_from_receipt,
+)
 from .negotiation import (
     ENCODING_RECORD_BATCH_V2,
     ENCODING_RECORD_SET_V1,
@@ -63,11 +70,14 @@ except ImportError:  # pragma: no cover
     _HAS_GENERATED = False
 
 __all__ = [
+    "DEFAULT_READ_FENCE_MAX_WAIT_MS",
     "ENCODING_RECORD_BATCH_V2",
     "ENCODING_RECORD_SET_V1",
     "Metadata",
     "Negotiator",
+    "ReadFence",
     "UDB_PROTOCOL_VERSION",
+    "WriteReceipt",
     "UdbAsyncClient",
     "UdbAuthzDenied",
     "UdbClient",
@@ -79,6 +89,7 @@ __all__ = [
     "default_channel_options",
     "merge_channel_options",
     "decode_records",
+    "read_fence_from_receipt",
     "to_record_json",
     "to_struct",
 ]

@@ -45,7 +45,7 @@ public final class NotificationLogProto {
       "entity.v1\032\037google/protobuf/timestamp.pro" +
       "to\032\033udb/core/common/v1/db.proto\032!udb/cor" +
       "e/common/v1/security.proto\032+udb/core/not" +
-      "ification/entity/v1/enums.proto\"\210\025\n\017Noti" +
+      "ification/entity/v1/enums.proto\"\221\026\n\017Noti" +
       "ficationLog\022@\n\006log_id\030\001 \001(\tB)\202\267\030%\n\006log_i" +
       "d\022\004UUID\030\001(\001:\021gen_random_uuid()R\005logId\022\303\001" +
       "\n\013template_id\030\002 \001(\tB\241\001\202\267\030\234\001\n\013template_id" +
@@ -100,27 +100,31 @@ public final class NotificationLogProto {
       "TIMESTAMPTZR\013deliveredAt\022q\n\ncreated_at\030\023" +
       " \001(\0132\032.google.protobuf.TimestampB6\202\267\0302\n\n" +
       "created_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIMES" +
-      "TAMP`\001h\001R\tcreatedAt:\374\003\372\266\030\334\002\n\021notificatio" +
-      "n_logs\022\020udb_notification\030\002 \001*<Delivery a" +
-      "udit log for every notification sent by " +
-      "the system@\001H\003R\ncreated_atXZb^\n\020tenant_i" +
-      "solation\032H(tenant_id::text = current_set" +
-      "ting(\'app.current_tenant_id\', true)::tex" +
-      "t)(\001\212\001C\n\036idx_nlog_tenant_channel_status\022" +
-      "\005BTREEZ\ttenant_idZ\007channelZ\006status\212\001!\n\020i" +
-      "dx_nlog_sent_at\022\004BRINZ\007sent_at\362\001\026notific" +
-      "ation.failed.v1\212\262\031\226\001\n\006tenant\032\ttenant_id*" +
-      "4tenant_id = current_setting(\'app.curren" +
-      "t_tenant_id\')2\004none:\030notification.operat" +
-      "ional@ZH\002R\006tenantZ\010standardr\025tenant.data" +
-      "_residencyB\251\002\n#com.udb.core.notification" +
-      ".entity.v1B\024NotificationLogProtoP\001ZKgith" +
-      "ub.com/fahara02/udb/sdk/go/gen/udb/core/" +
-      "notification/entity/v1;entityv1\242\002\004UCNE\252\002" +
-      "\037udb.core.Notification.Entity.V1\312\002\037Udb\\C" +
-      "ore\\Notification\\Entity\\V1\342\002+Udb\\GPBMeta" +
-      "data\\Core\\Notification\\Entity\\V1\352\002#Udb::" +
-      "Core::Notification::Entity::V1b\006proto3"
+      "TAMP`\001h\001R\tcreatedAt\022G\n\020rendered_subject\030" +
+      "\024 \001(\tB\034\202\267\030\030\n\020rendered_subject\022\004TEXTR\017ren" +
+      "deredSubject\022>\n\rrendered_body\030\025 \001(\tB\031\202\267\030" +
+      "\025\n\rrendered_body\022\004TEXTR\014renderedBody:\374\003\372" +
+      "\266\030\334\002\n\021notification_logs\022\020udb_notificatio" +
+      "n\030\002 \001*<Delivery audit log for every noti" +
+      "fication sent by the system@\001H\003R\ncreated" +
+      "_atXZb^\n\020tenant_isolation\032H(tenant_id::t" +
+      "ext = current_setting(\'app.current_tenan" +
+      "t_id\', true)::text)(\001\212\001C\n\036idx_nlog_tenan" +
+      "t_channel_status\022\005BTREEZ\ttenant_idZ\007chan" +
+      "nelZ\006status\212\001!\n\020idx_nlog_sent_at\022\004BRINZ\007" +
+      "sent_at\362\001\026notification.failed.v1\212\262\031\226\001\n\006t" +
+      "enant\032\ttenant_id*4tenant_id = current_se" +
+      "tting(\'app.current_tenant_id\')2\004none:\030no" +
+      "tification.operational@ZH\002R\006tenantZ\010stan" +
+      "dardr\025tenant.data_residencyB\251\002\n#com.udb." +
+      "core.notification.entity.v1B\024Notificatio" +
+      "nLogProtoP\001ZKgithub.com/fahara02/udb/sdk" +
+      "/go/gen/udb/core/notification/entity/v1;" +
+      "entityv1\242\002\004UCNE\252\002\037udb.core.Notification." +
+      "Entity.V1\312\002\037Udb\\Core\\Notification\\Entity" +
+      "\\V1\342\002+Udb\\GPBMetadata\\Core\\Notification\\" +
+      "Entity\\V1\352\002#Udb::Core::Notification::Ent" +
+      "ity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -135,7 +139,7 @@ public final class NotificationLogProto {
     internal_static_udb_core_notification_entity_v1_NotificationLog_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_notification_entity_v1_NotificationLog_descriptor,
-        new java.lang.String[] { "LogId", "TemplateId", "EventType", "Channel", "RecipientId", "RecipientAddress", "TenantId", "ProjectId", "ResourceType", "ResourceId", "ResourceName", "CorrelationId", "Status", "ErrorMessage", "ProviderMessageId", "RetryCount", "SentAt", "DeliveredAt", "CreatedAt", });
+        new java.lang.String[] { "LogId", "TemplateId", "EventType", "Channel", "RecipientId", "RecipientAddress", "TenantId", "ProjectId", "ResourceType", "ResourceId", "ResourceName", "CorrelationId", "Status", "ErrorMessage", "ProviderMessageId", "RetryCount", "SentAt", "DeliveredAt", "CreatedAt", "RenderedSubject", "RenderedBody", });
     descriptor.resolveAllFeaturesImmutable();
     com.google.protobuf.TimestampProto.getDescriptor();
     com.udb.core.common.v1.DbProto.getDescriptor();

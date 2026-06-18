@@ -1326,6 +1326,15 @@ impl AuthzService for AuthzServiceImpl {
     ) -> Result<Response<authz_pb::AuthzResponse>, Status> {
         let started = Instant::now();
         let req = request.into_inner();
+        // 01.5.2.1 — capture the body-REQUESTED scopes BEFORE the claim-binding below
+        // forces `principal.scopes` to the EFFECTIVE claim set, so the durable audit
+        // can show requested-vs-effective (a scope the body asked for but the claim
+        // did not grant is then observable).
+        let requested_scopes = req
+            .principal
+            .as_ref()
+            .map(|p| p.scopes.clone())
+            .unwrap_or_default();
         let mut principal = req
             .principal
             .as_ref()
@@ -1350,6 +1359,33 @@ impl AuthzService for AuthzServiceImpl {
         }
         if principal.principal_id.trim().is_empty() {
             principal.principal_id = principal.subject.clone();
+        }
+        // Claim-binding (served path only): the decision must be evaluated as the
+        // AUTHENTICATED caller, not as whatever principal the body claims. Seed the
+        // principal from the verified claim and enforce the body tenant/project
+        // matches the claim. A non-admin caller may NOT impersonate another
+        // subject/tenant/project/scope set — those are forced to the claim and the
+        // body `req.principal` is treated only as the asked-about TARGET. A genuine
+        // cross-tenant admin may keep the body-derived principal to ask "can X do Y".
+        // The in-process / loopback path (no claim) preserves the body-derived
+        // behavior built above.
+        if crate::runtime::service::method_security::claim_context_present() {
+            let ctx = crate::runtime::service::method_security::current_claim_context();
+            crate::runtime::service::method_security::enforce_body_tenant_matches_claim(
+                &ctx,
+                &req.tenant_id,
+                &req.project_id,
+            )?;
+            if !ctx.is_cross_tenant_admin() {
+                let base = ctx.to_principal();
+                principal.subject = base.subject;
+                principal.tenant_id = base.tenant_id;
+                principal.project_id = base.project_id;
+                principal.scopes = base.scopes;
+                if principal.principal_id.trim().is_empty() {
+                    principal.principal_id = principal.subject.clone();
+                }
+            }
         }
         let mut resource = req
             .resource
@@ -1384,6 +1420,12 @@ impl AuthzService for AuthzServiceImpl {
             latency_us = started.elapsed().as_micros() as u64,
             "authz decision",
         );
+        // 01.5.2.1 — fold the body-requested scopes into the audit attribute bag
+        // (AFTER the decision, so the decision input is unchanged) so the durable
+        // decision-audit row records what was REQUESTED next to what was EFFECTIVE.
+        if !requested_scopes.is_empty() {
+            attributes.insert("requested_scopes".to_string(), requested_scopes.join(","));
+        }
         // Items 84–86: persist denies / audit-flagged allows to the proto audit table.
         let audit_ctx = AuditContext::from_attributes(&attributes, &req.purpose);
         self.write_decision_audit(&principal, &resource, &req.action, &decision, &audit_ctx)
@@ -1409,6 +1451,10 @@ impl AuthzService for AuthzServiceImpl {
                         "action": req.action.clone(),
                         "deny_reason": decision.deny_reason.clone(),
                         "decision_id": decision.decision_id.clone(),
+                        // 01.5.2.1 — requested-vs-effective scope visibility on the
+                        // deny event: the body-requested set vs the decision scopes.
+                        "requested_scopes": requested_scopes.clone(),
+                        "effective_scopes": principal.scopes.clone(),
                     }),
                 )
                 .with_correlation(if decision.decision_id.trim().is_empty() {
@@ -1689,6 +1735,32 @@ impl AuthzService for AuthzServiceImpl {
             principal.project_id = req.project_id.clone();
         }
 
+        // Claim-binding (served path only): a non-admin caller may only ask the PDP
+        // about THEMSELVES — force the evaluated principal's subject/tenant/project/
+        // scopes to the verified claim so a tenant-A token cannot probe a tenant-B
+        // user's access by supplying that user_id. A cross-tenant admin keeps the
+        // body-derived "can user X do Y?" query. The in-process/loopback path (no
+        // claim) preserves the body-derived behavior above.
+        if crate::runtime::service::method_security::claim_context_present() {
+            let ctx = crate::runtime::service::method_security::current_claim_context();
+            crate::runtime::service::method_security::enforce_body_tenant_matches_claim(
+                &ctx,
+                &req.tenant_id,
+                &req.project_id,
+            )?;
+            if !ctx.is_cross_tenant_admin() {
+                let base = ctx.to_principal();
+                principal.subject = base.subject;
+                principal.user_id = base.user_id;
+                principal.tenant_id = base.tenant_id;
+                principal.project_id = base.project_id;
+                principal.scopes = base.scopes;
+                if principal.principal_id.trim().is_empty() {
+                    principal.principal_id = principal.subject.clone();
+                }
+            }
+        }
+
         let mut resource = req
             .resource
             .as_ref()
@@ -1745,10 +1817,30 @@ impl AuthzService for AuthzServiceImpl {
         if req.name.trim().is_empty() {
             return Err(Status::invalid_argument("name is required"));
         }
-        if req.created_by.trim().is_empty() {
-            return Err(Status::invalid_argument("created_by is required"));
-        }
-        let created_by = parse_uuid_field("created_by", &req.created_by)?;
+        // Bind `created_by` to the authenticated caller on the served path: derive
+        // it from the claim subject when the body omits it, and forge-guard a
+        // supplied value that disagrees with the caller's claim-derived UUID unless
+        // the caller is a cross-tenant/governance admin acting on someone's behalf.
+        let created_by = if crate::runtime::service::method_security::claim_context_present() {
+            let ctx = crate::runtime::service::method_security::current_claim_context();
+            let claim_id = stable_uuid_from_subject(&ctx.subject);
+            if req.created_by.trim().is_empty() {
+                claim_id
+            } else {
+                let supplied = parse_uuid_field("created_by", &req.created_by)?;
+                if supplied != claim_id && !ctx.is_cross_tenant_admin() {
+                    return Err(Status::permission_denied(
+                        "created_by must match the authenticated caller",
+                    ));
+                }
+                supplied
+            }
+        } else {
+            if req.created_by.trim().is_empty() {
+                return Err(Status::invalid_argument("created_by is required"));
+            }
+            parse_uuid_field("created_by", &req.created_by)?
+        };
         let runtime = self.runtime.as_ref().ok_or_else(|| {
             Status::failed_precondition("native authz requires runtime-backed role persistence")
         })?;
@@ -1915,9 +2007,31 @@ impl AuthzService for AuthzServiceImpl {
                 "group role bindings require an explicit principal_id (IdP/SCIM group mapping)",
             ));
         }
-        if req.assigned_by.trim().is_empty() {
-            return Err(Status::invalid_argument("assigned_by is required"));
-        }
+        // Bind `assigned_by` to the authenticated caller on the served path (same
+        // shape as create_role.created_by): derive from the claim subject when the
+        // body omits it; forge-guard a supplied value that disagrees with the
+        // caller's claim-derived UUID unless the caller is a cross-tenant admin.
+        let assigned_by_uuid = if crate::runtime::service::method_security::claim_context_present()
+        {
+            let ctx = crate::runtime::service::method_security::current_claim_context();
+            let claim_id = stable_uuid_from_subject(&ctx.subject);
+            if req.assigned_by.trim().is_empty() {
+                claim_id
+            } else {
+                let supplied = parse_uuid_field("assigned_by", &req.assigned_by)?;
+                if supplied != claim_id && !ctx.is_cross_tenant_admin() {
+                    return Err(Status::permission_denied(
+                        "assigned_by must match the authenticated caller",
+                    ));
+                }
+                supplied
+            }
+        } else {
+            if req.assigned_by.trim().is_empty() {
+                return Err(Status::invalid_argument("assigned_by is required"));
+            }
+            parse_uuid_field("assigned_by", &req.assigned_by)?
+        };
         // USER with a UUID keeps its UUID; every other kind (and non-UUID users)
         // gets a stable derived UUID so service/workload/group/external principals
         // are first-class without forcing them through a real user_id.
@@ -1929,7 +2043,7 @@ impl AuthzService for AuthzServiceImpl {
             _ => stable_uuid_from_subject(principal_ref.trim()),
         };
         let role_id = parse_uuid_field("role_id", &req.role_id)?;
-        let assigned_by = parse_uuid_field("assigned_by", &req.assigned_by)?;
+        let assigned_by = assigned_by_uuid;
         let expires_at_unix = timestamp_unix_field("expires_at", req.expires_at.clone())?;
         let tenant_id = tenant_from_domain(&req.tenant_id, &req.domain);
         if tenant_id.trim().is_empty() {
@@ -2253,10 +2367,29 @@ impl AuthzService for AuthzServiceImpl {
         if req.action.trim().is_empty() {
             return Err(Status::invalid_argument("action is required"));
         }
-        if req.created_by.trim().is_empty() {
-            return Err(Status::invalid_argument("created_by is required"));
-        }
-        let created_by = parse_uuid_field("created_by", &req.created_by)?;
+        // Bind `created_by` to the authenticated caller on the served path (same
+        // shape as create_role.created_by): derive from the claim subject when the
+        // body omits it; forge-guard a supplied mismatch unless cross-tenant admin.
+        let created_by = if crate::runtime::service::method_security::claim_context_present() {
+            let ctx = crate::runtime::service::method_security::current_claim_context();
+            let claim_id = stable_uuid_from_subject(&ctx.subject);
+            if req.created_by.trim().is_empty() {
+                claim_id
+            } else {
+                let supplied = parse_uuid_field("created_by", &req.created_by)?;
+                if supplied != claim_id && !ctx.is_cross_tenant_admin() {
+                    return Err(Status::permission_denied(
+                        "created_by must match the authenticated caller",
+                    ));
+                }
+                supplied
+            }
+        } else {
+            if req.created_by.trim().is_empty() {
+                return Err(Status::invalid_argument("created_by is required"));
+            }
+            parse_uuid_field("created_by", &req.created_by)?
+        };
         let effect = entity_effect_to_runtime(req.effect)?;
         let policy = AuthzPolicy {
             id: Uuid::new_v4().to_string(),
@@ -3107,6 +3240,11 @@ impl AuthzService for AuthzServiceImpl {
         use crate::runtime::authz::native_access::NativeAccessConfig;
 
         let req = request.into_inner();
+        // 01.5.1.1 — capture the body-REQUESTED scopes before the claim-binding /
+        // narrow-only intersection below rewrites `principal.scopes` into the
+        // EFFECTIVE set, so the grant audit can surface a narrowed/rejected scope
+        // request distinct from what was actually granted.
+        let requested_scopes = req.requested_scopes.clone();
         let mut principal = req
             .principal
             .as_ref()
@@ -3118,7 +3256,37 @@ impl AuthzService for AuthzServiceImpl {
         if principal.project_id.trim().is_empty() {
             principal.project_id = req.project_id.clone();
         }
-        if principal.scopes.is_empty() {
+        // Claim-binding (served path only): seed the principal from the verified
+        // claim so the minted native-access contract is scoped to the AUTHENTICATED
+        // caller, not the body. `req.requested_scopes` may only NARROW the claim
+        // scopes (intersection) — never widen them into a superset of the token.
+        // `req.principal` stays a TARGET only for a genuine cross-tenant admin. The
+        // in-process / loopback path (no claim) preserves the body-derived behavior.
+        if crate::runtime::service::method_security::claim_context_present() {
+            let ctx = crate::runtime::service::method_security::current_claim_context();
+            crate::runtime::service::method_security::enforce_body_tenant_matches_claim(
+                &ctx,
+                &req.tenant_id,
+                &req.project_id,
+            )?;
+            if !ctx.is_cross_tenant_admin() {
+                let base = ctx.to_principal();
+                principal.subject = base.subject;
+                principal.user_id = base.user_id;
+                principal.tenant_id = base.tenant_id;
+                principal.project_id = base.project_id;
+                principal.scopes = base.scopes;
+            }
+            // Intersect requested scopes with the claim scopes (narrow-only). When
+            // the caller requests no specific scopes, keep the full claim set.
+            if !req.requested_scopes.is_empty() {
+                principal.scopes.retain(|scope| {
+                    req.requested_scopes
+                        .iter()
+                        .any(|requested| requested == scope)
+                });
+            }
+        } else if principal.scopes.is_empty() {
             principal.scopes = req.requested_scopes.clone();
         }
         if principal.subject.trim().is_empty() {
@@ -3231,6 +3399,10 @@ impl AuthzService for AuthzServiceImpl {
                     "purpose": req.purpose.clone(),
                     "allowed": decision.allowed,
                     "granted": issued,
+                    // 01.5.1.1 — requested-vs-effective scope visibility: the raw
+                    // body-requested set next to the narrowed set actually granted.
+                    "requested_scopes": requested_scopes.clone(),
+                    "effective_scopes": principal.scopes.clone(),
                 }),
             )
             .with_correlation(correlation)

@@ -122,7 +122,7 @@ async fn live_postgres_notification_service_crud_roundtrip() {
             event_type: event_type.to_string(),
             channel: notif_entity_pb::NotificationChannel::Email as i32,
             locale: "en".to_string(),
-            subject_template: "Invoice {{number}}".to_string(),
+            subject_template: "Invoice notice".to_string(),
             body_template: body.to_string(),
             is_active: true,
             ..Default::default()

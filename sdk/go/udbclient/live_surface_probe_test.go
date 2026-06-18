@@ -1,7 +1,7 @@
 package udbclient
 
 // Descriptor-driven deepening of the full-surface RPC probe. The base probe
-// proves every one of the ~262 RPCs is mounted; this upgrades it so that every
+// proves every one of the ~265 RPCs is mounted; this upgrades it so that every
 // side-effect-free READ RPC (Get/List/Lookup/Validate/…) is sent a correctly
 // typed, field-POPULATED request resolved from its proto descriptor — exercising
 // real request decode + tenant-scope/validation + handler-entry logic across the

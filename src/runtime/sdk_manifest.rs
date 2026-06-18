@@ -10,6 +10,8 @@
 //! Only UDB services (package starting with `udb`) are surfaced; the vendored
 //! `google.*` descriptors carry no services and are skipped regardless.
 
+use std::collections::BTreeMap;
+
 use crate::runtime::descriptor_manifest::descriptor_contract_manifest;
 
 /// One RPC method, flattened with its owning service for easy per-RPC template
@@ -87,6 +89,25 @@ pub struct RpcDescriptor {
     /// Convenience: `operation_kind == read_only`. Only read-only RPCs are
     /// safe to auto-retry / safe to fully field-populate in conformance probes.
     pub read_only: bool,
+    /// From the method's `IdempotencyContract`: whether the RPC is safe to
+    /// replay (e.g. keyed mutations like `DataBroker/Upsert` and
+    /// `DataBroker/Delete`). Drives SDK retry-on-transient-failure for
+    /// mutations. Defaults `false` when no idempotency contract is annotated.
+    pub replay_safe: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EntityDescriptor {
+    pub message_type: String,
+    pub short_name: String,
+    pub table: String,
+    pub primary_keys: Vec<String>,
+    pub tenant_field: String,
+    pub project_field: String,
+    pub soft_delete_field: String,
+    pub proto_package: String,
+    pub language_classes: BTreeMap<String, String>,
+    pub json_field_names: Vec<String>,
 }
 
 impl RpcDescriptor {
@@ -243,6 +264,11 @@ pub fn rpc_manifest() -> Vec<RpcDescriptor> {
                 )
                 .to_string(),
                 read_only: method.operation_kind == 1,
+                replay_safe: method
+                    .idempotency_contract
+                    .as_ref()
+                    .map(|c| c.replay_safe)
+                    .unwrap_or(false),
             });
         }
     }
@@ -250,6 +276,49 @@ pub fn rpc_manifest() -> Vec<RpcDescriptor> {
         a.service_full()
             .cmp(&b.service_full())
             .then_with(|| a.method.cmp(&b.method))
+    });
+    out
+}
+
+pub fn entity_manifest() -> Vec<EntityDescriptor> {
+    let descriptor = descriptor_contract_manifest();
+    let catalog = crate::runtime::native_catalog::native_manifest();
+    let mut out = Vec::new();
+    for message in descriptor
+        .messages
+        .iter()
+        .filter(|message| message.db_table_security.is_some())
+    {
+        let Some(table) = crate::broker::table_for_message(catalog, &message.full_name)
+            .or_else(|| crate::broker::table_for_message(catalog, &message.name))
+        else {
+            continue;
+        };
+        out.push(EntityDescriptor {
+            message_type: message.name.clone(),
+            short_name: message.name.clone(),
+            table: table.table.clone(),
+            primary_keys: table.primary_key.clone(),
+            tenant_field: table.table_security.tenant_column.clone(),
+            project_field: table.table_security.project_column.clone(),
+            soft_delete_field: if table.soft_delete {
+                table.soft_delete_column.clone()
+            } else {
+                String::new()
+            },
+            proto_package: table.proto_package.clone(),
+            language_classes: table.language_classes.clone(),
+            json_field_names: table
+                .columns
+                .iter()
+                .map(|column| column.field_name.clone())
+                .collect(),
+        });
+    }
+    out.sort_by(|a, b| {
+        a.message_type
+            .cmp(&b.message_type)
+            .then_with(|| a.table.cmp(&b.table))
     });
     out
 }
@@ -355,6 +424,33 @@ mod tests {
             expected.is_subset(&actual),
             "descriptor native service ids must all appear in SDK manifest; missing: {:?}",
             expected.difference(&actual).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn entity_manifest_resolves_catalog_tables() {
+        let entities = entity_manifest();
+        assert!(
+            !entities.is_empty(),
+            "db_table_security messages should produce SDK entity descriptors"
+        );
+        for entity in &entities {
+            assert!(
+                !entity.table.trim().is_empty(),
+                "entity {} must resolve a physical table",
+                entity.message_type
+            );
+            assert!(
+                !entity.primary_keys.is_empty(),
+                "entity {} must carry primary keys",
+                entity.message_type
+            );
+        }
+        assert!(
+            entities
+                .iter()
+                .any(|entity| entity.message_type == "Tenant"),
+            "expected native Tenant entity descriptor in manifest"
         );
     }
 

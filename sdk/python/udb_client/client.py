@@ -11,9 +11,18 @@ from udb.services.v1 import data_broker_pb2_grpc
 
 from ._channel import merge_channel_options
 from .exceptions import UdbConfigurationError, UdbRpcError
-from .metadata import Metadata
+from .metadata import Metadata, WriteReceipt
 
 JsonMapping = Mapping[str, Any]
+
+
+def receipt_from_response(response: Any) -> WriteReceipt:
+    """Parse the typed :class:`WriteReceipt` from a ``MutationResponse``.
+
+    Reads ``MutationResponse.write_receipt_json`` (field 7); returns an empty
+    receipt when the field is absent/blank so callers never hand-parse JSON.
+    """
+    return WriteReceipt.from_json(getattr(response, "write_receipt_json", "") or "")
 
 
 def to_struct(value: JsonMapping | Struct | None) -> Struct:
@@ -166,6 +175,39 @@ class UdbClient:
             idempotency_key=idempotency_key,
         )
         return self.call("Delete", req, metadata=metadata, timeout=timeout)
+
+    def upsert_with_receipt(
+        self, *args: Any, **kwargs: Any
+    ) -> tuple[types_pb2.MutationResponse, WriteReceipt]:
+        """Like :meth:`upsert` but also returns the parsed :class:`WriteReceipt`.
+
+        Lets callers do ``resp, receipt = udb.upsert_with_receipt(...)`` then
+        ``metadata.after_write(receipt)`` for read-your-writes without
+        hand-parsing ``write_receipt_json``.
+        """
+        response = self.upsert(*args, **kwargs)
+        return response, receipt_from_response(response)
+
+    def delete_with_receipt(
+        self, *args: Any, **kwargs: Any
+    ) -> tuple[types_pb2.MutationResponse, WriteReceipt]:
+        """Like :meth:`delete` but also returns the parsed :class:`WriteReceipt`."""
+        response = self.delete(*args, **kwargs)
+        return response, receipt_from_response(response)
+
+    def entity(self, message_type: str, *, key: Sequence[str] = ()) -> "_BoundEntity":
+        """Bind an entity once, then ``select/upsert/delete`` with plain dicts.
+
+        ``key`` is the conflict (primary-key) field set used for upserts. The
+        returned wrapper reuses :func:`to_record_json`/:func:`to_struct`/
+        :func:`decode_records`; it binds the supplied key once and never fetches
+        the catalog per request.
+        """
+        return _BoundEntity(self, message_type, tuple(key))
+
+    def table(self, name: str, *, key: Sequence[str] = ()) -> "_BoundEntity":
+        """Table-shaped alias of :meth:`entity` (``udb.data.table("invoice")``)."""
+        return self.entity(name, key=key)
 
     def batch_select(
         self,
@@ -397,6 +439,83 @@ class UdbClient:
         if not cloned.context.tenant_id:
             cloned.context.CopyFrom(self._effective_metadata(metadata).to_request_context())
         return cloned
+
+
+class _BoundEntity:
+    """A message-type/table bound to a :class:`UdbClient`, taking plain dicts.
+
+    Returned by :meth:`UdbClient.entity` / :meth:`UdbClient.table`. Its
+    ``select``/``upsert``/``delete`` build the proto requests from dicts using the
+    same :func:`to_record_json`/:func:`to_struct`/:func:`decode_records` helpers
+    the raw client uses, and set ``conflict_fields`` from the bound key. The bind
+    happens once; no per-request catalog lookup.
+    """
+
+    def __init__(self, client: "UdbClient", message_type: str, key: Sequence[str]):
+        self._client = client
+        self._message_type = message_type
+        self._key = tuple(key)
+
+    def select(
+        self,
+        *,
+        where: JsonMapping | Struct | None = None,
+        fields: Sequence[str] = (),
+        limit: int = 0,
+        page_token: str = "",
+        sort: Sequence[types_pb2.Sort] = (),
+        metadata: Metadata | None = None,
+        timeout: float | None = None,
+    ) -> list[dict[str, Any]]:
+        """One ``Select``; returns decoded records (no hidden List)."""
+        record_set = self._client.select(
+            message_type=self._message_type,
+            filter=where,
+            fields=fields,
+            limit=limit,
+            page_token=page_token,
+            sort=sort,
+            metadata=metadata,
+            timeout=timeout,
+        )
+        return decode_records(record_set)
+
+    def upsert(
+        self,
+        record: JsonMapping,
+        *,
+        return_record: bool = False,
+        idempotency_key: str = "",
+        metadata: Metadata | None = None,
+        timeout: float | None = None,
+    ) -> types_pb2.MutationResponse:
+        """One ``Upsert`` with ``conflict_fields`` from the bound key."""
+        return self._client.upsert(
+            message_type=self._message_type,
+            record=record,
+            conflict_fields=self._key,
+            return_record=return_record,
+            idempotency_key=idempotency_key,
+            metadata=metadata,
+            timeout=timeout,
+        )
+
+    def delete(
+        self,
+        *,
+        where: JsonMapping | Struct | None = None,
+        idempotency_key: str = "",
+        metadata: Metadata | None = None,
+        timeout: float | None = None,
+    ) -> types_pb2.MutationResponse:
+        """One ``Delete`` filtered by ``where``."""
+        return self._client.delete(
+            message_type=self._message_type,
+            filter=where,
+            idempotency_key=idempotency_key,
+            metadata=metadata,
+            timeout=timeout,
+        )
 
 
 class UdbAsyncClient:

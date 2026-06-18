@@ -500,7 +500,8 @@ type StartPipelineResponse struct {
 	InstanceId string                 `protobuf:"bytes,1,opt,name=instance_id,json=instanceId,proto3" json:"instance_id,omitempty"`
 	Message    string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
 	// Error information if operation failed
-	Error         *v1.ApiError `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
+	Error         *v1.ApiError        `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
+	Steps         []*v11.PipelineStep `protobuf:"bytes,4,rep,name=steps,proto3" json:"steps,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -552,6 +553,13 @@ func (x *StartPipelineResponse) GetMessage() string {
 func (x *StartPipelineResponse) GetError() *v1.ApiError {
 	if x != nil {
 		return x.Error
+	}
+	return nil
+}
+
+func (x *StartPipelineResponse) GetSteps() []*v11.PipelineStep {
+	if x != nil {
+		return x.Steps
 	}
 	return nil
 }
@@ -1083,12 +1091,13 @@ const file_udb_core_asset_services_v1_asset_service_proto_rawDesc = "" +
 	"\rdefinition_id\x18\x02 \x01(\tR\fdefinitionId\x12\x19\n" +
 	"\basset_id\x18\x03 \x01(\tR\aassetId\x12\x18\n" +
 	"\acontext\x18\x04 \x01(\tR\acontext\x12%\n" +
-	"\x0ecorrelation_id\x18\x05 \x01(\tR\rcorrelationId:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05assetP\x01\"\xa4\x01\n" +
+	"\x0ecorrelation_id\x18\x05 \x01(\tR\rcorrelationId:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05assetP\x01\"\xe2\x01\n" +
 	"\x15StartPipelineResponse\x12\x1f\n" +
 	"\vinstance_id\x18\x01 \x01(\tR\n" +
 	"instanceId\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x122\n" +
-	"\x05error\x18\x03 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05assetP\x01\"p\n" +
+	"\x05error\x18\x03 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error\x12<\n" +
+	"\x05steps\x18\x04 \x03(\v2&.udb.core.asset.entity.v1.PipelineStepR\x05steps:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05assetP\x01\"p\n" +
 	"\x12GetPipelineRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1f\n" +
 	"\vinstance_id\x18\x02 \x01(\tR\n" +
@@ -1123,7 +1132,7 @@ const file_udb_core_asset_services_v1_asset_service_proto_rawDesc = "" +
 	"\basset_id\x18\x02 \x01(\tR\aassetId:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05assetP\x01\"\x9b\x01\n" +
 	"\x10GetAssetResponse\x125\n" +
 	"\x05asset\x18\x01 \x01(\v2\x1f.udb.core.asset.entity.v1.AssetR\x05asset\x122\n" +
-	"\x05error\x18\x02 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05assetP\x012\xdb-\n" +
+	"\x05error\x18\x02 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05assetP\x012\xcc/\n" +
 	"\fAssetService\x12\xdd\x05\n" +
 	"\x18CreatePipelineDefinition\x12;.udb.core.asset.services.v1.CreatePipelineDefinitionRequest\x1a<.udb.core.asset.services.v1.CreatePipelineDefinitionResponse\"\xc5\x04\xca\xf3\x18Q\b\x02\x1a$udb:asset:create-pipeline-definition \x01J\x02\x01\x02j\x1easset.CreatePipelineDefinition\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x184\b\x01\x12\x1acreate_pipeline_definition\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05assetP\x01\xe2\xf3\x18\xcd\x01\n" +
 	"\x05asset\x12\x10udb/native/asset\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"7udb.native.asset.create_pipeline_definition.boilerplate*\x1acreate_pipeline_definition2\tudb_asset:\x05assetJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18Z\n" +
@@ -1132,17 +1141,25 @@ const file_udb_core_asset_services_v1_asset_service_proto_rawDesc = "" +
 	"\x15GetPipelineDefinition\x128.udb.core.asset.services.v1.GetPipelineDefinitionRequest\x1a9.udb.core.asset.services.v1.GetPipelineDefinitionResponse\"\xc0\x04\xca\xf3\x18K\b\x02\x1a!udb:asset:get-pipeline-definition \x01J\x02\x01\x02j\x1basset.GetPipelineDefinition\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x181\b\x01\x12\x17get_pipeline_definition\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05assetP\x01\xe2\xf3\x18\xc7\x01\n" +
 	"\x05asset\x12\x10udb/native/asset\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"4udb.native.asset.get_pipeline_definition.boilerplate*\x17get_pipeline_definition2\tudb_asset:\x05assetJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18W\n" +
 	"\x1basset.GetPipelineDefinition\x12\fasset.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18M\n" +
-	"\x05asset\x1a\bpostgres\x1a\fobject_store2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x020\x12./v1/asset/pipeline-definitions/{definition_id}\x12\xad\x05\n" +
-	"\rRegisterAsset\x120.udb.core.asset.services.v1.RegisterAssetRequest\x1a1.udb.core.asset.services.v1.RegisterAssetResponse\"\xb6\x04\xca\xf3\x18:\b\x02\x1a\x18udb:asset:register-asset \x01J\x02\x01\x02j\x13asset.RegisterAsset\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18(\b\x01\x12\x0eregister_asset\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05assetP\x01\xe2\xf3\x18\xb5\x01\n" +
+	"\x05asset\x1a\bpostgres\x1a\fobject_store2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x020\x12./v1/asset/pipeline-definitions/{definition_id}\x12\xd1\x05\n" +
+	"\rRegisterAsset\x120.udb.core.asset.services.v1.RegisterAssetRequest\x1a1.udb.core.asset.services.v1.RegisterAssetResponse\"\xda\x04\xca\xf3\x18:\b\x02\x1a\x18udb:asset:register-asset \x01J\x02\x01\x02j\x13asset.RegisterAsset\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18(\b\x01\x12\x0eregister_asset\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05assetP\x01\xe2\xf3\x18\xb5\x01\n" +
 	"\x05asset\x12\x10udb/native/asset\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"+udb.native.asset.register_asset.boilerplate*\x0eregister_asset2\tudb_asset:\x05assetJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18\x93\x01\n" +
 	"\x13asset.RegisterAsset\x12\fasset.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable:B\n" +
 	"\x1dudb.asset.asset.registered.v1\x12\basset_id\x1a\rat_least_once\"\bstandard\xf2\xf3\x18M\n" +
-	"\x05asset\x1a\bpostgres\x1a\fobject_store2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02\x15:\x01*\"\x10/v1/asset/assets\x12\xb3\x05\n" +
-	"\rStartPipeline\x120.udb.core.asset.services.v1.StartPipelineRequest\x1a1.udb.core.asset.services.v1.StartPipelineResponse\"\xbc\x04\xca\xf3\x18:\b\x02\x1a\x18udb:asset:start-pipeline \x01J\x02\x01\x02j\x13asset.StartPipeline\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18(\b\x01\x12\x0estart_pipeline\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05assetP\x01\xe2\xf3\x18\xb5\x01\n" +
+	"\x05asset\x1a\bpostgres\x1a\fobject_store2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x8a\xf4\x18 \n" +
+	"\basset_id\x12\bGetAsset\x1a\basset_id(\x01\x82\xd3\xe4\x93\x02\x15:\x01*\"\x10/v1/asset/assets\x12\x80\a\n" +
+	"\rStartPipeline\x120.udb.core.asset.services.v1.StartPipelineRequest\x1a1.udb.core.asset.services.v1.StartPipelineResponse\"\x89\x06\xca\xf3\x18:\b\x02\x1a\x18udb:asset:start-pipeline \x01J\x02\x01\x02j\x13asset.StartPipeline\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18(\b\x01\x12\x0estart_pipeline\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05assetP\x01\xe2\xf3\x18\xb5\x01\n" +
 	"\x05asset\x12\x10udb/native/asset\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"+udb.native.asset.start_pipeline.boilerplate*\x0estart_pipeline2\tudb_asset:\x05assetJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18\x96\x01\n" +
 	"\x13asset.StartPipeline\x12\fasset.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable:E\n" +
 	"\x1dudb.asset.pipeline.started.v1\x12\vinstance_id\x1a\rat_least_once\"\bstandard\xf2\xf3\x18M\n" +
-	"\x05asset\x1a\bpostgres\x1a\fobject_store2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02\x18:\x01*\"\x13/v1/asset/pipelines\x12\xe4\x04\n" +
+	"\x05asset\x1a\bpostgres\x1a\fobject_store2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x8a\xf4\x18)\n" +
+	"\vinstance_id\x12\vGetPipeline\x1a\vinstance_id(\x01\x92\xf4\x18.\n" +
+	"\x10PipelineInstance\x1a\aRUNNING\"\tCOMPLETED\"\x06FAILED\x9a\xf4\x18\x12\n" +
+	"\x0ecorrelation_id \x01\xa2\xf4\x18T\n" +
+	"'\n" +
+	"\x1bPIPELINE_DEFINITION_INVALID\x12\bINTERNAL\n" +
+	")\n" +
+	"\x15STEP_TYPE_UNSUPPORTED\x12\x10INVALID_ARGUMENT\x82\xd3\xe4\x93\x02\x18:\x01*\"\x13/v1/asset/pipelines\x12\xe4\x04\n" +
 	"\vGetPipeline\x12..udb.core.asset.services.v1.GetPipelineRequest\x1a/.udb.core.asset.services.v1.GetPipelineResponse\"\xf3\x03\xca\xf3\x186\b\x02\x1a\x16udb:asset:get-pipeline \x01J\x02\x01\x02j\x11asset.GetPipeline\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18&\b\x01\x12\fget_pipeline\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05assetP\x01\xe2\xf3\x18\xb1\x01\n" +
 	"\x05asset\x12\x10udb/native/asset\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\")udb.native.asset.get_pipeline.boilerplate*\fget_pipeline2\tudb_asset:\x05assetJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18M\n" +
 	"\x11asset.GetPipeline\x12\fasset.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18M\n" +
@@ -1200,8 +1217,8 @@ var file_udb_core_asset_services_v1_asset_service_proto_goTypes = []any{
 	(*GetAssetResponse)(nil),                 // 15: udb.core.asset.services.v1.GetAssetResponse
 	(*v1.ApiError)(nil),                      // 16: udb.core.common.v1.ApiError
 	(*v11.PipelineDefinition)(nil),           // 17: udb.core.asset.entity.v1.PipelineDefinition
-	(*v11.PipelineInstance)(nil),             // 18: udb.core.asset.entity.v1.PipelineInstance
-	(*v11.PipelineStep)(nil),                 // 19: udb.core.asset.entity.v1.PipelineStep
+	(*v11.PipelineStep)(nil),                 // 18: udb.core.asset.entity.v1.PipelineStep
+	(*v11.PipelineInstance)(nil),             // 19: udb.core.asset.entity.v1.PipelineInstance
 	(*v11.Asset)(nil),                        // 20: udb.core.asset.entity.v1.Asset
 }
 var file_udb_core_asset_services_v1_asset_service_proto_depIdxs = []int32{
@@ -1210,35 +1227,36 @@ var file_udb_core_asset_services_v1_asset_service_proto_depIdxs = []int32{
 	16, // 2: udb.core.asset.services.v1.GetPipelineDefinitionResponse.error:type_name -> udb.core.common.v1.ApiError
 	16, // 3: udb.core.asset.services.v1.RegisterAssetResponse.error:type_name -> udb.core.common.v1.ApiError
 	16, // 4: udb.core.asset.services.v1.StartPipelineResponse.error:type_name -> udb.core.common.v1.ApiError
-	18, // 5: udb.core.asset.services.v1.GetPipelineResponse.instance:type_name -> udb.core.asset.entity.v1.PipelineInstance
-	19, // 6: udb.core.asset.services.v1.GetPipelineResponse.steps:type_name -> udb.core.asset.entity.v1.PipelineStep
-	16, // 7: udb.core.asset.services.v1.GetPipelineResponse.error:type_name -> udb.core.common.v1.ApiError
-	16, // 8: udb.core.asset.services.v1.CompleteStepResponse.error:type_name -> udb.core.common.v1.ApiError
-	20, // 9: udb.core.asset.services.v1.ListAssetsResponse.assets:type_name -> udb.core.asset.entity.v1.Asset
-	16, // 10: udb.core.asset.services.v1.ListAssetsResponse.error:type_name -> udb.core.common.v1.ApiError
-	20, // 11: udb.core.asset.services.v1.GetAssetResponse.asset:type_name -> udb.core.asset.entity.v1.Asset
-	16, // 12: udb.core.asset.services.v1.GetAssetResponse.error:type_name -> udb.core.common.v1.ApiError
-	0,  // 13: udb.core.asset.services.v1.AssetService.CreatePipelineDefinition:input_type -> udb.core.asset.services.v1.CreatePipelineDefinitionRequest
-	2,  // 14: udb.core.asset.services.v1.AssetService.GetPipelineDefinition:input_type -> udb.core.asset.services.v1.GetPipelineDefinitionRequest
-	4,  // 15: udb.core.asset.services.v1.AssetService.RegisterAsset:input_type -> udb.core.asset.services.v1.RegisterAssetRequest
-	6,  // 16: udb.core.asset.services.v1.AssetService.StartPipeline:input_type -> udb.core.asset.services.v1.StartPipelineRequest
-	8,  // 17: udb.core.asset.services.v1.AssetService.GetPipeline:input_type -> udb.core.asset.services.v1.GetPipelineRequest
-	10, // 18: udb.core.asset.services.v1.AssetService.CompleteStep:input_type -> udb.core.asset.services.v1.CompleteStepRequest
-	12, // 19: udb.core.asset.services.v1.AssetService.ListAssets:input_type -> udb.core.asset.services.v1.ListAssetsRequest
-	14, // 20: udb.core.asset.services.v1.AssetService.GetAsset:input_type -> udb.core.asset.services.v1.GetAssetRequest
-	1,  // 21: udb.core.asset.services.v1.AssetService.CreatePipelineDefinition:output_type -> udb.core.asset.services.v1.CreatePipelineDefinitionResponse
-	3,  // 22: udb.core.asset.services.v1.AssetService.GetPipelineDefinition:output_type -> udb.core.asset.services.v1.GetPipelineDefinitionResponse
-	5,  // 23: udb.core.asset.services.v1.AssetService.RegisterAsset:output_type -> udb.core.asset.services.v1.RegisterAssetResponse
-	7,  // 24: udb.core.asset.services.v1.AssetService.StartPipeline:output_type -> udb.core.asset.services.v1.StartPipelineResponse
-	9,  // 25: udb.core.asset.services.v1.AssetService.GetPipeline:output_type -> udb.core.asset.services.v1.GetPipelineResponse
-	11, // 26: udb.core.asset.services.v1.AssetService.CompleteStep:output_type -> udb.core.asset.services.v1.CompleteStepResponse
-	13, // 27: udb.core.asset.services.v1.AssetService.ListAssets:output_type -> udb.core.asset.services.v1.ListAssetsResponse
-	15, // 28: udb.core.asset.services.v1.AssetService.GetAsset:output_type -> udb.core.asset.services.v1.GetAssetResponse
-	21, // [21:29] is the sub-list for method output_type
-	13, // [13:21] is the sub-list for method input_type
-	13, // [13:13] is the sub-list for extension type_name
-	13, // [13:13] is the sub-list for extension extendee
-	0,  // [0:13] is the sub-list for field type_name
+	18, // 5: udb.core.asset.services.v1.StartPipelineResponse.steps:type_name -> udb.core.asset.entity.v1.PipelineStep
+	19, // 6: udb.core.asset.services.v1.GetPipelineResponse.instance:type_name -> udb.core.asset.entity.v1.PipelineInstance
+	18, // 7: udb.core.asset.services.v1.GetPipelineResponse.steps:type_name -> udb.core.asset.entity.v1.PipelineStep
+	16, // 8: udb.core.asset.services.v1.GetPipelineResponse.error:type_name -> udb.core.common.v1.ApiError
+	16, // 9: udb.core.asset.services.v1.CompleteStepResponse.error:type_name -> udb.core.common.v1.ApiError
+	20, // 10: udb.core.asset.services.v1.ListAssetsResponse.assets:type_name -> udb.core.asset.entity.v1.Asset
+	16, // 11: udb.core.asset.services.v1.ListAssetsResponse.error:type_name -> udb.core.common.v1.ApiError
+	20, // 12: udb.core.asset.services.v1.GetAssetResponse.asset:type_name -> udb.core.asset.entity.v1.Asset
+	16, // 13: udb.core.asset.services.v1.GetAssetResponse.error:type_name -> udb.core.common.v1.ApiError
+	0,  // 14: udb.core.asset.services.v1.AssetService.CreatePipelineDefinition:input_type -> udb.core.asset.services.v1.CreatePipelineDefinitionRequest
+	2,  // 15: udb.core.asset.services.v1.AssetService.GetPipelineDefinition:input_type -> udb.core.asset.services.v1.GetPipelineDefinitionRequest
+	4,  // 16: udb.core.asset.services.v1.AssetService.RegisterAsset:input_type -> udb.core.asset.services.v1.RegisterAssetRequest
+	6,  // 17: udb.core.asset.services.v1.AssetService.StartPipeline:input_type -> udb.core.asset.services.v1.StartPipelineRequest
+	8,  // 18: udb.core.asset.services.v1.AssetService.GetPipeline:input_type -> udb.core.asset.services.v1.GetPipelineRequest
+	10, // 19: udb.core.asset.services.v1.AssetService.CompleteStep:input_type -> udb.core.asset.services.v1.CompleteStepRequest
+	12, // 20: udb.core.asset.services.v1.AssetService.ListAssets:input_type -> udb.core.asset.services.v1.ListAssetsRequest
+	14, // 21: udb.core.asset.services.v1.AssetService.GetAsset:input_type -> udb.core.asset.services.v1.GetAssetRequest
+	1,  // 22: udb.core.asset.services.v1.AssetService.CreatePipelineDefinition:output_type -> udb.core.asset.services.v1.CreatePipelineDefinitionResponse
+	3,  // 23: udb.core.asset.services.v1.AssetService.GetPipelineDefinition:output_type -> udb.core.asset.services.v1.GetPipelineDefinitionResponse
+	5,  // 24: udb.core.asset.services.v1.AssetService.RegisterAsset:output_type -> udb.core.asset.services.v1.RegisterAssetResponse
+	7,  // 25: udb.core.asset.services.v1.AssetService.StartPipeline:output_type -> udb.core.asset.services.v1.StartPipelineResponse
+	9,  // 26: udb.core.asset.services.v1.AssetService.GetPipeline:output_type -> udb.core.asset.services.v1.GetPipelineResponse
+	11, // 27: udb.core.asset.services.v1.AssetService.CompleteStep:output_type -> udb.core.asset.services.v1.CompleteStepResponse
+	13, // 28: udb.core.asset.services.v1.AssetService.ListAssets:output_type -> udb.core.asset.services.v1.ListAssetsResponse
+	15, // 29: udb.core.asset.services.v1.AssetService.GetAsset:output_type -> udb.core.asset.services.v1.GetAssetResponse
+	22, // [22:30] is the sub-list for method output_type
+	14, // [14:22] is the sub-list for method input_type
+	14, // [14:14] is the sub-list for extension type_name
+	14, // [14:14] is the sub-list for extension extendee
+	0,  // [0:14] is the sub-list for field type_name
 }
 
 func init() { file_udb_core_asset_services_v1_asset_service_proto_init() }

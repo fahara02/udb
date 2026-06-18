@@ -13,6 +13,8 @@ use Grpc\ChannelCredentials;
 use Udb\Core\Authn\Services\V1\AuthnRequest;
 use Udb\Core\Authn\Services\V1\AuthnResponse;
 use Udb\Core\Authn\Services\V1\AuthnServiceClient;
+use Udb\Core\Authn\Services\V1\LoginRequest;
+use Udb\Core\Authn\Services\V1\LoginResponse;
 use Udb\Core\Authz\Services\V1\AuthzRequest;
 use Udb\Core\Authz\Services\V1\AuthzServiceClient;
 use Udb\Core\Authz\Services\V1\BatchCheckPermissionsRequest;
@@ -111,6 +113,46 @@ class UdbAuthClient
                 ->setTenantHint($meta->tenantId)->setProjectHint($meta->projectId ?? ''),
             $metadata,
         );
+    }
+
+    /**
+     * Password login (`AuthnService.Login`). Returns `LoginResponse` with the
+     * short-lived `access_token` + `refresh_token`. Tenant/project hints flow
+     * from the bound context.
+     */
+    public function login(
+        string $username,
+        string $password,
+        string $totpCode = '',
+        string $mfaOtpId = '',
+        ?UdbMetadata $metadata = null,
+    ): LoginResponse {
+        $meta = $this->context($metadata);
+        $request = (new LoginRequest())
+            ->setUsername($username)
+            ->setPassword($password)
+            ->setTotpCode($totpCode)
+            ->setMfaOtpId($mfaOtpId)
+            ->setTenantHint($meta->tenantId)
+            ->setProjectHint($meta->projectId ?? '');
+
+        return $this->invoke('Login', fn (array $md, array $o) => $this->authn()->Login($request, $md, $o), $metadata, LoginResponse::class);
+    }
+
+    /**
+     * Canonical naming-contract alias of {@see login()} (`auth->loginSession`,
+     * parity with TS `auth.loginSession` / Python `auth.login_session` / Go
+     * `Auth.LoginSession`). Same single `AuthnService.Login` RPC — no hidden
+     * round trips. `login()` stays as the established name.
+     */
+    public function loginSession(
+        string $username,
+        string $password,
+        string $totpCode = '',
+        string $mfaOtpId = '',
+        ?UdbMetadata $metadata = null,
+    ): LoginResponse {
+        return $this->login($username, $password, $totpCode, $mfaOtpId, $metadata);
     }
 
     // ── Authorization ─────────────────────────────────────────────────────────
@@ -249,6 +291,88 @@ class UdbAuthClient
             $out[(string) $key] = (bool) $allowed;
         }
         return $out;
+    }
+
+    /**
+     * Grant a role permission on a resource/action. Emits EXACTLY one
+     * `AuthzService.CreatePolicyRule` RPC (no hidden List/Get) — naming-contract
+     * `authz->allowRole(role, {resource, action})`, parity with TS/Python/Go.
+     * `role` becomes the policy `subject`, `resource` the `object`, `action` the
+     * `action`; `effect` defaults to `ALLOW`. Tenant/project default to the
+     * bound metadata. Returns the typed `CreatePolicyRuleResponse`.
+     *
+     * @param  array{resource:string, action:string, effect?:string}  $grant
+     */
+    public function allowRole(
+        string $role,
+        array $grant,
+        ?UdbMetadata $metadata = null,
+    ): \Udb\Core\Authz\Services\V1\CreatePolicyRuleResponse {
+        $meta = $this->context($metadata);
+        $request = (new \Udb\Core\Authz\Services\V1\CreatePolicyRuleRequest())
+            ->setSubject($role)
+            ->setObject((string) $grant['resource'])
+            ->setAction((string) $grant['action'])
+            ->setEffect(self::policyEffect((string) ($grant['effect'] ?? 'ALLOW')))
+            ->setDomain($meta->tenantId)
+            ->setTenantId($meta->tenantId)
+            ->setProjectId($meta->projectId ?? '');
+
+        return $this->invoke(
+            'CreatePolicyRule',
+            fn (array $md, array $o) => $this->authz()->CreatePolicyRule($request, $md, $o),
+            $metadata,
+            \Udb\Core\Authz\Services\V1\CreatePolicyRuleResponse::class,
+        );
+    }
+
+    /**
+     * Bind a subject (user/principal) to a role. Emits EXACTLY one
+     * `AuthzService.AssignRole` RPC (no hidden List/Get) — naming-contract
+     * `authz->bindRole(subject, role)`, parity with TS/Python/Go. `subject` is
+     * sent as both `user_id` and `principal_id`; `role` as `role_id`.
+     * Tenant/domain default to the bound metadata. Returns the typed
+     * `AssignRoleResponse`.
+     */
+    public function bindRole(
+        string $subject,
+        string $role,
+        ?UdbMetadata $metadata = null,
+    ): \Udb\Core\Authz\Services\V1\AssignRoleResponse {
+        $meta = $this->context($metadata);
+        $request = (new \Udb\Core\Authz\Services\V1\AssignRoleRequest())
+            ->setUserId($subject)
+            ->setPrincipalId($subject)
+            ->setRoleId($role)
+            ->setDomain($meta->tenantId)
+            ->setTenantId($meta->tenantId)
+            ->setProjectId($meta->projectId ?? '');
+
+        return $this->invoke(
+            'AssignRole',
+            fn (array $md, array $o) => $this->authz()->AssignRole($request, $md, $o),
+            $metadata,
+            \Udb\Core\Authz\Services\V1\AssignRoleResponse::class,
+        );
+    }
+
+    /**
+     * Map a friendly effect string ("ALLOW"/"DENY", case-insensitive, with or
+     * without the `POLICY_EFFECT_` prefix) to the {@see \Udb\Core\Authz\Entity\V1\PolicyEffect}
+     * enum int. Unknown/empty defaults to ALLOW (the contract default for
+     * {@see allowRole()}).
+     */
+    private static function policyEffect(string $effect): int
+    {
+        $normalized = strtoupper(trim($effect));
+        if ($normalized === '' || $normalized === 'ALLOW' || $normalized === 'POLICY_EFFECT_ALLOW') {
+            return \Udb\Core\Authz\Entity\V1\PolicyEffect::POLICY_EFFECT_ALLOW;
+        }
+        if ($normalized === 'DENY' || $normalized === 'POLICY_EFFECT_DENY') {
+            return \Udb\Core\Authz\Entity\V1\PolicyEffect::POLICY_EFFECT_DENY;
+        }
+
+        return \Udb\Core\Authz\Entity\V1\PolicyEffect::POLICY_EFFECT_ALLOW;
     }
 
     /** Stable string identity for a ResourceRef, used in the cache key. */

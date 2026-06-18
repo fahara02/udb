@@ -1,13 +1,29 @@
 package udbclient
 
 import (
+	"bytes"
 	"context"
+	"fmt"
+	"io"
+	"net/http"
+	"time"
 
+	assetentityv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/asset/entity/v1"
 	assetv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/asset/services/v1"
 	storagev1 "github.com/fahara02/udb/sdk/go/gen/udb/core/storage/services/v1"
 	webrtcv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/webrtc/services/v1"
 	"google.golang.org/grpc"
 )
+
+// httpDoer is the minimal HTTP client interface UploadFile uses for the
+// presigned PUT. It is a package var so the mock-transport test can intercept
+// the byte transfer without a real network round trip; production uses
+// http.DefaultClient.
+type httpDoer interface {
+	Do(*http.Request) (*http.Response, error)
+}
+
+var uploadHTTPDoer httpDoer = http.DefaultClient
 
 // ── Phase 7 M8: media-plane convenience facades ──────────────────────────────
 //
@@ -24,6 +40,92 @@ import (
 type StorageFacade struct {
 	Raw  storagev1.StorageServiceClient
 	meta Metadata
+
+	// MaxUploadBytes caps the in-memory UploadFile byte path; zero = unlimited.
+	// UploadFile returns a typed error BEFORE any RPC when the payload exceeds it.
+	MaxUploadBytes int64
+}
+
+// UploadOptions carries the non-positional UploadFile inputs. The CANONICAL
+// cross-language signature keeps filename + bytes positional and everything else
+// here (matching the TS/Python uploadFile(filename, bytes, options) shape).
+type UploadOptions struct {
+	ContentType string
+	FileType    string
+	Checksum    string // optional integrity checksum persisted on finalize
+	ETag        string // optional object etag asserted on finalize
+}
+
+// UploadOption is a functional option mutating UploadOptions.
+type UploadOption func(*UploadOptions)
+
+// WithContentType sets the upload Content-Type (used for the PUT header and the
+// RegisterUpload request).
+func WithContentType(ct string) UploadOption { return func(o *UploadOptions) { o.ContentType = ct } }
+
+// WithFileType sets the logical file type bucket.
+func WithFileType(ft string) UploadOption { return func(o *UploadOptions) { o.FileType = ft } }
+
+// WithChecksum sets a content checksum persisted on finalize.
+func WithChecksum(c string) UploadOption { return func(o *UploadOptions) { o.Checksum = c } }
+
+// WithETag asserts an object etag on finalize.
+func WithETag(e string) UploadOption { return func(o *UploadOptions) { o.ETag = e } }
+
+// UploadFile is the combined register -> PUT -> finalize helper. It performs
+// EXACTLY those three steps with NO hidden Get/List proof read (perf guardrail):
+//
+//  1. RegisterUpload(filename, len(data)) -> file id + presigned upload_url
+//  2. HTTP PUT the bytes to upload_url (only when the broker returned one)
+//  3. FinalizeUpload(file id, len(data)) with the optional checksum/etag
+//
+// filename and data are positional; all other inputs live in UploadOptions via
+// functional options. The MaxUploadBytes cap is enforced before any RPC.
+func (f *StorageFacade) UploadFile(ctx context.Context, filename string, data []byte, opts ...UploadOption) (*storagev1.FinalizeUploadResponse, error) {
+	var o UploadOptions
+	for _, opt := range opts {
+		opt(&o)
+	}
+	if f.MaxUploadBytes > 0 && int64(len(data)) > f.MaxUploadBytes {
+		return nil, fmt.Errorf("udb: upload %q is %d bytes, exceeds MaxUploadBytes %d", filename, len(data), f.MaxUploadBytes)
+	}
+
+	reg, err := f.RegisterUpload(ctx, filename, o.ContentType, o.FileType, int64(len(data)))
+	if err != nil {
+		return nil, err
+	}
+	if url := reg.GetUploadUrl(); url != "" {
+		req, err := http.NewRequestWithContext(ctx, http.MethodPut, url, bytes.NewReader(data))
+		if err != nil {
+			return nil, fmt.Errorf("udb: build upload PUT: %w", err)
+		}
+		if o.ContentType != "" {
+			req.Header.Set("Content-Type", o.ContentType)
+		}
+		resp, err := uploadHTTPDoer.Do(req)
+		if err != nil {
+			return nil, fmt.Errorf("udb: upload PUT: %w", err)
+		}
+		if resp.Body != nil {
+			_, _ = io.Copy(io.Discard, resp.Body)
+			_ = resp.Body.Close()
+		}
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			return nil, fmt.Errorf("udb: upload PUT returned HTTP %d", resp.StatusCode)
+		}
+	}
+	fin := &storagev1.FinalizeUploadRequest{
+		TenantId:  f.meta.TenantID,
+		FileId:    reg.GetFileId(),
+		SizeBytes: int64(len(data)),
+	}
+	if o.Checksum != "" {
+		fin.Checksum = &o.Checksum
+	}
+	if o.ETag != "" {
+		fin.Etag = &o.ETag
+	}
+	return f.Raw.FinalizeUpload(ctx, fin)
 }
 
 // RegisterUpload reserves a file id + presigned upload target and runs the
@@ -58,6 +160,103 @@ func (f *StorageFacade) GetDownloadUrl(ctx context.Context, fileID string, expir
 		FileId:           fileID,
 		ExpiresInMinutes: expiresInMinutes,
 	})
+}
+
+// DownloadFile is the canonical naming-contract download accessor and the
+// PREFERRED happy path: it mints a time-limited presigned download URL for
+// fileID so the bytes never transit the broker. It emits EXACTLY one
+// GetDownloadUrl RPC (no GetFile probe) — a fileId-first alias of GetDownloadUrl.
+// expiresInMinutes of zero lets the server choose its default; tenant defaults
+// to the caller Metadata. Callers that cannot use a presigned HTTP URL and need
+// the bytes returned through the broker use DownloadFileBytes, which drives the
+// server-streaming DownloadFile RPC instead.
+func (f *StorageFacade) DownloadFile(ctx context.Context, fileID string, expiresInMinutes int32) (*storagev1.GetDownloadUrlResponse, error) {
+	return f.GetDownloadUrl(ctx, fileID, expiresInMinutes)
+}
+
+// DownloadOptions carries the non-positional DownloadFileBytes inputs.
+type DownloadOptions struct {
+	// ChunkSizeBytes is the advisory server-side chunk size for the streaming
+	// fallback; zero lets the server choose. It does not bound reassembly.
+	ChunkSizeBytes int32
+	// MaxBytes caps the reassembled payload; the stream is aborted with a typed
+	// error once the accumulated bytes would exceed it. Zero = unlimited.
+	MaxBytes int64
+}
+
+// DownloadOption is a functional option mutating DownloadOptions.
+type DownloadOption func(*DownloadOptions)
+
+// WithDownloadChunkSize sets the advisory streaming chunk size.
+func WithDownloadChunkSize(n int32) DownloadOption {
+	return func(o *DownloadOptions) { o.ChunkSizeBytes = n }
+}
+
+// WithMaxDownloadBytes caps the reassembled byte payload.
+func WithMaxDownloadBytes(n int64) DownloadOption {
+	return func(o *DownloadOptions) { o.MaxBytes = n }
+}
+
+// DownloadResult is the reassembled output of DownloadFileBytes: the full file
+// bytes plus the content-type/total-size/etag metadata the first chunk carries.
+type DownloadResult struct {
+	Data        []byte
+	ContentType string
+	TotalSize   int64
+	ETag        string
+}
+
+// DownloadFileBytes is the byte-fetch download path. The presigned URL flow
+// (DownloadFile -> GetDownloadUrl) is the happy path and keeps bytes OUT of the
+// broker; DownloadFileBytes is for callers that cannot resolve/use a presigned
+// HTTP URL and need the bytes back through the broker. It calls the new
+// server-streaming DownloadFile RPC and reassembles the bounded DownloadFileChunk
+// stream into a single buffer. tenant defaults to the caller Metadata. The
+// MaxBytes cap (option) fails closed with a typed error before the buffer can
+// grow past it.
+func (f *StorageFacade) DownloadFileBytes(ctx context.Context, fileID string, opts ...DownloadOption) (*DownloadResult, error) {
+	var o DownloadOptions
+	for _, opt := range opts {
+		opt(&o)
+	}
+	req := &storagev1.DownloadFileRequest{
+		TenantId: f.meta.TenantID,
+		FileId:   fileID,
+	}
+	if o.ChunkSizeBytes != 0 {
+		req.ChunkSizeBytes = &o.ChunkSizeBytes
+	}
+	stream, err := f.Raw.DownloadFile(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	res := &DownloadResult{}
+	for {
+		chunk, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, fmt.Errorf("udb: download stream: %w", err)
+		}
+		// The first chunk carries the file metadata; later chunks may repeat or
+		// leave it empty — keep the first non-empty values.
+		if res.ContentType == "" {
+			res.ContentType = chunk.GetContentType()
+		}
+		if res.TotalSize == 0 {
+			res.TotalSize = chunk.GetTotalSize()
+		}
+		if res.ETag == "" {
+			res.ETag = chunk.GetEtag()
+		}
+		data := chunk.GetData()
+		if o.MaxBytes > 0 && int64(len(res.Data))+int64(len(data)) > o.MaxBytes {
+			return nil, fmt.Errorf("udb: download %q exceeds MaxBytes %d", fileID, o.MaxBytes)
+		}
+		res.Data = append(res.Data, data...)
+	}
+	return res, nil
 }
 
 // GetFile fetches file metadata by id. tenant defaults to the Metadata.
@@ -202,6 +401,73 @@ func (f *AssetFacade) GetAsset(ctx context.Context, assetID string) (*assetv1.Ge
 	})
 }
 
+// ── Asset workflow helpers (chapter 13.6) ────────────────────────────────────
+
+// DefinePipeline is a thin wrapper over CreatePipelineDefinition taking the step
+// list as a JSON array (the producer-side define helper). tenant defaults to the
+// Metadata.
+func (f *AssetFacade) DefinePipeline(ctx context.Context, name, description, mediaType, stepsJSON string, version int32) (*assetv1.CreatePipelineDefinitionResponse, error) {
+	return f.CreatePipelineDefinition(ctx, name, description, mediaType, stepsJSON, version)
+}
+
+// RegisterFromStorageFile registers an asset bound to a storage file id (the
+// producer-side register helper over RegisterAsset). tenant/project default to
+// the Metadata.
+func (f *AssetFacade) RegisterFromStorageFile(ctx context.Context, fileID, name, mediaType, metadataJSON string) (*assetv1.RegisterAssetResponse, error) {
+	return f.RegisterAsset(ctx, fileID, name, mediaType, metadataJSON)
+}
+
+// StartAndWaitResult carries a StartAndWait outcome: the inline steps the
+// StartPipeline response already returned (no GetPipeline proof read needed) and
+// the terminal instance status reached by the bounded status poll.
+type StartAndWaitResult struct {
+	InstanceID string
+	Steps      []*assetentityv1.PipelineStep
+	Status     assetentityv1.PipelineStatus
+}
+
+func pipelineTerminal(s assetentityv1.PipelineStatus) bool {
+	return s == assetentityv1.PipelineStatus_PIPELINE_STATUS_COMPLETED ||
+		s == assetentityv1.PipelineStatus_PIPELINE_STATUS_FAILED
+}
+
+// StartAndWait starts a pipeline (consuming the inline steps from the
+// StartPipeline response — NOT a follow-up GetPipeline proof read) and then polls
+// instance status to a terminal state (COMPLETED/FAILED) or until the deadline.
+// Status polling uses only GetPipeline reads, bounded and cancellation-aware —
+// never a fixed sleep loop.
+func (f *AssetFacade) StartAndWait(ctx context.Context, definitionID, assetID, contextJSON, correlationID string, deadline time.Duration) (*StartAndWaitResult, error) {
+	start, err := f.StartPipeline(ctx, definitionID, assetID, contextJSON, correlationID)
+	if err != nil {
+		return nil, err
+	}
+	res := &StartAndWaitResult{
+		InstanceID: start.GetInstanceId(),
+		Steps:      start.GetSteps(), // inline steps from 04.2.1 — no GetPipeline here
+	}
+	if deadline > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, deadline)
+		defer cancel()
+	}
+	const pollInterval = 150 * time.Millisecond
+	for {
+		got, err := f.GetPipeline(ctx, res.InstanceID)
+		if err != nil {
+			return res, err
+		}
+		res.Status = got.GetInstance().GetStatus()
+		if pipelineTerminal(res.Status) {
+			return res, nil
+		}
+		select {
+		case <-ctx.Done():
+			return res, ctx.Err()
+		case <-time.After(pollInterval):
+		}
+	}
+}
+
 // ── WebRTC ───────────────────────────────────────────────────────────────────
 //
 // The WebRTC proto is split into five generated service clients (Room, Peer,
@@ -227,6 +493,75 @@ type WebRTCFacade struct {
 // honest surface for a bidi stream — the facade does not buffer or fake frames.
 func (f *WebRTCFacade) Signal(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[webrtcv1.SignalRequest, webrtcv1.SignalResponse], error) {
 	return f.RawSignaling.Signal(ctx, opts...)
+}
+
+// ── joinSession wrapper (chapter 13.4) ───────────────────────────────────────
+
+// Session is the handle JoinSession returns: the atomically-joined peer + ICE +
+// existing peers from the single JoinSession RPC, plus the live signaling stream.
+// Leave closes the stream and removes the peer from the room.
+type Session struct {
+	facade       *WebRTCFacade
+	roomID       string
+	Result       *webrtcv1.JoinSessionResponse
+	Stream       grpc.BidiStreamingClient[webrtcv1.SignalRequest, webrtcv1.SignalResponse]
+	cancelSignal context.CancelFunc
+}
+
+// PeerID returns the joined peer's id.
+func (s *Session) PeerID() string {
+	if s.Result == nil || s.Result.GetPeer() == nil {
+		return ""
+	}
+	return s.Result.GetPeer().GetPeerId()
+}
+
+// Leave closes the signaling stream and issues LeaveRoom. Safe to call once.
+func (s *Session) Leave(ctx context.Context) error {
+	if s.Stream != nil {
+		_ = s.Stream.CloseSend()
+	}
+	if s.cancelSignal != nil {
+		s.cancelSignal()
+	}
+	if s.facade == nil || s.PeerID() == "" {
+		return nil
+	}
+	_, err := s.facade.Peer.LeaveRoom(ctx, s.roomID, s.PeerID())
+	return err
+}
+
+// JoinSession joins a room atomically via the JoinSession RPC (peer + ICE +
+// existing peers in ONE call — no SDK-side JoinRoom+IssueCredentials fan-out),
+// then opens the bidi signaling stream for the session. tenant defaults from the
+// facade Metadata. The caller drives the returned Stream and ends the session
+// with Leave. Reconnect is the caller's concern and is denied after a first
+// observed response until the broker exposes a resume token (guardrail).
+func (f *WebRTCFacade) JoinSession(ctx context.Context, roomID, displayName, metadataJSON, userAgent string, ttlSeconds int32) (*Session, error) {
+	resp, err := f.Peer.Raw.JoinSession(ctx, &webrtcv1.JoinSessionRequest{
+		TenantId:    f.meta.TenantID,
+		RoomId:      roomID,
+		DisplayName: displayName,
+		Metadata:    metadataJSON,
+		UserAgent:   userAgent,
+		TtlSeconds:  ttlSeconds,
+	})
+	if err != nil {
+		return nil, err
+	}
+	streamCtx, cancel := context.WithCancel(ctx)
+	stream, err := f.Signal(streamCtx)
+	if err != nil {
+		cancel()
+		return nil, err
+	}
+	return &Session{
+		facade:       f,
+		roomID:       roomID,
+		Result:       resp,
+		Stream:       stream,
+		cancelSignal: cancel,
+	}, nil
 }
 
 // WebRTCRoomFacade wraps RoomServiceClient.

@@ -198,6 +198,10 @@ namespace Udb.Services.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Entity.V1.SagaResponse> __Marshaller_udb_entity_v1_SagaResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.SagaResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Services.V1.EnsureBaselineRequest> __Marshaller_udb_services_v1_EnsureBaselineRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Services.V1.EnsureBaselineRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Services.V1.EnsureBaselineResponse> __Marshaller_udb_services_v1_EnsureBaselineResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Services.V1.EnsureBaselineResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Entity.V1.PolicyListRequest> __Marshaller_udb_entity_v1_PolicyListRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.PolicyListRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Entity.V1.PolicyListResponse> __Marshaller_udb_entity_v1_PolicyListResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.PolicyListResponse.Parser));
@@ -731,6 +735,14 @@ namespace Udb.Services.V1 {
         "MarkSagaReviewed",
         __Marshaller_udb_entity_v1_SagaRequest,
         __Marshaller_udb_entity_v1_SagaResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Udb.Services.V1.EnsureBaselineRequest, global::Udb.Services.V1.EnsureBaselineResponse> __Method_EnsureBaseline = new grpc::Method<global::Udb.Services.V1.EnsureBaselineRequest, global::Udb.Services.V1.EnsureBaselineResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "EnsureBaseline",
+        __Marshaller_udb_services_v1_EnsureBaselineRequest,
+        __Marshaller_udb_services_v1_EnsureBaselineResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Method<global::Udb.Entity.V1.PolicyListRequest, global::Udb.Entity.V1.PolicyListResponse> __Method_ListPolicies = new grpc::Method<global::Udb.Entity.V1.PolicyListRequest, global::Udb.Entity.V1.PolicyListResponse>(
@@ -1408,6 +1420,20 @@ namespace Udb.Services.V1 {
 
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::System.Threading.Tasks.Task<global::Udb.Entity.V1.SagaResponse> MarkSagaReviewed(global::Udb.Entity.V1.SagaRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Idempotently seed a baseline manual-review saga row and a retryable DLQ row
+      /// for the VERIFIED principal's tenant/project. Privilege-creating: fail-closed,
+      /// env-gated (UDB_ENABLE_ADMIN_SEED) and requires scope: udb:admin.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Services.V1.EnsureBaselineResponse> EnsureBaseline(global::Udb.Services.V1.EnsureBaselineRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -3513,6 +3539,62 @@ namespace Udb.Services.V1 {
         return CallInvoker.AsyncUnaryCall(__Method_MarkSagaReviewed, null, options, request);
       }
       /// <summary>
+      /// Idempotently seed a baseline manual-review saga row and a retryable DLQ row
+      /// for the VERIFIED principal's tenant/project. Privilege-creating: fail-closed,
+      /// env-gated (UDB_ENABLE_ADMIN_SEED) and requires scope: udb:admin.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Services.V1.EnsureBaselineResponse EnsureBaseline(global::Udb.Services.V1.EnsureBaselineRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return EnsureBaseline(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Idempotently seed a baseline manual-review saga row and a retryable DLQ row
+      /// for the VERIFIED principal's tenant/project. Privilege-creating: fail-closed,
+      /// env-gated (UDB_ENABLE_ADMIN_SEED) and requires scope: udb:admin.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Services.V1.EnsureBaselineResponse EnsureBaseline(global::Udb.Services.V1.EnsureBaselineRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_EnsureBaseline, null, options, request);
+      }
+      /// <summary>
+      /// Idempotently seed a baseline manual-review saga row and a retryable DLQ row
+      /// for the VERIFIED principal's tenant/project. Privilege-creating: fail-closed,
+      /// env-gated (UDB_ENABLE_ADMIN_SEED) and requires scope: udb:admin.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Services.V1.EnsureBaselineResponse> EnsureBaselineAsync(global::Udb.Services.V1.EnsureBaselineRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return EnsureBaselineAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Idempotently seed a baseline manual-review saga row and a retryable DLQ row
+      /// for the VERIFIED principal's tenant/project. Privilege-creating: fail-closed,
+      /// env-gated (UDB_ENABLE_ADMIN_SEED) and requires scope: udb:admin.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Services.V1.EnsureBaselineResponse> EnsureBaselineAsync(global::Udb.Services.V1.EnsureBaselineRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_EnsureBaseline, null, options, request);
+      }
+      /// <summary>
       /// Policy administration.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
@@ -4139,6 +4221,7 @@ namespace Udb.Services.V1 {
           .AddMethod(__Method_GetSaga, serviceImpl.GetSaga)
           .AddMethod(__Method_RetrySagaCompensation, serviceImpl.RetrySagaCompensation)
           .AddMethod(__Method_MarkSagaReviewed, serviceImpl.MarkSagaReviewed)
+          .AddMethod(__Method_EnsureBaseline, serviceImpl.EnsureBaseline)
           .AddMethod(__Method_ListPolicies, serviceImpl.ListPolicies)
           .AddMethod(__Method_PutPolicy, serviceImpl.PutPolicy)
           .AddMethod(__Method_DeletePolicy, serviceImpl.DeletePolicy)
@@ -4224,6 +4307,7 @@ namespace Udb.Services.V1 {
       serviceBinder.AddMethod(__Method_GetSaga, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.SagaRequest, global::Udb.Entity.V1.SagaResponse>(serviceImpl.GetSaga));
       serviceBinder.AddMethod(__Method_RetrySagaCompensation, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.SagaRequest, global::Udb.Entity.V1.SagaResponse>(serviceImpl.RetrySagaCompensation));
       serviceBinder.AddMethod(__Method_MarkSagaReviewed, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.SagaRequest, global::Udb.Entity.V1.SagaResponse>(serviceImpl.MarkSagaReviewed));
+      serviceBinder.AddMethod(__Method_EnsureBaseline, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Services.V1.EnsureBaselineRequest, global::Udb.Services.V1.EnsureBaselineResponse>(serviceImpl.EnsureBaseline));
       serviceBinder.AddMethod(__Method_ListPolicies, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.PolicyListRequest, global::Udb.Entity.V1.PolicyListResponse>(serviceImpl.ListPolicies));
       serviceBinder.AddMethod(__Method_PutPolicy, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.PutPolicyRequest, global::Udb.Entity.V1.MutationResponse>(serviceImpl.PutPolicy));
       serviceBinder.AddMethod(__Method_DeletePolicy, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.PolicyRequest, global::Udb.Entity.V1.MutationResponse>(serviceImpl.DeletePolicy));

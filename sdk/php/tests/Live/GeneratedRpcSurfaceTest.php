@@ -389,7 +389,7 @@ function run_native_service_e2e(GeneratedClient $authGenerated, GeneratedClient 
     $body = "sdk-live-body-php-$suffix";
     $authGenerated->upsert_template((new \Udb\Core\Notification\Services\V1\UpsertTemplateRequest())
         ->setEventType($event)->setChannel(1)->setLocale('en')
-        ->setSubjectTemplate('SDK {{n}}')->setBodyTemplate($body)->setIsActive(true), $meta);
+        ->setSubjectTemplate('SDK notify')->setBodyTemplate($body)->setIsActive(true), $meta);
     $template = $authGenerated->get_template((new \Udb\Core\Notification\Services\V1\GetTemplateRequest())
         ->setEventType($event)->setChannel(1)->setLocale('en'), $meta)->getTemplate();
     expect($template->getBodyTemplate())->toBe($body);
@@ -1168,16 +1168,16 @@ it('covers the live generated RPC surface', function () {
 
     // Per-RPC surface probing now lives in the data-driven test below
     // ("reaches live RPC … with (<stub>/<rpc>)") so the runner reports granular
-    // per-RPC pass/fail (262 cases) instead of one opaque test — matching Go's
+    // per-RPC pass/fail (265 cases) instead of one opaque test — matching Go's
     // sub-tests and Python's parametrized cases. The deep create→read→assert
     // e2e above stays in this test.
 });
 
 // --- Per-RPC surface coverage (granular: one Pest case per RPC) ---------------
 
-// Memoized live session: log in ONCE and reuse the authed clients across all 262
+// Memoized live session: log in ONCE and reuse the authed clients across all 265
 // data-driven cases. A dataset re-runs the test closure per case, so a
-// non-memoized login would re-authenticate 262 times.
+// non-memoized login would re-authenticate 265 times.
 function phpLiveSession(): array
 {
     static $session = null;
@@ -1281,8 +1281,113 @@ it('reaches live RPC', function (string $stubName, string $methodName) {
 })->with('liveRpcs');
 
 // Coverage guard: the per-RPC dataset must enumerate exactly the full surface.
-it('enumerates exactly 262 live RPCs', function () {
-    expect(count(phpLiveRpcCatalog()))->toBe(262);
+it('enumerates exactly 265 live RPCs', function () {
+    expect(count(phpLiveRpcCatalog()))->toBe(265);
+});
+
+/**
+ * Read the shared bench-body manifest (docs/bench-bodies/<svc>.md) the way the
+ * Python consumer does (test_live_conformance.py::bench_body_rows): every row is
+ * `| [ ] | <RpcName> | <KIND> | <ReqType> | <body> | <notes> |`. Returns a map
+ * of RPC name → documented JSON body (column 4), with `<seed:KEY>` references
+ * intact (resolved at send time from the seed fixtures). Cross-SDK parity: Go/
+ * Python already consume this; PHP now reads the same source of truth so adding
+ * an RPC needs only a new manifest row.
+ *
+ * @return array<string,string>
+ */
+function phpBenchBodyRows(): array
+{
+    static $rows = null;
+    if ($rows !== null) {
+        return $rows;
+    }
+    $rows = [];
+    // Consume the GENERATED machine-readable manifest
+    // (scripts/gen-bench-bodies-json.mjs -> docs/generated/bench-bodies.json), the
+    // new cross-SDK consumer source of truth. The markdown corpus stays the
+    // human-editable source; phpBenchBodyMarkdownRows() + the drift test prove the
+    // JSON equals a fresh markdown parse. tests/Live -> php -> sdk -> udb (repo
+    // root) is dirname(__DIR__, 4); the JSON lives at <repo>/docs/generated.
+    $json = dirname(__DIR__, 4).'/docs/generated/bench-bodies.json';
+    $entries = json_decode((string) file_get_contents($json), true) ?: [];
+    foreach ($entries as $e) {
+        // Key on the full RPC name (col2), body on col5.
+        $rows[$e['rpc']] = $e['body'];
+    }
+
+    return $rows;
+}
+
+/**
+ * LEGACY markdown parse, retained ONLY to power the drift test that proves the
+ * generated JSON still equals a fresh parse of the human-editable markdown.
+ *
+ * @return array<string,string>
+ */
+function phpBenchBodyMarkdownRows(): array
+{
+    $rows = [];
+    $dir = dirname(__DIR__, 4).'/docs/bench-bodies';
+    foreach (glob($dir.'/*.md') ?: [] as $path) {
+        if (basename($path) === 'workflow-sequences.md') {
+            continue;
+        }
+        foreach (file($path, FILE_IGNORE_NEW_LINES) ?: [] as $line) {
+            if (! str_starts_with($line, '| [')) {
+                continue;
+            }
+            $parts = array_map('trim', explode('|', trim($line, " \t|")));
+            if (count($parts) >= 5 && $parts[1] !== 'RPC') {
+                $rows[$parts[1]] = $parts[4];
+            }
+        }
+    }
+
+    return $rows;
+}
+
+// The bench-body manifest is the shared source of truth (265 rows). PHP reads it
+// like the other SDKs; adding an RPC needs only a manifest row. The 265-row count
+// is the ASSERTED cross-SDK contract; the typed perfBodyPhp switch below is PHP's
+// realization of those bodies. The full generic JSON-merge hydrator (BENCH §11.1.4.2/.3,
+// the descriptor-driven consumer Go/Python use) stays DEFERRED for PHP: the protobuf
+// PHP extension exposes no usable descriptor reflection in this env
+// (DescriptorPool::getDescriptorByClassName -> null), so a like-for-like generic
+// hydrator is not portable. The typed switch + this row-count contract are the
+// honest PHP equivalent.
+it('reads exactly 265 rows from the shared bench-body manifest', function () {
+    expect(count(phpBenchBodyRows()))->toBe(265);
+});
+
+// R6.1 DRIFT gate: docs/generated/bench-bodies.json must equal a fresh parse of
+// the human-editable docs/bench-bodies/*.md. Editing markdown without regenerating
+// (`node scripts/gen-bench-bodies-json.mjs`) trips this.
+it('bench-bodies.json matches a fresh markdown parse', function () {
+    $fromJson = phpBenchBodyRows();
+    $fromMd = phpBenchBodyMarkdownRows();
+    expect(count($fromJson))->toBe(265);
+    expect(count($fromMd))->toBe(265);
+    ksort($fromJson);
+    ksort($fromMd);
+    expect($fromJson)->toBe($fromMd);
+});
+
+// Manifest↔catalog parity is enforced by COUNT: the 265-row manifest assertion
+// above and the "enumerates exactly 265 live RPCs" reflection assertion both pin
+// the same number, so a drift on either side trips a test. A name-by-name cross-
+// check is intentionally NOT done here because the two key shapes don't map 1:1:
+// the catalog keys are "<stub>/<Method>" (e.g. "data/EnsureBaseline") while the
+// manifest mixes bare method names ("EnsureBaseline") with "Service.Method" forms
+// ("PeerService.JoinSession", which disambiguates the webrtc Join* overloads) —
+// reconciling them cleanly needs the descriptor reflection PHP doesn't expose
+// (see the deferral note above). What we CAN assert offline (no ext-grpc, no
+// broker) is that the manifest carries the two RPCs added in the 262->264 bump,
+// keyed exactly as phpBenchBodyRows() stores them.
+it('manifest carries the two newly-added RPCs (EnsureBaseline, JoinSession)', function () {
+    $rows = phpBenchBodyRows();
+    expect($rows)->toHaveKey('EnsureBaseline');          // data_broker.md, bare name
+    expect($rows)->toHaveKey('PeerService.JoinSession'); // webrtc.md, Service.Method form
 });
 
 // gRPC status code -> NAME (BENCH_RPC_BODIES.md #1/#3: a failing RPC must be recorded
@@ -1369,11 +1474,19 @@ function perfBodyPhp(string $name, PerfFixturesPhp $fix, string $tenant, string 
     $C = fn (string $c) => "\\Udb\\Core\\Control\\Services\\V1\\$c";
     $I = fn (string $c) => "\\Udb\\Core\\Idp\\Services\\V1\\$c";
     $E = fn (string $c) => "\\Udb\\Entity\\V1\\$c";
+    $DB = fn (string $c) => "\\Udb\\Services\\V1\\$c";
     $page = fn (string $cls = '', int $sz = 20) => (new \Udb\Core\Common\V1\PageRequest())->setPage(1)->setPageSize($sz);
     // Authz nested-message builders (shared across many authz RPCs).
     $principal = fn () => (new ($Z('Principal'))())->setSubject($sub)->setUserId($g('user_id'))->setTenantId($tenant)->setProjectId($project)->setScopes(['udb:read']);
     $resourceRef = fn () => (new ($Z('ResourceRef'))())->setResourceType($g('resource', 'invoice'))->setTable('records');
-    $actor = fn (array $sc) => (new ($Z('GovernanceActor'))())->setSubject($sub)->setTenantId($tenant)->setProjectId($project)->setScopes($sc);
+    // GovernanceActor: the `$sc` scope arg is kept for doc parity, but the live
+    // D1/D2 governance gate evaluates scopes from the VERIFIED claim, NOT request-
+    // body actor.scopes, and no role projects to authz:* (tokens.rs
+    // ROLE_SCOPE_PROJECTIONS). So body scopes can never satisfy the gate; use the
+    // body-authoritative break-glass bypass instead (≤900s, reason-bearing,
+    // audited). gov_exp is seeded to now+900 in perfSeedPhp.
+    $actor = fn (array $sc) => (new ($Z('GovernanceActor'))())->setSubject($sub)->setTenantId($tenant)->setProjectId($project)
+        ->setBreakGlass(true)->setBreakGlassReason('sdk perf bench')->setBreakGlassExpiresAtUnix((int) ($g('gov_exp') ?: (time() + 900)));
     // DataBroker StoreResource for a given backend.
     $store = fn (string $backend, string $rn = '') => (new ($E('StoreResource'))())->setBackend($backend)->setResourceName($rn);
     $ts = fn () => (new \Google\Protobuf\Timestamp())->setSeconds(1748736000);
@@ -1569,9 +1682,15 @@ function perfBodyPhp(string $name, PerfFixturesPhp $fix, string $tenant, string 
             // "default" fails "uuid params must be UUID strings"). reference_id is a fresh UUID.
             return (new ($S('RegisterUploadRequest'))())->setTenantId($tenant)->setProjectId('')->setFilename('report.pdf')->setContentType('application/pdf')->setFileType('document')->setReferenceId(liveUuidV4())->setReferenceType('document')->setExpiresInMinutes(15)->setSizeBytes(1024);
         case 'finalize_upload':
-            return (new ($S('FinalizeUploadRequest'))())->setTenantId($tenant)->setFileId($g('file_id'))->setContentType('application/pdf')->setFileType('document')->setReferenceId($g('file_id'))->setReferenceType('document')->setSizeBytes(1024);
+            // A SEPARATE registered+uploaded but NOT finalized file (finalize_file_id):
+            // finalizing the primary file_id again fails "upload already finalized".
+            return (new ($S('FinalizeUploadRequest'))())->setTenantId($tenant)->setFileId($g('finalize_file_id') ?: $g('file_id'))->setContentType('application/pdf')->setFileType('document')->setReferenceId($g('finalize_file_id') ?: $g('file_id'))->setReferenceType('document')->setSizeBytes(1024);
         case 'get_download_url':
             return (new ($S('GetDownloadUrlRequest'))())->setTenantId($tenant)->setFileId($g('file_id'))->setExpiresInMinutes(15);
+        case 'download_file':
+            // Server-streaming: the primary file_id is finalized with object bytes
+            // present (seeded), so the first DownloadFileChunk delivers.
+            return (new ($S('DownloadFileRequest'))())->setTenantId($tenant)->setFileId($g('file_id'))->setChunkSizeBytes(65536);
         case 'get_file':
             return (new ($S('GetFileRequest'))())->setTenantId($tenant)->setFileId($g('file_id'));
         case 'update_file':
@@ -1615,6 +1734,12 @@ function perfBodyPhp(string $name, PerfFixturesPhp $fix, string $tenant, string 
             return (new ($W('ListRoomsRequest'))())->setTenantId($tenant)->setState('active')->setPage(1)->setPageSize(20);
         case 'join_room':
             return (new ($W('JoinRoomRequest'))())->setTenantId($tenant)->setRoomId($g('room_id'))->setDisplayName('Bench User')->setMetadata('{}')->setUserAgent('bench/1.0');
+        case 'join_session':
+            // PeerService.JoinSession: atomic join-room + mint TURN credentials in one RPC.
+            // Uses its OWN high-capacity room (join_session_room_id, maxParticipants=64):
+            // the main room_id is filled to capacity (cap 8) by JoinRoom's iters, so
+            // JoinSession against it would hit "room ... at capacity".
+            return (new ($W('JoinSessionRequest'))())->setTenantId($tenant)->setRoomId($g('join_session_room_id') ?: $g('room_id'))->setDisplayName('Bench Session')->setMetadata('{}')->setUserAgent('bench/1.0')->setTtlSeconds(3600);
         case 'leave_room':
             return (new ($W('LeaveRoomRequest'))())->setTenantId($tenant)->setRoomId($g('room_id'))->setPeerId($g('leave_peer_id') ?: liveUuidV4());
         case 'get_peer':
@@ -1682,6 +1807,10 @@ function perfBodyPhp(string $name, PerfFixturesPhp $fix, string $tenant, string 
                 ->setRecordJson(liveRecordJson($g('record_id'), $tenant, $project, 'php-perf-lk', 'php-perf', 1))->setConflictFields(['record_id']);
         case 'select':
             return (new ($E('SelectRequest'))())->setContext($ctxE())->setMessageType('udb.sdk.live.v1.SdkLiveRecord')->setFilter(liveStruct(['record_id' => $g('record_id'), 'tenant_id' => $tenant, 'project_id' => $project]))->setLimit(10);
+        case 'ensure_baseline':
+            // DataBroker.EnsureBaseline carries ONLY context (field 1); the udb:admin
+            // scope rides the bearer. Idempotently seeds a baseline saga + DLQ row.
+            return (new ($DB('EnsureBaselineRequest'))())->setContext($ctxE());
         case 'delete':
             return (new ($E('DeleteRequest'))())->setContext($ctxE())->setMessageType('udb.sdk.live.v1.SdkLiveRecord')->setFilter(liveStruct(['record_id' => 'php-perf-delete-noop', 'tenant_id' => $tenant, 'project_id' => $project]));
         case 'get_capabilities':
@@ -1950,7 +2079,9 @@ function perfBodyPhp(string $name, PerfFixturesPhp $fix, string $tenant, string 
         case 'scim_delete_user':
             return (new ($I('ScimDeleteUserRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setScimUserId($g('delete_scim_user_id') ?: $g('record_id'))->setContext($ctxC());
         case 'scim_create_group':
-            return (new ($I('ScimCreateGroupRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setScimGroupJson(json_encode(['displayName' => 'grp-'.bin2hex(random_bytes(6))]))->setContext($ctxC());
+            // displayName MUST equal a seeded provider group_mapping_json key
+            // (perfSeedPhp maps sdk-perf-group -> admin) or ScimCreateGroup fails.
+            return (new ($I('ScimCreateGroupRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setScimGroupJson(json_encode(['displayName' => 'sdk-perf-group']))->setContext($ctxC());
         case 'scim_get_group':
             return (new ($I('ScimGetGroupRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setScimGroupId($g('scim_group_id') ?: $g('record_id'));
         case 'scim_list_groups':
@@ -2221,7 +2352,7 @@ function perfSeedPhp(array $s): array
     $prov = $try('CreateProvider', fn () => $authGen->create_provider((new \Udb\Core\Idp\Services\V1\CreateProviderRequest())
         ->setTenantId($tenant)->setKind(2)->setDisplayName("SDK Perf OIDC $suffix")->setIssuer('https://idp.example.com')
         ->setJwksUrl('https://idp.example.com/jwks')->setClientIds(['client-1'])->setAudiences(['udb'])
-        ->setClaimMappingJson('{}')->setGroupMappingJson('{"sdk-perf-group":"reader"}')->setJitPolicyJson('{"require_verified_email":false}')->setAccountLinkingPolicy('explicit')
+        ->setClaimMappingJson('{}')->setGroupMappingJson('{"sdk-perf-group":"admin"}')->setJitPolicyJson('{"require_verified_email":false}')->setAccountLinkingPolicy('explicit')
         ->setEnabled(true)->setCreatedBy($uid !== '' ? $uid : liveUuidV4())->setContext($ctxC), $meta));
     if ($prov) {
         $pid = method_exists($prov, 'getProvider') && $prov->getProvider() ? $prov->getProvider()->getProviderId() : '';
@@ -2279,7 +2410,8 @@ function perfSeedPhp(array $s): array
 
     // AuthzService governance: a real policy draft -> policy_draft_id.
     $draft = $try('CreatePolicyDraft', fn () => $authGen->create_policy_draft((new \Udb\Core\Authz\Services\V1\CreatePolicyDraftRequest())
-        ->setActor((new \Udb\Core\Authz\Services\V1\GovernanceActor())->setSubject($fix->lookup('subject') ?? ('user:'.$uid))->setTenantId($tenant)->setProjectId($project)->setScopes(['authz:policy:write']))
+        ->setActor((new \Udb\Core\Authz\Services\V1\GovernanceActor())->setSubject($fix->lookup('subject') ?? ('user:'.$uid))->setTenantId($tenant)->setProjectId($project)
+            ->setBreakGlass(true)->setBreakGlassReason('sdk perf seed')->setBreakGlassExpiresAtUnix(time() + 900))
         ->setTenantId($tenant)->setProjectId($project)->setPolicySetName('default')->setTitle("sdk-perf draft $suffix")->setChangeReason('seed')->setDocument(new \Udb\Core\Authz\Services\V1\PolicyDocument()), $meta));
     if ($draft) {
         $did2 = method_exists($draft, 'getDraft') && $draft->getDraft() ? $draft->getDraft()->getDraftId() : '';
@@ -2288,7 +2420,12 @@ function perfSeedPhp(array $s): array
         }
     }
     // Governance lifecycle: drafts in each state, approved versions, a canary, a rollback set.
-    $gA = fn () => (new \Udb\Core\Authz\Services\V1\GovernanceActor())->setSubject($fix->lookup('subject') ?? ('user:'.$uid))->setTenantId($tenant)->setProjectId($project)->setScopes(['authz:admin', 'authz:policy:write', 'authz:policy:approve', 'policy:read']);
+    // Body actor.scopes are ignored by the live D1/D2 gate (it reads claim scopes,
+    // and no role projects to authz:*), so the seed's own governance writes must use
+    // the body-authoritative break-glass bypass — otherwise the drafts/versions/
+    // canary are never created and the governance RPCs that read them fail
+    // "<id> is required".
+    $gA = fn () => (new \Udb\Core\Authz\Services\V1\GovernanceActor())->setSubject($fix->lookup('subject') ?? ('user:'.$uid))->setTenantId($tenant)->setProjectId($project)->setBreakGlass(true)->setBreakGlassReason('sdk perf seed')->setBreakGlassExpiresAtUnix(time() + 900);
     $mkDraft = function (string $title, string $setName) use ($authGen, $tenant, $project, $meta, $gA, $suffix): string {
         try {
             $d = $authGen->create_policy_draft((new \Udb\Core\Authz\Services\V1\CreatePolicyDraftRequest())->setActor($gA())->setTenantId($tenant)->setProjectId($project)->setPolicySetName($setName)->setTitle($title.$suffix)->setChangeReason('seed')->setDocument(new \Udb\Core\Authz\Services\V1\PolicyDocument()), $meta);
@@ -2363,6 +2500,12 @@ function perfSeedPhp(array $s): array
             $fix->set('rollback_target_version_id', $v1->getPolicyVersionId());
         }
     }
+    // Governance break-glass expiry: the D1/D2 governance gate reads scopes from the
+    // VERIFIED claim, not request-body actor.scopes, and no role projects to authz:*
+    // — so the measured governance RPCs are reached via the body-authoritative
+    // break-glass bypass (<=900s, reason-bearing, audited). Set at seed time; the
+    // governance RPCs measure shortly after.
+    $fix->set('gov_exp', (string) (time() + 900));
 
     // DataBroker: a dry-run migration plan -> migration_id (run_id).
     $rcSeed = (new \Udb\Entity\V1\RequestContext())->setTenantId($tenant)->setProjectId($project)->setPurpose('php.live.perf.seed');
@@ -2376,19 +2519,23 @@ function perfSeedPhp(array $s): array
         $fix->set('approve_run_id', $p1->getRunId());
     }
     // apply_run_id + approval_token: a SECOND non-dry-run plan, then APPROVE it so the measured
-    // ApplyMigration has a valid token. ApproveMigrationPlan returns the token ONLY in the
-    // response HEADER x-udb-approval-token (handlers_catalog.rs:882) — read it via the client's
-    // lastResponseMetadata() right after the approve (BENCH_TS_PHP_ADVISORY.md).
+    // ApplyMigration has a valid token. Per 06.1.1.1 ApproveMigrationPlan now returns the token
+    // in the response BODY (MigrationStatusResponse.approval_token); the legacy response HEADER
+    // x-udb-approval-token is kept for one compat release and used only as a fallback.
     $p2 = $try('PlanMigrationApply', fn () => $data->plan_migration((new \Udb\Entity\V1\MigrationPlanRequest())->setContext($rcSeed)->setProjectId($project)->setDryRun(false), $meta));
     if ($p2 && $p2->getRunId() !== '') {
         $applyRunId = $p2->getRunId();
         $fix->set('apply_run_id', $applyRunId);
         $try('ApproveForApply', function () use ($data, $rcSeed, $project, $applyRunId, $fix, $meta) {
-            $data->approve_migration_plan((new \Udb\Entity\V1\MigrationRunRequest())->setContext($rcSeed)->setRunId($applyRunId)->setProjectId($project), $meta);
-            $md = $data->lastResponseMetadata();
-            $tok = $md['x-udb-approval-token'][0] ?? '';
+            $resp = $data->approve_migration_plan((new \Udb\Entity\V1\MigrationRunRequest())->setContext($rcSeed)->setRunId($applyRunId)->setProjectId($project), $meta);
+            // Prefer the body field (06.1.1.1); fall back to the legacy header.
+            $tok = ($resp !== null && method_exists($resp, 'getApprovalToken')) ? (string) $resp->getApprovalToken() : '';
+            if ($tok === '') {
+                $md = $data->lastResponseMetadata();
+                $tok = (string) ($md['x-udb-approval-token'][0] ?? '');
+            }
             if ($tok !== '') {
-                $fix->set('approval_token', (string) $tok);
+                $fix->set('approval_token', $tok);
             }
             return $tok;
         });
@@ -2425,8 +2572,11 @@ function perfSeedPhp(array $s): array
 
     // NotificationService: template + a sent notification.
     $event = "sdk.perf.$suffix";
+    // subject_template MUST NOT carry a placeholder: "SDK {{n}}" requires var `n`,
+    // which SendNotification below does not pass -> render fails -> no log_id ->
+    // Get/Retry/Send notification RPCs fail. Use a literal subject.
     $try('UpsertTemplate', fn () => $authGen->upsert_template((new \Udb\Core\Notification\Services\V1\UpsertTemplateRequest())
-        ->setEventType($event)->setChannel(1)->setLocale('en')->setSubjectTemplate('SDK {{n}}')->setBodyTemplate('sdk-perf-body')->setIsActive(true), $meta));
+        ->setEventType($event)->setChannel(1)->setLocale('en')->setSubjectTemplate('SDK perf')->setBodyTemplate('sdk-perf-body')->setIsActive(true), $meta));
     $fix->set('event_type', $event);
     if ($uid !== '') {
         $sent = $try('SendNotification', fn () => $authGen->send_notification((new \Udb\Core\Notification\Services\V1\SendNotificationRequest())
@@ -2475,6 +2625,12 @@ function perfSeedPhp(array $s): array
     if ($reg) {
         $fid = $reg->getFileId();
         $fix->set('file_id', $fid);
+        // Ensure the OBJECT bucket FinalizeUpload HEADs (UDB_OBJECT_BUCKET=udb-storage on the
+        // bench lane) exists, so the PutObject fallback below lands bytes where Finalize looks
+        // (mirrors the Go seed's EnsureResource(storageBucket)).
+        $try('SeedStorageBucket', fn () => $data->ensure_resource((new \Udb\Entity\V1\ResourceAdminRequest())
+            ->setContext((new \Udb\Entity\V1\RequestContext())->setTenantId($tenant)->setProjectId($project)->setPurpose('php.live.perf.seed'))
+            ->setBackend('minio')->setResourceName(liveEnv('UDB_LIVE_S3_BUCKET', 'udb-live-sdk'))->setSpecJson('{}'), $meta));
         // FinalizeUpload HEADs the object bytes the StorageService minted. Upload through the
         // presigned RegisterUpload.upload_url FIRST (the canonical native path); DataBroker
         // PutObject is a manifest-gated fallback (harness_correction.md FinalizeUpload).
@@ -2508,6 +2664,50 @@ function perfSeedPhp(array $s): array
             $call->write((new \Udb\Entity\V1\Chunk())->setContext($rc)->setBucket($bucket)->setObjectKey($reg->getObjectKey())->setData($payload)->setContentType('text/plain')->setFinalChunk(true));
             $call->wait();
         });
+        // FINALIZE the primary file so its object bytes are present: the measured
+        // DownloadFile streams chunks from this finalized file_id, and GetFile/Get-
+        // DownloadUrl read it. The measured FinalizeUpload uses a SEPARATE un-finalized
+        // file (finalize_file_id below) so it does not double-finalize this one.
+        $try('SeedFinalizePrimary', fn () => $authGen->finalize_upload((new \Udb\Core\Storage\Services\V1\FinalizeUploadRequest())
+            ->setTenantId($tenant)->setFileId($fid)->setContentType('text/plain')->setFileType('DOCUMENT')->setSizeBytes(strlen("sdk-perf-file-$suffix")), $meta));
+        // A SEPARATE registered+uploaded but NOT finalized file for the measured
+        // FinalizeUpload — finalizing the primary file_id again fails "already
+        // finalized", so the measured Finalize needs its own un-finalized target.
+        $finReg = $try('RegisterFinalizeFile', fn () => $authGen->register_upload((new \Udb\Core\Storage\Services\V1\RegisterUploadRequest())
+            ->setTenantId($tenant)->setProjectId('')->setFilename("perf-fin-$suffix.txt")->setContentType('text/plain')
+            ->setFileType('DOCUMENT')->setReferenceId(liveUuidV4())->setReferenceType('sdk.perf')->setSizeBytes(64)->setExpiresInMinutes(30), $meta));
+        if ($finReg) {
+            $ffid = $finReg->getFileId();
+            $fix->set('finalize_file_id', $ffid);
+            if ($ffid !== '') {
+                $cleanups[] = fn () => $try('DeleteFinalizeFile', fn () => $authGen->delete_file((new \Udb\Core\Storage\Services\V1\DeleteFileRequest())
+                    ->setTenantId($tenant)->setFileId($ffid), $meta));
+            }
+            // Upload bytes (presigned first, DataBroker PutObject fallback) but DO NOT
+            // finalize — the measured FinalizeUpload finalizes it.
+            $try('SeedFinalizeFilePut', function () use ($data, $finReg, $suffix, $tenant, $project, $meta) {
+                $payload = "sdk-perf-finalize-$suffix";
+                $url = method_exists($finReg, 'getUploadUrl') ? $finReg->getUploadUrl() : '';
+                if ($url !== '') {
+                    if (str_contains(liveEnv('UDB_GRPC_TARGET', ''), 'host.docker.internal')) {
+                        $url = str_replace(['127.0.0.1', 'localhost'], 'host.docker.internal', $url);
+                    }
+                    $ch = curl_init($url);
+                    curl_setopt_array($ch, [CURLOPT_CUSTOMREQUEST => 'PUT', CURLOPT_POSTFIELDS => $payload, CURLOPT_HTTPHEADER => ['Content-Type: text/plain'], CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 10]);
+                    curl_exec($ch);
+                    $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                    curl_close($ch);
+                    if ($code >= 200 && $code < 300) {
+                        return;
+                    }
+                }
+                $bucket = liveEnv('UDB_LIVE_S3_BUCKET', 'udb-live-sdk');
+                $rc = (new \Udb\Entity\V1\RequestContext())->setTenantId($tenant)->setProjectId($project)->setPurpose('php.live.perf.seed');
+                $call = $data->put_object($meta);
+                $call->write((new \Udb\Entity\V1\Chunk())->setContext($rc)->setBucket($bucket)->setObjectKey($finReg->getObjectKey())->setData($payload)->setContentType('text/plain')->setFinalChunk(true));
+                $call->wait();
+            });
+        }
         // A SEPARATE disposable file for the destructive DeleteFile -> real 200.
         $delReg = $try('RegisterDeleteFile', fn () => $authGen->register_upload((new \Udb\Core\Storage\Services\V1\RegisterUploadRequest())
             ->setTenantId($tenant)->setProjectId('')->setFilename("perf-del-$suffix.txt")->setContentType('text/plain')
@@ -2589,6 +2789,20 @@ function perfSeedPhp(array $s): array
                 ->setTenantId($tenant)->setName("sdk-perf-close-room-$suffix")->setMaxParticipants(8)->setConfig('{}')->setCreatedBy($uid !== '' ? $uid : liveUuidV4()), $meta));
             if ($cr) {
                 $fix->set('close_room_id', $cr->getRoomId());
+            }
+            // A SEPARATE high-capacity room for the measured JoinSession. The main
+            // room_id is filled to capacity (cap 8) by JoinRoom's mutation iters, so
+            // JoinSession against it would hit "room ... at capacity". This room's
+            // maxParticipants=64 absorbs the 5 JoinSession iters.
+            $jsr = $try('CreateJoinSessionRoom', fn () => $authGen->create_room((new \Udb\Core\Webrtc\Services\V1\CreateRoomRequest())
+                ->setTenantId($tenant)->setName("sdk-perf-joinsession-room-$suffix")->setMaxParticipants(64)->setConfig('{}')->setCreatedBy($uid !== '' ? $uid : liveUuidV4()), $meta));
+            if ($jsr) {
+                $jsrId = $jsr->getRoomId();
+                $fix->set('join_session_room_id', $jsrId);
+                if ($jsrId !== '') {
+                    $cleanups[] = fn () => $try('CloseJoinSessionRoom', fn () => $authGen->close_room((new \Udb\Core\Webrtc\Services\V1\CloseRoomRequest())
+                        ->setTenantId($tenant)->setRoomId($jsrId), $meta));
+                }
             }
         }
     }
@@ -2735,7 +2949,11 @@ it('measures per-RPC latency', function () {
                 if ($err !== 'OK') { fwrite(STDERR, "FAILDETAIL $svc/$name [$err] ".substr($detail, 0, 200)."\n"); }
                 sort($durs);
                 $pp = fn (int $p) => $durs[min(count($durs) - 1, intdiv($p * (count($durs) - 1), 100))];
-                $samples[] = ['service' => $svc, 'rpc' => $name, 'kind' => 'mutation', 'err' => $err, 'p50' => $pp(50), 'p99' => $pp(99), 'mean' => array_sum($durs) / count($durs)];
+                $samples[] = [
+                    'service' => $svc, 'rpc' => $name, 'kind' => 'mutation', 'err' => $err,
+                    'p50' => $pp(50), 'p99' => $pp(99), 'mean' => array_sum($durs) / count($durs),
+                    'iters' => count($durs),
+                ];
 
                 continue;
             }
@@ -2781,7 +2999,7 @@ it('measures per-RPC latency', function () {
                 $openMs = (microtime(true) - $openStart) * 1000.0;
                 $samples[] = [
                     'service' => $svc, 'rpc' => $name, 'kind' => 'stream_open', 'err' => 'OK',
-                    'p50' => $openMs, 'p99' => $openMs, 'mean' => $openMs,
+                    'p50' => $openMs, 'p99' => $openMs, 'mean' => $openMs, 'iters' => 1,
                 ];
 
                 continue;
@@ -2820,6 +3038,7 @@ it('measures per-RPC latency', function () {
             $samples[] = [
                 'service' => $svc, 'rpc' => $name, 'kind' => $kind, 'err' => $errCode,
                 'p50' => $pct(50), 'p99' => $pct(99), 'mean' => array_sum($durs) / count($durs),
+                'iters' => count($durs),
             ];
         }
     }
@@ -2845,6 +3064,11 @@ it('measures per-RPC latency', function () {
     $lines = array_merge($lines, ['', '## Slowest 20 by p99', '', '| RPC | kind | err | p50 ms | p99 ms | mean ms |', '|---|---|---|--:|--:|--:|']);
     foreach (array_slice($samples, 0, 20) as $row) {
         $lines[] = sprintf('| %s/%s | %s | %s | %.2f | %.2f | %.2f |', $row['service'], $row['rpc'], $row['kind'], $row['err'] ?? 'OK', $row['p50'], $row['p99'], $row['mean']);
+    }
+    usort($samples, fn ($a, $b) => ($a['service'] === $b['service']) ? ($a['rpc'] <=> $b['rpc']) : ($a['service'] <=> $b['service']));
+    $lines = array_merge($lines, ['', '## Full per-RPC table (sorted by service, then RPC)', '', '| Service | RPC | kind | err | p50 ms | p99 ms | mean ms | iters |', '|---|---|---|---|--:|--:|--:|--:|']);
+    foreach ($samples as $row) {
+        $lines[] = sprintf('| %s | %s | %s | %s | %.2f | %.2f | %.2f | %d |', $row['service'], $row['rpc'], $row['kind'], $row['err'] ?? 'OK', $row['p50'], $row['p99'], $row['mean'], $row['iters'] ?? 0);
     }
     // Failures section (BENCH_RPC_BODIES.md #1/#3): every RPC whose last iteration
     // returned a non-OK gRPC status is a FAILURE, not a latency sample.

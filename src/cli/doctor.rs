@@ -460,6 +460,11 @@ pub(crate) fn print_doctor_human(report: &DoctorReport) {
                 profile.tenant_isolation_strategy
             );
             println!("     read-fence       : {}", profile.read_fence_strategy);
+            println!("     read-fence-support: {}", profile.read_fence_supported);
+            println!(
+                "     consistency-modes: {}",
+                profile.supported_consistency_modes.join(", ")
+            );
             println!("     prerequisites:");
             if profile.durability_prerequisites.is_empty() {
                 println!("        (none)");

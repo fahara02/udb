@@ -96,14 +96,16 @@ class StartPipelineRequest(_message.Message):
     def __init__(self, tenant_id: _Optional[str] = ..., definition_id: _Optional[str] = ..., asset_id: _Optional[str] = ..., context: _Optional[str] = ..., correlation_id: _Optional[str] = ...) -> None: ...
 
 class StartPipelineResponse(_message.Message):
-    __slots__ = ("instance_id", "message", "error")
+    __slots__ = ("instance_id", "message", "error", "steps")
     INSTANCE_ID_FIELD_NUMBER: _ClassVar[int]
     MESSAGE_FIELD_NUMBER: _ClassVar[int]
     ERROR_FIELD_NUMBER: _ClassVar[int]
+    STEPS_FIELD_NUMBER: _ClassVar[int]
     instance_id: str
     message: str
     error: _dto_pb2.ApiError
-    def __init__(self, instance_id: _Optional[str] = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
+    steps: _containers.RepeatedCompositeFieldContainer[_pipeline_step_pb2.PipelineStep]
+    def __init__(self, instance_id: _Optional[str] = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ..., steps: _Optional[_Iterable[_Union[_pipeline_step_pb2.PipelineStep, _Mapping]]] = ...) -> None: ...
 
 class GetPipelineRequest(_message.Message):
     __slots__ = ("tenant_id", "instance_id")

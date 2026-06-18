@@ -69,12 +69,34 @@ async fn run_auth_command_async(command: AuthCommand) -> Result<serde_json::Valu
                 .map_err(|_| {
                     "set UDB_PG_DSN (or DATABASE_URL) to the target Postgres".to_string()
                 })?;
-            let admin = udb::runtime::service::bootstrap_admin_user(
-                &dsn, &username, &email, &password, &tenant, &project,
-            )
-            .await?;
+            // 06.4.1.1 wiring: when the operator opts into the SERVED single-use
+            // bootstrap path (`UDB_ALLOW_SERVED_BOOTSTRAP=1`), route the same CLI
+            // through `served_bootstrap_admin`, which re-checks that env gate AND
+            // enforces a durable single-use marker (`udb_system.bootstrap_state`)
+            // so a privilege-creating bootstrap can never be replayed. Without the
+            // opt-in this stays the plain offline utility (`bootstrap_admin_user`):
+            // the gate is checked inside the served wrapper and is NOT weakened here.
+            let served = std::env::var("UDB_ALLOW_SERVED_BOOTSTRAP")
+                .ok()
+                .map(|v| {
+                    let v = v.trim().to_ascii_lowercase();
+                    v == "1" || v == "true"
+                })
+                .unwrap_or(false);
+            let admin = if served {
+                udb::runtime::service::served_bootstrap_admin(
+                    &dsn, &username, &email, &password, &tenant, &project,
+                )
+                .await?
+            } else {
+                udb::runtime::service::bootstrap_admin_user(
+                    &dsn, &username, &email, &password, &tenant, &project,
+                )
+                .await?
+            };
             Ok(json!({
                 "bootstrapped": true,
+                "served": served,
                 "user_id": admin.user_id,
                 "username": username,
                 // `tenant` is the human code/input; `tenant_id` is the CANONICAL

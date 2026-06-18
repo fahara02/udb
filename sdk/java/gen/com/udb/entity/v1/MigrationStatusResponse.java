@@ -36,6 +36,7 @@ private static final long serialVersionUID = 0L;
     finishedAt_ = "";
     operations_ = java.util.Collections.emptyList();
     error_ = "";
+    approvalToken_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -51,6 +52,7 @@ private static final long serialVersionUID = 0L;
             com.udb.entity.v1.MigrationStatusResponse.class, com.udb.entity.v1.MigrationStatusResponse.Builder.class);
   }
 
+  private int bitField0_;
   public static final int RUN_ID_FIELD_NUMBER = 1;
   @SuppressWarnings("serial")
   private volatile java.lang.Object runId_ = "";
@@ -373,6 +375,72 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int APPROVAL_TOKEN_FIELD_NUMBER = 9;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object approvalToken_ = "";
+  /**
+   * <code>optional string approval_token = 9 [json_name = "approvalToken"];</code>
+   * @return Whether the approvalToken field is set.
+   */
+  @java.lang.Override
+  public boolean hasApprovalToken() {
+    return ((bitField0_ & 0x00000001) != 0);
+  }
+  /**
+   * <code>optional string approval_token = 9 [json_name = "approvalToken"];</code>
+   * @return The approvalToken.
+   */
+  @java.lang.Override
+  public java.lang.String getApprovalToken() {
+    java.lang.Object ref = approvalToken_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      approvalToken_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>optional string approval_token = 9 [json_name = "approvalToken"];</code>
+   * @return The bytes for approvalToken.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getApprovalTokenBytes() {
+    java.lang.Object ref = approvalToken_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      approvalToken_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int APPLYABLE_FIELD_NUMBER = 10;
+  private boolean applyable_ = false;
+  /**
+   * <code>optional bool applyable = 10 [json_name = "applyable"];</code>
+   * @return Whether the applyable field is set.
+   */
+  @java.lang.Override
+  public boolean hasApplyable() {
+    return ((bitField0_ & 0x00000002) != 0);
+  }
+  /**
+   * <code>optional bool applyable = 10 [json_name = "applyable"];</code>
+   * @return The applyable.
+   */
+  @java.lang.Override
+  public boolean getApplyable() {
+    return applyable_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -411,6 +479,12 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(error_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 8, error_);
     }
+    if (((bitField0_ & 0x00000001) != 0)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 9, approvalToken_);
+    }
+    if (((bitField0_ & 0x00000002) != 0)) {
+      output.writeBool(10, applyable_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -445,6 +519,13 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(error_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(8, error_);
     }
+    if (((bitField0_ & 0x00000001) != 0)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(9, approvalToken_);
+    }
+    if (((bitField0_ & 0x00000002) != 0)) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(10, applyable_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -476,6 +557,16 @@ private static final long serialVersionUID = 0L;
         .equals(other.getOperationsList())) return false;
     if (!getError()
         .equals(other.getError())) return false;
+    if (hasApprovalToken() != other.hasApprovalToken()) return false;
+    if (hasApprovalToken()) {
+      if (!getApprovalToken()
+          .equals(other.getApprovalToken())) return false;
+    }
+    if (hasApplyable() != other.hasApplyable()) return false;
+    if (hasApplyable()) {
+      if (getApplyable()
+          != other.getApplyable()) return false;
+    }
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -505,6 +596,15 @@ private static final long serialVersionUID = 0L;
     }
     hash = (37 * hash) + ERROR_FIELD_NUMBER;
     hash = (53 * hash) + getError().hashCode();
+    if (hasApprovalToken()) {
+      hash = (37 * hash) + APPROVAL_TOKEN_FIELD_NUMBER;
+      hash = (53 * hash) + getApprovalToken().hashCode();
+    }
+    if (hasApplyable()) {
+      hash = (37 * hash) + APPLYABLE_FIELD_NUMBER;
+      hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+          getApplyable());
+    }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -650,6 +750,8 @@ private static final long serialVersionUID = 0L;
       }
       bitField0_ = (bitField0_ & ~0x00000040);
       error_ = "";
+      approvalToken_ = "";
+      applyable_ = false;
       return this;
     }
 
@@ -717,6 +819,16 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000080) != 0)) {
         result.error_ = error_;
       }
+      int to_bitField0_ = 0;
+      if (((from_bitField0_ & 0x00000100) != 0)) {
+        result.approvalToken_ = approvalToken_;
+        to_bitField0_ |= 0x00000001;
+      }
+      if (((from_bitField0_ & 0x00000200) != 0)) {
+        result.applyable_ = applyable_;
+        to_bitField0_ |= 0x00000002;
+      }
+      result.bitField0_ |= to_bitField0_;
     }
 
     @java.lang.Override
@@ -792,6 +904,14 @@ private static final long serialVersionUID = 0L;
         bitField0_ |= 0x00000080;
         onChanged();
       }
+      if (other.hasApprovalToken()) {
+        approvalToken_ = other.approvalToken_;
+        bitField0_ |= 0x00000100;
+        onChanged();
+      }
+      if (other.hasApplyable()) {
+        setApplyable(other.getApplyable());
+      }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
@@ -866,6 +986,16 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000080;
               break;
             } // case 66
+            case 74: {
+              approvalToken_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000100;
+              break;
+            } // case 74
+            case 80: {
+              applyable_ = input.readBool();
+              bitField0_ |= 0x00000200;
+              break;
+            } // case 80
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1643,6 +1773,125 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       error_ = value;
       bitField0_ |= 0x00000080;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object approvalToken_ = "";
+    /**
+     * <code>optional string approval_token = 9 [json_name = "approvalToken"];</code>
+     * @return Whether the approvalToken field is set.
+     */
+    public boolean hasApprovalToken() {
+      return ((bitField0_ & 0x00000100) != 0);
+    }
+    /**
+     * <code>optional string approval_token = 9 [json_name = "approvalToken"];</code>
+     * @return The approvalToken.
+     */
+    public java.lang.String getApprovalToken() {
+      java.lang.Object ref = approvalToken_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        approvalToken_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>optional string approval_token = 9 [json_name = "approvalToken"];</code>
+     * @return The bytes for approvalToken.
+     */
+    public com.google.protobuf.ByteString
+        getApprovalTokenBytes() {
+      java.lang.Object ref = approvalToken_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        approvalToken_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>optional string approval_token = 9 [json_name = "approvalToken"];</code>
+     * @param value The approvalToken to set.
+     * @return This builder for chaining.
+     */
+    public Builder setApprovalToken(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      approvalToken_ = value;
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>optional string approval_token = 9 [json_name = "approvalToken"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearApprovalToken() {
+      approvalToken_ = getDefaultInstance().getApprovalToken();
+      bitField0_ = (bitField0_ & ~0x00000100);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>optional string approval_token = 9 [json_name = "approvalToken"];</code>
+     * @param value The bytes for approvalToken to set.
+     * @return This builder for chaining.
+     */
+    public Builder setApprovalTokenBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      approvalToken_ = value;
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return this;
+    }
+
+    private boolean applyable_ ;
+    /**
+     * <code>optional bool applyable = 10 [json_name = "applyable"];</code>
+     * @return Whether the applyable field is set.
+     */
+    @java.lang.Override
+    public boolean hasApplyable() {
+      return ((bitField0_ & 0x00000200) != 0);
+    }
+    /**
+     * <code>optional bool applyable = 10 [json_name = "applyable"];</code>
+     * @return The applyable.
+     */
+    @java.lang.Override
+    public boolean getApplyable() {
+      return applyable_;
+    }
+    /**
+     * <code>optional bool applyable = 10 [json_name = "applyable"];</code>
+     * @param value The applyable to set.
+     * @return This builder for chaining.
+     */
+    public Builder setApplyable(boolean value) {
+
+      applyable_ = value;
+      bitField0_ |= 0x00000200;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>optional bool applyable = 10 [json_name = "applyable"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearApplyable() {
+      bitField0_ = (bitField0_ & ~0x00000200);
+      applyable_ = false;
       onChanged();
       return this;
     }

@@ -513,7 +513,7 @@ class MigrationRunListResponse(_message.Message):
     def __init__(self, runs: _Optional[_Iterable[_Union[MigrationStatusResponse, _Mapping]]] = ..., next_page_token: _Optional[str] = ..., total_count: _Optional[int] = ...) -> None: ...
 
 class MigrationStatusResponse(_message.Message):
-    __slots__ = ("run_id", "project_id", "catalog_version", "state", "started_at", "finished_at", "operations", "error")
+    __slots__ = ("run_id", "project_id", "catalog_version", "state", "started_at", "finished_at", "operations", "error", "approval_token", "applyable")
     RUN_ID_FIELD_NUMBER: _ClassVar[int]
     PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
     CATALOG_VERSION_FIELD_NUMBER: _ClassVar[int]
@@ -522,6 +522,8 @@ class MigrationStatusResponse(_message.Message):
     FINISHED_AT_FIELD_NUMBER: _ClassVar[int]
     OPERATIONS_FIELD_NUMBER: _ClassVar[int]
     ERROR_FIELD_NUMBER: _ClassVar[int]
+    APPROVAL_TOKEN_FIELD_NUMBER: _ClassVar[int]
+    APPLYABLE_FIELD_NUMBER: _ClassVar[int]
     run_id: str
     project_id: str
     catalog_version: str
@@ -530,7 +532,9 @@ class MigrationStatusResponse(_message.Message):
     finished_at: str
     operations: _containers.RepeatedCompositeFieldContainer[MigrationOperationStatus]
     error: str
-    def __init__(self, run_id: _Optional[str] = ..., project_id: _Optional[str] = ..., catalog_version: _Optional[str] = ..., state: _Optional[str] = ..., started_at: _Optional[str] = ..., finished_at: _Optional[str] = ..., operations: _Optional[_Iterable[_Union[MigrationOperationStatus, _Mapping]]] = ..., error: _Optional[str] = ...) -> None: ...
+    approval_token: str
+    applyable: bool
+    def __init__(self, run_id: _Optional[str] = ..., project_id: _Optional[str] = ..., catalog_version: _Optional[str] = ..., state: _Optional[str] = ..., started_at: _Optional[str] = ..., finished_at: _Optional[str] = ..., operations: _Optional[_Iterable[_Union[MigrationOperationStatus, _Mapping]]] = ..., error: _Optional[str] = ..., approval_token: _Optional[str] = ..., applyable: bool = ...) -> None: ...
 
 class MigrationOperationStatus(_message.Message):
     __slots__ = ("index", "backend", "resource_uri", "operation_kind", "status", "error")

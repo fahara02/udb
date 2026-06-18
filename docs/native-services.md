@@ -13,7 +13,7 @@
 │    UNIVERSAL DATA BROKER                                                   │
 │    gRPC data plane | native control plane | tenant/project scope guard     │
 │                                                                            │
-│    crate v0.3.5 | protocol v1.0.0                                          │
+│    crate v0.3.6 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 UDB includes a native control plane for identity, access, storage metadata,
@@ -27,9 +27,50 @@ policy distribution.
 The native control plane is separate from the public `DataBroker` listener. Bind
 it to an internal network or place it behind a trusted gateway.
 
+## Client layers
+
+Every UDB SDK ships three layers. Reach for the highest one that fits — most app
+code should never hand-build a raw RPC request body.
+
+1. **Workflow client (recommended).** The `UdbProject` facade composes the small,
+   correct RPC sequences for common flows — login + tenant adoption, file upload
+   (register → HTTP PUT → finalize), asset pipelines, WebRTC join, notification
+   templates, read-after-write fences — so callers do not stitch RPCs or re-send
+   body authority (identity always flows from the verified token, never the body).
+   Per language: [`sdk/go/udbclient/project.go`](../sdk/go/udbclient/project.go),
+   [`sdk/python/udb_client/project.py`](../sdk/python/udb_client/project.py),
+   [`sdk/typescript/project.ts`](../sdk/typescript/project.ts),
+   [`sdk/php/src/UdbProject.php`](../sdk/php/src/UdbProject.php).
+
+   ```text
+   // First-page example — workflow helper, never a raw GenericDispatch body:
+   project := udb.LoginAndAdoptTenant(ctx, username, password)   // [Login, AuthenticateBearer]
+   file    := project.Storage().UploadFile(ctx, name, bytes)     // [RegisterUpload, PUT, FinalizeUpload]
+   room    := project.WebRTC().JoinSession(ctx, roomID)          // [JoinSession]
+   ```
+
+2. **Thin generated client (advanced / admin / bench).** The raw generated
+   robustness client (`generatedClient.ts`, `generated_client.go`,
+   `generated_client.py`, `Generated/GeneratedClient.php`) exposes every RPC
+   one-to-one, including `GenericDispatch` for arbitrary data-plane SQL. Use it
+   for one-off admin calls, conformance/bench harnesses, or RPCs the workflow
+   layer has not wrapped — and mind the per-RPC **lifecycle preconditions** in the
+   contract (e.g. an approve→apply token, an EnsureBaseline before a migration).
+   Do **not** point `GenericDispatch` at the broker's internal `udb_*` schemas to
+   repair native state (the No-Internal-Tables rule, enforced by
+   `scripts/check-no-internal-tables.py`).
+
+3. **Broker contracts (post-mutation guarantees).** The generated native-service
+   docs carry the machine-readable per-RPC contracts — `operation_kind`/`read_only`
+   (retry safety), readback/lifecycle preconditions, the idempotency contract
+   (`request_key_field`/`replay_safe`), and the typed error detail — sourced from
+   [`docs/generated/udb-native-contract.json`](generated/udb-native-contract.json).
+   The workflow helpers consume these to honor write receipts and read fences so a
+   create/update is durably visible without a hot-path proof `Get`/`List`.
+
 ## Service Table
 
-UDB 0.3.5 exposes 15 native services with 186 native RPCs.
+UDB 0.3.6 exposes 15 native services with 188 native RPCs.
 
 | Service | RPCs | Purpose |
 |---|---:|---|
@@ -44,26 +85,35 @@ UDB 0.3.5 exposes 15 native services with 186 native RPCs.
 | `StorageService` | 7 | Upload registration, finalize, download URLs, file metadata and lifecycle |
 | `AssetService` | 8 | Asset records, pipeline definitions, pipeline runs, step completion |
 | `RoomService` | 5 | WebRTC room lifecycle |
-| `PeerService` | 4 | WebRTC peer lifecycle |
+| `PeerService` | 5 | WebRTC peer lifecycle |
 | `TrackService` | 4 | WebRTC track lifecycle |
 | `TurnService` | 1 | TURN credential issuance |
 | `SignalingService` | 1 | Bidirectional WebRTC signaling bridge |
 
 Generated table: [generated/native-services.md](generated/native-services.md).
 
-## 0.3.5 Native Store Path
+## 0.3.6 Native Store Path
 
-The 0.3.5 control-plane work aligns native services with UDB's canonical
-descriptor pipeline. Native services should persist through typed native entity
-stores and native runtime bindings, not through one-off SQL strings or a
-separate KV-only shortcut.
+The native-store control-plane work (0.3.5) aligns native services with UDB's
+canonical descriptor pipeline. Native services should persist through typed
+native entity stores and native runtime bindings, not through one-off SQL strings
+or a separate KV-only shortcut.
 
 That matters because service state then inherits the same contract that app
 entities do: generated table metadata, tenant/project scope checks, conflict and
 return-field semantics, CDC/outbox behavior, native-service event contracts, and
-manifest drift gates. Notification and analytics are part of this move in
-0.3.5; storage and asset flows use the same runtime direction while object bytes
-remain in the configured object backend.
+manifest drift gates. Notification and analytics are part of this move; storage
+and asset flows use the same runtime direction while object bytes remain in the
+configured object backend.
+
+0.3.6 adds `StorageService.DownloadFile`, a server-streaming RPC that returns a
+finalized file's bytes in `DownloadFileChunk` frames. SDK clients prefer the
+presigned `GetDownloadUrl` for the happy path and fall back to `DownloadFile`
+streaming when presigned-HTTP access is unavailable, so file bytes never need to
+transit the broker on the common path. The object bucket the storage service
+reads/writes is resolved from `UDB_STORAGE_BUCKET` / `UDB_STORAGE_OBJECT_BACKEND`
+(defaulting to `minio` / `udb-storage`), independent of the data-plane object
+module's `UDB_OBJECT_BUCKET`.
 
 For operators, this means native-service startup should fail closed when a
 declared backend is missing, and release branches should keep

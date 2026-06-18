@@ -265,6 +265,14 @@ pub(crate) fn test_otp_codes()
     CODES.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()))
 }
 
+/// Test-only re-exports of the single dev-echo gate chokepoint so the served-path
+/// conformance test (13.1.4.1) — which lives outside the `authn::mfa` module — can
+/// assert the prod-closed property. `mfa::otp_dev_echo_*` are `pub(super)`, visible
+/// only inside `authn`; this surfaces them at `authn::` (crate-visible like
+/// `test_otp_codes`) without widening the production visibility.
+#[cfg(test)]
+pub(crate) use mfa::{otp_dev_echo_enabled, otp_dev_echo_resolved};
+
 impl AuthnServiceImpl {
     pub fn new(config: AuthnConfig, security: SecurityConfig) -> Self {
         Self {
@@ -783,6 +791,38 @@ impl AuthnServiceImpl {
                 "WebAuthn requires UDB_WEBAUTHN_RP_ID and UDB_WEBAUTHN_ORIGIN",
             ));
         }
+        // Fail-closed hardening (02.5.1.1): in production posture the RP must be a
+        // real HTTPS origin with a non-loopback host, and the dev soft-authenticator
+        // must never be reachable. Non-production behavior is unchanged.
+        if SecurityConfig::current().is_production() {
+            let origin_lower = rp_origin.trim().to_ascii_lowercase();
+            if !origin_lower.starts_with("https://") {
+                return Err(Status::failed_precondition(
+                    "production WebAuthn requires an https UDB_WEBAUTHN_ORIGIN",
+                ));
+            }
+            let host_is_loopback = |value: &str| {
+                let host = value.trim().to_ascii_lowercase();
+                host == "localhost" || host == "127.0.0.1" || host == "::1"
+            };
+            // origin host: strip scheme + any path/port to compare the bare host.
+            let origin_host = origin_lower
+                .trim_start_matches("https://")
+                .split(['/', ':'])
+                .next()
+                .unwrap_or_default()
+                .to_string();
+            if host_is_loopback(&rp_id) || host_is_loopback(&origin_host) {
+                return Err(Status::failed_precondition(
+                    "production WebAuthn RP id/origin must not be localhost/127.0.0.1",
+                ));
+            }
+            if webauthn_softauth::test_mode_enabled() {
+                return Err(Status::failed_precondition(
+                    "production WebAuthn must not enable UDB_WEBAUTHN_TEST_MODE (dev soft-authenticator)",
+                ));
+            }
+        }
         Ok(WebAuthnConfig {
             rp_name: std::env::var("UDB_WEBAUTHN_RP_NAME")
                 .ok()
@@ -800,13 +840,48 @@ impl AuthnServiceImpl {
 
     #[cfg(feature = "webauthn")]
     fn webauthn(&self) -> Result<webauthn_rs::prelude::Webauthn, Status> {
-        // TODO(host): attestation/RK-UV policy needs the webauthn/openssl feature (Tier-7 #32)
-        // — configurable attestation conveyance, resident-key (discoverable
-        // credential) requirement, and user-verification policy are host-blocked
-        // on the openssl-backed webauthn build; only the 3 IdP event families are
-        // shippable in this pass.
+        // RP attestation / resident-key / user-verification policy (02.5.2.1).
+        //
+        // HOST-BLOCK: webauthn-rs 0.5 (the pinned build) does NOT expose builder
+        // setters for attestation conveyance, resident-key (discoverable credential)
+        // requirement, or user-verification — those are per-ceremony arguments
+        // (`start_attested_passkey_registration`, etc.), and the only related builder
+        // setter (`danger_set_user_presence_only_security_keys`) is gated behind the
+        // `danger-user-presence-only-security-keys` feature which this build does NOT
+        // enable. So the requested policy CANNOT be enforced on the builder here.
+        //
+        // Rather than SILENTLY ignore a requested policy, we read the policy env and
+        // fail closed in production posture when a non-default (i.e. unenforceable
+        // here) policy is requested. In non-production the behavior is identical to
+        // before when no policy env is set.
         use std::time::Duration;
         use webauthn_rs::prelude::{Url, WebauthnBuilder};
+
+        // Defaults: UV preferred, attestation none, resident-key not required.
+        let policy_var = |key: &str| {
+            std::env::var(key)
+                .ok()
+                .map(|v| v.trim().to_ascii_lowercase())
+                .filter(|v| !v.is_empty())
+        };
+        let attestation = policy_var("UDB_WEBAUTHN_ATTESTATION");
+        let resident_key = policy_var("UDB_WEBAUTHN_REQUIRE_RESIDENT_KEY");
+        let user_verification = policy_var("UDB_WEBAUTHN_USER_VERIFICATION");
+
+        let requests_non_default = attestation.as_deref().is_some_and(|v| v != "none")
+            || resident_key
+                .as_deref()
+                .is_some_and(|v| matches!(v, "1" | "true" | "yes" | "required"))
+            || user_verification
+                .as_deref()
+                .is_some_and(|v| v != "preferred");
+        if requests_non_default && SecurityConfig::current().is_production() {
+            return Err(Status::failed_precondition(
+                "requested WebAuthn attestation/resident-key/user-verification policy \
+                 is not enforceable in this build (host-blocked on webauthn-rs 0.5 \
+                 builder support); refusing to silently ignore it in production",
+            ));
+        }
 
         let cfg = self.webauthn_config()?;
         let origin = Url::parse(&cfg.rp_origin).map_err(|err| {
@@ -857,7 +932,10 @@ impl AuthnServiceImpl {
                 )
                 .await
                 .map_err(|err| {
-                    Status::internal(format!("store WebAuthn challenge failed: {err}"))
+                    crate::runtime::executor_utils::prefix_status(
+                        "store WebAuthn challenge failed",
+                        err,
+                    )
                 })?;
             return Ok(challenge_id);
         }
@@ -878,7 +956,12 @@ impl AuthnServiceImpl {
         .bind(expires_at as f64)
         .execute(pool)
         .await
-        .map_err(|err| Status::internal(format!("store WebAuthn challenge failed: {err}")))?;
+        .map_err(|err| {
+            crate::runtime::executor_utils::sqlx_error_to_status(
+                "store WebAuthn challenge failed",
+                &err,
+            )
+        })?;
         Ok(challenge_id)
     }
 

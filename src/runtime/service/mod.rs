@@ -29,20 +29,20 @@ use crate::proto::{
     CatalogVersionResponse, CdcControlRequest, CdcEnvelope, CdcRedactionPreviewRequest,
     CdcRedactionPreviewResponse, CdcStatusResponse, CdcSubscriptionRequest, Chunk, DeleteRequest,
     DlqActionRequest, DlqEventRecord, DlqEventRequest, DlqEventResponse, DlqListRequest,
-    DlqListResponse, EnqueueOutboxEventRequest, EnqueueOutboxEventResponse, EnsureProjectRequest,
-    GenericDispatchRequest, GenericDispatchResponse, HealthReportRequest, HealthReportResponse,
-    MessageFieldDescriptor, MessageSchemaDescriptor, MessageSchemaListRequest,
-    MessageSchemaListResponse, MessageSchemaLookupRequest, MessageSchemaLookupResponse,
-    MigrationApplyRequest, MigrationPlanRequest, MigrationPlanResponse, MigrationRunListRequest,
-    MigrationRunListResponse, MigrationRunRequest, MigrationStatusResponse, MultipartUploadRequest,
-    MultipartUploadResponse, Mutation, MutationResponse, PolicyLintResponse, PolicyListRequest,
-    PolicyListResponse, PolicyRecord, PolicyRequest, ProjectListRequest, ProjectListResponse,
-    ProjectRecord, ProjectionDriftDivergentRow, ProjectionDriftScanRequest,
-    ProjectionDriftScanResponse, ProjectionDriftTargetReport, PutPolicyRequest, RecordSet,
-    ResourceAdminRequest, ResourceListResponse, SagaListRequest, SagaListResponse, SagaRecord,
-    SagaRequest, SagaResponse, SelectRequest, StageCatalogRequest, TxStatus, UpsertRequest,
-    UrlRequest, UrlResponse, VectorHybridSearchRequest, VectorSearchRequest, VectorSet,
-    VectorUpsertRequest, ViewDefinition,
+    DlqListResponse, EnqueueOutboxEventRequest, EnqueueOutboxEventResponse, EnsureBaselineRequest,
+    EnsureBaselineResponse, EnsureProjectRequest, GenericDispatchRequest, GenericDispatchResponse,
+    HealthReportRequest, HealthReportResponse, MessageFieldDescriptor, MessageSchemaDescriptor,
+    MessageSchemaListRequest, MessageSchemaListResponse, MessageSchemaLookupRequest,
+    MessageSchemaLookupResponse, MigrationApplyRequest, MigrationPlanRequest,
+    MigrationPlanResponse, MigrationRunListRequest, MigrationRunListResponse, MigrationRunRequest,
+    MigrationStatusResponse, MultipartUploadRequest, MultipartUploadResponse, Mutation,
+    MutationResponse, PolicyLintResponse, PolicyListRequest, PolicyListResponse, PolicyRecord,
+    PolicyRequest, ProjectListRequest, ProjectListResponse, ProjectRecord,
+    ProjectionDriftDivergentRow, ProjectionDriftScanRequest, ProjectionDriftScanResponse,
+    ProjectionDriftTargetReport, PutPolicyRequest, RecordSet, ResourceAdminRequest,
+    ResourceListResponse, SagaListRequest, SagaListResponse, SagaRecord, SagaRequest, SagaResponse,
+    SelectRequest, StageCatalogRequest, TxStatus, UpsertRequest, UrlRequest, UrlResponse,
+    VectorHybridSearchRequest, VectorSearchRequest, VectorSet, VectorUpsertRequest, ViewDefinition,
 };
 use crate::runtime::DataBrokerRuntime;
 use crate::runtime::authz::{AuthzQuery, AuthzSnapshot, Principal, ResourceRef};
@@ -65,7 +65,7 @@ pub use auth_service::auth_readiness_triples;
 /// — see `CdcConfig::normalize`. (The `auth_service` module is private to this
 /// `service` module, so this `pub(crate)` re-export is the reachable handle.)
 pub(crate) use auth_service::events::topics::AUTH_TOPIC_PATTERNS;
-pub use auth_service::{BootstrapAdmin, bootstrap_admin_user};
+pub use auth_service::{BootstrapAdmin, bootstrap_admin_user, served_bootstrap_admin};
 mod method_security;
 pub(crate) mod native_entity_store;
 #[cfg(test)]
@@ -150,6 +150,20 @@ pub struct DataBrokerService {
 
 pub(crate) const UDB_PROTOCOL_VERSION: &str = "1.0.0";
 
+/// Whether the privilege-creating dev/bench baseline seed (`EnsureBaseline`) is
+/// enabled. Fail-closed: disabled unless the operator sets `UDB_ENABLE_ADMIN_SEED`.
+/// Read here (an allowlisted startup/config boundary) rather than inside the request
+/// handler, so `handlers_*` stay free of direct env access (see connection_manager
+/// hot-path/env-confinement tests).
+pub(crate) fn admin_seed_enabled() -> bool {
+    std::env::var("UDB_ENABLE_ADMIN_SEED")
+        .map(|value| {
+            let value = value.trim();
+            value.eq_ignore_ascii_case("1") || value.eq_ignore_ascii_case("true")
+        })
+        .unwrap_or(false)
+}
+
 pub(crate) const SUPPORTED_RPC_NAMES: &[&str] = &[
     "Select",
     "BatchSelect",
@@ -223,6 +237,7 @@ pub(crate) const SUPPORTED_RPC_NAMES: &[&str] = &[
     "ListMessageSchemas",
     "GetHealthReport",
     "EnsureProject",
+    "EnsureBaseline",
     "ListProjects",
     "GetAdminSummary",
     "ListAdminAuditLogs",
@@ -3330,6 +3345,13 @@ impl DataBroker for DataBrokerService {
         request: Request<SagaRequest>,
     ) -> Result<Response<SagaResponse>, Status> {
         self.mark_saga_reviewed_inner(request).await
+    }
+
+    async fn ensure_baseline(
+        &self,
+        request: Request<EnsureBaselineRequest>,
+    ) -> Result<Response<EnsureBaselineResponse>, Status> {
+        self.ensure_baseline_inner(request).await
     }
 
     async fn list_policies(

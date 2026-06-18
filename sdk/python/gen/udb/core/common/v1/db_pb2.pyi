@@ -215,7 +215,7 @@ COLUMN_SECURITY_FIELD_NUMBER: _ClassVar[int]
 column_security: _descriptor.FieldDescriptor
 
 class TableOptions(_message.Message):
-    __slots__ = ("table_name", "schema_name", "migration_order", "is_table", "comment", "soft_delete", "audit_fields", "enable_rls", "partition_strategy", "partition_column", "retention_days", "rls_policies", "force_rls", "soft_delete_column", "unlogged", "tablespace", "indexes", "foreign_keys", "extensions", "materialized_views", "triggers", "previous_table_name", "allow_drop", "sql_artifacts", "partition_interval", "partition_premake", "partition_default", "partition_retention_months", "replica_hint", "cdc_topic", "required_scope", "vector_store")
+    __slots__ = ("table_name", "schema_name", "migration_order", "is_table", "comment", "soft_delete", "audit_fields", "enable_rls", "partition_strategy", "partition_column", "retention_days", "rls_policies", "force_rls", "soft_delete_column", "unlogged", "tablespace", "indexes", "foreign_keys", "extensions", "materialized_views", "triggers", "previous_table_name", "allow_drop", "sql_artifacts", "partition_interval", "partition_premake", "partition_default", "partition_retention_months", "replica_hint", "cdc_topic", "required_scope", "vector_store", "native_service_id")
     TABLE_NAME_FIELD_NUMBER: _ClassVar[int]
     SCHEMA_NAME_FIELD_NUMBER: _ClassVar[int]
     MIGRATION_ORDER_FIELD_NUMBER: _ClassVar[int]
@@ -248,6 +248,7 @@ class TableOptions(_message.Message):
     CDC_TOPIC_FIELD_NUMBER: _ClassVar[int]
     REQUIRED_SCOPE_FIELD_NUMBER: _ClassVar[int]
     VECTOR_STORE_FIELD_NUMBER: _ClassVar[int]
+    NATIVE_SERVICE_ID_FIELD_NUMBER: _ClassVar[int]
     table_name: str
     schema_name: str
     migration_order: int
@@ -280,7 +281,8 @@ class TableOptions(_message.Message):
     cdc_topic: str
     required_scope: str
     vector_store: VectorStoreOptions
-    def __init__(self, table_name: _Optional[str] = ..., schema_name: _Optional[str] = ..., migration_order: _Optional[int] = ..., is_table: bool = ..., comment: _Optional[str] = ..., soft_delete: bool = ..., audit_fields: bool = ..., enable_rls: bool = ..., partition_strategy: _Optional[_Union[PartitionStrategy, str]] = ..., partition_column: _Optional[str] = ..., retention_days: _Optional[int] = ..., rls_policies: _Optional[_Iterable[_Union[RlsPolicy, _Mapping]]] = ..., force_rls: bool = ..., soft_delete_column: _Optional[str] = ..., unlogged: bool = ..., tablespace: _Optional[str] = ..., indexes: _Optional[_Iterable[_Union[IndexOptions, _Mapping]]] = ..., foreign_keys: _Optional[_Iterable[_Union[TableForeignKey, _Mapping]]] = ..., extensions: _Optional[_Iterable[_Union[DbExtension, _Mapping]]] = ..., materialized_views: _Optional[_Iterable[_Union[MaterializedView, _Mapping]]] = ..., triggers: _Optional[_Iterable[_Union[DbTrigger, _Mapping]]] = ..., previous_table_name: _Optional[str] = ..., allow_drop: bool = ..., sql_artifacts: _Optional[_Iterable[_Union[SqlArtifact, _Mapping]]] = ..., partition_interval: _Optional[str] = ..., partition_premake: _Optional[int] = ..., partition_default: bool = ..., partition_retention_months: _Optional[int] = ..., replica_hint: _Optional[str] = ..., cdc_topic: _Optional[str] = ..., required_scope: _Optional[str] = ..., vector_store: _Optional[_Union[VectorStoreOptions, _Mapping]] = ...) -> None: ...
+    native_service_id: str
+    def __init__(self, table_name: _Optional[str] = ..., schema_name: _Optional[str] = ..., migration_order: _Optional[int] = ..., is_table: bool = ..., comment: _Optional[str] = ..., soft_delete: bool = ..., audit_fields: bool = ..., enable_rls: bool = ..., partition_strategy: _Optional[_Union[PartitionStrategy, str]] = ..., partition_column: _Optional[str] = ..., retention_days: _Optional[int] = ..., rls_policies: _Optional[_Iterable[_Union[RlsPolicy, _Mapping]]] = ..., force_rls: bool = ..., soft_delete_column: _Optional[str] = ..., unlogged: bool = ..., tablespace: _Optional[str] = ..., indexes: _Optional[_Iterable[_Union[IndexOptions, _Mapping]]] = ..., foreign_keys: _Optional[_Iterable[_Union[TableForeignKey, _Mapping]]] = ..., extensions: _Optional[_Iterable[_Union[DbExtension, _Mapping]]] = ..., materialized_views: _Optional[_Iterable[_Union[MaterializedView, _Mapping]]] = ..., triggers: _Optional[_Iterable[_Union[DbTrigger, _Mapping]]] = ..., previous_table_name: _Optional[str] = ..., allow_drop: bool = ..., sql_artifacts: _Optional[_Iterable[_Union[SqlArtifact, _Mapping]]] = ..., partition_interval: _Optional[str] = ..., partition_premake: _Optional[int] = ..., partition_default: bool = ..., partition_retention_months: _Optional[int] = ..., replica_hint: _Optional[str] = ..., cdc_topic: _Optional[str] = ..., required_scope: _Optional[str] = ..., vector_store: _Optional[_Union[VectorStoreOptions, _Mapping]] = ..., native_service_id: _Optional[str] = ...) -> None: ...
 
 class RlsPolicy(_message.Message):
     __slots__ = ("policy_name", "command", "using", "with_check", "permissive")

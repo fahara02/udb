@@ -125,4 +125,32 @@ public interface MigrationStatusResponseOrBuilder extends
    */
   com.google.protobuf.ByteString
       getErrorBytes();
+
+  /**
+   * <code>optional string approval_token = 9 [json_name = "approvalToken"];</code>
+   * @return Whether the approvalToken field is set.
+   */
+  boolean hasApprovalToken();
+  /**
+   * <code>optional string approval_token = 9 [json_name = "approvalToken"];</code>
+   * @return The approvalToken.
+   */
+  java.lang.String getApprovalToken();
+  /**
+   * <code>optional string approval_token = 9 [json_name = "approvalToken"];</code>
+   * @return The bytes for approvalToken.
+   */
+  com.google.protobuf.ByteString
+      getApprovalTokenBytes();
+
+  /**
+   * <code>optional bool applyable = 10 [json_name = "applyable"];</code>
+   * @return Whether the applyable field is set.
+   */
+  boolean hasApplyable();
+  /**
+   * <code>optional bool applyable = 10 [json_name = "applyable"];</code>
+   * @return The applyable.
+   */
+  boolean getApplyable();
 }

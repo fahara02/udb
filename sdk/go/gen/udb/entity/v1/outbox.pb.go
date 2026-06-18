@@ -36,6 +36,8 @@ type EnqueueOutboxEventRequest struct {
 	SchemaUri string `protobuf:"bytes,5,opt,name=schema_uri,json=schemaUri,proto3" json:"schema_uri,omitempty"`
 	// Caller-supplied idempotency key. If provided and a recent matching key exists
 	// in Redis, the event is not re-enqueued and was_duplicate = true is returned.
+	// If the dedup store is unavailable, a keyed enqueue is refused (UNAVAILABLE)
+	// rather than risking a duplicate (fail-closed).
 	IdempotencyKey string `protobuf:"bytes,6,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache

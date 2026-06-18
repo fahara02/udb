@@ -62,6 +62,16 @@ service StorageService {
   // Register a new upload and obtain a pre-signed upload URL
   rpc RegisterUpload(RegisterUploadRequest) returns (RegisterUploadResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    // Verified: storage_service::register_upload inserts the File row (status
+    // PENDING) via native_entity_write_for_service BEFORE the response is built,
+    // and GetFile reads the live row by (tenant_id, file_id). The returned
+    // file_id is therefore immediately gettable. Primary read (no replica lag).
+    option (udb.core.common.v1.method_readback_contract) = {
+      returned_id_field: "file_id"
+      readback_rpc: "GetFile"
+      readback_request_field: "file_id"
+      requires_primary_read: true
+    };
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:storage:register-upload"
@@ -123,6 +133,36 @@ service StorageService {
   // Finalize an upload after the object has been written to the store
   rpc FinalizeUpload(FinalizeUploadRequest) returns (FinalizeUploadResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    // Verified: storage_service::finalize_upload transitions the File from
+    // PENDING to ACTIVE (status set to 'ACTIVE'); a re-finalize of an already
+    // ACTIVE file is rejected with ALREADY_FINALIZED, so PENDING is the only
+    // legal source state. The uploaded object bytes are consumed (HEAD-checked)
+    // as part of the transition. ACTIVE is the steady terminal of this RPC.
+    option (udb.core.common.v1.method_lifecycle_contract) = {
+      entity: "File"
+      legal_source_states: "PENDING"
+      target_state: "ACTIVE"
+      terminal_states: "ACTIVE"
+      input_consumed: true
+    };
+    // Verified: finalize_upload re-reads and returns the finalized File row
+    // in-band (FinalizeUploadResponse.file), and the same row is gettable by
+    // GetFile(file_id). Primary read.
+    option (udb.core.common.v1.method_readback_contract) = {
+      readback_rpc: "GetFile"
+      readback_request_field: "file_id"
+      requires_primary_read: true
+    };
+    // Verified against the status_with_reason(...) call sites in
+    // storage_service::finalize_upload — every code below is emitted with the
+    // listed gRPC status and the canonical_code carried in the error-reason
+    // trailer. None are server-retryable (a retry would hit the same condition).
+    option (udb.core.common.v1.method_error_contract) = {
+      cases: { canonical_code: "STORAGE_QUOTA_EXCEEDED" grpc_status: "RESOURCE_EXHAUSTED" retryable: false }
+      cases: { canonical_code: "ALREADY_FINALIZED" grpc_status: "FAILED_PRECONDITION" retryable: false }
+      cases: { canonical_code: "OBJECT_NOT_PRESENT" grpc_status: "FAILED_PRECONDITION" retryable: false }
+      cases: { canonical_code: "UPLOAD_SIZE_MISMATCH" grpc_status: "FAILED_PRECONDITION" retryable: false }
+    };
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
       scopes: "udb:storage:finalize-upload"
@@ -236,6 +276,66 @@ service StorageService {
       explicit_nulls: true
     };
     option (google.api.http) = {get: "/v1/storage/files/{file_id}/download-url"};
+  }
+
+  // Stream a file's bytes directly through the broker. FALLBACK for clients
+  // that cannot use the presigned `GetDownloadUrl` HTTP GET (no egress to the
+  // object store, corporate proxy, etc.). The broker streams the object bytes
+  // in bounded chunks server-side; it never buffers the whole object.
+  rpc DownloadFile(DownloadFileRequest) returns (stream DownloadFileChunk) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:storage:get-download-url"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "storage.DownloadFile"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "download_file"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "storage"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "storage"
+      import_path: "udb/native/storage"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.storage.download_file.boilerplate"
+      route_name: "download_file"
+      middleware_name: "udb_storage"
+      required_native_services: "storage"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "storage"
+      required_backends: "postgres"
+      required_backends: "object_store"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "storage.DownloadFile"
+      outbox_topic: "storage.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/storage/files/{file_id}/download"};
   }
 
   // Get file metadata
@@ -511,6 +611,10 @@ message RegisterUploadResponse {
   string object_key = 3;
   // Error information if operation failed
   udb.core.common.v1.ApiError error = 4;
+  // Unix-seconds expiry of the presigned PUT `upload_url`; 0 when no URL was
+  // minted (metadata-only mode / presign error). Lets the client know when the
+  // URL dies without a follow-up call.
+  int64 expires_at = 5;
 }
 
 message FinalizeUploadRequest {
@@ -533,6 +637,12 @@ message FinalizeUploadRequest {
   optional bool is_public = 7;
   // Actual uploaded size in bytes, persisted on finalize.
   int64 size_bytes = 8;
+  // Optional client-computed content checksum; persisted into File.checksum.
+  // Only verified/stored when present.
+  optional string checksum = 9;
+  // Optional client-observed object ETag; compared against the store's HEAD
+  // ETag when present (mismatch → FailedPrecondition / UPLOAD_SIZE_MISMATCH).
+  optional string etag = 10;
 }
 
 message FinalizeUploadResponse {
@@ -579,6 +689,42 @@ message GetDownloadUrlResponse {
   google.protobuf.Timestamp expires_at = 2;
   // Error information if operation failed
   udb.core.common.v1.ApiError error = 3;
+}
+
+message DownloadFileRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "storage"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string file_id = 2;
+  // Optional preferred chunk size in bytes. Absent/0 → server default; the
+  // server clamps to a safe bound so a client cannot force an unbounded frame.
+  optional int32 chunk_size_bytes = 3;
+}
+
+message DownloadFileChunk {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "storage"
+    generate_minimal_example: true
+  };
+  // Raw object bytes for this frame.
+  bytes data = 1;
+  // First-chunk-only object metadata (absent on subsequent chunks): the file's
+  // content type, total size in bytes, and object ETag.
+  optional string content_type = 2;
+  optional int64 total_size = 3;
+  optional string etag = 4;
 }
 
 message GetFileRequest {

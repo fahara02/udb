@@ -28,6 +28,10 @@ class StartPipelineResponse extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>.udb.core.common.v1.ApiError error = 3 [json_name = "error"];</code>
      */
     protected $error = null;
+    /**
+     * Generated from protobuf field <code>repeated .udb.core.asset.entity.v1.PipelineStep steps = 4 [json_name = "steps"];</code>
+     */
+    private $steps;
 
     /**
      * Constructor.
@@ -39,6 +43,7 @@ class StartPipelineResponse extends \Google\Protobuf\Internal\Message
      *     @type string $message
      *     @type \Udb\Core\Common\V1\ApiError $error
      *           Error information if operation failed
+     *     @type \Udb\Core\Asset\Entity\V1\PipelineStep[] $steps
      * }
      */
     public function __construct($data = NULL) {
@@ -122,6 +127,28 @@ class StartPipelineResponse extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkMessage($var, \Udb\Core\Common\V1\ApiError::class);
         $this->error = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>repeated .udb.core.asset.entity.v1.PipelineStep steps = 4 [json_name = "steps"];</code>
+     * @return RepeatedField<\Udb\Core\Asset\Entity\V1\PipelineStep>
+     */
+    public function getSteps()
+    {
+        return $this->steps;
+    }
+
+    /**
+     * Generated from protobuf field <code>repeated .udb.core.asset.entity.v1.PipelineStep steps = 4 [json_name = "steps"];</code>
+     * @param \Udb\Core\Asset\Entity\V1\PipelineStep[] $var
+     * @return $this
+     */
+    public function setSteps($var)
+    {
+        $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Asset\Entity\V1\PipelineStep::class);
+        $this->steps = $arr;
 
         return $this;
     }

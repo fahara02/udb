@@ -136,3 +136,96 @@ async fn live_postgres_asset_pipeline_roundtrip() {
 
     cleanup_native_service_db(&pool).await;
 }
+
+/// §1 read-after-write (13.7.1.2): the ids `RegisterAsset` and `StartPipeline`
+/// return are IMMEDIATELY gettable by `GetAsset`/`GetPipeline` on the SAME served
+/// path with the SAME tenant metadata. Reverting either get guarantee fails this.
+#[tokio::test]
+#[ignore = "requires live Postgres; run with UDB_LIVE_AUTH_TESTS=1 cargo test --lib live_postgres_asset_read_after_write -- --ignored --nocapture"]
+async fn live_postgres_asset_read_after_write() {
+    let _guard = live_native_service_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_service_db(&pool).await;
+    let svc = asset_service(pool.clone()).await;
+    let tenant_id = Uuid::new_v4().to_string();
+
+    let def = svc
+        .create_pipeline_definition(Request::new(asset_pb::CreatePipelineDefinitionRequest {
+            tenant_id: tenant_id.clone(),
+            name: "ryw-default".to_string(),
+            media_type: "text".to_string(),
+            steps: r#"[{"name":"extract","type":"EXTRACT"},{"name":"embed","type":"EMBED"}]"#
+                .to_string(),
+            ..Default::default()
+        }))
+        .await
+        .expect("create_pipeline_definition")
+        .into_inner();
+
+    let file_id = seed_storage_file(&pool, &tenant_id).await;
+    let asset = svc
+        .register_asset(Request::new(asset_pb::RegisterAssetRequest {
+            tenant_id: tenant_id.clone(),
+            file_id,
+            name: "ryw.txt".to_string(),
+            media_type: "text".to_string(),
+            ..Default::default()
+        }))
+        .await
+        .expect("register_asset")
+        .into_inner();
+
+    // RegisterAsset → GetAsset
+    assert_create_then_get("RegisterAsset→GetAsset", &asset.asset_id, |id| {
+        let svc = &svc;
+        let tenant_id = tenant_id.clone();
+        async move {
+            let got = svc
+                .get_asset(Request::new(asset_pb::GetAssetRequest {
+                    tenant_id,
+                    asset_id: id.clone(),
+                }))
+                .await?
+                .into_inner()
+                .asset;
+            Ok(got.is_some_and(|a| a.asset_id == id))
+        }
+    })
+    .await;
+
+    let start = svc
+        .start_pipeline(Request::new(asset_pb::StartPipelineRequest {
+            tenant_id: tenant_id.clone(),
+            definition_id: def.definition_id.clone(),
+            asset_id: asset.asset_id.clone(),
+            correlation_id: format!("ryw-{}", asset.asset_id),
+            ..Default::default()
+        }))
+        .await
+        .expect("start_pipeline")
+        .into_inner();
+
+    // StartPipeline → GetPipeline (also exercises the 04.2.1 inline-steps path:
+    // start returns the steps without a proof GetPipeline round-trip).
+    assert!(
+        !start.steps.is_empty(),
+        "StartPipeline must return inline steps (04.2.1) so startAndWait needs no proof GetPipeline"
+    );
+    assert_create_then_get("StartPipeline→GetPipeline", &start.instance_id, |id| {
+        let svc = &svc;
+        let tenant_id = tenant_id.clone();
+        async move {
+            let pipe = svc
+                .get_pipeline(Request::new(asset_pb::GetPipelineRequest {
+                    tenant_id,
+                    instance_id: id.clone(),
+                }))
+                .await?
+                .into_inner();
+            Ok(pipe.instance.is_some_and(|i| i.instance_id == id))
+        }
+    })
+    .await;
+
+    cleanup_native_service_db(&pool).await;
+}

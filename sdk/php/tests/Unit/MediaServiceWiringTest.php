@@ -37,8 +37,9 @@ it('exposes storage/asset/webRtc accessors on UdbProject', function () {
 
 it('StorageService wraps the documented RPCs plus client()', function () {
     foreach ([
-        'registerUpload', 'finalizeUpload', 'getDownloadUrl', 'getFile',
-        'updateFile', 'deleteFile', 'listFiles', 'client',
+        'registerUpload', 'finalizeUpload', 'getDownloadUrl', 'downloadFile',
+        'downloadFileBytes', 'withDownloadStreamOpener', 'getFile', 'updateFile',
+        'deleteFile', 'listFiles', 'client',
     ] as $m) {
         expect(method_exists(StorageService::class, $m))->toBeTrue("StorageService::{$m}() missing");
     }
@@ -82,4 +83,43 @@ it('WebRTC group wrappers carry their key RPC verbs + client()', function () {
     foreach (['signal', 'client'] as $m) {
         expect(method_exists(SignalingApi::class, $m))->toBeTrue("SignalingApi::{$m}() missing");
     }
+});
+
+/*
+ * BENCH §11.2.x storage uploadFile sequence gate (OFFLINE).
+ *
+ * The full cross-language contract is that StorageFacade.uploadFile is the
+ * canonical 3-step sequence RegisterUpload -> presigned PUT -> FinalizeUpload.
+ * Go/TS/Python prove this with offline mock-transport sequence gates that read
+ * docs/bench-bodies/workflow-sequences.md. PHP's UdbProject is final and a clean
+ * offline mock transport needs ext-grpc, so a like-for-like PHP offline gate is
+ * DEFERRED — the upload logic is verified by reading + the injectable $httpPut
+ * seam on StorageService::uploadFile(). What we CAN do offline (no broker, no
+ * ext-grpc) is assert the shared fixture parses and pins the same 3-step contract
+ * the PHP wrapper implements, so a drift in the contract trips a PHP test too.
+ */
+it('shared workflow-sequences fixture pins the uploadFile contract PHP implements', function () {
+    $path = dirname(__DIR__, 4).'/docs/bench-bodies/workflow-sequences.md';
+    expect(is_file($path))->toBeTrue("missing shared fixture: {$path}");
+    $text = file_get_contents($path) ?: '';
+
+    // The fixture must document the canonical StorageFacade.uploadFile sequence.
+    expect($text)->toContain('StorageFacade.uploadFile');
+    // ...as exactly RegisterUpload -> PUT -> FinalizeUpload (the 3-step contract).
+    foreach (['RegisterUpload', 'PUT', 'FinalizeUpload'] as $step) {
+        expect($text)->toContain($step);
+    }
+
+    // And the PHP wrapper that realizes it exposes the injectable PUT seam used to
+    // verify the middle step without a live object store / broker.
+    expect(method_exists(StorageService::class, 'uploadFile'))->toBeTrue('StorageService::uploadFile() missing');
+    $params = (new ReflectionMethod(StorageService::class, 'uploadFile'))->getParameters();
+    $hasHttpPutSeam = false;
+    foreach ($params as $p) {
+        if ($p->getName() === 'httpPut') {
+            $hasHttpPutSeam = true;
+            break;
+        }
+    }
+    expect($hasHttpPutSeam)->toBeTrue('StorageService::uploadFile() missing injectable $httpPut seam');
 });

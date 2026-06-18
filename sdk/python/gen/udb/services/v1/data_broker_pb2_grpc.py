@@ -13,6 +13,7 @@ from udb.entity.v1 import stores_pb2 as udb_dot_entity_dot_v1_dot_stores__pb2
 from udb.entity.v1 import tx_pb2 as udb_dot_entity_dot_v1_dot_tx__pb2
 from udb.entity.v1 import vector_pb2 as udb_dot_entity_dot_v1_dot_vector__pb2
 from udb.events.v1 import udb_events_pb2 as udb_dot_events_dot_v1_dot_udb__events__pb2
+from udb.services.v1 import data_broker_pb2 as udb_dot_services_dot_v1_dot_data__broker__pb2
 
 
 class DataBrokerStub(object):
@@ -330,6 +331,11 @@ class DataBrokerStub(object):
                 '/udb.services.v1.DataBroker/MarkSagaReviewed',
                 request_serializer=udb_dot_entity_dot_v1_dot_admin__pb2.SagaRequest.SerializeToString,
                 response_deserializer=udb_dot_entity_dot_v1_dot_admin__pb2.SagaResponse.FromString,
+                _registered_method=True)
+        self.EnsureBaseline = channel.unary_unary(
+                '/udb.services.v1.DataBroker/EnsureBaseline',
+                request_serializer=udb_dot_services_dot_v1_dot_data__broker__pb2.EnsureBaselineRequest.SerializeToString,
+                response_deserializer=udb_dot_services_dot_v1_dot_data__broker__pb2.EnsureBaselineResponse.FromString,
                 _registered_method=True)
         self.ListPolicies = channel.unary_unary(
                 '/udb.services.v1.DataBroker/ListPolicies',
@@ -826,6 +832,15 @@ class DataBrokerServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def EnsureBaseline(self, request, context):
+        """Idempotently seed a baseline manual-review saga row and a retryable DLQ row
+        for the VERIFIED principal's tenant/project. Privilege-creating: fail-closed,
+        env-gated (UDB_ENABLE_ADMIN_SEED) and requires scope: udb:admin.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def ListPolicies(self, request, context):
         """Policy administration.
         """
@@ -1238,6 +1253,11 @@ def add_DataBrokerServicer_to_server(servicer, server):
                     servicer.MarkSagaReviewed,
                     request_deserializer=udb_dot_entity_dot_v1_dot_admin__pb2.SagaRequest.FromString,
                     response_serializer=udb_dot_entity_dot_v1_dot_admin__pb2.SagaResponse.SerializeToString,
+            ),
+            'EnsureBaseline': grpc.unary_unary_rpc_method_handler(
+                    servicer.EnsureBaseline,
+                    request_deserializer=udb_dot_services_dot_v1_dot_data__broker__pb2.EnsureBaselineRequest.FromString,
+                    response_serializer=udb_dot_services_dot_v1_dot_data__broker__pb2.EnsureBaselineResponse.SerializeToString,
             ),
             'ListPolicies': grpc.unary_unary_rpc_method_handler(
                     servicer.ListPolicies,
@@ -2964,6 +2984,33 @@ class DataBroker(object):
             '/udb.services.v1.DataBroker/MarkSagaReviewed',
             udb_dot_entity_dot_v1_dot_admin__pb2.SagaRequest.SerializeToString,
             udb_dot_entity_dot_v1_dot_admin__pb2.SagaResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def EnsureBaseline(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.services.v1.DataBroker/EnsureBaseline',
+            udb_dot_services_dot_v1_dot_data__broker__pb2.EnsureBaselineRequest.SerializeToString,
+            udb_dot_services_dot_v1_dot_data__broker__pb2.EnsureBaselineResponse.FromString,
             options,
             channel_credentials,
             insecure,

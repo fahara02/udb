@@ -30,6 +30,7 @@ private static final long serialVersionUID = 0L;
   private StartPipelineResponse() {
     instanceId_ = "";
     message_ = "";
+    steps_ = java.util.Collections.emptyList();
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -162,6 +163,47 @@ private static final long serialVersionUID = 0L;
     return error_ == null ? com.udb.core.common.v1.ApiError.getDefaultInstance() : error_;
   }
 
+  public static final int STEPS_FIELD_NUMBER = 4;
+  @SuppressWarnings("serial")
+  private java.util.List<com.udb.core.asset.entity.v1.PipelineStep> steps_;
+  /**
+   * <code>repeated .udb.core.asset.entity.v1.PipelineStep steps = 4 [json_name = "steps"];</code>
+   */
+  @java.lang.Override
+  public java.util.List<com.udb.core.asset.entity.v1.PipelineStep> getStepsList() {
+    return steps_;
+  }
+  /**
+   * <code>repeated .udb.core.asset.entity.v1.PipelineStep steps = 4 [json_name = "steps"];</code>
+   */
+  @java.lang.Override
+  public java.util.List<? extends com.udb.core.asset.entity.v1.PipelineStepOrBuilder>
+      getStepsOrBuilderList() {
+    return steps_;
+  }
+  /**
+   * <code>repeated .udb.core.asset.entity.v1.PipelineStep steps = 4 [json_name = "steps"];</code>
+   */
+  @java.lang.Override
+  public int getStepsCount() {
+    return steps_.size();
+  }
+  /**
+   * <code>repeated .udb.core.asset.entity.v1.PipelineStep steps = 4 [json_name = "steps"];</code>
+   */
+  @java.lang.Override
+  public com.udb.core.asset.entity.v1.PipelineStep getSteps(int index) {
+    return steps_.get(index);
+  }
+  /**
+   * <code>repeated .udb.core.asset.entity.v1.PipelineStep steps = 4 [json_name = "steps"];</code>
+   */
+  @java.lang.Override
+  public com.udb.core.asset.entity.v1.PipelineStepOrBuilder getStepsOrBuilder(
+      int index) {
+    return steps_.get(index);
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -185,6 +227,9 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000001) != 0)) {
       output.writeMessage(3, getError());
     }
+    for (int i = 0; i < steps_.size(); i++) {
+      output.writeMessage(4, steps_.get(i));
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -203,6 +248,10 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000001) != 0)) {
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(3, getError());
+    }
+    for (int i = 0; i < steps_.size(); i++) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(4, steps_.get(i));
     }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
@@ -228,6 +277,8 @@ private static final long serialVersionUID = 0L;
       if (!getError()
           .equals(other.getError())) return false;
     }
+    if (!getStepsList()
+        .equals(other.getStepsList())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -246,6 +297,10 @@ private static final long serialVersionUID = 0L;
     if (hasError()) {
       hash = (37 * hash) + ERROR_FIELD_NUMBER;
       hash = (53 * hash) + getError().hashCode();
+    }
+    if (getStepsCount() > 0) {
+      hash = (37 * hash) + STEPS_FIELD_NUMBER;
+      hash = (53 * hash) + getStepsList().hashCode();
     }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
@@ -378,6 +433,7 @@ private static final long serialVersionUID = 0L;
       if (com.google.protobuf.GeneratedMessage
               .alwaysUseFieldBuilders) {
         internalGetErrorFieldBuilder();
+        internalGetStepsFieldBuilder();
       }
     }
     @java.lang.Override
@@ -391,6 +447,13 @@ private static final long serialVersionUID = 0L;
         errorBuilder_.dispose();
         errorBuilder_ = null;
       }
+      if (stepsBuilder_ == null) {
+        steps_ = java.util.Collections.emptyList();
+      } else {
+        steps_ = null;
+        stepsBuilder_.clear();
+      }
+      bitField0_ = (bitField0_ & ~0x00000008);
       return this;
     }
 
@@ -417,9 +480,22 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.udb.core.asset.services.v1.StartPipelineResponse buildPartial() {
       com.udb.core.asset.services.v1.StartPipelineResponse result = new com.udb.core.asset.services.v1.StartPipelineResponse(this);
+      buildPartialRepeatedFields(result);
       if (bitField0_ != 0) { buildPartial0(result); }
       onBuilt();
       return result;
+    }
+
+    private void buildPartialRepeatedFields(com.udb.core.asset.services.v1.StartPipelineResponse result) {
+      if (stepsBuilder_ == null) {
+        if (((bitField0_ & 0x00000008) != 0)) {
+          steps_ = java.util.Collections.unmodifiableList(steps_);
+          bitField0_ = (bitField0_ & ~0x00000008);
+        }
+        result.steps_ = steps_;
+      } else {
+        result.steps_ = stepsBuilder_.build();
+      }
     }
 
     private void buildPartial0(com.udb.core.asset.services.v1.StartPipelineResponse result) {
@@ -465,6 +541,32 @@ private static final long serialVersionUID = 0L;
       if (other.hasError()) {
         mergeError(other.getError());
       }
+      if (stepsBuilder_ == null) {
+        if (!other.steps_.isEmpty()) {
+          if (steps_.isEmpty()) {
+            steps_ = other.steps_;
+            bitField0_ = (bitField0_ & ~0x00000008);
+          } else {
+            ensureStepsIsMutable();
+            steps_.addAll(other.steps_);
+          }
+          onChanged();
+        }
+      } else {
+        if (!other.steps_.isEmpty()) {
+          if (stepsBuilder_.isEmpty()) {
+            stepsBuilder_.dispose();
+            stepsBuilder_ = null;
+            steps_ = other.steps_;
+            bitField0_ = (bitField0_ & ~0x00000008);
+            stepsBuilder_ =
+              com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                 internalGetStepsFieldBuilder() : null;
+          } else {
+            stepsBuilder_.addAllMessages(other.steps_);
+          }
+        }
+      }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
@@ -508,6 +610,19 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000004;
               break;
             } // case 26
+            case 34: {
+              com.udb.core.asset.entity.v1.PipelineStep m =
+                  input.readMessage(
+                      com.udb.core.asset.entity.v1.PipelineStep.parser(),
+                      extensionRegistry);
+              if (stepsBuilder_ == null) {
+                ensureStepsIsMutable();
+                steps_.add(m);
+              } else {
+                stepsBuilder_.addMessage(m);
+              }
+              break;
+            } // case 34
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -824,6 +939,246 @@ private static final long serialVersionUID = 0L;
         error_ = null;
       }
       return errorBuilder_;
+    }
+
+    private java.util.List<com.udb.core.asset.entity.v1.PipelineStep> steps_ =
+      java.util.Collections.emptyList();
+    private void ensureStepsIsMutable() {
+      if (!((bitField0_ & 0x00000008) != 0)) {
+        steps_ = new java.util.ArrayList<com.udb.core.asset.entity.v1.PipelineStep>(steps_);
+        bitField0_ |= 0x00000008;
+       }
+    }
+
+    private com.google.protobuf.RepeatedFieldBuilder<
+        com.udb.core.asset.entity.v1.PipelineStep, com.udb.core.asset.entity.v1.PipelineStep.Builder, com.udb.core.asset.entity.v1.PipelineStepOrBuilder> stepsBuilder_;
+
+    /**
+     * <code>repeated .udb.core.asset.entity.v1.PipelineStep steps = 4 [json_name = "steps"];</code>
+     */
+    public java.util.List<com.udb.core.asset.entity.v1.PipelineStep> getStepsList() {
+      if (stepsBuilder_ == null) {
+        return java.util.Collections.unmodifiableList(steps_);
+      } else {
+        return stepsBuilder_.getMessageList();
+      }
+    }
+    /**
+     * <code>repeated .udb.core.asset.entity.v1.PipelineStep steps = 4 [json_name = "steps"];</code>
+     */
+    public int getStepsCount() {
+      if (stepsBuilder_ == null) {
+        return steps_.size();
+      } else {
+        return stepsBuilder_.getCount();
+      }
+    }
+    /**
+     * <code>repeated .udb.core.asset.entity.v1.PipelineStep steps = 4 [json_name = "steps"];</code>
+     */
+    public com.udb.core.asset.entity.v1.PipelineStep getSteps(int index) {
+      if (stepsBuilder_ == null) {
+        return steps_.get(index);
+      } else {
+        return stepsBuilder_.getMessage(index);
+      }
+    }
+    /**
+     * <code>repeated .udb.core.asset.entity.v1.PipelineStep steps = 4 [json_name = "steps"];</code>
+     */
+    public Builder setSteps(
+        int index, com.udb.core.asset.entity.v1.PipelineStep value) {
+      if (stepsBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureStepsIsMutable();
+        steps_.set(index, value);
+        onChanged();
+      } else {
+        stepsBuilder_.setMessage(index, value);
+      }
+      return this;
+    }
+    /**
+     * <code>repeated .udb.core.asset.entity.v1.PipelineStep steps = 4 [json_name = "steps"];</code>
+     */
+    public Builder setSteps(
+        int index, com.udb.core.asset.entity.v1.PipelineStep.Builder builderForValue) {
+      if (stepsBuilder_ == null) {
+        ensureStepsIsMutable();
+        steps_.set(index, builderForValue.build());
+        onChanged();
+      } else {
+        stepsBuilder_.setMessage(index, builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <code>repeated .udb.core.asset.entity.v1.PipelineStep steps = 4 [json_name = "steps"];</code>
+     */
+    public Builder addSteps(com.udb.core.asset.entity.v1.PipelineStep value) {
+      if (stepsBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureStepsIsMutable();
+        steps_.add(value);
+        onChanged();
+      } else {
+        stepsBuilder_.addMessage(value);
+      }
+      return this;
+    }
+    /**
+     * <code>repeated .udb.core.asset.entity.v1.PipelineStep steps = 4 [json_name = "steps"];</code>
+     */
+    public Builder addSteps(
+        int index, com.udb.core.asset.entity.v1.PipelineStep value) {
+      if (stepsBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureStepsIsMutable();
+        steps_.add(index, value);
+        onChanged();
+      } else {
+        stepsBuilder_.addMessage(index, value);
+      }
+      return this;
+    }
+    /**
+     * <code>repeated .udb.core.asset.entity.v1.PipelineStep steps = 4 [json_name = "steps"];</code>
+     */
+    public Builder addSteps(
+        com.udb.core.asset.entity.v1.PipelineStep.Builder builderForValue) {
+      if (stepsBuilder_ == null) {
+        ensureStepsIsMutable();
+        steps_.add(builderForValue.build());
+        onChanged();
+      } else {
+        stepsBuilder_.addMessage(builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <code>repeated .udb.core.asset.entity.v1.PipelineStep steps = 4 [json_name = "steps"];</code>
+     */
+    public Builder addSteps(
+        int index, com.udb.core.asset.entity.v1.PipelineStep.Builder builderForValue) {
+      if (stepsBuilder_ == null) {
+        ensureStepsIsMutable();
+        steps_.add(index, builderForValue.build());
+        onChanged();
+      } else {
+        stepsBuilder_.addMessage(index, builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <code>repeated .udb.core.asset.entity.v1.PipelineStep steps = 4 [json_name = "steps"];</code>
+     */
+    public Builder addAllSteps(
+        java.lang.Iterable<? extends com.udb.core.asset.entity.v1.PipelineStep> values) {
+      if (stepsBuilder_ == null) {
+        ensureStepsIsMutable();
+        com.google.protobuf.AbstractMessageLite.Builder.addAll(
+            values, steps_);
+        onChanged();
+      } else {
+        stepsBuilder_.addAllMessages(values);
+      }
+      return this;
+    }
+    /**
+     * <code>repeated .udb.core.asset.entity.v1.PipelineStep steps = 4 [json_name = "steps"];</code>
+     */
+    public Builder clearSteps() {
+      if (stepsBuilder_ == null) {
+        steps_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000008);
+        onChanged();
+      } else {
+        stepsBuilder_.clear();
+      }
+      return this;
+    }
+    /**
+     * <code>repeated .udb.core.asset.entity.v1.PipelineStep steps = 4 [json_name = "steps"];</code>
+     */
+    public Builder removeSteps(int index) {
+      if (stepsBuilder_ == null) {
+        ensureStepsIsMutable();
+        steps_.remove(index);
+        onChanged();
+      } else {
+        stepsBuilder_.remove(index);
+      }
+      return this;
+    }
+    /**
+     * <code>repeated .udb.core.asset.entity.v1.PipelineStep steps = 4 [json_name = "steps"];</code>
+     */
+    public com.udb.core.asset.entity.v1.PipelineStep.Builder getStepsBuilder(
+        int index) {
+      return internalGetStepsFieldBuilder().getBuilder(index);
+    }
+    /**
+     * <code>repeated .udb.core.asset.entity.v1.PipelineStep steps = 4 [json_name = "steps"];</code>
+     */
+    public com.udb.core.asset.entity.v1.PipelineStepOrBuilder getStepsOrBuilder(
+        int index) {
+      if (stepsBuilder_ == null) {
+        return steps_.get(index);  } else {
+        return stepsBuilder_.getMessageOrBuilder(index);
+      }
+    }
+    /**
+     * <code>repeated .udb.core.asset.entity.v1.PipelineStep steps = 4 [json_name = "steps"];</code>
+     */
+    public java.util.List<? extends com.udb.core.asset.entity.v1.PipelineStepOrBuilder>
+         getStepsOrBuilderList() {
+      if (stepsBuilder_ != null) {
+        return stepsBuilder_.getMessageOrBuilderList();
+      } else {
+        return java.util.Collections.unmodifiableList(steps_);
+      }
+    }
+    /**
+     * <code>repeated .udb.core.asset.entity.v1.PipelineStep steps = 4 [json_name = "steps"];</code>
+     */
+    public com.udb.core.asset.entity.v1.PipelineStep.Builder addStepsBuilder() {
+      return internalGetStepsFieldBuilder().addBuilder(
+          com.udb.core.asset.entity.v1.PipelineStep.getDefaultInstance());
+    }
+    /**
+     * <code>repeated .udb.core.asset.entity.v1.PipelineStep steps = 4 [json_name = "steps"];</code>
+     */
+    public com.udb.core.asset.entity.v1.PipelineStep.Builder addStepsBuilder(
+        int index) {
+      return internalGetStepsFieldBuilder().addBuilder(
+          index, com.udb.core.asset.entity.v1.PipelineStep.getDefaultInstance());
+    }
+    /**
+     * <code>repeated .udb.core.asset.entity.v1.PipelineStep steps = 4 [json_name = "steps"];</code>
+     */
+    public java.util.List<com.udb.core.asset.entity.v1.PipelineStep.Builder>
+         getStepsBuilderList() {
+      return internalGetStepsFieldBuilder().getBuilderList();
+    }
+    private com.google.protobuf.RepeatedFieldBuilder<
+        com.udb.core.asset.entity.v1.PipelineStep, com.udb.core.asset.entity.v1.PipelineStep.Builder, com.udb.core.asset.entity.v1.PipelineStepOrBuilder>
+        internalGetStepsFieldBuilder() {
+      if (stepsBuilder_ == null) {
+        stepsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+            com.udb.core.asset.entity.v1.PipelineStep, com.udb.core.asset.entity.v1.PipelineStep.Builder, com.udb.core.asset.entity.v1.PipelineStepOrBuilder>(
+                steps_,
+                ((bitField0_ & 0x00000008) != 0),
+                getParentForChildren(),
+                isClean());
+        steps_ = null;
+      }
+      return stepsBuilder_;
     }
 
     // @@protoc_insertion_point(builder_scope:udb.core.asset.services.v1.StartPipelineResponse)

@@ -70,6 +70,8 @@ message TableOptions {
   string required_scope = 31;
   // Optional table-local vector projection; message-level vector_store remains supported.
   VectorStoreOptions vector_store = 32;
+  // native_service_id: which native service owns this internal table.
+  string native_service_id = 33;
 }
 
 // RlsPolicy defines a single PostgreSQL Row-Level Security policy.

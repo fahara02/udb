@@ -70,7 +70,7 @@ header.nav{position:sticky;top:0;z-index:60;backdrop-filter:blur(14px) saturate(
 .brand{display:flex;align-items:center;gap:11px;font-weight:900;letter-spacing:.04em;color:var(--text);font-size:1.05rem}
 .brand:hover{text-decoration:none}
 .brand img{width:32px;height:32px;border-radius:9px;box-shadow:0 6px 18px rgba(0,0,0,.45)}
-.nav-links{margin-left:auto;display:flex;gap:18px;align-items:center}
+.nav-links{margin-left:auto;display:flex;gap:14px;align-items:center}
 .nav-links a{color:var(--muted);font-size:.86rem;font-weight:600;position:relative}
 .nav-links a:not(.nav-cta)::after{content:"";position:absolute;left:0;right:100%;bottom:-6px;height:2px;
   background:var(--grad-cool);border-radius:2px;transition:right .25s var(--ease)}
@@ -269,6 +269,7 @@ td.n{text-align:right;font-weight:800;font-variant-numeric:tabular-nums}
 .bench-kpi{border:1px solid var(--line-2);border-radius:14px;background:rgba(8,10,13,.55);padding:13px 15px}
 .bench-kpi span{display:block;color:var(--muted);font-size:.73rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
 .bench-kpi b{font-size:1.6rem;line-height:1.1;font-variant-numeric:tabular-nums}
+.bench-section{border:1px solid var(--line-2);border-radius:var(--radius);background:linear-gradient(180deg,var(--panel),var(--bg-2));padding:20px;overflow:hidden}
 .bench-chart-card{border:1px solid var(--line-2);border-radius:var(--radius);background:linear-gradient(180deg,var(--panel),var(--bg-2));padding:20px;overflow:hidden}
 .bench-chart-head{display:flex;justify-content:space-between;gap:18px;align-items:start;margin-bottom:14px}
 .bench-chart-head h3{margin:0;font-size:1.14rem}.bench-chart-head p{margin:4px 0 0;color:var(--muted)}
@@ -283,7 +284,20 @@ td.n{text-align:right;font-weight:800;font-variant-numeric:tabular-nums}
 .bench-sdk-top span.skip,.bench-status.skip{background:rgba(154,167,184,.14);color:#cbd5e1}
 .bench-sdk-main{margin-top:18px;font-size:2rem;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;background:var(--grad-text);-webkit-background-clip:text;background-clip:text;color:transparent}
 .bench-sdk-card p{margin:12px 0 0;color:var(--muted);font-size:.9rem}
+.bench-controls{display:grid;grid-template-columns:240px minmax(280px,1fr) minmax(220px,.8fr);gap:14px;margin-bottom:14px}
+.bench-controls label{display:flex;flex-direction:column;gap:7px;color:var(--muted);font-size:.76rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+.bench-controls select,.bench-controls input{width:100%;border:1px solid var(--line-2);border-radius:12px;background:#0d1017;color:var(--text);font:600 .88rem var(--font);padding:10px 12px;outline:none}
+.bench-controls select{min-height:154px}
+.bench-controls input{min-height:42px}
+.bench-controls select:focus,.bench-controls input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,229,255,.12)}
+.bench-table-meta{color:var(--muted);font-size:.86rem;margin:0 0 12px}
+.bench-full-table table{min-width:1120px}
+.api-reference{padding-top:34px}
+.swagger-shell{border:1px solid var(--line-2);border-radius:var(--radius);background:#f8fafc;color:#0f172a;overflow:hidden}
+.swagger-shell .swagger-ui{font-family:var(--font)}
+.swagger-shell .swagger-ui .topbar{display:none}
 @media(max-width:900px){.bench-hero{grid-template-columns:1fr}.bench-kpis,.bench-sdk-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:900px){.bench-controls{grid-template-columns:1fr}}
 @media(max-width:620px){.bench-kpis,.bench-sdk-grid{grid-template-columns:1fr}.bench-chart-head{display:block}.bench-chart-head .btn{margin-top:12px}}
 
 /* ── CTA band ── */

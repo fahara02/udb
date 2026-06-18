@@ -40,6 +40,66 @@ const TEMPLATE_MSG: &str = "udb.core.notification.entity.v1.NotificationTemplate
 const PREFERENCE_MSG: &str = "udb.core.notification.entity.v1.NotificationPreference";
 const TEMPLATE_LOCALE_MAX_CHARS: usize = 10;
 
+// Stable machine-readable error reasons (google.rpc.ErrorInfo-style `reason`),
+// attached to the returned `Status` metadata under `error-reason` so SDK clients
+// can branch on a fixed code instead of free-text messages. Only reasons with a
+// LIVE failure path are fired here. `TEMPLATE_INACTIVE`/`PROVIDER_UNAVAILABLE`
+// have no reachable site and are intentionally NOT defined.
+/// No template matched the (event_type, channel, locale, tenant) scope on send.
+const TEMPLATE_NOT_FOUND: &str = "TEMPLATE_NOT_FOUND";
+/// A `{{placeholder}}` in the matched template had no value in `req.variables`.
+const VARIABLE_MISSING: &str = "VARIABLE_MISSING";
+/// Reserved: recipient opted out of the (channel, event) — currently handled as a
+/// SUPPRESSED log row, not an error, so no live site fires this reason yet.
+#[allow(dead_code)]
+const RECIPIENT_OPTED_OUT: &str = "RECIPIENT_OPTED_OUT";
+/// Retry was requested for a notification that is not in a retryable state.
+const NOT_RETRYABLE_STATE: &str = "NOT_RETRYABLE_STATE";
+
+/// Test-only sentinel (TODO 04.4.2.2): when `test_mode_enabled()` is true AND a
+/// `SendNotification` request carries this exact value in `resource_type`, each
+/// per-channel log is written as FAILED so `retry_notification` has a real
+/// retryable row to exercise. Unreachable in production: the env gate defaults
+/// false, so production sends ignore this value entirely.
+const TEST_FORCE_FAILED_SENTINEL: &str = "__perf_force_failed__";
+
+/// Attach a stable machine-readable `reason` (and optional metadata pairs) to a
+/// `Status` without changing its gRPC `Code`. The reason rides in the trailing
+/// `error-reason` metadata key; extra `(key, value)` pairs (e.g. the offending
+/// variable name) ride alongside it. Bad ASCII keys/values are skipped so this
+/// can never itself fail.
+fn status_with_reason(mut status: Status, reason: &str, extra: &[(&str, &str)]) -> Status {
+    let md = status.metadata_mut();
+    if let Ok(value) = reason.parse::<tonic::metadata::MetadataValue<_>>() {
+        md.insert("error-reason", value);
+    }
+    for (key, raw) in extra {
+        if let (Ok(name), Ok(value)) = (
+            key.parse::<tonic::metadata::MetadataKey<_>>(),
+            raw.parse::<tonic::metadata::MetadataValue<_>>(),
+        ) {
+            md.insert(name, value);
+        }
+    }
+    status
+}
+
+/// Whether the notification test harness is enabled (resolved once). Fail-closed
+/// default: production never sets `UDB_NOTIFICATION_TEST_MODE`, so the test-only
+/// forced-FAILED send path below is unreachable in production. Mirrors the exact
+/// shape of `auth_service::authn::webauthn_softauth::test_mode_enabled`.
+fn test_mode_enabled() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ENABLED.get_or_init(|| {
+        std::env::var("UDB_NOTIFICATION_TEST_MODE")
+            .map(|v| {
+                let v = v.trim();
+                v == "1" || v.eq_ignore_ascii_case("true") || v.eq_ignore_ascii_case("yes")
+            })
+            .unwrap_or(false)
+    })
+}
+
 pub struct NotificationServiceImpl {
     pg_pool: Option<PgPool>,
     /// Runtime handle for P4 native-entity data-plane operations. Straightforward
@@ -417,6 +477,8 @@ fn log_projection() -> LogicalProjection {
         "error_message".to_string(),
         "provider_message_id".to_string(),
         "retry_count".to_string(),
+        "rendered_subject".to_string(),
+        "rendered_body".to_string(),
     ])
 }
 
@@ -644,6 +706,8 @@ fn log_from_json(row: &serde_json::Value) -> notif_entity_pb::NotificationLog {
         error_message: json_string_field(row, "error_message"),
         provider_message_id: json_string_field(row, "provider_message_id"),
         retry_count: json_i32_field(row, "retry_count"),
+        rendered_subject: json_string_field(row, "rendered_subject"),
+        rendered_body: json_string_field(row, "rendered_body"),
         ..Default::default()
     }
 }
@@ -741,7 +805,50 @@ fn notification_log_record(
         "retry_count".to_string(),
         LogicalValue::Int(log.retry_count as i64),
     );
+    record.insert(
+        "rendered_subject".to_string(),
+        logical_optional_string(&log.rendered_subject),
+    );
+    record.insert(
+        "rendered_body".to_string(),
+        logical_optional_string(&log.rendered_body),
+    );
     record
+}
+
+/// Render a `{{placeholder}}` template against the request `variables` map.
+/// Substitution is minimal and consistent with the template comment
+/// (`'{{.ResourceName}} requires review'`): every `{{ ... }}` token is trimmed,
+/// an optional leading `.` is stripped (Go-template dotted form), and the result
+/// is looked up in `variables`. A token with no value yields `Err(field_name)`
+/// so the caller can fail-closed with `VARIABLE_MISSING` naming that field. No
+/// regex dependency: a single forward scan over the bytes.
+fn render_template(
+    template: &str,
+    variables: &std::collections::HashMap<String, String>,
+) -> Result<String, String> {
+    let mut out = String::with_capacity(template.len());
+    let bytes = template.as_bytes();
+    let mut i = 0;
+    while i < template.len() {
+        if i + 1 < template.len() && bytes[i] == b'{' && bytes[i + 1] == b'{' {
+            if let Some(rel_end) = template[i + 2..].find("}}") {
+                let raw = &template[i + 2..i + 2 + rel_end];
+                let key = raw.trim().trim_start_matches('.').trim();
+                match variables.get(key) {
+                    Some(value) => out.push_str(value),
+                    None => return Err(key.to_string()),
+                }
+                i += 2 + rel_end + 2;
+                continue;
+            }
+        }
+        // Not a placeholder start (or unterminated `{{`): copy this char verbatim.
+        let ch = template[i..].chars().next().unwrap();
+        out.push(ch);
+        i += ch.len_utf8();
+    }
+    Ok(out)
 }
 
 async fn is_notification_opted_out(
@@ -935,8 +1042,61 @@ impl NotificationService for NotificationServiceImpl {
         } else {
             req.channels.clone()
         };
+        let locale = template_locale_or_default(&req.locale)?;
         let mut logs = Vec::with_capacity(channels.len());
         for channel in channels.iter().copied() {
+            // Resolve the active template for this (event_type, channel, locale,
+            // tenant) scope. Identity/tenant come from the verified context only.
+            let channel_db = channel_to_db(channel);
+            let template_filter = template_scope_filter(
+                &req.tenant_id,
+                &req.event_type,
+                channel_db,
+                Some(&locale),
+                true,
+            );
+            let template_rows = runtime
+                .native_entity_read_for_service(
+                    "notification",
+                    &context,
+                    template_read(template_filter, 0, 1),
+                )
+                .await?;
+            let template = match template_rows.first() {
+                Some(row) => template_from_json_row(row),
+                None => {
+                    return Err(status_with_reason(
+                        Status::not_found(format!(
+                            "no active notification template for event '{}' channel '{}' locale '{}'",
+                            req.event_type, channel_db, locale
+                        )),
+                        TEMPLATE_NOT_FOUND,
+                        &[],
+                    ));
+                }
+            };
+            // Render subject/body against the request variables; an unsatisfied
+            // `{{placeholder}}` fails closed naming the missing variable.
+            let rendered_subject = render_template(&template.subject_template, &req.variables)
+                .map_err(|field| {
+                    status_with_reason(
+                        Status::invalid_argument(format!(
+                            "template variable '{field}' is required but was not provided"
+                        )),
+                        VARIABLE_MISSING,
+                        &[("error-variable", field.as_str())],
+                    )
+                })?;
+            let rendered_body =
+                render_template(&template.body_template, &req.variables).map_err(|field| {
+                    status_with_reason(
+                        Status::invalid_argument(format!(
+                            "template variable '{field}' is required but was not provided"
+                        )),
+                        VARIABLE_MISSING,
+                        &[("error-variable", field.as_str())],
+                    )
+                })?;
             let opted_out = is_notification_opted_out(
                 runtime,
                 &context,
@@ -946,10 +1106,18 @@ impl NotificationService for NotificationServiceImpl {
                 &req.event_type,
             )
             .await?;
-            let (status_db, status_pb) = channel_send_decision(opted_out);
+            let (mut status_db, mut status_pb) = channel_send_decision(opted_out);
+            // Test-only forced-FAILED path (TODO 04.4.2.2): gated false in prod.
+            let mut error_message = String::new();
+            if test_mode_enabled() && req.resource_type == TEST_FORCE_FAILED_SENTINEL {
+                status_db = "FAILED";
+                status_pb = notif_entity_pb::NotificationStatus::Failed as i32;
+                error_message = "forced FAILED by UDB_NOTIFICATION_TEST_MODE harness".to_string();
+            }
             let log_id = Uuid::new_v4().to_string();
             let log = notif_entity_pb::NotificationLog {
                 log_id,
+                template_id: template.template_id.clone(),
                 event_type: req.event_type.clone(),
                 channel,
                 recipient_id: req.recipient_id.clone(),
@@ -961,6 +1129,9 @@ impl NotificationService for NotificationServiceImpl {
                 resource_name: req.resource_name.clone(),
                 correlation_id: req.correlation_id.clone(),
                 status: status_pb,
+                error_message,
+                rendered_subject,
+                rendered_body,
                 ..Default::default()
             };
             runtime
@@ -1147,8 +1318,12 @@ impl NotificationService for NotificationServiceImpl {
         let log = match row {
             Some(row) => log_from_row(&row)?,
             None => {
-                return Err(Status::failed_precondition(
-                    "notification not found or not in a retryable (FAILED) state",
+                return Err(status_with_reason(
+                    Status::failed_precondition(
+                        "notification not found or not in a retryable (FAILED) state",
+                    ),
+                    NOT_RETRYABLE_STATE,
+                    &[],
                 ));
             }
         };

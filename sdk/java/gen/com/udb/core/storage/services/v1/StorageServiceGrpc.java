@@ -105,6 +105,37 @@ public final class StorageServiceGrpc {
     return getGetDownloadUrlMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.storage.services.v1.DownloadFileRequest,
+      com.udb.core.storage.services.v1.DownloadFileChunk> getDownloadFileMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "DownloadFile",
+      requestType = com.udb.core.storage.services.v1.DownloadFileRequest.class,
+      responseType = com.udb.core.storage.services.v1.DownloadFileChunk.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.SERVER_STREAMING)
+  public static io.grpc.MethodDescriptor<com.udb.core.storage.services.v1.DownloadFileRequest,
+      com.udb.core.storage.services.v1.DownloadFileChunk> getDownloadFileMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.storage.services.v1.DownloadFileRequest, com.udb.core.storage.services.v1.DownloadFileChunk> getDownloadFileMethod;
+    if ((getDownloadFileMethod = StorageServiceGrpc.getDownloadFileMethod) == null) {
+      synchronized (StorageServiceGrpc.class) {
+        if ((getDownloadFileMethod = StorageServiceGrpc.getDownloadFileMethod) == null) {
+          StorageServiceGrpc.getDownloadFileMethod = getDownloadFileMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.storage.services.v1.DownloadFileRequest, com.udb.core.storage.services.v1.DownloadFileChunk>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.SERVER_STREAMING)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "DownloadFile"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.storage.services.v1.DownloadFileRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.storage.services.v1.DownloadFileChunk.getDefaultInstance()))
+              .setSchemaDescriptor(new StorageServiceMethodDescriptorSupplier("DownloadFile"))
+              .build();
+        }
+      }
+    }
+    return getDownloadFileMethod;
+  }
+
   private static volatile io.grpc.MethodDescriptor<com.udb.core.storage.services.v1.GetFileRequest,
       com.udb.core.storage.services.v1.GetFileResponse> getGetFileMethod;
 
@@ -324,6 +355,19 @@ public final class StorageServiceGrpc {
 
     /**
      * <pre>
+     * Stream a file's bytes directly through the broker. FALLBACK for clients
+     * that cannot use the presigned `GetDownloadUrl` HTTP GET (no egress to the
+     * object store, corporate proxy, etc.). The broker streams the object bytes
+     * in bounded chunks server-side; it never buffers the whole object.
+     * </pre>
+     */
+    default void downloadFile(com.udb.core.storage.services.v1.DownloadFileRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.storage.services.v1.DownloadFileChunk> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getDownloadFileMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
      * Get file metadata
      * </pre>
      */
@@ -425,6 +469,20 @@ public final class StorageServiceGrpc {
 
     /**
      * <pre>
+     * Stream a file's bytes directly through the broker. FALLBACK for clients
+     * that cannot use the presigned `GetDownloadUrl` HTTP GET (no egress to the
+     * object store, corporate proxy, etc.). The broker streams the object bytes
+     * in bounded chunks server-side; it never buffers the whole object.
+     * </pre>
+     */
+    public void downloadFile(com.udb.core.storage.services.v1.DownloadFileRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.storage.services.v1.DownloadFileChunk> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncServerStreamingCall(
+          getChannel().newCall(getDownloadFileMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
      * Get file metadata
      * </pre>
      */
@@ -516,6 +574,21 @@ public final class StorageServiceGrpc {
 
     /**
      * <pre>
+     * Stream a file's bytes directly through the broker. FALLBACK for clients
+     * that cannot use the presigned `GetDownloadUrl` HTTP GET (no egress to the
+     * object store, corporate proxy, etc.). The broker streams the object bytes
+     * in bounded chunks server-side; it never buffers the whole object.
+     * </pre>
+     */
+    @io.grpc.ExperimentalApi("https://github.com/grpc/grpc-java/issues/10918")
+    public io.grpc.stub.BlockingClientCall<?, com.udb.core.storage.services.v1.DownloadFileChunk>
+        downloadFile(com.udb.core.storage.services.v1.DownloadFileRequest request) {
+      return io.grpc.stub.ClientCalls.blockingV2ServerStreamingCall(
+          getChannel(), getDownloadFileMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
      * Get file metadata
      * </pre>
      */
@@ -599,6 +672,20 @@ public final class StorageServiceGrpc {
     public com.udb.core.storage.services.v1.GetDownloadUrlResponse getDownloadUrl(com.udb.core.storage.services.v1.GetDownloadUrlRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getGetDownloadUrlMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Stream a file's bytes directly through the broker. FALLBACK for clients
+     * that cannot use the presigned `GetDownloadUrl` HTTP GET (no egress to the
+     * object store, corporate proxy, etc.). The broker streams the object bytes
+     * in bounded chunks server-side; it never buffers the whole object.
+     * </pre>
+     */
+    public java.util.Iterator<com.udb.core.storage.services.v1.DownloadFileChunk> downloadFile(
+        com.udb.core.storage.services.v1.DownloadFileRequest request) {
+      return io.grpc.stub.ClientCalls.blockingServerStreamingCall(
+          getChannel(), getDownloadFileMethod(), getCallOptions(), request);
     }
 
     /**
@@ -739,10 +826,11 @@ public final class StorageServiceGrpc {
   private static final int METHODID_REGISTER_UPLOAD = 0;
   private static final int METHODID_FINALIZE_UPLOAD = 1;
   private static final int METHODID_GET_DOWNLOAD_URL = 2;
-  private static final int METHODID_GET_FILE = 3;
-  private static final int METHODID_UPDATE_FILE = 4;
-  private static final int METHODID_DELETE_FILE = 5;
-  private static final int METHODID_LIST_FILES = 6;
+  private static final int METHODID_DOWNLOAD_FILE = 3;
+  private static final int METHODID_GET_FILE = 4;
+  private static final int METHODID_UPDATE_FILE = 5;
+  private static final int METHODID_DELETE_FILE = 6;
+  private static final int METHODID_LIST_FILES = 7;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -772,6 +860,10 @@ public final class StorageServiceGrpc {
         case METHODID_GET_DOWNLOAD_URL:
           serviceImpl.getDownloadUrl((com.udb.core.storage.services.v1.GetDownloadUrlRequest) request,
               (io.grpc.stub.StreamObserver<com.udb.core.storage.services.v1.GetDownloadUrlResponse>) responseObserver);
+          break;
+        case METHODID_DOWNLOAD_FILE:
+          serviceImpl.downloadFile((com.udb.core.storage.services.v1.DownloadFileRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.storage.services.v1.DownloadFileChunk>) responseObserver);
           break;
         case METHODID_GET_FILE:
           serviceImpl.getFile((com.udb.core.storage.services.v1.GetFileRequest) request,
@@ -828,6 +920,13 @@ public final class StorageServiceGrpc {
               com.udb.core.storage.services.v1.GetDownloadUrlRequest,
               com.udb.core.storage.services.v1.GetDownloadUrlResponse>(
                 service, METHODID_GET_DOWNLOAD_URL)))
+        .addMethod(
+          getDownloadFileMethod(),
+          io.grpc.stub.ServerCalls.asyncServerStreamingCall(
+            new MethodHandlers<
+              com.udb.core.storage.services.v1.DownloadFileRequest,
+              com.udb.core.storage.services.v1.DownloadFileChunk>(
+                service, METHODID_DOWNLOAD_FILE)))
         .addMethod(
           getGetFileMethod(),
           io.grpc.stub.ServerCalls.asyncUnaryCall(
@@ -907,6 +1006,7 @@ public final class StorageServiceGrpc {
               .addMethod(getRegisterUploadMethod())
               .addMethod(getFinalizeUploadMethod())
               .addMethod(getGetDownloadUrlMethod())
+              .addMethod(getDownloadFileMethod())
               .addMethod(getGetFileMethod())
               .addMethod(getUpdateFileMethod())
               .addMethod(getDeleteFileMethod())

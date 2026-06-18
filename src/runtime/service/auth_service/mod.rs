@@ -381,6 +381,103 @@ pub async fn bootstrap_admin_user(
     })
 }
 
+/// Fixed schema/table/key for the durable single-use bootstrap marker (06.4.2.1).
+/// A singleton row (one FIXED uuid) records that a *served* privilege-creating
+/// bootstrap has already been consumed, so [`served_bootstrap_admin`] is one-shot
+/// across process restarts — the env gate alone is not durable.
+const SERVED_BOOTSTRAP_MARKER_ID: &str = "00000000-0000-0000-0000-0000000b0001";
+
+/// Served (online) single-use wrapper around [`bootstrap_admin_user`] (06.4.1.1).
+///
+/// Privilege-creating bootstrap is FAIL-CLOSED and HARD-GUARDED: unlike the
+/// offline CLI utility, this entry point can be reached from a running broker, so
+/// minting the first `organization_owner` here is gated on BOTH
+///   1. an explicit operator opt-in env (`UDB_ALLOW_SERVED_BOOTSTRAP` = `1`/`true`), and
+///   2. a durable single-use marker (`udb_system.bootstrap_state`) — once a served
+///      bootstrap succeeds the marker row exists and every later call is rejected.
+///
+/// The env check runs BEFORE any DB connection, so a disabled deployment never
+/// touches Postgres. All user/role/tenant binding is delegated verbatim to
+/// [`bootstrap_admin_user`] — this wrapper adds only the gate + the marker and
+/// never re-implements credential logic.
+pub async fn served_bootstrap_admin(
+    dsn: &str,
+    username: &str,
+    email: &str,
+    password: &str,
+    tenant: &str,
+    project: &str,
+) -> Result<BootstrapAdmin, String> {
+    // Gate 1 (no DB): operator opt-in. Fail closed when unset/anything else.
+    let allowed = std::env::var("UDB_ALLOW_SERVED_BOOTSTRAP")
+        .ok()
+        .map(|v| {
+            let v = v.trim().to_ascii_lowercase();
+            v == "1" || v == "true"
+        })
+        .unwrap_or(false);
+    if !allowed {
+        return Err(
+            "served bootstrap is disabled (set UDB_ALLOW_SERVED_BOOTSTRAP=1 to allow the \
+             one-time privilege-creating bootstrap)"
+                .to_string(),
+        );
+    }
+
+    // Gate 2 (durable single-use marker). Connect with the SAME approach
+    // `bootstrap_admin_user` uses (it connects to `dsn` directly), ensure the
+    // singleton marker table exists (idempotent CREATE … IF NOT EXISTS, mirroring
+    // the schema-ensure idiom), and reject if the marker row is already present.
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(2)
+        .acquire_timeout(std::time::Duration::from_secs(10))
+        .connect(dsn)
+        .await
+        .map_err(|err| format!("connect postgres '{dsn}': {err}"))?;
+
+    sqlx::raw_sql("CREATE SCHEMA IF NOT EXISTS udb_system")
+        .execute(&pool)
+        .await
+        .map_err(|err| format!("ensure udb_system schema failed: {err}"))?;
+    sqlx::raw_sql(
+        "CREATE TABLE IF NOT EXISTS udb_system.bootstrap_state ( \
+            id          UUID PRIMARY KEY, \
+            consumed_at TIMESTAMPTZ NOT NULL DEFAULT NOW() )",
+    )
+    .execute(&pool)
+    .await
+    .map_err(|err| format!("ensure bootstrap_state table failed: {err}"))?;
+
+    let already_consumed: bool = sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM udb_system.bootstrap_state WHERE id = $1::UUID)",
+    )
+    .bind(SERVED_BOOTSTRAP_MARKER_ID)
+    .fetch_one(&pool)
+    .await
+    .map_err(|err| format!("read bootstrap marker failed: {err}"))?;
+    if already_consumed {
+        return Err("served bootstrap already consumed (single-use)".to_string());
+    }
+
+    // Delegate ALL user/role/tenant binding to the existing offline path — no
+    // duplication of credential logic.
+    let admin = bootstrap_admin_user(dsn, username, email, password, tenant, project).await?;
+
+    // Persist the durable single-use marker. Idempotent: a concurrent winner may
+    // have inserted it, so DO NOTHING on conflict keeps this one-shot rather than
+    // erroring after a successful bind.
+    sqlx::query(
+        "INSERT INTO udb_system.bootstrap_state (id) VALUES ($1::UUID) \
+         ON CONFLICT (id) DO NOTHING",
+    )
+    .bind(SERVED_BOOTSTRAP_MARKER_ID)
+    .execute(&pool)
+    .await
+    .map_err(|err| format!("persist bootstrap marker failed: {err}"))?;
+
+    Ok(admin)
+}
+
 /// Result of [`bootstrap_admin_user`]: the created/bound principal plus the
 /// CANONICAL tenant UUID it was bound to (resolved from the human code). Callers
 /// surface the tenant id so clients/tests use the same UUID the Login JWT claim

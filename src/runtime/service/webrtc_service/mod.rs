@@ -85,6 +85,35 @@ const STALE_PEER_TIMEOUT_SECS_DEFAULT: i64 = 120;
 /// Bounded batch per stale-peer reaper sweep.
 const STALE_PEER_REAP_BATCH_SIZE: i64 = 500;
 
+// ── Machine-readable failure reasons ─────────────────────────────────────────
+// Stable `reason` codes attached to the otherwise-opaque `Status` so SDK callers
+// can branch on the failure cause without string-matching the human message.
+// These do NOT change the gRPC status code or fail-closed behaviour — they only
+// ADD a `error-reason` trailer (the tonic-native way to carry a machine-readable
+// reason without pulling in the `tonic-types`/google.rpc.ErrorInfo dependency).
+/// Room rejected a join: it is at capacity.
+const ROOM_FULL: &str = "ROOM_FULL";
+/// Room rejected a join: it is CLOSED (reserved; surfaced on the join path).
+#[allow(dead_code)]
+const ROOM_CLOSED: &str = "ROOM_CLOSED";
+/// Peer is not an active (CONNECTED) member of an ACTIVE room.
+const PEER_NOT_ACTIVE: &str = "PEER_NOT_ACTIVE";
+/// No TURN secret configured; credentials cannot be minted.
+const TURN_NOT_CONFIGURED: &str = "TURN_NOT_CONFIGURED";
+
+/// Build a `FailedPrecondition` status carrying a stable, machine-readable
+/// `reason` in the `error-reason` response trailer. Same status code and
+/// fail-closed semantics as `Status::failed_precondition`; the reason is purely
+/// additive metadata for SDK callers.
+fn failed_precondition_with_reason(reason: &'static str, message: impl Into<String>) -> Status {
+    let mut status = Status::failed_precondition(message.into());
+    status.metadata_mut().insert(
+        "error-reason",
+        tonic::metadata::MetadataValue::from_static(reason),
+    );
+    status
+}
+
 /// TURN (coturn) configuration, read from the environment once at build time.
 ///
 /// Credentials follow the long-term-secret REST scheme (RFC 5766-bis / coturn
@@ -389,11 +418,161 @@ impl WebrtcServiceImpl {
         .await
         .map_err(|err| Status::internal(format!("verify peer membership failed: {err}")))?;
         if member.is_none() {
-            return Err(Status::failed_precondition(
+            return Err(failed_precondition_with_reason(
+                PEER_NOT_ACTIVE,
                 "peer is not an active member of this room",
             ));
         }
         Ok(())
+    }
+
+    /// Shared join body for `join_room` and `join_session`: atomically claim a
+    /// participant slot (capacity-CAS), insert the peer, reload the self + other
+    /// peers, fan out the `PeerJoined` signal, and emit the join outbox event.
+    /// Returns the freshly-inserted peer, the other room peers, and the new
+    /// peer_id. Callers MUST have already validated the tenant and acquired the
+    /// admission permit; identity/tenant come only from the validated inputs.
+    async fn join_room_inner(
+        &self,
+        tenant_id_str: &str,
+        room_id_str: &str,
+        display_name: &str,
+        metadata_raw: &str,
+        user_agent: &str,
+    ) -> Result<(webrtc_entity_pb::Peer, Vec<webrtc_entity_pb::Peer>, String), Status> {
+        let tenant_id = parse_uuid("tenant_id", tenant_id_str)?;
+        let room_id = parse_uuid("room_id", room_id_str)?;
+        let pool = self.require_pool()?;
+        let m = peer_model();
+        let rel = m.relation.clone();
+        let peer_id = Uuid::new_v4().to_string();
+        let metadata = non_empty_json(metadata_raw);
+
+        // Atomically claim a participant slot: increment participant_count only if
+        // the room exists, belongs to the tenant, is open, and has capacity. 0 rows
+        // ⇒ reject — no peer is inserted into a missing/foreign/closed/full room,
+        // and capacity is enforced atomically (no TOCTOU).
+        // Transitional P4 gate: this compare-and-increment is intentionally not
+        // lowered to generic typed CRUD until the native path has a CAS/update
+        // capability that every eligible backend can declare honestly.
+        let rm = room_model();
+        let claimed = sqlx::query(&format!(
+            "UPDATE {room_rel} SET {count} = {count} + 1 \
+             WHERE {rid} = $1::UUID AND {rtid} = $2::UUID AND {deleted} IS NULL \
+               AND {state} <> 'CLOSED' AND ({max} = 0 OR {count} < {max})",
+            room_rel = rm.relation,
+            count = rm.q("participant_count"),
+            rid = rm.q("room_id"),
+            rtid = rm.q("tenant_id"),
+            deleted = rm.q("deleted_at"),
+            state = rm.q("state"),
+            max = rm.q("max_participants"),
+        ))
+        .bind(room_id)
+        .bind(tenant_id)
+        .execute(pool)
+        .await
+        .map_err(|err| Status::internal(format!("claim room slot failed: {err}")))?;
+        if claimed.rows_affected() == 0 {
+            return Err(failed_precondition_with_reason(
+                ROOM_FULL,
+                "room not found, closed, or at capacity",
+            ));
+        }
+
+        // Insert the peer; release the claimed slot on failure.
+        if let Err(err) = sqlx::query(&format!(
+            "INSERT INTO {rel} \
+             ({peer_id}, {room_id}, {tenant_id}, {display_name}, {state}, {metadata}, {user_agent}, {joined_at}) \
+             VALUES ($1::UUID, $2::UUID, $3::UUID, $4, 'CONNECTED', $5::JSONB, $6, CURRENT_TIMESTAMP)",
+            peer_id = m.q("peer_id"),
+            room_id = m.q("room_id"),
+            tenant_id = m.q("tenant_id"),
+            display_name = m.q("display_name"),
+            state = m.q("state"),
+            metadata = m.q("metadata"),
+            user_agent = m.q("user_agent"),
+            joined_at = m.q("joined_at"),
+        ))
+        .bind(&peer_id)
+        .bind(room_id)
+        .bind(tenant_id)
+        .bind(display_name)
+        .bind(&metadata)
+        .bind(user_agent)
+        .execute(pool)
+        .await
+        {
+            let _ = sqlx::query(&format!(
+                "UPDATE {room_rel} SET {count} = GREATEST({count} - 1, 0) \
+                 WHERE {rid} = $1::UUID AND {deleted} IS NULL",
+                room_rel = rm.relation,
+                count = rm.q("participant_count"),
+                rid = rm.q("room_id"),
+                deleted = rm.q("deleted_at"),
+            ))
+            .bind(room_id)
+            .execute(pool)
+            .await;
+            return Err(Status::internal(format!("join room failed: {err}")));
+        }
+
+        // Fetch the freshly-created peer + the other peers already in the room.
+        let projection = peer_select_projection(&m);
+        let self_row = sqlx::query(&format!(
+            "SELECT {projection} FROM {rel} WHERE {peer_id} = $1::UUID",
+            peer_id = m.q("peer_id"),
+        ))
+        .bind(parse_uuid("peer_id", &peer_id)?)
+        .fetch_one(pool)
+        .await
+        .map_err(|err| Status::internal(format!("reload peer failed: {err}")))?;
+        let peer = peer_from_row(&self_row)?;
+
+        let other_rows = sqlx::query(&format!(
+            "SELECT {projection} FROM {rel} \
+             WHERE {room_id} = $1::UUID AND {peer_id} <> $2::UUID \
+               AND {deleted} IS NULL AND {state} <> 'CLOSED' \
+             ORDER BY {display_name}",
+            room_id = m.q("room_id"),
+            peer_id = m.q("peer_id"),
+            deleted = m.q("deleted_at"),
+            state = m.q("state"),
+            display_name = m.q("display_name"),
+        ))
+        .bind(room_id)
+        .bind(parse_uuid("peer_id", &peer_id)?)
+        .fetch_all(pool)
+        .await
+        .map_err(|err| Status::internal(format!("list existing peers failed: {err}")))?;
+        let mut existing_peers = Vec::with_capacity(other_rows.len());
+        for row in &other_rows {
+            existing_peers.push(peer_from_row(row)?);
+        }
+
+        // Notify the room's signaling subscribers that a peer joined.
+        let tx = self.signaling.channel(room_id_str).await;
+        tx.send_signal(webrtc_pb::SignalResponse {
+            payload: Some(webrtc_pb::signal_response::Payload::PeerJoined(
+                peer_id.clone(),
+            )),
+        });
+
+        emit_payload_event(
+            pool,
+            self.outbox_relation.as_deref(),
+            "udb.webrtc.peer.joined.v1",
+            room_id_str,
+            serde_json::json!({
+                "room_id": room_id_str.to_string(),
+                "peer_id": peer_id.clone(),
+                "tenant_id": tenant_id_str.to_string(),
+            }),
+            Some(&self.metrics),
+        )
+        .await;
+
+        Ok((peer, existing_peers, peer_id))
     }
 
     pub(crate) async fn require_active_signal_membership(
@@ -1644,140 +1823,89 @@ impl PeerService for WebrtcServiceImpl {
         // Per-tenant fair admission (held for the whole RPC) — one tenant's join
         // flood can't starve the shared control plane.
         let _admit = self.admit(&req.tenant_id).await?;
-        let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?;
-        let room_id = parse_uuid("room_id", &req.room_id)?;
-        let pool = self.require_pool()?;
-        let m = peer_model();
-        let rel = m.relation.clone();
-        let peer_id = Uuid::new_v4().to_string();
-        let metadata = non_empty_json(&req.metadata);
-
-        // Atomically claim a participant slot: increment participant_count only if
-        // the room exists, belongs to the tenant, is open, and has capacity. 0 rows
-        // ⇒ reject — no peer is inserted into a missing/foreign/closed/full room,
-        // and capacity is enforced atomically (no TOCTOU).
-        // Transitional P4 gate: this compare-and-increment is intentionally not
-        // lowered to generic typed CRUD until the native path has a CAS/update
-        // capability that every eligible backend can declare honestly.
-        let rm = room_model();
-        let claimed = sqlx::query(&format!(
-            "UPDATE {room_rel} SET {count} = {count} + 1 \
-             WHERE {rid} = $1::UUID AND {rtid} = $2::UUID AND {deleted} IS NULL \
-               AND {state} <> 'CLOSED' AND ({max} = 0 OR {count} < {max})",
-            room_rel = rm.relation,
-            count = rm.q("participant_count"),
-            rid = rm.q("room_id"),
-            rtid = rm.q("tenant_id"),
-            deleted = rm.q("deleted_at"),
-            state = rm.q("state"),
-            max = rm.q("max_participants"),
-        ))
-        .bind(room_id)
-        .bind(tenant_id)
-        .execute(pool)
-        .await
-        .map_err(|err| Status::internal(format!("claim room slot failed: {err}")))?;
-        if claimed.rows_affected() == 0 {
-            return Err(Status::failed_precondition(
-                "room not found, closed, or at capacity",
-            ));
-        }
-
-        // Insert the peer; release the claimed slot on failure.
-        if let Err(err) = sqlx::query(&format!(
-            "INSERT INTO {rel} \
-             ({peer_id}, {room_id}, {tenant_id}, {display_name}, {state}, {metadata}, {user_agent}, {joined_at}) \
-             VALUES ($1::UUID, $2::UUID, $3::UUID, $4, 'CONNECTED', $5::JSONB, $6, CURRENT_TIMESTAMP)",
-            peer_id = m.q("peer_id"),
-            room_id = m.q("room_id"),
-            tenant_id = m.q("tenant_id"),
-            display_name = m.q("display_name"),
-            state = m.q("state"),
-            metadata = m.q("metadata"),
-            user_agent = m.q("user_agent"),
-            joined_at = m.q("joined_at"),
-        ))
-        .bind(&peer_id)
-        .bind(room_id)
-        .bind(tenant_id)
-        .bind(&req.display_name)
-        .bind(&metadata)
-        .bind(&req.user_agent)
-        .execute(pool)
-        .await
-        {
-            let _ = sqlx::query(&format!(
-                "UPDATE {room_rel} SET {count} = GREATEST({count} - 1, 0) \
-                 WHERE {rid} = $1::UUID AND {deleted} IS NULL",
-                room_rel = rm.relation,
-                count = rm.q("participant_count"),
-                rid = rm.q("room_id"),
-                deleted = rm.q("deleted_at"),
-            ))
-            .bind(room_id)
-            .execute(pool)
-            .await;
-            return Err(Status::internal(format!("join room failed: {err}")));
-        }
-
-        // Fetch the freshly-created peer + the other peers already in the room.
-        let projection = peer_select_projection(&m);
-        let self_row = sqlx::query(&format!(
-            "SELECT {projection} FROM {rel} WHERE {peer_id} = $1::UUID",
-            peer_id = m.q("peer_id"),
-        ))
-        .bind(parse_uuid("peer_id", &peer_id)?)
-        .fetch_one(pool)
-        .await
-        .map_err(|err| Status::internal(format!("reload peer failed: {err}")))?;
-        let peer = peer_from_row(&self_row)?;
-
-        let other_rows = sqlx::query(&format!(
-            "SELECT {projection} FROM {rel} \
-             WHERE {room_id} = $1::UUID AND {peer_id} <> $2::UUID \
-               AND {deleted} IS NULL AND {state} <> 'CLOSED' \
-             ORDER BY {display_name}",
-            room_id = m.q("room_id"),
-            peer_id = m.q("peer_id"),
-            deleted = m.q("deleted_at"),
-            state = m.q("state"),
-            display_name = m.q("display_name"),
-        ))
-        .bind(room_id)
-        .bind(parse_uuid("peer_id", &peer_id)?)
-        .fetch_all(pool)
-        .await
-        .map_err(|err| Status::internal(format!("list existing peers failed: {err}")))?;
-        let mut existing_peers = Vec::with_capacity(other_rows.len());
-        for row in &other_rows {
-            existing_peers.push(peer_from_row(row)?);
-        }
-
-        // Notify the room's signaling subscribers that a peer joined.
-        let tx = self.signaling.channel(&req.room_id).await;
-        tx.send_signal(webrtc_pb::SignalResponse {
-            payload: Some(webrtc_pb::signal_response::Payload::PeerJoined(
-                peer_id.clone(),
-            )),
-        });
-
-        emit_payload_event(
-            pool,
-            self.outbox_relation.as_deref(),
-            "udb.webrtc.peer.joined.v1",
-            &req.room_id,
-            serde_json::json!({
-                "room_id": req.room_id.clone(),
-                "peer_id": peer_id.clone(),
-                "tenant_id": req.tenant_id.clone(),
-            }),
-            Some(&self.metrics),
-        )
-        .await;
+        let (peer, existing_peers, _peer_id) = self
+            .join_room_inner(
+                &req.tenant_id,
+                &req.room_id,
+                &req.display_name,
+                &req.metadata,
+                &req.user_agent,
+            )
+            .await?;
 
         Ok(Response::new(webrtc_pb::JoinRoomResponse {
             peer: Some(peer),
             existing_peers,
+            error: None,
+        }))
+    }
+
+    async fn join_session(
+        &self,
+        request: Request<webrtc_pb::JoinSessionRequest>,
+    ) -> Result<Response<webrtc_pb::JoinSessionResponse>, Status> {
+        let metadata = request.metadata().clone();
+        let req = request.into_inner();
+        validate_request_tenant(&metadata, &req.tenant_id)?;
+        // Per-tenant fair admission (held for the whole RPC), same as join_room.
+        let _admit = self.admit(&req.tenant_id).await?;
+        // Run the SAME atomic join (capacity-CAS + insert + reload + signal +
+        // event) as join_room. Over-full/closed/foreign rooms reject here with
+        // FailedPrecondition + ROOM_FULL.
+        let (peer, existing_peers, peer_id) = self
+            .join_room_inner(
+                &req.tenant_id,
+                &req.room_id,
+                &req.display_name,
+                &req.metadata,
+                &req.user_agent,
+            )
+            .await?;
+
+        // Mint TURN credentials for the just-inserted peer. The peer was inserted
+        // by the join above, so no separate active-membership re-check is needed;
+        // use the SAME fail-closed secret check as issue_credentials.
+        let ttl = if req.ttl_seconds > 0 {
+            (req.ttl_seconds as i64).min(self.turn.default_ttl)
+        } else {
+            self.turn.default_ttl
+        };
+        let now = chrono::Utc::now().timestamp();
+        let expiry = now + ttl;
+        // username = "<expiry>:<principal>" per the coturn long-term-secret REST
+        // scheme; bind the principal to the verified tenant/room/peer tuple and
+        // the only action this credential authorizes: TURN media relay.
+        let principal = format!(
+            "{}:{}:{}:{}",
+            req.tenant_id.trim(),
+            req.room_id.trim(),
+            peer_id.trim(),
+            TURN_RELAY_ACTION
+        );
+        // Fail closed when no TURN secret is configured rather than minting
+        // against a well-known dev secret.
+        let secret = self.turn.secret.as_deref().ok_or_else(|| {
+            failed_precondition_with_reason(
+                TURN_NOT_CONFIGURED,
+                "TURN secret not configured; set UDB_TURN_SECRET to issue credentials",
+            )
+        })?;
+        let (username, credential) =
+            crate::runtime::security::turn_rest_credential(secret, &principal, expiry);
+        let ice = webrtc_pb::IceServer {
+            urls: self.turn.urls.clone(),
+            username,
+            credential,
+        };
+
+        Ok(Response::new(webrtc_pb::JoinSessionResponse {
+            peer: Some(peer),
+            existing_peers,
+            ice_servers: vec![ice],
+            expires_at: Some(prost_types::Timestamp {
+                seconds: expiry,
+                nanos: 0,
+            }),
             error: None,
         }))
     }
@@ -2153,7 +2281,8 @@ impl TurnService for WebrtcServiceImpl {
         // Fail closed when no TURN secret is configured (production with no
         // UDB_TURN_SECRET) rather than minting against a well-known dev secret.
         let secret = self.turn.secret.as_deref().ok_or_else(|| {
-            Status::failed_precondition(
+            failed_precondition_with_reason(
+                TURN_NOT_CONFIGURED,
                 "TURN secret not configured; set UDB_TURN_SECRET to issue credentials",
             )
         })?;

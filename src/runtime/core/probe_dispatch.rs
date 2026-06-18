@@ -570,11 +570,21 @@ impl DataBrokerRuntime {
                         }
                     }
                     Err(e) => {
+                        // KEYSTONE (lane 05): fail CLOSED, not open. This block is
+                        // reached ONLY for a keyed enqueue (gated by `Some(ikey)` +
+                        // `!ikey.is_empty()`), so refusing here cannot regress the
+                        // keyless hot path. Proceeding without the dedup guard would
+                        // risk a silent duplicate enqueue on a retry — the integrity
+                        // trade is: lose availability on keyed enqueues when the
+                        // dedup store is down, preserve exactly-once intent.
                         tracing::warn!(
                             idempotency_key = ikey,
                             error = %e,
-                            "Redis unavailable for idempotency check; proceeding without guard"
+                            "Redis unavailable for idempotency check; refusing keyed enqueue (fail-closed)"
                         );
+                        return Err(tonic::Status::unavailable(
+                            "idempotency dedup store unavailable; keyed enqueue refused (fail-closed)",
+                        ));
                     }
                 }
             }
@@ -606,9 +616,24 @@ impl DataBrokerRuntime {
             if let Some(client) = &self.redis
                 && let Ok(mut conn) = client.get_multiplexed_async_connection().await
             {
-                let _: redis::RedisResult<()> = conn
+                // KEYSTONE (lane 05): the outbox row is ALREADY inserted above
+                // (pool-based, not a tx — it cannot be un-inserted here), so a
+                // failed set_ex leaves this key untracked → a later replay would
+                // double-insert. That is the irreducible gap of the pool-based
+                // outbox dedup. We no longer silently discard the result: log at
+                // error! with the key so the lost-tracking is observable, rather
+                // than claiming the duplicate guard was written when it was not.
+                let store_result: redis::RedisResult<()> = conn
                     .set_ex(&redis_key, &event_id, self.config.cdc.idempotency_ttl_secs)
                     .await;
+                if let Err(e) = store_result {
+                    tracing::error!(
+                        idempotency_key = ikey,
+                        event_id = %event_id,
+                        error = %e,
+                        "failed to persist idempotency guard after enqueue; key is now untracked — a retry may double-insert"
+                    );
+                }
             }
         }
 
@@ -991,6 +1016,61 @@ impl DataBrokerRuntime {
             .await;
         }
         ObjectExecutor::get_object(
+            &self.resolve_dispatch_executor(
+                backend,
+                instance,
+                false,
+                tonic::Code::FailedPrecondition,
+                // Probe/admin paths: no request context, so RLS settings
+                // aren't installed (these are infrastructure calls).
+                None,
+            )?,
+            request_json,
+        )
+        .await
+    }
+
+    /// Stream an object's bytes from an object-store backend WITHOUT buffering
+    /// the whole object in UDB. Mirrors [`get_object_backend_target`] but returns
+    /// the executor's bounded byte stream (the same primitive the data-plane
+    /// `GetObject` uses) so callers can forward chunks straight to the wire.
+    /// Used by the native `StorageService::DownloadFile` fallback.
+    pub async fn get_object_stream_backend_target(
+        &self,
+        backend: &str,
+        instance: Option<&str>,
+        project_id: &str,
+        request_json: &str,
+    ) -> Result<crate::runtime::executors::ExecutorByteStream, tonic::Status> {
+        // Validate well-formed JSON before dispatch; the executor re-parses shape.
+        parse_dispatch_json(request_json)?;
+        use crate::runtime::executors::ObjectExecutor;
+        #[cfg(not(feature = "s3"))]
+        let _ = project_id;
+        #[cfg(feature = "s3")]
+        if matches!(backend, "s3" | "minio") {
+            let project = project_id.trim();
+            let project = if project.is_empty() {
+                crate::runtime::catalog::DEFAULT_PROJECT_ID
+            } else {
+                project
+            };
+            let target_instance = instance
+                .filter(|value| !value.trim().is_empty())
+                .or_else(|| {
+                    self.choose_instance_name_for_project("minio", false, project)
+                        .or_else(|| self.choose_instance_name_for_project("s3", false, project))
+                });
+            return ObjectExecutor::get_object_stream(
+                &crate::runtime::executors::s3::S3Executor(
+                    self.s3_for_instance_for_project(target_instance, project)?
+                        .clone(),
+                ),
+                request_json,
+            )
+            .await;
+        }
+        ObjectExecutor::get_object_stream(
             &self.resolve_dispatch_executor(
                 backend,
                 instance,

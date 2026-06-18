@@ -490,7 +490,7 @@ func runLiveNativeServiceE2E(t *testing.T, ctx context.Context, authConn grpc.Cl
 			EventType:       event,
 			Channel:         notifentpb.NotificationChannel_NOTIFICATION_CHANNEL_EMAIL,
 			Locale:          "en",
-			SubjectTemplate: "SDK {{n}}",
+			SubjectTemplate: "SDK notify",
 			BodyTemplate:    body,
 			IsActive:        true,
 		}); err != nil {

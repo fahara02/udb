@@ -22,6 +22,7 @@ const (
 	StorageService_RegisterUpload_FullMethodName = "/udb.core.storage.services.v1.StorageService/RegisterUpload"
 	StorageService_FinalizeUpload_FullMethodName = "/udb.core.storage.services.v1.StorageService/FinalizeUpload"
 	StorageService_GetDownloadUrl_FullMethodName = "/udb.core.storage.services.v1.StorageService/GetDownloadUrl"
+	StorageService_DownloadFile_FullMethodName   = "/udb.core.storage.services.v1.StorageService/DownloadFile"
 	StorageService_GetFile_FullMethodName        = "/udb.core.storage.services.v1.StorageService/GetFile"
 	StorageService_UpdateFile_FullMethodName     = "/udb.core.storage.services.v1.StorageService/UpdateFile"
 	StorageService_DeleteFile_FullMethodName     = "/udb.core.storage.services.v1.StorageService/DeleteFile"
@@ -38,6 +39,11 @@ type StorageServiceClient interface {
 	FinalizeUpload(ctx context.Context, in *FinalizeUploadRequest, opts ...grpc.CallOption) (*FinalizeUploadResponse, error)
 	// Get a pre-signed download URL for a file
 	GetDownloadUrl(ctx context.Context, in *GetDownloadUrlRequest, opts ...grpc.CallOption) (*GetDownloadUrlResponse, error)
+	// Stream a file's bytes directly through the broker. FALLBACK for clients
+	// that cannot use the presigned `GetDownloadUrl` HTTP GET (no egress to the
+	// object store, corporate proxy, etc.). The broker streams the object bytes
+	// in bounded chunks server-side; it never buffers the whole object.
+	DownloadFile(ctx context.Context, in *DownloadFileRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[DownloadFileChunk], error)
 	// Get file metadata
 	GetFile(ctx context.Context, in *GetFileRequest, opts ...grpc.CallOption) (*GetFileResponse, error)
 	// Update file metadata
@@ -85,6 +91,25 @@ func (c *storageServiceClient) GetDownloadUrl(ctx context.Context, in *GetDownlo
 	}
 	return out, nil
 }
+
+func (c *storageServiceClient) DownloadFile(ctx context.Context, in *DownloadFileRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[DownloadFileChunk], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &StorageService_ServiceDesc.Streams[0], StorageService_DownloadFile_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[DownloadFileRequest, DownloadFileChunk]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type StorageService_DownloadFileClient = grpc.ServerStreamingClient[DownloadFileChunk]
 
 func (c *storageServiceClient) GetFile(ctx context.Context, in *GetFileRequest, opts ...grpc.CallOption) (*GetFileResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
@@ -136,6 +161,11 @@ type StorageServiceServer interface {
 	FinalizeUpload(context.Context, *FinalizeUploadRequest) (*FinalizeUploadResponse, error)
 	// Get a pre-signed download URL for a file
 	GetDownloadUrl(context.Context, *GetDownloadUrlRequest) (*GetDownloadUrlResponse, error)
+	// Stream a file's bytes directly through the broker. FALLBACK for clients
+	// that cannot use the presigned `GetDownloadUrl` HTTP GET (no egress to the
+	// object store, corporate proxy, etc.). The broker streams the object bytes
+	// in bounded chunks server-side; it never buffers the whole object.
+	DownloadFile(*DownloadFileRequest, grpc.ServerStreamingServer[DownloadFileChunk]) error
 	// Get file metadata
 	GetFile(context.Context, *GetFileRequest) (*GetFileResponse, error)
 	// Update file metadata
@@ -161,6 +191,9 @@ func (UnimplementedStorageServiceServer) FinalizeUpload(context.Context, *Finali
 }
 func (UnimplementedStorageServiceServer) GetDownloadUrl(context.Context, *GetDownloadUrlRequest) (*GetDownloadUrlResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetDownloadUrl not implemented")
+}
+func (UnimplementedStorageServiceServer) DownloadFile(*DownloadFileRequest, grpc.ServerStreamingServer[DownloadFileChunk]) error {
+	return status.Error(codes.Unimplemented, "method DownloadFile not implemented")
 }
 func (UnimplementedStorageServiceServer) GetFile(context.Context, *GetFileRequest) (*GetFileResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetFile not implemented")
@@ -247,6 +280,17 @@ func _StorageService_GetDownloadUrl_Handler(srv interface{}, ctx context.Context
 	}
 	return interceptor(ctx, in, info, handler)
 }
+
+func _StorageService_DownloadFile_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(DownloadFileRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(StorageServiceServer).DownloadFile(m, &grpc.GenericServerStream[DownloadFileRequest, DownloadFileChunk]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type StorageService_DownloadFileServer = grpc.ServerStreamingServer[DownloadFileChunk]
 
 func _StorageService_GetFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetFileRequest)
@@ -356,6 +400,12 @@ var StorageService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _StorageService_ListFiles_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "DownloadFile",
+			Handler:       _StorageService_DownloadFile_Handler,
+			ServerStreams: true,
+		},
+	},
 	Metadata: "udb/core/storage/services/v1/storage_service.proto",
 }

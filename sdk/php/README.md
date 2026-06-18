@@ -7,7 +7,7 @@
 
 <p align="center">
   <strong>UDB :: Universal Data Broker</strong><br>
-  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.3.5 | protocol v1.0.0</sub>
+  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.3.6 | protocol v1.0.0</sub>
 </p>
 <!-- UDB_BRAND_HEADER_END -->
 
@@ -33,7 +33,7 @@ That means the Laravel app does not need to know whether the data is in Postgres
 
 This package makes UDB feel natural inside Laravel:
 
-- `composer require fahara02/udb-laravel:^0.3.5`
+- `composer require fahara02/udb-laravel:^0.3.6`
 - set `UDB_ENDPOINT` in `.env`
 - call `Udb::select()`, `Udb::upsert()`, or `Udb::delete()`
 - use typed generated PHP classes for requests and responses
@@ -54,7 +54,7 @@ This package makes UDB feel natural inside Laravel:
 ## Installation
 
 ```bash
-composer require fahara02/udb-laravel:^0.3.5
+composer require fahara02/udb-laravel:^0.3.6
 ```
 
 The service provider is auto-discovered by Laravel. The `Udb` facade is registered automatically. By default, the package also adds middleware to the `web` and `api` route groups so each request can carry tenant and user context into UDB.
@@ -220,6 +220,63 @@ $meta = UdbMetadata::fromContext(
 
 $response = Udb::upsert($req, $meta);
 ```
+
+### Storage (upload & download)
+
+The framework-agnostic `UdbProject` exposes a `storage()` facade over the
+generated `StorageService`. Build it with `createUdb()` (or
+`UdbProject::connect()`), then use the convenience wrappers:
+
+```php
+use function Fahara02\UdbLaravel\createUdb;
+
+$udb = createUdb([
+    'target'    => '127.0.0.1:50051',
+    'tenantId'  => 't_acme',
+    'projectId' => 'default',
+    'purpose'   => 'web.request',
+    'scopes'    => ['udb:read', 'udb:write'],
+]);
+
+$storage = $udb->storage();
+
+// One-call upload: RegisterUpload -> presigned PUT -> FinalizeUpload.
+$file = $storage->uploadFile('report.pdf', $bytes, [
+    'contentType'   => 'application/pdf',
+    'fileType'      => 'report',
+    'referenceType' => 'invoice',
+    'referenceId'   => 'inv_42',
+]);
+$fileId = $file->getFileId();
+```
+
+**Download — happy path (presigned URL).** `downloadFile()` emits exactly one
+`GetDownloadUrl` RPC and returns the typed `GetDownloadUrlResponse`; the bytes
+never transit the broker. Hand the URL to the client / browser:
+
+```php
+$dl  = $storage->downloadFile($fileId, ['expiresInMinutes' => 15]);
+$url = $dl->getDownloadUrl();
+// `getDownloadUrl($fileId, $expiresInMinutes)` is the un-aliased equivalent.
+```
+
+**Download — streaming fallback (new in 0.3.6).** When the client cannot reach
+the object store over HTTP (no egress, corporate proxy), pull the raw bytes
+through the broker with the server-streaming `DownloadFile` RPC.
+`downloadFileBytes()` opens one server-stream and reassembles each
+`DownloadFileChunk.data` run in order:
+
+```php
+// BLOCKING: PHP ext-grpc has no async API, so this returns only after the
+// final chunk lands (or the deadline trips) and buffers the body in memory.
+// Prefer the presigned URL above for large objects.
+$bytes = $storage->downloadFileBytes($fileId);            // server default chunk size
+$bytes = $storage->downloadFileBytes($fileId, 1 << 20);   // 1 MiB advisory chunk hint
+```
+
+For RPCs without a wrapper, reach the generated stub via `$storage->client()`.
+A runnable end-to-end upload-then-download script lives at
+[`examples/storage-download.php`](examples/storage-download.php).
 
 ### Raw gRPC Stub
 

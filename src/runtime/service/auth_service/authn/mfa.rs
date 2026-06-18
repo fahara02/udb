@@ -3,15 +3,30 @@
 
 use super::*;
 
-/// Whether the broker should echo plaintext OTP codes in `SendOTP` responses.
-/// Resolved once from `UDB_OTP_DEV_ECHO` (a dev/conformance affordance — must
-/// never be set in production). bug_report.md F/Lane-2.
-fn otp_dev_echo_enabled() -> bool {
+/// Pure decision for the dev-echo gate: echo is permitted ONLY when the
+/// `UDB_OTP_DEV_ECHO` env opt-in is set AND the broker is NOT in a production
+/// posture. Factored out (and `pub(super)`) so the production-closed property is
+/// deterministically unit-testable without touching the process-wide env/OnceLock.
+/// Mirrors `webauthn_softauth::test_mode_enabled`'s fail-closed posture.
+pub(crate) fn otp_dev_echo_resolved(env_opt_in: bool, is_production: bool) -> bool {
+    env_opt_in && !is_production
+}
+
+/// Whether the broker should echo plaintext OTP codes in `SendOTP`/`ForgotPassword`/
+/// `SendPhoneVerification` responses. Resolved once from `UDB_OTP_DEV_ECHO` (a
+/// dev/conformance affordance — must NEVER export proof material in production).
+/// Fail-closed in production posture regardless of the env var. This is the SINGLE
+/// chokepoint every echo site reads. bug_report.md F/Lane-2.
+pub(crate) fn otp_dev_echo_enabled() -> bool {
     static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
     *ENABLED.get_or_init(|| {
-        std::env::var("UDB_OTP_DEV_ECHO")
+        let env_opt_in = std::env::var("UDB_OTP_DEV_ECHO")
             .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
-            .unwrap_or(false)
+            .unwrap_or(false);
+        otp_dev_echo_resolved(
+            env_opt_in,
+            crate::runtime::security::SecurityConfig::current().is_production(),
+        )
     })
 }
 
@@ -682,7 +697,7 @@ impl AuthnServiceImpl {
             now,
         )
         .await?;
-        let (otp_id, _code) = self
+        let (otp_id, code) = self
             .issue_otp_to(
                 &user,
                 authn_entity_pb::OtpType::PhoneVerification as i32,
@@ -692,8 +707,16 @@ impl AuthnServiceImpl {
                 now,
             )
             .await?;
+        // Dev-only echo of the phone OTP under the single fail-closed gate
+        // (empty in production / when the env opt-in is unset).
+        let dev_otp_code = if otp_dev_echo_enabled() {
+            code
+        } else {
+            String::new()
+        };
         Ok(Response::new(authn_pb::SendPhoneVerificationResponse {
             otp_id,
+            dev_otp_code,
         }))
     }
 }

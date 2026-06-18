@@ -171,6 +171,88 @@ async fn live_postgres_webrtc_room_roundtrip() {
     cleanup_native_service_db(&pool).await;
 }
 
+/// §1 read-after-write (13.7.1.2): the ids `CreateRoom` and `JoinRoom` return are
+/// IMMEDIATELY gettable by `GetRoom`/`GetPeer` on the SAME served path with the SAME
+/// tenant metadata. Reverting either get guarantee fails this assertion.
+#[tokio::test]
+#[ignore = "requires live Postgres; run with UDB_LIVE_AUTH_TESTS=1 cargo test --lib live_postgres_webrtc_read_after_write -- --ignored --nocapture"]
+async fn live_postgres_webrtc_read_after_write() {
+    let _guard = live_native_service_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_service_db(&pool).await;
+    let svc = webrtc_service(pool.clone()).await;
+    let tenant_id = Uuid::new_v4().to_string();
+
+    let room = RoomService::create_room(
+        &svc,
+        Request::new(webrtc_pb::CreateRoomRequest {
+            tenant_id: tenant_id.clone(),
+            name: "ryw-room".to_string(),
+            max_participants: 10,
+            ..Default::default()
+        }),
+    )
+    .await
+    .expect("create_room")
+    .into_inner();
+
+    // CreateRoom → GetRoom
+    assert_create_then_get("CreateRoom→GetRoom", &room.room_id, |id| {
+        let svc = &svc;
+        let tenant_id = tenant_id.clone();
+        async move {
+            let got = RoomService::get_room(
+                svc,
+                Request::new(webrtc_pb::GetRoomRequest {
+                    tenant_id,
+                    room_id: id.clone(),
+                }),
+            )
+            .await?
+            .into_inner()
+            .room;
+            Ok(got.is_some_and(|r| r.room_id == id))
+        }
+    })
+    .await;
+
+    let join = PeerService::join_room(
+        &svc,
+        Request::new(webrtc_pb::JoinRoomRequest {
+            tenant_id: tenant_id.clone(),
+            room_id: room.room_id.clone(),
+            display_name: "Ada".to_string(),
+            ..Default::default()
+        }),
+    )
+    .await
+    .expect("join_room")
+    .into_inner();
+    let peer = join.peer.expect("peer");
+
+    // JoinRoom → GetPeer
+    assert_create_then_get("JoinRoom→GetPeer", &peer.peer_id, |id| {
+        let svc = &svc;
+        let tenant_id = tenant_id.clone();
+        async move {
+            let got = PeerService::get_peer(
+                svc,
+                Request::new(webrtc_pb::GetPeerRequest {
+                    tenant_id,
+                    peer_id: id.clone(),
+                }),
+            )
+            .await?
+            .into_inner()
+            .peer;
+            Ok(got.is_some_and(|p| p.peer_id == id))
+        }
+    })
+    .await;
+
+    cleanup_native_service_db(&pool).await;
+}
+
 /// Phase 7 acceptance (final_task.md §8): "WebRTC peers cannot signal or publish
 /// after room closure." `CloseRoom` is a lifecycle transition that marks the room
 /// CLOSED and ends its peers/tracks, so `require_active_peer_membership` (which

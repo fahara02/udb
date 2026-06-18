@@ -79,11 +79,37 @@ class RetryPolicy:
     jitter: float = 0.2
     retryable_codes: frozenset[grpc.StatusCode] = field(default_factory=lambda: _RETRYABLE_CODES)
 
-    def should_retry(self, code: grpc.StatusCode, attempt: int, *, read_only: bool) -> bool:
-        if attempt >= self.max_attempts or not read_only:
+    def should_retry(
+        self,
+        code: grpc.StatusCode,
+        attempt: int,
+        *,
+        read_only: bool,
+        replay_safe: bool = False,
+        has_idempotency_key: bool = False,
+    ) -> bool:
+        """Decide whether to auto-retry a failed unary / first-item RPC.
+
+        Fail-safe by default — only the cases proven safe below ever retry:
+
+        * **Read-only** RPCs retry on the configured transient codes and also on
+          ``DEADLINE_EXCEEDED`` (re-reading is always safe).
+        * **Mutations** retry ONLY when the RPC is proto-declared ``replay_safe``
+          (proven idempotent against the broker's dedup, e.g. ``Upsert``/``Delete``)
+          AND the caller supplied a non-empty idempotency key — and even then only
+          on the configured transient codes, never on ``DEADLINE_EXCEEDED`` (a
+          deadline leaves the mutation's landing ambiguous). A non-replay-safe
+          mutation is NEVER auto-retried, regardless of idempotency key.
+        """
+        if attempt >= self.max_attempts:
             return False
-        if code == grpc.StatusCode.DEADLINE_EXCEEDED:
-            return True
+        if read_only:
+            if code == grpc.StatusCode.DEADLINE_EXCEEDED:
+                return True
+            return code in self.retryable_codes
+        # Mutation: retry only when durably replay-safe AND idempotency-keyed.
+        if not (replay_safe and has_idempotency_key):
+            return False
         return code in self.retryable_codes
 
     def backoff_for(self, attempt: int) -> float:
@@ -91,17 +117,65 @@ class RetryPolicy:
         return base + random.uniform(0.0, base * self.jitter)
 
 
+def _decode_error_detail(detail: bytes | None) -> Any | None:
+    """Prost-decode the raw ``udb-error-detail-bin`` bytes into an ``ErrorDetail``.
+
+    Returns the decoded ``udb.entity.v1.ErrorDetail`` message, or ``None`` when
+    no trailer was present or the generated message is unavailable in this
+    checkout (kept defensive so the raw bytes remain the fallback).
+    """
+    if not detail:
+        return None
+    try:  # pragma: no cover - presence depends on codegen having run
+        from udb.entity.v1.error_pb2 import ErrorDetail
+    except Exception:  # pragma: no cover - defensive
+        return None
+    try:
+        decoded = ErrorDetail()
+        decoded.ParseFromString(detail)
+        return decoded
+    except Exception:  # pragma: no cover - defensive
+        return None
+
+
 class UdbDetailedRpcError(UdbRpcError):
     """An :class:`UdbRpcError` enriched with the broker's ``ErrorDetail`` trailer.
 
     ``detail`` is the raw bytes of the ``udb-error-detail-bin`` trailer when the
-    server provided one (callers may parse it with the appropriate generated
-    ``ErrorDetail`` message); otherwise ``None``.
+    server provided one (kept for compatibility); ``error_detail`` is the decoded
+    ``udb.entity.v1.ErrorDetail`` message when decodable. The typed attributes
+    (:attr:`kind`/:attr:`retryable`/:attr:`retry_after_ms`/
+    :attr:`capability_required`/:attr:`policy_decision_id`/
+    :attr:`correlation_id`) and the :meth:`is_retryable`/:meth:`kind` accessors
+    read the decoded detail.
     """
 
     def __init__(self, rpc_name: str, error: grpc.RpcError, detail: bytes | None):
         super().__init__(rpc_name, error)
         self.detail = detail
+        self.error_detail = _decode_error_detail(detail)
+        ed = self.error_detail
+        self.retryable: bool = bool(getattr(ed, "retryable", False))
+        self.retry_after_ms: int = int(getattr(ed, "retry_after_ms", 0) or 0)
+        self.capability_required: str = str(getattr(ed, "capability_required", "") or "")
+        self.policy_decision_id: str = str(getattr(ed, "policy_decision_id", "") or "")
+        self.correlation_id: str = str(getattr(ed, "correlation_id", "") or "")
+        # ``kind`` is the ErrorKind enum name (e.g. "ERROR_KIND_CAPABILITY"); empty
+        # when no detail was decoded.
+        self._kind: str = ""
+        if ed is not None:
+            try:
+                self._kind = ed.DESCRIPTOR.fields_by_name["kind"].enum_type.values_by_number[ed.kind].name
+            except Exception:  # pragma: no cover - defensive
+                self._kind = ""
+
+    def is_retryable(self) -> bool:
+        """Whether the decoded detail flags this error as retryable."""
+        return self.retryable
+
+    def kind(self) -> str:
+        """The decoded ``ErrorKind`` enum name, or ``""`` when undecodable."""
+        return self._kind
 
 
 def _extract_error_detail(error: grpc.RpcError) -> bytes | None:
@@ -134,6 +208,51 @@ def _map_error(rpc_name: str, error: grpc.RpcError) -> UdbRpcError:
     return UdbRpcError(rpc_name, error)
 
 
+def invoke_unary(
+    method: Callable[..., Any],
+    rpc_name: str,
+    request: Any,
+    *,
+    call_metadata: tuple[tuple[str, str], ...],
+    timeout: float | None,
+    read_only: bool,
+    retry: RetryPolicy | None = None,
+    rpc_path: str = "",
+) -> Any:
+    """Invoke a unary gRPC ``method`` with the generated layer's robustness.
+
+    Shared so the hand-written :class:`udb_client.project.UdbProject` facade
+    routes its control-plane calls through the SAME retry/error-mapping path as
+    :class:`_ServiceClientBase`, instead of calling the raw stub directly. Maps
+    non-OK status to :class:`UdbDetailedRpcError`/:class:`UdbRpcError` and retries
+    transient codes for ``read_only`` RPCs and for proto-declared ``replay_safe``
+    mutations that carry a non-empty idempotency key (matching
+    :meth:`RetryPolicy.should_retry`); all other mutations are never auto-retried.
+    ``rpc_path`` (the full ``/pkg.Service/Method``) selects the replay-safety entry
+    — when empty, replay-safety defaults to ``False`` (fail-safe).
+    """
+    policy = retry or RetryPolicy()
+    replay_safe = _is_replay_safe(rpc_path) if rpc_path else False
+    has_key = _request_has_idempotency_key(request)
+    attempt = 0
+    while True:
+        attempt += 1
+        try:
+            return method(request, metadata=call_metadata, timeout=timeout)
+        except grpc.RpcError as error:
+            code = error.code()
+            if policy.should_retry(
+                code,
+                attempt,
+                read_only=read_only,
+                replay_safe=replay_safe,
+                has_idempotency_key=has_key,
+            ):
+                time.sleep(policy.backoff_for(attempt))
+                continue
+            raise _map_error(rpc_name, error) from error
+
+
 # Retry safety is read from the proto-derived operation_kind per RPC (see the
 # generated wrappers' read_only= argument) — never guessed from the method name.
 
@@ -147,6 +266,46 @@ RPC_OPERATION_KIND: dict[str, str] = {
     "{{RPC_PATH}}": "{{RPC_OPERATION_KIND}}",
     # @@UDB_RPC_END
 }
+
+
+# Proto-derived per-RPC replay-safety, keyed by full gRPC path: "true" ONLY for
+# RPCs whose proto ``method_idempotency_contract`` declares ``replay_safe = true``
+# (i.e. the broker durably dedups a replayed request carrying the same idempotency
+# key — currently ``Upsert``/``Delete``); every other RPC is "false". This is the
+# SINGLE authoritative replay-safety source — a mutation is auto-retried only when
+# this map is "true" AND the caller supplied a non-empty idempotency key. Never
+# derived from the method name.
+RPC_REPLAY_SAFE: dict[str, str] = {
+    # @@UDB_RPC_BEGIN
+    "{{RPC_PATH}}": "{{RPC_REPLAY_SAFE}}",
+    # @@UDB_RPC_END
+}
+
+
+def _is_replay_safe(rpc_path: str) -> bool:
+    """Whether the RPC at ``rpc_path`` is proto-declared durably replay-safe."""
+    return RPC_REPLAY_SAFE.get(rpc_path, "false") == "true"
+
+
+def _request_has_idempotency_key(request: Any) -> bool:
+    """Whether ``request`` carries a non-empty ``idempotency_key``.
+
+    Reads the top-level ``idempotency_key`` field if present, else the one nested
+    in the request's ``context`` (``RequestContext.idempotency_key``). Returns
+    ``False`` defensively when neither is set or readable.
+    """
+    try:
+        key = getattr(request, "idempotency_key", "")
+        if isinstance(key, str) and key:
+            return True
+        context = getattr(request, "context", None)
+        if context is not None:
+            ctx_key = getattr(context, "idempotency_key", "")
+            if isinstance(ctx_key, str) and ctx_key:
+                return True
+    except Exception:  # pragma: no cover - defensive
+        return False
+    return False
 
 
 def _discover_stub_class(service_pkg: str, service_name: str) -> type:
@@ -279,6 +438,9 @@ class _ServiceClientBase:
         retryable: bool,
         read_only: bool,
     ) -> Any:
+        rpc_path = f"/{self._SERVICE_FULL}/{rpc_name}"
+        replay_safe = _is_replay_safe(rpc_path)
+        has_key = _request_has_idempotency_key(request)
         attempt = 0
         while True:
             attempt += 1
@@ -291,7 +453,13 @@ class _ServiceClientBase:
                 )
             except grpc.RpcError as error:
                 code = error.code()
-                if retryable and self._retry.should_retry(code, attempt, read_only=read_only):
+                if retryable and self._retry.should_retry(
+                    code,
+                    attempt,
+                    read_only=read_only,
+                    replay_safe=replay_safe,
+                    has_idempotency_key=has_key,
+                ):
                     time.sleep(self._retry.backoff_for(attempt))
                     continue
                 raise _map_error(rpc_name, error) from error
@@ -309,6 +477,9 @@ class _ServiceClientBase:
     ) -> Iterator[Any]:
         # Retry only applies before the first item is yielded; once streaming has
         # begun a partial replay is not safe, so we surface errors as they occur.
+        rpc_path = f"/{self._SERVICE_FULL}/{rpc_name}"
+        replay_safe = _is_replay_safe(rpc_path)
+        has_key = _request_has_idempotency_key(request)
         attempt = 0
         while True:
             attempt += 1
@@ -325,7 +496,13 @@ class _ServiceClientBase:
                 return iter(())
             except grpc.RpcError as error:
                 code = error.code()
-                if retryable and self._retry.should_retry(code, attempt, read_only=read_only):
+                if retryable and self._retry.should_retry(
+                    code,
+                    attempt,
+                    read_only=read_only,
+                    replay_safe=replay_safe,
+                    has_idempotency_key=has_key,
+                ):
                     time.sleep(self._retry.backoff_for(attempt))
                     continue
                 raise _map_error(rpc_name, error) from error

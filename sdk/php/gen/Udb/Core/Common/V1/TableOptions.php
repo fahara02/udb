@@ -190,6 +190,12 @@ class TableOptions extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>.udb.core.common.v1.VectorStoreOptions vector_store = 32 [json_name = "vectorStore"];</code>
      */
     protected $vector_store = null;
+    /**
+     * native_service_id: which native service owns this internal table.
+     *
+     * Generated from protobuf field <code>string native_service_id = 33 [json_name = "nativeServiceId"];</code>
+     */
+    protected $native_service_id = '';
 
     /**
      * Constructor.
@@ -255,6 +261,8 @@ class TableOptions extends \Google\Protobuf\Internal\Message
      *           required_scope seeds broker-level ABAC policy requirements for this table.
      *     @type \Udb\Core\Common\V1\VectorStoreOptions $vector_store
      *           Optional table-local vector projection; message-level vector_store remains supported.
+     *     @type string $native_service_id
+     *           native_service_id: which native service owns this internal table.
      * }
      */
     public function __construct($data = NULL) {
@@ -1068,6 +1076,32 @@ class TableOptions extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkMessage($var, \Udb\Core\Common\V1\VectorStoreOptions::class);
         $this->vector_store = $var;
+
+        return $this;
+    }
+
+    /**
+     * native_service_id: which native service owns this internal table.
+     *
+     * Generated from protobuf field <code>string native_service_id = 33 [json_name = "nativeServiceId"];</code>
+     * @return string
+     */
+    public function getNativeServiceId()
+    {
+        return $this->native_service_id;
+    }
+
+    /**
+     * native_service_id: which native service owns this internal table.
+     *
+     * Generated from protobuf field <code>string native_service_id = 33 [json_name = "nativeServiceId"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setNativeServiceId($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->native_service_id = $var;
 
         return $this;
     }

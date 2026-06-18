@@ -378,6 +378,8 @@ message MigrationStatusResponse {
   string finished_at = 6;
   repeated MigrationOperationStatus operations = 7;
   string error = 8;
+  optional string approval_token = 9;
+  optional bool applyable = 10;
 }
 
 message MigrationOperationStatus {

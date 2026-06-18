@@ -26,13 +26,19 @@ var File_udb_core_notification_services_v1_notification_service_proto protorefle
 
 const file_udb_core_notification_services_v1_notification_service_proto_rawDesc = "" +
 	"\n" +
-	"<udb/core/notification/services/v1/notification_service.proto\x12!udb.core.notification.services.v1\x1a\x1cgoogle/api/annotations.proto\x1a!udb/core/common/v1/security.proto\x1a,udb/core/notification/services/v1/core.proto2\x9dC\n" +
-	"\x13NotificationService\x12\x9c\x06\n" +
-	"\x10SendNotification\x12:.udb.core.notification.services.v1.SendNotificationRequest\x1a;.udb.core.notification.services.v1.SendNotificationResponse\"\x8e\x05\xca\xf3\x18N\b\x02\x1a\"udb:notification:send-notification \x01J\x02\x01\x02j\x1dnotification.SendNotification\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x182\b\x01\x12\x11send_notification\x1a\x03udb(\xb0\xea\x010\x03@\x01J\fnotificationP\x01\xe2\xf3\x18\xde\x01\n" +
+	"<udb/core/notification/services/v1/notification_service.proto\x12!udb.core.notification.services.v1\x1a\x1cgoogle/api/annotations.proto\x1a!udb/core/common/v1/security.proto\x1a,udb/core/notification/services/v1/core.proto2\xf4D\n" +
+	"\x13NotificationService\x12\x91\a\n" +
+	"\x10SendNotification\x12:.udb.core.notification.services.v1.SendNotificationRequest\x1a;.udb.core.notification.services.v1.SendNotificationResponse\"\x83\x06\xca\xf3\x18N\b\x02\x1a\"udb:notification:send-notification \x01J\x02\x01\x02j\x1dnotification.SendNotification\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x182\b\x01\x12\x11send_notification\x1a\x03udb(\xb0\xea\x010\x03@\x01J\fnotificationP\x01\xe2\xf3\x18\xde\x01\n" +
 	"\fnotification\x12\x17udb/native/notification\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"5udb.native.notification.send_notification.boilerplate*\x11send_notification2\x10udb_notification:\fnotificationJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18\xa3\x01\n" +
 	"\x1dnotification.SendNotification\x12\x13notification.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable:A\n" +
 	"\x18udb.notification.sent.v1\x12\frecipient_id\x1a\rat_least_once\"\bstandard\xf2\xf3\x18M\n" +
-	"\fnotification\x1a\bpostgres\x1a\x05kafka2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02\x16:\x01*\"\x11/v1/notifications\x12\xd5\x05\n" +
+	"\fnotification\x1a\bpostgres\x1a\x05kafka2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x92\xf4\x18&\n" +
+	"\x0fNotificationLog\x1a\aPENDING\"\n" +
+	"SUPPRESSED\xa2\xf4\x18G\n" +
+	"\x1f\n" +
+	"\x12TEMPLATE_NOT_FOUND\x12\tNOT_FOUND\n" +
+	"$\n" +
+	"\x10VARIABLE_MISSING\x12\x10INVALID_ARGUMENT\x82\xd3\xe4\x93\x02\x16:\x01*\"\x11/v1/notifications\x12\xd5\x05\n" +
 	"\x0fGetNotification\x129.udb.core.notification.services.v1.GetNotificationRequest\x1a:.udb.core.notification.services.v1.GetNotificationResponse\"\xca\x04\xca\xf3\x18L\b\x02\x1a!udb:notification:get-notification \x01J\x02\x01\x02j\x1cnotification.GetNotification\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x181\b\x01\x12\x10get_notification\x1a\x03udb(\xb0\xea\x010\x03@\x01J\fnotificationP\x01\xe2\xf3\x18\xdc\x01\n" +
 	"\fnotification\x12\x17udb/native/notification\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"4udb.native.notification.get_notification.boilerplate*\x10get_notification2\x10udb_notification:\fnotificationJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18_\n" +
 	"\x1cnotification.GetNotification\x12\x13notification.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18M\n" +
@@ -40,11 +46,15 @@ const file_udb_core_notification_services_v1_notification_service_proto_rawDesc 
 	"\x11ListNotifications\x12;.udb.core.notification.services.v1.ListNotificationsRequest\x1a<.udb.core.notification.services.v1.ListNotificationsResponse\"\xcd\x04\xca\xf3\x18P\b\x02\x1a#udb:notification:list-notifications \x01J\x02\x01\x02j\x1enotification.ListNotifications\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x183\b\x01\x12\x12list_notifications\x1a\x03udb(\xb0\xea\x010\x03@\x01J\fnotificationP\x01\xe2\xf3\x18\xe0\x01\n" +
 	"\fnotification\x12\x17udb/native/notification\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"6udb.native.notification.list_notifications.boilerplate*\x12list_notifications2\x10udb_notification:\fnotificationJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18a\n" +
 	"\x1enotification.ListNotifications\x12\x13notification.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18M\n" +
-	"\fnotification\x1a\bpostgres\x1a\x05kafka2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02\x13\x12\x11/v1/notifications\x12\xf0\x05\n" +
-	"\x11RetryNotification\x12;.udb.core.notification.services.v1.RetryNotificationRequest\x1a<.udb.core.notification.services.v1.RetryNotificationResponse\"\xdf\x04\xca\xf3\x18P\b\x02\x1a#udb:notification:retry-notification \x01J\x02\x01\x02j\x1enotification.RetryNotification\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x183\b\x01\x12\x12retry_notification\x1a\x03udb(\xb0\xea\x010\x03@\x01J\fnotificationP\x01\xe2\xf3\x18\xe0\x01\n" +
+	"\fnotification\x1a\bpostgres\x1a\x05kafka2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02\x13\x12\x11/v1/notifications\x12\xd2\x06\n" +
+	"\x11RetryNotification\x12;.udb.core.notification.services.v1.RetryNotificationRequest\x1a<.udb.core.notification.services.v1.RetryNotificationResponse\"\xc1\x05\xca\xf3\x18P\b\x02\x1a#udb:notification:retry-notification \x01J\x02\x01\x02j\x1enotification.RetryNotification\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x183\b\x01\x12\x12retry_notification\x1a\x03udb(\xb0\xea\x010\x03@\x01J\fnotificationP\x01\xe2\xf3\x18\xe0\x01\n" +
 	"\fnotification\x12\x17udb/native/notification\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"6udb.native.notification.retry_notification.boilerplate*\x12retry_notification2\x10udb_notification:\fnotificationJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18a\n" +
 	"\x1enotification.RetryNotification\x12\x13notification.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18M\n" +
-	"\fnotification\x1a\bpostgres\x1a\x05kafka2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02%:\x01*\" /v1/notifications/{log_id}:retry\x12\xe7\x05\n" +
+	"\fnotification\x1a\bpostgres\x1a\x05kafka2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x92\xf4\x18.\n" +
+	"\x0fNotificationLog\x12\x06FAILED\x12\n" +
+	"SUPPRESSED\x1a\aPENDING\xa2\xf4\x18,\n" +
+	"*\n" +
+	"\x13NOT_RETRYABLE_STATE\x12\x13FAILED_PRECONDITION\x82\xd3\xe4\x93\x02%:\x01*\" /v1/notifications/{log_id}:retry\x12\xe7\x05\n" +
 	"\x0eUpsertTemplate\x128.udb.core.notification.services.v1.UpsertTemplateRequest\x1a9.udb.core.notification.services.v1.UpsertTemplateResponse\"\xdf\x04\xca\xf3\x18J\b\x02\x1a udb:notification:upsert-template \x01J\x02\x01\x02j\x1bnotification.UpsertTemplate\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x180\b\x01\x12\x0fupsert_template\x1a\x03udb(\xb0\xea\x010\x03@\x01J\fnotificationP\x01\xe2\xf3\x18\xda\x01\n" +
 	"\fnotification\x12\x17udb/native/notification\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"3udb.native.notification.upsert_template.boilerplate*\x0fupsert_template2\x10udb_notification:\fnotificationJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18^\n" +
 	"\x1bnotification.UpsertTemplate\x12\x13notification.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18M\n" +

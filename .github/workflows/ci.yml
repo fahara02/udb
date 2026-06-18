@@ -59,6 +59,22 @@ jobs:
             exit 1
           fi
           cargo run --locked -q --bin udb -- native lint
+      - name: Native docs markdown drift
+        # Mirror of the JSON gate above for docs/generated/native-services.md.
+        # `udb native docs` renders the markdown table from the same embedded
+        # descriptor; the committed file must match byte-for-byte (the
+        # `generated_native_docs_match_embedded_descriptor` unit test pins the
+        # same equality, but this gate catches a stale committed file on any
+        # path that does not run the lib tests). Runs once on Linux to avoid
+        # CRLF skew.
+        if: runner.os == 'Linux'
+        run: |
+          cargo run --locked -q --bin udb -- native docs > docs/generated/native-services.md
+          if ! git diff --quiet -- docs/generated/native-services.md; then
+            echo "::error::Native docs markdown is stale. Run 'udb native docs > docs/generated/native-services.md' and commit."
+            git diff -- docs/generated/native-services.md | sed -n '1,120p'
+            exit 1
+          fi
       - name: Doc service-count drift guard
         # The README + docs/native-services.md native-service/RPC counts must
         # match the generated contract (they silently drifted before: prose said
@@ -73,6 +89,15 @@ jobs:
         # regenerate with `udb sdk generate`.
         if: runner.os == 'Linux'
         run: python3 scripts/check-sdk-service-coverage.py
+      - name: No internal tables guard (masterplan §12)
+        # Published SDK helpers must not use GenericDispatch to run SQL against
+        # internal udb_* control-plane schemas. The legitimate raw binding
+        # (generated client) and all test/harness files are excluded; native
+        # state repair goes through served RPCs (device-via-Login, env-gated
+        # FAILED-log, EnsureBaseline). Lands after those broker replacements so
+        # it does not red the harness prematurely.
+        if: runner.os == 'Linux'
+        run: python3 scripts/check-no-internal-tables.py
       - name: Codebase map freshness gate
         # docs/generated/codebase-map.md is the agent-facing module-dependency
         # graph + public-symbol index (consumed by the udb-coding skill).

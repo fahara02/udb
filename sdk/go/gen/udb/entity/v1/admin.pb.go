@@ -2731,6 +2731,8 @@ type MigrationStatusResponse struct {
 	FinishedAt    string                      `protobuf:"bytes,6,opt,name=finished_at,json=finishedAt,proto3" json:"finished_at,omitempty"`
 	Operations    []*MigrationOperationStatus `protobuf:"bytes,7,rep,name=operations,proto3" json:"operations,omitempty"`
 	Error         string                      `protobuf:"bytes,8,opt,name=error,proto3" json:"error,omitempty"`
+	ApprovalToken *string                     `protobuf:"bytes,9,opt,name=approval_token,json=approvalToken,proto3,oneof" json:"approval_token,omitempty"`
+	Applyable     *bool                       `protobuf:"varint,10,opt,name=applyable,proto3,oneof" json:"applyable,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2819,6 +2821,20 @@ func (x *MigrationStatusResponse) GetError() string {
 		return x.Error
 	}
 	return ""
+}
+
+func (x *MigrationStatusResponse) GetApprovalToken() string {
+	if x != nil && x.ApprovalToken != nil {
+		return *x.ApprovalToken
+	}
+	return ""
+}
+
+func (x *MigrationStatusResponse) GetApplyable() bool {
+	if x != nil && x.Applyable != nil {
+		return *x.Applyable
+	}
+	return false
 }
 
 type MigrationOperationStatus struct {
@@ -6227,7 +6243,7 @@ const file_udb_entity_v1_admin_proto_rawDesc = "" +
 	"\x04runs\x18\x01 \x03(\v2&.udb.entity.v1.MigrationStatusResponseR\x04runs\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12\x1f\n" +
 	"\vtotal_count\x18\x03 \x01(\x05R\n" +
-	"totalCount\"\xad\x02\n" +
+	"totalCount\"\x9d\x03\n" +
 	"\x17MigrationStatusResponse\x12\x15\n" +
 	"\x06run_id\x18\x01 \x01(\tR\x05runId\x12\x1d\n" +
 	"\n" +
@@ -6241,7 +6257,13 @@ const file_udb_entity_v1_admin_proto_rawDesc = "" +
 	"\n" +
 	"operations\x18\a \x03(\v2'.udb.entity.v1.MigrationOperationStatusR\n" +
 	"operations\x12\x14\n" +
-	"\x05error\x18\b \x01(\tR\x05error\"\xc2\x01\n" +
+	"\x05error\x18\b \x01(\tR\x05error\x12*\n" +
+	"\x0eapproval_token\x18\t \x01(\tH\x00R\rapprovalToken\x88\x01\x01\x12!\n" +
+	"\tapplyable\x18\n" +
+	" \x01(\bH\x01R\tapplyable\x88\x01\x01B\x11\n" +
+	"\x0f_approval_tokenB\f\n" +
+	"\n" +
+	"_applyable\"\xc2\x01\n" +
 	"\x18MigrationOperationStatus\x12\x14\n" +
 	"\x05index\x18\x01 \x01(\x05R\x05index\x12\x18\n" +
 	"\abackend\x18\x02 \x01(\tR\abackend\x12!\n" +
@@ -6694,6 +6716,7 @@ func file_udb_entity_v1_admin_proto_init() {
 		return
 	}
 	file_udb_entity_v1_context_proto_init()
+	file_udb_entity_v1_admin_proto_msgTypes[32].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

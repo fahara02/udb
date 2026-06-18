@@ -56,6 +56,8 @@ export type EnqueueOutboxEventRequest = Message<"udb.entity.v1.EnqueueOutboxEven
   /**
    * Caller-supplied idempotency key. If provided and a recent matching key exists
    * in Redis, the event is not re-enqueued and was_duplicate = true is returned.
+   * If the dedup store is unavailable, a keyed enqueue is refused (UNAVAILABLE)
+   * rather than risking a duplicate (fail-closed).
    *
    * @generated from field: string idempotency_key = 6;
    */

@@ -809,6 +809,8 @@ impl BackendKind {
                     ordered_progress_strategy: "monotonic outbox sequence column under transactional isolation",
                     tenant_isolation_strategy: "tenant_id column + RLS / session-context enforcement",
                     read_fence_strategy: "transactional write-progress token (LSN / GTID / rowversion)",
+                    read_fence_supported: true,
+                    supported_consistency_modes: supported_consistency_modes_for_family("sql"),
                     durability_prerequisites: &[],
                     blocking_gaps: &[],
                     live_conformance_env: Some(match self {
@@ -828,6 +830,8 @@ impl BackendKind {
                 ordered_progress_strategy: "monotonic counter document + change-stream resume token",
                 tenant_isolation_strategy: "tenant_id field + per-collection scoping",
                 read_fence_strategy: "majority read-concern resume token / cluster time",
+                read_fence_supported: true,
+                supported_consistency_modes: supported_consistency_modes_for_family("document"),
                 durability_prerequisites: &[
                     "replica set or sharded cluster with majority write concern",
                 ],
@@ -850,6 +854,8 @@ impl BackendKind {
                 ordered_progress_strategy: "insert-block ordering only (eventual)",
                 tenant_isolation_strategy: "session-setting scoping (no row policy)",
                 read_fence_strategy: "none proven — eventual visibility of inserted blocks",
+                read_fence_supported: false,
+                supported_consistency_modes: supported_consistency_modes_for_family("column"),
                 durability_prerequisites: &[],
                 // B.10c: native HTTP canonical store implemented via
                 // ReplacingMergeTree(version) + SELECT … FINAL versioned-CAS
@@ -877,6 +883,8 @@ impl BackendKind {
                 ordered_progress_strategy: "sequence node + transaction commit order",
                 tenant_isolation_strategy: "tenant property + label scoping",
                 read_fence_strategy: "transaction bookmark",
+                read_fence_supported: true,
+                supported_consistency_modes: supported_consistency_modes_for_family("graph"),
                 durability_prerequisites: &[],
                 // B.10b: graph-native SystemStores implemented (HTTP-transactional
                 // Cypher; full 5-contract conformance verified live) in `neo4j`
@@ -897,6 +905,8 @@ impl BackendKind {
                 ordered_progress_strategy: "monotonic timeuuid under quorum writes",
                 tenant_isolation_strategy: "tenant partition-key prefix",
                 read_fence_strategy: "LWT applied flag at quorum",
+                read_fence_supported: true,
+                supported_consistency_modes: supported_consistency_modes_for_family("column"),
                 durability_prerequisites: &[
                     "QUORUM/LOCAL_QUORUM read+write consistency configured",
                 ],
@@ -923,6 +933,8 @@ impl BackendKind {
                 ordered_progress_strategy: "monotonic outbox sequence document persisted as a Qdrant point under strong write ordering",
                 tenant_isolation_strategy: "dedicated system collection per UDB instance plus tenant/project fields inside system records",
                 read_fence_strategy: "outbox sequence durability token stored in the system collection and polled by wait_for_token",
+                read_fence_supported: true,
+                supported_consistency_modes: supported_consistency_modes_for_family("vector"),
                 durability_prerequisites: VECTOR_CANONICAL_PLANE_PREREQS,
                 blocking_gaps: if implemented {
                     &[]
@@ -940,6 +952,8 @@ impl BackendKind {
                 ordered_progress_strategy: "monotonic outbox sequence metadata record persisted through Pinecone vector upsert",
                 tenant_isolation_strategy: "dedicated namespace per UDB instance plus tenant/project fields inside system records",
                 read_fence_strategy: "outbox sequence durability token stored in the namespace and polled by wait_for_token",
+                read_fence_supported: true,
+                supported_consistency_modes: supported_consistency_modes_for_family("vector"),
                 durability_prerequisites: VECTOR_CANONICAL_PLANE_PREREQS,
                 blocking_gaps: if implemented {
                     &[]
@@ -957,6 +971,8 @@ impl BackendKind {
                 ordered_progress_strategy: "monotonic outbox sequence object persisted through Weaviate object upsert",
                 tenant_isolation_strategy: "dedicated system class per UDB instance plus tenant/project fields inside system records",
                 read_fence_strategy: "outbox sequence durability token stored in the class and polled by wait_for_token",
+                read_fence_supported: true,
+                supported_consistency_modes: supported_consistency_modes_for_family("vector"),
                 durability_prerequisites: VECTOR_CANONICAL_PLANE_PREREQS,
                 blocking_gaps: if implemented {
                     &[]
@@ -974,6 +990,8 @@ impl BackendKind {
                 ordered_progress_strategy: "monotonic outbox sequence document persisted with refresh=wait_for",
                 tenant_isolation_strategy: "dedicated system index per UDB instance plus tenant/project fields inside system records",
                 read_fence_strategy: "outbox sequence durability token stored in the index and polled by wait_for_token",
+                read_fence_supported: true,
+                supported_consistency_modes: supported_consistency_modes_for_family("vector"),
                 durability_prerequisites: VECTOR_CANONICAL_PLANE_PREREQS,
                 blocking_gaps: if implemented {
                     &[]
@@ -992,6 +1010,8 @@ impl BackendKind {
                 ordered_progress_strategy: "no native cross-object sequence — needs single-writer or external sequencer profile",
                 tenant_isolation_strategy: "tenant/project key prefix + bucket policy",
                 read_fence_strategy: "ETag / version-id per object",
+                read_fence_supported: true,
+                supported_consistency_modes: supported_consistency_modes_for_family("object"),
                 durability_prerequisites: OBJECT_DURABILITY_PREREQS,
                 blocking_gaps: OBJECT_BLOCKING_GAPS,
                 live_conformance_env: Some("UDB_BENCH_S3_ENDPOINT"),
@@ -1005,6 +1025,8 @@ impl BackendKind {
                 ordered_progress_strategy: "no native cross-blob sequence — needs single-writer or external sequencer profile",
                 tenant_isolation_strategy: "tenant/project key prefix + container policy",
                 read_fence_strategy: "ETag per blob",
+                read_fence_supported: true,
+                supported_consistency_modes: supported_consistency_modes_for_family("object"),
                 durability_prerequisites: OBJECT_DURABILITY_PREREQS,
                 blocking_gaps: OBJECT_BLOCKING_GAPS,
                 live_conformance_env: Some("UDB_BENCH_AZURE_BLOB"),
@@ -1018,6 +1040,8 @@ impl BackendKind {
                 ordered_progress_strategy: "no native cross-object sequence — needs single-writer or external sequencer profile",
                 tenant_isolation_strategy: "tenant/project key prefix + bucket IAM",
                 read_fence_strategy: "object generation number",
+                read_fence_supported: true,
+                supported_consistency_modes: supported_consistency_modes_for_family("object"),
                 durability_prerequisites: OBJECT_DURABILITY_PREREQS,
                 blocking_gaps: OBJECT_BLOCKING_GAPS,
                 live_conformance_env: Some("UDB_BENCH_GCS"),
@@ -1032,6 +1056,8 @@ impl BackendKind {
                 ordered_progress_strategy: "INCR sequence + per-record JSON documents (Streams-ready)",
                 tenant_isolation_strategy: "udb:system:{instance} key-prefix namespacing",
                 read_fence_strategy: "INCR durability token gated on AOF fsync",
+                read_fence_supported: true,
+                supported_consistency_modes: supported_consistency_modes_for_family("cache"),
                 durability_prerequisites: REDIS_DURABILITY_PREREQS,
                 blocking_gaps: if implemented {
                     &[]
@@ -1049,6 +1075,8 @@ impl BackendKind {
                 ordered_progress_strategy: "none — no durable log or scan to recover outbox order",
                 tenant_isolation_strategy: "key-prefix only (no enumeration to audit)",
                 read_fence_strategy: "none — no durable write-progress token",
+                read_fence_supported: false,
+                supported_consistency_modes: supported_consistency_modes_for_family("cache"),
                 durability_prerequisites: &[
                     "a durable persistence layer Memcached does not provide",
                 ],
@@ -1406,12 +1434,58 @@ pub struct CanonicalFeasibilityProfile {
     pub tenant_isolation_strategy: &'static str,
     /// How a recoverable read fence / durable write-progress token is obtained.
     pub read_fence_strategy: &'static str,
+    /// 03.4.1.1: machine-readable companion to `read_fence_strategy`. `true` when
+    /// the backend exposes a real durability/projection write-progress token a
+    /// read fence can wait on; `false` for the "none"/eventual rows. SDK fence
+    /// helpers key on this so they never attach a pointless (silently no-op)
+    /// fence. Invariant (pinned by test): agrees with a non-"none" strategy.
+    pub read_fence_supported: bool,
+    /// 03.4.1.2: machine-readable list of `ConsistencyMode` wire tokens this
+    /// backend family can actually serve, so SDKs/doctor can show which modes
+    /// are meaningful per backend instead of inferring from prose.
+    pub supported_consistency_modes: Vec<&'static str>,
     /// Operator prerequisites that MUST hold before canonical registration.
     pub durability_prerequisites: &'static [&'static str],
     /// Concrete proofs still missing before promotion (empty == implemented).
     pub blocking_gaps: &'static [&'static str],
     /// Env var that gates live conformance for this family, if any.
     pub live_conformance_env: Option<&'static str>,
+}
+
+/// 03.4.1.2: the `ConsistencyMode` wire tokens a backend family can meaningfully
+/// serve. Centralised so the per-backend match stays declarative and the lists
+/// never diverge across backends of the same family. Tokens are the pinned
+/// `ConsistencyMode::as_str` values (see `runtime::consistency`).
+fn supported_consistency_modes_for_family(family: &str) -> Vec<&'static str> {
+    match family {
+        // SQL canonical family carries a durable LSN/GTID/rowversion token, so
+        // every mode (including read-your-writes + cache) is meaningful.
+        "sql" => vec![
+            "strong",
+            "read_your_writes",
+            "bounded_staleness",
+            "eventual",
+            "projection_ok",
+            "cache_ok",
+        ],
+        // Projection-backed families wait on the projection-task fence; no Redis
+        // cache path, and read-your-writes is served via the projection fence
+        // under projection_ok rather than a primary-LSN fence.
+        "document" | "graph" | "vector" => {
+            vec!["strong", "bounded_staleness", "eventual", "projection_ok"]
+        }
+        // Column stores (ClickHouse eventual; Cassandra quorum) expose no
+        // read-your-writes fence — advertise only the non-fence-bearing modes so
+        // SDKs never attach a pointless fence.
+        "column" => vec!["bounded_staleness", "eventual"],
+        // Object stores give per-object ETag/version freshness, not a session
+        // fence: read-own-write (strong) and eventual.
+        "object" => vec!["strong", "eventual"],
+        // Cache/KV family: the cache hit path plus eventual fallback.
+        "cache" => vec!["cache_ok", "eventual"],
+        // Unknown family: advertise the safe floor only.
+        _ => vec!["eventual"],
+    }
 }
 
 // ── B.13/B.14 — shared prerequisite/gap tables (kept module-level so the
@@ -2770,7 +2844,39 @@ mod tests {
                     "{kind:?}: {name} must be a non-empty strategy description"
                 );
             }
+            // 03.4.1.1: the machine-readable flag must agree with the prose
+            // strategy — `true` iff the strategy is a real (non-"none") token.
+            assert_eq!(
+                p.read_fence_supported,
+                !p.read_fence_strategy.trim_start().starts_with("none"),
+                "{kind:?}: read_fence_supported must agree with read_fence_strategy"
+            );
+            // 03.4.1.2: every backend advertises at least one consistency mode.
+            assert!(
+                !p.supported_consistency_modes.is_empty(),
+                "{kind:?}: supported_consistency_modes must not be empty"
+            );
         }
+
+        // 03.4.1.x verify: ClickHouse has no durable write-progress token, so it
+        // reports no fence support and no fence-bearing mode; Postgres carries a
+        // real LSN fence and advertises read-your-writes.
+        let clickhouse = BackendKind::Clickhouse.canonical_feasibility_profile();
+        assert!(!clickhouse.read_fence_supported);
+        assert!(
+            !clickhouse
+                .supported_consistency_modes
+                .iter()
+                .any(|m| matches!(*m, "strong" | "read_your_writes" | "projection_ok")),
+            "clickhouse must advertise no fence-bearing mode"
+        );
+        let postgres = BackendKind::Postgres.canonical_feasibility_profile();
+        assert!(postgres.read_fence_supported);
+        assert!(
+            postgres
+                .supported_consistency_modes
+                .contains(&"read_your_writes")
+        );
     }
 
     #[test]

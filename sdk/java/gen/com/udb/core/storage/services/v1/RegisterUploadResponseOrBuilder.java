@@ -72,4 +72,16 @@ public interface RegisterUploadResponseOrBuilder extends
    * <code>.udb.core.common.v1.ApiError error = 4 [json_name = "error"];</code>
    */
   com.udb.core.common.v1.ApiErrorOrBuilder getErrorOrBuilder();
+
+  /**
+   * <pre>
+   * Unix-seconds expiry of the presigned PUT `upload_url`; 0 when no URL was
+   * minted (metadata-only mode / presign error). Lets the client know when the
+   * URL dies without a follow-up call.
+   * </pre>
+   *
+   * <code>int64 expires_at = 5 [json_name = "expiresAt"];</code>
+   * @return The expiresAt.
+   */
+  long getExpiresAt();
 }

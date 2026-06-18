@@ -676,6 +676,50 @@ pub fn enforce_body_tenant_matches_claim(
     Ok(())
 }
 
+/// 01.4.1.1 — the write-path analogue of [`enforce_body_tenant_matches_claim`].
+/// It applies the SAME mismatch-reject + both-empty fail-closed checks, then
+/// RESOLVES the effective `(tenant, project)` to STORE:
+/// - a non-empty body returns the (validated-equal) body values;
+/// - an empty body with a tenant-bound claim returns the claim tenant/project, so
+///   an omitted body is persisted as the claim tenant — NOT `""` (which would be
+///   invisible to claim-bound reads and force clients to copy the claim tenant
+///   into every write body);
+/// - a genuine cross-tenant admin returns the body values verbatim (may target any
+///   tenant);
+/// - with no claim context installed (in-process/loopback path) the body values
+///   pass through unchanged.
+pub fn resolve_body_tenant_scope(
+    ctx: &VerifiedClaimContext,
+    body_tenant: &str,
+    body_project: &str,
+) -> Result<(String, String), Status> {
+    // No claim context installed → not an over-the-wire request. Preserve the body.
+    if !claim_context_present() {
+        return Ok((body_tenant.to_string(), body_project.to_string()));
+    }
+    // Reuse the validate-only guard: rejects a body↔claim mismatch and the
+    // tenant-less (both-empty, non-admin) case before we resolve anything.
+    enforce_body_tenant_matches_claim(ctx, body_tenant, body_project)?;
+    // A cross-tenant admin may legitimately target a foreign/unscoped tenant: keep
+    // whatever the body asked for verbatim.
+    if ctx.is_cross_tenant_admin() {
+        return Ok((body_tenant.to_string(), body_project.to_string()));
+    }
+    let body_tenant = body_tenant.trim();
+    let body_project = body_project.trim();
+    let tenant = if body_tenant.is_empty() {
+        ctx.tenant_id.trim().to_string()
+    } else {
+        body_tenant.to_string()
+    };
+    let project = if body_project.is_empty() {
+        ctx.project_id.trim().to_string()
+    } else {
+        body_project.to_string()
+    };
+    Ok((tenant, project))
+}
+
 /// D2 — per-action authz guard for admin-mutation handlers. The coarse `udb:admin`
 /// scope from the transport gate authorizes ANY non-public RPC; this requires a
 /// *concrete* action scope on top so the handler records a real per-action
@@ -760,6 +804,33 @@ impl VerifiedClaimContext {
         }
     }
 }
+
+// NOTE (R3.1): a single `bind_claim_scope`/`BoundClaimScope` projection was
+// considered as the central authority binder, but every served call site that
+// builds an authz `Principal` from the verified claim follows a deliberately
+// different contract than a one-shot "claim → principal + request context"
+// bundle would impose:
+//   * authz/mod.rs (Authorize / CheckAccess / MintNativeAccess) and
+//     governance.rs VALIDATE the body tenant/project against the claim with
+//     `enforce_body_tenant_matches_claim`, then OVERRIDE individual principal
+//     fields from the claim ONLY for non-admins — a genuine cross-tenant admin
+//     deliberately KEEPS the body-derived principal to answer "can X do Y?".
+//     A claim-only projection would clobber that admin path.
+//   * `created_by`/`assigned_by` binders use `stable_uuid_from_subject` +
+//     forge-guarding, not a principal projection.
+//   * native_helpers (`validate_request_scope`, `native_service_context`,
+//     `metadata_tenant_id`) layer x-tenant-id/x-project-id header-consistency
+//     checks and a metadata-sourced `RequestContext` that a claim-only bundle
+//     does not model.
+//   * authn/core.rs CreateUser already calls `resolve_body_tenant_scope`
+//     directly and threads `claim_ctx` into `authorize_action` /
+//     `decide_action_native`; the bundle's principal/request_context would be
+//     unused.
+// The reusable primitives (`current_claim_context`, `resolve_body_tenant_scope`,
+// `to_principal`, `enforce_body_tenant_matches_claim`) ARE the shared authority
+// binders and are already adopted at those sites; a wrapper bundle could not be
+// adopted anywhere without changing behavior, so it was removed to clear the
+// dead-code warning rather than leave an unused capability.
 
 /// Decide whether a request for `path` carrying `headers` may proceed. On denial
 /// returns the `Status` plus a stable `reason` label so the caller can record

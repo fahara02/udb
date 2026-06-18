@@ -877,12 +877,12 @@ impl DataBrokerRuntime {
     pub async fn enforce_read_fence(
         &self,
         context: &RequestContext,
-        _pool: &PgPool,
         backend_label: &str,
         instance_label: &str,
-    ) -> Result<(), tonic::Status> {
+    ) -> Result<Option<crate::runtime::consistency::StaleReadWarning>, tonic::Status> {
+        use crate::runtime::consistency::{ConsistencyMode, StaleReadWarning};
         if context.read_fence_json.trim().is_empty() {
-            return Ok(());
+            return Ok(None);
         }
         let mut consistency = crate::runtime::consistency::ConsistencyPolicy::from_request_context(
             &context.consistency,
@@ -898,19 +898,20 @@ impl DataBrokerRuntime {
         })?;
         consistency = consistency.with_fence(fence);
         if consistency.fence.is_empty() || !consistency.mode.honours_fence() {
-            return Ok(());
+            return Ok(None);
         }
 
-        // NW1-3e: route the fence through the canonical store
-        // registry. The `_pool` parameter is retained on the API for
-        // backward compatibility with the legacy call signature, but
-        // the wait now happens against `Arc<dyn SystemStores>`. A
-        // deployment without any registered canonical store
-        // (slim/test) treats the fence as cleared — same effect the
-        // pre-NW1-3e code path had when the PG pool query returned
-        // an error.
+        // NW1-3e: route the fence through the canonical store registry; the
+        // wait happens against `Arc<dyn SystemStores>` and is backend-agnostic
+        // (no PG pool required), so every read entrypoint can call this.
+        //
+        // 03.3.6: the no-store early return is a DELIBERATE fail-open for
+        // storeless deployments (slim/test builds with no registered canonical
+        // store). It is NOT a bug — a fence cannot be honoured without a store
+        // to wait against, so we treat it as cleared (`Ok(None)`) rather than
+        // hard-failing the read. Do not change this to an error.
         let Some(store) = self.default_system_stores_clone() else {
-            return Ok(());
+            return Ok(None);
         };
         match crate::runtime::consistency_fence::wait_for_fence(
             store.as_ref(),
@@ -920,16 +921,41 @@ impl DataBrokerRuntime {
         )
         .await
         {
-            crate::runtime::consistency_fence::FenceOutcome::Cleared => Ok(()),
+            crate::runtime::consistency_fence::FenceOutcome::Cleared => Ok(None),
+            // 03.2.1.1: component- and mode-aware stale handling. The matrix is
+            // intentionally narrow — only Eventual/BoundedStaleness (and
+            // ProjectionOk for non-own-write staleness) serve stale data with a
+            // warning; Strong/ReadYourWrites always hard-fail, and ProjectionOk
+            // hard-fails on its OWN un-projected write (ProjectionMissing).
             crate::runtime::consistency_fence::FenceOutcome::Stale(warning) => {
-                tracing::warn!(
-                    warning = ?warning,
-                    "read fence did not clear before max_wait_ms"
-                );
-                Err(tonic::Status::deadline_exceeded(format!(
-                    "read fence did not clear: {}",
-                    warning.kind_token()
-                )))
+                let hard_fail = |warning: &StaleReadWarning| {
+                    tracing::warn!(
+                        warning = ?warning,
+                        "read fence did not clear before max_wait_ms"
+                    );
+                    tonic::Status::deadline_exceeded(format!(
+                        "read fence did not clear: {}",
+                        warning.kind_token()
+                    ))
+                };
+                match consistency.mode {
+                    ConsistencyMode::Strong | ConsistencyMode::ReadYourWrites => {
+                        Err(hard_fail(&warning))
+                    }
+                    ConsistencyMode::ProjectionOk => {
+                        if matches!(warning, StaleReadWarning::ProjectionMissing { .. }) {
+                            Err(hard_fail(&warning))
+                        } else {
+                            Ok(Some(warning))
+                        }
+                    }
+                    ConsistencyMode::Eventual | ConsistencyMode::BoundedStaleness => {
+                        Ok(Some(warning))
+                    }
+                    // Unreachable: CacheOk was already filtered by
+                    // `!honours_fence()` above. Returned as cleared defensively.
+                    ConsistencyMode::CacheOk => Ok(None),
+                }
             }
         }
     }

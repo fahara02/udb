@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UDB API Reference</title>
+<meta name="description" content="Swagger API reference for the UDB broker HTTP gateway.">
+<meta name="theme-color" content="#121214">
+<link rel="icon" type="image/svg+xml" href="./assets/udb_logo.svg">
+<link rel="stylesheet" href="./styles.css">
+<link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css">
+</head>
+<body>
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="brand" href="./index.html"><img src="./assets/udb_logo.svg" alt="UDB logo">UDB</a>
+    <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="./architecture.html">Architecture</a>
+      <a href="./data-plane.html">Data&nbsp;Plane</a>
+      <a href="./control-plane.html">Control&nbsp;Plane</a>
+      <a href="./security.html">Security</a>
+      <a href="./enterprise.html">Enterprise</a>
+      <a href="./sdks.html">SDKs</a>
+      <a href="./benchmarks.html">Benchmarks</a>
+      <a class="active" href="./api.html">API</a>
+      <a href="./playground.html">Playground</a>
+      <a class="nav-cta" href="https://github.com/fahara02/udb">GitHub ↗</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="page-head">
+    <div class="wrap">
+      <div class="eyebrow reveal">Swagger · generated API</div>
+      <h1 class="reveal">API <span class="g">reference</span></h1>
+      <p class="lead reveal d1">The published Swagger document is copied from <code>api/udb-broker.swagger.json</code> into the GitHub Pages artifact on every site deploy.</p>
+      <div class="cta reveal d2">
+        <a class="btn primary" href="./api/udb-broker.swagger.json">Open raw JSON</a>
+        <a class="btn ghost" href="https://github.com/fahara02/udb/tree/main/api">Source in GitHub</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="api-reference">
+    <div class="wrap">
+      <div id="swagger-ui" class="swagger-shell"></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <div><b>UDB</b><br><small>Universal Data Broker</small></div>
+    <nav class="foot-links">
+      <a href="./index.html">Home</a><a href="./data-plane.html">Data Plane</a><a href="./benchmarks.html">Benchmarks</a><a href="./playground.html">Playground</a>
+    </nav>
+  </div>
+</footer>
+
+<script src="./app.js"></script>
+<script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+<script>
+  window.addEventListener("load", function () {
+    SwaggerUIBundle({
+      url: "./api/udb-broker.swagger.json",
+      dom_id: "#swagger-ui",
+      deepLinking: true,
+      docExpansion: "none",
+      defaultModelsExpandDepth: 1,
+      presets: [SwaggerUIBundle.presets.apis]
+    });
+  });
+</script>
+</body>
+</html>

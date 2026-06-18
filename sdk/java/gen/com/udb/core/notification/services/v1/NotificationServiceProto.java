@@ -40,11 +40,11 @@ public final class NotificationServiceProto {
       "ation.services.v1\032\034google/api/annotation" +
       "s.proto\032!udb/core/common/v1/security.pro" +
       "to\032,udb/core/notification/services/v1/co" +
-      "re.proto2\235C\n\023NotificationService\022\234\006\n\020Sen" +
+      "re.proto2\364D\n\023NotificationService\022\221\007\n\020Sen" +
       "dNotification\022:.udb.core.notification.se" +
       "rvices.v1.SendNotificationRequest\032;.udb." +
       "core.notification.services.v1.SendNotifi" +
-      "cationResponse\"\216\005\312\363\030N\010\002\032\"udb:notificatio" +
+      "cationResponse\"\203\006\312\363\030N\010\002\032\"udb:notificatio" +
       "n:send-notification \001J\002\001\002j\035notification." +
       "SendNotification\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0302\010\001\022\021sen" +
       "d_notification\032\003udb(\260\352\0010\003@\001J\014notificatio" +
@@ -60,210 +60,215 @@ public final class NotificationServiceProto {
       "\014recipient_id\032\rat_least_once\"\010standard\362\363" +
       "\030M\n\014notification\032\010postgres\032\005kafka2\033UDB_N" +
       "ATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370" +
-      "\363\030\002\202\323\344\223\002\026\"\021/v1/notifications:\001*\022\325\005\n\017GetN" +
-      "otification\0229.udb.core.notification.serv" +
-      "ices.v1.GetNotificationRequest\032:.udb.cor" +
-      "e.notification.services.v1.GetNotificati" +
-      "onResponse\"\312\004\312\363\030L\010\002\032!udb:notification:ge" +
-      "t-notification \001J\002\001\002j\034notification.GetNo" +
-      "tification\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0301\010\001\022\020get_notif" +
-      "ication\032\003udb(\260\352\0010\003@\001J\014notificationP\001\342\363\030\334" +
-      "\001\n\014notification\022\027udb/native/notification" +
-      "\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_" +
-      "TARGET\"4udb.native.notification.get_noti" +
-      "fication.boilerplate*\020get_notification2\020" +
-      "udb_notification:\014notificationJ\013UDB_API_" +
-      "KEYZ\020udb native smoke\352\363\030_\n\034notification." +
-      "GetNotification\022\023notification.events\032\tte" +
+      "\363\030\002\222\364\030&\n\017NotificationLog\032\007PENDING\"\nSUPPR" +
+      "ESSED\242\364\030G\n\037\n\022TEMPLATE_NOT_FOUND\022\tNOT_FOU" +
+      "ND\n$\n\020VARIABLE_MISSING\022\020INVALID_ARGUMENT" +
+      "\202\323\344\223\002\026\"\021/v1/notifications:\001*\022\325\005\n\017GetNoti" +
+      "fication\0229.udb.core.notification.service" +
+      "s.v1.GetNotificationRequest\032:.udb.core.n" +
+      "otification.services.v1.GetNotificationR" +
+      "esponse\"\312\004\312\363\030L\010\002\032!udb:notification:get-n" +
+      "otification \001J\002\001\002j\034notification.GetNotif" +
+      "ication\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0301\010\001\022\020get_notifica" +
+      "tion\032\003udb(\260\352\0010\003@\001J\014notificationP\001\342\363\030\334\001\n\014" +
+      "notification\022\027udb/native/notification\032\033U" +
+      "DB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TAR" +
+      "GET\"4udb.native.notification.get_notific" +
+      "ation.boilerplate*\020get_notification2\020udb" +
+      "_notification:\014notificationJ\013UDB_API_KEY" +
+      "Z\020udb native smoke\352\363\030_\n\034notification.Get" +
+      "Notification\022\023notification.events\032\ttenan" +
+      "t_id\"\010standard*\rat_least_once2\006stable\362\363\030" +
+      "M\n\014notification\032\010postgres\032\005kafka2\033UDB_NA" +
+      "TIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363" +
+      "\030\001\202\323\344\223\002\034\022\032/v1/notifications/{log_id}\022\336\005\n" +
+      "\021ListNotifications\022;.udb.core.notificati" +
+      "on.services.v1.ListNotificationsRequest\032" +
+      "<.udb.core.notification.services.v1.List" +
+      "NotificationsResponse\"\315\004\312\363\030P\010\002\032#udb:noti" +
+      "fication:list-notifications \001J\002\001\002j\036notif" +
+      "ication.ListNotifications\220\001\001\322\363\030\006\010\001\020\001 \001\332\363" +
+      "\0303\010\001\022\022list_notifications\032\003udb(\260\352\0010\003@\001J\014n" +
+      "otificationP\001\342\363\030\340\001\n\014notification\022\027udb/na" +
+      "tive/notification\032\033UDB_NATIVE_SERVICES_E" +
+      "NABLED\032\017UDB_GRPC_TARGET\"6udb.native.noti" +
+      "fication.list_notifications.boilerplate*" +
+      "\022list_notifications2\020udb_notification:\014n" +
+      "otificationJ\013UDB_API_KEYZ\020udb native smo" +
+      "ke\352\363\030a\n\036notification.ListNotifications\022\023" +
+      "notification.events\032\ttenant_id\"\010standard" +
+      "*\rat_least_once2\006stable\362\363\030M\n\014notificatio" +
+      "n\032\010postgres\032\005kafka2\033UDB_NATIVE_SERVICES_" +
+      "ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\023\022\021/v1/" +
+      "notifications\022\322\006\n\021RetryNotification\022;.ud" +
+      "b.core.notification.services.v1.RetryNot" +
+      "ificationRequest\032<.udb.core.notification" +
+      ".services.v1.RetryNotificationResponse\"\301" +
+      "\005\312\363\030P\010\002\032#udb:notification:retry-notifica" +
+      "tion \001J\002\001\002j\036notification.RetryNotificati" +
+      "on\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0303\010\001\022\022retry_notificatio" +
+      "n\032\003udb(\260\352\0010\003@\001J\014notificationP\001\342\363\030\340\001\n\014not" +
+      "ification\022\027udb/native/notification\032\033UDB_" +
+      "NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TARGET" +
+      "\"6udb.native.notification.retry_notifica" +
+      "tion.boilerplate*\022retry_notification2\020ud" +
+      "b_notification:\014notificationJ\013UDB_API_KE" +
+      "YZ\020udb native smoke\352\363\030a\n\036notification.Re" +
+      "tryNotification\022\023notification.events\032\tte" +
       "nant_id\"\010standard*\rat_least_once2\006stable" +
       "\362\363\030M\n\014notification\032\010postgres\032\005kafka2\033UDB" +
       "_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGE" +
-      "T\370\363\030\001\202\323\344\223\002\034\022\032/v1/notifications/{log_id}\022" +
-      "\336\005\n\021ListNotifications\022;.udb.core.notific" +
-      "ation.services.v1.ListNotificationsReque" +
-      "st\032<.udb.core.notification.services.v1.L" +
-      "istNotificationsResponse\"\315\004\312\363\030P\010\002\032#udb:n" +
-      "otification:list-notifications \001J\002\001\002j\036no" +
-      "tification.ListNotifications\220\001\001\322\363\030\006\010\001\020\001 " +
-      "\001\332\363\0303\010\001\022\022list_notifications\032\003udb(\260\352\0010\003@\001" +
-      "J\014notificationP\001\342\363\030\340\001\n\014notification\022\027udb" +
-      "/native/notification\032\033UDB_NATIVE_SERVICE" +
-      "S_ENABLED\032\017UDB_GRPC_TARGET\"6udb.native.n" +
-      "otification.list_notifications.boilerpla" +
-      "te*\022list_notifications2\020udb_notification" +
-      ":\014notificationJ\013UDB_API_KEYZ\020udb native " +
-      "smoke\352\363\030a\n\036notification.ListNotification" +
-      "s\022\023notification.events\032\ttenant_id\"\010stand" +
+      "T\370\363\030\002\222\364\030.\n\017NotificationLog\022\006FAILED\022\nSUPP" +
+      "RESSED\032\007PENDING\242\364\030,\n*\n\023NOT_RETRYABLE_STA" +
+      "TE\022\023FAILED_PRECONDITION\202\323\344\223\002%\" /v1/notif" +
+      "ications/{log_id}:retry:\001*\022\347\005\n\016UpsertTem" +
+      "plate\0228.udb.core.notification.services.v" +
+      "1.UpsertTemplateRequest\0329.udb.core.notif" +
+      "ication.services.v1.UpsertTemplateRespon" +
+      "se\"\337\004\312\363\030J\010\002\032 udb:notification:upsert-tem" +
+      "plate \001J\002\001\002j\033notification.UpsertTemplate" +
+      "\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0300\010\001\022\017upsert_template\032\003ud" +
+      "b(\260\352\0010\003@\001J\014notificationP\001\342\363\030\332\001\n\014notifica" +
+      "tion\022\027udb/native/notification\032\033UDB_NATIV" +
+      "E_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"3udb" +
+      ".native.notification.upsert_template.boi" +
+      "lerplate*\017upsert_template2\020udb_notificat" +
+      "ion:\014notificationJ\013UDB_API_KEYZ\020udb nati" +
+      "ve smoke\352\363\030^\n\033notification.UpsertTemplat" +
+      "e\022\023notification.events\032\ttenant_id\"\010stand" +
       "ard*\rat_least_once2\006stable\362\363\030M\n\014notifica" +
       "tion\032\010postgres\032\005kafka2\033UDB_NATIVE_SERVIC" +
-      "ES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\023\022\021/" +
-      "v1/notifications\022\360\005\n\021RetryNotification\022;" +
-      ".udb.core.notification.services.v1.Retry" +
-      "NotificationRequest\032<.udb.core.notificat" +
-      "ion.services.v1.RetryNotificationRespons" +
-      "e\"\337\004\312\363\030P\010\002\032#udb:notification:retry-notif" +
-      "ication \001J\002\001\002j\036notification.RetryNotific" +
-      "ation\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0303\010\001\022\022retry_notifica" +
-      "tion\032\003udb(\260\352\0010\003@\001J\014notificationP\001\342\363\030\340\001\n\014" +
+      "ES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\0027\0322/" +
+      "v1/notifications/templates/{event_type}/" +
+      "{channel}:\001*\022\311\005\n\013GetTemplate\0225.udb.core." +
+      "notification.services.v1.GetTemplateRequ" +
+      "est\0326.udb.core.notification.services.v1." +
+      "GetTemplateResponse\"\312\004\312\363\030D\010\002\032\035udb:notifi" +
+      "cation:get-template \001J\002\001\002j\030notification." +
+      "GetTemplate\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030-\010\001\022\014get_temp" +
+      "late\032\003udb(\260\352\0010\003@\001J\014notificationP\001\342\363\030\324\001\n\014" +
       "notification\022\027udb/native/notification\032\033U" +
       "DB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TAR" +
-      "GET\"6udb.native.notification.retry_notif" +
-      "ication.boilerplate*\022retry_notification2" +
+      "GET\"0udb.native.notification.get_templat" +
+      "e.boilerplate*\014get_template2\020udb_notific" +
+      "ation:\014notificationJ\013UDB_API_KEYZ\020udb na" +
+      "tive smoke\352\363\030[\n\030notification.GetTemplate" +
+      "\022\023notification.events\032\ttenant_id\"\010standa" +
+      "rd*\rat_least_once2\006stable\362\363\030M\n\014notificat" +
+      "ion\032\010postgres\032\005kafka2\033UDB_NATIVE_SERVICE" +
+      "S_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\0024\0222/v" +
+      "1/notifications/templates/{event_type}/{" +
+      "channel}\022\304\005\n\rListTemplates\0227.udb.core.no" +
+      "tification.services.v1.ListTemplatesRequ" +
+      "est\0328.udb.core.notification.services.v1." +
+      "ListTemplatesResponse\"\277\004\312\363\030H\010\002\032\037udb:noti" +
+      "fication:list-templates \001J\002\001\002j\032notificat" +
+      "ion.ListTemplates\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030/\010\001\022\016li" +
+      "st_templates\032\003udb(\260\352\0010\003@\001J\014notificationP" +
+      "\001\342\363\030\330\001\n\014notification\022\027udb/native/notific" +
+      "ation\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_" +
+      "GRPC_TARGET\"2udb.native.notification.lis" +
+      "t_templates.boilerplate*\016list_templates2" +
       "\020udb_notification:\014notificationJ\013UDB_API" +
-      "_KEYZ\020udb native smoke\352\363\030a\n\036notification" +
-      ".RetryNotification\022\023notification.events\032" +
-      "\ttenant_id\"\010standard*\rat_least_once2\006sta" +
-      "ble\362\363\030M\n\014notification\032\010postgres\032\005kafka2\033" +
-      "UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TA" +
-      "RGET\370\363\030\002\202\323\344\223\002%\" /v1/notifications/{log_i" +
-      "d}:retry:\001*\022\347\005\n\016UpsertTemplate\0228.udb.cor" +
-      "e.notification.services.v1.UpsertTemplat" +
-      "eRequest\0329.udb.core.notification.service" +
-      "s.v1.UpsertTemplateResponse\"\337\004\312\363\030J\010\002\032 ud" +
-      "b:notification:upsert-template \001J\002\001\002j\033no" +
-      "tification.UpsertTemplate\220\001\001\322\363\030\006\010\001\020\001 \001\332\363" +
-      "\0300\010\001\022\017upsert_template\032\003udb(\260\352\0010\003@\001J\014noti" +
-      "ficationP\001\342\363\030\332\001\n\014notification\022\027udb/nativ" +
+      "_KEYZ\020udb native smoke\352\363\030]\n\032notification" +
+      ".ListTemplates\022\023notification.events\032\tten" +
+      "ant_id\"\010standard*\rat_least_once2\006stable\362" +
+      "\363\030M\n\014notification\032\010postgres\032\005kafka2\033UDB_" +
+      "NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET" +
+      "\370\363\030\001\202\323\344\223\002\035\022\033/v1/notifications/templates\022" +
+      "\337\005\n\020GetDeliveryStats\022:.udb.core.notifica" +
+      "tion.services.v1.GetDeliveryStatsRequest" +
+      "\032;.udb.core.notification.services.v1.Get" +
+      "DeliveryStatsResponse\"\321\004\312\363\030O\010\002\032#udb:noti" +
+      "fication:get-delivery-stats \001J\002\001\002j\035notif" +
+      "ication.GetDeliveryStats\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030" +
+      "3\010\001\022\022get_delivery_stats\032\003udb(\260\352\0010\003@\001J\014no" +
+      "tificationP\001\342\363\030\340\001\n\014notification\022\027udb/nat" +
+      "ive/notification\032\033UDB_NATIVE_SERVICES_EN" +
+      "ABLED\032\017UDB_GRPC_TARGET\"6udb.native.notif" +
+      "ication.get_delivery_stats.boilerplate*\022" +
+      "get_delivery_stats2\020udb_notification:\014no" +
+      "tificationJ\013UDB_API_KEYZ\020udb native smok" +
+      "e\352\363\030`\n\035notification.GetDeliveryStats\022\023no" +
+      "tification.events\032\ttenant_id\"\010standard*\r" +
+      "at_least_once2\006stable\362\363\030M\n\014notification\032" +
+      "\010postgres\032\005kafka2\033UDB_NATIVE_SERVICES_EN" +
+      "ABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\031\022\027/v1/no" +
+      "tifications/stats\022\335\005\n\rSetPreference\0227.ud" +
+      "b.core.notification.services.v1.SetPrefe" +
+      "renceRequest\0328.udb.core.notification.ser" +
+      "vices.v1.SetPreferenceResponse\"\330\004\312\363\030H\010\002\032" +
+      "\037udb:notification:set-preference \001J\002\001\002j\032" +
+      "notification.SetPreference\220\001\001\322\363\030\006\010\001\020\001 \001\332" +
+      "\363\030/\010\001\022\016set_preference\032\003udb(\260\352\0010\003@\001J\014noti" +
+      "ficationP\001\342\363\030\330\001\n\014notification\022\027udb/nativ" +
       "e/notification\032\033UDB_NATIVE_SERVICES_ENAB" +
-      "LED\032\017UDB_GRPC_TARGET\"3udb.native.notific" +
-      "ation.upsert_template.boilerplate*\017upser" +
-      "t_template2\020udb_notification:\014notificati" +
-      "onJ\013UDB_API_KEYZ\020udb native smoke\352\363\030^\n\033n" +
-      "otification.UpsertTemplate\022\023notification" +
-      ".events\032\ttenant_id\"\010standard*\rat_least_o" +
-      "nce2\006stable\362\363\030M\n\014notification\032\010postgres\032" +
-      "\005kafka2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB" +
-      "_GRPC_TARGET\370\363\030\002\202\323\344\223\0027\0322/v1/notification" +
-      "s/templates/{event_type}/{channel}:\001*\022\311\005" +
-      "\n\013GetTemplate\0225.udb.core.notification.se" +
-      "rvices.v1.GetTemplateRequest\0326.udb.core." +
-      "notification.services.v1.GetTemplateResp" +
-      "onse\"\312\004\312\363\030D\010\002\032\035udb:notification:get-temp" +
-      "late \001J\002\001\002j\030notification.GetTemplate\220\001\001\322" +
-      "\363\030\006\010\001\020\001 \001\332\363\030-\010\001\022\014get_template\032\003udb(\260\352\0010\003" +
-      "@\001J\014notificationP\001\342\363\030\324\001\n\014notification\022\027u" +
-      "db/native/notification\032\033UDB_NATIVE_SERVI" +
-      "CES_ENABLED\032\017UDB_GRPC_TARGET\"0udb.native" +
-      ".notification.get_template.boilerplate*\014" +
-      "get_template2\020udb_notification:\014notifica" +
-      "tionJ\013UDB_API_KEYZ\020udb native smoke\352\363\030[\n" +
-      "\030notification.GetTemplate\022\023notification." +
-      "events\032\ttenant_id\"\010standard*\rat_least_on" +
-      "ce2\006stable\362\363\030M\n\014notification\032\010postgres\032\005" +
-      "kafka2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_" +
-      "GRPC_TARGET\370\363\030\001\202\323\344\223\0024\0222/v1/notifications" +
-      "/templates/{event_type}/{channel}\022\304\005\n\rLi" +
-      "stTemplates\0227.udb.core.notification.serv" +
-      "ices.v1.ListTemplatesRequest\0328.udb.core." +
-      "notification.services.v1.ListTemplatesRe" +
-      "sponse\"\277\004\312\363\030H\010\002\032\037udb:notification:list-t" +
-      "emplates \001J\002\001\002j\032notification.ListTemplat" +
-      "es\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030/\010\001\022\016list_templates\032\003u" +
+      "LED\032\017UDB_GRPC_TARGET\"2udb.native.notific" +
+      "ation.set_preference.boilerplate*\016set_pr" +
+      "eference2\020udb_notification:\014notification" +
+      "J\013UDB_API_KEYZ\020udb native smoke\352\363\030]\n\032not" +
+      "ification.SetPreference\022\023notification.ev" +
+      "ents\032\ttenant_id\"\010standard*\rat_least_once" +
+      "2\006stable\362\363\030M\n\014notification\032\010postgres\032\005ka" +
+      "fka2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GR" +
+      "PC_TARGET\370\363\030\002\202\323\344\223\0026\0321/v1/notifications/p" +
+      "references/{user_id}/{channel}:\001*\022\332\005\n\rGe" +
+      "tPreference\0227.udb.core.notification.serv" +
+      "ices.v1.GetPreferenceRequest\0328.udb.core." +
+      "notification.services.v1.GetPreferenceRe" +
+      "sponse\"\325\004\312\363\030H\010\002\032\037udb:notification:get-pr" +
+      "eference \001J\002\001\002j\032notification.GetPreferen" +
+      "ce\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030/\010\001\022\016get_preference\032\003u" +
       "db(\260\352\0010\003@\001J\014notificationP\001\342\363\030\330\001\n\014notific" +
       "ation\022\027udb/native/notification\032\033UDB_NATI" +
       "VE_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"2ud" +
-      "b.native.notification.list_templates.boi" +
-      "lerplate*\016list_templates2\020udb_notificati" +
+      "b.native.notification.get_preference.boi" +
+      "lerplate*\016get_preference2\020udb_notificati" +
       "on:\014notificationJ\013UDB_API_KEYZ\020udb nativ" +
-      "e smoke\352\363\030]\n\032notification.ListTemplates\022" +
+      "e smoke\352\363\030]\n\032notification.GetPreference\022" +
       "\023notification.events\032\ttenant_id\"\010standar" +
       "d*\rat_least_once2\006stable\362\363\030M\n\014notificati" +
       "on\032\010postgres\032\005kafka2\033UDB_NATIVE_SERVICES" +
-      "_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\035\022\033/v1" +
-      "/notifications/templates\022\337\005\n\020GetDelivery" +
-      "Stats\022:.udb.core.notification.services.v" +
-      "1.GetDeliveryStatsRequest\032;.udb.core.not" +
-      "ification.services.v1.GetDeliveryStatsRe" +
-      "sponse\"\321\004\312\363\030O\010\002\032#udb:notification:get-de" +
-      "livery-stats \001J\002\001\002j\035notification.GetDeli" +
-      "veryStats\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0303\010\001\022\022get_delive" +
-      "ry_stats\032\003udb(\260\352\0010\003@\001J\014notificationP\001\342\363\030" +
-      "\340\001\n\014notification\022\027udb/native/notificatio" +
-      "n\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC" +
-      "_TARGET\"6udb.native.notification.get_del" +
-      "ivery_stats.boilerplate*\022get_delivery_st" +
-      "ats2\020udb_notification:\014notificationJ\013UDB" +
-      "_API_KEYZ\020udb native smoke\352\363\030`\n\035notifica" +
-      "tion.GetDeliveryStats\022\023notification.even" +
-      "ts\032\ttenant_id\"\010standard*\rat_least_once2\006" +
-      "stable\362\363\030M\n\014notification\032\010postgres\032\005kafk" +
-      "a2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC" +
-      "_TARGET\370\363\030\001\202\323\344\223\002\031\022\027/v1/notifications/sta" +
-      "ts\022\335\005\n\rSetPreference\0227.udb.core.notifica" +
-      "tion.services.v1.SetPreferenceRequest\0328." +
-      "udb.core.notification.services.v1.SetPre" +
-      "ferenceResponse\"\330\004\312\363\030H\010\002\032\037udb:notificati" +
-      "on:set-preference \001J\002\001\002j\032notification.Se" +
-      "tPreference\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030/\010\001\022\016set_pref" +
-      "erence\032\003udb(\260\352\0010\003@\001J\014notificationP\001\342\363\030\330\001" +
-      "\n\014notification\022\027udb/native/notification\032" +
-      "\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_T" +
-      "ARGET\"2udb.native.notification.set_prefe" +
-      "rence.boilerplate*\016set_preference2\020udb_n" +
-      "otification:\014notificationJ\013UDB_API_KEYZ\020" +
-      "udb native smoke\352\363\030]\n\032notification.SetPr" +
-      "eference\022\023notification.events\032\ttenant_id" +
-      "\"\010standard*\rat_least_once2\006stable\362\363\030M\n\014n" +
-      "otification\032\010postgres\032\005kafka2\033UDB_NATIVE" +
-      "_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323" +
-      "\344\223\0026\0321/v1/notifications/preferences/{use" +
-      "r_id}/{channel}:\001*\022\332\005\n\rGetPreference\0227.u" +
-      "db.core.notification.services.v1.GetPref" +
-      "erenceRequest\0328.udb.core.notification.se" +
-      "rvices.v1.GetPreferenceResponse\"\325\004\312\363\030H\010\002" +
-      "\032\037udb:notification:get-preference \001J\002\001\002j" +
-      "\032notification.GetPreference\220\001\001\322\363\030\006\010\001\020\001 \001" +
-      "\332\363\030/\010\001\022\016get_preference\032\003udb(\260\352\0010\003@\001J\014not" +
-      "ificationP\001\342\363\030\330\001\n\014notification\022\027udb/nati" +
+      "_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\0023\0221/v1" +
+      "/notifications/preferences/{user_id}/{ch" +
+      "annel}\022\342\005\n\017ListPreferences\0229.udb.core.no" +
+      "tification.services.v1.ListPreferencesRe" +
+      "quest\032:.udb.core.notification.services.v" +
+      "1.ListPreferencesResponse\"\327\004\312\363\030L\010\002\032!udb:" +
+      "notification:list-preferences \001J\002\001\002j\034not" +
+      "ification.ListPreferences\220\001\001\322\363\030\006\010\001\020\001 \001\332\363" +
+      "\0301\010\001\022\020list_preferences\032\003udb(\260\352\0010\003@\001J\014not" +
+      "ificationP\001\342\363\030\334\001\n\014notification\022\027udb/nati" +
       "ve/notification\032\033UDB_NATIVE_SERVICES_ENA" +
-      "BLED\032\017UDB_GRPC_TARGET\"2udb.native.notifi" +
-      "cation.get_preference.boilerplate*\016get_p" +
-      "reference2\020udb_notification:\014notificatio" +
-      "nJ\013UDB_API_KEYZ\020udb native smoke\352\363\030]\n\032no" +
-      "tification.GetPreference\022\023notification.e" +
-      "vents\032\ttenant_id\"\010standard*\rat_least_onc" +
-      "e2\006stable\362\363\030M\n\014notification\032\010postgres\032\005k" +
-      "afka2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_G" +
-      "RPC_TARGET\370\363\030\001\202\323\344\223\0023\0221/v1/notifications/" +
-      "preferences/{user_id}/{channel}\022\342\005\n\017List" +
-      "Preferences\0229.udb.core.notification.serv" +
-      "ices.v1.ListPreferencesRequest\032:.udb.cor" +
-      "e.notification.services.v1.ListPreferenc" +
-      "esResponse\"\327\004\312\363\030L\010\002\032!udb:notification:li" +
-      "st-preferences \001J\002\001\002j\034notification.ListP" +
-      "references\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0301\010\001\022\020list_pref" +
-      "erences\032\003udb(\260\352\0010\003@\001J\014notificationP\001\342\363\030\334" +
-      "\001\n\014notification\022\027udb/native/notification" +
-      "\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_" +
-      "TARGET\"4udb.native.notification.list_pre" +
-      "ferences.boilerplate*\020list_preferences2\020" +
-      "udb_notification:\014notificationJ\013UDB_API_" +
-      "KEYZ\020udb native smoke\352\363\030_\n\034notification." +
-      "ListPreferences\022\023notification.events\032\tte" +
-      "nant_id\"\010standard*\rat_least_once2\006stable" +
-      "\362\363\030M\n\014notification\032\010postgres\032\005kafka2\033UDB" +
-      "_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGE" +
-      "T\370\363\030\001\202\323\344\223\002)\022\'/v1/notifications/preferenc" +
-      "es/{user_id}\032\271\003\312\360\031\216\001\n\014notification\022\014noti" +
-      "fication\032\014notification\"\rNotifications*\tm" +
-      "essaging0\0018\001P\001h\001z\014notification\202\001\014notific" +
-      "ation\212\001\014notification\222\001\023native.notificati" +
-      "on\322\360\031\037\010\001\032\003udb(\260\352\0010\003@\001J\014notificationP\001\332\360\031" +
-      "\246\001\n\014notification\022\027udb/native/notificatio" +
-      "n\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC" +
-      "_TARGET\"#udb.native.notification.config." +
-      "json:\014notificationJ\013UDB_API_KEYZ\017udb nat" +
-      "ive lint\342\360\031T\n\014notification\032\010postgres\032\005ka" +
-      "fka2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GR" +
-      "PC_TARGET:\005kafkaB\273\002\n%com.udb.core.notifi" +
-      "cation.services.v1B\030NotificationServiceP" +
-      "rotoP\001ZOgithub.com/fahara02/udb/sdk/go/g" +
-      "en/udb/core/notification/services/v1;ser" +
-      "vicesv1\242\002\004UCNS\252\002!udb.core.Notification.S" +
-      "ervices.V1\312\002!Udb\\Core\\Notification\\Servi" +
-      "ces\\V1\342\002-Udb\\GPBMetadata\\Core\\Notificati" +
-      "on\\Services\\V1\352\002%Udb::Core::Notification" +
-      "::Services::V1b\006proto3"
+      "BLED\032\017UDB_GRPC_TARGET\"4udb.native.notifi" +
+      "cation.list_preferences.boilerplate*\020lis" +
+      "t_preferences2\020udb_notification:\014notific" +
+      "ationJ\013UDB_API_KEYZ\020udb native smoke\352\363\030_" +
+      "\n\034notification.ListPreferences\022\023notifica" +
+      "tion.events\032\ttenant_id\"\010standard*\rat_lea" +
+      "st_once2\006stable\362\363\030M\n\014notification\032\010postg" +
+      "res\032\005kafka2\033UDB_NATIVE_SERVICES_ENABLED2" +
+      "\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002)\022\'/v1/notifica" +
+      "tions/preferences/{user_id}\032\271\003\312\360\031\216\001\n\014not" +
+      "ification\022\014notification\032\014notification\"\rN" +
+      "otifications*\tmessaging0\0018\001P\001h\001z\014notific" +
+      "ation\202\001\014notification\212\001\014notification\222\001\023na" +
+      "tive.notification\322\360\031\037\010\001\032\003udb(\260\352\0010\003@\001J\014no" +
+      "tificationP\001\332\360\031\246\001\n\014notification\022\027udb/nat" +
+      "ive/notification\032\033UDB_NATIVE_SERVICES_EN" +
+      "ABLED\032\017UDB_GRPC_TARGET\"#udb.native.notif" +
+      "ication.config.json:\014notificationJ\013UDB_A" +
+      "PI_KEYZ\017udb native lint\342\360\031T\n\014notificatio" +
+      "n\032\010postgres\032\005kafka2\033UDB_NATIVE_SERVICES_" +
+      "ENABLED2\017UDB_GRPC_TARGET:\005kafkaB\273\002\n%com." +
+      "udb.core.notification.services.v1B\030Notif" +
+      "icationServiceProtoP\001ZOgithub.com/fahara" +
+      "02/udb/sdk/go/gen/udb/core/notification/" +
+      "services/v1;servicesv1\242\002\004UCNS\252\002!udb.core" +
+      ".Notification.Services.V1\312\002!Udb\\Core\\Not" +
+      "ification\\Services\\V1\342\002-Udb\\GPBMetadata\\" +
+      "Core\\Notification\\Services\\V1\352\002%Udb::Cor" +
+      "e::Notification::Services::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -282,7 +287,9 @@ public final class NotificationServiceProto {
     registry.add(com.udb.core.common.v1.SecurityProto.endpointSecurity);
     registry.add(com.udb.core.common.v1.SecurityProto.methodCliScaffold);
     registry.add(com.udb.core.common.v1.SecurityProto.methodDependencyContract);
+    registry.add(com.udb.core.common.v1.SecurityProto.methodErrorContract);
     registry.add(com.udb.core.common.v1.SecurityProto.methodEventContract);
+    registry.add(com.udb.core.common.v1.SecurityProto.methodLifecycleContract);
     registry.add(com.udb.core.common.v1.SecurityProto.nativeService);
     registry.add(com.udb.core.common.v1.SecurityProto.operationKind);
     registry.add(com.udb.core.common.v1.SecurityProto.restContract);

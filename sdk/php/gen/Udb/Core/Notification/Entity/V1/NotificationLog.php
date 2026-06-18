@@ -90,6 +90,14 @@ class NotificationLog extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>.google.protobuf.Timestamp created_at = 19 [json_name = "createdAt", (.udb.core.common.v1.pg_column) = {</code>
      */
     protected $created_at = null;
+    /**
+     * Generated from protobuf field <code>string rendered_subject = 20 [json_name = "renderedSubject", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $rendered_subject = '';
+    /**
+     * Generated from protobuf field <code>string rendered_body = 21 [json_name = "renderedBody", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $rendered_body = '';
 
     /**
      * Constructor.
@@ -116,6 +124,8 @@ class NotificationLog extends \Google\Protobuf\Internal\Message
      *     @type \Google\Protobuf\Timestamp $sent_at
      *     @type \Google\Protobuf\Timestamp $delivered_at
      *     @type \Google\Protobuf\Timestamp $created_at
+     *     @type string $rendered_subject
+     *     @type string $rendered_body
      * }
      */
     public function __construct($data = NULL) {
@@ -567,6 +577,50 @@ class NotificationLog extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->created_at = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>string rendered_subject = 20 [json_name = "renderedSubject", (.udb.core.common.v1.pg_column) = {</code>
+     * @return string
+     */
+    public function getRenderedSubject()
+    {
+        return $this->rendered_subject;
+    }
+
+    /**
+     * Generated from protobuf field <code>string rendered_subject = 20 [json_name = "renderedSubject", (.udb.core.common.v1.pg_column) = {</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setRenderedSubject($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->rendered_subject = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>string rendered_body = 21 [json_name = "renderedBody", (.udb.core.common.v1.pg_column) = {</code>
+     * @return string
+     */
+    public function getRenderedBody()
+    {
+        return $this->rendered_body;
+    }
+
+    /**
+     * Generated from protobuf field <code>string rendered_body = 21 [json_name = "renderedBody", (.udb.core.common.v1.pg_column) = {</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setRenderedBody($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->rendered_body = $var;
 
         return $this;
     }

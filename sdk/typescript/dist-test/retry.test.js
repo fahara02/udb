@@ -88,3 +88,66 @@ function fakeCore(stub) {
     node_assert_1.strict.deepEqual(result, { ok: true });
     node_assert_1.strict.equal(calls, 2);
 });
+// ── Replay-safe mutation retry (R1.2) ───────────────────────────────────────
+//
+// The proto marks Upsert/Delete `replay_safe` (R1.1) — the broker collapses a
+// retried duplicate carrying the same idempotency key. So a replay-safe mutation
+// may be retried on a transient failure ONLY when a non-empty key is present.
+(0, node_test_1.test)("catalog: Upsert is replay-safe and a mutation; ListSagas is not", () => {
+    // Guards the R1.1 catalog this retry behavior depends on.
+    node_assert_1.strict.equal(generatedClient_1.RPC_REPLAY_SAFE[`/${DATA_BROKER}/Upsert`], true);
+    node_assert_1.strict.equal(generatedClient_1.RPC_REPLAY_SAFE[`/${DATA_BROKER}/Delete`], true);
+    node_assert_1.strict.equal(generatedClient_1.RPC_OPERATION_KIND[`/${DATA_BROKER}/Upsert`], "mutation");
+    // A non-replay-safe mutation and a read-only RPC are absent/false.
+    node_assert_1.strict.notEqual(generatedClient_1.RPC_REPLAY_SAFE[`/${DATA_BROKER}/MarkSagaReviewed`], true);
+    node_assert_1.strict.notEqual(generatedClient_1.RPC_REPLAY_SAFE[`/${DATA_BROKER}/ListSagas`], true);
+});
+(0, node_test_1.test)("replay-safe mutation WITH idempotency key retries then succeeds", async () => {
+    let calls = 0;
+    const core = fakeCore({
+        Upsert(_request, _metadata, _options, cb) {
+            calls += 1;
+            if (calls === 1) {
+                cb(unavailable(), null);
+                return;
+            }
+            cb(null, { was_duplicate: true });
+        },
+    });
+    const result = await core.unary(DATA_BROKER, "Upsert", { idempotency_key: "key-123" });
+    node_assert_1.strict.deepEqual(result, { was_duplicate: true });
+    node_assert_1.strict.equal(calls, 2);
+});
+(0, node_test_1.test)("replay-safe mutation WITHOUT idempotency key is not retried", async () => {
+    let calls = 0;
+    const core = fakeCore({
+        Upsert(_request, _metadata, _options, cb) {
+            calls += 1;
+            cb(unavailable(), null);
+        },
+    });
+    await node_assert_1.strict.rejects(() => core.unary(DATA_BROKER, "Upsert", {}), (err) => err instanceof generatedClient_1.UdbError && err.code === grpc.status.UNAVAILABLE);
+    node_assert_1.strict.equal(calls, 1);
+});
+(0, node_test_1.test)("replay-safe mutation with BLANK idempotency key is not retried", async () => {
+    let calls = 0;
+    const core = fakeCore({
+        Upsert(_request, _metadata, _options, cb) {
+            calls += 1;
+            cb(unavailable(), null);
+        },
+    });
+    await node_assert_1.strict.rejects(() => core.unary(DATA_BROKER, "Upsert", { idempotency_key: "   " }));
+    node_assert_1.strict.equal(calls, 1);
+});
+(0, node_test_1.test)("non-replay-safe mutation is not retried even WITH an idempotency key", async () => {
+    let calls = 0;
+    const core = fakeCore({
+        MarkSagaReviewed(_request, _metadata, _options, cb) {
+            calls += 1;
+            cb(unavailable(), null);
+        },
+    });
+    await node_assert_1.strict.rejects(() => core.unary(DATA_BROKER, "MarkSagaReviewed", { idempotency_key: "key-123" }), (err) => err instanceof generatedClient_1.UdbError && err.code === grpc.status.UNAVAILABLE);
+    node_assert_1.strict.equal(calls, 1);
+});

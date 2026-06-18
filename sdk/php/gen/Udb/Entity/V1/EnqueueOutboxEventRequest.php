@@ -46,6 +46,8 @@ class EnqueueOutboxEventRequest extends \Google\Protobuf\Internal\Message
     /**
      * Caller-supplied idempotency key. If provided and a recent matching key exists
      * in Redis, the event is not re-enqueued and was_duplicate = true is returned.
+     * If the dedup store is unavailable, a keyed enqueue is refused (UNAVAILABLE)
+     * rather than risking a duplicate (fail-closed).
      *
      * Generated from protobuf field <code>string idempotency_key = 6 [json_name = "idempotencyKey"];</code>
      */
@@ -70,6 +72,8 @@ class EnqueueOutboxEventRequest extends \Google\Protobuf\Internal\Message
      *     @type string $idempotency_key
      *           Caller-supplied idempotency key. If provided and a recent matching key exists
      *           in Redis, the event is not re-enqueued and was_duplicate = true is returned.
+     *           If the dedup store is unavailable, a keyed enqueue is refused (UNAVAILABLE)
+     *           rather than risking a duplicate (fail-closed).
      * }
      */
     public function __construct($data = NULL) {
@@ -228,6 +232,8 @@ class EnqueueOutboxEventRequest extends \Google\Protobuf\Internal\Message
     /**
      * Caller-supplied idempotency key. If provided and a recent matching key exists
      * in Redis, the event is not re-enqueued and was_duplicate = true is returned.
+     * If the dedup store is unavailable, a keyed enqueue is refused (UNAVAILABLE)
+     * rather than risking a duplicate (fail-closed).
      *
      * Generated from protobuf field <code>string idempotency_key = 6 [json_name = "idempotencyKey"];</code>
      * @return string
@@ -240,6 +246,8 @@ class EnqueueOutboxEventRequest extends \Google\Protobuf\Internal\Message
     /**
      * Caller-supplied idempotency key. If provided and a recent matching key exists
      * in Redis, the event is not re-enqueued and was_duplicate = true is returned.
+     * If the dedup store is unavailable, a keyed enqueue is refused (UNAVAILABLE)
+     * rather than risking a duplicate (fail-closed).
      *
      * Generated from protobuf field <code>string idempotency_key = 6 [json_name = "idempotencyKey"];</code>
      * @param string $var

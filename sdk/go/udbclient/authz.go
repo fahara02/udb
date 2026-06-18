@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"strings"
 
+	authzentv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/authz/entity/v1"
 	authzv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/authz/services/v1"
 )
 
@@ -191,6 +192,70 @@ func (c *AuthClient) BatchCan(ctx context.Context, checks []BatchCheck) ([]Batch
 // results.
 func batchKey(object, action string) string {
 	return strings.Join([]string{object, action}, ":")
+}
+
+// ── Role / policy ergonomics (naming contract R2.0) ──────────────────────────
+//
+// AllowRole and BindRole are the canonical simple-client accessors that wrap the
+// raw AuthzService.CreatePolicyRule / AssignRole RPCs. Each emits EXACTLY ONE
+// RPC — no hidden List/Get probe — and seeds tenant/project/domain + the
+// created_by/assigned_by actor from the caller Metadata. The raw RPCs stay
+// reachable on AuthClient.Authz for anything these don't cover.
+
+// AllowRole grants role permission to perform action on resource. It emits
+// exactly one CreatePolicyRule RPC with effect = ALLOW: role becomes the policy
+// subject, the resource's object key (message_type/resource_name/table, in that
+// precedence) becomes the object, and tenant/project/domain + created_by are
+// filled from the caller Metadata.
+func (c *AuthClient) AllowRole(ctx context.Context, role string, resource *authzv1.ResourceRef, action string) (*authzv1.CreatePolicyRuleResponse, error) {
+	meta := c.Meta
+	actor := meta.UserID
+	if actor == "" {
+		actor = meta.ServiceIdentity
+	}
+	return c.Authz.CreatePolicyRule(c.Context(ctx), &authzv1.CreatePolicyRuleRequest{
+		Subject:   role,
+		Domain:    meta.TenantID,
+		Object:    resourceLabel(resource),
+		Action:    action,
+		Effect:    authzentv1.PolicyEffect_POLICY_EFFECT_ALLOW,
+		CreatedBy: actor,
+		TenantId:  meta.TenantID,
+		ProjectId: meta.ProjectID,
+	})
+}
+
+// BindRole binds subject (a user/principal id) to role. It emits exactly one
+// AssignRole RPC: subject is sent as both user_id and principal_id, role as
+// role_id, and domain/tenant/project + assigned_by are filled from the caller
+// Metadata.
+func (c *AuthClient) BindRole(ctx context.Context, subject, role string) (*authzv1.AssignRoleResponse, error) {
+	meta := c.Meta
+	actor := meta.UserID
+	if actor == "" {
+		actor = meta.ServiceIdentity
+	}
+	return c.Authz.AssignRole(c.Context(ctx), &authzv1.AssignRoleRequest{
+		UserId:      subject,
+		PrincipalId: subject,
+		RoleId:      role,
+		Domain:      meta.TenantID,
+		AssignedBy:  actor,
+		TenantId:    meta.TenantID,
+		ProjectId:   meta.ProjectID,
+	})
+}
+
+// AllowRole on the AuthzFacade forwards to the underlying AuthClient so the
+// canonical `u.Authz.AllowRole(...)` surface exists (one CreatePolicyRule RPC).
+func (f *AuthzFacade) AllowRole(ctx context.Context, role string, resource *authzv1.ResourceRef, action string) (*authzv1.CreatePolicyRuleResponse, error) {
+	return f.client.AllowRole(ctx, role, resource, action)
+}
+
+// BindRole on the AuthzFacade forwards to the underlying AuthClient so the
+// canonical `u.Authz.BindRole(...)` surface exists (one AssignRole RPC).
+func (f *AuthzFacade) BindRole(ctx context.Context, subject, role string) (*authzv1.AssignRoleResponse, error) {
+	return f.client.BindRole(ctx, subject, role)
 }
 
 // ── Phase 7 (M5.3): policy-bundle signature verification ──────────────────────

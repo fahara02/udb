@@ -138,6 +138,11 @@ fn request_with_context<T>(message: T, context: &RequestContext) -> Result<Reque
     insert_ascii(metadata, "x-udb-target-backend", &context.target_backend)?;
     insert_ascii(metadata, "x-udb-target-instance", &context.target_instance)?;
     insert_ascii(metadata, "x-udb-routing-policy", &context.routing_policy)?;
+    // 03.1.1.1: forward the read fence on the embedded in-process path. The
+    // served path reads it exclusively from this header (security.rs), so
+    // without this an embedded caller silently loses any fence it set.
+    // `insert_ascii` early-returns on empty input → zero cost when unset.
+    insert_ascii(metadata, "x-udb-read-fence", &context.read_fence_json)?;
     if context.max_replica_lag_ms > 0 {
         insert_ascii(
             metadata,

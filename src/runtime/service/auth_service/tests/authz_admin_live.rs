@@ -271,6 +271,76 @@ async fn live_postgres_authz_admin_crud_and_audit_lifecycle() {
     cleanup_native_auth_db(&pool).await;
 }
 
+/// §1 read-after-write served-path contract (13.7.1.1): the `policy_id`
+/// `CreatePolicyRule` returns is IMMEDIATELY readable by `GetPolicyRule` on the SAME
+/// served path with the SAME tenant metadata a client uses — i.e. create does NOT
+/// mint a random id that get cannot resolve. Reverting that broker guarantee (a
+/// create that returns an id not gettable) fails this test.
+///
+/// The governance draft→`ActivatePolicyVersion`→`GetPolicyRule` id-stability half
+/// (lane 02's guarantee that activation preserves each policy's own id rather than
+/// re-minting via `gen_random_uuid()`) requires the full multi-RPC governance
+/// lifecycle (CreatePolicyDraft → SubmitPolicyDraft → approval → ActivatePolicyVersion
+/// with SoD reviewers + a frozen policy document) for which no existing live module
+/// provides a harness. That half is DEFERRED to a dedicated governance-lifecycle live
+/// test rather than shipped as a fragile partial setup; the create→get half below
+/// pins the §1 read-after-write contract this lane owns. (The id-preservation code
+/// path itself — `apply_document_and_activate` binding each policy's own id via
+/// `COALESCE(NULLIF($1,'')::uuid, gen_random_uuid())` — landed in lane 02.)
+#[tokio::test]
+#[ignore = "requires live Postgres; run with UDB_LIVE_AUTH_TESTS=1 cargo test --lib live_postgres_authz_create_policy_rule_read_after_write -- --ignored --nocapture"]
+async fn live_postgres_authz_create_policy_rule_read_after_write() {
+    let _guard = live_auth_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_auth_db(&pool).await;
+    let authn = authn_service(pool.clone());
+    let authz = authz_service(pool.clone()).await;
+    let user = create_verified_user(&authn, "ryw_policy", "CorrectHorse1!").await;
+
+    let created = authz
+        .create_policy_rule(Request::new(authz_pb::CreatePolicyRuleRequest {
+            subject: user.user_id.clone(),
+            domain: "acme".to_string(),
+            object: "ledger".to_string(),
+            action: "data.read".to_string(),
+            effect: authz_entity_pb::PolicyEffect::Allow as i32,
+            description: "RYW live permission".to_string(),
+            created_by: user.user_id.clone(),
+            tenant_id: "acme".to_string(),
+            resource_type: "ledger".to_string(),
+            ..Default::default()
+        }))
+        .await
+        .expect("create_policy_rule")
+        .into_inner()
+        .policy
+        .expect("created policy");
+
+    // The id create returned must be NON-EMPTY and immediately gettable on the
+    // SAME served path, round-tripping the SAME id.
+    assert!(
+        !created.policy_id.is_empty(),
+        "CreatePolicyRule must return a non-empty policy_id"
+    );
+    let got = authz
+        .get_policy_rule(Request::new(authz_pb::GetPolicyRuleRequest {
+            policy_id: created.policy_id.clone(),
+        }))
+        .await
+        .expect("CreatePolicyRule→GetPolicyRule must resolve the returned id")
+        .into_inner()
+        .policy
+        .expect("got policy");
+    assert_eq!(
+        got.policy_id, created.policy_id,
+        "GetPolicyRule must return the SAME id CreatePolicyRule issued (read-after-write)"
+    );
+    assert_eq!(got.subject, user.user_id);
+    assert_eq!(got.object, "ledger");
+
+    cleanup_native_auth_db(&pool).await;
+}
+
 #[tokio::test]
 #[ignore = "requires live Postgres; run with UDB_LIVE_AUTH_TESTS=1 cargo test --lib live_postgres_authz_role_binding_authorize_and_lint -- --ignored --nocapture"]
 async fn live_postgres_authz_role_binding_authorize_and_lint() {

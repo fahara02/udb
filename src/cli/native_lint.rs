@@ -28,6 +28,156 @@ use udb::runtime::descriptor_manifest::{
 /// `tenant_required` but leaves `tenant_field` empty.
 const TENANT_FIELD_NAMES: &[&str] = &["tenant_id", "tenant"];
 
+/// Which `*_contract` method options a workflow-facing RPC is required to carry.
+#[derive(Clone, Copy, Default)]
+struct RequiredContracts {
+    readback: bool,
+    lifecycle: bool,
+    idempotency: bool,
+    error: bool,
+}
+
+/// Authoritative coverage floor (R1.3): the workflow-facing RPCs that were
+/// audited against the broker impl and verified to GENUINELY satisfy a contract.
+/// Each entry pins the contracts that MUST stay present so coverage cannot
+/// silently regress when the proto is edited or regenerated. This is gated on
+/// exactly the set we annotated — NOT every mutation — because an annotation the
+/// impl does not honor is a capability lie (worse than none). Keyed by the gRPC
+/// path `/{pkg}.{Service}/{Method}`.
+///
+/// Verification basis (per RPC) is documented inline in the proto next to each
+/// option; the short reason here keeps the lint message actionable.
+const REQUIRED_WORKFLOW_CONTRACTS: &[(&str, RequiredContracts)] = &[
+    // storage: PENDING row persisted on register, PENDING→ACTIVE on finalize.
+    (
+        "/udb.core.storage.services.v1.StorageService/RegisterUpload",
+        RequiredContracts {
+            readback: true,
+            ..ALL_FALSE
+        },
+    ),
+    (
+        "/udb.core.storage.services.v1.StorageService/FinalizeUpload",
+        RequiredContracts {
+            readback: true,
+            lifecycle: true,
+            error: true,
+            ..ALL_FALSE
+        },
+    ),
+    // asset: row persisted before return; StartPipeline RUNNING→COMPLETED/FAILED
+    // with genuine correlation_id keyed dedup.
+    (
+        "/udb.core.asset.services.v1.AssetService/RegisterAsset",
+        RequiredContracts {
+            readback: true,
+            ..ALL_FALSE
+        },
+    ),
+    (
+        "/udb.core.asset.services.v1.AssetService/StartPipeline",
+        RequiredContracts {
+            readback: true,
+            lifecycle: true,
+            idempotency: true,
+            error: true,
+        },
+    ),
+    // webrtc rooms/peers.
+    (
+        "/udb.core.webrtc.services.v1.RoomService/CreateRoom",
+        RequiredContracts {
+            readback: true,
+            ..ALL_FALSE
+        },
+    ),
+    (
+        "/udb.core.webrtc.services.v1.RoomService/CloseRoom",
+        RequiredContracts {
+            lifecycle: true,
+            ..ALL_FALSE
+        },
+    ),
+    (
+        "/udb.core.webrtc.services.v1.PeerService/JoinRoom",
+        RequiredContracts {
+            lifecycle: true,
+            error: true,
+            ..ALL_FALSE
+        },
+    ),
+    (
+        "/udb.core.webrtc.services.v1.PeerService/JoinSession",
+        RequiredContracts {
+            lifecycle: true,
+            error: true,
+            ..ALL_FALSE
+        },
+    ),
+    // notification send/retry state machine.
+    (
+        "/udb.core.notification.services.v1.NotificationService/SendNotification",
+        RequiredContracts {
+            lifecycle: true,
+            error: true,
+            ..ALL_FALSE
+        },
+    ),
+    (
+        "/udb.core.notification.services.v1.NotificationService/RetryNotification",
+        RequiredContracts {
+            lifecycle: true,
+            error: true,
+            ..ALL_FALSE
+        },
+    ),
+    // data-plane migration state machine (pre-existing annotations, pinned here).
+    (
+        "/udb.services.v1.DataBroker/PlanMigration",
+        RequiredContracts {
+            lifecycle: true,
+            ..ALL_FALSE
+        },
+    ),
+    (
+        "/udb.services.v1.DataBroker/ApplyMigration",
+        RequiredContracts {
+            lifecycle: true,
+            ..ALL_FALSE
+        },
+    ),
+    (
+        "/udb.services.v1.DataBroker/ApproveMigrationPlan",
+        RequiredContracts {
+            lifecycle: true,
+            ..ALL_FALSE
+        },
+    ),
+    // keyed data-plane mutations that truly dedup (replay_safe via idempotency_key).
+    (
+        "/udb.services.v1.DataBroker/Upsert",
+        RequiredContracts {
+            idempotency: true,
+            ..ALL_FALSE
+        },
+    ),
+    (
+        "/udb.services.v1.DataBroker/Delete",
+        RequiredContracts {
+            idempotency: true,
+            ..ALL_FALSE
+        },
+    ),
+];
+
+/// `..ALL_FALSE` spread base so each table row only names the contracts it needs.
+const ALL_FALSE: RequiredContracts = RequiredContracts {
+    readback: false,
+    lifecycle: false,
+    idempotency: false,
+    error: false,
+};
+
 /// Emit the F13 descriptor lints not already covered by
 /// `native_contract_findings`.
 pub(crate) fn descriptor_lint_findings(
@@ -97,6 +247,13 @@ pub(crate) fn descriptor_lint_findings(
         }
     }
 
+    // 5. workflow_contract_coverage_missing (error): the audited workflow-facing
+    // RPCs must keep the verified `*_contract` options so coverage can't silently
+    // regress. Gated on exactly the set we annotated (REQUIRED_WORKFLOW_CONTRACTS)
+    // — adding a new mutation never trips this; only dropping a pinned contract
+    // (or renaming the RPC out from under it) does.
+    findings.extend(workflow_contract_coverage_findings(manifest));
+
     for message in &manifest.messages {
         // 3. tenant_scoped_table_rls_gap (warning)
         if let Some(table) = message.db_table_security.as_ref() {
@@ -139,6 +296,84 @@ pub(crate) fn descriptor_lint_findings(
     // hardcoded baseline — see the module-level note.)
 
     findings
+}
+
+/// Enforce the R1.3 workflow-facing contract coverage floor: every entry in
+/// [`REQUIRED_WORKFLOW_CONTRACTS`] must resolve to an RPC in the manifest that
+/// still carries each pinned `*_contract` option. A missing RPC or a dropped
+/// contract is an `error` finding (fails CI) so coverage cannot silently
+/// regress. The committed-manifest gate then proves the contracts actually
+/// decoded into the emitted JSON.
+fn workflow_contract_coverage_findings(
+    manifest: &DescriptorContractManifest,
+) -> Vec<serde_json::Value> {
+    let mut findings = Vec::new();
+
+    for (path, required) in REQUIRED_WORKFLOW_CONTRACTS {
+        let Some(rpc) = find_rpc_by_path(manifest, path) else {
+            findings.push(serde_json::json!({
+                "severity": "error",
+                "code": "workflow_contract_rpc_missing",
+                "path": path,
+                "message": format!(
+                    "workflow-facing RPC {path} is in the required contract-coverage set but was not found in the manifest"
+                ),
+                "hint": "the RPC was renamed/removed — update REQUIRED_WORKFLOW_CONTRACTS in native_lint.rs to match the proto (and keep the verified contracts on the new path)",
+            }));
+            continue;
+        };
+
+        let missing = [
+            (
+                required.readback,
+                rpc.readback_contract.is_some(),
+                "method_readback_contract",
+            ),
+            (
+                required.lifecycle,
+                rpc.lifecycle_contract.is_some(),
+                "method_lifecycle_contract",
+            ),
+            (
+                required.idempotency,
+                rpc.idempotency_contract.is_some(),
+                "method_idempotency_contract",
+            ),
+            (
+                required.error,
+                rpc.error_contract.is_some(),
+                "method_error_contract",
+            ),
+        ];
+
+        for (req, present, option_name) in missing {
+            if req && !present {
+                findings.push(serde_json::json!({
+                    "severity": "error",
+                    "code": "workflow_contract_coverage_missing",
+                    "path": path,
+                    "message": format!(
+                        "workflow-facing RPC {path} must carry {option_name} (verified-satisfied per R1.3) but it is absent from the manifest"
+                    ),
+                    "hint": "restore the verified contract option in the proto (do NOT add it if the broker no longer honors it — drop the requirement instead)",
+                }));
+            }
+        }
+    }
+
+    findings
+}
+
+/// Resolve an RPC by its gRPC path `/{pkg}.{Service}/{Method}`.
+fn find_rpc_by_path<'m>(
+    manifest: &'m DescriptorContractManifest,
+    path: &str,
+) -> Option<&'m RpcContract> {
+    manifest
+        .services
+        .iter()
+        .flat_map(|service| service.methods.iter())
+        .find(|rpc| rpc.grpc_path() == path)
 }
 
 /// True when the RPC has an enforceable tenant source: an explicit
@@ -230,8 +465,8 @@ fn rls_gap_detail(missing_column: bool, missing_template: bool) -> &'static str 
 mod tests {
     use super::*;
     use udb::runtime::descriptor_manifest::{
-        DbColumnSecurityContract, DbTableSecurityContract, ScalarFieldSecurity, ServiceContract,
-        descriptor_contract_manifest,
+        DbColumnSecurityContract, DbTableSecurityContract, ReadAfterWriteContract,
+        ScalarFieldSecurity, ServiceContract, descriptor_contract_manifest,
     };
 
     fn empty_security() -> EndpointSecurityContract {
@@ -280,6 +515,11 @@ mod tests {
             emits: Vec::new(),
             dependency_contract: None,
             operation_kind: 1,
+            precondition_contract: None,
+            readback_contract: None,
+            lifecycle_contract: None,
+            idempotency_contract: None,
+            error_contract: None,
         }
     }
 
@@ -505,6 +745,59 @@ mod tests {
         assert!(
             !codes.contains(&"scalar_security_option_lost".to_string()),
             "db_column_security should count as a survivor, got {codes:?}"
+        );
+    }
+
+    /// A required workflow RPC that is missing a pinned contract is an error.
+    #[test]
+    fn workflow_rpc_missing_required_contract_is_error() {
+        // RegisterUpload is required to carry method_readback_contract; drop it.
+        let sec = empty_security();
+        let mut rpc = rpc_with(
+            "RegisterUpload",
+            ".udb.core.storage.services.v1.RegisterUploadRequest",
+            sec,
+        );
+        rpc.service_name = "StorageService".to_string();
+        rpc.service_pkg = "udb.core.storage.services.v1".to_string();
+        rpc.readback_contract = None; // the pinned contract is absent
+        let manifest = manifest_of(vec![service_with(vec![rpc])], Vec::new());
+
+        let findings = descriptor_lint_findings(&manifest);
+        let hit = findings.iter().find(|f| {
+            f.get("code").and_then(|c| c.as_str()) == Some("workflow_contract_coverage_missing")
+                && f.get("path").and_then(|p| p.as_str())
+                    == Some("/udb.core.storage.services.v1.StorageService/RegisterUpload")
+        });
+        let hit = hit.expect("expected workflow_contract_coverage_missing for RegisterUpload");
+        assert_eq!(hit.get("severity").and_then(|s| s.as_str()), Some("error"));
+    }
+
+    /// A required workflow RPC that carries its pinned contract is not flagged.
+    #[test]
+    fn workflow_rpc_with_required_contract_is_not_flagged() {
+        let sec = empty_security();
+        let mut rpc = rpc_with(
+            "RegisterUpload",
+            ".udb.core.storage.services.v1.RegisterUploadRequest",
+            sec,
+        );
+        rpc.service_name = "StorageService".to_string();
+        rpc.service_pkg = "udb.core.storage.services.v1".to_string();
+        rpc.readback_contract = Some(ReadAfterWriteContract {
+            returned_id_field: "file_id".to_string(),
+            readback_rpc: "GetFile".to_string(),
+            readback_request_field: "file_id".to_string(),
+            requires_read_fence: false,
+            requires_primary_read: true,
+            no_readback_reason: String::new(),
+        });
+        let manifest = manifest_of(vec![service_with(vec![rpc])], Vec::new());
+
+        let codes = codes(&descriptor_lint_findings(&manifest));
+        assert!(
+            !codes.contains(&"workflow_contract_coverage_missing".to_string()),
+            "RegisterUpload with readback should not be flagged, got {codes:?}"
         );
     }
 

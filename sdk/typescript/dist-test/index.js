@@ -28,3 +28,11 @@ Object.defineProperty(exports, "defaultProtoRoot", { enumerable: true, get: func
 // → Struct on send); `structToObject` is the inverse for reading Struct responses.
 var wkt_1 = require("./wkt");
 Object.defineProperty(exports, "structToObject", { enumerable: true, get: function () { return wkt_1.structToObject; } });
+// Typed snake_case request/response interfaces for the common-RPC subset (§8B).
+__exportStar(require("./messages"), exports);
+// Typed WriteReceipt / ReadFence read-after-write consistency helpers.
+__exportStar(require("./consistency"), exports);
+// Stream send-one / await-first helpers for client-streaming and bidi RPCs.
+__exportStar(require("./stream"), exports);
+// Bound entity / table helper over the DataBroker Upsert/Select/Delete RPCs.
+__exportStar(require("./entity"), exports);

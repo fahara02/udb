@@ -89,4 +89,7 @@ message NotificationLog {
   google.protobuf.Timestamp delivered_at = 18 [(udb.core.common.v1.pg_column) = { column_name: "delivered_at" sql_type: "TIMESTAMPTZ" }];
 
   google.protobuf.Timestamp created_at = 19 [(udb.core.common.v1.pg_column) = { column_name: "created_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true exclude_from_update: true }];
+
+  string rendered_subject = 20 [(udb.core.common.v1.pg_column) = { column_name: "rendered_subject" sql_type: "TEXT" }];
+  string rendered_body = 21 [(udb.core.common.v1.pg_column) = { column_name: "rendered_body" sql_type: "TEXT" }];
 }

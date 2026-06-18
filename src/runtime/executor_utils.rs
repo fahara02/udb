@@ -427,12 +427,21 @@ pub(crate) fn merge_context(
         },
         eventual_consistency_allowed: proto.eventual_consistency_allowed
             || metadata_context.eventual_consistency_allowed,
-        read_fence_json: first_non_empty(&proto.read_fence_json, &metadata_context.read_fence_json),
-        scopes: if proto.scopes.is_empty() {
-            metadata_context.scopes
-        } else {
-            proto.scopes.clone()
-        },
+        // R3.2: the read fence is a freshness/consistency control sourced from the
+        // verified `x-udb-read-fence` metadata header. Make it metadata-wins (only
+        // falling back to the per-op proto context when the header is absent) so it
+        // matches the metadata-wins precedence of every other authority field above
+        // (tenant_id / project_id / scopes / service_identity / decision_id). A
+        // caller-supplied per-op proto fence can no longer override a fence the
+        // transport already pinned; it is honored only when the header sets none.
+        read_fence_json: first_non_empty(&metadata_context.read_fence_json, &proto.read_fence_json),
+        // SECURITY (01.1.1.1): scopes are an authenticated capability — they drive
+        // PII unmasking, the materialized-view admin gate, and seed the cache key.
+        // Take them ONLY from the verified metadata/claim side; a caller-supplied
+        // per-op proto context must never assert authoritative scopes (it could
+        // self-grant `udb:pii:read`/`udb:admin`). Mirrors the tenant_id/project_id
+        // metadata-wins rule above.
+        scopes: metadata_context.scopes,
         // The broker stamps these from the verified SecurityContext / decision;
         // the wire `RequestContext` cannot assert them, so the metadata side wins.
         service_identity: metadata_context.service_identity,
@@ -1470,5 +1479,124 @@ mod record_batch_tests {
         assert_eq!(col(&batch, "id").int64_values, vec![1]);
         assert_eq!(col(&batch, "email").string_values, vec!["a@b.com"]);
         assert_eq!(batch.schema_version, "v9");
+    }
+}
+
+// ── merge_context scope-authority guards (01.1.1.1 / 01.1.2.1 / 01.1.3.1) ─────
+//
+// `merge_context` is the single authority boundary for `RequestContext.scopes`.
+// Both downstream gates that 01.1.2.1 (PII unmask in `rows_to_record_set`) and
+// 01.1.3.1 (the materialized-view `udb:admin` gate) protect read `context.scopes`
+// AFTER this merge — so proving body scopes never survive the merge proves neither
+// sink can be satisfied by caller-supplied body scopes. These tests fail if
+// 01.1.1.1 is reverted (i.e. body scopes once again override metadata scopes).
+#[cfg(test)]
+mod merge_context_scope_authority_tests {
+    use super::{ProtoRequestContext, RequestContext, cache_key, merge_context};
+    use serde_json::json;
+
+    fn metadata_ctx(scopes: &[&str]) -> RequestContext {
+        RequestContext {
+            tenant_id: "tenant-a".into(),
+            project_id: "proj-a".into(),
+            scopes: scopes.iter().map(|s| s.to_string()).collect(),
+            ..RequestContext::default()
+        }
+    }
+
+    fn proto_ctx(scopes: &[&str]) -> ProtoRequestContext {
+        ProtoRequestContext {
+            scopes: scopes.iter().map(|s| s.to_string()).collect(),
+            ..ProtoRequestContext::default()
+        }
+    }
+
+    #[test]
+    fn body_scopes_never_override_metadata_scopes() {
+        // Caller smuggles privileged scopes in the per-op proto body; the verified
+        // metadata side carries none of them.
+        let proto = proto_ctx(&["udb:pii:read", "udb:admin", "*"]);
+        let merged = merge_context(Some(&proto), metadata_ctx(&["udb:read"]));
+        assert_eq!(
+            merged.scopes,
+            vec!["udb:read".to_string()],
+            "body scopes must not reach the merged RequestContext"
+        );
+        // The PII-unmask predicate (rows_to_record_set) and the MV admin gate both
+        // read exactly this vector, so neither can be satisfied by the body.
+        assert!(
+            !merged
+                .scopes
+                .iter()
+                .any(|s| s == "udb:pii:read" || s == "udb:*" || s == "*")
+        );
+        assert!(!merged.scopes.iter().any(|s| s == "udb:admin" || s == "*"));
+    }
+
+    #[test]
+    fn empty_body_scopes_inherit_metadata_scopes() {
+        let proto = proto_ctx(&[]);
+        let merged = merge_context(Some(&proto), metadata_ctx(&["udb:read", "udb:admin"]));
+        assert_eq!(
+            merged.scopes,
+            vec!["udb:read".to_string(), "udb:admin".to_string()]
+        );
+    }
+
+    #[test]
+    fn metadata_read_fence_wins_over_body_read_fence() {
+        // R3.2: the read fence follows the same metadata-wins precedence as the
+        // other authority/freshness fields. When the verified metadata header
+        // pins a fence, a per-op proto body fence must NOT override it.
+        let mut meta = metadata_ctx(&["udb:read"]);
+        meta.read_fence_json = r#"{"seq":42}"#.into();
+        let proto = ProtoRequestContext {
+            read_fence_json: r#"{"seq":1}"#.into(),
+            ..ProtoRequestContext::default()
+        };
+        let merged = merge_context(Some(&proto), meta);
+        assert_eq!(
+            merged.read_fence_json, r#"{"seq":42}"#,
+            "metadata read fence must win over a body-supplied read fence"
+        );
+    }
+
+    #[test]
+    fn body_read_fence_used_only_when_metadata_absent() {
+        // When the transport pinned no fence, the per-op proto body fence is the
+        // honored fallback (so a body-only fence is not silently dropped).
+        let proto = ProtoRequestContext {
+            read_fence_json: r#"{"seq":7}"#.into(),
+            ..ProtoRequestContext::default()
+        };
+        let merged = merge_context(Some(&proto), metadata_ctx(&["udb:read"]));
+        assert_eq!(merged.read_fence_json, r#"{"seq":7}"#);
+    }
+
+    #[test]
+    fn cache_key_is_independent_of_body_scopes() {
+        // Same request, once with hostile body scopes and once without: the cache
+        // key (which folds in context.scopes) must be identical, proving body
+        // scopes can neither widen access nor poison/segment the cache.
+        let with_body = merge_context(
+            Some(&proto_ctx(&["udb:pii:read"])),
+            metadata_ctx(&["udb:read"]),
+        );
+        let without_body = merge_context(Some(&proto_ctx(&[])), metadata_ctx(&["udb:read"]));
+        let filter = json!({"eq": {"id": 1}});
+        let fields = vec!["id".to_string(), "email".to_string()];
+        let key_with = cache_key("select", "udb.Person", &with_body, "chk", &filter, &fields);
+        let key_without = cache_key(
+            "select",
+            "udb.Person",
+            &without_body,
+            "chk",
+            &filter,
+            &fields,
+        );
+        assert_eq!(
+            key_with, key_without,
+            "cache_key must not depend on caller-supplied body scopes"
+        );
     }
 }

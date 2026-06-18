@@ -25,6 +25,17 @@
   function statusClass(s) {
     return s === "ok" ? "ok" : s === "skipped" ? "skip" : "fail";
   }
+  function selectedValues(id) {
+    var el = $(id);
+    return el ? Array.prototype.map.call(el.selectedOptions || [], function (o) { return o.value; }) : [];
+  }
+  function uniqueSorted(values) {
+    var seen = {};
+    values.forEach(function (v) {
+      if (v) seen[v] = true;
+    });
+    return Object.keys(seen).sort(function (a, b) { return a.localeCompare(b); });
+  }
 
   function sdkAt(point, id) {
     return (point.sdks || []).find(function (s) { return s.id === id; });
@@ -91,6 +102,118 @@
       paths + labels + legend;
   }
 
+  function fullRows(data) {
+    var rows = [];
+    (data.sdks || []).forEach(function (s) {
+      (s.full_rpcs || []).forEach(function (r) {
+        rows.push({
+          sdkId: s.id,
+          sdk: s.name,
+          service: r.service || "",
+          rpc: r.rpc || "",
+          api: r.api || ((r.service || "") + "/" + (r.rpc || "")),
+          kind: r.kind || "",
+          err_code: r.err_code || "",
+          p50_ms: r.p50_ms,
+          p99_ms: r.p99_ms,
+          mean_ms: r.mean_ms,
+          min_ms: r.min_ms,
+          max_ms: r.max_ms,
+          iters: r.iters,
+          note: r.note || ""
+        });
+      });
+    });
+    return rows;
+  }
+
+  function renderWorstTable(data) {
+    var slowRows = [];
+    (data.sdks || []).forEach(function (s) {
+      var seen = {};
+      // Failed RPCs first — a non-OK gRPC status is a FAILURE, never a latency sample.
+      (s.failed_rpcs || []).forEach(function (r) {
+        seen[r.rpc] = true;
+        slowRows.push({ sdk: s.name, row: r, failed: true });
+      });
+      var source = (s.full_rpcs && s.full_rpcs.length) ? s.full_rpcs : (s.slowest || []);
+      source.forEach(function (r) {
+        var api = r.api || r.rpc;
+        if (seen[api] || seen[r.rpc]) return;
+        slowRows.push({ sdk: s.name, row: {
+          rpc: api || r.rpc,
+          kind: r.kind,
+          err_code: r.err_code,
+          p50_ms: r.p50_ms,
+          p99_ms: r.p99_ms,
+          mean_ms: r.mean_ms
+        }, failed: !!r.err_code });
+      });
+    });
+    // Failures float to the top; then sort the rest by p99 descending.
+    slowRows.sort(function (a, b) {
+      if (a.failed !== b.failed) return a.failed ? -1 : 1;
+      return (b.row.p99_ms || 0) - (a.row.p99_ms || 0);
+    });
+    $("bench-slowest-rows").innerHTML = slowRows.slice(0, 40).map(function (x) {
+      var r = x.row;
+      var p99Cell = x.failed
+        ? '<td><span class="bench-status fail">FAILED (' + esc(r.err_code || "ERR") + ')</span></td>'
+        : '<td class="n">' + ms(r.p99_ms) + '</td>';
+      return '<tr><td>' + esc(x.sdk) + '</td><td><code>' + esc(r.rpc) + '</code></td><td>' + esc(r.kind) + '</td>' +
+        '<td class="n">' + ms(r.p50_ms) + '</td>' + p99Cell + '<td class="n">' + ms(r.mean_ms) + '</td></tr>';
+    }).join("");
+  }
+
+  function renderFullExplorer(data) {
+    var rows = fullRows(data);
+    var sdkFilter = $("bench-sdk-filter");
+    var apiFilter = $("bench-api-filter");
+    var search = $("bench-search");
+    var meta = $("bench-full-meta");
+    var body = $("bench-full-rows");
+
+    sdkFilter.innerHTML = (data.sdks || []).filter(function (s) {
+      return (s.full_rpcs || []).length > 0;
+    }).map(function (s) {
+      return '<option value="' + esc(s.id) + '">' + esc(s.name) + ' (' + count((s.full_rpcs || []).length) + ')</option>';
+    }).join("");
+    apiFilter.innerHTML = uniqueSorted(rows.map(function (r) { return r.api; })).map(function (api) {
+      return '<option value="' + esc(api) + '">' + esc(api) + '</option>';
+    }).join("");
+
+    function draw() {
+      var sdkSelected = selectedValues("bench-sdk-filter");
+      var apiSelected = selectedValues("bench-api-filter");
+      var q = (search.value || "").trim().toLowerCase();
+      var filtered = rows.filter(function (r) {
+        if (sdkSelected.length && sdkSelected.indexOf(r.sdkId) < 0) return false;
+        if (apiSelected.length && apiSelected.indexOf(r.api) < 0) return false;
+        if (!q) return true;
+        return [r.sdk, r.api, r.kind, r.err_code, r.note].join(" ").toLowerCase().indexOf(q) >= 0;
+      }).sort(function (a, b) {
+        return a.api.localeCompare(b.api) || a.sdk.localeCompare(b.sdk);
+      });
+
+      meta.textContent = rows.length
+        ? "Showing " + filtered.length + " of " + rows.length + " full per-RPC rows."
+        : "No full per-RPC table is published yet. SDKs that only publish slowest rows still appear in the worst performer table.";
+      body.innerHTML = filtered.map(function (r) {
+        var failed = !!r.err_code;
+        return '<tr><td>' + esc(r.sdk) + '</td><td><code>' + esc(r.api) + '</code></td><td>' + esc(r.kind) + '</td>' +
+          '<td>' + (failed ? '<span class="bench-status fail">' + esc(r.err_code) + '</span>' : '<span class="bench-status ok">OK</span>') + '</td>' +
+          '<td class="n">' + ms(r.p50_ms) + '</td><td class="n">' + ms(r.p99_ms) + '</td><td class="n">' + ms(r.mean_ms) + '</td>' +
+          '<td class="n">' + ms(r.min_ms) + '</td><td class="n">' + ms(r.max_ms) + '</td><td class="n">' + count(r.iters) + '</td>' +
+          '<td>' + esc(r.note) + '</td></tr>';
+      }).join("");
+    }
+
+    sdkFilter.onchange = draw;
+    apiFilter.onchange = draw;
+    search.oninput = draw;
+    draw();
+  }
+
   function render(data) {
     $("bench-status").style.display = "none";
     var release = data.release || {};
@@ -128,33 +251,8 @@
         '<td class="n">' + ms(sm.mean_service_latency_ms) + '</td><td class="n">' + ms(sm.slowest_service_mean_ms) + '</td></tr>';
     }).join("");
 
-    var slowRows = [];
-    (data.sdks || []).forEach(function (s) {
-      var seen = {};
-      // Failed RPCs first — a non-OK gRPC status is a FAILURE, never a latency sample.
-      (s.failed_rpcs || []).forEach(function (r) {
-        seen[r.rpc] = true;
-        slowRows.push({ sdk: s.name, row: r, failed: true });
-      });
-      (s.slowest || []).slice(0, 8).forEach(function (r) {
-        if (seen[r.rpc]) return;
-        slowRows.push({ sdk: s.name, row: r, failed: !!r.err_code });
-      });
-    });
-    // Failures float to the top; then sort the rest by p99 descending.
-    slowRows.sort(function (a, b) {
-      if (a.failed !== b.failed) return a.failed ? -1 : 1;
-      return (b.row.p99_ms || 0) - (a.row.p99_ms || 0);
-    });
-    $("bench-slowest-rows").innerHTML = slowRows.slice(0, 40).map(function (x) {
-      var r = x.row;
-      var p99Cell = x.failed
-        ? '<td><span class="bench-status fail">FAILED (' + esc(r.err_code || "ERR") + ')</span></td>'
-        : '<td class="n">' + ms(r.p99_ms) + '</td>';
-      return '<tr><td>' + esc(x.sdk) + '</td><td><code>' + esc(r.rpc) + '</code></td><td>' + esc(r.kind) + '</td>' +
-        '<td class="n">' + ms(r.p50_ms) + '</td>' + p99Cell + '<td class="n">' + ms(r.mean_ms) + '</td></tr>';
-    }).join("");
-
+    renderWorstTable(data);
+    renderFullExplorer(data);
     renderCurve(data);
   }
 

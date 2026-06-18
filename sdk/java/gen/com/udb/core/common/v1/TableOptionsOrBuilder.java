@@ -660,4 +660,24 @@ public interface TableOptionsOrBuilder extends
    * <code>.udb.core.common.v1.VectorStoreOptions vector_store = 32 [json_name = "vectorStore"];</code>
    */
   com.udb.core.common.v1.VectorStoreOptionsOrBuilder getVectorStoreOrBuilder();
+
+  /**
+   * <pre>
+   * native_service_id: which native service owns this internal table.
+   * </pre>
+   *
+   * <code>string native_service_id = 33 [json_name = "nativeServiceId"];</code>
+   * @return The nativeServiceId.
+   */
+  java.lang.String getNativeServiceId();
+  /**
+   * <pre>
+   * native_service_id: which native service owns this internal table.
+   * </pre>
+   *
+   * <code>string native_service_id = 33 [json_name = "nativeServiceId"];</code>
+   * @return The bytes for nativeServiceId.
+   */
+  com.google.protobuf.ByteString
+      getNativeServiceIdBytes();
 }

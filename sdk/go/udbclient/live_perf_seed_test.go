@@ -85,6 +85,14 @@ func (f *perfFixtures) lookup(field string) (string, bool) {
 	return "", false
 }
 
+// HARNESS-ONLY: this is a live-perf seed that forces a notification log into a
+// FAILED state via a raw GenericDispatch UPDATE against the internal
+// udb_notification.notification_logs table. It is excluded from the
+// check-no-internal-tables.py lint by living in a *_test.go file. It will be
+// REPLACED by the env-gated FAILED-log served affordance
+// (UDB_NOTIFICATION_TEST_MODE=1 + ResourceType="__perf_force_failed__", chapter
+// item 06.2.2.2) once the bench harness runs against a live broker — at which
+// point this raw internal-table UPDATE is deleted.
 func markPerfNotificationRetryable(ctx context.Context, broker servicesv1.DataBrokerClient, rc *entityv1.RequestContext, logID, tenant string) error {
 	spec, err := json.Marshal(map[string]any{
 		"sql": "UPDATE udb_notification.notification_logs SET status = 'FAILED', error_message = 'go live perf seed failure' WHERE log_id = $1::UUID AND tenant_id = $2 RETURNING log_id",
@@ -141,42 +149,20 @@ func putPresignedStorageObject(ctx context.Context, uploadURL string, data []byt
 	return nil
 }
 
-// seedPerfDevice inserts a real udb_authn.devices row for the given user+tenant through the
-// broker's Postgres dispatch path (no RPC mints a device row — Login only writes
-// token_families.device, bug_report.md P3), so RevokeDevice has a live device_id to revoke.
-// Done in-band (not a fixed out-of-band row) so it is scoped to THIS run's user/tenant and
-// never absent or stale. revoke_device matches on device_id + claim-tenant only.
-func seedPerfDevice(ctx context.Context, broker servicesv1.DataBrokerClient, rc *entityv1.RequestContext, deviceID, userID, tenant string) error {
-	spec, err := json.Marshal(map[string]any{
-		"sql": "INSERT INTO udb_authn.devices (device_id, user_id, tenant_id, project_id, device_name, device_type, created_at) " +
-			"VALUES ($1::UUID, $2, $3, $4, 'sdk-perf-device', 'WEB', NOW()) " +
-			"ON CONFLICT (device_id) DO UPDATE SET revoked_at = NULL RETURNING device_id",
-		"params":      []any{deviceID, userID, tenant, "default"},
-		"param_types": []string{"uuid", "string", "string", "string"},
-		"return_rows": true,
-	})
-	if err != nil {
-		return err
+// perfDeviceFingerprint returns a stable per-run device fingerprint for the seed
+// Login's `device_id`. Passing it makes the broker's register_login_device mint a
+// single listable udb_authn.devices row for THIS user+tenant (login.rs:501,
+// lifecycle.rs:365) — replacing the old out-of-band GenericDispatch INSERT into
+// udb_authn.devices. The broker HMACs the fingerprint, so it need not be a real
+// UUID; this formats the all-digit run suffix into a UUID-shaped, deterministic
+// string so reruns are idempotent (same user/tenant → same row, no duplicates).
+func perfDeviceFingerprint(suffix string) string {
+	hex := suffix
+	for len(hex) < 32 {
+		hex += "0"
 	}
-	resp, err := broker.GenericDispatch(ctx, &entityv1.GenericDispatchRequest{
-		Context:   rc,
-		Backend:   "postgres",
-		Operation: "mutate",
-		SpecJson:  string(spec),
-	})
-	if err != nil {
-		return err
-	}
-	var result struct {
-		AffectedRows int `json:"affected_rows"`
-	}
-	if err := json.Unmarshal([]byte(resp.GetResultJson()), &result); err != nil {
-		return err
-	}
-	if result.AffectedRows == 0 {
-		return fmt.Errorf("no device row inserted for device_id %s", deviceID)
-	}
-	return nil
+	hex = hex[:32]
+	return hex[0:8] + "-" + hex[8:12] + "-" + hex[12:16] + "-" + hex[16:20] + "-" + hex[20:32]
 }
 
 // perfSeedResult carries the fixture map plus the seeded record's primary key (so
@@ -310,8 +296,13 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 			UserId: uid, NewStatus: authnentpb.UserStatus_USER_STATUS_ACTIVE, Reason: "perf seed activate",
 			Context: &commonpb.RequestContext{Tenant: &commonpb.TenantContext{TenantId: tenant, ProjectId: project}},
 		})
-		// A real login → session id + tokens for session/token RPCs.
-		if login, err := authn.Login(ctx, &authnpb.LoginRequest{Username: uname, Password: pw, TenantHint: tenant, ProjectHint: project, DeviceName: "go-sdk-perf-seed"}); err == nil {
+		// A real login → session id + tokens for session/token RPCs. Passing a stable
+		// DeviceId makes the broker's register_login_device mint a listable udb_authn.devices
+		// row (login.rs:501, lifecycle.rs:365) for THIS user+tenant, so ListDevices below
+		// returns a real device_id for RevokeDevice (no out-of-band INSERT needed). The id is
+		// a deterministic UUID derived from the per-run suffix so reruns are idempotent.
+		seedDeviceID := perfDeviceFingerprint(suffix)
+		if login, err := authn.Login(ctx, &authnpb.LoginRequest{Username: uname, Password: pw, TenantHint: tenant, ProjectHint: project, DeviceName: "go-sdk-perf-seed", DeviceId: seedDeviceID}); err == nil {
 			fix.set("session_id", login.GetSessionId())
 			fix.set("token", login.GetAccessToken())
 			fix.set("refresh_token", login.GetRefreshToken())
@@ -324,7 +315,7 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 		// is not active") and Authenticate ("token subject is no longer active", which
 		// also validates the issuing session) fail. This login is a distinct token family
 		// + session that no measured RPC touches before its Phase-1 read.
-		if dlogin, err := authn.Login(ctx, &authnpb.LoginRequest{Username: uname, Password: pw, TenantHint: tenant, ProjectHint: project, DeviceName: "go-sdk-perf-refresh"}); err == nil {
+		if dlogin, err := authn.Login(ctx, &authnpb.LoginRequest{Username: uname, Password: pw, TenantHint: tenant, ProjectHint: project, DeviceName: "go-sdk-perf-refresh", DeviceId: seedDeviceID}); err == nil {
 			fix.set("refresh_session_id", dlogin.GetSessionId())
 			fix.set("auth_token", dlogin.GetAccessToken())
 		}
@@ -333,20 +324,15 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 			fix.set("code", codes.GetCodes()[0])
 			fix.set("recovery_code", codes.GetCodes()[0])
 		}
-		// device_id for RevokeDevice. No RPC INSERTs a `devices` row (Login only writes
-		// token_families.device — bug_report.md P3), so ListDevices is empty; insert a real
-		// row for THIS user+tenant through the broker's Postgres dispatch path (mirrors the
-		// notification seed) so RevokeDevice has a live device_id (matches device_id + claim
-		// tenant only).
+		// device_id for RevokeDevice. The seed Login above passed a stable DeviceId, so the
+		// broker's register_login_device minted a real udb_authn.devices row for THIS
+		// user+tenant; ListDevices now returns it. Fall back to the same deterministic
+		// fingerprint if the list read is empty (revoke_device matches on device_id + claim
+		// tenant only, so the minted id is sufficient).
 		if dl, err := authn.ListDevices(base, &authnpb.ListDevicesRequest{UserId: uid}); err == nil && len(dl.GetDevices()) > 0 {
 			fix.set("device_id", dl.GetDevices()[0].GetDeviceId())
 		} else {
-			deviceID := uuid4()
-			if err := seedPerfDevice(brokerCtx, broker, rc, deviceID, uid, tenant); err != nil {
-				t.Logf("perf seed: seed device failed: %v", err)
-			} else {
-				fix.set("device_id", deviceID)
-			}
+			fix.set("device_id", seedDeviceID)
 		}
 		// ── WebAuthn dev soft-authenticator (broker UDB_WEBAUTHN_TEST_MODE=1). The harness
 		// sends the sentinel as public_key_credential_json and the broker mints+verifies a
@@ -509,7 +495,7 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 	// A governed policy draft → policy_draft_id for the draft lifecycle RPCs
 	// (Update/Diff/Submit/Approve/Reject/Simulate).
 	if draft, err := authz.CreatePolicyDraft(base, &authzpb.CreatePolicyDraftRequest{
-		Actor:    &authzpb.GovernanceActor{Subject: fix.m["subject"], TenantId: tenant, ProjectId: project, Scopes: []string{"authz:policy:write"}},
+		Actor:    &authzpb.GovernanceActor{Subject: fix.m["subject"], TenantId: tenant, ProjectId: project, BreakGlass: true, BreakGlassReason: "sdk perf seed", BreakGlassExpiresAtUnix: time.Now().Unix() + 900},
 		TenantId: tenant, ProjectId: project, PolicySetName: "default", Title: "sdk perf draft " + suffix, ChangeReason: "seed", Document: &authzpb.PolicyDocument{},
 	}); err == nil {
 		fix.set("policy_draft_id", draft.GetDraft().GetDraftId())
@@ -518,7 +504,12 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 	// need IN_REVIEW (draft_reviewable, governance_drafts.rs). Seed one OPEN draft and
 	// two submitted-to-IN_REVIEW drafts (one each for Approve/Reject, which consume them).
 	gActor := func() *authzpb.GovernanceActor {
-		return &authzpb.GovernanceActor{Subject: fix.m["subject"], TenantId: tenant, ProjectId: project, Scopes: []string{"authz:admin", "authz:policy:write", "authz:policy:approve", "policy:read"}}
+		// Body actor.scopes are ignored by the live D1/D2 gate (it reads claim
+		// scopes, and no role projects to authz:*), so the seed's own governance
+		// writes must use the body-authoritative break-glass bypass — otherwise the
+		// drafts/versions/canary are never created and the governance RPCs that read
+		// them fail "<id> is required".
+		return &authzpb.GovernanceActor{Subject: fix.m["subject"], TenantId: tenant, ProjectId: project, BreakGlass: true, BreakGlassReason: "sdk perf seed", BreakGlassExpiresAtUnix: time.Now().Unix() + 900}
 	}
 	mkDraft := func(title string) string {
 		d, err := authz.CreatePolicyDraft(base, &authzpb.CreatePolicyDraftRequest{
@@ -712,10 +703,16 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 	event := "sdk.perf." + suffix
 	_, _ = notif.UpsertTemplate(base, &notifpb.UpsertTemplateRequest{
 		EventType: event, Channel: notifentpb.NotificationChannel_NOTIFICATION_CHANNEL_EMAIL, Locale: "en",
-		SubjectTemplate: "SDK {{n}}", BodyTemplate: "sdk-perf-body", IsActive: true,
+		SubjectTemplate: "SDK perf", BodyTemplate: "sdk-perf-body", IsActive: true,
 	})
 	fix.set("event_type", event)
 	fix.set("locale", "en")
+	// Governance break-glass expiry: the D1/D2 governance gate reads scopes from
+	// the VERIFIED claim, not request-body actor.scopes, and no role projects to
+	// authz:* (tokens.rs ROLE_SCOPE_PROJECTIONS) — so the governance RPCs are
+	// reached via the body-authoritative break-glass bypass (≤900s, reason-bearing,
+	// audited). Set at seed time; the governance RPCs measure shortly after.
+	fix.set("gov_exp", fmt.Sprintf("%d", time.Now().Unix()+900))
 	if rid := fix.m["recipient_id"]; rid != "" {
 		if sent, err := notif.SendNotification(base, &notifpb.SendNotificationRequest{
 			EventType: event, RecipientId: rid, RecipientAddress: "sdk+" + suffix + "@example.com",
@@ -799,6 +796,35 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 			FileType: "DOCUMENT", ReferenceId: uuid4(), ReferenceType: "sdk.perf", SizeBytes: 64, ExpiresInMinutes: 30,
 		}); err == nil {
 			fix.set("delete_file_id", dreg.GetFileId())
+		}
+		// A SEPARATE registered+uploaded but NOT finalized file for the measured
+		// FinalizeUpload — finalizing the primary file_id again fails "already
+		// finalized", so the measured Finalize needs its own un-finalized target.
+		if freg, err := storage.RegisterUpload(nctx, &storagepb.RegisterUploadRequest{
+			TenantId: uuidTenant, ProjectId: "", Filename: "perf-fin-" + suffix + ".txt", ContentType: "text/plain",
+			FileType: "DOCUMENT", ReferenceId: uuid4(), ReferenceType: "sdk.perf", SizeBytes: 64, ExpiresInMinutes: 30,
+		}); err == nil {
+			ffid := freg.GetFileId()
+			fix.set("finalize_file_id", ffid)
+			addCleanup(func() {
+				_, _ = storage.DeleteFile(nativeCtxFn(), &storagepb.DeleteFileRequest{TenantId: uuidTenant, FileId: ffid})
+			})
+			fpayload := []byte("sdk-perf-finalize-" + suffix)
+			fuploaded := false
+			if freg.GetUploadUrl() != "" {
+				putCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+				if err := putPresignedStorageObject(putCtx, freg.GetUploadUrl(), fpayload, "text/plain"); err == nil {
+					fuploaded = true
+				}
+				cancel()
+			}
+			if !fuploaded {
+				if put, err := broker.PutObject(brokerCtx); err == nil {
+					_ = put.Send(&entityv1.Chunk{Context: rc, Bucket: storageBucket, ObjectKey: freg.GetObjectKey(), Data: fpayload, ContentType: "text/plain", FinalChunk: true})
+					_, _ = put.CloseAndRecv()
+				}
+			}
+			// NB: intentionally NOT finalized — the measured FinalizeUpload finalizes it.
 		}
 
 		// ── AssetService: pipeline definition + asset + a started instance ────────
@@ -886,6 +912,19 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 			TenantId: uuidTenant, Name: "sdk-perf-close-room-" + suffix, MaxParticipants: 8, Config: `{}`, CreatedBy: uuid4(),
 		}); err == nil {
 			fix.set("close_room_id", cr.GetRoomId())
+		}
+		// A SEPARATE high-capacity room for the measured JoinSession. The main
+		// room_id is filled to capacity by JoinRoom's mutation iters (3 seeded
+		// peers + 5 joins = the cap of 8), so JoinSession against it would hit
+		// "room ... at capacity". Its 5 iters each join a fresh peer here.
+		if jsr, err := rooms.CreateRoom(nativeCtxFn(), &webrtcpb.CreateRoomRequest{
+			TenantId: uuidTenant, Name: "sdk-perf-joinsession-room-" + suffix, MaxParticipants: 64, Config: `{}`, CreatedBy: uuid4(),
+		}); err == nil {
+			jsrID := jsr.GetRoomId()
+			fix.set("join_session_room_id", jsrID)
+			addCleanup(func() {
+				_, _ = rooms.CloseRoom(nativeCtxFn(), &webrtcpb.CloseRoomRequest{TenantId: uuidTenant, RoomId: jsrID})
+			})
 		}
 	}
 

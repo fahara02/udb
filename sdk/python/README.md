@@ -7,7 +7,7 @@
 
 <p align="center">
   <strong>UDB :: Universal Data Broker</strong><br>
-  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.3.5 | protocol v1.0.0</sub>
+  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.3.6 | protocol v1.0.0</sub>
 </p>
 <!-- UDB_BRAND_HEADER_END -->
 
@@ -18,13 +18,13 @@ every broker RPC, and a version-matched `udb` CLI launcher.
 ## Install
 
 ```bash
-pip install udb-client==0.3.5
+pip install udb-client==0.3.6
 ```
 
 Optional validated command models:
 
 ```bash
-pip install "udb-client[pydantic]==0.3.5"
+pip install "udb-client[pydantic]==0.3.6"
 ```
 
 Runtime: Python 3.10+
@@ -111,6 +111,57 @@ async with UdbAsyncClient("127.0.0.1:50051", meta) as udb:
 The async client is faster under concurrency than the sync client (it shares one
 HTTP/2 channel across many in-flight coroutines), so prefer `UdbAsyncClient` /
 `UdbAsyncProject` (`create_udb_async`) for high-throughput or fan-out workloads.
+
+## File Storage
+
+`UdbProject` exposes the `StorageService` file lifecycle on `project.storage`.
+The one-call `upload_file` does `RegisterUpload` → HTTP PUT the bytes to the
+presigned URL → `FinalizeUpload` (exactly three RPCs, no proof Get/List):
+
+```python
+from udb_client import UdbConfig, UdbProject
+
+with UdbProject.connect(
+    UdbConfig(target="127.0.0.1:50051", tenant_id="acme", project_id="default")
+) as project:
+    project.login_and_adopt_tenant("svc@acme", "password")  # bearer + canonical tenant
+
+    finalized = project.storage.upload_file(
+        "report.pdf",
+        b"...file bytes...",
+        {"content_type": "application/pdf", "file_type": "report"},
+    )
+    file_id = finalized.file_id
+```
+
+### Download
+
+Downloads prefer the presigned `GetDownloadUrl` path so file bytes never travel
+through the broker. `download_file` returns the `GetDownloadUrlResponse` by
+default; pass `fetch=True` to also HTTP GET the presigned URL and return the raw
+bytes:
+
+```python
+# Presigned URL only (default): no bytes through the broker
+resp = project.storage.download_file(file_id)
+print(resp.download_url)
+
+# Resolve the presigned URL and HTTP GET the bytes back
+data = project.storage.download_file(file_id, fetch=True)
+```
+
+New in 0.3.6: when a client cannot egress to the object store (no public
+download URL, corporate proxy, etc.), stream the bytes **through the broker**
+with the server-streaming `StorageService.DownloadFile` RPC. Pass `stream=True`
+to `download_file`, or call `download_stream` directly — both issue exactly one
+`DownloadFile` RPC and reassemble every `DownloadFileChunk` into the full body:
+
+```python
+# Server-streaming fallback through the broker
+data = project.storage.download_file(file_id, stream=True)
+# equivalently:
+data = project.storage.download_stream(file_id)
+```
 
 ## Performance
 

@@ -268,6 +268,11 @@ class PeerServiceStub(object):
                 request_serializer=udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_webrtc__service__pb2.JoinRoomRequest.SerializeToString,
                 response_deserializer=udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_webrtc__service__pb2.JoinRoomResponse.FromString,
                 _registered_method=True)
+        self.JoinSession = channel.unary_unary(
+                '/udb.core.webrtc.services.v1.PeerService/JoinSession',
+                request_serializer=udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_webrtc__service__pb2.JoinSessionRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_webrtc__service__pb2.JoinSessionResponse.FromString,
+                _registered_method=True)
         self.LeaveRoom = channel.unary_unary(
                 '/udb.core.webrtc.services.v1.PeerService/LeaveRoom',
                 request_serializer=udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_webrtc__service__pb2.LeaveRoomRequest.SerializeToString,
@@ -290,6 +295,13 @@ class PeerServiceServicer(object):
 
     def JoinRoom(self, request, context):
         """Join a room
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def JoinSession(self, request, context):
+        """Join a room and atomically mint TURN credentials for the freshly-inserted peer
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -323,6 +335,11 @@ def add_PeerServiceServicer_to_server(servicer, server):
                     servicer.JoinRoom,
                     request_deserializer=udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_webrtc__service__pb2.JoinRoomRequest.FromString,
                     response_serializer=udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_webrtc__service__pb2.JoinRoomResponse.SerializeToString,
+            ),
+            'JoinSession': grpc.unary_unary_rpc_method_handler(
+                    servicer.JoinSession,
+                    request_deserializer=udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_webrtc__service__pb2.JoinSessionRequest.FromString,
+                    response_serializer=udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_webrtc__service__pb2.JoinSessionResponse.SerializeToString,
             ),
             'LeaveRoom': grpc.unary_unary_rpc_method_handler(
                     servicer.LeaveRoom,
@@ -367,6 +384,33 @@ class PeerService(object):
             '/udb.core.webrtc.services.v1.PeerService/JoinRoom',
             udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_webrtc__service__pb2.JoinRoomRequest.SerializeToString,
             udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_webrtc__service__pb2.JoinRoomResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def JoinSession(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.webrtc.services.v1.PeerService/JoinSession',
+            udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_webrtc__service__pb2.JoinSessionRequest.SerializeToString,
+            udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_webrtc__service__pb2.JoinSessionResponse.FromString,
             options,
             channel_credentials,
             insecure,

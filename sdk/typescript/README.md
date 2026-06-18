@@ -7,7 +7,7 @@
 
 <p align="center">
   <strong>UDB :: Universal Data Broker</strong><br>
-  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.3.5 | protocol v1.0.0</sub>
+  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.3.6 | protocol v1.0.0</sub>
 </p>
 <!-- UDB_BRAND_HEADER_END -->
 
@@ -18,7 +18,7 @@ version-matched `udb` CLI from a project that installed the package.
 ## Install
 
 ```bash
-npm i @udb_plus/sdk@0.3.5
+npm i @udb_plus/sdk@0.3.6
 ```
 
 Runtime: Node 18+
@@ -83,6 +83,49 @@ const [allowed, decision] = await auth.can(
   "read",
 );
 ```
+
+## Storage: Upload And Download
+
+The `UdbProject` facade exposes the native `StorageService` file lifecycle on
+`udb.storage`. `uploadFile` is a composite helper — it does `RegisterUpload`,
+PUTs the bytes to the broker-minted presigned `upload_url` over plain HTTP, then
+`FinalizeUpload` — and returns the `FinalizeUpload` response.
+
+For reads, the default is a presigned download URL (no object bytes traverse the
+broker). UDB 0.3.6 adds a server-streaming `StorageService.DownloadFile` RPC and
+a client helper for clients that can't reach presigned HTTP: it pulls the raw
+bytes through the broker and reassembles them into a `Uint8Array`.
+
+```ts
+import { UdbProject } from "@udb_plus/sdk/project";
+
+const udb = await UdbProject.connect({
+  target: "localhost:50051",
+  tenantId: "acme",
+  scopes: ["udb:read", "udb:write"],
+});
+await udb.loginAndAdoptTenant({ username: "admin", password: "secret" });
+
+// Upload: RegisterUpload -> HTTP PUT (presigned) -> FinalizeUpload.
+const finalized = await udb.storage.uploadFile(
+  "greeting.txt",
+  Buffer.from("hello\n", "utf8"),
+  { contentType: "text/plain", fileType: "document" },
+);
+const fileId = finalized.file_id;
+
+// Default download: mint a presigned URL (one GetDownloadUrl RPC).
+const { download_url } = await udb.storage.downloadFile(fileId);
+
+// 0.3.6 streaming fallback: pull bytes over DownloadFile -> Uint8Array.
+const bytes = await udb.storage.downloadFileBytes(fileId);
+// Equivalent via the canonical accessor with the streaming opt-in:
+const sameBytes = await udb.storage.downloadFile(fileId, { stream: true });
+```
+
+The streaming helper accepts extra request fields (e.g. `chunk_size_bytes`) in
+its `opts` argument. See `examples/storage_upload_download.ts` for a full
+connect -> login -> upload -> streaming-download example.
 
 ## Performance
 

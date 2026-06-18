@@ -87,3 +87,66 @@ async fn live_postgres_authn_user_account_lifecycle() {
 
     cleanup_native_auth_db(&pool).await;
 }
+
+/// §1 read-after-write (13.7.1.3): the `user_id` `CreateUser` returns is IMMEDIATELY
+/// gettable by `GetUser` and listable by `ListUsers` on the SAME served path with the
+/// SAME tenant metadata a client uses. Reverting the create/get guarantee fails this.
+#[tokio::test]
+#[ignore = "requires live Postgres; run with UDB_LIVE_AUTH_TESTS=1 cargo test --lib live_postgres_authn_user_read_after_write -- --ignored --nocapture"]
+async fn live_postgres_authn_user_read_after_write() {
+    let _guard = live_auth_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_auth_db(&pool).await;
+    let svc = authn_service(pool.clone());
+    let suffix = uuid::Uuid::new_v4().simple().to_string();
+
+    let created = svc
+        .create_user(Request::new(authn_pb::CreateUserRequest {
+            username: format!("ryw_{suffix}"),
+            email: format!("ryw_{suffix}@example.com"),
+            password: "CorrectHorse1!".to_string(),
+            tenant_id: "acme".to_string(),
+            full_name: "RYW Live".to_string(),
+            project_id: "billing".to_string(),
+            ..Default::default()
+        }))
+        .await
+        .expect("create_user")
+        .into_inner();
+    let user = created.user.expect("created user");
+
+    // CreateUser → GetUser
+    assert_create_then_get("CreateUser→GetUser", &user.user_id, |id| {
+        let svc = &svc;
+        async move {
+            let got = svc
+                .get_user(Request::new(authn_pb::GetUserRequest {
+                    user_id: id.clone(),
+                    ..Default::default()
+                }))
+                .await?
+                .into_inner()
+                .user;
+            Ok(got.is_some_and(|u| u.user_id == id))
+        }
+    })
+    .await;
+
+    // CreateUser → ListUsers (same tenant metadata) finds the returned id.
+    assert_create_then_get("CreateUser→ListUsers", &user.user_id, |id| {
+        let svc = &svc;
+        async move {
+            let listed = svc
+                .list_users(Request::new(authn_pb::ListUsersRequest {
+                    tenant_id: "acme".to_string(),
+                    ..Default::default()
+                }))
+                .await?
+                .into_inner();
+            Ok(listed.users.iter().any(|u| u.user_id == id))
+        }
+    })
+    .await;
+
+    cleanup_native_auth_db(&pool).await;
+}

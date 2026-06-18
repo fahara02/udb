@@ -1,0 +1,20 @@
+{
+  "read_fence": {
+    "max_wait_ms": 2500,
+    "min_outbox_lsn": "0/1A2B3C4D",
+    "projection_task_ids": [
+      "projection-task-a",
+      "projection-task-b"
+    ]
+  },
+  "write_receipt": {
+    "manifest_checksum": "sha256:0123456789abcdef",
+    "outbox_seq": 42,
+    "projection_task_ids": [
+      "projection-task-a",
+      "projection-task-b"
+    ],
+    "source_lsn": "0/1A2B3C4D",
+    "written_at_unix_ms": 1735689600000
+  }
+}
