@@ -39,15 +39,18 @@ def test_retry_policy_keeps_read_only_transient_retries() -> None:
     assert not policy.should_retry(grpc.StatusCode.INVALID_ARGUMENT, 1, read_only=True)
 
 
-def test_replay_safe_map_only_marks_upsert_and_delete() -> None:
-    # The proto-derived replay-safety map (R1.1) flags ONLY Upsert/Delete true.
+def test_replay_safe_map_matches_proto_contract() -> None:
+    # The proto-derived replay-safety map (R1.1) flags only RPCs whose
+    # method_idempotency_contract declares replay_safe=true.
     truthy = {path for path, val in RPC_REPLAY_SAFE.items() if val == "true"}
     assert truthy == {
         "/udb.services.v1.DataBroker/Upsert",
         "/udb.services.v1.DataBroker/Delete",
+        "/udb.core.asset.services.v1.AssetService/StartPipeline",
     }
     assert _is_replay_safe("/udb.services.v1.DataBroker/Upsert") is True
     assert _is_replay_safe("/udb.services.v1.DataBroker/Delete") is True
+    assert _is_replay_safe("/udb.core.asset.services.v1.AssetService/StartPipeline") is True
     assert _is_replay_safe("/udb.services.v1.DataBroker/Select") is False
     assert _is_replay_safe("/unknown/Rpc") is False
 
