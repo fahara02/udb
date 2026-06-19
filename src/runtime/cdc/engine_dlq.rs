@@ -15,7 +15,7 @@ fn durable_dlq_insert_sql(dlq_rel: &str) -> String {
     format!(
         "INSERT INTO {dlq_rel} \
          (event_id, topic, tenant_id, project_id, error_type, error_message, payload, status, next_retry_at, created_at) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7::JSONB, 'RETRYING', NOW() + ($8::TEXT || ' seconds')::INTERVAL, NOW()) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7::JSONB, 'RETRYING', NOW() + ($8::BIGINT * INTERVAL '1 second'), NOW()) \
          ON CONFLICT (event_id) DO NOTHING"
     )
 }
@@ -30,6 +30,7 @@ mod tests {
         assert!(sql.starts_with("INSERT INTO udb_system.udb_cdc_dlq_events"));
         assert!(sql.contains("status, next_retry_at, created_at"));
         assert!(sql.contains("'RETRYING'"));
+        assert!(sql.contains("$8::BIGINT * INTERVAL '1 second'"));
         assert!(sql.contains("ON CONFLICT (event_id) DO NOTHING"));
     }
 
@@ -606,7 +607,7 @@ impl CdcEngine {
                  retry_count = $1,
                  error_message = $2,
                  last_retry_at = NOW(),
-                 next_retry_at = NOW() + ($3::TEXT || ' seconds')::INTERVAL,
+                 next_retry_at = NOW() + ($3::BIGINT * INTERVAL '1 second'),
                  updated_at = NOW()
              WHERE dlq_id = $4"
         ))

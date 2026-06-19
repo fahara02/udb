@@ -863,7 +863,7 @@ impl DataBrokerService {
                  (event_id, topic, tenant_id, project_id, error_type, error_message, payload, \
                   status, next_retry_at, created_at) \
                  VALUES ($1, $2, $3, $4, $5, $6, $7::JSONB, 'RETRYING', \
-                         NOW() + ($8::TEXT || ' seconds')::INTERVAL, NOW()) \
+                         NOW() + ($8::BIGINT * INTERVAL '1 second'), NOW()) \
                  ON CONFLICT (event_id) DO NOTHING"
             ))
             .bind(dlq_event_id)
@@ -873,7 +873,7 @@ impl DataBrokerService {
             .bind("baseline_seed")
             .bind("baseline seed")
             .bind(serde_json::json!({}))
-            .bind("60")
+            .bind(60_i64)
             .execute(pool)
             .await
             .map_err(|err| Status::internal(format!("EnsureBaseline dlq insert failed: {err}")))?;
