@@ -12,6 +12,7 @@
   var $ = function (id) { return document.getElementById(id); };
   var enc = new TextEncoder(), dec = new TextDecoder();
   var ex = null; // wasm exports
+  var runTimer = null;
 
   var EXAMPLES = {
     invoice:
@@ -103,9 +104,11 @@
         esc((s.schema_name || "public")) + "." + esc(s.table_name) + "</code>" +
         '<span class="sbadges">' + sec.join("") + "</span></div>";
       html += '<div class="tablewrap" style="border:none;border-radius:0"><table><thead><tr>' +
-        "<th>Column</th><th>SQL type</th><th>#</th><th>Constraints &amp; data class</th></tr></thead><tbody>";
+        "<th>Proto field</th><th>DB column</th><th>SQL type</th><th>#</th><th>Constraints &amp; data class</th></tr></thead><tbody>";
       (s.columns || []).forEach(function (c) {
         var b = [];
+        var fieldName = c.field_name || c.column_name || "";
+        var columnName = c.column_name || c.field_name || "";
         if (c.is_primary) b.push(badge("PK", "pk"));
         if (c.not_null) b.push(badge("NOT NULL", ""));
         if (c.unique) b.push(badge("UNIQUE", ""));
@@ -113,7 +116,8 @@
         if (c.is_pii || (c.security && c.security.is_pii)) b.push(badge("PII", "pii"));
         if (c.encrypted || c.is_encrypted || (c.security && c.security.is_encrypted)) b.push(badge("encrypted", "enc"));
         if (c.mask_in_logs || (c.security && c.security.mask_in_logs)) b.push(badge("mask-in-logs", "enc"));
-        html += "<tr><td><code>" + esc(c.column_name || c.field_name) + "</code></td>" +
+        html += "<tr><td><code>" + esc(fieldName) + "</code></td>" +
+          "<td><code>" + esc(columnName) + "</code></td>" +
           "<td>" + esc(c.sql_type || c.proto_type || "—") + "</td>" +
           '<td class="n">' + esc(c.field_number) + "</td>" +
           "<td>" + (b.length ? b.join(" ") : '<span style="color:var(--muted-2)">—</span>') + "</td></tr>";
@@ -160,6 +164,11 @@
     } catch (e) {
       $("out").innerHTML = '<div class="rmeta"><span class="err">✗ wasm error</span> ' + esc(e.message) + "</div>";
     }
+  }
+
+  function scheduleRun() {
+    if (runTimer) clearTimeout(runTimer);
+    runTimer = setTimeout(run, 300);
   }
 
   function fail(msg) {
@@ -213,6 +222,7 @@
       $("proto").addEventListener("keydown", function (e) {
         if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); run(); }
       });
+      $("proto").addEventListener("input", scheduleRun);
       $("examples").addEventListener("click", function (e) {
         var el = e.target.closest("[data-ex]");
         if (el) { $("proto").value = EXAMPLES[el.getAttribute("data-ex")] || ""; run(); }
