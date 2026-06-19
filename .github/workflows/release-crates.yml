@@ -1,9 +1,9 @@
 name: Release · crates.io
 
-# Triggers on a SemVer tag push (`v0.1.0`, `v1.2.3`, `v2.0.0-rc1`).
-# Validates the package, runs the default-features test suite, then
-# `cargo publish`. The token is a GitHub Actions secret — never read
-# from disk, never written to the runner filesystem.
+# Reusable publisher invoked by `release.yml` (the tag-driven orchestrator) after
+# the release binaries are built. CI gates the exact main commit before release;
+# this workflow only performs packaging/publish work so the release graph does
+# not re-run CI's Rust build, test, and native-contract gates.
 #
 # Required `production` environment secret:
 #   CARGO_REGISTRY_TOKEN   (https://crates.io/settings/tokens)
@@ -13,12 +13,17 @@ name: Release · crates.io
 # delete). Choose the version carefully.
 
 on:
-  push:
-    tags:
-      - 'v*.*.*'
+  workflow_call:
+    secrets:
+      CARGO_REGISTRY_TOKEN:
+        description: crates.io API token used by `cargo publish`.
+        required: false
 
 env:
   CARGO_TERM_COLOR: always
+
+permissions:
+  contents: read
 
 jobs:
   publish:
@@ -32,28 +37,24 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
 
-      - uses: actions/setup-node@v4
+      # Rust toolchain + cache + native build deps (single-source composite).
+      - uses: ./.github/actions/setup-rust
+
+      # version-guard needs Node first (it runs check-versions.mjs but does not
+      # install Node itself).
+      - uses: ./.github/actions/setup-sdk-toolchains
         with:
-          node-version: '20'
-      - name: Versions consistent with versions.json
-        run: node scripts/check-versions.mjs
-
-      - name: Verify tag matches Cargo.toml version
-        run: |
-          tag="${GITHUB_REF#refs/tags/v}"
-          crate_version=$(grep -E '^version = "' Cargo.toml | head -1 | sed -E 's/version = "(.+)"/\1/')
-          if [ "$tag" != "$crate_version" ]; then
-            echo "::error::Tag v$tag does not match Cargo.toml version $crate_version"
-            exit 1
-          fi
-          echo "Tag and Cargo.toml both at $tag"
+          node: 'true'
+      - uses: ./.github/actions/version-guard
+        with:
+          component: udb
 
       - name: Check crates.io version availability
         id: crate_version
+        shell: bash
         run: |
+          set -euo pipefail
           version="${GITHUB_REF#refs/tags/v}"
           if curl -fsS "https://crates.io/api/v1/crates/udb/${version}" >/dev/null; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
@@ -61,30 +62,6 @@ jobs:
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
-
-      # urgent_fix #38: a release must clear the SAME hard gates as branch CI,
-      # not just `cargo test --lib`. This standalone tag-triggered workflow cannot
-      # `needs: [ci]` across workflows, so the gates are inlined here so a tag push
-      # can never publish past stale manifests / a broken build / unformatted code.
-      - name: Format gate
-        run: cargo fmt --all -- --check
-      - name: Build all targets
-        run: cargo build --locked --all-targets
-      - name: Native contract manifest drift + lint gate
-        run: |
-          cargo run --locked -q --bin udb -- native manifest > docs/generated/udb-native-contract.json
-          if ! git diff --quiet -- docs/generated/udb-native-contract.json; then
-            echo "::error::Native contract manifest is stale; regenerate and commit before tagging a release."
-            exit 1
-          fi
-          cargo run --locked -q --bin udb -- native lint
-      - name: Native contract breaking-change gate
-        run: |
-          cargo run --locked -q --bin udb -- native contract-diff \
-            --baseline docs/generated/contract-baseline.bin
-
-      - name: Run the default test suite before publishing
-        run: cargo test --locked --lib
 
       - name: cargo publish --dry-run
         if: steps.crate_version.outputs.exists != 'true'
@@ -94,6 +71,7 @@ jobs:
         if: steps.crate_version.outputs.exists != 'true'
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        shell: bash
         run: |
           set +e
           cargo publish 2>&1 | tee /tmp/cargo-publish.log

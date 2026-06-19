@@ -7,8 +7,8 @@ namespace Udb\Core\Apikey\Services\V1;
  * ---------------------------------------------------------------------------
  * ApiKeyService — Machine-to-machine key lifecycle and validation.
  *
- * HTTP prefix: /v1/api_keys
- * URL conventions (Rule 07): snake_case paths, :<verb> custom method suffix, kebab-case query params.
+ * HTTP prefix: /v1/api-keys
+ * URL conventions: kebab-case paths, :lowerCamel custom method suffix, kebab-case query params.
  *
  * The gateway calls ValidateApiKey on every inbound API request to:
  *   1. Verify key hash

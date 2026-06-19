@@ -69,7 +69,7 @@ service TenantService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "create_tenant"
+      method_alias: "create_tenant" rest_operation_id: "createTenant"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -128,7 +128,7 @@ service TenantService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "get_tenant"
+      method_alias: "get_tenant" rest_operation_id: "getTenant"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -184,7 +184,7 @@ service TenantService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "list_tenants"
+      method_alias: "list_tenants" rest_operation_id: "listTenants"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -240,7 +240,7 @@ service TenantService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "update_tenant"
+      method_alias: "update_tenant" rest_operation_id: "updateTenant"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -299,7 +299,7 @@ service TenantService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "get_tenant_config"
+      method_alias: "get_tenant_config" rest_operation_id: "getTenantConfig"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -355,7 +355,7 @@ service TenantService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "update_tenant_config"
+      method_alias: "update_tenant_config" rest_operation_id: "updateTenantConfig"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3

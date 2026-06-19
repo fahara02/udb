@@ -50,6 +50,14 @@ cp target/wasm32-unknown-unknown/release/udb_wasm.wasm docs/site/udb.wasm
 The deploy workflow rebuilds it fresh on every publish, so the in-browser parser
 never drifts from the server's.
 
+## Benchmark JSON
+
+`bench-results.json` is produced by `scripts/collect_sdk_bench_results.py` from
+SDK Markdown reports. Per-RPC rows prefer descriptor-derived `operation_id`, then
+`api_alias`, then the legacy `service/rpc` wire identity. The dashboard keeps the
+wire RPC as row detail so users can filter by canonical API identity without
+losing transport diagnostics.
+
 ## Assets
 
 The page references images at `./assets/…`. The canonical source images live in

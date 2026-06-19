@@ -74,19 +74,19 @@ public sealed partial class Generated{{SERVICE_NAME}}Client : GeneratedServiceBa
 public sealed partial class Generated{{SERVICE_NAME}}Client
 {
     /// <summary>
-    /// <c>{{RPC_NAME}}</c> (unary) — forwards to <c>{{SERVICE_NAME}}Client.{{RPC_NAME}}Async</c>.
+    /// <c>{{RPC_ALIAS_SNAKE}}</c> (unary) — forwards to <c>{{SERVICE_NAME}}Client.{{RPC_WIRE_NAME}}Async</c>.
     /// gRPC path: <c>{{RPC_PATH}}</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
-    public Task<dynamic> {{RPC_NAME}}Async(
+    public Task<dynamic> {{RPC_ALIAS_PASCAL}}Async(
         dynamic request,
         TimeSpan? deadline = null,
         CancellationToken cancellationToken = default)
     {
-        // _stub.{{RPC_NAME}}Async returns a concrete AsyncUnaryCall<TResp>; box it
+        // _stub.{{RPC_WIRE_NAME}}Async returns a concrete AsyncUnaryCall<TResp>; box it
         // as object so no dynamic-to-closed-generic cast is ever attempted.
         return InvokeUnaryAsync(
             "{{RPC_PATH}}",
-            co => (object)_stub.{{RPC_NAME}}Async(request, co),
+            co => (object)_stub.{{RPC_WIRE_NAME}}Async(request, co),
             deadline,
             cancellationToken,
             "{{RPC_OPERATION_KIND}}" == "read_only");
@@ -99,12 +99,12 @@ public sealed partial class Generated{{SERVICE_NAME}}Client
 public sealed partial class Generated{{SERVICE_NAME}}Client
 {
     /// <summary>
-    /// <c>{{RPC_NAME}}</c> (server-streaming) — forwards to
-    /// <c>{{SERVICE_NAME}}Client.{{RPC_NAME}}</c>. gRPC path: <c>{{RPC_PATH}}</c>.
+    /// <c>{{RPC_ALIAS_SNAKE}}</c> (server-streaming) — forwards to
+    /// <c>{{SERVICE_NAME}}Client.{{RPC_WIRE_NAME}}</c>. gRPC path: <c>{{RPC_PATH}}</c>.
     /// Not retried mid-stream; drain the returned stream and map errors with
     /// <see cref="GeneratedServiceBase.MapStreamError"/>.
     /// </summary>
-    public dynamic {{RPC_NAME}}(
+    public dynamic {{RPC_ALIAS_PASCAL}}(
         dynamic request,
         TimeSpan? deadline = null,
         CancellationToken cancellationToken = default)
@@ -112,7 +112,7 @@ public sealed partial class Generated{{SERVICE_NAME}}Client
         // Returns the concrete AsyncServerStreamingCall<TResp> as dynamic.
         return InvokeStreaming(
             "{{RPC_PATH}}",
-            co => (object)_stub.{{RPC_NAME}}(request, co),
+            co => (object)_stub.{{RPC_WIRE_NAME}}(request, co),
             deadline,
             cancellationToken);
     }
@@ -124,18 +124,18 @@ public sealed partial class Generated{{SERVICE_NAME}}Client
 public sealed partial class Generated{{SERVICE_NAME}}Client
 {
     /// <summary>
-    /// <c>{{RPC_NAME}}</c> (client-streaming) — forwards to
-    /// <c>{{SERVICE_NAME}}Client.{{RPC_NAME}}</c>. gRPC path: <c>{{RPC_PATH}}</c>.
+    /// <c>{{RPC_ALIAS_SNAKE}}</c> (client-streaming) — forwards to
+    /// <c>{{SERVICE_NAME}}Client.{{RPC_WIRE_NAME}}</c>. gRPC path: <c>{{RPC_PATH}}</c>.
     /// Never retried (request stream cannot be safely replayed).
     /// </summary>
-    public dynamic {{RPC_NAME}}(
+    public dynamic {{RPC_ALIAS_PASCAL}}(
         TimeSpan? deadline = null,
         CancellationToken cancellationToken = default)
     {
         // Returns the concrete AsyncClientStreamingCall<TReq,TResp> as dynamic.
         return InvokeStreaming(
             "{{RPC_PATH}}",
-            co => (object)_stub.{{RPC_NAME}}(co),
+            co => (object)_stub.{{RPC_WIRE_NAME}}(co),
             deadline,
             cancellationToken);
     }
@@ -147,18 +147,18 @@ public sealed partial class Generated{{SERVICE_NAME}}Client
 public sealed partial class Generated{{SERVICE_NAME}}Client
 {
     /// <summary>
-    /// <c>{{RPC_NAME}}</c> (bidi-streaming) — forwards to
-    /// <c>{{SERVICE_NAME}}Client.{{RPC_NAME}}</c>. gRPC path: <c>{{RPC_PATH}}</c>.
+    /// <c>{{RPC_ALIAS_SNAKE}}</c> (bidi-streaming) — forwards to
+    /// <c>{{SERVICE_NAME}}Client.{{RPC_WIRE_NAME}}</c>. gRPC path: <c>{{RPC_PATH}}</c>.
     /// Never retried.
     /// </summary>
-    public dynamic {{RPC_NAME}}(
+    public dynamic {{RPC_ALIAS_PASCAL}}(
         TimeSpan? deadline = null,
         CancellationToken cancellationToken = default)
     {
         // Returns the concrete AsyncDuplexStreamingCall<TReq,TResp> as dynamic.
         return InvokeStreaming(
             "{{RPC_PATH}}",
-            co => (object)_stub.{{RPC_NAME}}(co),
+            co => (object)_stub.{{RPC_WIRE_NAME}}(co),
             deadline,
             cancellationToken);
     }

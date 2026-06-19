@@ -20,7 +20,7 @@
 // CI can make every supported SDK a hard gate.
 
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -92,6 +92,11 @@ const LANGS = {
     fail: /failed|errors/i,
     skipReason: "requires composer install + ext-grpc/ext-protobuf — runs in CI",
   },
+  metadata: {
+    cwd: repoRoot,
+    detect: () => true,
+    check: checkAliasMetadata,
+  },
 };
 
 function has(bin, args = ["--version"]) {
@@ -113,9 +118,65 @@ function run(step, cwd) {
   return { code: r.status, out: `${r.stdout || ""}${r.stderr || ""}` };
 }
 
+function readJson(rel) {
+  return JSON.parse(readFileSync(join(repoRoot, rel), "utf8"));
+}
+
+function eachSwaggerOperation(swagger, fn) {
+  for (const [path, methods] of Object.entries(swagger.paths || {})) {
+    for (const [method, op] of Object.entries(methods || {})) {
+      if (!op || typeof op !== "object") continue;
+      fn(path, method, op);
+    }
+  }
+}
+
+function checkAliasMetadata() {
+  const failures = [];
+  const swaggerPath = join(repoRoot, "api", "udb-broker.swagger.json");
+  if (!existsSync(swaggerPath)) {
+    return { status: "SKIP", note: "api/udb-broker.swagger.json missing" };
+  }
+  const swagger = readJson("api/udb-broker.swagger.json");
+  let operations = 0;
+  let aliasExtensions = 0;
+  eachSwaggerOperation(swagger, (path, method, op) => {
+    operations += 1;
+    const operationId = String(op.operationId || "");
+    const alias = String(op["x-udb-sdk-alias"] || "");
+    if (!operationId) failures.push(`${method.toUpperCase()} ${path}: missing operationId`);
+    if (/^[A-Za-z]+Service_[A-Za-z0-9]+$/.test(operationId)) {
+      failures.push(`${method.toUpperCase()} ${path}: generated operationId ${operationId}`);
+    }
+    if (!alias) failures.push(`${method.toUpperCase()} ${path}: missing x-udb-sdk-alias`);
+    if (alias) aliasExtensions += 1;
+  });
+  if (operations === 0) failures.push("Swagger contains no operations");
+
+  const templateChecks = [
+    ["sdk-templates/typescript/generatedClient.ts.tmpl", "{{RPC_ALIAS_CAMEL}}", "{{RPC_WIRE_NAME}}"],
+    ["sdk-templates/python/udb_client/generated_client.py.tmpl", "{{RPC_ALIAS_SNAKE}}", "{{RPC_WIRE_NAME}}"],
+    ["sdk-templates/php/src/Generated/GeneratedClient.php.tmpl", "{{RPC_ALIAS_CAMEL}}", "{{RPC_WIRE_NAME}}"],
+    ["sdk-templates/java/src/main/java/dev/udb/client/generated/GeneratedUdbClient.java.tmpl", "{{RPC_ALIAS_PASCAL}}", "{{RPC_WIRE_NAME}}"],
+    ["sdk-templates/csharp/Udb.Client/GeneratedClient.cs.tmpl", "{{RPC_ALIAS_PASCAL}}", "{{RPC_WIRE_NAME}}"],
+    ["sdk-templates/go/udbclient/generated_client.go.tmpl", "{{RPC_ALIAS_SNAKE}}", "{{REST_OPERATION_ID}}"],
+  ];
+  for (const [rel, aliasNeedle, wireNeedle] of templateChecks) {
+    const text = readFileSync(join(repoRoot, rel), "utf8");
+    if (!text.includes(aliasNeedle)) failures.push(`${rel}: missing ${aliasNeedle}`);
+    if (!text.includes(wireNeedle)) failures.push(`${rel}: missing ${wireNeedle}`);
+  }
+
+  if (failures.length) {
+    return { status: "FAIL", note: failures.slice(0, 8).join("; ") };
+  }
+  return { status: "PASS", note: `${operations} Swagger operations, ${aliasExtensions} SDK aliases` };
+}
+
 const explicitTargets = process.argv.slice(2).filter((a) => LANGS[a]);
 const selected = explicitTargets;
-const targets = selected.length ? selected : Object.keys(LANGS);
+const defaultTargets = Object.keys(LANGS).filter((name) => name !== "metadata");
+const targets = selected.length ? selected : defaultTargets;
 const strictSelected = selected.length > 0;
 
 const results = [];
@@ -134,6 +195,10 @@ for (const name of targets) {
     continue;
   }
   process.stderr.write(`\n=== ${name} ===\n`);
+  if (cfg.check) {
+    results.push({ name, ...cfg.check() });
+    continue;
+  }
   if (cfg.setup) run(cfg.setup, cfg.cwd);
   if (cfg.build) {
     const b = run(cfg.build, cfg.cwd);

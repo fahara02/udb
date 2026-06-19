@@ -553,7 +553,7 @@ class {{SERVICE_NAME}}Client(_ServiceClientBase):
 
     # ── unary RPCs ────────────────────────────────────────────────────────────
     # @@UDB_RPC_BEGIN service={{SERVICE_NAME}} kind=unary
-    def {{RPC_SNAKE}}(
+    def {{RPC_ALIAS_SNAKE}}(
         self,
         request: Any,
         *,
@@ -561,15 +561,15 @@ class {{SERVICE_NAME}}Client(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``{{RPC_NAME}}`` — unary call to ``{{RPC_PATH}}``.
+        """``{{RPC_ALIAS_SNAKE}}`` — unary call to wire RPC ``{{RPC_PATH}}``.
 
         Forwards ``{{RPC_INPUT}}`` ({{RPC_INPUT_PKG}}) and returns
         ``{{RPC_OUTPUT}}`` ({{RPC_OUTPUT_PKG}}).
         """
 
         return self._invoke_unary(
-            self._stub.{{RPC_NAME}},
-            "{{RPC_NAME}}",
+            self._stub.{{RPC_WIRE_NAME}},
+            "{{RPC_WIRE_NAME}}",
             request,
             metadata=metadata,
             timeout=timeout,
@@ -581,7 +581,7 @@ class {{SERVICE_NAME}}Client(_ServiceClientBase):
 
     # ── server-streaming RPCs ─────────────────────────────────────────────────
     # @@UDB_RPC_BEGIN service={{SERVICE_NAME}} kind=server_streaming
-    def {{RPC_SNAKE}}(
+    def {{RPC_ALIAS_SNAKE}}(
         self,
         request: Any,
         *,
@@ -589,7 +589,7 @@ class {{SERVICE_NAME}}Client(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Iterator[Any]:
-        """``{{RPC_NAME}}`` — server-streaming call to ``{{RPC_PATH}}``.
+        """``{{RPC_ALIAS_SNAKE}}`` — server-streaming call to wire RPC ``{{RPC_PATH}}``.
 
         Forwards ``{{RPC_INPUT}}`` ({{RPC_INPUT_PKG}}) and yields
         ``{{RPC_OUTPUT}}`` ({{RPC_OUTPUT_PKG}}) messages. Retry applies only
@@ -597,8 +597,8 @@ class {{SERVICE_NAME}}Client(_ServiceClientBase):
         """
 
         return self._invoke_server_streaming(
-            self._stub.{{RPC_NAME}},
-            "{{RPC_NAME}}",
+            self._stub.{{RPC_WIRE_NAME}},
+            "{{RPC_WIRE_NAME}}",
             request,
             metadata=metadata,
             timeout=timeout,
@@ -610,14 +610,14 @@ class {{SERVICE_NAME}}Client(_ServiceClientBase):
 
     # ── client-streaming RPCs ─────────────────────────────────────────────────
     # @@UDB_RPC_BEGIN service={{SERVICE_NAME}} kind=client_streaming
-    def {{RPC_SNAKE}}(
+    def {{RPC_ALIAS_SNAKE}}(
         self,
         request_iterator: Iterable[Any],
         *,
         metadata: Metadata | None = None,
         timeout: float | None = None,
     ) -> Any:
-        """``{{RPC_NAME}}`` — client-streaming call to ``{{RPC_PATH}}``.
+        """``{{RPC_ALIAS_SNAKE}}`` — client-streaming call to wire RPC ``{{RPC_PATH}}``.
 
         Consumes an iterator of ``{{RPC_INPUT}}`` ({{RPC_INPUT_PKG}}) and returns
         ``{{RPC_OUTPUT}}`` ({{RPC_OUTPUT_PKG}}). Not auto-retried (request stream
@@ -625,8 +625,8 @@ class {{SERVICE_NAME}}Client(_ServiceClientBase):
         """
 
         return self._invoke_client_streaming(
-            self._stub.{{RPC_NAME}},
-            "{{RPC_NAME}}",
+            self._stub.{{RPC_WIRE_NAME}},
+            "{{RPC_WIRE_NAME}}",
             request_iterator,
             metadata=metadata,
             timeout=timeout,
@@ -636,22 +636,22 @@ class {{SERVICE_NAME}}Client(_ServiceClientBase):
 
     # ── bidirectional-streaming RPCs ──────────────────────────────────────────
     # @@UDB_RPC_BEGIN service={{SERVICE_NAME}} kind=bidi
-    def {{RPC_SNAKE}}(
+    def {{RPC_ALIAS_SNAKE}}(
         self,
         request_iterator: Iterable[Any],
         *,
         metadata: Metadata | None = None,
         timeout: float | None = None,
     ) -> Iterator[Any]:
-        """``{{RPC_NAME}}`` — bidirectional-streaming call to ``{{RPC_PATH}}``.
+        """``{{RPC_ALIAS_SNAKE}}`` — bidirectional-streaming call to wire RPC ``{{RPC_PATH}}``.
 
         Consumes an iterator of ``{{RPC_INPUT}}`` ({{RPC_INPUT_PKG}}) and yields
         ``{{RPC_OUTPUT}}`` ({{RPC_OUTPUT_PKG}}). Not auto-retried.
         """
 
         stream = self._invoke_client_streaming(
-            self._stub.{{RPC_NAME}},
-            "{{RPC_NAME}}",
+            self._stub.{{RPC_WIRE_NAME}},
+            "{{RPC_WIRE_NAME}}",
             request_iterator,
             metadata=metadata,
             timeout=timeout,
@@ -660,7 +660,7 @@ class {{SERVICE_NAME}}Client(_ServiceClientBase):
             for item in stream:
                 yield item
         except grpc.RpcError as error:
-            raise _map_error("{{RPC_NAME}}", error) from error
+            raise _map_error("{{RPC_WIRE_NAME}}", error) from error
 
     # @@UDB_RPC_END
 

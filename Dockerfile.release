@@ -1,0 +1,55 @@
+# syntax=docker/dockerfile:1.7
+#
+# UDB broker image — RELEASE variant (single-artifact-system, Chapter 15.A.2).
+#
+# Unlike ./Dockerfile (which compiles the broker from source), this Dockerfile
+# consumes the ALREADY-BUILT release binary that `release-binaries.yml` attached
+# to the GitHub Release. The orchestrator (`release.yml`) downloads the
+# `udb-linux-amd64-full` asset into the build context as `udb`, so the image is
+# never recompiled — the same provenance binary ships in the tarball AND the
+# image.
+#
+# Build context must contain an executable `udb` at its root, e.g.:
+#   gh release download "$TAG" --pattern udb-linux-amd64-full --output udb
+#   chmod +x udb
+#   docker build -f Dockerfile.release .
+
+FROM debian:bookworm-slim AS runtime
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates curl \
+    && rm -rf /var/lib/apt/lists/*
+
+ARG GRPC_HEALTH_PROBE_VERSION=v0.4.37
+RUN curl -fsSL \
+    "https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/${GRPC_HEALTH_PROBE_VERSION}/grpc_health_probe-linux-amd64" \
+    -o /usr/local/bin/grpc_health_probe \
+    && chmod +x /usr/local/bin/grpc_health_probe
+
+RUN groupadd --system udb \
+    && useradd --system --gid udb --home-dir /app --shell /usr/sbin/nologin udb
+
+WORKDIR /app
+
+# The prebuilt release binary, downloaded into the build context by the caller.
+COPY udb /usr/local/bin/udb
+RUN chmod +x /usr/local/bin/udb
+
+# UDB-owned proto + vendored imports + default configs. Application schemas
+# (e.g. the acme_billing example) are mounted in at runtime and served via an
+# overridden CMD.
+COPY proto ./proto
+COPY third_party ./third_party
+COPY configs ./configs
+
+ENV RUST_LOG=info \
+    UDB_METRICS_ADDR=0.0.0.0:50052
+
+EXPOSE 50051 50052
+USER udb:udb
+
+HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=3 \
+    CMD ["/usr/local/bin/grpc_health_probe", "-addr=127.0.0.1:50051"]
+
+ENTRYPOINT ["/usr/local/bin/udb"]
+CMD ["serve", "/app/proto", "", "0.0.0.0:50051"]

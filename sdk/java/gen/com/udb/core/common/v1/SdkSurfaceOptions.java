@@ -33,6 +33,7 @@ private static final long serialVersionUID = 0L;
     streamingHelperType_ = "";
     boilerplateRecipeTags_ =
         com.google.protobuf.LazyStringArrayList.emptyList();
+    restOperationId_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -268,6 +269,45 @@ private static final long serialVersionUID = 0L;
     return generateMinimalExample_;
   }
 
+  public static final int REST_OPERATION_ID_FIELD_NUMBER = 11;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object restOperationId_ = "";
+  /**
+   * <code>string rest_operation_id = 11 [json_name = "restOperationId"];</code>
+   * @return The restOperationId.
+   */
+  @java.lang.Override
+  public java.lang.String getRestOperationId() {
+    java.lang.Object ref = restOperationId_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      restOperationId_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string rest_operation_id = 11 [json_name = "restOperationId"];</code>
+   * @return The bytes for restOperationId.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getRestOperationIdBytes() {
+    java.lang.Object ref = restOperationId_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      restOperationId_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -311,6 +351,9 @@ private static final long serialVersionUID = 0L;
     }
     if (generateMinimalExample_ != false) {
       output.writeBool(10, generateMinimalExample_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(restOperationId_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 11, restOperationId_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -362,6 +405,9 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeBoolSize(10, generateMinimalExample_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(restOperationId_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(11, restOperationId_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -397,6 +443,8 @@ private static final long serialVersionUID = 0L;
         .equals(other.getBoilerplateRecipeTagsList())) return false;
     if (getGenerateMinimalExample()
         != other.getGenerateMinimalExample()) return false;
+    if (!getRestOperationId()
+        .equals(other.getRestOperationId())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -434,6 +482,8 @@ private static final long serialVersionUID = 0L;
     hash = (37 * hash) + GENERATE_MINIMAL_EXAMPLE_FIELD_NUMBER;
     hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
         getGenerateMinimalExample());
+    hash = (37 * hash) + REST_OPERATION_ID_FIELD_NUMBER;
+    hash = (53 * hash) + getRestOperationId().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -576,6 +626,7 @@ private static final long serialVersionUID = 0L;
       boilerplateRecipeTags_ =
           com.google.protobuf.LazyStringArrayList.emptyList();
       generateMinimalExample_ = false;
+      restOperationId_ = "";
       return this;
     }
 
@@ -640,6 +691,9 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000200) != 0)) {
         result.generateMinimalExample_ = generateMinimalExample_;
       }
+      if (((from_bitField0_ & 0x00000400) != 0)) {
+        result.restOperationId_ = restOperationId_;
+      }
     }
 
     @java.lang.Override
@@ -696,6 +750,11 @@ private static final long serialVersionUID = 0L;
       }
       if (other.getGenerateMinimalExample() != false) {
         setGenerateMinimalExample(other.getGenerateMinimalExample());
+      }
+      if (!other.getRestOperationId().isEmpty()) {
+        restOperationId_ = other.restOperationId_;
+        bitField0_ |= 0x00000400;
+        onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -774,6 +833,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000200;
               break;
             } // case 80
+            case 90: {
+              restOperationId_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000400;
+              break;
+            } // case 90
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1306,6 +1370,78 @@ private static final long serialVersionUID = 0L;
     public Builder clearGenerateMinimalExample() {
       bitField0_ = (bitField0_ & ~0x00000200);
       generateMinimalExample_ = false;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object restOperationId_ = "";
+    /**
+     * <code>string rest_operation_id = 11 [json_name = "restOperationId"];</code>
+     * @return The restOperationId.
+     */
+    public java.lang.String getRestOperationId() {
+      java.lang.Object ref = restOperationId_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        restOperationId_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string rest_operation_id = 11 [json_name = "restOperationId"];</code>
+     * @return The bytes for restOperationId.
+     */
+    public com.google.protobuf.ByteString
+        getRestOperationIdBytes() {
+      java.lang.Object ref = restOperationId_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        restOperationId_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string rest_operation_id = 11 [json_name = "restOperationId"];</code>
+     * @param value The restOperationId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRestOperationId(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      restOperationId_ = value;
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string rest_operation_id = 11 [json_name = "restOperationId"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearRestOperationId() {
+      restOperationId_ = getDefaultInstance().getRestOperationId();
+      bitField0_ = (bitField0_ & ~0x00000400);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string rest_operation_id = 11 [json_name = "restOperationId"];</code>
+     * @param value The bytes for restOperationId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRestOperationIdBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      restOperationId_ = value;
+      bitField0_ |= 0x00000400;
       onChanged();
       return this;
     }

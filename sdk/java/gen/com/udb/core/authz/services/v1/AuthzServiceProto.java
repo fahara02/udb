@@ -40,166 +40,170 @@ public final class AuthzServiceProto {
       "ogle/api/annotations.proto\032%udb/core/aut" +
       "hz/services/v1/core.proto\032+udb/core/auth" +
       "z/services/v1/governance.proto\032!udb/core" +
-      "/common/v1/security.proto2\373\233\001\n\014AuthzServ" +
-      "ice\022\255\004\n\tAuthorize\022(.udb.core.authz.servi" +
+      "/common/v1/security.proto2\316\241\001\n\014AuthzServ" +
+      "ice\022\270\004\n\tAuthorize\022(.udb.core.authz.servi" +
       "ces.v1.AuthzRequest\032).udb.core.authz.ser" +
-      "vices.v1.AuthzResponse\"\312\003\312\363\0301\010\002\032\023udb:aut" +
+      "vices.v1.AuthzResponse\"\325\003\312\363\0301\010\002\032\023udb:aut" +
       "hz:authorize \001J\002\001\002j\017authz.Authorize\220\001\001\322\363" +
-      "\030\006\010\001\020\001 \001\332\363\030#\010\001\022\tauthorize\032\003udb(\260\352\0010\003@\001J\005" +
-      "authzP\001\342\363\030\253\001\n\005authz\022\020udb/native/authz\032\033U" +
-      "DB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TAR" +
-      "GET\"&udb.native.authz.authorize.boilerpl" +
-      "ate*\tauthorize2\tudb_authz:\005authzJ\013UDB_AP" +
-      "I_KEYZ\020udb native smoke\352\363\030K\n\017authz.Autho" +
-      "rize\022\014authz.events\032\ttenant_id\"\010standard*" +
-      "\rat_least_once2\006stable\362\363\030?\n\005authz\032\010postg" +
-      "res2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GR" +
-      "PC_TARGET\370\363\030\001\202\323\344\223\002\030\"\023/v1/authz/authorize" +
-      ":\001*\022\310\004\n\013CheckAccess\022..udb.core.authz.ser" +
-      "vices.v1.CheckAccessRequest\032/.udb.core.a" +
-      "uthz.services.v1.CheckAccessResponse\"\327\003\312" +
-      "\363\0306\010\002\032\026udb:authz:check-access \001J\002\001\002j\021aut" +
-      "hz.CheckAccess\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030&\010\001\022\014check" +
-      "_access\032\003udb(\260\352\0010\003@\001J\005authzP\001\342\363\030\261\001\n\005auth" +
-      "z\022\020udb/native/authz\032\033UDB_NATIVE_SERVICES" +
-      "_ENABLED\032\017UDB_GRPC_TARGET\")udb.native.au" +
-      "thz.check_access.boilerplate*\014check_acce" +
-      "ss2\tudb_authz:\005authzJ\013UDB_API_KEYZ\020udb n" +
-      "ative smoke\352\363\030M\n\021authz.CheckAccess\022\014auth" +
-      "z.events\032\ttenant_id\"\010standard*\rat_least_" +
-      "once2\006stable\362\363\030?\n\005authz\032\010postgres2\033UDB_N" +
-      "ATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370" +
-      "\363\030\001\202\323\344\223\002\025\"\020/v1/authz/checks:\001*\022\276\004\n\nCreat" +
-      "eRole\022-.udb.core.authz.services.v1.Creat" +
-      "eRoleRequest\032..udb.core.authz.services.v" +
-      "1.CreateRoleResponse\"\320\003\312\363\0304\010\002\032\025udb:authz" +
-      ":create-role \001J\002\001\002j\020authz.CreateRole\220\001\001\322" +
-      "\363\030\006\010\001\020\001 \001\332\363\030%\010\001\022\013create_role\032\003udb(\260\352\0010\003@" +
-      "\001J\005authzP\001\342\363\030\257\001\n\005authz\022\020udb/native/authz" +
-      "\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_" +
-      "TARGET\"(udb.native.authz.create_role.boi" +
-      "lerplate*\013create_role2\tudb_authz:\005authzJ" +
-      "\013UDB_API_KEYZ\020udb native smoke\352\363\030L\n\020auth" +
-      "z.CreateRole\022\014authz.events\032\ttenant_id\"\010s" +
-      "tandard*\rat_least_once2\006stable\362\363\030?\n\005auth" +
-      "z\032\010postgres2\033UDB_NATIVE_SERVICES_ENABLED" +
-      "2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002\024\"\017/v1/authz/r" +
-      "oles:\001*\022\316\004\n\nAssignRole\022-.udb.core.authz." +
-      "services.v1.AssignRoleRequest\032..udb.core" +
-      ".authz.services.v1.AssignRoleResponse\"\340\003" +
-      "\312\363\0304\010\002\032\025udb:authz:assign-role \001J\002\001\002j\020aut" +
-      "hz.AssignRole\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030%\010\001\022\013assign" +
-      "_role\032\003udb(\260\352\0010\003@\001J\005authzP\001\342\363\030\257\001\n\005authz\022" +
-      "\020udb/native/authz\032\033UDB_NATIVE_SERVICES_E" +
-      "NABLED\032\017UDB_GRPC_TARGET\"(udb.native.auth" +
-      "z.assign_role.boilerplate*\013assign_role2\t" +
-      "udb_authz:\005authzJ\013UDB_API_KEYZ\020udb nativ" +
-      "e smoke\352\363\030L\n\020authz.AssignRole\022\014authz.eve" +
-      "nts\032\ttenant_id\"\010standard*\rat_least_once2" +
-      "\006stable\362\363\030?\n\005authz\032\010postgres2\033UDB_NATIVE" +
-      "_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323" +
-      "\344\223\002$\"\037/v1/authz/users/{user_id}/roles:\001*" +
-      "\022\373\004\n\020CreatePolicyRule\0223.udb.core.authz.s" +
-      "ervices.v1.CreatePolicyRuleRequest\0324.udb" +
-      ".core.authz.services.v1.CreatePolicyRule" +
-      "Response\"\373\003\312\363\030A\010\002\032\034udb:authz:create-poli" +
-      "cy-rule \001J\002\001\002j\026authz.CreatePolicyRule\220\001\001" +
-      "\322\363\030\006\010\001\020\001 \001\332\363\030,\010\001\022\022create_policy_rule\032\003ud" +
-      "b(\260\352\0010\003@\001J\005authzP\001\342\363\030\275\001\n\005authz\022\020udb/nati" +
+      "\030\006\010\001\020\001 \001\332\363\030.\010\001\022\tauthorize\032\003udb(\260\352\0010\003@\001J\005" +
+      "authzP\001Z\tauthorize\342\363\030\253\001\n\005authz\022\020udb/nati" +
       "ve/authz\032\033UDB_NATIVE_SERVICES_ENABLED\032\017U" +
-      "DB_GRPC_TARGET\"/udb.native.authz.create_" +
-      "policy_rule.boilerplate*\022create_policy_r" +
-      "ule2\tudb_authz:\005authzJ\013UDB_API_KEYZ\020udb " +
-      "native smoke\352\363\030R\n\026authz.CreatePolicyRule" +
-      "\022\014authz.events\032\ttenant_id\"\010standard*\rat_" +
-      "least_once2\006stable\362\363\030?\n\005authz\032\010postgres2" +
-      "\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_T" +
-      "ARGET\370\363\030\002\202\323\344\223\002\027\"\022/v1/authz/policies:\001*\022\246" +
-      "\005\n\023ListUserPermissions\0226.udb.core.authz." +
-      "services.v1.ListUserPermissionsRequest\0327" +
-      ".udb.core.authz.services.v1.ListUserPerm" +
-      "issionsResponse\"\235\004\312\363\030G\010\002\032\037udb:authz:list" +
-      "-user-permissions \001J\002\001\002j\031authz.ListUserP" +
-      "ermissions\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030/\010\001\022\025list_user" +
-      "_permissions\032\003udb(\260\352\0010\003@\001J\005authzP\001\342\363\030\303\001\n" +
-      "\005authz\022\020udb/native/authz\032\033UDB_NATIVE_SER" +
-      "VICES_ENABLED\032\017UDB_GRPC_TARGET\"2udb.nati" +
-      "ve.authz.list_user_permissions.boilerpla" +
-      "te*\025list_user_permissions2\tudb_authz:\005au" +
-      "thzJ\013UDB_API_KEYZ\020udb native smoke\352\363\030U\n\031" +
-      "authz.ListUserPermissions\022\014authz.events\032" +
-      "\ttenant_id\"\010standard*\rat_least_once2\006sta" +
-      "ble\362\363\030?\n\005authz\032\010postgres2\033UDB_NATIVE_SER" +
-      "VICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\'" +
-      "\022%/v1/authz/users/{user_id}/permissions\022" +
-      "\302\005\n\030ListAccessDecisionAudits\022;.udb.core." +
-      "authz.services.v1.ListAccessDecisionAudi" +
-      "tsRequest\032<.udb.core.authz.services.v1.L" +
-      "istAccessDecisionAuditsResponse\"\252\004\312\363\030R\010\002" +
-      "\032%udb:authz:list-access-decision-audits " +
-      "\001J\002\001\002j\036authz.ListAccessDecisionAudits\220\001\001" +
-      "\322\363\030\006\010\001\020\001 \001\332\363\0305\010\001\022\033list_access_decision_a" +
-      "udits\032\003udb(\260\352\0010\003@\001J\005authzP\001\342\363\030\317\001\n\005authz\022" +
-      "\020udb/native/authz\032\033UDB_NATIVE_SERVICES_E" +
-      "NABLED\032\017UDB_GRPC_TARGET\"8udb.native.auth" +
-      "z.list_access_decision_audits.boilerplat" +
-      "e*\033list_access_decision_audits2\tudb_auth" +
-      "z:\005authzJ\013UDB_API_KEYZ\020udb native smoke\352" +
-      "\363\030Z\n\036authz.ListAccessDecisionAudits\022\014aut" +
-      "hz.events\032\ttenant_id\"\010standard*\rat_least" +
-      "_once2\006stable\362\363\030?\n\005authz\032\010postgres2\033UDB_" +
-      "NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET" +
-      "\370\363\030\001\202\323\344\223\002\022\022\020/v1/authz/audits\022\344\004\n\nRevokeR" +
-      "ole\022-.udb.core.authz.services.v1.RevokeR" +
-      "oleRequest\032..udb.core.authz.services.v1." +
-      "RevokeRoleResponse\"\366\003\312\363\0304\010\002\032\025udb:authz:r" +
-      "evoke-role \001J\002\001\002j\020authz.RevokeRole\220\001\001\322\363\030" +
-      "\006\010\001\020\001 \001\332\363\030%\010\001\022\013revoke_role\032\003udb(\260\352\0010\003@\001J" +
-      "\005authzP\001\342\363\030\257\001\n\005authz\022\020udb/native/authz\032\033" +
-      "UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TA" +
-      "RGET\"(udb.native.authz.revoke_role.boile" +
-      "rplate*\013revoke_role2\tudb_authz:\005authzJ\013U" +
-      "DB_API_KEYZ\020udb native smoke\352\363\030L\n\020authz." +
-      "RevokeRole\022\014authz.events\032\ttenant_id\"\010sta" +
-      "ndard*\rat_least_once2\006stable\362\363\030?\n\005authz\032" +
-      "\010postgres2\033UDB_NATIVE_SERVICES_ENABLED2\017" +
-      "UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002:\"5/v1/authz/use" +
-      "rs/{user_id}/roles/{user_role_id}:revoke" +
-      ":\001*\022\352\004\n\rListUserRoles\0220.udb.core.authz.s" +
-      "ervices.v1.ListUserRolesRequest\0321.udb.co" +
-      "re.authz.services.v1.ListUserRolesRespon" +
-      "se\"\363\003\312\363\030;\010\002\032\031udb:authz:list-user-roles \001" +
-      "J\002\001\002j\023authz.ListUserRoles\220\001\001\322\363\030\006\010\001\020\001 \001\332\363" +
-      "\030)\010\001\022\017list_user_roles\032\003udb(\260\352\0010\003@\001J\005auth" +
-      "zP\001\342\363\030\267\001\n\005authz\022\020udb/native/authz\032\033UDB_N" +
-      "ATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"" +
-      ",udb.native.authz.list_user_roles.boiler" +
-      "plate*\017list_user_roles2\tudb_authz:\005authz" +
-      "J\013UDB_API_KEYZ\020udb native smoke\352\363\030O\n\023aut" +
-      "hz.ListUserRoles\022\014authz.events\032\ttenant_i" +
-      "d\"\010standard*\rat_least_once2\006stable\362\363\030?\n\005" +
-      "authz\032\010postgres2\033UDB_NATIVE_SERVICES_ENA" +
-      "BLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002!\022\037/v1/aut" +
-      "hz/users/{user_id}/roles\022\252\004\n\007GetRole\022*.u" +
-      "db.core.authz.services.v1.GetRoleRequest" +
-      "\032+.udb.core.authz.services.v1.GetRoleRes" +
-      "ponse\"\305\003\312\363\030.\010\002\032\022udb:authz:get-role \001J\002\001\002" +
-      "j\rauthz.GetRole\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030\"\010\001\022\010get_" +
-      "role\032\003udb(\260\352\0010\003@\001J\005authzP\001\342\363\030\251\001\n\005authz\022\020" +
-      "udb/native/authz\032\033UDB_NATIVE_SERVICES_EN" +
-      "ABLED\032\017UDB_GRPC_TARGET\"%udb.native.authz" +
-      ".get_role.boilerplate*\010get_role2\tudb_aut" +
-      "hz:\005authzJ\013UDB_API_KEYZ\020udb native smoke" +
-      "\352\363\030I\n\rauthz.GetRole\022\014authz.events\032\ttenan" +
-      "t_id\"\010standard*\rat_least_once2\006stable\362\363\030" +
-      "?\n\005authz\032\010postgres2\033UDB_NATIVE_SERVICES_" +
-      "ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\033\022\031/v1/" +
-      "authz/roles/{role_id}\022\262\004\n\tListRoles\022,.ud" +
-      "b.core.authz.services.v1.ListRolesReques" +
-      "t\032-.udb.core.authz.services.v1.ListRoles" +
-      "Response\"\307\003\312\363\0302\010\002\032\024udb:authz:list-roles " +
-      "\001J\002\001\002j\017authz.ListRoles\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030$\010" +
-      "\001\022\nlist_roles\032\003udb(\260\352\0010\003@\001J\005authzP\001\342\363\030\255\001" +
+      "DB_GRPC_TARGET\"&udb.native.authz.authori" +
+      "ze.boilerplate*\tauthorize2\tudb_authz:\005au" +
+      "thzJ\013UDB_API_KEYZ\020udb native smoke\352\363\030K\n\017" +
+      "authz.Authorize\022\014authz.events\032\ttenant_id" +
+      "\"\010standard*\rat_least_once2\006stable\362\363\030?\n\005a" +
+      "uthz\032\010postgres2\033UDB_NATIVE_SERVICES_ENAB" +
+      "LED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\030\"\023/v1/auth" +
+      "z/authorize:\001*\022\325\004\n\013CheckAccess\022..udb.cor" +
+      "e.authz.services.v1.CheckAccessRequest\032/" +
+      ".udb.core.authz.services.v1.CheckAccessR" +
+      "esponse\"\344\003\312\363\0306\010\002\032\026udb:authz:check-access" +
+      " \001J\002\001\002j\021authz.CheckAccess\220\001\001\322\363\030\006\010\001\020\001 \001\332\363" +
+      "\0303\010\001\022\014check_access\032\003udb(\260\352\0010\003@\001J\005authzP\001" +
+      "Z\013checkAccess\342\363\030\261\001\n\005authz\022\020udb/native/au" +
+      "thz\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GR" +
+      "PC_TARGET\")udb.native.authz.check_access" +
+      ".boilerplate*\014check_access2\tudb_authz:\005a" +
+      "uthzJ\013UDB_API_KEYZ\020udb native smoke\352\363\030M\n" +
+      "\021authz.CheckAccess\022\014authz.events\032\ttenant" +
+      "_id\"\010standard*\rat_least_once2\006stable\362\363\030?" +
+      "\n\005authz\032\010postgres2\033UDB_NATIVE_SERVICES_E" +
+      "NABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\025\"\020/v1/a" +
+      "uthz/checks:\001*\022\312\004\n\nCreateRole\022-.udb.core" +
+      ".authz.services.v1.CreateRoleRequest\032..u" +
+      "db.core.authz.services.v1.CreateRoleResp" +
+      "onse\"\334\003\312\363\0304\010\002\032\025udb:authz:create-role \001J\002" +
+      "\001\002j\020authz.CreateRole\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0301\010\001\022" +
+      "\013create_role\032\003udb(\260\352\0010\003@\001J\005authzP\001Z\ncrea" +
+      "teRole\342\363\030\257\001\n\005authz\022\020udb/native/authz\032\033UD" +
+      "B_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TARG" +
+      "ET\"(udb.native.authz.create_role.boilerp" +
+      "late*\013create_role2\tudb_authz:\005authzJ\013UDB" +
+      "_API_KEYZ\020udb native smoke\352\363\030L\n\020authz.Cr" +
+      "eateRole\022\014authz.events\032\ttenant_id\"\010stand" +
+      "ard*\rat_least_once2\006stable\362\363\030?\n\005authz\032\010p" +
+      "ostgres2\033UDB_NATIVE_SERVICES_ENABLED2\017UD" +
+      "B_GRPC_TARGET\370\363\030\002\202\323\344\223\002\024\"\017/v1/authz/roles" +
+      ":\001*\022\332\004\n\nAssignRole\022-.udb.core.authz.serv" +
+      "ices.v1.AssignRoleRequest\032..udb.core.aut" +
+      "hz.services.v1.AssignRoleResponse\"\354\003\312\363\0304" +
+      "\010\002\032\025udb:authz:assign-role \001J\002\001\002j\020authz.A" +
+      "ssignRole\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0301\010\001\022\013assign_rol" +
+      "e\032\003udb(\260\352\0010\003@\001J\005authzP\001Z\nassignRole\342\363\030\257\001" +
+      "\n\005authz\022\020udb/native/authz\032\033UDB_NATIVE_SE" +
+      "RVICES_ENABLED\032\017UDB_GRPC_TARGET\"(udb.nat" +
+      "ive.authz.assign_role.boilerplate*\013assig" +
+      "n_role2\tudb_authz:\005authzJ\013UDB_API_KEYZ\020u" +
+      "db native smoke\352\363\030L\n\020authz.AssignRole\022\014a" +
+      "uthz.events\032\ttenant_id\"\010standard*\rat_lea" +
+      "st_once2\006stable\362\363\030?\n\005authz\032\010postgres2\033UD" +
+      "B_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARG" +
+      "ET\370\363\030\002\202\323\344\223\002$\"\037/v1/authz/users/{user_id}/" +
+      "roles:\001*\022\215\005\n\020CreatePolicyRule\0223.udb.core" +
+      ".authz.services.v1.CreatePolicyRuleReque" +
+      "st\0324.udb.core.authz.services.v1.CreatePo" +
+      "licyRuleResponse\"\215\004\312\363\030A\010\002\032\034udb:authz:cre" +
+      "ate-policy-rule \001J\002\001\002j\026authz.CreatePolic" +
+      "yRule\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030>\010\001\022\022create_policy_" +
+      "rule\032\003udb(\260\352\0010\003@\001J\005authzP\001Z\020createPolicy" +
+      "Rule\342\363\030\275\001\n\005authz\022\020udb/native/authz\032\033UDB_" +
+      "NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TARGET" +
+      "\"/udb.native.authz.create_policy_rule.bo" +
+      "ilerplate*\022create_policy_rule2\tudb_authz" +
+      ":\005authzJ\013UDB_API_KEYZ\020udb native smoke\352\363" +
+      "\030R\n\026authz.CreatePolicyRule\022\014authz.events" +
+      "\032\ttenant_id\"\010standard*\rat_least_once2\006st" +
+      "able\362\363\030?\n\005authz\032\010postgres2\033UDB_NATIVE_SE" +
+      "RVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002" +
+      "\027\"\022/v1/authz/policies:\001*\022\273\005\n\023ListUserPer" +
+      "missions\0226.udb.core.authz.services.v1.Li" +
+      "stUserPermissionsRequest\0327.udb.core.auth" +
+      "z.services.v1.ListUserPermissionsRespons" +
+      "e\"\262\004\312\363\030G\010\002\032\037udb:authz:list-user-permissi" +
+      "ons \001J\002\001\002j\031authz.ListUserPermissions\220\001\001\322" +
+      "\363\030\006\010\001\020\001 \001\332\363\030D\010\001\022\025list_user_permissions\032\003" +
+      "udb(\260\352\0010\003@\001J\005authzP\001Z\023listUserPermission" +
+      "s\342\363\030\303\001\n\005authz\022\020udb/native/authz\032\033UDB_NAT" +
+      "IVE_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"2u" +
+      "db.native.authz.list_user_permissions.bo" +
+      "ilerplate*\025list_user_permissions2\tudb_au" +
+      "thz:\005authzJ\013UDB_API_KEYZ\020udb native smok" +
+      "e\352\363\030U\n\031authz.ListUserPermissions\022\014authz." +
+      "events\032\ttenant_id\"\010standard*\rat_least_on" +
+      "ce2\006stable\362\363\030?\n\005authz\032\010postgres2\033UDB_NAT" +
+      "IVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030" +
+      "\001\202\323\344\223\002\'\022%/v1/authz/users/{user_id}/permi" +
+      "ssions\022\334\005\n\030ListAccessDecisionAudits\022;.ud" +
+      "b.core.authz.services.v1.ListAccessDecis" +
+      "ionAuditsRequest\032<.udb.core.authz.servic" +
+      "es.v1.ListAccessDecisionAuditsResponse\"\304" +
+      "\004\312\363\030R\010\002\032%udb:authz:list-access-decision-" +
+      "audits \001J\002\001\002j\036authz.ListAccessDecisionAu" +
+      "dits\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030O\010\001\022\033list_access_dec" +
+      "ision_audits\032\003udb(\260\352\0010\003@\001J\005authzP\001Z\030list" +
+      "AccessDecisionAudits\342\363\030\317\001\n\005authz\022\020udb/na" +
+      "tive/authz\032\033UDB_NATIVE_SERVICES_ENABLED\032" +
+      "\017UDB_GRPC_TARGET\"8udb.native.authz.list_" +
+      "access_decision_audits.boilerplate*\033list" +
+      "_access_decision_audits2\tudb_authz:\005auth" +
+      "zJ\013UDB_API_KEYZ\020udb native smoke\352\363\030Z\n\036au" +
+      "thz.ListAccessDecisionAudits\022\014authz.even" +
+      "ts\032\ttenant_id\"\010standard*\rat_least_once2\006" +
+      "stable\362\363\030?\n\005authz\032\010postgres2\033UDB_NATIVE_" +
+      "SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344" +
+      "\223\002\022\022\020/v1/authz/audits\022\360\004\n\nRevokeRole\022-.u" +
+      "db.core.authz.services.v1.RevokeRoleRequ" +
+      "est\032..udb.core.authz.services.v1.RevokeR" +
+      "oleResponse\"\202\004\312\363\0304\010\002\032\025udb:authz:revoke-r" +
+      "ole \001J\002\001\002j\020authz.RevokeRole\220\001\001\322\363\030\006\010\001\020\001 \001" +
+      "\332\363\0301\010\001\022\013revoke_role\032\003udb(\260\352\0010\003@\001J\005authzP" +
+      "\001Z\nrevokeRole\342\363\030\257\001\n\005authz\022\020udb/native/au" +
+      "thz\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GR" +
+      "PC_TARGET\"(udb.native.authz.revoke_role." +
+      "boilerplate*\013revoke_role2\tudb_authz:\005aut" +
+      "hzJ\013UDB_API_KEYZ\020udb native smoke\352\363\030L\n\020a" +
+      "uthz.RevokeRole\022\014authz.events\032\ttenant_id" +
+      "\"\010standard*\rat_least_once2\006stable\362\363\030?\n\005a" +
+      "uthz\032\010postgres2\033UDB_NATIVE_SERVICES_ENAB" +
+      "LED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002:\"5/v1/auth" +
+      "z/users/{user_id}/roles/{user_role_id}:r" +
+      "evoke:\001*\022\371\004\n\rListUserRoles\0220.udb.core.au" +
+      "thz.services.v1.ListUserRolesRequest\0321.u" +
+      "db.core.authz.services.v1.ListUserRolesR" +
+      "esponse\"\202\004\312\363\030;\010\002\032\031udb:authz:list-user-ro" +
+      "les \001J\002\001\002j\023authz.ListUserRoles\220\001\001\322\363\030\006\010\001\020" +
+      "\001 \001\332\363\0308\010\001\022\017list_user_roles\032\003udb(\260\352\0010\003@\001J" +
+      "\005authzP\001Z\rlistUserRoles\342\363\030\267\001\n\005authz\022\020udb" +
+      "/native/authz\032\033UDB_NATIVE_SERVICES_ENABL" +
+      "ED\032\017UDB_GRPC_TARGET\",udb.native.authz.li" +
+      "st_user_roles.boilerplate*\017list_user_rol" +
+      "es2\tudb_authz:\005authzJ\013UDB_API_KEYZ\020udb n" +
+      "ative smoke\352\363\030O\n\023authz.ListUserRoles\022\014au" +
+      "thz.events\032\ttenant_id\"\010standard*\rat_leas" +
+      "t_once2\006stable\362\363\030?\n\005authz\032\010postgres2\033UDB" +
+      "_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGE" +
+      "T\370\363\030\001\202\323\344\223\002!\022\037/v1/authz/users/{user_id}/r" +
+      "oles\022\263\004\n\007GetRole\022*.udb.core.authz.servic" +
+      "es.v1.GetRoleRequest\032+.udb.core.authz.se" +
+      "rvices.v1.GetRoleResponse\"\316\003\312\363\030.\010\002\032\022udb:" +
+      "authz:get-role \001J\002\001\002j\rauthz.GetRole\220\001\001\322\363" +
+      "\030\006\010\001\020\001 \001\332\363\030+\010\001\022\010get_role\032\003udb(\260\352\0010\003@\001J\005a" +
+      "uthzP\001Z\007getRole\342\363\030\251\001\n\005authz\022\020udb/native/" +
+      "authz\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_" +
+      "GRPC_TARGET\"%udb.native.authz.get_role.b" +
+      "oilerplate*\010get_role2\tudb_authz:\005authzJ\013" +
+      "UDB_API_KEYZ\020udb native smoke\352\363\030I\n\rauthz" +
+      ".GetRole\022\014authz.events\032\ttenant_id\"\010stand" +
+      "ard*\rat_least_once2\006stable\362\363\030?\n\005authz\032\010p" +
+      "ostgres2\033UDB_NATIVE_SERVICES_ENABLED2\017UD" +
+      "B_GRPC_TARGET\370\363\030\001\202\323\344\223\002\033\022\031/v1/authz/roles" +
+      "/{role_id}\022\275\004\n\tListRoles\022,.udb.core.auth" +
+      "z.services.v1.ListRolesRequest\032-.udb.cor" +
+      "e.authz.services.v1.ListRolesResponse\"\322\003" +
+      "\312\363\0302\010\002\032\024udb:authz:list-roles \001J\002\001\002j\017auth" +
+      "z.ListRoles\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030/\010\001\022\nlist_rol" +
+      "es\032\003udb(\260\352\0010\003@\001J\005authzP\001Z\tlistRoles\342\363\030\255\001" +
       "\n\005authz\022\020udb/native/authz\032\033UDB_NATIVE_SE" +
       "RVICES_ENABLED\032\017UDB_GRPC_TARGET\"\'udb.nat" +
       "ive.authz.list_roles.boilerplate*\nlist_r" +
@@ -208,345 +212,359 @@ public final class AuthzServiceProto {
       "z.events\032\ttenant_id\"\010standard*\rat_least_" +
       "once2\006stable\362\363\030?\n\005authz\032\010postgres2\033UDB_N" +
       "ATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370" +
-      "\363\030\001\202\323\344\223\002\021\022\017/v1/authz/roles\022\254\005\n\025BatchChec" +
+      "\363\030\001\202\323\344\223\002\021\022\017/v1/authz/roles\022\303\005\n\025BatchChec" +
       "kPermissions\0228.udb.core.authz.services.v" +
       "1.BatchCheckPermissionsRequest\0329.udb.cor" +
       "e.authz.services.v1.BatchCheckPermission" +
-      "sResponse\"\235\004\312\363\030K\010\002\032!udb:authz:batch-chec" +
+      "sResponse\"\264\004\312\363\030K\010\002\032!udb:authz:batch-chec" +
       "k-permissions \001J\002\001\002j\033authz.BatchCheckPer" +
-      "missions\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0301\010\001\022\027batch_check" +
-      "_permissions\032\003udb(\260\352\0010\003@\001J\005authzP\001\342\363\030\307\001\n" +
-      "\005authz\022\020udb/native/authz\032\033UDB_NATIVE_SER" +
-      "VICES_ENABLED\032\017UDB_GRPC_TARGET\"4udb.nati" +
-      "ve.authz.batch_check_permissions.boilerp" +
-      "late*\027batch_check_permissions2\tudb_authz" +
-      ":\005authzJ\013UDB_API_KEYZ\020udb native smoke\352\363" +
-      "\030W\n\033authz.BatchCheckPermissions\022\014authz.e" +
-      "vents\032\ttenant_id\"\010standard*\rat_least_onc" +
-      "e2\006stable\362\363\030?\n\005authz\032\010postgres2\033UDB_NATI" +
-      "VE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001" +
-      "\202\323\344\223\002\033\"\026/v1/authz/checks:batch:\001*\022\310\004\n\nUp" +
-      "dateRole\022-.udb.core.authz.services.v1.Up" +
-      "dateRoleRequest\032..udb.core.authz.service" +
-      "s.v1.UpdateRoleResponse\"\332\003\312\363\0304\010\002\032\025udb:au" +
-      "thz:update-role \001J\002\001\002j\020authz.UpdateRole\220" +
-      "\001\001\322\363\030\006\010\001\020\001 \001\332\363\030%\010\001\022\013update_role\032\003udb(\260\352\001" +
-      "0\003@\001J\005authzP\001\342\363\030\257\001\n\005authz\022\020udb/native/au" +
-      "thz\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GR" +
-      "PC_TARGET\"(udb.native.authz.update_role." +
-      "boilerplate*\013update_role2\tudb_authz:\005aut" +
-      "hzJ\013UDB_API_KEYZ\020udb native smoke\352\363\030L\n\020a" +
-      "uthz.UpdateRole\022\014authz.events\032\ttenant_id" +
-      "\"\010standard*\rat_least_once2\006stable\362\363\030?\n\005a" +
-      "uthz\032\010postgres2\033UDB_NATIVE_SERVICES_ENAB" +
-      "LED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002\0362\031/v1/auth" +
-      "z/roles/{role_id}:\001*\022\305\004\n\nDeleteRole\022-.ud" +
-      "b.core.authz.services.v1.DeleteRoleReque" +
-      "st\032..udb.core.authz.services.v1.DeleteRo" +
-      "leResponse\"\327\003\312\363\0304\010\002\032\025udb:authz:delete-ro" +
-      "le \001J\002\001\002j\020authz.DeleteRole\220\001\001\322\363\030\006\010\001\020\001 \001\332" +
-      "\363\030%\010\001\022\013delete_role\032\003udb(\260\352\0010\003@\001J\005authzP\001" +
-      "\342\363\030\257\001\n\005authz\022\020udb/native/authz\032\033UDB_NATI" +
-      "VE_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"(ud" +
-      "b.native.authz.delete_role.boilerplate*\013" +
-      "delete_role2\tudb_authz:\005authzJ\013UDB_API_K" +
-      "EYZ\020udb native smoke\352\363\030L\n\020authz.DeleteRo" +
-      "le\022\014authz.events\032\ttenant_id\"\010standard*\ra" +
-      "t_least_once2\006stable\362\363\030?\n\005authz\032\010postgre" +
-      "s2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC" +
-      "_TARGET\370\363\030\002\202\323\344\223\002\033*\031/v1/authz/roles/{role" +
-      "_id}\022\351\004\n\rGetPolicyRule\0220.udb.core.authz." +
-      "services.v1.GetPolicyRuleRequest\0321.udb.c" +
-      "ore.authz.services.v1.GetPolicyRuleRespo" +
-      "nse\"\362\003\312\363\030;\010\002\032\031udb:authz:get-policy-rule " +
-      "\001J\002\001\002j\023authz.GetPolicyRule\220\001\001\322\363\030\006\010\001\020\001 \001\332" +
-      "\363\030)\010\001\022\017get_policy_rule\032\003udb(\260\352\0010\003@\001J\005aut" +
-      "hzP\001\342\363\030\267\001\n\005authz\022\020udb/native/authz\032\033UDB_" +
-      "NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TARGET" +
-      "\",udb.native.authz.get_policy_rule.boile" +
-      "rplate*\017get_policy_rule2\tudb_authz:\005auth" +
-      "zJ\013UDB_API_KEYZ\020udb native smoke\352\363\030O\n\023au" +
-      "thz.GetPolicyRule\022\014authz.events\032\ttenant_" +
-      "id\"\010standard*\rat_least_once2\006stable\362\363\030?\n" +
-      "\005authz\032\010postgres2\033UDB_NATIVE_SERVICES_EN" +
-      "ABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002 \022\036/v1/au" +
-      "thz/policies/{policy_id}\022\357\004\n\017ListPolicyR" +
-      "ules\0222.udb.core.authz.services.v1.ListPo" +
-      "licyRulesRequest\0323.udb.core.authz.servic" +
-      "es.v1.ListPolicyRulesResponse\"\362\003\312\363\030?\010\002\032\033" +
-      "udb:authz:list-policy-rules \001J\002\001\002j\025authz" +
-      ".ListPolicyRules\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030+\010\001\022\021lis" +
-      "t_policy_rules\032\003udb(\260\352\0010\003@\001J\005authzP\001\342\363\030\273" +
-      "\001\n\005authz\022\020udb/native/authz\032\033UDB_NATIVE_S" +
-      "ERVICES_ENABLED\032\017UDB_GRPC_TARGET\".udb.na" +
-      "tive.authz.list_policy_rules.boilerplate" +
-      "*\021list_policy_rules2\tudb_authz:\005authzJ\013U" +
-      "DB_API_KEYZ\020udb native smoke\352\363\030Q\n\025authz." +
-      "ListPolicyRules\022\014authz.events\032\ttenant_id" +
-      "\"\010standard*\rat_least_once2\006stable\362\363\030?\n\005a" +
-      "uthz\032\010postgres2\033UDB_NATIVE_SERVICES_ENAB" +
-      "LED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\024\022\022/v1/auth" +
-      "z/policies\022\204\005\n\020DeletePolicyRule\0223.udb.co" +
-      "re.authz.services.v1.DeletePolicyRuleReq" +
-      "uest\0324.udb.core.authz.services.v1.Delete" +
-      "PolicyRuleResponse\"\204\004\312\363\030A\010\002\032\034udb:authz:d" +
-      "elete-policy-rule \001J\002\001\002j\026authz.DeletePol" +
-      "icyRule\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030,\010\001\022\022delete_polic" +
-      "y_rule\032\003udb(\260\352\0010\003@\001J\005authzP\001\342\363\030\275\001\n\005authz" +
-      "\022\020udb/native/authz\032\033UDB_NATIVE_SERVICES_" +
-      "ENABLED\032\017UDB_GRPC_TARGET\"/udb.native.aut" +
-      "hz.delete_policy_rule.boilerplate*\022delet" +
-      "e_policy_rule2\tudb_authz:\005authzJ\013UDB_API" +
-      "_KEYZ\020udb native smoke\352\363\030R\n\026authz.Delete" +
-      "PolicyRule\022\014authz.events\032\ttenant_id\"\010sta" +
-      "ndard*\rat_least_once2\006stable\362\363\030?\n\005authz\032" +
-      "\010postgres2\033UDB_NATIVE_SERVICES_ENABLED2\017" +
-      "UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002 *\036/v1/authz/pol" +
-      "icies/{policy_id}\022\354\004\n\016PutRoleBinding\0221.u" +
-      "db.core.authz.services.v1.PutRoleBinding" +
-      "Request\0320.udb.core.authz.services.v1.Aut" +
-      "hMutationResponse\"\364\003\312\363\030=\010\002\032\032udb:authz:pu" +
-      "t-role-binding \001J\002\001\002j\024authz.PutRoleBindi" +
-      "ng\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030*\010\001\022\020put_role_binding\032" +
-      "\003udb(\260\352\0010\003@\001J\005authzP\001\342\363\030\271\001\n\005authz\022\020udb/n" +
-      "ative/authz\032\033UDB_NATIVE_SERVICES_ENABLED" +
-      "\032\017UDB_GRPC_TARGET\"-udb.native.authz.put_" +
-      "role_binding.boilerplate*\020put_role_bindi" +
-      "ng2\tudb_authz:\005authzJ\013UDB_API_KEYZ\020udb n" +
-      "ative smoke\352\363\030P\n\024authz.PutRoleBinding\022\014a" +
-      "uthz.events\032\ttenant_id\"\010standard*\rat_lea" +
-      "st_once2\006stable\362\363\030?\n\005authz\032\010postgres2\033UD" +
-      "B_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARG" +
-      "ET\370\363\030\002\202\323\344\223\002\034\032\027/v1/authz/role-bindings:\001*" +
-      "\022\360\004\n\017PutRelationship\0222.udb.core.authz.se" +
-      "rvices.v1.PutRelationshipRequest\0320.udb.c" +
-      "ore.authz.services.v1.AuthMutationRespon" +
-      "se\"\366\003\312\363\030>\010\002\032\032udb:authz:put-relationship " +
-      "\001J\002\001\002j\025authz.PutRelationship\220\001\001\322\363\030\006\010\001\020\001 " +
-      "\001\332\363\030*\010\001\022\020put_relationship\032\003udb(\260\352\0010\003@\001J\005" +
-      "authzP\001\342\363\030\271\001\n\005authz\022\020udb/native/authz\032\033U" +
-      "DB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TAR" +
-      "GET\"-udb.native.authz.put_relationship.b" +
-      "oilerplate*\020put_relationship2\tudb_authz:" +
-      "\005authzJ\013UDB_API_KEYZ\020udb native smoke\352\363\030" +
-      "Q\n\025authz.PutRelationship\022\014authz.events\032\t" +
-      "tenant_id\"\010standard*\rat_least_once2\006stab" +
-      "le\362\363\030?\n\005authz\032\010postgres2\033UDB_NATIVE_SERV" +
-      "ICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002\034\032" +
-      "\027/v1/authz/relationships:\001*\022\347\004\n\016PutAuthz" +
-      "Policy\0221.udb.core.authz.services.v1.PutA" +
-      "uthzPolicyRequest\0320.udb.core.authz.servi" +
-      "ces.v1.AuthMutationResponse\"\357\003\312\363\030=\010\002\032\032ud" +
-      "b:authz:put-authz-policy \001J\002\001\002j\024authz.Pu" +
-      "tAuthzPolicy\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030*\010\001\022\020put_aut" +
-      "hz_policy\032\003udb(\260\352\0010\003@\001J\005authzP\001\342\363\030\271\001\n\005au" +
-      "thz\022\020udb/native/authz\032\033UDB_NATIVE_SERVIC" +
-      "ES_ENABLED\032\017UDB_GRPC_TARGET\"-udb.native." +
-      "authz.put_authz_policy.boilerplate*\020put_" +
-      "authz_policy2\tudb_authz:\005authzJ\013UDB_API_" +
-      "KEYZ\020udb native smoke\352\363\030P\n\024authz.PutAuth" +
-      "zPolicy\022\014authz.events\032\ttenant_id\"\010standa" +
-      "rd*\rat_least_once2\006stable\362\363\030?\n\005authz\032\010po" +
-      "stgres2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB" +
-      "_GRPC_TARGET\370\363\030\002\202\323\344\223\002\027\032\022/v1/authz/polici" +
-      "es:\001*\022\211\005\n\021LintAuthzPolicies\0224.udb.core.a" +
-      "uthz.services.v1.LintAuthzPoliciesReques" +
-      "t\0325.udb.core.authz.services.v1.LintAuthz" +
-      "PoliciesResponse\"\206\004\312\363\030C\010\002\032\035udb:authz:lin" +
-      "t-authz-policies \001J\002\001\002j\027authz.LintAuthzP" +
-      "olicies\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030-\010\001\022\023lint_authz_p" +
-      "olicies\032\003udb(\260\352\0010\003@\001J\005authzP\001\342\363\030\277\001\n\005auth" +
-      "z\022\020udb/native/authz\032\033UDB_NATIVE_SERVICES" +
-      "_ENABLED\032\017UDB_GRPC_TARGET\"0udb.native.au" +
-      "thz.lint_authz_policies.boilerplate*\023lin" +
-      "t_authz_policies2\tudb_authz:\005authzJ\013UDB_" +
-      "API_KEYZ\020udb native smoke\352\363\030S\n\027authz.Lin" +
-      "tAuthzPolicies\022\014authz.events\032\ttenant_id\"" +
+      "missions\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030H\010\001\022\027batch_check" +
+      "_permissions\032\003udb(\260\352\0010\003@\001J\005authzP\001Z\025batc" +
+      "hCheckPermissions\342\363\030\307\001\n\005authz\022\020udb/nativ" +
+      "e/authz\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UD" +
+      "B_GRPC_TARGET\"4udb.native.authz.batch_ch" +
+      "eck_permissions.boilerplate*\027batch_check" +
+      "_permissions2\tudb_authz:\005authzJ\013UDB_API_" +
+      "KEYZ\020udb native smoke\352\363\030W\n\033authz.BatchCh" +
+      "eckPermissions\022\014authz.events\032\ttenant_id\"" +
       "\010standard*\rat_least_once2\006stable\362\363\030?\n\005au" +
       "thz\032\010postgres2\033UDB_NATIVE_SERVICES_ENABL" +
-      "ED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\034\"\027/v1/authz" +
-      "/policies:lint:\001*\022\361\004\n\017GetNativeAccess\022/." +
-      "udb.core.authz.services.v1.NativeAccessR" +
-      "equest\0320.udb.core.authz.services.v1.Nati" +
-      "veAccessResponse\"\372\003\312\363\030?\010\002\032\033udb:authz:get" +
-      "-native-access \001J\002\001\002j\025authz.GetNativeAcc" +
-      "ess\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030+\010\001\022\021get_native_acces" +
-      "s\032\003udb(\260\352\0010\003@\001J\005authzP\001\342\363\030\273\001\n\005authz\022\020udb" +
-      "/native/authz\032\033UDB_NATIVE_SERVICES_ENABL" +
-      "ED\032\017UDB_GRPC_TARGET\".udb.native.authz.ge" +
-      "t_native_access.boilerplate*\021get_native_" +
-      "access2\tudb_authz:\005authzJ\013UDB_API_KEYZ\020u" +
-      "db native smoke\352\363\030Q\n\025authz.GetNativeAcce" +
-      "ss\022\014authz.events\032\ttenant_id\"\010standard*\ra" +
-      "t_least_once2\006stable\362\363\030?\n\005authz\032\010postgre" +
-      "s2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC" +
-      "_TARGET\370\363\030\001\202\323\344\223\002\034\"\027/v1/authz/native-acce" +
-      "ss:\001*\022\361\004\n\017GetPolicyBundle\022/.udb.core.aut" +
-      "hz.services.v1.PolicyBundleRequest\0320.udb" +
-      ".core.authz.services.v1.PolicyBundleResp" +
-      "onse\"\372\003\312\363\030?\010\002\032\033udb:authz:get-policy-bund" +
-      "le \001J\002\001\002j\025authz.GetPolicyBundle\220\001\001\322\363\030\006\010\001" +
-      "\020\001 \001\332\363\030+\010\001\022\021get_policy_bundle\032\003udb(\260\352\0010\003" +
-      "@\001J\005authzP\001\342\363\030\273\001\n\005authz\022\020udb/native/auth" +
-      "z\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC" +
-      "_TARGET\".udb.native.authz.get_policy_bun" +
-      "dle.boilerplate*\021get_policy_bundle2\tudb_" +
-      "authz:\005authzJ\013UDB_API_KEYZ\020udb native sm" +
-      "oke\352\363\030Q\n\025authz.GetPolicyBundle\022\014authz.ev" +
+      "ED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\033\"\026/v1/authz" +
+      "/checks:batch:\001*\022\324\004\n\nUpdateRole\022-.udb.co" +
+      "re.authz.services.v1.UpdateRoleRequest\032." +
+      ".udb.core.authz.services.v1.UpdateRoleRe" +
+      "sponse\"\346\003\312\363\0304\010\002\032\025udb:authz:update-role \001" +
+      "J\002\001\002j\020authz.UpdateRole\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0301\010" +
+      "\001\022\013update_role\032\003udb(\260\352\0010\003@\001J\005authzP\001Z\nup" +
+      "dateRole\342\363\030\257\001\n\005authz\022\020udb/native/authz\032\033" +
+      "UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TA" +
+      "RGET\"(udb.native.authz.update_role.boile" +
+      "rplate*\013update_role2\tudb_authz:\005authzJ\013U" +
+      "DB_API_KEYZ\020udb native smoke\352\363\030L\n\020authz." +
+      "UpdateRole\022\014authz.events\032\ttenant_id\"\010sta" +
+      "ndard*\rat_least_once2\006stable\362\363\030?\n\005authz\032" +
+      "\010postgres2\033UDB_NATIVE_SERVICES_ENABLED2\017" +
+      "UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002\0362\031/v1/authz/rol" +
+      "es/{role_id}:\001*\022\321\004\n\nDeleteRole\022-.udb.cor" +
+      "e.authz.services.v1.DeleteRoleRequest\032.." +
+      "udb.core.authz.services.v1.DeleteRoleRes" +
+      "ponse\"\343\003\312\363\0304\010\002\032\025udb:authz:delete-role \001J" +
+      "\002\001\002j\020authz.DeleteRole\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0301\010\001" +
+      "\022\013delete_role\032\003udb(\260\352\0010\003@\001J\005authzP\001Z\ndel" +
+      "eteRole\342\363\030\257\001\n\005authz\022\020udb/native/authz\032\033U" +
+      "DB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TAR" +
+      "GET\"(udb.native.authz.delete_role.boiler" +
+      "plate*\013delete_role2\tudb_authz:\005authzJ\013UD" +
+      "B_API_KEYZ\020udb native smoke\352\363\030L\n\020authz.D" +
+      "eleteRole\022\014authz.events\032\ttenant_id\"\010stan" +
+      "dard*\rat_least_once2\006stable\362\363\030?\n\005authz\032\010" +
+      "postgres2\033UDB_NATIVE_SERVICES_ENABLED2\017U" +
+      "DB_GRPC_TARGET\370\363\030\002\202\323\344\223\002\033*\031/v1/authz/role" +
+      "s/{role_id}\022\370\004\n\rGetPolicyRule\0220.udb.core" +
+      ".authz.services.v1.GetPolicyRuleRequest\032" +
+      "1.udb.core.authz.services.v1.GetPolicyRu" +
+      "leResponse\"\201\004\312\363\030;\010\002\032\031udb:authz:get-polic" +
+      "y-rule \001J\002\001\002j\023authz.GetPolicyRule\220\001\001\322\363\030\006" +
+      "\010\001\020\001 \001\332\363\0308\010\001\022\017get_policy_rule\032\003udb(\260\352\0010\003" +
+      "@\001J\005authzP\001Z\rgetPolicyRule\342\363\030\267\001\n\005authz\022\020" +
+      "udb/native/authz\032\033UDB_NATIVE_SERVICES_EN" +
+      "ABLED\032\017UDB_GRPC_TARGET\",udb.native.authz" +
+      ".get_policy_rule.boilerplate*\017get_policy" +
+      "_rule2\tudb_authz:\005authzJ\013UDB_API_KEYZ\020ud" +
+      "b native smoke\352\363\030O\n\023authz.GetPolicyRule\022" +
+      "\014authz.events\032\ttenant_id\"\010standard*\rat_l" +
+      "east_once2\006stable\362\363\030?\n\005authz\032\010postgres2\033" +
+      "UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TA" +
+      "RGET\370\363\030\001\202\323\344\223\002 \022\036/v1/authz/policies/{poli" +
+      "cy_id}\022\200\005\n\017ListPolicyRules\0222.udb.core.au" +
+      "thz.services.v1.ListPolicyRulesRequest\0323" +
+      ".udb.core.authz.services.v1.ListPolicyRu" +
+      "lesResponse\"\203\004\312\363\030?\010\002\032\033udb:authz:list-pol" +
+      "icy-rules \001J\002\001\002j\025authz.ListPolicyRules\220\001" +
+      "\001\322\363\030\006\010\001\020\001 \001\332\363\030<\010\001\022\021list_policy_rules\032\003ud" +
+      "b(\260\352\0010\003@\001J\005authzP\001Z\017listPolicyRules\342\363\030\273\001" +
+      "\n\005authz\022\020udb/native/authz\032\033UDB_NATIVE_SE" +
+      "RVICES_ENABLED\032\017UDB_GRPC_TARGET\".udb.nat" +
+      "ive.authz.list_policy_rules.boilerplate*" +
+      "\021list_policy_rules2\tudb_authz:\005authzJ\013UD" +
+      "B_API_KEYZ\020udb native smoke\352\363\030Q\n\025authz.L" +
+      "istPolicyRules\022\014authz.events\032\ttenant_id\"" +
+      "\010standard*\rat_least_once2\006stable\362\363\030?\n\005au" +
+      "thz\032\010postgres2\033UDB_NATIVE_SERVICES_ENABL" +
+      "ED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\024\022\022/v1/authz" +
+      "/policies\022\226\005\n\020DeletePolicyRule\0223.udb.cor" +
+      "e.authz.services.v1.DeletePolicyRuleRequ" +
+      "est\0324.udb.core.authz.services.v1.DeleteP" +
+      "olicyRuleResponse\"\226\004\312\363\030A\010\002\032\034udb:authz:de" +
+      "lete-policy-rule \001J\002\001\002j\026authz.DeletePoli" +
+      "cyRule\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030>\010\001\022\022delete_policy" +
+      "_rule\032\003udb(\260\352\0010\003@\001J\005authzP\001Z\020deletePolic" +
+      "yRule\342\363\030\275\001\n\005authz\022\020udb/native/authz\032\033UDB" +
+      "_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TARGE" +
+      "T\"/udb.native.authz.delete_policy_rule.b" +
+      "oilerplate*\022delete_policy_rule2\tudb_auth" +
+      "z:\005authzJ\013UDB_API_KEYZ\020udb native smoke\352" +
+      "\363\030R\n\026authz.DeletePolicyRule\022\014authz.event" +
+      "s\032\ttenant_id\"\010standard*\rat_least_once2\006s" +
+      "table\362\363\030?\n\005authz\032\010postgres2\033UDB_NATIVE_S" +
+      "ERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223" +
+      "\002 *\036/v1/authz/policies/{policy_id}\022\374\004\n\016P" +
+      "utRoleBinding\0221.udb.core.authz.services." +
+      "v1.PutRoleBindingRequest\0320.udb.core.auth" +
+      "z.services.v1.AuthMutationResponse\"\204\004\312\363\030" +
+      "=\010\002\032\032udb:authz:put-role-binding \001J\002\001\002j\024a" +
+      "uthz.PutRoleBinding\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030:\010\001\022\020" +
+      "put_role_binding\032\003udb(\260\352\0010\003@\001J\005authzP\001Z\016" +
+      "putRoleBinding\342\363\030\271\001\n\005authz\022\020udb/native/a" +
+      "uthz\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_G" +
+      "RPC_TARGET\"-udb.native.authz.put_role_bi" +
+      "nding.boilerplate*\020put_role_binding2\tudb" +
+      "_authz:\005authzJ\013UDB_API_KEYZ\020udb native s" +
+      "moke\352\363\030P\n\024authz.PutRoleBinding\022\014authz.ev" +
       "ents\032\ttenant_id\"\010standard*\rat_least_once" +
       "2\006stable\362\363\030?\n\005authz\032\010postgres2\033UDB_NATIV" +
-      "E_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202" +
-      "\323\344\223\002\034\"\027/v1/authz/policy-bundle:\001*\022\242\002\n\021Cr" +
-      "eatePolicyDraft\0224.udb.core.authz.service" +
-      "s.v1.CreatePolicyDraftRequest\032/.udb.core" +
-      ".authz.services.v1.PolicyDraftResponse\"\245" +
-      "\001\312\363\030N\010\002\032\026udb:authz:policy:write \001J\002\001\002j)n" +
-      "ative.authz.governance.CreatePolicyDraft" +
-      "\220\001\001\332\363\030%\010\001\022\023create_policy_draft\032\003udb@\001J\005a" +
-      "uthz\370\363\030\002\202\323\344\223\002 \"\033/v1/authz/governance/dra" +
-      "fts:\001*\022\251\002\n\021UpdatePolicyDraft\0224.udb.core." +
-      "authz.services.v1.UpdatePolicyDraftReque" +
-      "st\032/.udb.core.authz.services.v1.PolicyDr" +
-      "aftResponse\"\254\001\312\363\030N\010\002\032\026udb:authz:policy:w" +
-      "rite \001J\002\001\002j)native.authz.governance.Upda" +
-      "tePolicyDraft\220\001\001\332\363\030%\010\001\022\023update_policy_dr" +
-      "aft\032\003udb@\001J\005authz\370\363\030\002\202\323\344\223\002\'\"\"/v1/authz/g" +
-      "overnance/drafts:update:\001*\022\242\002\n\017DiffPolic" +
-      "yDraft\0222.udb.core.authz.services.v1.Diff" +
-      "PolicyDraftRequest\0323.udb.core.authz.serv" +
-      "ices.v1.DiffPolicyDraftResponse\"\245\001\312\363\030K\010\002" +
-      "\032\025udb:authz:policy:read \001J\002\001\002j\'native.au" +
-      "thz.governance.DiffPolicyDraft\220\001\001\332\363\030#\010\001\022" +
-      "\021diff_policy_draft\032\003udb@\001J\005authz\370\363\030\001\202\323\344\223" +
-      "\002%\" /v1/authz/governance/drafts:diff:\001*\022" +
-      "\251\002\n\021SubmitPolicyDraft\0224.udb.core.authz.s" +
-      "ervices.v1.SubmitPolicyDraftRequest\032/.ud" +
-      "b.core.authz.services.v1.PolicyDraftResp" +
-      "onse\"\254\001\312\363\030N\010\002\032\026udb:authz:policy:write \001J" +
-      "\002\001\002j)native.authz.governance.SubmitPolic" +
-      "yDraft\220\001\001\332\363\030%\010\001\022\023submit_policy_draft\032\003ud" +
-      "b@\001J\005authz\370\363\030\002\202\323\344\223\002\'\"\"/v1/authz/governan" +
-      "ce/drafts:submit:\001*\022\263\002\n\022ApprovePolicyDra" +
-      "ft\0225.udb.core.authz.services.v1.ApproveP" +
-      "olicyDraftRequest\0322.udb.core.authz.servi" +
-      "ces.v1.PolicyApprovalResponse\"\261\001\312\363\030Q\010\002\032\030" +
-      "udb:authz:policy:approve \001J\002\001\002j*native.a" +
-      "uthz.governance.ApprovePolicyDraft\220\001\001\332\363\030" +
-      "&\010\001\022\024approve_policy_draft\032\003udb@\001J\005authz\370" +
-      "\363\030\002\202\323\344\223\002(\"#/v1/authz/governance/drafts:a" +
-      "pprove:\001*\022\256\002\n\021RejectPolicyDraft\0224.udb.co",
-      "re.authz.services.v1.RejectPolicyDraftRe" +
-      "quest\0322.udb.core.authz.services.v1.Polic" +
-      "yApprovalResponse\"\256\001\312\363\030P\010\002\032\030udb:authz:po" +
-      "licy:approve \001J\002\001\002j)native.authz.governa" +
-      "nce.RejectPolicyDraft\220\001\001\332\363\030%\010\001\022\023reject_p" +
-      "olicy_draft\032\003udb@\001J\005authz\370\363\030\002\202\323\344\223\002\'\"\"/v1" +
-      "/authz/governance/drafts:reject:\001*\022\265\002\n\025A" +
-      "ctivatePolicyVersion\0228.udb.core.authz.se" +
-      "rvices.v1.ActivatePolicyVersionRequest\032." +
-      ".udb.core.authz.services.v1.ActivationRe" +
-      "sponse\"\261\001\312\363\030K\010\002\032\017udb:authz:admin \001J\002\001\002j-" +
-      "native.authz.governance.ActivatePolicyVe" +
-      "rsion\220\001\001\332\363\030)\010\001\022\027activate_policy_version\032" +
-      "\003udb@\001J\005authz\370\363\030\003\202\323\344\223\002+\"&/v1/authz/gover" +
-      "nance/versions:activate:\001*\022\265\002\n\025RollbackP" +
+      "E_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202" +
+      "\323\344\223\002\034\032\027/v1/authz/role-bindings:\001*\022\201\005\n\017Pu" +
+      "tRelationship\0222.udb.core.authz.services." +
+      "v1.PutRelationshipRequest\0320.udb.core.aut" +
+      "hz.services.v1.AuthMutationResponse\"\207\004\312\363" +
+      "\030>\010\002\032\032udb:authz:put-relationship \001J\002\001\002j\025" +
+      "authz.PutRelationship\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030;\010\001" +
+      "\022\020put_relationship\032\003udb(\260\352\0010\003@\001J\005authzP\001" +
+      "Z\017putRelationship\342\363\030\271\001\n\005authz\022\020udb/nativ" +
+      "e/authz\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UD" +
+      "B_GRPC_TARGET\"-udb.native.authz.put_rela" +
+      "tionship.boilerplate*\020put_relationship2\t" +
+      "udb_authz:\005authzJ\013UDB_API_KEYZ\020udb nativ" +
+      "e smoke\352\363\030Q\n\025authz.PutRelationship\022\014auth" +
+      "z.events\032\ttenant_id\"\010standard*\rat_least_" +
+      "once2\006stable\362\363\030?\n\005authz\032\010postgres2\033UDB_N" +
+      "ATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370" +
+      "\363\030\002\202\323\344\223\002\034\032\027/v1/authz/relationships:\001*\022\367\004" +
+      "\n\016PutAuthzPolicy\0221.udb.core.authz.servic" +
+      "es.v1.PutAuthzPolicyRequest\0320.udb.core.a" +
+      "uthz.services.v1.AuthMutationResponse\"\377\003" +
+      "\312\363\030=\010\002\032\032udb:authz:put-authz-policy \001J\002\001\002" +
+      "j\024authz.PutAuthzPolicy\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030:\010" +
+      "\001\022\020put_authz_policy\032\003udb(\260\352\0010\003@\001J\005authzP" +
+      "\001Z\016putAuthzPolicy\342\363\030\271\001\n\005authz\022\020udb/nativ" +
+      "e/authz\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UD" +
+      "B_GRPC_TARGET\"-udb.native.authz.put_auth" +
+      "z_policy.boilerplate*\020put_authz_policy2\t" +
+      "udb_authz:\005authzJ\013UDB_API_KEYZ\020udb nativ" +
+      "e smoke\352\363\030P\n\024authz.PutAuthzPolicy\022\014authz" +
+      ".events\032\ttenant_id\"\010standard*\rat_least_o" +
+      "nce2\006stable\362\363\030?\n\005authz\032\010postgres2\033UDB_NA" +
+      "TIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363" +
+      "\030\002\202\323\344\223\002\027\032\022/v1/authz/policies:\001*\022\234\005\n\021Lint" +
+      "AuthzPolicies\0224.udb.core.authz.services." +
+      "v1.LintAuthzPoliciesRequest\0325.udb.core.a" +
+      "uthz.services.v1.LintAuthzPoliciesRespon" +
+      "se\"\231\004\312\363\030C\010\002\032\035udb:authz:lint-authz-polici" +
+      "es \001J\002\001\002j\027authz.LintAuthzPolicies\220\001\001\322\363\030\006" +
+      "\010\001\020\001 \001\332\363\030@\010\001\022\023lint_authz_policies\032\003udb(\260" +
+      "\352\0010\003@\001J\005authzP\001Z\021lintAuthzPolicies\342\363\030\277\001\n" +
+      "\005authz\022\020udb/native/authz\032\033UDB_NATIVE_SER" +
+      "VICES_ENABLED\032\017UDB_GRPC_TARGET\"0udb.nati" +
+      "ve.authz.lint_authz_policies.boilerplate" +
+      "*\023lint_authz_policies2\tudb_authz:\005authzJ" +
+      "\013UDB_API_KEYZ\020udb native smoke\352\363\030S\n\027auth" +
+      "z.LintAuthzPolicies\022\014authz.events\032\ttenan" +
+      "t_id\"\010standard*\rat_least_once2\006stable\362\363\030" +
+      "?\n\005authz\032\010postgres2\033UDB_NATIVE_SERVICES_" +
+      "ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\034\"\027/v1/" +
+      "authz/policies:lint:\001*\022\202\005\n\017GetNativeAcce" +
+      "ss\022/.udb.core.authz.services.v1.NativeAc" +
+      "cessRequest\0320.udb.core.authz.services.v1" +
+      ".NativeAccessResponse\"\213\004\312\363\030?\010\002\032\033udb:auth" +
+      "z:get-native-access \001J\002\001\002j\025authz.GetNati" +
+      "veAccess\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030<\010\001\022\021get_native_" +
+      "access\032\003udb(\260\352\0010\003@\001J\005authzP\001Z\017getNativeA" +
+      "ccess\342\363\030\273\001\n\005authz\022\020udb/native/authz\032\033UDB" +
+      "_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TARGE" +
+      "T\".udb.native.authz.get_native_access.bo" +
+      "ilerplate*\021get_native_access2\tudb_authz:" +
+      "\005authzJ\013UDB_API_KEYZ\020udb native smoke\352\363\030" +
+      "Q\n\025authz.GetNativeAccess\022\014authz.events\032\t" +
+      "tenant_id\"\010standard*\rat_least_once2\006stab" +
+      "le\362\363\030?\n\005authz\032\010postgres2\033UDB_NATIVE_SERV" +
+      "ICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\034\"" +
+      "\027/v1/authz/native-access:\001*\022\202\005\n\017GetPolic" +
+      "yBundle\022/.udb.core.authz.services.v1.Pol" +
+      "icyBundleRequest\0320.udb.core.authz.servic" +
+      "es.v1.PolicyBundleResponse\"\213\004\312\363\030?\010\002\032\033udb" +
+      ":authz:get-policy-bundle \001J\002\001\002j\025authz.Ge" +
+      "tPolicyBundle\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030<\010\001\022\021get_po" +
+      "licy_bundle\032\003udb(\260\352\0010\003@\001J\005authzP\001Z\017getPo" +
+      "licyBundle\342\363\030\273\001\n\005authz\022\020udb/native/authz" +
+      "\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_" +
+      "TARGET\".udb.native.authz.get_policy_bund" +
+      "le.boilerplate*\021get_policy_bundle2\tudb_a" +
+      "uthz:\005authzJ\013UDB_API_KEYZ\020udb native smo" +
+      "ke\352\363\030Q\n\025authz.GetPolicyBundle\022\014authz.eve" +
+      "nts\032\ttenant_id\"\010standard*\rat_least_once2" +
+      "\006stable\362\363\030?\n\005authz\032\010postgres2\033UDB_NATIVE" +
+      "_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323" +
+      "\344\223\002\034\"\027/v1/authz/policy-bundle:\001*\022\265\002\n\021Cre" +
+      "atePolicyDraft\0224.udb.core.authz.services" +
+      ".v1.CreatePolicyDraftRequest\032/.udb.core." +
+      "authz.services.v1.PolicyDraftResponse\"\270\001" +
+      "\312\363\030N\010\002\032\026udb:authz:policy:write \001J\002\001\002j)na" +
+      "tive.authz.governance.CreatePolicyDraft\220" +
+      "\001\001\332\363\0308\010\001\022\023create_policy_draft\032\003udb@\001J\005au" +
+      "thzZ\021createPolicyDraft\370\363\030\002\202\323\344\223\002 \"\033/v1/au" +
+      "thz/governance/drafts:\001*\022\274\002\n\021UpdatePolic" +
+      "yDraft\0224.udb.core.authz.services.v1.Upda" +
+      "tePolicyDraftRequest\032/.udb.core.authz.se" +
+      "rvices.v1.PolicyDraftResponse\"\277\001\312\363\030N\010\002\032\026" +
+      "udb:authz:policy:write \001J\002\001\002j)native.aut" +
+      "hz.governance.UpdatePolicyDraft\220\001\001\332\363\0308\010\001" +
+      "\022\023update_policy_draft\032\003udb@\001J\005authzZ\021upd" +
+      "atePolicyDraft\370\363\030\002\202\323\344\223\002\'\"\"/v1/authz/gove" +
+      "rnance/drafts:update:\001*\022\263\002\n\017DiffPolicyDr" +
+      "aft\0222.udb.core.authz.services.v1.DiffPol" +
+      "icyDraftRequest\0323.udb.core.authz.service" +
+      "s.v1.DiffPolicyDraftResponse\"\266\001\312\363\030K\010\002\032\025u" +
+      "db:authz:policy:read \001J\002\001\002j\'native.authz" +
+      ".governance.DiffPolicyDraft\220\001\001\332\363\0304\010\001\022\021di" +
+      "ff_policy_draft\032\003udb@\001J\005authzZ\017diffPolic" +
+      "yDraft\370\363\030\001\202\323\344\223\002%\" /v1/authz/governance/d" +
+      "rafts:diff:\001*\022\274\002\n\021SubmitPolicyDraft\0224.ud" +
+      "b.core.authz.services.v1.SubmitPolicyDra" +
+      "ftRequest\032/.udb.core.authz.services.v1.P" +
+      "olicyDraftResponse\"\277\001\312\363\030N\010\002\032\026udb:authz:p" +
+      "olicy:write \001J\002\001\002j)native.authz.governan" +
+      "ce.SubmitPolicyDraft\220\001\001\332\363\0308\010\001\022\023submit_po",
+      "licy_draft\032\003udb@\001J\005authzZ\021submitPolicyDr" +
+      "aft\370\363\030\002\202\323\344\223\002\'\"\"/v1/authz/governance/draf" +
+      "ts:submit:\001*\022\307\002\n\022ApprovePolicyDraft\0225.ud" +
+      "b.core.authz.services.v1.ApprovePolicyDr" +
+      "aftRequest\0322.udb.core.authz.services.v1." +
+      "PolicyApprovalResponse\"\305\001\312\363\030Q\010\002\032\030udb:aut" +
+      "hz:policy:approve \001J\002\001\002j*native.authz.go" +
+      "vernance.ApprovePolicyDraft\220\001\001\332\363\030:\010\001\022\024ap" +
+      "prove_policy_draft\032\003udb@\001J\005authzZ\022approv" +
+      "ePolicyDraft\370\363\030\002\202\323\344\223\002(\"#/v1/authz/govern" +
+      "ance/drafts:approve:\001*\022\301\002\n\021RejectPolicyD" +
+      "raft\0224.udb.core.authz.services.v1.Reject" +
+      "PolicyDraftRequest\0322.udb.core.authz.serv" +
+      "ices.v1.PolicyApprovalResponse\"\301\001\312\363\030P\010\002\032" +
+      "\030udb:authz:policy:approve \001J\002\001\002j)native." +
+      "authz.governance.RejectPolicyDraft\220\001\001\332\363\030" +
+      "8\010\001\022\023reject_policy_draft\032\003udb@\001J\005authzZ\021" +
+      "rejectPolicyDraft\370\363\030\002\202\323\344\223\002\'\"\"/v1/authz/g" +
+      "overnance/drafts:reject:\001*\022\314\002\n\025ActivateP" +
       "olicyVersion\0228.udb.core.authz.services.v" +
-      "1.RollbackPolicyVersionRequest\032..udb.cor" +
-      "e.authz.services.v1.ActivationResponse\"\261" +
+      "1.ActivatePolicyVersionRequest\032..udb.cor" +
+      "e.authz.services.v1.ActivationResponse\"\310" +
       "\001\312\363\030K\010\002\032\017udb:authz:admin \001J\002\001\002j-native.a" +
-      "uthz.governance.RollbackPolicyVersion\220\001\001" +
-      "\332\363\030)\010\001\022\027rollback_policy_version\032\003udb@\001J\005" +
-      "authz\370\363\030\003\202\323\344\223\002+\"&/v1/authz/governance/ve" +
-      "rsions:rollback:\001*\022\224\002\n\016ActivateCanary\0221." +
-      "udb.core.authz.services.v1.ActivateCanar" +
-      "yRequest\032*.udb.core.authz.services.v1.Ca" +
-      "naryResponse\"\242\001\312\363\030D\010\002\032\017udb:authz:admin \001" +
-      "J\002\001\002j&native.authz.governance.ActivateCa" +
-      "nary\220\001\001\332\363\030!\010\001\022\017activate_canary\032\003udb@\001J\005a" +
-      "uthz\370\363\030\003\202\323\344\223\002+\"&/v1/authz/governance/can" +
-      "aries:activate:\001*\022\217\002\n\rPromoteCanary\0220.ud" +
-      "b.core.authz.services.v1.PromoteCanaryRe" +
-      "quest\032*.udb.core.authz.services.v1.Canar" +
-      "yResponse\"\237\001\312\363\030C\010\002\032\017udb:authz:admin \001J\002\001" +
-      "\002j%native.authz.governance.PromoteCanary" +
-      "\220\001\001\332\363\030 \010\001\022\016promote_canary\032\003udb@\001J\005authz\370" +
-      "\363\030\003\202\323\344\223\002*\"%/v1/authz/governance/canaries" +
-      ":promote:\001*\022\246\002\n\017GetCanaryStatus\0222.udb.co" +
-      "re.authz.services.v1.GetCanaryStatusRequ" +
-      "est\0323.udb.core.authz.services.v1.GetCana" +
-      "ryStatusResponse\"\251\001\312\363\030K\010\002\032\025udb:authz:pol" +
-      "icy:read \001J\002\001\002j\'native.authz.governance." +
-      "GetCanaryStatus\220\001\001\332\363\030#\010\001\022\021get_canary_sta" +
-      "tus\032\003udb@\001J\005authz\370\363\030\001\202\323\344\223\002)\"$/v1/authz/g" +
-      "overnance/canaries:status:\001*\022\263\002\n\022ListPol" +
-      "icyVersions\0225.udb.core.authz.services.v1" +
-      ".ListPolicyVersionsRequest\0326.udb.core.au" +
-      "thz.services.v1.ListPolicyVersionsRespon" +
-      "se\"\255\001\312\363\030N\010\002\032\025udb:authz:policy:read \001J\002\001\002" +
-      "j*native.authz.governance.ListPolicyVers" +
-      "ions\220\001\001\332\363\030&\010\001\022\024list_policy_versions\032\003udb" +
-      "@\001J\005authz\370\363\030\001\202\323\344\223\002\'\"\"/v1/authz/governanc" +
-      "e/versions:list:\001*\022\231\002\n\016SimulatePolicy\0221." +
-      "udb.core.authz.services.v1.SimulatePolic" +
-      "yRequest\0322.udb.core.authz.services.v1.Si" +
-      "mulatePolicyResponse\"\237\001\312\363\030J\010\002\032\025udb:authz" +
-      ":policy:read \001J\002\001\002j&native.authz.governa" +
-      "nce.SimulatePolicy\220\001\001\332\363\030!\010\001\022\017simulate_po" +
-      "licy\032\003udb@\001J\005authz\370\363\030\002\202\323\344\223\002\"\"\035/v1/authz/" +
-      "governance/simulate:\001*\022\223\002\n\rExplainPolicy" +
-      "\0220.udb.core.authz.services.v1.ExplainPol" +
-      "icyRequest\0321.udb.core.authz.services.v1." +
-      "ExplainPolicyResponse\"\234\001\312\363\030I\010\002\032\025udb:auth" +
-      "z:policy:read \001J\002\001\002j%native.authz.govern" +
-      "ance.ExplainPolicy\220\001\001\332\363\030 \010\001\022\016explain_pol" +
-      "icy\032\003udb@\001J\005authz\370\363\030\001\202\323\344\223\002!\"\034/v1/authz/g" +
-      "overnance/explain:\001*\022\244\002\n\020GetAuthzRevisio" +
-      "n\0223.udb.core.authz.services.v1.GetAuthzR" +
-      "evisionRequest\0324.udb.core.authz.services" +
-      ".v1.GetAuthzRevisionResponse\"\244\001\312\363\030L\010\002\032\025u" +
-      "db:authz:policy:read \001J\002\001\002j(native.authz" +
-      ".governance.GetAuthzRevision\220\001\001\332\363\030$\010\001\022\022g" +
-      "et_authz_revision\032\003udb@\001J\005authz\370\363\030\001\202\323\344\223\002" +
-      "\"\"\035/v1/authz/governance/revision:\001*\022\313\002\n\027" +
-      "InvalidatePolicyBundles\022:.udb.core.authz" +
-      ".services.v1.InvalidatePolicyBundlesRequ" +
-      "est\032;.udb.core.authz.services.v1.Invalid" +
-      "atePolicyBundlesResponse\"\266\001\312\363\030M\010\002\032\017udb:a" +
-      "uthz:admin \001J\002\001\002j/native.authz.governanc" +
-      "e.InvalidatePolicyBundles\220\001\001\332\363\030+\010\001\022\031inva" +
-      "lidate_policy_bundles\032\003udb@\001J\005authz\370\363\030\003\202" +
-      "\323\344\223\002,\"\'/v1/authz/governance/bundles:inva" +
-      "lidate:\001*\022\240\002\n\020SeedBuiltinRoles\0223.udb.cor" +
-      "e.authz.services.v1.SeedBuiltinRolesRequ" +
-      "est\0324.udb.core.authz.services.v1.SeedBui" +
-      "ltinRolesResponse\"\240\001\312\363\030F\010\002\032\017udb:authz:ad" +
-      "min \001J\002\001\002j(native.authz.governance.SeedB" +
-      "uiltinRoles\220\001\001\332\363\030$\010\001\022\022seed_builtin_roles" +
-      "\032\003udb@\001J\005authz\370\363\030\002\202\323\344\223\002$\"\037/v1/authz/gove" +
-      "rnance/roles:seed:\001*\022\275\002\n\025MigrateLegacyPo" +
-      "licies\0228.udb.core.authz.services.v1.Migr" +
-      "ateLegacyPoliciesRequest\0329.udb.core.auth" +
-      "z.services.v1.MigrateLegacyPoliciesRespo" +
-      "nse\"\256\001\312\363\030K\010\002\032\017udb:authz:admin \001J\002\001\002j-nat" +
-      "ive.authz.governance.MigrateLegacyPolici" +
-      "es\220\001\001\332\363\030)\010\001\022\027migrate_legacy_policies\032\003ud" +
-      "b@\001J\005authz\370\363\030\003\202\323\344\223\002(\"#/v1/authz/governan" +
-      "ce/legacy:migrate:\001*\032\311\002\312\360\031\\\n\005authz\022\005auth" +
-      "z\032\005authz\"\rAuthorization*\ngovernance0\0018\001h" +
-      "\001z\005authz\202\001\005authz\212\001\005authz\222\001\014native.authz\322" +
-      "\360\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\332\360\031\205\001\n\005authz\022" +
-      "\020udb/native/authz\032\033UDB_NATIVE_SERVICES_E" +
-      "NABLED\032\017UDB_GRPC_TARGET\"\027udb.native.auth" +
-      "z.config:\005authzJ\013UDB_API_KEYZ\017udb native" +
-      " lint\342\360\031?\n\005authz\032\010postgres2\033UDB_NATIVE_S" +
-      "ERVICES_ENABLED2\017UDB_GRPC_TARGETB\212\002\n\036com" +
-      ".udb.core.authz.services.v1B\021AuthzServic" +
-      "eProtoP\001ZHgithub.com/fahara02/udb/sdk/go" +
-      "/gen/udb/core/authz/services/v1;services" +
-      "v1\242\002\004UCAS\252\002\032udb.core.Authz.Services.V1\312\002" +
-      "\032Udb\\Core\\Authz\\Services\\V1\342\002&Udb\\GPBMet" +
-      "adata\\Core\\Authz\\Services\\V1\352\002\036Udb::Core" +
-      "::Authz::Services::V1b\006proto3"
+      "uthz.governance.ActivatePolicyVersion\220\001\001" +
+      "\332\363\030@\010\001\022\027activate_policy_version\032\003udb@\001J\005" +
+      "authzZ\025activatePolicyVersion\370\363\030\003\202\323\344\223\002+\"&" +
+      "/v1/authz/governance/versions:activate:\001" +
+      "*\022\314\002\n\025RollbackPolicyVersion\0228.udb.core.a" +
+      "uthz.services.v1.RollbackPolicyVersionRe" +
+      "quest\032..udb.core.authz.services.v1.Activ" +
+      "ationResponse\"\310\001\312\363\030K\010\002\032\017udb:authz:admin " +
+      "\001J\002\001\002j-native.authz.governance.RollbackP" +
+      "olicyVersion\220\001\001\332\363\030@\010\001\022\027rollback_policy_v" +
+      "ersion\032\003udb@\001J\005authzZ\025rollbackPolicyVers" +
+      "ion\370\363\030\003\202\323\344\223\002+\"&/v1/authz/governance/vers" +
+      "ions:rollback:\001*\022\244\002\n\016ActivateCanary\0221.ud" +
+      "b.core.authz.services.v1.ActivateCanaryR" +
+      "equest\032*.udb.core.authz.services.v1.Cana" +
+      "ryResponse\"\262\001\312\363\030D\010\002\032\017udb:authz:admin \001J\002" +
+      "\001\002j&native.authz.governance.ActivateCana" +
+      "ry\220\001\001\332\363\0301\010\001\022\017activate_canary\032\003udb@\001J\005aut" +
+      "hzZ\016activateCanary\370\363\030\003\202\323\344\223\002+\"&/v1/authz/" +
+      "governance/canaries:activate:\001*\022\236\002\n\rProm" +
+      "oteCanary\0220.udb.core.authz.services.v1.P" +
+      "romoteCanaryRequest\032*.udb.core.authz.ser" +
+      "vices.v1.CanaryResponse\"\256\001\312\363\030C\010\002\032\017udb:au" +
+      "thz:admin \001J\002\001\002j%native.authz.governance" +
+      ".PromoteCanary\220\001\001\332\363\030/\010\001\022\016promote_canary\032" +
+      "\003udb@\001J\005authzZ\rpromoteCanary\370\363\030\003\202\323\344\223\002*\"%" +
+      "/v1/authz/governance/canaries:promote:\001*" +
+      "\022\271\002\n\017GetCanaryStatus\0222.udb.core.authz.se" +
+      "rvices.v1.GetCanaryStatusRequest\0323.udb.c" +
+      "ore.authz.services.v1.GetCanaryStatusRes" +
+      "ponse\"\274\001\312\363\030K\010\002\032\025udb:authz:policy:read \001J" +
+      "\002\001\002j\'native.authz.governance.GetCanarySt" +
+      "atus\220\001\001\332\363\0304\010\001\022\021get_canary_status\032\003udb@\001J" +
+      "\005authzZ\017getCanaryStatus\370\363\030\001\202\323\344\223\002+\022)/v1/a" +
+      "uthz/governance/canaries/{canary_id}\022\277\002\n" +
+      "\022ListPolicyVersions\0225.udb.core.authz.ser" +
+      "vices.v1.ListPolicyVersionsRequest\0326.udb" +
+      ".core.authz.services.v1.ListPolicyVersio" +
+      "nsResponse\"\271\001\312\363\030N\010\002\032\025udb:authz:policy:re" +
+      "ad \001J\002\001\002j*native.authz.governance.ListPo" +
+      "licyVersions\220\001\001\332\363\030:\010\001\022\024list_policy_versi" +
+      "ons\032\003udb@\001J\005authzZ\022listPolicyVersions\370\363\030" +
+      "\001\202\323\344\223\002\037\022\035/v1/authz/governance/versions\022\263" +
+      "\002\n\016SimulatePolicy\0221.udb.core.authz.servi" +
+      "ces.v1.SimulatePolicyRequest\0322.udb.core." +
+      "authz.services.v1.SimulatePolicyResponse" +
+      "\"\271\001\312\363\030J\010\002\032\025udb:authz:policy:read \001J\002\001\002j&" +
+      "native.authz.governance.SimulatePolicy\220\001" +
+      "\001\332\363\0301\010\001\022\017simulate_policy\032\003udb@\001J\005authzZ\016" +
+      "simulatePolicy\370\363\030\002\202\323\344\223\002,\"\'/v1/authz/gove" +
+      "rnance/policy-simulations:\001*\022\256\002\n\rExplain" +
+      "Policy\0220.udb.core.authz.services.v1.Expl" +
+      "ainPolicyRequest\0321.udb.core.authz.servic" +
+      "es.v1.ExplainPolicyResponse\"\267\001\312\363\030I\010\002\032\025ud" +
+      "b:authz:policy:read \001J\002\001\002j%native.authz." +
+      "governance.ExplainPolicy\220\001\001\332\363\030/\010\001\022\016expla" +
+      "in_policy\032\003udb@\001J\005authzZ\rexplainPolicy\370\363" +
+      "\030\001\202\323\344\223\002-\"(/v1/authz/governance/policy-ex" +
+      "planations:\001*\022\274\002\n\020GetAuthzRevision\0223.udb" +
+      ".core.authz.services.v1.GetAuthzRevision" +
+      "Request\0324.udb.core.authz.services.v1.Get" +
+      "AuthzRevisionResponse\"\274\001\312\363\030L\010\002\032\025udb:auth" +
+      "z:policy:read \001J\002\001\002j(native.authz.govern" +
+      "ance.GetAuthzRevision\220\001\001\332\363\0306\010\001\022\022get_auth" +
+      "z_revision\032\003udb@\001J\005authzZ\020getAuthzRevisi" +
+      "on\370\363\030\001\202\323\344\223\002(\022&/v1/authz/governance/revis" +
+      "ions/current\022\344\002\n\027InvalidatePolicyBundles" +
+      "\022:.udb.core.authz.services.v1.Invalidate" +
+      "PolicyBundlesRequest\032;.udb.core.authz.se" +
+      "rvices.v1.InvalidatePolicyBundlesRespons" +
+      "e\"\317\001\312\363\030M\010\002\032\017udb:authz:admin \001J\002\001\002j/nativ" +
+      "e.authz.governance.InvalidatePolicyBundl" +
+      "es\220\001\001\332\363\030D\010\001\022\031invalidate_policy_bundles\032\003" +
+      "udb@\001J\005authzZ\027invalidatePolicyBundles\370\363\030" +
+      "\003\202\323\344\223\002,\"\'/v1/authz/governance/bundles:in" +
+      "validate:\001*\022\262\002\n\020SeedBuiltinRoles\0223.udb.c" +
+      "ore.authz.services.v1.SeedBuiltinRolesRe" +
+      "quest\0324.udb.core.authz.services.v1.SeedB" +
+      "uiltinRolesResponse\"\262\001\312\363\030F\010\002\032\017udb:authz:" +
+      "admin \001J\002\001\002j(native.authz.governance.See" +
+      "dBuiltinRoles\220\001\001\332\363\0306\010\001\022\022seed_builtin_rol" +
+      "es\032\003udb@\001J\005authzZ\020seedBuiltinRoles\370\363\030\002\202\323" +
+      "\344\223\002$\"\037/v1/authz/governance/roles:seed:\001*" +
+      "\022\324\002\n\025MigrateLegacyPolicies\0228.udb.core.au" +
+      "thz.services.v1.MigrateLegacyPoliciesReq" +
+      "uest\0329.udb.core.authz.services.v1.Migrat" +
+      "eLegacyPoliciesResponse\"\305\001\312\363\030K\010\002\032\017udb:au" +
+      "thz:admin \001J\002\001\002j-native.authz.governance" +
+      ".MigrateLegacyPolicies\220\001\001\332\363\030@\010\001\022\027migrate" +
+      "_legacy_policies\032\003udb@\001J\005authzZ\025migrateL" +
+      "egacyPolicies\370\363\030\003\202\323\344\223\002(\"#/v1/authz/gover" +
+      "nance/legacy:migrate:\001*\032\311\002\312\360\031\\\n\005authz\022\005a" +
+      "uthz\032\005authz\"\rAuthorization*\ngovernance0\001" +
+      "8\001h\001z\005authz\202\001\005authz\212\001\005authz\222\001\014native.aut" +
+      "hz\322\360\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\332\360\031\205\001\n\005aut" +
+      "hz\022\020udb/native/authz\032\033UDB_NATIVE_SERVICE" +
+      "S_ENABLED\032\017UDB_GRPC_TARGET\"\027udb.native.a" +
+      "uthz.config:\005authzJ\013UDB_API_KEYZ\017udb nat" +
+      "ive lint\342\360\031?\n\005authz\032\010postgres2\033UDB_NATIV" +
+      "E_SERVICES_ENABLED2\017UDB_GRPC_TARGETB\212\002\n\036" +
+      "com.udb.core.authz.services.v1B\021AuthzSer" +
+      "viceProtoP\001ZHgithub.com/fahara02/udb/sdk" +
+      "/go/gen/udb/core/authz/services/v1;servi" +
+      "cesv1\242\002\004UCAS\252\002\032udb.core.Authz.Services.V" +
+      "1\312\002\032Udb\\Core\\Authz\\Services\\V1\342\002&Udb\\GPB" +
+      "Metadata\\Core\\Authz\\Services\\V1\352\002\036Udb::C" +
+      "ore::Authz::Services::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

@@ -1,0 +1,61 @@
+name: Version guard
+description: >-
+  Single source for the release version/tag guard (replaces the 8 inconsistent
+  copies across release-binaries/crates/docker/typescript/python/csharp/packagist
+  + ci::versions). Runs `node scripts/check-versions.mjs` to assert every
+  manifest + protocol constant matches versions.json, then asserts the release
+  context's version (the pushed `refs/tags/vX.Y.Z` tag, or the workflow_dispatch
+  input when no tag is present) equals
+  `versions.json.components[<component>].version`.
+  REQUIRES Node.js to already be set up by the caller (e.g. via
+  actions/setup-node) — this action deliberately does NOT install Node, to stay
+  single-responsibility. Also requires the repository to be checked out so
+  scripts/check-versions.mjs and versions.json are present.
+
+inputs:
+  component:
+    description: >-
+      The versions.json component key to guard against, e.g. `udb`,
+      `sdk-typescript`, `sdk-python`, `sdk-csharp`, `sdk-php`.
+    required: true
+  dispatch-version:
+    description: >-
+      The expected version supplied via the workflow_dispatch input, when the
+      run was dispatched manually (no tag). Pass the dispatch `version` input
+      here; leave empty ("") on tag-triggered runs.
+    required: false
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - name: Versions consistent with versions.json
+      shell: bash
+      run: node scripts/check-versions.mjs
+
+    - name: Release version matches versions.json
+      shell: bash
+      env:
+        COMPONENT: ${{ inputs.component }}
+        DISPATCH_VERSION: ${{ inputs.dispatch-version }}
+        GUARD_REF: ${{ github.ref }}
+        GUARD_REF_NAME: ${{ github.ref_name }}
+      run: |
+        set -euo pipefail
+        want="$(node -p "require('./versions.json').components['${COMPONENT}'].version")"
+        if [[ "${GUARD_REF}" == refs/tags/* ]]; then
+          tag="${GUARD_REF_NAME#v}"
+          if [[ "${tag}" != "${want}" ]]; then
+            echo "::error::Tag ${GUARD_REF_NAME} does not match versions.json ${COMPONENT} ${want}" >&2
+            exit 1
+          fi
+          echo "Tag ${GUARD_REF_NAME} matches versions.json ${COMPONENT} ${want}"
+        elif [[ -n "${DISPATCH_VERSION}" ]]; then
+          if [[ "${DISPATCH_VERSION}" != "${want}" ]]; then
+            echo "::error::Input version ${DISPATCH_VERSION} does not match versions.json ${COMPONENT} ${want}" >&2
+            exit 1
+          fi
+          echo "Input version ${DISPATCH_VERSION} matches versions.json ${COMPONENT} ${want}"
+        else
+          echo "No tag ref and no dispatch-version supplied; only versions.json self-consistency was checked for ${COMPONENT} (${want})."
+        fi

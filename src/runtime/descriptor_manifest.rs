@@ -186,6 +186,7 @@ pub struct NativeServiceContract {
 pub struct SdkSurfaceContract {
     pub include_in_facade: bool,
     pub method_alias: String,
+    pub rest_operation_id: String,
     pub required_credential_provider: String,
     pub streaming_helper_type: String,
     pub default_deadline_ms: i32,
@@ -712,6 +713,7 @@ impl From<&SdkSurfaceOpts> for SdkSurfaceContract {
         Self {
             include_in_facade: value.include_in_facade,
             method_alias: value.method_alias.clone(),
+            rest_operation_id: value.rest_operation_id.clone(),
             required_credential_provider: value.required_credential_provider.clone(),
             streaming_helper_type: value.streaming_helper_type.clone(),
             default_deadline_ms: value.default_deadline_ms,
@@ -1194,6 +1196,8 @@ struct SdkSurfaceOpts {
     boilerplate_recipe_tags: Vec<String>,
     #[prost(bool, tag = "10")]
     generate_minimal_example: bool,
+    #[prost(string, tag = "11")]
+    rest_operation_id: String,
 }
 
 #[derive(Clone, PartialEq, Message)]
@@ -1817,5 +1821,25 @@ mod tests {
             .expect("password_hash must carry structured db_column_security");
         assert_eq!(structured.secret_classification, 3);
         assert_eq!(structured.output_view, 1);
+    }
+
+    #[test]
+    fn sdk_surface_contract_decodes_rest_operation_id() {
+        let surface = SdkSurfaceOpts {
+            include_in_facade: true,
+            method_alias: "get_jwks".to_string(),
+            required_credential_provider: "udb".to_string(),
+            streaming_helper_type: String::new(),
+            default_deadline_ms: 30000,
+            default_max_attempts: 3,
+            browser_safe: true,
+            server_only: false,
+            boilerplate_recipe_tags: vec!["auth".to_string()],
+            generate_minimal_example: true,
+            rest_operation_id: "authn.getJwks".to_string(),
+        };
+        let contract = SdkSurfaceContract::from(&surface);
+        assert_eq!(contract.method_alias, "get_jwks");
+        assert_eq!(contract.rest_operation_id, "authn.getJwks");
     }
 }

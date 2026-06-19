@@ -477,6 +477,26 @@ fn rpc_to_json(rpc: &RpcDescriptor) -> serde_json::Value {
         "method_snake".to_string(),
         serde_json::json!(&rpc.method_snake),
     );
+    obj.insert(
+        "method_alias".to_string(),
+        serde_json::json!(&rpc.method_alias),
+    );
+    obj.insert(
+        "method_alias_snake".to_string(),
+        serde_json::json!(&rpc.method_alias_snake),
+    );
+    obj.insert(
+        "method_alias_camel".to_string(),
+        serde_json::json!(&rpc.method_alias_camel),
+    );
+    obj.insert(
+        "method_alias_pascal".to_string(),
+        serde_json::json!(&rpc.method_alias_pascal),
+    );
+    obj.insert(
+        "rest_operation_id".to_string(),
+        serde_json::json!(&rpc.rest_operation_id),
+    );
     obj.insert("input".to_string(), serde_json::json!(&rpc.input_short));
     obj.insert("input_pkg".to_string(), serde_json::json!(&rpc.input_pkg));
     obj.insert("output".to_string(), serde_json::json!(&rpc.output_short));
@@ -491,6 +511,13 @@ fn rpc_to_json(rpc: &RpcDescriptor) -> serde_json::Value {
     );
     obj.insert("kind".to_string(), serde_json::json!(rpc.kind()));
     obj.insert("path".to_string(), serde_json::json!(rpc.grpc_path()));
+    obj.insert("http_verb".to_string(), serde_json::json!(&rpc.http_verb));
+    obj.insert("http_path".to_string(), serde_json::json!(&rpc.http_path));
+    obj.insert("http_body".to_string(), serde_json::json!(&rpc.http_body));
+    obj.insert(
+        "http_response_body".to_string(),
+        serde_json::json!(&rpc.http_response_body),
+    );
     obj.insert(
         "native_service_id".to_string(),
         serde_json::json!(&rpc.native_service_id),
@@ -1214,9 +1241,29 @@ fn service_matches(svc: &ServiceInfo, filter: &str) -> bool {
 }
 
 fn substitute_rpc(body: &str, rpc: &RpcDescriptor) -> String {
-    let pairs: [(&str, String); 21] = [
+    let alias_snake = rpc_alias_snake(rpc);
+    let alias_camel = rpc_alias_camel(rpc);
+    let alias_pascal = rpc_alias_pascal(rpc);
+    let rest_operation_id = if rpc.rest_operation_id.trim().is_empty() {
+        alias_camel.clone()
+    } else {
+        rpc.rest_operation_id.clone()
+    };
+    let pairs: [(&str, String); 32] = [
         ("{{RPC_NAME}}", rpc.method.clone()),
+        ("{{RPC_WIRE_NAME}}", rpc.method.clone()),
         ("{{RPC_SNAKE}}", rpc.method_snake.clone()),
+        ("{{RPC_ALIAS_SNAKE}}", alias_snake.clone()),
+        ("{{RPC_ALIAS_CAMEL}}", alias_camel.clone()),
+        ("{{RPC_ALIAS_PASCAL}}", alias_pascal.clone()),
+        ("{{REST_OPERATION_ID}}", rest_operation_id.clone()),
+        // Compatibility placeholders used by older templates during migration.
+        ("{{RPC_WIRE_PATH}}", rpc.grpc_path()),
+        ("{{RPC_API_ALIAS}}", alias_snake.clone()),
+        ("{{RPC_OPERATION_ID}}", rest_operation_id),
+        ("{{RPC_METHOD_ALIAS_SNAKE}}", alias_snake),
+        ("{{RPC_METHOD_ALIAS_CAMEL}}", alias_camel),
+        ("{{RPC_METHOD_ALIAS_PASCAL}}", alias_pascal),
         ("{{RPC_INPUT}}", rpc.input_short.clone()),
         ("{{RPC_INPUT_PKG}}", rpc.input_pkg.clone()),
         ("{{RPC_OUTPUT}}", rpc.output_short.clone()),
@@ -1254,6 +1301,115 @@ fn substitute_rpc(body: &str, rpc: &RpcDescriptor) -> String {
         text = text.replace(key, value);
     }
     text
+}
+
+fn rpc_alias_value(rpc: &RpcDescriptor) -> &str {
+    if rpc.method_alias.trim().is_empty() {
+        rpc.method.as_str()
+    } else {
+        rpc.method_alias.as_str()
+    }
+}
+
+fn rpc_alias_snake(rpc: &RpcDescriptor) -> String {
+    if rpc.method_alias_snake.trim().is_empty() {
+        alias_snake_case(rpc_alias_value(rpc))
+    } else {
+        rpc.method_alias_snake.clone()
+    }
+}
+
+fn rpc_alias_camel(rpc: &RpcDescriptor) -> String {
+    if rpc.method_alias_camel.trim().is_empty() {
+        alias_camel_case(rpc_alias_value(rpc))
+    } else {
+        rpc.method_alias_camel.clone()
+    }
+}
+
+fn rpc_alias_pascal(rpc: &RpcDescriptor) -> String {
+    if rpc.method_alias_pascal.trim().is_empty() {
+        alias_pascal_case(rpc_alias_value(rpc))
+    } else {
+        rpc.method_alias_pascal.clone()
+    }
+}
+
+fn alias_words(value: &str) -> Vec<String> {
+    let mut words = Vec::new();
+    let mut current = String::new();
+    let chars: Vec<char> = value.trim().chars().collect();
+    for (idx, ch) in chars.iter().copied().enumerate() {
+        if !ch.is_ascii_alphanumeric() {
+            if !current.is_empty() {
+                words.push(std::mem::take(&mut current));
+            }
+            continue;
+        }
+        if !current.is_empty() {
+            let prev = current.chars().last().unwrap_or_default();
+            let next = chars.get(idx + 1).copied();
+            let lower_to_upper = prev.is_ascii_lowercase() && ch.is_ascii_uppercase();
+            let acronym_to_word = prev.is_ascii_uppercase()
+                && ch.is_ascii_uppercase()
+                && next.is_some_and(|n| n.is_ascii_lowercase());
+            let alpha_digit = prev.is_ascii_alphabetic() && ch.is_ascii_digit();
+            let digit_alpha = prev.is_ascii_digit() && ch.is_ascii_alphabetic();
+            if lower_to_upper || acronym_to_word || alpha_digit || digit_alpha {
+                words.push(std::mem::take(&mut current));
+            }
+        }
+        current.push(ch);
+    }
+    if !current.is_empty() {
+        words.push(current);
+    }
+    if words.is_empty() {
+        vec![value.trim().to_string()]
+    } else {
+        words
+    }
+}
+
+fn title_word(word: &str) -> String {
+    let mut chars = word.chars();
+    let Some(first) = chars.next() else {
+        return String::new();
+    };
+    let mut out = String::new();
+    out.push(first.to_ascii_uppercase());
+    for ch in chars {
+        out.push(ch.to_ascii_lowercase());
+    }
+    out
+}
+
+fn alias_snake_case(value: &str) -> String {
+    alias_words(value)
+        .into_iter()
+        .map(|word| word.to_ascii_lowercase())
+        .collect::<Vec<_>>()
+        .join("_")
+}
+
+fn alias_pascal_case(value: &str) -> String {
+    alias_words(value)
+        .into_iter()
+        .map(|word| title_word(&word))
+        .collect::<String>()
+}
+
+fn alias_camel_case(value: &str) -> String {
+    let words = alias_words(value);
+    let mut out = String::new();
+    for (idx, word) in words.iter().enumerate() {
+        if idx == 0 {
+            out.push_str(&word.to_ascii_lowercase());
+        } else {
+            out.push_str(&title_word(word));
+        }
+    }
+    out
 }
 
 fn substitute_entity(body: &str, entity: &EntityDescriptor) -> String {
@@ -1385,10 +1541,19 @@ mod tests {
                 service_pkg: "udb.services.v1".into(),
                 method: "Select".into(),
                 method_snake: "select".into(),
+                method_alias: "select".into(),
+                method_alias_snake: "select".into(),
+                method_alias_camel: "select".into(),
+                method_alias_pascal: "Select".into(),
+                rest_operation_id: "select".into(),
                 input_short: "SelectRequest".into(),
                 input_pkg: "udb.entity.v1".into(),
                 output_short: "RecordSet".into(),
                 output_pkg: "udb.entity.v1".into(),
+                http_verb: "post".into(),
+                http_path: "/v1/data/select".into(),
+                http_body: "*".into(),
+                http_response_body: String::new(),
                 client_streaming: false,
                 server_streaming: false,
                 native_service_id: String::new(),
@@ -1434,10 +1599,19 @@ mod tests {
                 service_pkg: "udb.services.v1".into(),
                 method: "SelectV2".into(),
                 method_snake: "select_v2".into(),
+                method_alias: "select_v2".into(),
+                method_alias_snake: "select_v2".into(),
+                method_alias_camel: "selectV2".into(),
+                method_alias_pascal: "SelectV2".into(),
+                rest_operation_id: "selectV2".into(),
                 input_short: "SelectRequest".into(),
                 input_pkg: "udb.entity.v1".into(),
                 output_short: "RecordBatchV2".into(),
                 output_pkg: "udb.entity.v1".into(),
+                http_verb: String::new(),
+                http_path: String::new(),
+                http_body: String::new(),
+                http_response_body: String::new(),
                 client_streaming: false,
                 server_streaming: true,
                 native_service_id: String::new(),
@@ -1518,6 +1692,25 @@ mod tests {
     }
 
     #[test]
+    fn alias_placeholders_are_acronym_safe_and_wire_name_stays_compatible() {
+        let mut manifest = sample_manifest();
+        manifest[0].method = "GetJWKS".to_string();
+        manifest[0].method_snake = "get_j_w_k_s".to_string();
+        manifest[0].method_alias = "get_jwks".to_string();
+        manifest[0].method_alias_snake = "get_jwks".to_string();
+        manifest[0].method_alias_camel = "getJwks".to_string();
+        manifest[0].method_alias_pascal = "GetJwks".to_string();
+        manifest[0].rest_operation_id = "authn.getJwks".to_string();
+        let tmpl = "# @@UDB_RPC_BEGIN kind=unary\n\
+                    {{RPC_NAME}} {{RPC_WIRE_NAME}} {{RPC_SNAKE}} \
+                    {{RPC_ALIAS_SNAKE}} {{RPC_ALIAS_CAMEL}} {{RPC_ALIAS_PASCAL}} \
+                    {{REST_OPERATION_ID}}\n\
+                    # @@UDB_RPC_END\n";
+        let out = render_text(tmpl, &manifest, &[], &[]);
+        assert!(out.contains("GetJWKS GetJWKS get_j_w_k_s get_jwks getJwks GetJwks authn.getJwks"));
+    }
+
+    #[test]
     fn sdk_manifest_json_exposes_template_token_fields() {
         let manifest = sample_manifest();
         let rpc = &manifest[0];
@@ -1527,6 +1720,18 @@ mod tests {
             Some("read_only")
         );
         assert_eq!(value.get("read_only").and_then(|v| v.as_bool()), Some(true));
+        assert_eq!(
+            value.get("method_alias_camel").and_then(|v| v.as_str()),
+            Some("select")
+        );
+        assert_eq!(
+            value.get("rest_operation_id").and_then(|v| v.as_str()),
+            Some("select")
+        );
+        assert_eq!(
+            value.get("http_path").and_then(|v| v.as_str()),
+            Some("/v1/data/select")
+        );
     }
 
     #[test]

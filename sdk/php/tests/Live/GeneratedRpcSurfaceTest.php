@@ -555,7 +555,12 @@ function liveUuidV4(): string
 // reset family, DropResource, …) could corrupt shared/global broker state.
 function shouldPopulatePhp(string $name): bool
 {
-    return (\Fahara02\UdbLaravel\Generated\GeneratedClient::OPERATION_KIND[$name] ?? '') !== 'destructive';
+    return operationKindPhp($name) !== 'destructive';
+}
+
+function operationKindPhp(string $name): string
+{
+    return \Fahara02\UdbLaravel\Generated\GeneratedClient::OPERATION_KIND[$name] ?? 'read_only';
 }
 
 // Name-aware probe string, mirroring the Go/Python descriptor probes: tenant/
@@ -1440,6 +1445,14 @@ class PerfFixturesPhp
 
         return null;
     }
+
+    public function keys(): array
+    {
+        $keys = array_keys($this->m);
+        sort($keys);
+
+        return $keys;
+    }
 }
 
 /**
@@ -2087,9 +2100,9 @@ function perfBodyPhp(string $name, PerfFixturesPhp $fix, string $tenant, string 
         case 'scim_list_groups':
             return (new ($I('ScimListGroupsRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setPage($page());
         case 'scim_patch_group':
-            return (new ($I('ScimPatchGroupRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setScimGroupId($g('record_id'))->setOperations([(new ($I('ScimPatchOp'))())->setOp('add')->setPath('members')->setValueJson('["x"]')])->setContext($ctxC());
+            return (new ($I('ScimPatchGroupRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setScimGroupId($g('scim_group_id') ?: $g('record_id'))->setOperations([(new ($I('ScimPatchOp'))())->setOp('add')->setPath('members')->setValueJson('["x"]')])->setContext($ctxC());
         case 'scim_delete_group':
-            return (new ($I('ScimDeleteGroupRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setScimGroupId($g('record_id'))->setContext($ctxC());
+            return (new ($I('ScimDeleteGroupRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setScimGroupId($g('scim_group_id') ?: $g('record_id'))->setContext($ctxC());
 
         // ── WebRTC SignalingService ──
         case 'signal':
@@ -2837,34 +2850,30 @@ it('measures per-RPC latency', function () {
     // Returns [elapsed_ms, err] where err is the gRPC status code NAME on a non-OK
     // status, else "OK" — so a failing RPC is recorded as a FAILURE, never a silent
     // latency sample (BENCH_RPC_BODIES.md #1/#3).
-    $timeUnary = function ($stub, ReflectionMethod $method, $hasRequest, $probeRequest) use ($invoke, $authedMeta): array {
+    $timeUnary = function (GeneratedClient $sdkClient, string $rpcName, $stub, ReflectionMethod $method, $hasRequest, $probeRequest) use ($invoke, $authedMeta): array {
         $start = microtime(true);
         $err = 'OK';
         $detail = '';
         try {
-            // put_object is CLIENT-STREAMING: the request body is STREAMED via write(), not a
-            // request arg. The generic $invoke binds the Chunk to the put_object(?UdbMetadata)
-            // metadata slot → the broker reads an empty stream ("empty object stream"). Open
-            // with the real metadata, WRITE the seeded Chunk, then close + wait (mirrors the
-            // working SeedPutObject pattern).
-            if ($method->getName() === 'put_object') {
-                $call = $stub->put_object($authedMeta);
-                if ($probeRequest !== null) {
-                    $call->write($probeRequest);
-                }
+            // Measure the generated SDK wrapper for unary RPCs, not the raw grpc stub.
+            // The wrapper is where metadata binding, deadline, retry gating, and typed
+            // error mapping live. Raw stubs are retained only as a fallback for unusual
+            // signatures and for the streaming probe below.
+            if ($hasRequest && method_exists($sdkClient, $rpcName)) {
+                $sdkClient->{$rpcName}($probeRequest, $authedMeta);
             } else {
                 $call = $invoke($stub, $method, $hasRequest, $probeRequest);
-            }
-            if (method_exists($call, 'wait')) {
-                // Raw \Grpc\UnaryCall::wait() returns [response, status] and does NOT
-                // throw on a non-OK status — inspect the status code or every failing
-                // RPC is silently recorded as a latency sample (the PHP "false green").
-                $res = $call->wait();
-                $status = is_array($res) ? ($res[1] ?? null) : null;
-                $code = is_object($status) ? (int) ($status->code ?? 0) : (is_array($status) ? (int) ($status['code'] ?? 0) : 0);
-                if ($code !== 0) {
-                    $err = grpcStatusNamePhp($code);
-                    $detail = is_object($status) ? (string) ($status->details ?? '') : (string) ($status['details'] ?? '');
+                if (method_exists($call, 'wait')) {
+                    // Raw \Grpc\UnaryCall::wait() returns [response, status] and does NOT
+                    // throw on a non-OK status — inspect the status code or every failing
+                    // RPC is silently recorded as a latency sample (the PHP "false green").
+                    $res = $call->wait();
+                    $status = is_array($res) ? ($res[1] ?? null) : null;
+                    $code = is_object($status) ? (int) ($status->code ?? 0) : (is_array($status) ? (int) ($status['code'] ?? 0) : 0);
+                    if ($code !== 0) {
+                        $err = grpcStatusNamePhp($code);
+                        $detail = is_object($status) ? (string) ($status->details ?? '') : (string) ($status['details'] ?? '');
+                    }
                 }
             }
         } catch (\Fahara02\UdbLaravel\Exceptions\UdbRpcException $e) {
@@ -2895,8 +2904,9 @@ it('measures per-RPC latency', function () {
     $units = [];
     foreach (stubAccessors($s['data'], $s['authGenerated']) as $stubName => $stub) {
         $svc = preg_replace('/Stub$/', '', $stubName);
+        $sdkClient = $stubName === 'DataBrokerStub' ? $s['data'] : $s['authGenerated'];
         foreach (generatedStubMethods($stub) as $method) {
-            $units[] = ['stub' => $stub, 'svc' => $svc, 'method' => $method, 'name' => $method->getName()];
+            $units[] = ['stub' => $stub, 'client' => $sdkClient, 'svc' => $svc, 'method' => $method, 'name' => $method->getName()];
         }
     }
     // NOTE: $u['name'] is the raw grpc stub method (PascalCase, e.g. RefreshSession); the phase
@@ -2917,12 +2927,13 @@ it('measures per-RPC latency', function () {
     });
     foreach ($units as $u) {
         {
-            $stub = $u['stub']; $svc = $u['svc']; $method = $u['method'];
+            $stub = $u['stub']; $sdkClient = $u['client']; $svc = $u['svc']; $method = $u['method'];
             $name = $method->getName();
+            $rpcName = rpcSnake($name);
             // put_object is CLIENT-STREAMING: drive it explicitly (open with metadata, WRITE the
             // seeded Chunk, then wait) — the reflective probe/timeUnary path binds the Chunk to the
             // metadata slot → empty stream. Mirrors the working SeedPutObject (which lands code=0).
-            if (rpcSnake($name) === 'put_object') {
+            if ($rpcName === 'put_object') {
                 $durs = [];
                 $err = 'OK';
                 $detail = '';
@@ -2973,7 +2984,11 @@ it('measures per-RPC latency', function () {
                 // hit the unique constraint and the broker leaks it as INTERNAL).
                 $mkBody = fn () => perfBodyPhp($name, $fix, $authedMeta->tenantId, $authedMeta->projectId) ?? requestFor($method);
                 $probeRequest = $mkBody();
-                $kind = shouldPopulatePhp($name) ? 'mutation' : 'destructive';
+                $kind = operationKindPhp($name);
+            }
+            $iters = $itersFor($kind);
+            if ($rpcName === 'approve_migration_plan') {
+                $iters = 1;
             }
             // Classify with one probe invoke — invoke() does not block; only
             // responses()/wait() do. Streaming = a server-streaming (responses) or
@@ -3007,15 +3022,15 @@ it('measures per-RPC latency', function () {
             // Warm-up ONLY for idempotent reads — a warm-up on a non-idempotent mutation
             // CONSUMES the op (submit/approve a draft, rotate a token, revoke a key).
             if ($kind === 'read_only') {
-                $timeUnary($stub, $method, $hasRequest, $mkBody ? $mkBody() : $probeRequest);
+                $timeUnary($sdkClient, $rpcName, $stub, $method, $hasRequest, $mkBody ? $mkBody() : $probeRequest);
             }
             $allDurs = [];
             $okDurs = [];
             $anyOk = false;
             $firstErr = 'OK';
             $errDetail = '';
-            for ($i = 0; $i < $itersFor($kind); $i++) {
-                [$ms, $err, $detail] = $timeUnary($stub, $method, $hasRequest, $mkBody ? $mkBody() : $probeRequest);
+            for ($i = 0; $i < $iters; $i++) {
+                [$ms, $err, $detail] = $timeUnary($sdkClient, $rpcName, $stub, $method, $hasRequest, $mkBody ? $mkBody() : $probeRequest);
                 $allDurs[] = $ms;
                 if ($err === 'OK') {
                     $anyOk = true;
@@ -3052,28 +3067,28 @@ it('measures per-RPC latency', function () {
         $svcMean[$svc] = array_sum($means) / count($means);
     }
     arsort($svcMean);
+    // Failures section (BENCH_RPC_BODIES.md #1/#3): every RPC whose measured
+    // status is non-OK is a FAILURE, not just a latency sample.
+    $failed = array_values(array_filter($samples, fn ($r) => ($r['err'] ?? 'OK') !== 'OK'));
+    usort($failed, fn ($a, $b) => ($a['service'].'/'.$a['rpc']) <=> ($b['service'].'/'.$b['rpc']));
+    $fixtureKeys = $fix->keys();
     $lines = ['# UDB SDK Live Perf — PHP (Docker → host)', '',
-        'RPCs measured: '.count($samples), '',
+        'RPCs measured: '.count($samples).'   tenant='.$authedMeta->tenantId, '',
+        'Every RPC is driven down its SUCCESS path: a SEED phase first creates real, disposable entities '
+            .'(a user, role + assignment + policies, an API key, a notification, a stored file, an asset + pipeline, '
+            .'a WebRTC room/peer/track, an SdkLiveRecord row) and the harness resolves each request\'s reference/ID '
+            .'fields to those real identifiers. So the numbers reflect real handler work, not validation-rejection '
+            .'latency. The TARGET is zero failures; any residual non-OK RPC is listed under Failures for the maintainer '
+            .'to finish.', '',
         'Unary = full request/response round-trip. Streaming rows (kind=stream_open) report '
             .'stream-open latency (initiate + cancel, no response drain), NOT first-message latency.', '',
+        '## Seeded fixtures', '',
+        'Captured semantic field -> seeded value keys used to resolve request fields: '
+            .(count($fixtureKeys) > 0 ? implode(', ', $fixtureKeys) : '(none)'), '',
         '## Per-service mean latency', '', '| Service | RPCs | mean ms |', '|---|--:|--:|'];
     foreach ($svcMean as $svc => $mean) {
         $lines[] = sprintf('| %s | %d | %.2f |', $svc, count($bySvc[$svc]), $mean);
     }
-    usort($samples, fn ($a, $b) => $b['p99'] <=> $a['p99']);
-    $lines = array_merge($lines, ['', '## Slowest 20 by p99', '', '| RPC | kind | err | p50 ms | p99 ms | mean ms |', '|---|---|---|--:|--:|--:|']);
-    foreach (array_slice($samples, 0, 20) as $row) {
-        $lines[] = sprintf('| %s/%s | %s | %s | %.2f | %.2f | %.2f |', $row['service'], $row['rpc'], $row['kind'], $row['err'] ?? 'OK', $row['p50'], $row['p99'], $row['mean']);
-    }
-    usort($samples, fn ($a, $b) => ($a['service'] === $b['service']) ? ($a['rpc'] <=> $b['rpc']) : ($a['service'] <=> $b['service']));
-    $lines = array_merge($lines, ['', '## Full per-RPC table (sorted by service, then RPC)', '', '| Service | RPC | kind | err | p50 ms | p99 ms | mean ms | iters |', '|---|---|---|---|--:|--:|--:|--:|']);
-    foreach ($samples as $row) {
-        $lines[] = sprintf('| %s | %s | %s | %s | %.2f | %.2f | %.2f | %d |', $row['service'], $row['rpc'], $row['kind'], $row['err'] ?? 'OK', $row['p50'], $row['p99'], $row['mean'], $row['iters'] ?? 0);
-    }
-    // Failures section (BENCH_RPC_BODIES.md #1/#3): every RPC whose last iteration
-    // returned a non-OK gRPC status is a FAILURE, not a latency sample.
-    $failed = array_values(array_filter($samples, fn ($r) => ($r['err'] ?? 'OK') !== 'OK'));
-    usort($failed, fn ($a, $b) => ($a['service'].'/'.$a['rpc']) <=> ($b['service'].'/'.$b['rpc']));
     $lines = array_merge($lines, ['', '## Failures ('.count($failed).')', '']);
     if (count($failed) === 0) {
         $lines[] = 'No RPC returned a non-OK gRPC status.';
@@ -3085,6 +3100,16 @@ it('measures per-RPC latency', function () {
         foreach ($failed as $row) {
             $lines[] = sprintf('| %s/%s | %s | %s | %.2f |', $row['service'], $row['rpc'], $row['kind'], $row['err'], $row['p99']);
         }
+    }
+    usort($samples, fn ($a, $b) => $b['p99'] <=> $a['p99']);
+    $lines = array_merge($lines, ['', '## Slowest 20 by p99', '', '| RPC | kind | err | p50 ms | p99 ms | mean ms |', '|---|---|---|--:|--:|--:|']);
+    foreach (array_slice($samples, 0, 20) as $row) {
+        $lines[] = sprintf('| %s/%s | %s | %s | %.2f | %.2f | %.2f |', $row['service'], $row['rpc'], $row['kind'], $row['err'] ?? 'OK', $row['p50'], $row['p99'], $row['mean']);
+    }
+    usort($samples, fn ($a, $b) => ($a['service'] === $b['service']) ? ($a['rpc'] <=> $b['rpc']) : ($a['service'] <=> $b['service']));
+    $lines = array_merge($lines, ['', '## Full per-RPC table (sorted by service, then RPC)', '', '| Service | RPC | kind | err | p50 ms | p99 ms | mean ms | iters |', '|---|---|---|---|--:|--:|--:|--:|']);
+    foreach ($samples as $row) {
+        $lines[] = sprintf('| %s | %s | %s | %s | %.2f | %.2f | %.2f | %d |', $row['service'], $row['rpc'], $row['kind'], $row['err'] ?? 'OK', $row['p50'], $row['p99'], $row['mean'], $row['iters'] ?? 0);
     }
     file_put_contents('perf_report_php.md', implode("\n", $lines)."\n");
     $seedCleanup();

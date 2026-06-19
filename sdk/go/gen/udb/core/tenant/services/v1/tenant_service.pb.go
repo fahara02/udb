@@ -795,36 +795,36 @@ const file_udb_core_tenant_services_v1_tenant_service_proto_rawDesc = "" +
 	"\x04type\x18\x04 \x01(\tR\x04type:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06tenantP\x01\"\x89\x01\n" +
 	"\x1aUpdateTenantConfigResponse\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\x122\n" +
-	"\x05error\x18\x02 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06tenantP\x012\xf0\x1f\n" +
-	"\rTenantService\x12\xd9\x04\n" +
-	"\fCreateTenant\x120.udb.core.tenant.services.v1.CreateTenantRequest\x1a1.udb.core.tenant.services.v1.CreateTenantResponse\"\xe3\x03\xca\xf3\x18:\b\x02\x1a\x18udb:tenant:create-tenant \x01J\x02\x01\x02j\x13tenant.CreateTenant\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18(\b\x01\x12\rcreate_tenant\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06tenantP\x01\xe2\xf3\x18\xb8\x01\n" +
+	"\x05error\x18\x02 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06tenantP\x012\xc9 \n" +
+	"\rTenantService\x12\xe7\x04\n" +
+	"\fCreateTenant\x120.udb.core.tenant.services.v1.CreateTenantRequest\x1a1.udb.core.tenant.services.v1.CreateTenantResponse\"\xf1\x03\xca\xf3\x18:\b\x02\x1a\x18udb:tenant:create-tenant \x01J\x02\x01\x02j\x13tenant.CreateTenant\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x186\b\x01\x12\rcreate_tenant\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06tenantP\x01Z\fcreateTenant\xe2\xf3\x18\xb8\x01\n" +
 	"\x06tenant\x12\x11udb/native/tenant\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"+udb.native.tenant.create_tenant.boilerplate*\rcreate_tenant2\n" +
 	"udb_tenant:\x06tenantJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18P\n" +
 	"\x13tenant.CreateTenant\x12\rtenant.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18@\n" +
-	"\x06tenant\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02\x10:\x01*\"\v/v1/tenants\x12\xc7\x04\n" +
-	"\tGetTenant\x12-.udb.core.tenant.services.v1.GetTenantRequest\x1a..udb.core.tenant.services.v1.GetTenantResponse\"\xda\x03\xca\xf3\x184\b\x02\x1a\x15udb:tenant:get-tenant \x01J\x02\x01\x02j\x10tenant.GetTenant\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18%\b\x01\x12\n" +
-	"get_tenant\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06tenantP\x01\xe2\xf3\x18\xb2\x01\n" +
+	"\x06tenant\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02\x10:\x01*\"\v/v1/tenants\x12\xd2\x04\n" +
+	"\tGetTenant\x12-.udb.core.tenant.services.v1.GetTenantRequest\x1a..udb.core.tenant.services.v1.GetTenantResponse\"\xe5\x03\xca\xf3\x184\b\x02\x1a\x15udb:tenant:get-tenant \x01J\x02\x01\x02j\x10tenant.GetTenant\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x180\b\x01\x12\n" +
+	"get_tenant\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06tenantP\x01Z\tgetTenant\xe2\xf3\x18\xb2\x01\n" +
 	"\x06tenant\x12\x11udb/native/tenant\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"(udb.native.tenant.get_tenant.boilerplate*\n" +
 	"get_tenant2\n" +
 	"udb_tenant:\x06tenantJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18M\n" +
 	"\x10tenant.GetTenant\x12\rtenant.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18@\n" +
-	"\x06tenant\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02\x19\x12\x17/v1/tenants/{tenant_id}\x12\xcd\x04\n" +
-	"\vListTenants\x12/.udb.core.tenant.services.v1.ListTenantsRequest\x1a0.udb.core.tenant.services.v1.ListTenantsResponse\"\xda\x03\xca\xf3\x188\b\x02\x1a\x17udb:tenant:list-tenants \x01J\x02\x01\x02j\x12tenant.ListTenants\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18'\b\x01\x12\flist_tenants\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06tenantP\x01\xe2\xf3\x18\xb6\x01\n" +
+	"\x06tenant\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02\x19\x12\x17/v1/tenants/{tenant_id}\x12\xda\x04\n" +
+	"\vListTenants\x12/.udb.core.tenant.services.v1.ListTenantsRequest\x1a0.udb.core.tenant.services.v1.ListTenantsResponse\"\xe7\x03\xca\xf3\x188\b\x02\x1a\x17udb:tenant:list-tenants \x01J\x02\x01\x02j\x12tenant.ListTenants\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x184\b\x01\x12\flist_tenants\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06tenantP\x01Z\vlistTenants\xe2\xf3\x18\xb6\x01\n" +
 	"\x06tenant\x12\x11udb/native/tenant\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"*udb.native.tenant.list_tenants.boilerplate*\flist_tenants2\n" +
 	"udb_tenant:\x06tenantJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18O\n" +
 	"\x12tenant.ListTenants\x12\rtenant.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18@\n" +
-	"\x06tenant\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02\r\x12\v/v1/tenants\x12\xe5\x04\n" +
-	"\fUpdateTenant\x120.udb.core.tenant.services.v1.UpdateTenantRequest\x1a1.udb.core.tenant.services.v1.UpdateTenantResponse\"\xef\x03\xca\xf3\x18:\b\x02\x1a\x18udb:tenant:update-tenant \x01J\x02\x01\x02j\x13tenant.UpdateTenant\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18(\b\x01\x12\rupdate_tenant\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06tenantP\x01\xe2\xf3\x18\xb8\x01\n" +
+	"\x06tenant\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02\r\x12\v/v1/tenants\x12\xf3\x04\n" +
+	"\fUpdateTenant\x120.udb.core.tenant.services.v1.UpdateTenantRequest\x1a1.udb.core.tenant.services.v1.UpdateTenantResponse\"\xfd\x03\xca\xf3\x18:\b\x02\x1a\x18udb:tenant:update-tenant \x01J\x02\x01\x02j\x13tenant.UpdateTenant\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x186\b\x01\x12\rupdate_tenant\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06tenantP\x01Z\fupdateTenant\xe2\xf3\x18\xb8\x01\n" +
 	"\x06tenant\x12\x11udb/native/tenant\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"+udb.native.tenant.update_tenant.boilerplate*\rupdate_tenant2\n" +
 	"udb_tenant:\x06tenantJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18P\n" +
 	"\x13tenant.UpdateTenant\x12\rtenant.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18@\n" +
-	"\x06tenant\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02\x1c:\x01*2\x17/v1/tenants/{tenant_id}\x12\x88\x05\n" +
-	"\x0fGetTenantConfig\x123.udb.core.tenant.services.v1.GetTenantConfigRequest\x1a4.udb.core.tenant.services.v1.GetTenantConfigResponse\"\x89\x04\xca\xf3\x18A\b\x02\x1a\x1cudb:tenant:get-tenant-config \x01J\x02\x01\x02j\x16tenant.GetTenantConfig\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18,\b\x01\x12\x11get_tenant_config\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06tenantP\x01\xe2\xf3\x18\xc0\x01\n" +
+	"\x06tenant\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02\x1c:\x01*2\x17/v1/tenants/{tenant_id}\x12\x99\x05\n" +
+	"\x0fGetTenantConfig\x123.udb.core.tenant.services.v1.GetTenantConfigRequest\x1a4.udb.core.tenant.services.v1.GetTenantConfigResponse\"\x9a\x04\xca\xf3\x18A\b\x02\x1a\x1cudb:tenant:get-tenant-config \x01J\x02\x01\x02j\x16tenant.GetTenantConfig\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18=\b\x01\x12\x11get_tenant_config\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06tenantP\x01Z\x0fgetTenantConfig\xe2\xf3\x18\xc0\x01\n" +
 	"\x06tenant\x12\x11udb/native/tenant\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"/udb.native.tenant.get_tenant_config.boilerplate*\x11get_tenant_config2\n" +
 	"udb_tenant:\x06tenantJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18S\n" +
 	"\x16tenant.GetTenantConfig\x12\rtenant.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18@\n" +
-	"\x06tenant\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02 \x12\x1e/v1/tenants/{tenant_id}/config\x12\xa6\x05\n" +
-	"\x12UpdateTenantConfig\x126.udb.core.tenant.services.v1.UpdateTenantConfigRequest\x1a7.udb.core.tenant.services.v1.UpdateTenantConfigResponse\"\x9e\x04\xca\xf3\x18G\b\x02\x1a\x1fudb:tenant:update-tenant-config \x01J\x02\x01\x02j\x19tenant.UpdateTenantConfig\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18/\b\x01\x12\x14update_tenant_config\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06tenantP\x01\xe2\xf3\x18\xc6\x01\n" +
+	"\x06tenant\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02 \x12\x1e/v1/tenants/{tenant_id}/config\x12\xba\x05\n" +
+	"\x12UpdateTenantConfig\x126.udb.core.tenant.services.v1.UpdateTenantConfigRequest\x1a7.udb.core.tenant.services.v1.UpdateTenantConfigResponse\"\xb2\x04\xca\xf3\x18G\b\x02\x1a\x1fudb:tenant:update-tenant-config \x01J\x02\x01\x02j\x19tenant.UpdateTenantConfig\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18C\b\x01\x12\x14update_tenant_config\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06tenantP\x01Z\x12updateTenantConfig\xe2\xf3\x18\xc6\x01\n" +
 	"\x06tenant\x12\x11udb/native/tenant\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"2udb.native.tenant.update_tenant_config.boilerplate*\x14update_tenant_config2\n" +
 	"udb_tenant:\x06tenantJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18V\n" +
 	"\x19tenant.UpdateTenantConfig\x12\rtenant.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18@\n" +

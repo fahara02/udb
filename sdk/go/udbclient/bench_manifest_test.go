@@ -8,7 +8,7 @@ package udbclient
 // documented in data_broker.md: col1=done, col2=RPC, col3=op_kind,
 // col4=request msg, col5=valid body, col6=notes. The four language bench-body
 // consumers (Go loadBenchBodyRows, TS loadBenchBodyRows, PHP loadBenchBodyRows,
-// Python bench_body_rows) all key on col2/col5 and must total exactly 265 rows.
+// Python bench_body_rows) all key on col2/col5 and must match AllRPCs.
 //
 // HONEST RESIDUAL (11.1.2.2/11.1.2.3 decision): the manifest col5 body cell is
 // free-form markdown prose (e.g. `username`=`<seed:username>`, `password`="X"),
@@ -43,10 +43,6 @@ const benchBodyManifestDir = "../../../docs/bench-bodies"
 // fresh markdown parse, so the two can never diverge.
 const benchBodiesJSONPath = "../../../docs/generated/bench-bodies.json"
 
-// expectedBenchBodyRows is the contract total (chapter 11.1.5.1). It must equal
-// the live RPC surface (len(AllRPCs)); both are asserted to match below.
-const expectedBenchBodyRows = 265
-
 // benchBodyEntry mirrors one object in docs/generated/bench-bodies.json.
 type benchBodyEntry struct {
 	RPC        string `json:"rpc"`
@@ -73,8 +69,8 @@ func loadBenchBodyEntries(t *testing.T) []benchBodyEntry {
 // loadBenchBodyRows reads the generated docs/generated/bench-bodies.json and maps
 // the bare RPC method name (rpc's last dotted segment — webrtc uses
 // `Service.Method`, others use a bare `Method`) to the body cell. It t.Fatalf's
-// unless exactly expectedBenchBodyRows rows load (11.1.5.1, the count==265
-// assertion). The bare-name keys are unique across the whole corpus (verified),
+// unless the row count matches AllRPCs. The bare-name keys are unique across the
+// whole corpus (verified),
 // so the returned map has exactly that many entries.
 func loadBenchBodyRows(t *testing.T) map[string]string {
 	t.Helper()
@@ -94,8 +90,8 @@ func loadBenchBodyRows(t *testing.T) map[string]string {
 		}
 		rows[name] = e.Body
 	}
-	if len(rows) != expectedBenchBodyRows {
-		t.Fatalf("bench-body manifest has %d rows, want exactly %d (chapter 11.1.5.1)", len(rows), expectedBenchBodyRows)
+	if len(rows) != len(AllRPCs) {
+		t.Fatalf("bench-body manifest has %d rows, want current AllRPCs count %d (chapter 14 API surface contract)", len(rows), len(AllRPCs))
 	}
 	return rows
 }
@@ -142,8 +138,8 @@ func parseBenchBodyMarkdown(t *testing.T) map[string]string {
 			total++
 		}
 	}
-	if total != expectedBenchBodyRows {
-		t.Fatalf("bench-body markdown has %d rows, want exactly %d", total, expectedBenchBodyRows)
+	if total != len(AllRPCs) {
+		t.Fatalf("bench-body markdown has %d rows, want current AllRPCs count %d", total, len(AllRPCs))
 	}
 	return rows
 }
@@ -196,15 +192,15 @@ func loadWorkflowSequence(t *testing.T, helper string) []string {
 // fresh parse of the human-editable docs/bench-bodies/*.md markdown. If markdown
 // is edited without regenerating the JSON (`node scripts/gen-bench-bodies-json.mjs`),
 // this fails — so the two views can never silently diverge. It also re-asserts
-// the 265 count on both sides.
+// the AllRPCs count on both sides.
 func TestBenchBodyManifestMatchesMarkdown(t *testing.T) {
 	fromJSON := loadBenchBodyRows(t)
 	fromMD := parseBenchBodyMarkdown(t)
-	if len(fromJSON) != expectedBenchBodyRows {
-		t.Fatalf("JSON manifest has %d rows, want %d", len(fromJSON), expectedBenchBodyRows)
+	if len(fromJSON) != len(AllRPCs) {
+		t.Fatalf("JSON manifest has %d rows, want current AllRPCs count %d", len(fromJSON), len(AllRPCs))
 	}
-	if len(fromMD) != expectedBenchBodyRows {
-		t.Fatalf("markdown manifest has %d rows, want %d", len(fromMD), expectedBenchBodyRows)
+	if len(fromMD) != len(AllRPCs) {
+		t.Fatalf("markdown manifest has %d rows, want current AllRPCs count %d", len(fromMD), len(AllRPCs))
 	}
 	var diffs []string
 	for name, body := range fromMD {
@@ -229,11 +225,8 @@ func TestBenchBodyManifestMatchesMarkdown(t *testing.T) {
 // already enforces it, but this names the assertion explicitly.
 func TestBenchBodyManifestCount(t *testing.T) {
 	rows := loadBenchBodyRows(t)
-	if len(rows) != expectedBenchBodyRows {
-		t.Fatalf("loaded %d unique bench-body rows, want %d", len(rows), expectedBenchBodyRows)
-	}
-	if len(AllRPCs) != expectedBenchBodyRows {
-		t.Fatalf("AllRPCs surface is %d but the bench-body manifest expects %d — they must match", len(AllRPCs), expectedBenchBodyRows)
+	if len(rows) != len(AllRPCs) {
+		t.Fatalf("loaded %d unique bench-body rows, want current AllRPCs count %d", len(rows), len(AllRPCs))
 	}
 }
 
@@ -274,7 +267,7 @@ func TestBenchBodyManifestMatchesSurface(t *testing.T) {
 // the spec->manifest direction of 11.1.2.2: the typed specs may not encode a body
 // the manifest does not document. (The reverse direction — every manifest row has
 // a Go body — is covered by TestLivePerfExplicitBodyCoverage, which iterates the
-// full 265-RPC surface and fails on any NO-BODY gap.)
+// full AllRPCs surface and fails on any NO-BODY gap.)
 func TestBenchBodySpecsHaveManifestRow(t *testing.T) {
 	rows := loadBenchBodyRows(t)
 	var missing []string

@@ -13,6 +13,8 @@ use super::mapping::{
 };
 use super::oidc::parse_jwks_kids;
 use super::saml;
+use super::scim::ScimGroupView;
+use super::{group_keys, scim_group_pb};
 use crate::proto::udb::core::idp::entity::v1::AssuranceLevel as A;
 use serde_json::json;
 
@@ -157,4 +159,34 @@ fn account_linking_policy_values_are_recognized() {
         evaluate_account_linking("new-unknown-mode", true),
         AccountLinkDecision::RequireExplicit
     );
+}
+
+#[test]
+fn scim_group_mapping_keys_are_the_canonical_ids() {
+    let mapping = json!({
+        "platform-admins": ["role:admin"],
+        "support": "role:support",
+    })
+    .to_string();
+    let mut keys = group_keys(&mapping);
+    keys.sort();
+    assert_eq!(keys, vec!["platform-admins", "support"]);
+    assert!(!keys.contains(&"role:admin".to_string()));
+}
+
+#[test]
+fn scim_group_pb_uses_mapping_key_as_id_and_location() {
+    let group = scim_group_pb(
+        "platform-admins",
+        &ScimGroupView {
+            display_name: "platform-admins".to_string(),
+            members: vec!["user-1".to_string()],
+        },
+    );
+
+    assert_eq!(group.id, "platform-admins");
+    assert_eq!(group.display_name, "platform-admins");
+    let raw: serde_json::Value = serde_json::from_str(&group.raw_json).expect("SCIM group JSON");
+    assert_eq!(raw["id"], "platform-admins");
+    assert_eq!(raw["meta"]["location"], "/scim/v2/Groups/platform-admins");
 }

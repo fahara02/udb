@@ -476,7 +476,7 @@ public sealed partial class GeneratedDataBrokerClient : GeneratedServiceBase
 public sealed partial class GeneratedAnalyticsServiceClient
 {
     /// <summary>
-    /// <c>GetExecutorPerformance</c> (unary) — forwards to <c>AnalyticsServiceClient.GetExecutorPerformanceAsync</c>.
+    /// <c>get_executor_performance</c> (unary) — forwards to <c>AnalyticsServiceClient.GetExecutorPerformanceAsync</c>.
     /// gRPC path: <c>/udb.core.analytics.services.v1.AnalyticsService/GetExecutorPerformance</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GetExecutorPerformanceAsync(
@@ -497,7 +497,7 @@ public sealed partial class GeneratedAnalyticsServiceClient
 public sealed partial class GeneratedAnalyticsServiceClient
 {
     /// <summary>
-    /// <c>GetPipelineSummary</c> (unary) — forwards to <c>AnalyticsServiceClient.GetPipelineSummaryAsync</c>.
+    /// <c>get_pipeline_summary</c> (unary) — forwards to <c>AnalyticsServiceClient.GetPipelineSummaryAsync</c>.
     /// gRPC path: <c>/udb.core.analytics.services.v1.AnalyticsService/GetPipelineSummary</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GetPipelineSummaryAsync(
@@ -518,7 +518,7 @@ public sealed partial class GeneratedAnalyticsServiceClient
 public sealed partial class GeneratedAnalyticsServiceClient
 {
     /// <summary>
-    /// <c>GetReconciliationAnalytics</c> (unary) — forwards to <c>AnalyticsServiceClient.GetReconciliationAnalyticsAsync</c>.
+    /// <c>get_reconciliation_analytics</c> (unary) — forwards to <c>AnalyticsServiceClient.GetReconciliationAnalyticsAsync</c>.
     /// gRPC path: <c>/udb.core.analytics.services.v1.AnalyticsService/GetReconciliationAnalytics</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GetReconciliationAnalyticsAsync(
@@ -539,7 +539,7 @@ public sealed partial class GeneratedAnalyticsServiceClient
 public sealed partial class GeneratedAnalyticsServiceClient
 {
     /// <summary>
-    /// <c>GetSlaCompliance</c> (unary) — forwards to <c>AnalyticsServiceClient.GetSlaComplianceAsync</c>.
+    /// <c>get_sla_compliance</c> (unary) — forwards to <c>AnalyticsServiceClient.GetSlaComplianceAsync</c>.
     /// gRPC path: <c>/udb.core.analytics.services.v1.AnalyticsService/GetSlaCompliance</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GetSlaComplianceAsync(
@@ -560,7 +560,7 @@ public sealed partial class GeneratedAnalyticsServiceClient
 public sealed partial class GeneratedAnalyticsServiceClient
 {
     /// <summary>
-    /// <c>GetThroughput</c> (unary) — forwards to <c>AnalyticsServiceClient.GetThroughputAsync</c>.
+    /// <c>get_throughput</c> (unary) — forwards to <c>AnalyticsServiceClient.GetThroughputAsync</c>.
     /// gRPC path: <c>/udb.core.analytics.services.v1.AnalyticsService/GetThroughput</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GetThroughputAsync(
@@ -581,7 +581,7 @@ public sealed partial class GeneratedAnalyticsServiceClient
 public sealed partial class GeneratedAnalyticsServiceClient
 {
     /// <summary>
-    /// <c>RecordPipelineMetric</c> (unary) — forwards to <c>AnalyticsServiceClient.RecordPipelineMetricAsync</c>.
+    /// <c>record_pipeline_metric</c> (unary) — forwards to <c>AnalyticsServiceClient.RecordPipelineMetricAsync</c>.
     /// gRPC path: <c>/udb.core.analytics.services.v1.AnalyticsService/RecordPipelineMetric</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> RecordPipelineMetricAsync(
@@ -602,7 +602,7 @@ public sealed partial class GeneratedAnalyticsServiceClient
 public sealed partial class GeneratedAnalyticsServiceClient
 {
     /// <summary>
-    /// <c>TriggerSnapshot</c> (unary) — forwards to <c>AnalyticsServiceClient.TriggerSnapshotAsync</c>.
+    /// <c>trigger_snapshot</c> (unary) — forwards to <c>AnalyticsServiceClient.TriggerSnapshotAsync</c>.
     /// gRPC path: <c>/udb.core.analytics.services.v1.AnalyticsService/TriggerSnapshot</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> TriggerSnapshotAsync(
@@ -623,7 +623,7 @@ public sealed partial class GeneratedAnalyticsServiceClient
 public sealed partial class GeneratedApiKeyServiceClient
 {
     /// <summary>
-    /// <c>CreateApiKey</c> (unary) — forwards to <c>ApiKeyServiceClient.CreateApiKeyAsync</c>.
+    /// <c>create_api_key</c> (unary) — forwards to <c>ApiKeyServiceClient.CreateApiKeyAsync</c>.
     /// gRPC path: <c>/udb.core.apikey.services.v1.ApiKeyService/CreateApiKey</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> CreateApiKeyAsync(
@@ -644,7 +644,7 @@ public sealed partial class GeneratedApiKeyServiceClient
 public sealed partial class GeneratedApiKeyServiceClient
 {
     /// <summary>
-    /// <c>EmergencyRevokeApiKeys</c> (unary) — forwards to <c>ApiKeyServiceClient.EmergencyRevokeApiKeysAsync</c>.
+    /// <c>emergency_revoke_api_keys</c> (unary) — forwards to <c>ApiKeyServiceClient.EmergencyRevokeApiKeysAsync</c>.
     /// gRPC path: <c>/udb.core.apikey.services.v1.ApiKeyService/EmergencyRevokeApiKeys</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> EmergencyRevokeApiKeysAsync(
@@ -665,7 +665,7 @@ public sealed partial class GeneratedApiKeyServiceClient
 public sealed partial class GeneratedApiKeyServiceClient
 {
     /// <summary>
-    /// <c>GetApiKey</c> (unary) — forwards to <c>ApiKeyServiceClient.GetApiKeyAsync</c>.
+    /// <c>get_api_key</c> (unary) — forwards to <c>ApiKeyServiceClient.GetApiKeyAsync</c>.
     /// gRPC path: <c>/udb.core.apikey.services.v1.ApiKeyService/GetApiKey</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GetApiKeyAsync(
@@ -686,7 +686,7 @@ public sealed partial class GeneratedApiKeyServiceClient
 public sealed partial class GeneratedApiKeyServiceClient
 {
     /// <summary>
-    /// <c>GetApiKeyUsageStats</c> (unary) — forwards to <c>ApiKeyServiceClient.GetApiKeyUsageStatsAsync</c>.
+    /// <c>get_api_key_usage_stats</c> (unary) — forwards to <c>ApiKeyServiceClient.GetApiKeyUsageStatsAsync</c>.
     /// gRPC path: <c>/udb.core.apikey.services.v1.ApiKeyService/GetApiKeyUsageStats</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GetApiKeyUsageStatsAsync(
@@ -707,7 +707,7 @@ public sealed partial class GeneratedApiKeyServiceClient
 public sealed partial class GeneratedApiKeyServiceClient
 {
     /// <summary>
-    /// <c>ListApiKeys</c> (unary) — forwards to <c>ApiKeyServiceClient.ListApiKeysAsync</c>.
+    /// <c>list_api_keys</c> (unary) — forwards to <c>ApiKeyServiceClient.ListApiKeysAsync</c>.
     /// gRPC path: <c>/udb.core.apikey.services.v1.ApiKeyService/ListApiKeys</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ListApiKeysAsync(
@@ -728,7 +728,7 @@ public sealed partial class GeneratedApiKeyServiceClient
 public sealed partial class GeneratedApiKeyServiceClient
 {
     /// <summary>
-    /// <c>RevokeApiKey</c> (unary) — forwards to <c>ApiKeyServiceClient.RevokeApiKeyAsync</c>.
+    /// <c>revoke_api_key</c> (unary) — forwards to <c>ApiKeyServiceClient.RevokeApiKeyAsync</c>.
     /// gRPC path: <c>/udb.core.apikey.services.v1.ApiKeyService/RevokeApiKey</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> RevokeApiKeyAsync(
@@ -749,7 +749,7 @@ public sealed partial class GeneratedApiKeyServiceClient
 public sealed partial class GeneratedApiKeyServiceClient
 {
     /// <summary>
-    /// <c>RotateApiKey</c> (unary) — forwards to <c>ApiKeyServiceClient.RotateApiKeyAsync</c>.
+    /// <c>rotate_api_key</c> (unary) — forwards to <c>ApiKeyServiceClient.RotateApiKeyAsync</c>.
     /// gRPC path: <c>/udb.core.apikey.services.v1.ApiKeyService/RotateApiKey</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> RotateApiKeyAsync(
@@ -770,7 +770,7 @@ public sealed partial class GeneratedApiKeyServiceClient
 public sealed partial class GeneratedApiKeyServiceClient
 {
     /// <summary>
-    /// <c>UpdateApiKey</c> (unary) — forwards to <c>ApiKeyServiceClient.UpdateApiKeyAsync</c>.
+    /// <c>update_api_key</c> (unary) — forwards to <c>ApiKeyServiceClient.UpdateApiKeyAsync</c>.
     /// gRPC path: <c>/udb.core.apikey.services.v1.ApiKeyService/UpdateApiKey</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> UpdateApiKeyAsync(
@@ -791,7 +791,7 @@ public sealed partial class GeneratedApiKeyServiceClient
 public sealed partial class GeneratedApiKeyServiceClient
 {
     /// <summary>
-    /// <c>ValidateApiKey</c> (unary) — forwards to <c>ApiKeyServiceClient.ValidateApiKeyAsync</c>.
+    /// <c>validate_api_key</c> (unary) — forwards to <c>ApiKeyServiceClient.ValidateApiKeyAsync</c>.
     /// gRPC path: <c>/udb.core.apikey.services.v1.ApiKeyService/ValidateApiKey</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ValidateApiKeyAsync(
@@ -812,7 +812,7 @@ public sealed partial class GeneratedApiKeyServiceClient
 public sealed partial class GeneratedAssetServiceClient
 {
     /// <summary>
-    /// <c>CompleteStep</c> (unary) — forwards to <c>AssetServiceClient.CompleteStepAsync</c>.
+    /// <c>complete_step</c> (unary) — forwards to <c>AssetServiceClient.CompleteStepAsync</c>.
     /// gRPC path: <c>/udb.core.asset.services.v1.AssetService/CompleteStep</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> CompleteStepAsync(
@@ -833,7 +833,7 @@ public sealed partial class GeneratedAssetServiceClient
 public sealed partial class GeneratedAssetServiceClient
 {
     /// <summary>
-    /// <c>CreatePipelineDefinition</c> (unary) — forwards to <c>AssetServiceClient.CreatePipelineDefinitionAsync</c>.
+    /// <c>create_pipeline_definition</c> (unary) — forwards to <c>AssetServiceClient.CreatePipelineDefinitionAsync</c>.
     /// gRPC path: <c>/udb.core.asset.services.v1.AssetService/CreatePipelineDefinition</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> CreatePipelineDefinitionAsync(
@@ -854,7 +854,7 @@ public sealed partial class GeneratedAssetServiceClient
 public sealed partial class GeneratedAssetServiceClient
 {
     /// <summary>
-    /// <c>GetAsset</c> (unary) — forwards to <c>AssetServiceClient.GetAssetAsync</c>.
+    /// <c>get_asset</c> (unary) — forwards to <c>AssetServiceClient.GetAssetAsync</c>.
     /// gRPC path: <c>/udb.core.asset.services.v1.AssetService/GetAsset</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GetAssetAsync(
@@ -875,7 +875,7 @@ public sealed partial class GeneratedAssetServiceClient
 public sealed partial class GeneratedAssetServiceClient
 {
     /// <summary>
-    /// <c>GetPipeline</c> (unary) — forwards to <c>AssetServiceClient.GetPipelineAsync</c>.
+    /// <c>get_pipeline</c> (unary) — forwards to <c>AssetServiceClient.GetPipelineAsync</c>.
     /// gRPC path: <c>/udb.core.asset.services.v1.AssetService/GetPipeline</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GetPipelineAsync(
@@ -896,7 +896,7 @@ public sealed partial class GeneratedAssetServiceClient
 public sealed partial class GeneratedAssetServiceClient
 {
     /// <summary>
-    /// <c>GetPipelineDefinition</c> (unary) — forwards to <c>AssetServiceClient.GetPipelineDefinitionAsync</c>.
+    /// <c>get_pipeline_definition</c> (unary) — forwards to <c>AssetServiceClient.GetPipelineDefinitionAsync</c>.
     /// gRPC path: <c>/udb.core.asset.services.v1.AssetService/GetPipelineDefinition</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GetPipelineDefinitionAsync(
@@ -917,7 +917,7 @@ public sealed partial class GeneratedAssetServiceClient
 public sealed partial class GeneratedAssetServiceClient
 {
     /// <summary>
-    /// <c>ListAssets</c> (unary) — forwards to <c>AssetServiceClient.ListAssetsAsync</c>.
+    /// <c>list_assets</c> (unary) — forwards to <c>AssetServiceClient.ListAssetsAsync</c>.
     /// gRPC path: <c>/udb.core.asset.services.v1.AssetService/ListAssets</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ListAssetsAsync(
@@ -938,7 +938,7 @@ public sealed partial class GeneratedAssetServiceClient
 public sealed partial class GeneratedAssetServiceClient
 {
     /// <summary>
-    /// <c>RegisterAsset</c> (unary) — forwards to <c>AssetServiceClient.RegisterAssetAsync</c>.
+    /// <c>register_asset</c> (unary) — forwards to <c>AssetServiceClient.RegisterAssetAsync</c>.
     /// gRPC path: <c>/udb.core.asset.services.v1.AssetService/RegisterAsset</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> RegisterAssetAsync(
@@ -959,7 +959,7 @@ public sealed partial class GeneratedAssetServiceClient
 public sealed partial class GeneratedAssetServiceClient
 {
     /// <summary>
-    /// <c>StartPipeline</c> (unary) — forwards to <c>AssetServiceClient.StartPipelineAsync</c>.
+    /// <c>start_pipeline</c> (unary) — forwards to <c>AssetServiceClient.StartPipelineAsync</c>.
     /// gRPC path: <c>/udb.core.asset.services.v1.AssetService/StartPipeline</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> StartPipelineAsync(
@@ -980,7 +980,7 @@ public sealed partial class GeneratedAssetServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>AdminResetMfa</c> (unary) — forwards to <c>AuthnServiceClient.AdminResetMfaAsync</c>.
+    /// <c>admin_reset_mfa</c> (unary) — forwards to <c>AuthnServiceClient.AdminResetMfaAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/AdminResetMfa</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> AdminResetMfaAsync(
@@ -1001,7 +1001,7 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>AdminResetPassword</c> (unary) — forwards to <c>AuthnServiceClient.AdminResetPasswordAsync</c>.
+    /// <c>admin_reset_password</c> (unary) — forwards to <c>AuthnServiceClient.AdminResetPasswordAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/AdminResetPassword</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> AdminResetPasswordAsync(
@@ -1022,7 +1022,7 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>AdminRevokeAllTenantSessions</c> (unary) — forwards to <c>AuthnServiceClient.AdminRevokeAllTenantSessionsAsync</c>.
+    /// <c>admin_revoke_all_tenant_sessions</c> (unary) — forwards to <c>AuthnServiceClient.AdminRevokeAllTenantSessionsAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/AdminRevokeAllTenantSessions</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> AdminRevokeAllTenantSessionsAsync(
@@ -1043,7 +1043,7 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>AdminRevokeAllUserSessions</c> (unary) — forwards to <c>AuthnServiceClient.AdminRevokeAllUserSessionsAsync</c>.
+    /// <c>admin_revoke_all_user_sessions</c> (unary) — forwards to <c>AuthnServiceClient.AdminRevokeAllUserSessionsAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/AdminRevokeAllUserSessions</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> AdminRevokeAllUserSessionsAsync(
@@ -1064,7 +1064,7 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>AdminRevokeSession</c> (unary) — forwards to <c>AuthnServiceClient.AdminRevokeSessionAsync</c>.
+    /// <c>admin_revoke_session</c> (unary) — forwards to <c>AuthnServiceClient.AdminRevokeSessionAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/AdminRevokeSession</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> AdminRevokeSessionAsync(
@@ -1085,7 +1085,7 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>Authenticate</c> (unary) — forwards to <c>AuthnServiceClient.AuthenticateAsync</c>.
+    /// <c>authenticate</c> (unary) — forwards to <c>AuthnServiceClient.AuthenticateAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/Authenticate</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> AuthenticateAsync(
@@ -1106,7 +1106,7 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>ChangePassword</c> (unary) — forwards to <c>AuthnServiceClient.ChangePasswordAsync</c>.
+    /// <c>change_password</c> (unary) — forwards to <c>AuthnServiceClient.ChangePasswordAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/ChangePassword</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ChangePasswordAsync(
@@ -1127,7 +1127,7 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>ChangeUserStatus</c> (unary) — forwards to <c>AuthnServiceClient.ChangeUserStatusAsync</c>.
+    /// <c>change_user_status</c> (unary) — forwards to <c>AuthnServiceClient.ChangeUserStatusAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/ChangeUserStatus</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ChangeUserStatusAsync(
@@ -1148,10 +1148,10 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>ConfirmMFAEnrollment</c> (unary) — forwards to <c>AuthnServiceClient.ConfirmMFAEnrollmentAsync</c>.
+    /// <c>confirm_mfaenrollment</c> (unary) — forwards to <c>AuthnServiceClient.ConfirmMFAEnrollmentAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/ConfirmMFAEnrollment</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
-    public Task<dynamic> ConfirmMFAEnrollmentAsync(
+    public Task<dynamic> ConfirmMfaenrollmentAsync(
         dynamic request,
         TimeSpan? deadline = null,
         CancellationToken cancellationToken = default)
@@ -1169,7 +1169,7 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>CreateSession</c> (unary) — forwards to <c>AuthnServiceClient.CreateSessionAsync</c>.
+    /// <c>create_session</c> (unary) — forwards to <c>AuthnServiceClient.CreateSessionAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/CreateSession</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> CreateSessionAsync(
@@ -1190,7 +1190,7 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>CreateUser</c> (unary) — forwards to <c>AuthnServiceClient.CreateUserAsync</c>.
+    /// <c>create_user</c> (unary) — forwards to <c>AuthnServiceClient.CreateUserAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/CreateUser</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> CreateUserAsync(
@@ -1211,7 +1211,7 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>DeleteWebAuthnCredential</c> (unary) — forwards to <c>AuthnServiceClient.DeleteWebAuthnCredentialAsync</c>.
+    /// <c>delete_web_authn_credential</c> (unary) — forwards to <c>AuthnServiceClient.DeleteWebAuthnCredentialAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/DeleteWebAuthnCredential</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> DeleteWebAuthnCredentialAsync(
@@ -1232,7 +1232,7 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>DisableMfaFactor</c> (unary) — forwards to <c>AuthnServiceClient.DisableMfaFactorAsync</c>.
+    /// <c>disable_mfa_factor</c> (unary) — forwards to <c>AuthnServiceClient.DisableMfaFactorAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/DisableMfaFactor</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> DisableMfaFactorAsync(
@@ -1253,7 +1253,7 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>EmergencyRevoke</c> (unary) — forwards to <c>AuthnServiceClient.EmergencyRevokeAsync</c>.
+    /// <c>emergency_revoke</c> (unary) — forwards to <c>AuthnServiceClient.EmergencyRevokeAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/EmergencyRevoke</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> EmergencyRevokeAsync(
@@ -1274,10 +1274,10 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>EnrollMFA</c> (unary) — forwards to <c>AuthnServiceClient.EnrollMFAAsync</c>.
+    /// <c>enroll_mfa</c> (unary) — forwards to <c>AuthnServiceClient.EnrollMFAAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/EnrollMFA</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
-    public Task<dynamic> EnrollMFAAsync(
+    public Task<dynamic> EnrollMfaAsync(
         dynamic request,
         TimeSpan? deadline = null,
         CancellationToken cancellationToken = default)
@@ -1295,7 +1295,7 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>FinishWebAuthnAuthentication</c> (unary) — forwards to <c>AuthnServiceClient.FinishWebAuthnAuthenticationAsync</c>.
+    /// <c>finish_web_authn_authentication</c> (unary) — forwards to <c>AuthnServiceClient.FinishWebAuthnAuthenticationAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/FinishWebAuthnAuthentication</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> FinishWebAuthnAuthenticationAsync(
@@ -1316,7 +1316,7 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>FinishWebAuthnRegistration</c> (unary) — forwards to <c>AuthnServiceClient.FinishWebAuthnRegistrationAsync</c>.
+    /// <c>finish_web_authn_registration</c> (unary) — forwards to <c>AuthnServiceClient.FinishWebAuthnRegistrationAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/FinishWebAuthnRegistration</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> FinishWebAuthnRegistrationAsync(
@@ -1337,7 +1337,7 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>ForgotPassword</c> (unary) — forwards to <c>AuthnServiceClient.ForgotPasswordAsync</c>.
+    /// <c>forgot_password</c> (unary) — forwards to <c>AuthnServiceClient.ForgotPasswordAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/ForgotPassword</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ForgotPasswordAsync(
@@ -1358,7 +1358,7 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>GenerateRecoveryCodes</c> (unary) — forwards to <c>AuthnServiceClient.GenerateRecoveryCodesAsync</c>.
+    /// <c>generate_recovery_codes</c> (unary) — forwards to <c>AuthnServiceClient.GenerateRecoveryCodesAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/GenerateRecoveryCodes</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GenerateRecoveryCodesAsync(
@@ -1379,7 +1379,7 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>GetJwks</c> (unary) — forwards to <c>AuthnServiceClient.GetJwksAsync</c>.
+    /// <c>get_jwks</c> (unary) — forwards to <c>AuthnServiceClient.GetJwksAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/GetJwks</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GetJwksAsync(
@@ -1400,7 +1400,7 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>GetMfaPolicy</c> (unary) — forwards to <c>AuthnServiceClient.GetMfaPolicyAsync</c>.
+    /// <c>get_mfa_policy</c> (unary) — forwards to <c>AuthnServiceClient.GetMfaPolicyAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/GetMfaPolicy</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GetMfaPolicyAsync(
@@ -1421,7 +1421,7 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>GetSession</c> (unary) — forwards to <c>AuthnServiceClient.GetSessionAsync</c>.
+    /// <c>get_session</c> (unary) — forwards to <c>AuthnServiceClient.GetSessionAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/GetSession</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GetSessionAsync(
@@ -1442,7 +1442,7 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>GetUser</c> (unary) — forwards to <c>AuthnServiceClient.GetUserAsync</c>.
+    /// <c>get_user</c> (unary) — forwards to <c>AuthnServiceClient.GetUserAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/GetUser</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GetUserAsync(
@@ -1463,7 +1463,7 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>IntrospectToken</c> (unary) — forwards to <c>AuthnServiceClient.IntrospectTokenAsync</c>.
+    /// <c>introspect_token</c> (unary) — forwards to <c>AuthnServiceClient.IntrospectTokenAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/IntrospectToken</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> IntrospectTokenAsync(
@@ -1484,7 +1484,7 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>IssueMfaChallenge</c> (unary) — forwards to <c>AuthnServiceClient.IssueMfaChallengeAsync</c>.
+    /// <c>issue_mfa_challenge</c> (unary) — forwards to <c>AuthnServiceClient.IssueMfaChallengeAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/IssueMfaChallenge</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> IssueMfaChallengeAsync(
@@ -1505,7 +1505,7 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>ListDevices</c> (unary) — forwards to <c>AuthnServiceClient.ListDevicesAsync</c>.
+    /// <c>list_devices</c> (unary) — forwards to <c>AuthnServiceClient.ListDevicesAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/ListDevices</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ListDevicesAsync(
@@ -1526,7 +1526,7 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>ListMfaFactors</c> (unary) — forwards to <c>AuthnServiceClient.ListMfaFactorsAsync</c>.
+    /// <c>list_mfa_factors</c> (unary) — forwards to <c>AuthnServiceClient.ListMfaFactorsAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/ListMfaFactors</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ListMfaFactorsAsync(
@@ -1547,7 +1547,7 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>ListSessions</c> (unary) — forwards to <c>AuthnServiceClient.ListSessionsAsync</c>.
+    /// <c>list_sessions</c> (unary) — forwards to <c>AuthnServiceClient.ListSessionsAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/ListSessions</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ListSessionsAsync(
@@ -1568,7 +1568,7 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>ListUsers</c> (unary) — forwards to <c>AuthnServiceClient.ListUsersAsync</c>.
+    /// <c>list_users</c> (unary) — forwards to <c>AuthnServiceClient.ListUsersAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/ListUsers</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ListUsersAsync(
@@ -1589,7 +1589,7 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>ListWebAuthnCredentials</c> (unary) — forwards to <c>AuthnServiceClient.ListWebAuthnCredentialsAsync</c>.
+    /// <c>list_web_authn_credentials</c> (unary) — forwards to <c>AuthnServiceClient.ListWebAuthnCredentialsAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/ListWebAuthnCredentials</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ListWebAuthnCredentialsAsync(
@@ -1610,7 +1610,7 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>Login</c> (unary) — forwards to <c>AuthnServiceClient.LoginAsync</c>.
+    /// <c>login</c> (unary) — forwards to <c>AuthnServiceClient.LoginAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/Login</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> LoginAsync(
@@ -1631,7 +1631,7 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>Logout</c> (unary) — forwards to <c>AuthnServiceClient.LogoutAsync</c>.
+    /// <c>logout</c> (unary) — forwards to <c>AuthnServiceClient.LogoutAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/Logout</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> LogoutAsync(
@@ -1652,7 +1652,7 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>PutMfaPolicy</c> (unary) — forwards to <c>AuthnServiceClient.PutMfaPolicyAsync</c>.
+    /// <c>put_mfa_policy</c> (unary) — forwards to <c>AuthnServiceClient.PutMfaPolicyAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/PutMfaPolicy</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> PutMfaPolicyAsync(
@@ -1673,7 +1673,7 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>RefreshSession</c> (unary) — forwards to <c>AuthnServiceClient.RefreshSessionAsync</c>.
+    /// <c>refresh_session</c> (unary) — forwards to <c>AuthnServiceClient.RefreshSessionAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/RefreshSession</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> RefreshSessionAsync(
@@ -1694,7 +1694,7 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>RefreshToken</c> (unary) — forwards to <c>AuthnServiceClient.RefreshTokenAsync</c>.
+    /// <c>refresh_token</c> (unary) — forwards to <c>AuthnServiceClient.RefreshTokenAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/RefreshToken</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> RefreshTokenAsync(
@@ -1715,7 +1715,7 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>RenamePasskey</c> (unary) — forwards to <c>AuthnServiceClient.RenamePasskeyAsync</c>.
+    /// <c>rename_passkey</c> (unary) — forwards to <c>AuthnServiceClient.RenamePasskeyAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/RenamePasskey</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> RenamePasskeyAsync(
@@ -1736,10 +1736,10 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>ResendOTP</c> (unary) — forwards to <c>AuthnServiceClient.ResendOTPAsync</c>.
+    /// <c>resend_otp</c> (unary) — forwards to <c>AuthnServiceClient.ResendOTPAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/ResendOTP</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
-    public Task<dynamic> ResendOTPAsync(
+    public Task<dynamic> ResendOtpAsync(
         dynamic request,
         TimeSpan? deadline = null,
         CancellationToken cancellationToken = default)
@@ -1757,7 +1757,7 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>ResetPassword</c> (unary) — forwards to <c>AuthnServiceClient.ResetPasswordAsync</c>.
+    /// <c>reset_password</c> (unary) — forwards to <c>AuthnServiceClient.ResetPasswordAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/ResetPassword</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ResetPasswordAsync(
@@ -1778,7 +1778,7 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>RevokeDevice</c> (unary) — forwards to <c>AuthnServiceClient.RevokeDeviceAsync</c>.
+    /// <c>revoke_device</c> (unary) — forwards to <c>AuthnServiceClient.RevokeDeviceAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/RevokeDevice</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> RevokeDeviceAsync(
@@ -1799,7 +1799,7 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>RevokeRecoveryCodes</c> (unary) — forwards to <c>AuthnServiceClient.RevokeRecoveryCodesAsync</c>.
+    /// <c>revoke_recovery_codes</c> (unary) — forwards to <c>AuthnServiceClient.RevokeRecoveryCodesAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/RevokeRecoveryCodes</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> RevokeRecoveryCodesAsync(
@@ -1820,7 +1820,7 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>RevokeSession</c> (unary) — forwards to <c>AuthnServiceClient.RevokeSessionAsync</c>.
+    /// <c>revoke_session</c> (unary) — forwards to <c>AuthnServiceClient.RevokeSessionAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/RevokeSession</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> RevokeSessionAsync(
@@ -1841,10 +1841,10 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>SendOTP</c> (unary) — forwards to <c>AuthnServiceClient.SendOTPAsync</c>.
+    /// <c>send_otp</c> (unary) — forwards to <c>AuthnServiceClient.SendOTPAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/SendOTP</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
-    public Task<dynamic> SendOTPAsync(
+    public Task<dynamic> SendOtpAsync(
         dynamic request,
         TimeSpan? deadline = null,
         CancellationToken cancellationToken = default)
@@ -1862,7 +1862,7 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>SendPhoneVerification</c> (unary) — forwards to <c>AuthnServiceClient.SendPhoneVerificationAsync</c>.
+    /// <c>send_phone_verification</c> (unary) — forwards to <c>AuthnServiceClient.SendPhoneVerificationAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/SendPhoneVerification</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> SendPhoneVerificationAsync(
@@ -1883,7 +1883,7 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>StartWebAuthnAuthentication</c> (unary) — forwards to <c>AuthnServiceClient.StartWebAuthnAuthenticationAsync</c>.
+    /// <c>start_web_authn_authentication</c> (unary) — forwards to <c>AuthnServiceClient.StartWebAuthnAuthenticationAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/StartWebAuthnAuthentication</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> StartWebAuthnAuthenticationAsync(
@@ -1904,7 +1904,7 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>StartWebAuthnRegistration</c> (unary) — forwards to <c>AuthnServiceClient.StartWebAuthnRegistrationAsync</c>.
+    /// <c>start_web_authn_registration</c> (unary) — forwards to <c>AuthnServiceClient.StartWebAuthnRegistrationAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/StartWebAuthnRegistration</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> StartWebAuthnRegistrationAsync(
@@ -1925,7 +1925,7 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>UpdateUser</c> (unary) — forwards to <c>AuthnServiceClient.UpdateUserAsync</c>.
+    /// <c>update_user</c> (unary) — forwards to <c>AuthnServiceClient.UpdateUserAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/UpdateUser</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> UpdateUserAsync(
@@ -1946,10 +1946,10 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>ValidateCSRF</c> (unary) — forwards to <c>AuthnServiceClient.ValidateCSRFAsync</c>.
+    /// <c>validate_csrf</c> (unary) — forwards to <c>AuthnServiceClient.ValidateCSRFAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/ValidateCSRF</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
-    public Task<dynamic> ValidateCSRFAsync(
+    public Task<dynamic> ValidateCsrfAsync(
         dynamic request,
         TimeSpan? deadline = null,
         CancellationToken cancellationToken = default)
@@ -1967,7 +1967,7 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>ValidateToken</c> (unary) — forwards to <c>AuthnServiceClient.ValidateTokenAsync</c>.
+    /// <c>validate_token</c> (unary) — forwards to <c>AuthnServiceClient.ValidateTokenAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/ValidateToken</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ValidateTokenAsync(
@@ -1988,7 +1988,7 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>VerifyMfaChallenge</c> (unary) — forwards to <c>AuthnServiceClient.VerifyMfaChallengeAsync</c>.
+    /// <c>verify_mfa_challenge</c> (unary) — forwards to <c>AuthnServiceClient.VerifyMfaChallengeAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/VerifyMfaChallenge</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> VerifyMfaChallengeAsync(
@@ -2009,10 +2009,10 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
-    /// <c>VerifyOTP</c> (unary) — forwards to <c>AuthnServiceClient.VerifyOTPAsync</c>.
+    /// <c>verify_otp</c> (unary) — forwards to <c>AuthnServiceClient.VerifyOTPAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/VerifyOTP</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
-    public Task<dynamic> VerifyOTPAsync(
+    public Task<dynamic> VerifyOtpAsync(
         dynamic request,
         TimeSpan? deadline = null,
         CancellationToken cancellationToken = default)
@@ -2030,7 +2030,7 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthzServiceClient
 {
     /// <summary>
-    /// <c>ActivateCanary</c> (unary) — forwards to <c>AuthzServiceClient.ActivateCanaryAsync</c>.
+    /// <c>activate_canary</c> (unary) — forwards to <c>AuthzServiceClient.ActivateCanaryAsync</c>.
     /// gRPC path: <c>/udb.core.authz.services.v1.AuthzService/ActivateCanary</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ActivateCanaryAsync(
@@ -2051,7 +2051,7 @@ public sealed partial class GeneratedAuthzServiceClient
 public sealed partial class GeneratedAuthzServiceClient
 {
     /// <summary>
-    /// <c>ActivatePolicyVersion</c> (unary) — forwards to <c>AuthzServiceClient.ActivatePolicyVersionAsync</c>.
+    /// <c>activate_policy_version</c> (unary) — forwards to <c>AuthzServiceClient.ActivatePolicyVersionAsync</c>.
     /// gRPC path: <c>/udb.core.authz.services.v1.AuthzService/ActivatePolicyVersion</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ActivatePolicyVersionAsync(
@@ -2072,7 +2072,7 @@ public sealed partial class GeneratedAuthzServiceClient
 public sealed partial class GeneratedAuthzServiceClient
 {
     /// <summary>
-    /// <c>ApprovePolicyDraft</c> (unary) — forwards to <c>AuthzServiceClient.ApprovePolicyDraftAsync</c>.
+    /// <c>approve_policy_draft</c> (unary) — forwards to <c>AuthzServiceClient.ApprovePolicyDraftAsync</c>.
     /// gRPC path: <c>/udb.core.authz.services.v1.AuthzService/ApprovePolicyDraft</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ApprovePolicyDraftAsync(
@@ -2093,7 +2093,7 @@ public sealed partial class GeneratedAuthzServiceClient
 public sealed partial class GeneratedAuthzServiceClient
 {
     /// <summary>
-    /// <c>AssignRole</c> (unary) — forwards to <c>AuthzServiceClient.AssignRoleAsync</c>.
+    /// <c>assign_role</c> (unary) — forwards to <c>AuthzServiceClient.AssignRoleAsync</c>.
     /// gRPC path: <c>/udb.core.authz.services.v1.AuthzService/AssignRole</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> AssignRoleAsync(
@@ -2114,7 +2114,7 @@ public sealed partial class GeneratedAuthzServiceClient
 public sealed partial class GeneratedAuthzServiceClient
 {
     /// <summary>
-    /// <c>Authorize</c> (unary) — forwards to <c>AuthzServiceClient.AuthorizeAsync</c>.
+    /// <c>authorize</c> (unary) — forwards to <c>AuthzServiceClient.AuthorizeAsync</c>.
     /// gRPC path: <c>/udb.core.authz.services.v1.AuthzService/Authorize</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> AuthorizeAsync(
@@ -2135,7 +2135,7 @@ public sealed partial class GeneratedAuthzServiceClient
 public sealed partial class GeneratedAuthzServiceClient
 {
     /// <summary>
-    /// <c>BatchCheckPermissions</c> (unary) — forwards to <c>AuthzServiceClient.BatchCheckPermissionsAsync</c>.
+    /// <c>batch_check_permissions</c> (unary) — forwards to <c>AuthzServiceClient.BatchCheckPermissionsAsync</c>.
     /// gRPC path: <c>/udb.core.authz.services.v1.AuthzService/BatchCheckPermissions</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> BatchCheckPermissionsAsync(
@@ -2156,7 +2156,7 @@ public sealed partial class GeneratedAuthzServiceClient
 public sealed partial class GeneratedAuthzServiceClient
 {
     /// <summary>
-    /// <c>CheckAccess</c> (unary) — forwards to <c>AuthzServiceClient.CheckAccessAsync</c>.
+    /// <c>check_access</c> (unary) — forwards to <c>AuthzServiceClient.CheckAccessAsync</c>.
     /// gRPC path: <c>/udb.core.authz.services.v1.AuthzService/CheckAccess</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> CheckAccessAsync(
@@ -2177,7 +2177,7 @@ public sealed partial class GeneratedAuthzServiceClient
 public sealed partial class GeneratedAuthzServiceClient
 {
     /// <summary>
-    /// <c>CreatePolicyDraft</c> (unary) — forwards to <c>AuthzServiceClient.CreatePolicyDraftAsync</c>.
+    /// <c>create_policy_draft</c> (unary) — forwards to <c>AuthzServiceClient.CreatePolicyDraftAsync</c>.
     /// gRPC path: <c>/udb.core.authz.services.v1.AuthzService/CreatePolicyDraft</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> CreatePolicyDraftAsync(
@@ -2198,7 +2198,7 @@ public sealed partial class GeneratedAuthzServiceClient
 public sealed partial class GeneratedAuthzServiceClient
 {
     /// <summary>
-    /// <c>CreatePolicyRule</c> (unary) — forwards to <c>AuthzServiceClient.CreatePolicyRuleAsync</c>.
+    /// <c>create_policy_rule</c> (unary) — forwards to <c>AuthzServiceClient.CreatePolicyRuleAsync</c>.
     /// gRPC path: <c>/udb.core.authz.services.v1.AuthzService/CreatePolicyRule</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> CreatePolicyRuleAsync(
@@ -2219,7 +2219,7 @@ public sealed partial class GeneratedAuthzServiceClient
 public sealed partial class GeneratedAuthzServiceClient
 {
     /// <summary>
-    /// <c>CreateRole</c> (unary) — forwards to <c>AuthzServiceClient.CreateRoleAsync</c>.
+    /// <c>create_role</c> (unary) — forwards to <c>AuthzServiceClient.CreateRoleAsync</c>.
     /// gRPC path: <c>/udb.core.authz.services.v1.AuthzService/CreateRole</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> CreateRoleAsync(
@@ -2240,7 +2240,7 @@ public sealed partial class GeneratedAuthzServiceClient
 public sealed partial class GeneratedAuthzServiceClient
 {
     /// <summary>
-    /// <c>DeletePolicyRule</c> (unary) — forwards to <c>AuthzServiceClient.DeletePolicyRuleAsync</c>.
+    /// <c>delete_policy_rule</c> (unary) — forwards to <c>AuthzServiceClient.DeletePolicyRuleAsync</c>.
     /// gRPC path: <c>/udb.core.authz.services.v1.AuthzService/DeletePolicyRule</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> DeletePolicyRuleAsync(
@@ -2261,7 +2261,7 @@ public sealed partial class GeneratedAuthzServiceClient
 public sealed partial class GeneratedAuthzServiceClient
 {
     /// <summary>
-    /// <c>DeleteRole</c> (unary) — forwards to <c>AuthzServiceClient.DeleteRoleAsync</c>.
+    /// <c>delete_role</c> (unary) — forwards to <c>AuthzServiceClient.DeleteRoleAsync</c>.
     /// gRPC path: <c>/udb.core.authz.services.v1.AuthzService/DeleteRole</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> DeleteRoleAsync(
@@ -2282,7 +2282,7 @@ public sealed partial class GeneratedAuthzServiceClient
 public sealed partial class GeneratedAuthzServiceClient
 {
     /// <summary>
-    /// <c>DiffPolicyDraft</c> (unary) — forwards to <c>AuthzServiceClient.DiffPolicyDraftAsync</c>.
+    /// <c>diff_policy_draft</c> (unary) — forwards to <c>AuthzServiceClient.DiffPolicyDraftAsync</c>.
     /// gRPC path: <c>/udb.core.authz.services.v1.AuthzService/DiffPolicyDraft</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> DiffPolicyDraftAsync(
@@ -2303,7 +2303,7 @@ public sealed partial class GeneratedAuthzServiceClient
 public sealed partial class GeneratedAuthzServiceClient
 {
     /// <summary>
-    /// <c>ExplainPolicy</c> (unary) — forwards to <c>AuthzServiceClient.ExplainPolicyAsync</c>.
+    /// <c>explain_policy</c> (unary) — forwards to <c>AuthzServiceClient.ExplainPolicyAsync</c>.
     /// gRPC path: <c>/udb.core.authz.services.v1.AuthzService/ExplainPolicy</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ExplainPolicyAsync(
@@ -2324,7 +2324,7 @@ public sealed partial class GeneratedAuthzServiceClient
 public sealed partial class GeneratedAuthzServiceClient
 {
     /// <summary>
-    /// <c>GetAuthzRevision</c> (unary) — forwards to <c>AuthzServiceClient.GetAuthzRevisionAsync</c>.
+    /// <c>get_authz_revision</c> (unary) — forwards to <c>AuthzServiceClient.GetAuthzRevisionAsync</c>.
     /// gRPC path: <c>/udb.core.authz.services.v1.AuthzService/GetAuthzRevision</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GetAuthzRevisionAsync(
@@ -2345,7 +2345,7 @@ public sealed partial class GeneratedAuthzServiceClient
 public sealed partial class GeneratedAuthzServiceClient
 {
     /// <summary>
-    /// <c>GetCanaryStatus</c> (unary) — forwards to <c>AuthzServiceClient.GetCanaryStatusAsync</c>.
+    /// <c>get_canary_status</c> (unary) — forwards to <c>AuthzServiceClient.GetCanaryStatusAsync</c>.
     /// gRPC path: <c>/udb.core.authz.services.v1.AuthzService/GetCanaryStatus</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GetCanaryStatusAsync(
@@ -2366,7 +2366,7 @@ public sealed partial class GeneratedAuthzServiceClient
 public sealed partial class GeneratedAuthzServiceClient
 {
     /// <summary>
-    /// <c>GetNativeAccess</c> (unary) — forwards to <c>AuthzServiceClient.GetNativeAccessAsync</c>.
+    /// <c>get_native_access</c> (unary) — forwards to <c>AuthzServiceClient.GetNativeAccessAsync</c>.
     /// gRPC path: <c>/udb.core.authz.services.v1.AuthzService/GetNativeAccess</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GetNativeAccessAsync(
@@ -2387,7 +2387,7 @@ public sealed partial class GeneratedAuthzServiceClient
 public sealed partial class GeneratedAuthzServiceClient
 {
     /// <summary>
-    /// <c>GetPolicyBundle</c> (unary) — forwards to <c>AuthzServiceClient.GetPolicyBundleAsync</c>.
+    /// <c>get_policy_bundle</c> (unary) — forwards to <c>AuthzServiceClient.GetPolicyBundleAsync</c>.
     /// gRPC path: <c>/udb.core.authz.services.v1.AuthzService/GetPolicyBundle</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GetPolicyBundleAsync(
@@ -2408,7 +2408,7 @@ public sealed partial class GeneratedAuthzServiceClient
 public sealed partial class GeneratedAuthzServiceClient
 {
     /// <summary>
-    /// <c>GetPolicyRule</c> (unary) — forwards to <c>AuthzServiceClient.GetPolicyRuleAsync</c>.
+    /// <c>get_policy_rule</c> (unary) — forwards to <c>AuthzServiceClient.GetPolicyRuleAsync</c>.
     /// gRPC path: <c>/udb.core.authz.services.v1.AuthzService/GetPolicyRule</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GetPolicyRuleAsync(
@@ -2429,7 +2429,7 @@ public sealed partial class GeneratedAuthzServiceClient
 public sealed partial class GeneratedAuthzServiceClient
 {
     /// <summary>
-    /// <c>GetRole</c> (unary) — forwards to <c>AuthzServiceClient.GetRoleAsync</c>.
+    /// <c>get_role</c> (unary) — forwards to <c>AuthzServiceClient.GetRoleAsync</c>.
     /// gRPC path: <c>/udb.core.authz.services.v1.AuthzService/GetRole</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GetRoleAsync(
@@ -2450,7 +2450,7 @@ public sealed partial class GeneratedAuthzServiceClient
 public sealed partial class GeneratedAuthzServiceClient
 {
     /// <summary>
-    /// <c>InvalidatePolicyBundles</c> (unary) — forwards to <c>AuthzServiceClient.InvalidatePolicyBundlesAsync</c>.
+    /// <c>invalidate_policy_bundles</c> (unary) — forwards to <c>AuthzServiceClient.InvalidatePolicyBundlesAsync</c>.
     /// gRPC path: <c>/udb.core.authz.services.v1.AuthzService/InvalidatePolicyBundles</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> InvalidatePolicyBundlesAsync(
@@ -2471,7 +2471,7 @@ public sealed partial class GeneratedAuthzServiceClient
 public sealed partial class GeneratedAuthzServiceClient
 {
     /// <summary>
-    /// <c>LintAuthzPolicies</c> (unary) — forwards to <c>AuthzServiceClient.LintAuthzPoliciesAsync</c>.
+    /// <c>lint_authz_policies</c> (unary) — forwards to <c>AuthzServiceClient.LintAuthzPoliciesAsync</c>.
     /// gRPC path: <c>/udb.core.authz.services.v1.AuthzService/LintAuthzPolicies</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> LintAuthzPoliciesAsync(
@@ -2492,7 +2492,7 @@ public sealed partial class GeneratedAuthzServiceClient
 public sealed partial class GeneratedAuthzServiceClient
 {
     /// <summary>
-    /// <c>ListAccessDecisionAudits</c> (unary) — forwards to <c>AuthzServiceClient.ListAccessDecisionAuditsAsync</c>.
+    /// <c>list_access_decision_audits</c> (unary) — forwards to <c>AuthzServiceClient.ListAccessDecisionAuditsAsync</c>.
     /// gRPC path: <c>/udb.core.authz.services.v1.AuthzService/ListAccessDecisionAudits</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ListAccessDecisionAuditsAsync(
@@ -2513,7 +2513,7 @@ public sealed partial class GeneratedAuthzServiceClient
 public sealed partial class GeneratedAuthzServiceClient
 {
     /// <summary>
-    /// <c>ListPolicyRules</c> (unary) — forwards to <c>AuthzServiceClient.ListPolicyRulesAsync</c>.
+    /// <c>list_policy_rules</c> (unary) — forwards to <c>AuthzServiceClient.ListPolicyRulesAsync</c>.
     /// gRPC path: <c>/udb.core.authz.services.v1.AuthzService/ListPolicyRules</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ListPolicyRulesAsync(
@@ -2534,7 +2534,7 @@ public sealed partial class GeneratedAuthzServiceClient
 public sealed partial class GeneratedAuthzServiceClient
 {
     /// <summary>
-    /// <c>ListPolicyVersions</c> (unary) — forwards to <c>AuthzServiceClient.ListPolicyVersionsAsync</c>.
+    /// <c>list_policy_versions</c> (unary) — forwards to <c>AuthzServiceClient.ListPolicyVersionsAsync</c>.
     /// gRPC path: <c>/udb.core.authz.services.v1.AuthzService/ListPolicyVersions</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ListPolicyVersionsAsync(
@@ -2555,7 +2555,7 @@ public sealed partial class GeneratedAuthzServiceClient
 public sealed partial class GeneratedAuthzServiceClient
 {
     /// <summary>
-    /// <c>ListRoles</c> (unary) — forwards to <c>AuthzServiceClient.ListRolesAsync</c>.
+    /// <c>list_roles</c> (unary) — forwards to <c>AuthzServiceClient.ListRolesAsync</c>.
     /// gRPC path: <c>/udb.core.authz.services.v1.AuthzService/ListRoles</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ListRolesAsync(
@@ -2576,7 +2576,7 @@ public sealed partial class GeneratedAuthzServiceClient
 public sealed partial class GeneratedAuthzServiceClient
 {
     /// <summary>
-    /// <c>ListUserPermissions</c> (unary) — forwards to <c>AuthzServiceClient.ListUserPermissionsAsync</c>.
+    /// <c>list_user_permissions</c> (unary) — forwards to <c>AuthzServiceClient.ListUserPermissionsAsync</c>.
     /// gRPC path: <c>/udb.core.authz.services.v1.AuthzService/ListUserPermissions</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ListUserPermissionsAsync(
@@ -2597,7 +2597,7 @@ public sealed partial class GeneratedAuthzServiceClient
 public sealed partial class GeneratedAuthzServiceClient
 {
     /// <summary>
-    /// <c>ListUserRoles</c> (unary) — forwards to <c>AuthzServiceClient.ListUserRolesAsync</c>.
+    /// <c>list_user_roles</c> (unary) — forwards to <c>AuthzServiceClient.ListUserRolesAsync</c>.
     /// gRPC path: <c>/udb.core.authz.services.v1.AuthzService/ListUserRoles</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ListUserRolesAsync(
@@ -2618,7 +2618,7 @@ public sealed partial class GeneratedAuthzServiceClient
 public sealed partial class GeneratedAuthzServiceClient
 {
     /// <summary>
-    /// <c>MigrateLegacyPolicies</c> (unary) — forwards to <c>AuthzServiceClient.MigrateLegacyPoliciesAsync</c>.
+    /// <c>migrate_legacy_policies</c> (unary) — forwards to <c>AuthzServiceClient.MigrateLegacyPoliciesAsync</c>.
     /// gRPC path: <c>/udb.core.authz.services.v1.AuthzService/MigrateLegacyPolicies</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> MigrateLegacyPoliciesAsync(
@@ -2639,7 +2639,7 @@ public sealed partial class GeneratedAuthzServiceClient
 public sealed partial class GeneratedAuthzServiceClient
 {
     /// <summary>
-    /// <c>PromoteCanary</c> (unary) — forwards to <c>AuthzServiceClient.PromoteCanaryAsync</c>.
+    /// <c>promote_canary</c> (unary) — forwards to <c>AuthzServiceClient.PromoteCanaryAsync</c>.
     /// gRPC path: <c>/udb.core.authz.services.v1.AuthzService/PromoteCanary</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> PromoteCanaryAsync(
@@ -2660,7 +2660,7 @@ public sealed partial class GeneratedAuthzServiceClient
 public sealed partial class GeneratedAuthzServiceClient
 {
     /// <summary>
-    /// <c>PutAuthzPolicy</c> (unary) — forwards to <c>AuthzServiceClient.PutAuthzPolicyAsync</c>.
+    /// <c>put_authz_policy</c> (unary) — forwards to <c>AuthzServiceClient.PutAuthzPolicyAsync</c>.
     /// gRPC path: <c>/udb.core.authz.services.v1.AuthzService/PutAuthzPolicy</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> PutAuthzPolicyAsync(
@@ -2681,7 +2681,7 @@ public sealed partial class GeneratedAuthzServiceClient
 public sealed partial class GeneratedAuthzServiceClient
 {
     /// <summary>
-    /// <c>PutRelationship</c> (unary) — forwards to <c>AuthzServiceClient.PutRelationshipAsync</c>.
+    /// <c>put_relationship</c> (unary) — forwards to <c>AuthzServiceClient.PutRelationshipAsync</c>.
     /// gRPC path: <c>/udb.core.authz.services.v1.AuthzService/PutRelationship</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> PutRelationshipAsync(
@@ -2702,7 +2702,7 @@ public sealed partial class GeneratedAuthzServiceClient
 public sealed partial class GeneratedAuthzServiceClient
 {
     /// <summary>
-    /// <c>PutRoleBinding</c> (unary) — forwards to <c>AuthzServiceClient.PutRoleBindingAsync</c>.
+    /// <c>put_role_binding</c> (unary) — forwards to <c>AuthzServiceClient.PutRoleBindingAsync</c>.
     /// gRPC path: <c>/udb.core.authz.services.v1.AuthzService/PutRoleBinding</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> PutRoleBindingAsync(
@@ -2723,7 +2723,7 @@ public sealed partial class GeneratedAuthzServiceClient
 public sealed partial class GeneratedAuthzServiceClient
 {
     /// <summary>
-    /// <c>RejectPolicyDraft</c> (unary) — forwards to <c>AuthzServiceClient.RejectPolicyDraftAsync</c>.
+    /// <c>reject_policy_draft</c> (unary) — forwards to <c>AuthzServiceClient.RejectPolicyDraftAsync</c>.
     /// gRPC path: <c>/udb.core.authz.services.v1.AuthzService/RejectPolicyDraft</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> RejectPolicyDraftAsync(
@@ -2744,7 +2744,7 @@ public sealed partial class GeneratedAuthzServiceClient
 public sealed partial class GeneratedAuthzServiceClient
 {
     /// <summary>
-    /// <c>RevokeRole</c> (unary) — forwards to <c>AuthzServiceClient.RevokeRoleAsync</c>.
+    /// <c>revoke_role</c> (unary) — forwards to <c>AuthzServiceClient.RevokeRoleAsync</c>.
     /// gRPC path: <c>/udb.core.authz.services.v1.AuthzService/RevokeRole</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> RevokeRoleAsync(
@@ -2765,7 +2765,7 @@ public sealed partial class GeneratedAuthzServiceClient
 public sealed partial class GeneratedAuthzServiceClient
 {
     /// <summary>
-    /// <c>RollbackPolicyVersion</c> (unary) — forwards to <c>AuthzServiceClient.RollbackPolicyVersionAsync</c>.
+    /// <c>rollback_policy_version</c> (unary) — forwards to <c>AuthzServiceClient.RollbackPolicyVersionAsync</c>.
     /// gRPC path: <c>/udb.core.authz.services.v1.AuthzService/RollbackPolicyVersion</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> RollbackPolicyVersionAsync(
@@ -2786,7 +2786,7 @@ public sealed partial class GeneratedAuthzServiceClient
 public sealed partial class GeneratedAuthzServiceClient
 {
     /// <summary>
-    /// <c>SeedBuiltinRoles</c> (unary) — forwards to <c>AuthzServiceClient.SeedBuiltinRolesAsync</c>.
+    /// <c>seed_builtin_roles</c> (unary) — forwards to <c>AuthzServiceClient.SeedBuiltinRolesAsync</c>.
     /// gRPC path: <c>/udb.core.authz.services.v1.AuthzService/SeedBuiltinRoles</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> SeedBuiltinRolesAsync(
@@ -2807,7 +2807,7 @@ public sealed partial class GeneratedAuthzServiceClient
 public sealed partial class GeneratedAuthzServiceClient
 {
     /// <summary>
-    /// <c>SimulatePolicy</c> (unary) — forwards to <c>AuthzServiceClient.SimulatePolicyAsync</c>.
+    /// <c>simulate_policy</c> (unary) — forwards to <c>AuthzServiceClient.SimulatePolicyAsync</c>.
     /// gRPC path: <c>/udb.core.authz.services.v1.AuthzService/SimulatePolicy</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> SimulatePolicyAsync(
@@ -2828,7 +2828,7 @@ public sealed partial class GeneratedAuthzServiceClient
 public sealed partial class GeneratedAuthzServiceClient
 {
     /// <summary>
-    /// <c>SubmitPolicyDraft</c> (unary) — forwards to <c>AuthzServiceClient.SubmitPolicyDraftAsync</c>.
+    /// <c>submit_policy_draft</c> (unary) — forwards to <c>AuthzServiceClient.SubmitPolicyDraftAsync</c>.
     /// gRPC path: <c>/udb.core.authz.services.v1.AuthzService/SubmitPolicyDraft</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> SubmitPolicyDraftAsync(
@@ -2849,7 +2849,7 @@ public sealed partial class GeneratedAuthzServiceClient
 public sealed partial class GeneratedAuthzServiceClient
 {
     /// <summary>
-    /// <c>UpdatePolicyDraft</c> (unary) — forwards to <c>AuthzServiceClient.UpdatePolicyDraftAsync</c>.
+    /// <c>update_policy_draft</c> (unary) — forwards to <c>AuthzServiceClient.UpdatePolicyDraftAsync</c>.
     /// gRPC path: <c>/udb.core.authz.services.v1.AuthzService/UpdatePolicyDraft</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> UpdatePolicyDraftAsync(
@@ -2870,7 +2870,7 @@ public sealed partial class GeneratedAuthzServiceClient
 public sealed partial class GeneratedAuthzServiceClient
 {
     /// <summary>
-    /// <c>UpdateRole</c> (unary) — forwards to <c>AuthzServiceClient.UpdateRoleAsync</c>.
+    /// <c>update_role</c> (unary) — forwards to <c>AuthzServiceClient.UpdateRoleAsync</c>.
     /// gRPC path: <c>/udb.core.authz.services.v1.AuthzService/UpdateRole</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> UpdateRoleAsync(
@@ -2891,7 +2891,7 @@ public sealed partial class GeneratedAuthzServiceClient
 public sealed partial class GeneratedControlPlaneServiceClient
 {
     /// <summary>
-    /// <c>AckStatus</c> (unary) — forwards to <c>ControlPlaneServiceClient.AckStatusAsync</c>.
+    /// <c>ack_status</c> (unary) — forwards to <c>ControlPlaneServiceClient.AckStatusAsync</c>.
     /// gRPC path: <c>/udb.core.control.services.v1.ControlPlaneService/AckStatus</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> AckStatusAsync(
@@ -2912,7 +2912,7 @@ public sealed partial class GeneratedControlPlaneServiceClient
 public sealed partial class GeneratedControlPlaneServiceClient
 {
     /// <summary>
-    /// <c>GetResources</c> (unary) — forwards to <c>ControlPlaneServiceClient.GetResourcesAsync</c>.
+    /// <c>get_resources</c> (unary) — forwards to <c>ControlPlaneServiceClient.GetResourcesAsync</c>.
     /// gRPC path: <c>/udb.core.control.services.v1.ControlPlaneService/GetResources</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GetResourcesAsync(
@@ -2933,7 +2933,7 @@ public sealed partial class GeneratedControlPlaneServiceClient
 public sealed partial class GeneratedControlPlaneServiceClient
 {
     /// <summary>
-    /// <c>ListNodeStates</c> (unary) — forwards to <c>ControlPlaneServiceClient.ListNodeStatesAsync</c>.
+    /// <c>list_node_states</c> (unary) — forwards to <c>ControlPlaneServiceClient.ListNodeStatesAsync</c>.
     /// gRPC path: <c>/udb.core.control.services.v1.ControlPlaneService/ListNodeStates</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ListNodeStatesAsync(
@@ -2954,7 +2954,7 @@ public sealed partial class GeneratedControlPlaneServiceClient
 public sealed partial class GeneratedIdentityProviderServiceClient
 {
     /// <summary>
-    /// <c>CreateProvider</c> (unary) — forwards to <c>IdentityProviderServiceClient.CreateProviderAsync</c>.
+    /// <c>create_provider</c> (unary) — forwards to <c>IdentityProviderServiceClient.CreateProviderAsync</c>.
     /// gRPC path: <c>/udb.core.idp.services.v1.IdentityProviderService/CreateProvider</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> CreateProviderAsync(
@@ -2975,7 +2975,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
 public sealed partial class GeneratedIdentityProviderServiceClient
 {
     /// <summary>
-    /// <c>DisableProvider</c> (unary) — forwards to <c>IdentityProviderServiceClient.DisableProviderAsync</c>.
+    /// <c>disable_provider</c> (unary) — forwards to <c>IdentityProviderServiceClient.DisableProviderAsync</c>.
     /// gRPC path: <c>/udb.core.idp.services.v1.IdentityProviderService/DisableProvider</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> DisableProviderAsync(
@@ -2996,7 +2996,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
 public sealed partial class GeneratedIdentityProviderServiceClient
 {
     /// <summary>
-    /// <c>ForceJwksRefresh</c> (unary) — forwards to <c>IdentityProviderServiceClient.ForceJwksRefreshAsync</c>.
+    /// <c>force_jwks_refresh</c> (unary) — forwards to <c>IdentityProviderServiceClient.ForceJwksRefreshAsync</c>.
     /// gRPC path: <c>/udb.core.idp.services.v1.IdentityProviderService/ForceJwksRefresh</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ForceJwksRefreshAsync(
@@ -3017,7 +3017,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
 public sealed partial class GeneratedIdentityProviderServiceClient
 {
     /// <summary>
-    /// <c>GetProvider</c> (unary) — forwards to <c>IdentityProviderServiceClient.GetProviderAsync</c>.
+    /// <c>get_provider</c> (unary) — forwards to <c>IdentityProviderServiceClient.GetProviderAsync</c>.
     /// gRPC path: <c>/udb.core.idp.services.v1.IdentityProviderService/GetProvider</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GetProviderAsync(
@@ -3038,7 +3038,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
 public sealed partial class GeneratedIdentityProviderServiceClient
 {
     /// <summary>
-    /// <c>ImportSamlMetadata</c> (unary) — forwards to <c>IdentityProviderServiceClient.ImportSamlMetadataAsync</c>.
+    /// <c>import_saml_metadata</c> (unary) — forwards to <c>IdentityProviderServiceClient.ImportSamlMetadataAsync</c>.
     /// gRPC path: <c>/udb.core.idp.services.v1.IdentityProviderService/ImportSamlMetadata</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ImportSamlMetadataAsync(
@@ -3059,7 +3059,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
 public sealed partial class GeneratedIdentityProviderServiceClient
 {
     /// <summary>
-    /// <c>LinkIdentity</c> (unary) — forwards to <c>IdentityProviderServiceClient.LinkIdentityAsync</c>.
+    /// <c>link_identity</c> (unary) — forwards to <c>IdentityProviderServiceClient.LinkIdentityAsync</c>.
     /// gRPC path: <c>/udb.core.idp.services.v1.IdentityProviderService/LinkIdentity</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> LinkIdentityAsync(
@@ -3080,7 +3080,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
 public sealed partial class GeneratedIdentityProviderServiceClient
 {
     /// <summary>
-    /// <c>ListExternalIdentities</c> (unary) — forwards to <c>IdentityProviderServiceClient.ListExternalIdentitiesAsync</c>.
+    /// <c>list_external_identities</c> (unary) — forwards to <c>IdentityProviderServiceClient.ListExternalIdentitiesAsync</c>.
     /// gRPC path: <c>/udb.core.idp.services.v1.IdentityProviderService/ListExternalIdentities</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ListExternalIdentitiesAsync(
@@ -3101,7 +3101,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
 public sealed partial class GeneratedIdentityProviderServiceClient
 {
     /// <summary>
-    /// <c>ListProviders</c> (unary) — forwards to <c>IdentityProviderServiceClient.ListProvidersAsync</c>.
+    /// <c>list_providers</c> (unary) — forwards to <c>IdentityProviderServiceClient.ListProvidersAsync</c>.
     /// gRPC path: <c>/udb.core.idp.services.v1.IdentityProviderService/ListProviders</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ListProvidersAsync(
@@ -3122,7 +3122,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
 public sealed partial class GeneratedIdentityProviderServiceClient
 {
     /// <summary>
-    /// <c>PreviewClaimMapping</c> (unary) — forwards to <c>IdentityProviderServiceClient.PreviewClaimMappingAsync</c>.
+    /// <c>preview_claim_mapping</c> (unary) — forwards to <c>IdentityProviderServiceClient.PreviewClaimMappingAsync</c>.
     /// gRPC path: <c>/udb.core.idp.services.v1.IdentityProviderService/PreviewClaimMapping</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> PreviewClaimMappingAsync(
@@ -3143,7 +3143,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
 public sealed partial class GeneratedIdentityProviderServiceClient
 {
     /// <summary>
-    /// <c>PreviewGroupMapping</c> (unary) — forwards to <c>IdentityProviderServiceClient.PreviewGroupMappingAsync</c>.
+    /// <c>preview_group_mapping</c> (unary) — forwards to <c>IdentityProviderServiceClient.PreviewGroupMappingAsync</c>.
     /// gRPC path: <c>/udb.core.idp.services.v1.IdentityProviderService/PreviewGroupMapping</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> PreviewGroupMappingAsync(
@@ -3164,7 +3164,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
 public sealed partial class GeneratedIdentityProviderServiceClient
 {
     /// <summary>
-    /// <c>ResolveExternalIdentity</c> (unary) — forwards to <c>IdentityProviderServiceClient.ResolveExternalIdentityAsync</c>.
+    /// <c>resolve_external_identity</c> (unary) — forwards to <c>IdentityProviderServiceClient.ResolveExternalIdentityAsync</c>.
     /// gRPC path: <c>/udb.core.idp.services.v1.IdentityProviderService/ResolveExternalIdentity</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ResolveExternalIdentityAsync(
@@ -3185,7 +3185,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
 public sealed partial class GeneratedIdentityProviderServiceClient
 {
     /// <summary>
-    /// <c>SamlAcs</c> (unary) — forwards to <c>IdentityProviderServiceClient.SamlAcsAsync</c>.
+    /// <c>saml_acs</c> (unary) — forwards to <c>IdentityProviderServiceClient.SamlAcsAsync</c>.
     /// gRPC path: <c>/udb.core.idp.services.v1.IdentityProviderService/SamlAcs</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> SamlAcsAsync(
@@ -3206,7 +3206,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
 public sealed partial class GeneratedIdentityProviderServiceClient
 {
     /// <summary>
-    /// <c>ScimCreateGroup</c> (unary) — forwards to <c>IdentityProviderServiceClient.ScimCreateGroupAsync</c>.
+    /// <c>scim_create_group</c> (unary) — forwards to <c>IdentityProviderServiceClient.ScimCreateGroupAsync</c>.
     /// gRPC path: <c>/udb.core.idp.services.v1.IdentityProviderService/ScimCreateGroup</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ScimCreateGroupAsync(
@@ -3227,7 +3227,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
 public sealed partial class GeneratedIdentityProviderServiceClient
 {
     /// <summary>
-    /// <c>ScimCreateUser</c> (unary) — forwards to <c>IdentityProviderServiceClient.ScimCreateUserAsync</c>.
+    /// <c>scim_create_user</c> (unary) — forwards to <c>IdentityProviderServiceClient.ScimCreateUserAsync</c>.
     /// gRPC path: <c>/udb.core.idp.services.v1.IdentityProviderService/ScimCreateUser</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ScimCreateUserAsync(
@@ -3248,7 +3248,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
 public sealed partial class GeneratedIdentityProviderServiceClient
 {
     /// <summary>
-    /// <c>ScimDeleteGroup</c> (unary) — forwards to <c>IdentityProviderServiceClient.ScimDeleteGroupAsync</c>.
+    /// <c>scim_delete_group</c> (unary) — forwards to <c>IdentityProviderServiceClient.ScimDeleteGroupAsync</c>.
     /// gRPC path: <c>/udb.core.idp.services.v1.IdentityProviderService/ScimDeleteGroup</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ScimDeleteGroupAsync(
@@ -3269,7 +3269,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
 public sealed partial class GeneratedIdentityProviderServiceClient
 {
     /// <summary>
-    /// <c>ScimDeleteUser</c> (unary) — forwards to <c>IdentityProviderServiceClient.ScimDeleteUserAsync</c>.
+    /// <c>scim_delete_user</c> (unary) — forwards to <c>IdentityProviderServiceClient.ScimDeleteUserAsync</c>.
     /// gRPC path: <c>/udb.core.idp.services.v1.IdentityProviderService/ScimDeleteUser</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ScimDeleteUserAsync(
@@ -3290,7 +3290,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
 public sealed partial class GeneratedIdentityProviderServiceClient
 {
     /// <summary>
-    /// <c>ScimGetGroup</c> (unary) — forwards to <c>IdentityProviderServiceClient.ScimGetGroupAsync</c>.
+    /// <c>scim_get_group</c> (unary) — forwards to <c>IdentityProviderServiceClient.ScimGetGroupAsync</c>.
     /// gRPC path: <c>/udb.core.idp.services.v1.IdentityProviderService/ScimGetGroup</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ScimGetGroupAsync(
@@ -3311,7 +3311,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
 public sealed partial class GeneratedIdentityProviderServiceClient
 {
     /// <summary>
-    /// <c>ScimGetUser</c> (unary) — forwards to <c>IdentityProviderServiceClient.ScimGetUserAsync</c>.
+    /// <c>scim_get_user</c> (unary) — forwards to <c>IdentityProviderServiceClient.ScimGetUserAsync</c>.
     /// gRPC path: <c>/udb.core.idp.services.v1.IdentityProviderService/ScimGetUser</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ScimGetUserAsync(
@@ -3332,7 +3332,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
 public sealed partial class GeneratedIdentityProviderServiceClient
 {
     /// <summary>
-    /// <c>ScimListGroups</c> (unary) — forwards to <c>IdentityProviderServiceClient.ScimListGroupsAsync</c>.
+    /// <c>scim_list_groups</c> (unary) — forwards to <c>IdentityProviderServiceClient.ScimListGroupsAsync</c>.
     /// gRPC path: <c>/udb.core.idp.services.v1.IdentityProviderService/ScimListGroups</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ScimListGroupsAsync(
@@ -3353,7 +3353,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
 public sealed partial class GeneratedIdentityProviderServiceClient
 {
     /// <summary>
-    /// <c>ScimListUsers</c> (unary) — forwards to <c>IdentityProviderServiceClient.ScimListUsersAsync</c>.
+    /// <c>scim_list_users</c> (unary) — forwards to <c>IdentityProviderServiceClient.ScimListUsersAsync</c>.
     /// gRPC path: <c>/udb.core.idp.services.v1.IdentityProviderService/ScimListUsers</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ScimListUsersAsync(
@@ -3374,7 +3374,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
 public sealed partial class GeneratedIdentityProviderServiceClient
 {
     /// <summary>
-    /// <c>ScimPatchGroup</c> (unary) — forwards to <c>IdentityProviderServiceClient.ScimPatchGroupAsync</c>.
+    /// <c>scim_patch_group</c> (unary) — forwards to <c>IdentityProviderServiceClient.ScimPatchGroupAsync</c>.
     /// gRPC path: <c>/udb.core.idp.services.v1.IdentityProviderService/ScimPatchGroup</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ScimPatchGroupAsync(
@@ -3395,7 +3395,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
 public sealed partial class GeneratedIdentityProviderServiceClient
 {
     /// <summary>
-    /// <c>ScimPatchUser</c> (unary) — forwards to <c>IdentityProviderServiceClient.ScimPatchUserAsync</c>.
+    /// <c>scim_patch_user</c> (unary) — forwards to <c>IdentityProviderServiceClient.ScimPatchUserAsync</c>.
     /// gRPC path: <c>/udb.core.idp.services.v1.IdentityProviderService/ScimPatchUser</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ScimPatchUserAsync(
@@ -3416,7 +3416,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
 public sealed partial class GeneratedIdentityProviderServiceClient
 {
     /// <summary>
-    /// <c>ScimReplaceUser</c> (unary) — forwards to <c>IdentityProviderServiceClient.ScimReplaceUserAsync</c>.
+    /// <c>scim_replace_user</c> (unary) — forwards to <c>IdentityProviderServiceClient.ScimReplaceUserAsync</c>.
     /// gRPC path: <c>/udb.core.idp.services.v1.IdentityProviderService/ScimReplaceUser</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ScimReplaceUserAsync(
@@ -3437,7 +3437,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
 public sealed partial class GeneratedIdentityProviderServiceClient
 {
     /// <summary>
-    /// <c>StartSamlLogin</c> (unary) — forwards to <c>IdentityProviderServiceClient.StartSamlLoginAsync</c>.
+    /// <c>start_saml_login</c> (unary) — forwards to <c>IdentityProviderServiceClient.StartSamlLoginAsync</c>.
     /// gRPC path: <c>/udb.core.idp.services.v1.IdentityProviderService/StartSamlLogin</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> StartSamlLoginAsync(
@@ -3458,7 +3458,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
 public sealed partial class GeneratedIdentityProviderServiceClient
 {
     /// <summary>
-    /// <c>TestProviderDiscovery</c> (unary) — forwards to <c>IdentityProviderServiceClient.TestProviderDiscoveryAsync</c>.
+    /// <c>test_provider_discovery</c> (unary) — forwards to <c>IdentityProviderServiceClient.TestProviderDiscoveryAsync</c>.
     /// gRPC path: <c>/udb.core.idp.services.v1.IdentityProviderService/TestProviderDiscovery</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> TestProviderDiscoveryAsync(
@@ -3479,7 +3479,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
 public sealed partial class GeneratedIdentityProviderServiceClient
 {
     /// <summary>
-    /// <c>UnlinkIdentity</c> (unary) — forwards to <c>IdentityProviderServiceClient.UnlinkIdentityAsync</c>.
+    /// <c>unlink_identity</c> (unary) — forwards to <c>IdentityProviderServiceClient.UnlinkIdentityAsync</c>.
     /// gRPC path: <c>/udb.core.idp.services.v1.IdentityProviderService/UnlinkIdentity</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> UnlinkIdentityAsync(
@@ -3500,7 +3500,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
 public sealed partial class GeneratedIdentityProviderServiceClient
 {
     /// <summary>
-    /// <c>UpdateProvider</c> (unary) — forwards to <c>IdentityProviderServiceClient.UpdateProviderAsync</c>.
+    /// <c>update_provider</c> (unary) — forwards to <c>IdentityProviderServiceClient.UpdateProviderAsync</c>.
     /// gRPC path: <c>/udb.core.idp.services.v1.IdentityProviderService/UpdateProvider</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> UpdateProviderAsync(
@@ -3521,7 +3521,7 @@ public sealed partial class GeneratedIdentityProviderServiceClient
 public sealed partial class GeneratedNotificationServiceClient
 {
     /// <summary>
-    /// <c>GetDeliveryStats</c> (unary) — forwards to <c>NotificationServiceClient.GetDeliveryStatsAsync</c>.
+    /// <c>get_delivery_stats</c> (unary) — forwards to <c>NotificationServiceClient.GetDeliveryStatsAsync</c>.
     /// gRPC path: <c>/udb.core.notification.services.v1.NotificationService/GetDeliveryStats</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GetDeliveryStatsAsync(
@@ -3542,7 +3542,7 @@ public sealed partial class GeneratedNotificationServiceClient
 public sealed partial class GeneratedNotificationServiceClient
 {
     /// <summary>
-    /// <c>GetNotification</c> (unary) — forwards to <c>NotificationServiceClient.GetNotificationAsync</c>.
+    /// <c>get_notification</c> (unary) — forwards to <c>NotificationServiceClient.GetNotificationAsync</c>.
     /// gRPC path: <c>/udb.core.notification.services.v1.NotificationService/GetNotification</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GetNotificationAsync(
@@ -3563,7 +3563,7 @@ public sealed partial class GeneratedNotificationServiceClient
 public sealed partial class GeneratedNotificationServiceClient
 {
     /// <summary>
-    /// <c>GetPreference</c> (unary) — forwards to <c>NotificationServiceClient.GetPreferenceAsync</c>.
+    /// <c>get_preference</c> (unary) — forwards to <c>NotificationServiceClient.GetPreferenceAsync</c>.
     /// gRPC path: <c>/udb.core.notification.services.v1.NotificationService/GetPreference</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GetPreferenceAsync(
@@ -3584,7 +3584,7 @@ public sealed partial class GeneratedNotificationServiceClient
 public sealed partial class GeneratedNotificationServiceClient
 {
     /// <summary>
-    /// <c>GetTemplate</c> (unary) — forwards to <c>NotificationServiceClient.GetTemplateAsync</c>.
+    /// <c>get_template</c> (unary) — forwards to <c>NotificationServiceClient.GetTemplateAsync</c>.
     /// gRPC path: <c>/udb.core.notification.services.v1.NotificationService/GetTemplate</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GetTemplateAsync(
@@ -3605,7 +3605,7 @@ public sealed partial class GeneratedNotificationServiceClient
 public sealed partial class GeneratedNotificationServiceClient
 {
     /// <summary>
-    /// <c>ListNotifications</c> (unary) — forwards to <c>NotificationServiceClient.ListNotificationsAsync</c>.
+    /// <c>list_notifications</c> (unary) — forwards to <c>NotificationServiceClient.ListNotificationsAsync</c>.
     /// gRPC path: <c>/udb.core.notification.services.v1.NotificationService/ListNotifications</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ListNotificationsAsync(
@@ -3626,7 +3626,7 @@ public sealed partial class GeneratedNotificationServiceClient
 public sealed partial class GeneratedNotificationServiceClient
 {
     /// <summary>
-    /// <c>ListPreferences</c> (unary) — forwards to <c>NotificationServiceClient.ListPreferencesAsync</c>.
+    /// <c>list_preferences</c> (unary) — forwards to <c>NotificationServiceClient.ListPreferencesAsync</c>.
     /// gRPC path: <c>/udb.core.notification.services.v1.NotificationService/ListPreferences</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ListPreferencesAsync(
@@ -3647,7 +3647,7 @@ public sealed partial class GeneratedNotificationServiceClient
 public sealed partial class GeneratedNotificationServiceClient
 {
     /// <summary>
-    /// <c>ListTemplates</c> (unary) — forwards to <c>NotificationServiceClient.ListTemplatesAsync</c>.
+    /// <c>list_templates</c> (unary) — forwards to <c>NotificationServiceClient.ListTemplatesAsync</c>.
     /// gRPC path: <c>/udb.core.notification.services.v1.NotificationService/ListTemplates</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ListTemplatesAsync(
@@ -3668,7 +3668,7 @@ public sealed partial class GeneratedNotificationServiceClient
 public sealed partial class GeneratedNotificationServiceClient
 {
     /// <summary>
-    /// <c>RetryNotification</c> (unary) — forwards to <c>NotificationServiceClient.RetryNotificationAsync</c>.
+    /// <c>retry_notification</c> (unary) — forwards to <c>NotificationServiceClient.RetryNotificationAsync</c>.
     /// gRPC path: <c>/udb.core.notification.services.v1.NotificationService/RetryNotification</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> RetryNotificationAsync(
@@ -3689,7 +3689,7 @@ public sealed partial class GeneratedNotificationServiceClient
 public sealed partial class GeneratedNotificationServiceClient
 {
     /// <summary>
-    /// <c>SendNotification</c> (unary) — forwards to <c>NotificationServiceClient.SendNotificationAsync</c>.
+    /// <c>send_notification</c> (unary) — forwards to <c>NotificationServiceClient.SendNotificationAsync</c>.
     /// gRPC path: <c>/udb.core.notification.services.v1.NotificationService/SendNotification</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> SendNotificationAsync(
@@ -3710,7 +3710,7 @@ public sealed partial class GeneratedNotificationServiceClient
 public sealed partial class GeneratedNotificationServiceClient
 {
     /// <summary>
-    /// <c>SetPreference</c> (unary) — forwards to <c>NotificationServiceClient.SetPreferenceAsync</c>.
+    /// <c>set_preference</c> (unary) — forwards to <c>NotificationServiceClient.SetPreferenceAsync</c>.
     /// gRPC path: <c>/udb.core.notification.services.v1.NotificationService/SetPreference</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> SetPreferenceAsync(
@@ -3731,7 +3731,7 @@ public sealed partial class GeneratedNotificationServiceClient
 public sealed partial class GeneratedNotificationServiceClient
 {
     /// <summary>
-    /// <c>UpsertTemplate</c> (unary) — forwards to <c>NotificationServiceClient.UpsertTemplateAsync</c>.
+    /// <c>upsert_template</c> (unary) — forwards to <c>NotificationServiceClient.UpsertTemplateAsync</c>.
     /// gRPC path: <c>/udb.core.notification.services.v1.NotificationService/UpsertTemplate</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> UpsertTemplateAsync(
@@ -3752,7 +3752,7 @@ public sealed partial class GeneratedNotificationServiceClient
 public sealed partial class GeneratedStorageServiceClient
 {
     /// <summary>
-    /// <c>DeleteFile</c> (unary) — forwards to <c>StorageServiceClient.DeleteFileAsync</c>.
+    /// <c>delete_file</c> (unary) — forwards to <c>StorageServiceClient.DeleteFileAsync</c>.
     /// gRPC path: <c>/udb.core.storage.services.v1.StorageService/DeleteFile</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> DeleteFileAsync(
@@ -3773,7 +3773,7 @@ public sealed partial class GeneratedStorageServiceClient
 public sealed partial class GeneratedStorageServiceClient
 {
     /// <summary>
-    /// <c>FinalizeUpload</c> (unary) — forwards to <c>StorageServiceClient.FinalizeUploadAsync</c>.
+    /// <c>finalize_upload</c> (unary) — forwards to <c>StorageServiceClient.FinalizeUploadAsync</c>.
     /// gRPC path: <c>/udb.core.storage.services.v1.StorageService/FinalizeUpload</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> FinalizeUploadAsync(
@@ -3794,7 +3794,7 @@ public sealed partial class GeneratedStorageServiceClient
 public sealed partial class GeneratedStorageServiceClient
 {
     /// <summary>
-    /// <c>GetDownloadUrl</c> (unary) — forwards to <c>StorageServiceClient.GetDownloadUrlAsync</c>.
+    /// <c>get_download_url</c> (unary) — forwards to <c>StorageServiceClient.GetDownloadUrlAsync</c>.
     /// gRPC path: <c>/udb.core.storage.services.v1.StorageService/GetDownloadUrl</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GetDownloadUrlAsync(
@@ -3815,7 +3815,7 @@ public sealed partial class GeneratedStorageServiceClient
 public sealed partial class GeneratedStorageServiceClient
 {
     /// <summary>
-    /// <c>GetFile</c> (unary) — forwards to <c>StorageServiceClient.GetFileAsync</c>.
+    /// <c>get_file</c> (unary) — forwards to <c>StorageServiceClient.GetFileAsync</c>.
     /// gRPC path: <c>/udb.core.storage.services.v1.StorageService/GetFile</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GetFileAsync(
@@ -3836,7 +3836,7 @@ public sealed partial class GeneratedStorageServiceClient
 public sealed partial class GeneratedStorageServiceClient
 {
     /// <summary>
-    /// <c>ListFiles</c> (unary) — forwards to <c>StorageServiceClient.ListFilesAsync</c>.
+    /// <c>list_files</c> (unary) — forwards to <c>StorageServiceClient.ListFilesAsync</c>.
     /// gRPC path: <c>/udb.core.storage.services.v1.StorageService/ListFiles</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ListFilesAsync(
@@ -3857,7 +3857,7 @@ public sealed partial class GeneratedStorageServiceClient
 public sealed partial class GeneratedStorageServiceClient
 {
     /// <summary>
-    /// <c>RegisterUpload</c> (unary) — forwards to <c>StorageServiceClient.RegisterUploadAsync</c>.
+    /// <c>register_upload</c> (unary) — forwards to <c>StorageServiceClient.RegisterUploadAsync</c>.
     /// gRPC path: <c>/udb.core.storage.services.v1.StorageService/RegisterUpload</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> RegisterUploadAsync(
@@ -3878,7 +3878,7 @@ public sealed partial class GeneratedStorageServiceClient
 public sealed partial class GeneratedStorageServiceClient
 {
     /// <summary>
-    /// <c>UpdateFile</c> (unary) — forwards to <c>StorageServiceClient.UpdateFileAsync</c>.
+    /// <c>update_file</c> (unary) — forwards to <c>StorageServiceClient.UpdateFileAsync</c>.
     /// gRPC path: <c>/udb.core.storage.services.v1.StorageService/UpdateFile</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> UpdateFileAsync(
@@ -3899,7 +3899,7 @@ public sealed partial class GeneratedStorageServiceClient
 public sealed partial class GeneratedTenantServiceClient
 {
     /// <summary>
-    /// <c>CreateTenant</c> (unary) — forwards to <c>TenantServiceClient.CreateTenantAsync</c>.
+    /// <c>create_tenant</c> (unary) — forwards to <c>TenantServiceClient.CreateTenantAsync</c>.
     /// gRPC path: <c>/udb.core.tenant.services.v1.TenantService/CreateTenant</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> CreateTenantAsync(
@@ -3920,7 +3920,7 @@ public sealed partial class GeneratedTenantServiceClient
 public sealed partial class GeneratedTenantServiceClient
 {
     /// <summary>
-    /// <c>GetTenant</c> (unary) — forwards to <c>TenantServiceClient.GetTenantAsync</c>.
+    /// <c>get_tenant</c> (unary) — forwards to <c>TenantServiceClient.GetTenantAsync</c>.
     /// gRPC path: <c>/udb.core.tenant.services.v1.TenantService/GetTenant</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GetTenantAsync(
@@ -3941,7 +3941,7 @@ public sealed partial class GeneratedTenantServiceClient
 public sealed partial class GeneratedTenantServiceClient
 {
     /// <summary>
-    /// <c>GetTenantConfig</c> (unary) — forwards to <c>TenantServiceClient.GetTenantConfigAsync</c>.
+    /// <c>get_tenant_config</c> (unary) — forwards to <c>TenantServiceClient.GetTenantConfigAsync</c>.
     /// gRPC path: <c>/udb.core.tenant.services.v1.TenantService/GetTenantConfig</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GetTenantConfigAsync(
@@ -3962,7 +3962,7 @@ public sealed partial class GeneratedTenantServiceClient
 public sealed partial class GeneratedTenantServiceClient
 {
     /// <summary>
-    /// <c>ListTenants</c> (unary) — forwards to <c>TenantServiceClient.ListTenantsAsync</c>.
+    /// <c>list_tenants</c> (unary) — forwards to <c>TenantServiceClient.ListTenantsAsync</c>.
     /// gRPC path: <c>/udb.core.tenant.services.v1.TenantService/ListTenants</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ListTenantsAsync(
@@ -3983,7 +3983,7 @@ public sealed partial class GeneratedTenantServiceClient
 public sealed partial class GeneratedTenantServiceClient
 {
     /// <summary>
-    /// <c>UpdateTenant</c> (unary) — forwards to <c>TenantServiceClient.UpdateTenantAsync</c>.
+    /// <c>update_tenant</c> (unary) — forwards to <c>TenantServiceClient.UpdateTenantAsync</c>.
     /// gRPC path: <c>/udb.core.tenant.services.v1.TenantService/UpdateTenant</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> UpdateTenantAsync(
@@ -4004,7 +4004,7 @@ public sealed partial class GeneratedTenantServiceClient
 public sealed partial class GeneratedTenantServiceClient
 {
     /// <summary>
-    /// <c>UpdateTenantConfig</c> (unary) — forwards to <c>TenantServiceClient.UpdateTenantConfigAsync</c>.
+    /// <c>update_tenant_config</c> (unary) — forwards to <c>TenantServiceClient.UpdateTenantConfigAsync</c>.
     /// gRPC path: <c>/udb.core.tenant.services.v1.TenantService/UpdateTenantConfig</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> UpdateTenantConfigAsync(
@@ -4025,7 +4025,7 @@ public sealed partial class GeneratedTenantServiceClient
 public sealed partial class GeneratedPeerServiceClient
 {
     /// <summary>
-    /// <c>GetPeer</c> (unary) — forwards to <c>PeerServiceClient.GetPeerAsync</c>.
+    /// <c>get_peer</c> (unary) — forwards to <c>PeerServiceClient.GetPeerAsync</c>.
     /// gRPC path: <c>/udb.core.webrtc.services.v1.PeerService/GetPeer</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GetPeerAsync(
@@ -4046,7 +4046,7 @@ public sealed partial class GeneratedPeerServiceClient
 public sealed partial class GeneratedPeerServiceClient
 {
     /// <summary>
-    /// <c>JoinRoom</c> (unary) — forwards to <c>PeerServiceClient.JoinRoomAsync</c>.
+    /// <c>join_room</c> (unary) — forwards to <c>PeerServiceClient.JoinRoomAsync</c>.
     /// gRPC path: <c>/udb.core.webrtc.services.v1.PeerService/JoinRoom</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> JoinRoomAsync(
@@ -4067,7 +4067,7 @@ public sealed partial class GeneratedPeerServiceClient
 public sealed partial class GeneratedPeerServiceClient
 {
     /// <summary>
-    /// <c>JoinSession</c> (unary) — forwards to <c>PeerServiceClient.JoinSessionAsync</c>.
+    /// <c>join_session</c> (unary) — forwards to <c>PeerServiceClient.JoinSessionAsync</c>.
     /// gRPC path: <c>/udb.core.webrtc.services.v1.PeerService/JoinSession</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> JoinSessionAsync(
@@ -4088,7 +4088,7 @@ public sealed partial class GeneratedPeerServiceClient
 public sealed partial class GeneratedPeerServiceClient
 {
     /// <summary>
-    /// <c>LeaveRoom</c> (unary) — forwards to <c>PeerServiceClient.LeaveRoomAsync</c>.
+    /// <c>leave_room</c> (unary) — forwards to <c>PeerServiceClient.LeaveRoomAsync</c>.
     /// gRPC path: <c>/udb.core.webrtc.services.v1.PeerService/LeaveRoom</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> LeaveRoomAsync(
@@ -4109,7 +4109,7 @@ public sealed partial class GeneratedPeerServiceClient
 public sealed partial class GeneratedPeerServiceClient
 {
     /// <summary>
-    /// <c>ListPeers</c> (unary) — forwards to <c>PeerServiceClient.ListPeersAsync</c>.
+    /// <c>list_peers</c> (unary) — forwards to <c>PeerServiceClient.ListPeersAsync</c>.
     /// gRPC path: <c>/udb.core.webrtc.services.v1.PeerService/ListPeers</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ListPeersAsync(
@@ -4130,7 +4130,7 @@ public sealed partial class GeneratedPeerServiceClient
 public sealed partial class GeneratedRoomServiceClient
 {
     /// <summary>
-    /// <c>CloseRoom</c> (unary) — forwards to <c>RoomServiceClient.CloseRoomAsync</c>.
+    /// <c>close_room</c> (unary) — forwards to <c>RoomServiceClient.CloseRoomAsync</c>.
     /// gRPC path: <c>/udb.core.webrtc.services.v1.RoomService/CloseRoom</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> CloseRoomAsync(
@@ -4151,7 +4151,7 @@ public sealed partial class GeneratedRoomServiceClient
 public sealed partial class GeneratedRoomServiceClient
 {
     /// <summary>
-    /// <c>CreateRoom</c> (unary) — forwards to <c>RoomServiceClient.CreateRoomAsync</c>.
+    /// <c>create_room</c> (unary) — forwards to <c>RoomServiceClient.CreateRoomAsync</c>.
     /// gRPC path: <c>/udb.core.webrtc.services.v1.RoomService/CreateRoom</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> CreateRoomAsync(
@@ -4172,7 +4172,7 @@ public sealed partial class GeneratedRoomServiceClient
 public sealed partial class GeneratedRoomServiceClient
 {
     /// <summary>
-    /// <c>GetRoom</c> (unary) — forwards to <c>RoomServiceClient.GetRoomAsync</c>.
+    /// <c>get_room</c> (unary) — forwards to <c>RoomServiceClient.GetRoomAsync</c>.
     /// gRPC path: <c>/udb.core.webrtc.services.v1.RoomService/GetRoom</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GetRoomAsync(
@@ -4193,7 +4193,7 @@ public sealed partial class GeneratedRoomServiceClient
 public sealed partial class GeneratedRoomServiceClient
 {
     /// <summary>
-    /// <c>ListRooms</c> (unary) — forwards to <c>RoomServiceClient.ListRoomsAsync</c>.
+    /// <c>list_rooms</c> (unary) — forwards to <c>RoomServiceClient.ListRoomsAsync</c>.
     /// gRPC path: <c>/udb.core.webrtc.services.v1.RoomService/ListRooms</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ListRoomsAsync(
@@ -4214,7 +4214,7 @@ public sealed partial class GeneratedRoomServiceClient
 public sealed partial class GeneratedRoomServiceClient
 {
     /// <summary>
-    /// <c>UpdateRoom</c> (unary) — forwards to <c>RoomServiceClient.UpdateRoomAsync</c>.
+    /// <c>update_room</c> (unary) — forwards to <c>RoomServiceClient.UpdateRoomAsync</c>.
     /// gRPC path: <c>/udb.core.webrtc.services.v1.RoomService/UpdateRoom</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> UpdateRoomAsync(
@@ -4235,7 +4235,7 @@ public sealed partial class GeneratedRoomServiceClient
 public sealed partial class GeneratedTrackServiceClient
 {
     /// <summary>
-    /// <c>ListTracks</c> (unary) — forwards to <c>TrackServiceClient.ListTracksAsync</c>.
+    /// <c>list_tracks</c> (unary) — forwards to <c>TrackServiceClient.ListTracksAsync</c>.
     /// gRPC path: <c>/udb.core.webrtc.services.v1.TrackService/ListTracks</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ListTracksAsync(
@@ -4256,7 +4256,7 @@ public sealed partial class GeneratedTrackServiceClient
 public sealed partial class GeneratedTrackServiceClient
 {
     /// <summary>
-    /// <c>MuteTrack</c> (unary) — forwards to <c>TrackServiceClient.MuteTrackAsync</c>.
+    /// <c>mute_track</c> (unary) — forwards to <c>TrackServiceClient.MuteTrackAsync</c>.
     /// gRPC path: <c>/udb.core.webrtc.services.v1.TrackService/MuteTrack</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> MuteTrackAsync(
@@ -4277,7 +4277,7 @@ public sealed partial class GeneratedTrackServiceClient
 public sealed partial class GeneratedTrackServiceClient
 {
     /// <summary>
-    /// <c>PublishTrack</c> (unary) — forwards to <c>TrackServiceClient.PublishTrackAsync</c>.
+    /// <c>publish_track</c> (unary) — forwards to <c>TrackServiceClient.PublishTrackAsync</c>.
     /// gRPC path: <c>/udb.core.webrtc.services.v1.TrackService/PublishTrack</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> PublishTrackAsync(
@@ -4298,7 +4298,7 @@ public sealed partial class GeneratedTrackServiceClient
 public sealed partial class GeneratedTrackServiceClient
 {
     /// <summary>
-    /// <c>UnpublishTrack</c> (unary) — forwards to <c>TrackServiceClient.UnpublishTrackAsync</c>.
+    /// <c>unpublish_track</c> (unary) — forwards to <c>TrackServiceClient.UnpublishTrackAsync</c>.
     /// gRPC path: <c>/udb.core.webrtc.services.v1.TrackService/UnpublishTrack</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> UnpublishTrackAsync(
@@ -4319,7 +4319,7 @@ public sealed partial class GeneratedTrackServiceClient
 public sealed partial class GeneratedTurnServiceClient
 {
     /// <summary>
-    /// <c>IssueCredentials</c> (unary) — forwards to <c>TurnServiceClient.IssueCredentialsAsync</c>.
+    /// <c>issue_credentials</c> (unary) — forwards to <c>TurnServiceClient.IssueCredentialsAsync</c>.
     /// gRPC path: <c>/udb.core.webrtc.services.v1.TurnService/IssueCredentials</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> IssueCredentialsAsync(
@@ -4340,7 +4340,7 @@ public sealed partial class GeneratedTurnServiceClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>ActivateCatalog</c> (unary) — forwards to <c>DataBrokerClient.ActivateCatalogAsync</c>.
+    /// <c>activate_catalog</c> (unary) — forwards to <c>DataBrokerClient.ActivateCatalogAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/ActivateCatalog</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ActivateCatalogAsync(
@@ -4361,7 +4361,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>AnalyticalQuery</c> (unary) — forwards to <c>DataBrokerClient.AnalyticalQueryAsync</c>.
+    /// <c>analytical_query</c> (unary) — forwards to <c>DataBrokerClient.AnalyticalQueryAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/AnalyticalQuery</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> AnalyticalQueryAsync(
@@ -4382,7 +4382,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>ApplyMigration</c> (unary) — forwards to <c>DataBrokerClient.ApplyMigrationAsync</c>.
+    /// <c>apply_migration</c> (unary) — forwards to <c>DataBrokerClient.ApplyMigrationAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/ApplyMigration</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ApplyMigrationAsync(
@@ -4403,7 +4403,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>ApproveMigrationPlan</c> (unary) — forwards to <c>DataBrokerClient.ApproveMigrationPlanAsync</c>.
+    /// <c>approve_migration_plan</c> (unary) — forwards to <c>DataBrokerClient.ApproveMigrationPlanAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/ApproveMigrationPlan</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ApproveMigrationPlanAsync(
@@ -4424,7 +4424,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>CacheDelete</c> (unary) — forwards to <c>DataBrokerClient.CacheDeleteAsync</c>.
+    /// <c>cache_delete</c> (unary) — forwards to <c>DataBrokerClient.CacheDeleteAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/CacheDelete</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> CacheDeleteAsync(
@@ -4445,7 +4445,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>CacheGet</c> (unary) — forwards to <c>DataBrokerClient.CacheGetAsync</c>.
+    /// <c>cache_get</c> (unary) — forwards to <c>DataBrokerClient.CacheGetAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/CacheGet</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> CacheGetAsync(
@@ -4466,7 +4466,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>CacheScan</c> (unary) — forwards to <c>DataBrokerClient.CacheScanAsync</c>.
+    /// <c>cache_scan</c> (unary) — forwards to <c>DataBrokerClient.CacheScanAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/CacheScan</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> CacheScanAsync(
@@ -4487,7 +4487,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>CacheSet</c> (unary) — forwards to <c>DataBrokerClient.CacheSetAsync</c>.
+    /// <c>cache_set</c> (unary) — forwards to <c>DataBrokerClient.CacheSetAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/CacheSet</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> CacheSetAsync(
@@ -4508,7 +4508,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>CreateMaterializedView</c> (unary) — forwards to <c>DataBrokerClient.CreateMaterializedViewAsync</c>.
+    /// <c>create_materialized_view</c> (unary) — forwards to <c>DataBrokerClient.CreateMaterializedViewAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/CreateMaterializedView</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> CreateMaterializedViewAsync(
@@ -4529,7 +4529,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>Delete</c> (unary) — forwards to <c>DataBrokerClient.DeleteAsync</c>.
+    /// <c>delete</c> (unary) — forwards to <c>DataBrokerClient.DeleteAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/Delete</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> DeleteAsync(
@@ -4550,7 +4550,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>DeletePolicy</c> (unary) — forwards to <c>DataBrokerClient.DeletePolicyAsync</c>.
+    /// <c>delete_policy</c> (unary) — forwards to <c>DataBrokerClient.DeletePolicyAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/DeletePolicy</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> DeletePolicyAsync(
@@ -4571,7 +4571,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>DismissDlqEvent</c> (unary) — forwards to <c>DataBrokerClient.DismissDlqEventAsync</c>.
+    /// <c>dismiss_dlq_event</c> (unary) — forwards to <c>DataBrokerClient.DismissDlqEventAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/DismissDlqEvent</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> DismissDlqEventAsync(
@@ -4592,7 +4592,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>DocumentDelete</c> (unary) — forwards to <c>DataBrokerClient.DocumentDeleteAsync</c>.
+    /// <c>document_delete</c> (unary) — forwards to <c>DataBrokerClient.DocumentDeleteAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/DocumentDelete</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> DocumentDeleteAsync(
@@ -4613,7 +4613,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>DocumentFind</c> (unary) — forwards to <c>DataBrokerClient.DocumentFindAsync</c>.
+    /// <c>document_find</c> (unary) — forwards to <c>DataBrokerClient.DocumentFindAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/DocumentFind</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> DocumentFindAsync(
@@ -4634,7 +4634,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>DocumentGet</c> (unary) — forwards to <c>DataBrokerClient.DocumentGetAsync</c>.
+    /// <c>document_get</c> (unary) — forwards to <c>DataBrokerClient.DocumentGetAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/DocumentGet</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> DocumentGetAsync(
@@ -4655,7 +4655,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>DocumentUpsert</c> (unary) — forwards to <c>DataBrokerClient.DocumentUpsertAsync</c>.
+    /// <c>document_upsert</c> (unary) — forwards to <c>DataBrokerClient.DocumentUpsertAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/DocumentUpsert</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> DocumentUpsertAsync(
@@ -4676,7 +4676,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>DropResource</c> (unary) — forwards to <c>DataBrokerClient.DropResourceAsync</c>.
+    /// <c>drop_resource</c> (unary) — forwards to <c>DataBrokerClient.DropResourceAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/DropResource</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> DropResourceAsync(
@@ -4697,7 +4697,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>EnqueueOutboxEvent</c> (unary) — forwards to <c>DataBrokerClient.EnqueueOutboxEventAsync</c>.
+    /// <c>enqueue_outbox_event</c> (unary) — forwards to <c>DataBrokerClient.EnqueueOutboxEventAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/EnqueueOutboxEvent</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> EnqueueOutboxEventAsync(
@@ -4718,7 +4718,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>EnsureBaseline</c> (unary) — forwards to <c>DataBrokerClient.EnsureBaselineAsync</c>.
+    /// <c>ensure_baseline</c> (unary) — forwards to <c>DataBrokerClient.EnsureBaselineAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/EnsureBaseline</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> EnsureBaselineAsync(
@@ -4739,7 +4739,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>EnsureProject</c> (unary) — forwards to <c>DataBrokerClient.EnsureProjectAsync</c>.
+    /// <c>ensure_project</c> (unary) — forwards to <c>DataBrokerClient.EnsureProjectAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/EnsureProject</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> EnsureProjectAsync(
@@ -4760,7 +4760,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>EnsureResource</c> (unary) — forwards to <c>DataBrokerClient.EnsureResourceAsync</c>.
+    /// <c>ensure_resource</c> (unary) — forwards to <c>DataBrokerClient.EnsureResourceAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/EnsureResource</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> EnsureResourceAsync(
@@ -4781,7 +4781,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>GeneratePresignedUrl</c> (unary) — forwards to <c>DataBrokerClient.GeneratePresignedUrlAsync</c>.
+    /// <c>generate_presigned_url</c> (unary) — forwards to <c>DataBrokerClient.GeneratePresignedUrlAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/GeneratePresignedUrl</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GeneratePresignedUrlAsync(
@@ -4802,7 +4802,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>GenericDispatch</c> (unary) — forwards to <c>DataBrokerClient.GenericDispatchAsync</c>.
+    /// <c>generic_dispatch</c> (unary) — forwards to <c>DataBrokerClient.GenericDispatchAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/GenericDispatch</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GenericDispatchAsync(
@@ -4823,7 +4823,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>GetAdminSummary</c> (unary) — forwards to <c>DataBrokerClient.GetAdminSummaryAsync</c>.
+    /// <c>get_admin_summary</c> (unary) — forwards to <c>DataBrokerClient.GetAdminSummaryAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/GetAdminSummary</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GetAdminSummaryAsync(
@@ -4844,7 +4844,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>GetCapabilities</c> (unary) — forwards to <c>DataBrokerClient.GetCapabilitiesAsync</c>.
+    /// <c>get_capabilities</c> (unary) — forwards to <c>DataBrokerClient.GetCapabilitiesAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/GetCapabilities</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GetCapabilitiesAsync(
@@ -4865,7 +4865,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>GetCatalogManifest</c> (unary) — forwards to <c>DataBrokerClient.GetCatalogManifestAsync</c>.
+    /// <c>get_catalog_manifest</c> (unary) — forwards to <c>DataBrokerClient.GetCatalogManifestAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/GetCatalogManifest</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GetCatalogManifestAsync(
@@ -4886,7 +4886,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>GetCatalogVersion</c> (unary) — forwards to <c>DataBrokerClient.GetCatalogVersionAsync</c>.
+    /// <c>get_catalog_version</c> (unary) — forwards to <c>DataBrokerClient.GetCatalogVersionAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/GetCatalogVersion</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GetCatalogVersionAsync(
@@ -4907,7 +4907,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>GetCatalogVersions</c> (unary) — forwards to <c>DataBrokerClient.GetCatalogVersionsAsync</c>.
+    /// <c>get_catalog_versions</c> (unary) — forwards to <c>DataBrokerClient.GetCatalogVersionsAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/GetCatalogVersions</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GetCatalogVersionsAsync(
@@ -4928,7 +4928,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>GetCdcStatus</c> (unary) — forwards to <c>DataBrokerClient.GetCdcStatusAsync</c>.
+    /// <c>get_cdc_status</c> (unary) — forwards to <c>DataBrokerClient.GetCdcStatusAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/GetCdcStatus</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GetCdcStatusAsync(
@@ -4949,7 +4949,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>GetDlqEvent</c> (unary) — forwards to <c>DataBrokerClient.GetDlqEventAsync</c>.
+    /// <c>get_dlq_event</c> (unary) — forwards to <c>DataBrokerClient.GetDlqEventAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/GetDlqEvent</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GetDlqEventAsync(
@@ -4970,7 +4970,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>GetHealthReport</c> (unary) — forwards to <c>DataBrokerClient.GetHealthReportAsync</c>.
+    /// <c>get_health_report</c> (unary) — forwards to <c>DataBrokerClient.GetHealthReportAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/GetHealthReport</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GetHealthReportAsync(
@@ -4991,7 +4991,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>GetMigrationStatus</c> (unary) — forwards to <c>DataBrokerClient.GetMigrationStatusAsync</c>.
+    /// <c>get_migration_status</c> (unary) — forwards to <c>DataBrokerClient.GetMigrationStatusAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/GetMigrationStatus</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GetMigrationStatusAsync(
@@ -5012,7 +5012,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>GetSaga</c> (unary) — forwards to <c>DataBrokerClient.GetSagaAsync</c>.
+    /// <c>get_saga</c> (unary) — forwards to <c>DataBrokerClient.GetSagaAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/GetSaga</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GetSagaAsync(
@@ -5033,7 +5033,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>GraphMutate</c> (unary) — forwards to <c>DataBrokerClient.GraphMutateAsync</c>.
+    /// <c>graph_mutate</c> (unary) — forwards to <c>DataBrokerClient.GraphMutateAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/GraphMutate</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GraphMutateAsync(
@@ -5054,7 +5054,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>GraphQuery</c> (unary) — forwards to <c>DataBrokerClient.GraphQueryAsync</c>.
+    /// <c>graph_query</c> (unary) — forwards to <c>DataBrokerClient.GraphQueryAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/GraphQuery</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> GraphQueryAsync(
@@ -5075,7 +5075,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>InitiateMultipartUpload</c> (unary) — forwards to <c>DataBrokerClient.InitiateMultipartUploadAsync</c>.
+    /// <c>initiate_multipart_upload</c> (unary) — forwards to <c>DataBrokerClient.InitiateMultipartUploadAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/InitiateMultipartUpload</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> InitiateMultipartUploadAsync(
@@ -5096,7 +5096,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>LintPolicies</c> (unary) — forwards to <c>DataBrokerClient.LintPoliciesAsync</c>.
+    /// <c>lint_policies</c> (unary) — forwards to <c>DataBrokerClient.LintPoliciesAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/LintPolicies</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> LintPoliciesAsync(
@@ -5117,7 +5117,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>ListAdminAuditLogs</c> (unary) — forwards to <c>DataBrokerClient.ListAdminAuditLogsAsync</c>.
+    /// <c>list_admin_audit_logs</c> (unary) — forwards to <c>DataBrokerClient.ListAdminAuditLogsAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/ListAdminAuditLogs</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ListAdminAuditLogsAsync(
@@ -5138,7 +5138,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>ListDlqEvents</c> (unary) — forwards to <c>DataBrokerClient.ListDlqEventsAsync</c>.
+    /// <c>list_dlq_events</c> (unary) — forwards to <c>DataBrokerClient.ListDlqEventsAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/ListDlqEvents</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ListDlqEventsAsync(
@@ -5159,7 +5159,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>ListMessageSchemas</c> (unary) — forwards to <c>DataBrokerClient.ListMessageSchemasAsync</c>.
+    /// <c>list_message_schemas</c> (unary) — forwards to <c>DataBrokerClient.ListMessageSchemasAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/ListMessageSchemas</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ListMessageSchemasAsync(
@@ -5180,7 +5180,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>ListMigrationRuns</c> (unary) — forwards to <c>DataBrokerClient.ListMigrationRunsAsync</c>.
+    /// <c>list_migration_runs</c> (unary) — forwards to <c>DataBrokerClient.ListMigrationRunsAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/ListMigrationRuns</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ListMigrationRunsAsync(
@@ -5201,7 +5201,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>ListPolicies</c> (unary) — forwards to <c>DataBrokerClient.ListPoliciesAsync</c>.
+    /// <c>list_policies</c> (unary) — forwards to <c>DataBrokerClient.ListPoliciesAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/ListPolicies</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ListPoliciesAsync(
@@ -5222,7 +5222,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>ListProjects</c> (unary) — forwards to <c>DataBrokerClient.ListProjectsAsync</c>.
+    /// <c>list_projects</c> (unary) — forwards to <c>DataBrokerClient.ListProjectsAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/ListProjects</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ListProjectsAsync(
@@ -5243,7 +5243,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>ListResources</c> (unary) — forwards to <c>DataBrokerClient.ListResourcesAsync</c>.
+    /// <c>list_resources</c> (unary) — forwards to <c>DataBrokerClient.ListResourcesAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/ListResources</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ListResourcesAsync(
@@ -5264,7 +5264,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>ListSagas</c> (unary) — forwards to <c>DataBrokerClient.ListSagasAsync</c>.
+    /// <c>list_sagas</c> (unary) — forwards to <c>DataBrokerClient.ListSagasAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/ListSagas</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ListSagasAsync(
@@ -5285,7 +5285,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>LookupMessageSchema</c> (unary) — forwards to <c>DataBrokerClient.LookupMessageSchemaAsync</c>.
+    /// <c>lookup_message_schema</c> (unary) — forwards to <c>DataBrokerClient.LookupMessageSchemaAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/LookupMessageSchema</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> LookupMessageSchemaAsync(
@@ -5306,7 +5306,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>MarkSagaReviewed</c> (unary) — forwards to <c>DataBrokerClient.MarkSagaReviewedAsync</c>.
+    /// <c>mark_saga_reviewed</c> (unary) — forwards to <c>DataBrokerClient.MarkSagaReviewedAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/MarkSagaReviewed</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> MarkSagaReviewedAsync(
@@ -5327,7 +5327,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>PauseCdc</c> (unary) — forwards to <c>DataBrokerClient.PauseCdcAsync</c>.
+    /// <c>pause_cdc</c> (unary) — forwards to <c>DataBrokerClient.PauseCdcAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/PauseCdc</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> PauseCdcAsync(
@@ -5348,7 +5348,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>PlanMigration</c> (unary) — forwards to <c>DataBrokerClient.PlanMigrationAsync</c>.
+    /// <c>plan_migration</c> (unary) — forwards to <c>DataBrokerClient.PlanMigrationAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/PlanMigration</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> PlanMigrationAsync(
@@ -5369,7 +5369,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>PreviewCdcRedaction</c> (unary) — forwards to <c>DataBrokerClient.PreviewCdcRedactionAsync</c>.
+    /// <c>preview_cdc_redaction</c> (unary) — forwards to <c>DataBrokerClient.PreviewCdcRedactionAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/PreviewCdcRedaction</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> PreviewCdcRedactionAsync(
@@ -5390,7 +5390,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>PutPolicy</c> (unary) — forwards to <c>DataBrokerClient.PutPolicyAsync</c>.
+    /// <c>put_policy</c> (unary) — forwards to <c>DataBrokerClient.PutPolicyAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/PutPolicy</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> PutPolicyAsync(
@@ -5411,7 +5411,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>QuarantineDlqEvent</c> (unary) — forwards to <c>DataBrokerClient.QuarantineDlqEventAsync</c>.
+    /// <c>quarantine_dlq_event</c> (unary) — forwards to <c>DataBrokerClient.QuarantineDlqEventAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/QuarantineDlqEvent</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> QuarantineDlqEventAsync(
@@ -5432,7 +5432,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>ReloadPolicies</c> (unary) — forwards to <c>DataBrokerClient.ReloadPoliciesAsync</c>.
+    /// <c>reload_policies</c> (unary) — forwards to <c>DataBrokerClient.ReloadPoliciesAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/ReloadPolicies</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ReloadPoliciesAsync(
@@ -5453,7 +5453,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>ReplayDlqEvent</c> (unary) — forwards to <c>DataBrokerClient.ReplayDlqEventAsync</c>.
+    /// <c>replay_dlq_event</c> (unary) — forwards to <c>DataBrokerClient.ReplayDlqEventAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/ReplayDlqEvent</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ReplayDlqEventAsync(
@@ -5474,7 +5474,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>ResumeCdc</c> (unary) — forwards to <c>DataBrokerClient.ResumeCdcAsync</c>.
+    /// <c>resume_cdc</c> (unary) — forwards to <c>DataBrokerClient.ResumeCdcAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/ResumeCdc</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ResumeCdcAsync(
@@ -5495,7 +5495,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>RetrySagaCompensation</c> (unary) — forwards to <c>DataBrokerClient.RetrySagaCompensationAsync</c>.
+    /// <c>retry_saga_compensation</c> (unary) — forwards to <c>DataBrokerClient.RetrySagaCompensationAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/RetrySagaCompensation</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> RetrySagaCompensationAsync(
@@ -5516,7 +5516,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>RollbackCatalog</c> (unary) — forwards to <c>DataBrokerClient.RollbackCatalogAsync</c>.
+    /// <c>rollback_catalog</c> (unary) — forwards to <c>DataBrokerClient.RollbackCatalogAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/RollbackCatalog</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> RollbackCatalogAsync(
@@ -5537,7 +5537,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>ScanProjectionDrift</c> (unary) — forwards to <c>DataBrokerClient.ScanProjectionDriftAsync</c>.
+    /// <c>scan_projection_drift</c> (unary) — forwards to <c>DataBrokerClient.ScanProjectionDriftAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/ScanProjectionDrift</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ScanProjectionDriftAsync(
@@ -5558,7 +5558,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>Select</c> (unary) — forwards to <c>DataBrokerClient.SelectAsync</c>.
+    /// <c>select</c> (unary) — forwards to <c>DataBrokerClient.SelectAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/Select</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> SelectAsync(
@@ -5579,7 +5579,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>StageCatalog</c> (unary) — forwards to <c>DataBrokerClient.StageCatalogAsync</c>.
+    /// <c>stage_catalog</c> (unary) — forwards to <c>DataBrokerClient.StageCatalogAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/StageCatalog</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> StageCatalogAsync(
@@ -5600,7 +5600,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>StepDownCdcLeader</c> (unary) — forwards to <c>DataBrokerClient.StepDownCdcLeaderAsync</c>.
+    /// <c>step_down_cdc_leader</c> (unary) — forwards to <c>DataBrokerClient.StepDownCdcLeaderAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/StepDownCdcLeader</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> StepDownCdcLeaderAsync(
@@ -5621,7 +5621,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>TimeSeriesQuery</c> (unary) — forwards to <c>DataBrokerClient.TimeSeriesQueryAsync</c>.
+    /// <c>time_series_query</c> (unary) — forwards to <c>DataBrokerClient.TimeSeriesQueryAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/TimeSeriesQuery</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> TimeSeriesQueryAsync(
@@ -5642,7 +5642,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>TimeSeriesWrite</c> (unary) — forwards to <c>DataBrokerClient.TimeSeriesWriteAsync</c>.
+    /// <c>time_series_write</c> (unary) — forwards to <c>DataBrokerClient.TimeSeriesWriteAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/TimeSeriesWrite</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> TimeSeriesWriteAsync(
@@ -5663,7 +5663,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>Upsert</c> (unary) — forwards to <c>DataBrokerClient.UpsertAsync</c>.
+    /// <c>upsert</c> (unary) — forwards to <c>DataBrokerClient.UpsertAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/Upsert</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> UpsertAsync(
@@ -5684,7 +5684,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>ValidateCatalog</c> (unary) — forwards to <c>DataBrokerClient.ValidateCatalogAsync</c>.
+    /// <c>validate_catalog</c> (unary) — forwards to <c>DataBrokerClient.ValidateCatalogAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/ValidateCatalog</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> ValidateCatalogAsync(
@@ -5705,7 +5705,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>VectorHybridSearch</c> (unary) — forwards to <c>DataBrokerClient.VectorHybridSearchAsync</c>.
+    /// <c>vector_hybrid_search</c> (unary) — forwards to <c>DataBrokerClient.VectorHybridSearchAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/VectorHybridSearch</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> VectorHybridSearchAsync(
@@ -5726,7 +5726,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>VectorSearch</c> (unary) — forwards to <c>DataBrokerClient.VectorSearchAsync</c>.
+    /// <c>vector_search</c> (unary) — forwards to <c>DataBrokerClient.VectorSearchAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/VectorSearch</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> VectorSearchAsync(
@@ -5747,7 +5747,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>VectorUpsert</c> (unary) — forwards to <c>DataBrokerClient.VectorUpsertAsync</c>.
+    /// <c>vector_upsert</c> (unary) — forwards to <c>DataBrokerClient.VectorUpsertAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/VectorUpsert</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> VectorUpsertAsync(
@@ -5768,7 +5768,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>VerifyAdminAuditLog</c> (unary) — forwards to <c>DataBrokerClient.VerifyAdminAuditLogAsync</c>.
+    /// <c>verify_admin_audit_log</c> (unary) — forwards to <c>DataBrokerClient.VerifyAdminAuditLogAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/VerifyAdminAuditLog</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> VerifyAdminAuditLogAsync(
@@ -5791,7 +5791,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedStorageServiceClient
 {
     /// <summary>
-    /// <c>DownloadFile</c> (server-streaming) — forwards to
+    /// <c>download_file</c> (server-streaming) — forwards to
     /// <c>StorageServiceClient.DownloadFile</c>. gRPC path: <c>/udb.core.storage.services.v1.StorageService/DownloadFile</c>.
     /// Not retried mid-stream; drain the returned stream and map errors with
     /// <see cref="GeneratedServiceBase.MapStreamError"/>.
@@ -5812,7 +5812,7 @@ public sealed partial class GeneratedStorageServiceClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>GetObject</c> (server-streaming) — forwards to
+    /// <c>get_object</c> (server-streaming) — forwards to
     /// <c>DataBrokerClient.GetObject</c>. gRPC path: <c>/udb.services.v1.DataBroker/GetObject</c>.
     /// Not retried mid-stream; drain the returned stream and map errors with
     /// <see cref="GeneratedServiceBase.MapStreamError"/>.
@@ -5833,12 +5833,12 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>PublishCDC</c> (server-streaming) — forwards to
+    /// <c>publish_cdc</c> (server-streaming) — forwards to
     /// <c>DataBrokerClient.PublishCDC</c>. gRPC path: <c>/udb.services.v1.DataBroker/PublishCDC</c>.
     /// Not retried mid-stream; drain the returned stream and map errors with
     /// <see cref="GeneratedServiceBase.MapStreamError"/>.
     /// </summary>
-    public dynamic PublishCDC(
+    public dynamic PublishCdc(
         dynamic request,
         TimeSpan? deadline = null,
         CancellationToken cancellationToken = default)
@@ -5854,7 +5854,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>SelectV2</c> (server-streaming) — forwards to
+    /// <c>select_v_2</c> (server-streaming) — forwards to
     /// <c>DataBrokerClient.SelectV2</c>. gRPC path: <c>/udb.services.v1.DataBroker/SelectV2</c>.
     /// Not retried mid-stream; drain the returned stream and map errors with
     /// <see cref="GeneratedServiceBase.MapStreamError"/>.
@@ -5877,7 +5877,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>PutObject</c> (client-streaming) — forwards to
+    /// <c>put_object</c> (client-streaming) — forwards to
     /// <c>DataBrokerClient.PutObject</c>. gRPC path: <c>/udb.services.v1.DataBroker/PutObject</c>.
     /// Never retried (request stream cannot be safely replayed).
     /// </summary>
@@ -5898,7 +5898,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedControlPlaneServiceClient
 {
     /// <summary>
-    /// <c>DeltaResources</c> (bidi-streaming) — forwards to
+    /// <c>delta_resources</c> (bidi-streaming) — forwards to
     /// <c>ControlPlaneServiceClient.DeltaResources</c>. gRPC path: <c>/udb.core.control.services.v1.ControlPlaneService/DeltaResources</c>.
     /// Never retried.
     /// </summary>
@@ -5917,7 +5917,7 @@ public sealed partial class GeneratedControlPlaneServiceClient
 public sealed partial class GeneratedControlPlaneServiceClient
 {
     /// <summary>
-    /// <c>StreamResources</c> (bidi-streaming) — forwards to
+    /// <c>stream_resources</c> (bidi-streaming) — forwards to
     /// <c>ControlPlaneServiceClient.StreamResources</c>. gRPC path: <c>/udb.core.control.services.v1.ControlPlaneService/StreamResources</c>.
     /// Never retried.
     /// </summary>
@@ -5936,7 +5936,7 @@ public sealed partial class GeneratedControlPlaneServiceClient
 public sealed partial class GeneratedSignalingServiceClient
 {
     /// <summary>
-    /// <c>Signal</c> (bidi-streaming) — forwards to
+    /// <c>signal</c> (bidi-streaming) — forwards to
     /// <c>SignalingServiceClient.Signal</c>. gRPC path: <c>/udb.core.webrtc.services.v1.SignalingService/Signal</c>.
     /// Never retried.
     /// </summary>
@@ -5955,7 +5955,7 @@ public sealed partial class GeneratedSignalingServiceClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>BatchSelect</c> (bidi-streaming) — forwards to
+    /// <c>batch_select</c> (bidi-streaming) — forwards to
     /// <c>DataBrokerClient.BatchSelect</c>. gRPC path: <c>/udb.services.v1.DataBroker/BatchSelect</c>.
     /// Never retried.
     /// </summary>
@@ -5974,7 +5974,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>BatchUpsert</c> (bidi-streaming) — forwards to
+    /// <c>batch_upsert</c> (bidi-streaming) — forwards to
     /// <c>DataBrokerClient.BatchUpsert</c>. gRPC path: <c>/udb.services.v1.DataBroker/BatchUpsert</c>.
     /// Never retried.
     /// </summary>
@@ -5993,7 +5993,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>BeginTx</c> (bidi-streaming) — forwards to
+    /// <c>begin_tx</c> (bidi-streaming) — forwards to
     /// <c>DataBrokerClient.BeginTx</c>. gRPC path: <c>/udb.services.v1.DataBroker/BeginTx</c>.
     /// Never retried.
     /// </summary>
@@ -6012,7 +6012,7 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>VectorBatchUpsert</c> (bidi-streaming) — forwards to
+    /// <c>vector_batch_upsert</c> (bidi-streaming) — forwards to
     /// <c>DataBrokerClient.VectorBatchUpsert</c>. gRPC path: <c>/udb.services.v1.DataBroker/VectorBatchUpsert</c>.
     /// Never retried.
     /// </summary>

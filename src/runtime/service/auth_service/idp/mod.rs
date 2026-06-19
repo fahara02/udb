@@ -1487,6 +1487,9 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
         let provider = self
             .load_provider(pool, &req.tenant_id, &req.provider_id)
             .await?;
+        if !group_keys(&provider.group_mapping_json).contains(&req.scim_group_id) {
+            return Err(Status::not_found("SCIM group not found in group mapping"));
+        }
         // Group membership changes only ever grant roles through the configured
         // mapping. Compute the roles this group grants (if any) for the response;
         // membership itself is not separately persisted.
@@ -1516,9 +1519,12 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
     ) -> Result<Response<idp_pb::ScimDeleteGroupResponse>, Status> {
         let pool = self.require_pool()?;
         let req = request.into_inner();
-        let _ = self
+        let provider = self
             .load_provider(pool, &req.tenant_id, &req.provider_id)
             .await?;
+        if !group_keys(&provider.group_mapping_json).contains(&req.scim_group_id) {
+            return Err(Status::not_found("SCIM group not found in group mapping"));
+        }
         // Groups are mapping-driven; "deletion" is a no-op on stored data (the
         // operator removes the mapping entry to revoke the binding). Reported as
         // deleted=true so SCIM clients converge.

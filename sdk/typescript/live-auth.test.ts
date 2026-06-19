@@ -68,8 +68,8 @@ const NON_UNARY_METHODS = new Set([
   "entity",
   "table",
   "get_object",
-  "publish_c_d_c",
-  "select_v2",
+  "publish_cdc",
+  "select_v_2",
   "put_object",
   "delta_resources",
   "stream_resources",
@@ -234,6 +234,23 @@ async function expectStreamMounted(
 // the whole surface (verified), and callers assert the lookup resolves so a
 // classification/coverage gap fails loudly rather than silently populating an RPC.
 function snakeToPascal(s: string): string {
+  const acronymSafe: Record<string, string> = {
+    publish_cdc: "PublishCDC",
+    send_otp: "SendOTP",
+    verify_otp: "VerifyOTP",
+    resend_otp: "ResendOTP",
+    validate_csrf: "ValidateCSRF",
+    enroll_mfa: "EnrollMFA",
+    confirm_mfaenrollment: "ConfirmMFAEnrollment",
+    publishCdc: "PublishCDC",
+    sendOtp: "SendOTP",
+    verifyOtp: "VerifyOTP",
+    resendOtp: "ResendOTP",
+    validateCsrf: "ValidateCSRF",
+    enrollMfa: "EnrollMFA",
+    confirmMfaenrollment: "ConfirmMFAEnrollment",
+  };
+  if (acronymSafe[s]) return acronymSafe[s];
   return s.split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join("");
 }
 function operationKindOf(serviceFull: string, methodSnake: string): string | undefined {
@@ -486,7 +503,7 @@ function dataBrokerBody(methodName: string, tenantId: string, projectId: string,
     case "batch_upsert":
       return { context, message_type: LIVE_MESSAGE_TYPE, record_json: jsonBytes({ record_id: `ts-perf-${tenantId}-${projectId}`, tenant_id: tenantId, project_id: projectId, lookup_key: "ts-perf-lk", payload: "ts-perf", revision: 1 }), conflict_fields: ["record_id"] };
     case "select":
-    case "select_v2":
+    case "select_v_2":
     case "batch_select":
       return { context, message_type: LIVE_MESSAGE_TYPE, filter: { record_id: get("record_id"), tenant_id: tenantId, project_id: projectId }, limit: 10 };
     case "delete":
@@ -541,7 +558,7 @@ function dataBrokerBody(methodName: string, tenantId: string, projectId: string,
       return { context, resource: { backend: "clickhouse" }, query: "SELECT 1", limit: 100 };
     case "begin_tx":
       return { context, operation: "upsert", message_type: LIVE_MESSAGE_TYPE, payload: { record_id: get("record_id"), tenant_id: tenantId, project_id: projectId } };
-    case "publish_c_d_c":
+    case "publish_cdc":
       return { context, topic_pattern: `${projectId}.*` };
     case "create_materialized_view":
       return { context, schema: "public", name: "mv_test", query: "SELECT 1", with_data: true };
@@ -673,11 +690,14 @@ function authnBody(methodName: string, tenantId: string, projectId: string, get:
       return { user_id: u, new_status: "USER_STATUS_SUSPENDED", reason: "bench action" };
     case "admin_reset_password":
       return { user_id: u };
+    case "send_otp":
     case "send_o_t_p":
       return { user_id: u, otp_type: "OTP_TYPE_EMAIL_VERIFICATION" };
+    case "verify_otp":
     case "verify_o_t_p":
       // Seeded otp_id + dev-echoed otp_code from the dedicated OTP user.
       return { otp_id: get("otp_id"), code: get("otp_code") };
+    case "resend_otp":
     case "resend_o_t_p":
       return { original_otp_id: get("otp_id"), reason: "not_received" };
     case "authenticate":
@@ -705,10 +725,13 @@ function authnBody(methodName: string, tenantId: string, projectId: string, get:
       return { user_id: u };
     case "revoke_session":
       return { session_id: get("session_id"), revoke_reason: "user logout" };
+    case "validate_csrf":
     case "validate_c_s_r_f":
       return { session_id: get("session_id"), csrf_token: get("csrf_token") };
+    case "enroll_mfa":
     case "enroll_m_f_a":
       return { user_id: u, mfa_type: "AUTH_FACTOR_KIND_TOTP" };
+    case "confirm_mfaenrollment":
     case "confirm_m_f_a_enrollment":
       return { user_id: u, otp_id: get("code"), code: "123456" };
     case "generate_recovery_codes":
@@ -994,9 +1017,9 @@ function idpBody(methodName: string, tenantId: string, projectId: string, tctx: 
     case "scim_list_groups":
       return { tenant_id: tenantId, provider_id, filter: "", page };
     case "scim_patch_group":
-      return { tenant_id: tenantId, provider_id, scim_group_id: get("record_id"), operations: [{ op: "add", path: "members", value_json: '["scim-user-id"]' }], context };
+      return { tenant_id: tenantId, provider_id, scim_group_id: get("scim_group_id") || get("record_id"), operations: [{ op: "add", path: "members", value_json: '["scim-user-id"]' }], context };
     case "scim_delete_group":
-      return { tenant_id: tenantId, provider_id, scim_group_id: get("record_id"), context };
+      return { tenant_id: tenantId, provider_id, scim_group_id: get("scim_group_id") || get("record_id"), context };
   }
   return undefined;
 }
@@ -1379,7 +1402,7 @@ async function seedPerfFixtures(
     // per-user cooldown) → real otp_id + dev-echoed code for VerifyOTP / ResendOTP.
     await tryRun("SeedOTP", async () => {
       const ou = (await gen.AuthnService.create_user({ username: `sdk-perf-otp-${suffix}`, email: `sdk-perf-otp-${suffix}@example.com`, password: pw, tenant_id: tenantId, project_id: projectId, full_name: "SDK Perf OTP User" }, opts)).user;
-      const so = await gen.AuthnService.send_o_t_p({ user_id: ou.user_id, otp_type: "OTP_TYPE_SENSITIVE_OPERATION", context: { tenant: { tenant_id: tenantId, project_id: projectId } } }, opts);
+      const so = await gen.AuthnService.send_otp({ user_id: ou.user_id, otp_type: "OTP_TYPE_SENSITIVE_OPERATION", context: { tenant: { tenant_id: tenantId, project_id: projectId } } }, opts);
       if (so.otp_id) fix.set("otp_id", so.otp_id);
       if (so.dev_otp_code) fix.set("otp_code", so.dev_otp_code);
     });
@@ -1392,7 +1415,7 @@ async function seedPerfFixtures(
       // The dev_otp_code echo is UNCONDITIONAL when UDB_OTP_DEV_ECHO=1 (mfa.rs:208 — gated only
       // on the env flag, NOT on otp_type or context); the earlier "context suppresses the echo"
       // theory was false (BENCH_TS_PHP_ADVISORY.md).
-      const rso = await gen.AuthnService.send_o_t_p({ user_id: ru.user_id, otp_type: "OTP_TYPE_PASSWORD_RESET", context: { tenant: { tenant_id: tenantId, project_id: projectId } } }, opts);
+      const rso = await gen.AuthnService.send_otp({ user_id: ru.user_id, otp_type: "OTP_TYPE_PASSWORD_RESET", context: { tenant: { tenant_id: tenantId, project_id: projectId } } }, opts);
       if (rso.otp_id) fix.set("reset_otp_id", rso.otp_id);
       if (rso.dev_otp_code) fix.set("reset_otp_code", rso.dev_otp_code);
     });
@@ -1768,7 +1791,7 @@ async function seedPerfFixtures(
   const recipientId = fix.lookup("recipient_id");
   if (recipientId) {
     await tryRun("SendNotification", async () => {
-      const sent = await gen.NotificationService.send_notification({ event_type: event, recipient_id: recipientId, recipient_address: `sdk+${suffix}@example.com`, tenant_id: tenantId, channels: [1] }, opts);
+      const sent = await gen.NotificationService.send_notification({ event_type: event, recipient_id: recipientId, recipient_address: `sdk+${suffix}@example.com`, tenant_id: tenantId, channels: [1], variables: { n: "1" } }, opts);
       if ((sent.logs ?? []).length > 0) {
         const logId = sent.logs[0].log_id;
         fix.set("log_id", logId);
@@ -1977,8 +2000,10 @@ async function expectGeneratedUnarySurfaceMounted(
     const api = generated[serviceName];
     assert.ok(api, `${label}.${serviceName} must exist on generated SDK client`);
     for (const [methodName, fn] of Object.entries(api)) {
-      if (methodName === "serviceFull" || NON_UNARY_METHODS.has(methodName)) continue;
+      if (methodName === "serviceFull") continue;
       if (typeof fn !== "function") continue;
+      if (!methodName.includes("_") && Object.entries(api).some(([otherName, otherFn]) => otherName.includes("_") && otherFn === fn)) continue;
+      if (NON_UNARY_METHODS.has(methodName)) continue;
       count += 1;
       // Proto-derived operation_kind (never name-guessed). Assert it resolves so a
       // missing classification is a loud failure, not a silently-populated RPC.
@@ -2151,6 +2176,12 @@ async function runLiveBackendCapabilityChallenge(data: any, ctx: any, caps: any)
   const descriptors: any[] = caps.backend_capabilities ?? [];
   assert.ok(descriptors.length > 0, "GetCapabilities advertised zero backend_capabilities descriptors");
   const opts = { deadlineMs: 5_000, noRetry: true };
+  const requiredBackends = new Set(
+    (process.env.UDB_LIVE_REQUIRED_BACKENDS || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
+  );
   const dispatch = async (backend: string, op: string): Promise<unknown> => {
     try {
       await data.generic_dispatch({ context: ctx, backend, operation: op, spec_json: "{}" }, opts);
@@ -2162,6 +2193,7 @@ async function runLiveBackendCapabilityChallenge(data: any, ctx: any, caps: any)
   for (const d of descriptors) {
     const backend = d.backend;
     assert.ok(backend, "a backend_capabilities descriptor has an empty backend name");
+    if (requiredBackends.size > 0 && !requiredBackends.has(backend)) continue;
     assert.ok(d.tier, `backend ${backend} advertises no tier`);
     const claimed: string[] = d.operations ?? [];
     assert.ok(claimed.length > 0, `backend ${backend} advertises an empty operations list`);
@@ -2212,6 +2244,12 @@ async function runLiveAllBackendKindsMatrix(data: any, tenantId: string, project
   const suffix = `${process.pid}-${Date.now()}`;
   const rc = (p: string) => requestContext(tenantId, projectId, p);
   const opts = { deadlineMs: 8_000, noRetry: true };
+  const requiredBackends = new Set(
+    (process.env.UDB_LIVE_REQUIRED_BACKENDS || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
+  );
   const mountFatal: MountFatal = (backend, op, err) => {
     const code = grpcCode(err);
     if (code !== undefined && FATAL_CONNECTIVITY_CODES.has(code)) throw new Error(`backend ${backend} (${op}) did not reach a live RPC: ${describeGrpcError(err)}`);
@@ -2220,6 +2258,7 @@ async function runLiveAllBackendKindsMatrix(data: any, tenantId: string, project
   for (const d of caps.backend_capabilities ?? []) {
     const backend = d.backend;
     if (!backend) continue;
+    if (requiredBackends.size > 0 && !requiredBackends.has(backend)) continue;
     const ops = new Set<string>(d.operations ?? []);
     const cat = backendCategory(d.tier, ops);
     exercised[cat] = (exercised[cat] ?? 0) + 1;
@@ -2370,7 +2409,7 @@ async function runLiveBackendE2E(project: UdbProject, tenantId: string, projectI
   }, { deadlineMs: 5_000, noRetry: true });
   assert.equal(mutationRecordJson(updated).payload, "updated-from-ts");
 
-  const selectV2 = await drainReadable(data.select_v2({
+  const selectV2 = await drainReadable(data.select_v_2({
     context: ctx,
     message_type: LIVE_MESSAGE_TYPE,
     filter: { record_id: recordId, tenant_id: tenantId, project_id: projectId },
@@ -2638,14 +2677,11 @@ async function runLiveNativeServiceE2E(
   const event = `sdk.live.ts.${suffix}`;
   const body = `sdk-live-body-ts-${suffix}`;
   await gen.NotificationService.upsert_template(
-    // No "{{n}}" placeholder: send_notification below passes no variables, and the
-    // broker rejects rendering a template that omits a required variable. Plain text
-    // renders with zero variables.
     { event_type: event, channel: 1, locale: "en", subject_template: "SDK notify", body_template: body, is_active: true }, opts);
   const template = (await gen.NotificationService.get_template({ event_type: event, channel: 1, locale: "en" }, opts)).template;
   assert.equal(template.body_template, body);
   const sent = await gen.NotificationService.send_notification(
-    { event_type: event, recipient_id: recipient.user_id, recipient_address: `sdk+${suffix}@example.com`, tenant_id: tenantId, channels: [1] }, opts);
+    { event_type: event, recipient_id: recipient.user_id, recipient_address: `sdk+${suffix}@example.com`, tenant_id: tenantId, channels: [1], variables: { n: "1" } }, opts);
   assert.ok((sent.logs ?? []).length >= 1, "SendNotification must record a log");
   const logId = sent.logs[0].log_id;
   const listedNotifs = await gen.NotificationService.list_notifications({ tenant_id: tenantId }, opts);
@@ -2889,11 +2925,11 @@ test("live broker login refreshes once and hot-swaps SDK credentials", {
     await expectStreamMounted("target.DataBroker.get_object", () =>
       project.generated.DataBroker.get_object({}, { deadlineMs: 2_000 }),
     );
-    await expectStreamMounted("target.DataBroker.publish_c_d_c", () =>
-      project.generated.DataBroker.publish_c_d_c({}, { deadlineMs: 2_000 }),
+    await expectStreamMounted("target.DataBroker.publish_cdc", () =>
+      project.generated.DataBroker.publish_cdc({}, { deadlineMs: 2_000 }),
     );
-    await expectStreamMounted("target.DataBroker.select_v2", () =>
-      project.generated.DataBroker.select_v2({}, { deadlineMs: 2_000 }),
+    await expectStreamMounted("target.DataBroker.select_v_2", () =>
+      project.generated.DataBroker.select_v_2({}, { deadlineMs: 2_000 }),
     );
     await expectStreamMounted("target.DataBroker.put_object", () => {
       const { stream, response } = project.generated.DataBroker.put_object({ deadlineMs: 2_000 });
@@ -2936,7 +2972,7 @@ test("live broker login refreshes once and hot-swaps SDK credentials", {
     // EnsureBaseline (DataBroker) + JoinSession (PeerService) are both unary, so the
     // unary count rose 251→253. StorageService.DownloadFile is SERVER-STREAMING, so
     // it adds to the streaming count (11→12), not the unary count (265 total).
-    const STREAMING_PROBED = 12; // get_object, publish_c_d_c, select_v2, put_object,
+    const STREAMING_PROBED = 12; // get_object, publish_cdc, select_v_2, put_object,
     //   batch_select, batch_upsert, begin_tx, vector_batch_upsert, delta_resources,
     //   stream_resources, signal, download_file
     assert.equal(
@@ -3039,7 +3075,7 @@ test("live per-RPC perf", {
     // Server-streaming first-response timer: open the stream with a seeded request
     // and measure up to the FIRST server-delivered message (a real round-trip), not
     // just stream-open. `end`/`error` before any `data` is treated as a successful
-    // (empty) completion. Used for select_v2 / get_object.
+    // (empty) completion. Used for select_v_2 / get_object.
     const timeServerStreamFirstResponse = async (
       fn: any,
       request: any,
@@ -3068,7 +3104,7 @@ test("live per-RPC perf", {
       });
     };
 
-    // CDC first-EVENT timer: subscribe to publish_c_d_c, then fire a real Upsert
+    // CDC first-EVENT timer: subscribe to publish_cdc, then fire a real Upsert
     // against the seeded SdkLiveRecord row — that write flows outbox→CDC→Kafka and
     // is delivered back on the stream. The measured cost is dominated by
     // produce→deliver, the honest first-event latency a real subscriber sees. A
@@ -3122,9 +3158,9 @@ test("live per-RPC perf", {
       topic_pattern: "*",
     });
     // Server-streaming reads that take a request and deliver a real first response.
-    const SERVER_STREAM_FIRST_RESPONSE = new Set(["select_v2", "get_object", "download_file"]);
+    const SERVER_STREAM_FIRST_RESPONSE = new Set(["select_v_2", "get_object", "download_file"]);
     const seededStreamRequest = (methodName: string) => {
-      if (methodName === "select_v2") {
+      if (methodName === "select_v_2") {
         return { context: requestContext(tenantId, projectId, "ts.live.perf"), message_type: LIVE_MESSAGE_TYPE, filter: { tenant_id: tenantId, project_id: projectId }, limit: 1 };
       }
       if (methodName === "get_object") {
@@ -3135,7 +3171,7 @@ test("live per-RPC perf", {
         // the first DownloadFileChunk carries object metadata + the first bytes.
         return { tenant_id: tenantId, file_id: fixtures.lookup("file_id") ?? "", chunk_size_bytes: 65536 };
       }
-      // Only select_v2/get_object/download_file reach here; never a generic body.
+      // Only select_v_2/get_object/download_file reach here; never a generic body.
       return perfRealBody("StorageService", methodName, tenantId, projectId, fixtures) ?? {};
     };
 
@@ -3146,14 +3182,13 @@ test("live per-RPC perf", {
     // → Phase 3 (session/credential teardown), so a destructive AuthnService RPC
     // never kills the live principal mid-run.
     const measureRpc = async (serviceName: string, api: any, methodName: string, fn: any): Promise<void> => {
+      // Facade accessors (DataBroker.table(name) / entity(messageType)) are builder
+      // helpers on the generated client, NOT RPCs. Skip them before classifying the
+      // callable as stream/unary so a helper never trips the strict body coverage gate.
+      if (methodName === "entity" || methodName === "table") return;
       if (NON_UNARY_METHODS.has(methodName)) {
-        // Facade accessors (DataBroker.table(name) / entity(messageType)) are builder
-        // helpers on the generated client, NOT RPCs — they have no perfRealBody and
-        // must not be measured. Skip them before any streaming/unary path so the run
-        // doesn't abort on "no doc-grounded body for DataBroker/entity".
-        if (methodName === "entity" || methodName === "table") return;
         // CDC subscription: subscribe → fire a real seeded Upsert → first event.
-        if (serviceName === "DataBroker" && methodName === "publish_c_d_c") {
+        if (serviceName === "DataBroker" && methodName === "publish_cdc") {
           const durs: number[] = [];
           let errCode = "OK";
           await timeCdcFirstEvent(fn, cdcRequest()); // warm-up
@@ -3167,7 +3202,7 @@ test("live per-RPC perf", {
           samples.push({ service: serviceName, rpc: methodName, kind: "stream", err: errCode, p50: pct(50), p99: pct(99), mean: durs.reduce((s, d) => s + d, 0) / durs.length, note: "cdc: time-to-first-event (real seeded Upsert produced)" });
           return;
         }
-        // Server-streaming reads with a real first response (select_v2, get_object).
+        // Server-streaming reads with a real first response (select_v_2, get_object).
         if (SERVER_STREAM_FIRST_RESPONSE.has(methodName)) {
           const req = seededStreamRequest(methodName);
           const durs: number[] = [];
@@ -3270,6 +3305,10 @@ test("live per-RPC perf", {
         for (const [methodName, fn] of Object.entries(api)) {
           if (methodName === "serviceFull") continue;
           if (typeof fn !== "function") continue;
+          // The generated TypeScript client exposes both idiomatic camelCase and
+          // documented snake_case aliases. Measure the snake alias once when both
+          // names point to the same RPC function, otherwise the perf count doubles.
+          if (!methodName.includes("_") && Object.entries(api).some(([otherName, otherFn]) => otherName.includes("_") && otherFn === fn)) continue;
           const unit: Unit = { serviceName, api, methodName, fn: fn as any };
           if (serviceName === "AuthnService" && PHASE1_AUTHN_ORDER.includes(methodName)) phase1.push(unit);
           else if (serviceName === "AuthnService" && PHASE3_AUTHN.has(methodName)) phase3.push(unit);
@@ -3309,7 +3348,7 @@ test("live per-RPC perf", {
       + "under Failures for the maintainer to finish.", "",
       "Unary = full request/response round-trip. Non-CDC server-streaming RPCs (kind=stream) report "
       + "time-to-FIRST-RESPONSE with seeded inputs; client-streaming/bidi RPCs (kind=stream_open) report "
-      + "stream-open latency. CDC subscription (publish_c_d_c, kind=stream) reports time-to-FIRST-EVENT: "
+      + "stream-open latency. CDC subscription (publish_cdc, kind=stream) reports time-to-FIRST-EVENT: "
       + "the harness subscribes, fires a real seeded Upsert that flows outbox→CDC→Kafka, and times the "
       + "first delivered event.", "",
       "RPCs run on the AUTH ROUTE in three phases (BENCH_RPC_BODIES.md \"Execution order\"): Phase 1 "

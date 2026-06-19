@@ -74,7 +74,7 @@ service AnalyticsService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "record_pipeline_metric"
+      method_alias: "record_pipeline_metric" rest_operation_id: "recordPipelineMetric"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -114,7 +114,7 @@ service AnalyticsService {
       explicit_nulls: true
     };
     option (google.api.http) = {
-      post: "/v1/analytics/pipeline_metrics"
+      post: "/v1/analytics/pipeline-metrics"
       body: "*"
     };
   }
@@ -133,7 +133,7 @@ service AnalyticsService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "get_pipeline_summary"
+      method_alias: "get_pipeline_summary" rest_operation_id: "getPipelineSummary"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -172,7 +172,7 @@ service AnalyticsService {
       api_error: true
       explicit_nulls: true
     };
-    option (google.api.http) = {get: "/v1/analytics/pipeline_summaries"};
+    option (google.api.http) = {get: "/v1/analytics/pipeline-summaries"};
   }
 
   // Query daily executor performance roll-ups.
@@ -189,7 +189,7 @@ service AnalyticsService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "get_executor_performance"
+      method_alias: "get_executor_performance" rest_operation_id: "getExecutorPerformance"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -228,7 +228,7 @@ service AnalyticsService {
       api_error: true
       explicit_nulls: true
     };
-    option (google.api.http) = {get: "/v1/analytics/executor_performance"};
+    option (google.api.http) = {get: "/v1/analytics/executor-performance"};
   }
 
   // Query daily reconciliation and conflict analytics.
@@ -245,7 +245,7 @@ service AnalyticsService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "get_reconciliation_analytics"
+      method_alias: "get_reconciliation_analytics" rest_operation_id: "getReconciliationAnalytics"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -284,7 +284,7 @@ service AnalyticsService {
       api_error: true
       explicit_nulls: true
     };
-    option (google.api.http) = {get: "/v1/analytics/reconciliation_stats"};
+    option (google.api.http) = {get: "/v1/analytics/reconciliation-stats"};
   }
 
   // Get throughput statistics over a time window.
@@ -301,7 +301,7 @@ service AnalyticsService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "get_throughput"
+      method_alias: "get_throughput" rest_operation_id: "getThroughput"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -357,7 +357,7 @@ service AnalyticsService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "get_sla_compliance"
+      method_alias: "get_sla_compliance" rest_operation_id: "getSlaCompliance"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -396,7 +396,7 @@ service AnalyticsService {
       api_error: true
       explicit_nulls: true
     };
-    option (google.api.http) = {get: "/v1/analytics/sla_compliance"};
+    option (google.api.http) = {get: "/v1/analytics/sla-compliance"};
   }
 
   // Manually trigger hourly snapshot aggregation (normally a cron job).
@@ -413,7 +413,7 @@ service AnalyticsService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "trigger_snapshot"
+      method_alias: "trigger_snapshot" rest_operation_id: "triggerSnapshot"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3

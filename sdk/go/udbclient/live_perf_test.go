@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"reflect"
 	"sort"
 	"strings"
 	"testing"
@@ -21,7 +22,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-// TestLivePerf measures per-RPC latency for the entire 265-RPC surface against a
+// TestLivePerf measures per-RPC latency for the entire AllRPCs surface against a
 // running broker and writes a sorted perf report. It is gated separately from the
 // conformance suite (UDB_LIVE_PERF=1) because it is a measurement run, not a
 // pass/fail gate: a slow RPC is reported, not failed.
@@ -217,6 +218,8 @@ func TestLivePerf(t *testing.T) {
 			// CDC first-event includes a real produce→deliver round-trip; keep the
 			// iteration count low so the run stays bounded.
 			iters, note = 3, "cdc subscription: time-to-first-event (real mutation produced)"
+		} else if rpc.FullMethod == "/udb.services.v1.DataBroker/ApproveMigrationPlan" {
+			iters, note = 1, "single-use migration approval"
 		} else if rpc.Kind != KindUnary {
 			note = "streaming: time-to-first-response (seeded; " + string(rpc.Kind) + ")"
 		}
@@ -351,32 +354,32 @@ func TestLivePerf(t *testing.T) {
 		out.WriteString("These RPCs still returned a non-OK gRPC status on their last iteration: the " +
 			"seed phase could not construct a fully-valid request for them. They are reported (not " +
 			"silently sampled) so the maintainer can finish their seeding/fixtures.\n\n")
-		out.WriteString("| RPC | kind | err | p99 | mean | iters |\n|---|---|---|---:|---:|---:|\n")
+		out.WriteString("| RPC | api_alias | operation_id | kind | err | p99 | mean | iters |\n|---|---|---|---|---|---:|---:|---:|\n")
 		sort.Slice(failed, func(i, j int) bool {
 			return failed[i].rpc.Service+"/"+failed[i].rpc.Name < failed[j].rpc.Service+"/"+failed[j].rpc.Name
 		})
 		for _, s := range failed {
-			out.WriteString(fmt.Sprintf("| %s/%s | %s | %s | %s | %s | %d |\n",
-				s.rpc.Service, s.rpc.Name, s.rpc.OperationKind, errOf(s),
+			out.WriteString(fmt.Sprintf("| %s/%s | %s | %s | %s | %s | %s | %s | %d |\n",
+				s.rpc.Service, s.rpc.Name, rpcAPIAlias(s.rpc), rpcOperationID(s.rpc), s.rpc.OperationKind, errOf(s),
 				s.p99.Round(time.Microsecond), s.mean.Round(time.Microsecond), s.iters))
 		}
 	}
 
 	out.WriteString("\n## Slowest 25 RPCs by p99\n\n")
-	out.WriteString("| RPC | kind | err | p50 | p99 | mean | iters | note |\n|---|---|---|---:|---:|---:|---:|---|\n")
+	out.WriteString("| RPC | api_alias | operation_id | kind | err | p50 | p99 | mean | iters | note |\n|---|---|---|---|---|---:|---:|---:|---:|---|\n")
 	sort.Slice(samples, func(i, j int) bool { return samples[i].p99 > samples[j].p99 })
 	for i, s := range samples {
 		if i >= 25 {
 			break
 		}
 		n := s.note
-		out.WriteString(fmt.Sprintf("| %s/%s | %s | %s | %s | %s | %s | %d | %s |\n",
-			s.rpc.Service, s.rpc.Name, s.rpc.OperationKind, errOf(s),
+		out.WriteString(fmt.Sprintf("| %s/%s | %s | %s | %s | %s | %s | %s | %s | %d | %s |\n",
+			s.rpc.Service, s.rpc.Name, rpcAPIAlias(s.rpc), rpcOperationID(s.rpc), s.rpc.OperationKind, errOf(s),
 			s.p50.Round(time.Microsecond), s.p99.Round(time.Microsecond), s.mean.Round(time.Microsecond), s.iters, n))
 	}
 
 	out.WriteString("\n## Full per-RPC table (sorted by service, then name)\n\n")
-	out.WriteString("| Service | RPC | kind | err | p50 | p99 | mean | min | max | iters |\n|---|---|---|---|---:|---:|---:|---:|---:|---:|\n")
+	out.WriteString("| Service | RPC | api_alias | operation_id | kind | err | p50 | p99 | mean | min | max | iters |\n|---|---|---|---|---|---|---:|---:|---:|---:|---:|---:|\n")
 	sort.Slice(samples, func(i, j int) bool {
 		if samples[i].rpc.Service != samples[j].rpc.Service {
 			return samples[i].rpc.Service < samples[j].rpc.Service
@@ -384,8 +387,8 @@ func TestLivePerf(t *testing.T) {
 		return samples[i].rpc.Name < samples[j].rpc.Name
 	})
 	for _, s := range samples {
-		out.WriteString(fmt.Sprintf("| %s | %s | %s | %s | %s | %s | %s | %s | %s | %d |\n",
-			s.rpc.Service, s.rpc.Name, s.rpc.OperationKind, errOf(s),
+		out.WriteString(fmt.Sprintf("| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %d |\n",
+			s.rpc.Service, s.rpc.Name, rpcAPIAlias(s.rpc), rpcOperationID(s.rpc), s.rpc.OperationKind, errOf(s),
 			s.p50.Round(time.Microsecond), s.p99.Round(time.Microsecond), s.mean.Round(time.Microsecond),
 			s.min.Round(time.Microsecond), s.max.Round(time.Microsecond), s.iters))
 	}
@@ -397,6 +400,25 @@ func TestLivePerf(t *testing.T) {
 	t.Logf("\n%s", report)
 	t.Logf("Go perf: %d RPCs measured (streaming rows = stream-open latency), %d FAILED (non-OK gRPC status), grand mean per-RPC = %s; report → sdk/go/perf_report_go.md",
 		len(samples), len(failed), (grand / time.Duration(len(samples))).Round(time.Microsecond))
+}
+
+func rpcAPIAlias(rpc RPCInfo) string {
+	return rpcStringField(rpc, "APIAlias", "ApiAlias")
+}
+
+func rpcOperationID(rpc RPCInfo) string {
+	return rpcStringField(rpc, "OperationID", "OperationId")
+}
+
+func rpcStringField(rpc RPCInfo, names ...string) string {
+	value := reflect.ValueOf(rpc)
+	for _, name := range names {
+		field := value.FieldByName(name)
+		if field.IsValid() && field.Kind() == reflect.String {
+			return field.String()
+		}
+	}
+	return ""
 }
 
 // seededFirstRecv opens a non-CDC streaming RPC with a seeded request and measures

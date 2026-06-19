@@ -1,0 +1,224 @@
+name: "Start backends"
+description: >-
+  Stand up the `docker run` backends (MinIO / Kafka / Qdrant / Redis /
+  ClickHouse / Neo4j) plus the Kafka topic and MinIO bucket creation shared by
+  the live-SDK, benchmark, and native-integration jobs. postgres/mongodb are
+  NOT here — composite actions cannot declare `services:`, so keep those in the
+  calling job's `services:` block.
+
+inputs:
+  minio:
+    description: "Start MinIO (object/S3 backend)."
+    required: false
+    default: "true"
+  kafka:
+    description: "Start Kafka (events backend) and create the topics."
+    required: false
+    default: "true"
+  qdrant:
+    description: "Start Qdrant (vector backend)."
+    required: false
+    default: "true"
+  redis:
+    description: "Start Redis (cache backend)."
+    required: false
+    default: "false"
+  clickhouse:
+    description: "Start ClickHouse (column backend)."
+    required: false
+    default: "false"
+  neo4j:
+    description: "Start Neo4j (graph backend)."
+    required: false
+    default: "false"
+  kafka-topics:
+    description: "Space-separated Kafka topics to create when kafka is enabled."
+    required: false
+    default: "udb.authn.user.registered.v1 udb.notification.sent.v1"
+  minio-bucket:
+    description: "MinIO bucket to create when minio is enabled."
+    required: false
+    default: "udb-live-sdk"
+  minio-storage-bucket:
+    description: >-
+      Extra MinIO bucket for the StorageService object path (UDB_OBJECT_BUCKET).
+      Empty string skips it.
+    required: false
+    default: "udb-storage"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Start MinIO
+      if: inputs.minio == 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        docker run -d --name udb-bench-minio \
+          -p 9000:9000 \
+          -e MINIO_ROOT_USER=minio \
+          -e MINIO_ROOT_PASSWORD=minio123 \
+          minio/minio:RELEASE.2025-01-20T14-49-07Z \
+          server /data --console-address ":9001"
+        for _ in {1..60}; do
+          curl -fsS http://localhost:9000/minio/health/live >/dev/null && exit 0
+          docker ps --filter name=udb-bench-minio --filter status=running --quiet | grep -q . || {
+            docker logs udb-bench-minio
+            exit 1
+          }
+          sleep 2
+        done
+        docker logs udb-bench-minio
+        exit 1
+
+    - name: Start Kafka
+      if: inputs.kafka == 'true'
+      shell: bash
+      env:
+        KAFKA_TOPICS: ${{ inputs.kafka-topics }}
+      run: |
+        set -euo pipefail
+        docker run -d --name udb-bench-kafka --hostname kafka \
+          -p 59192:59192 \
+          -e KAFKA_NODE_ID=1 \
+          -e KAFKA_PROCESS_ROLES=broker,controller \
+          -e KAFKA_CONTROLLER_QUORUM_VOTERS=1@kafka:9093 \
+          -e KAFKA_LISTENERS=INTERNAL://0.0.0.0:9092,CONTROLLER://kafka:9093,EXTERNAL://0.0.0.0:59192 \
+          -e KAFKA_ADVERTISED_LISTENERS=INTERNAL://localhost:9092,EXTERNAL://localhost:59192 \
+          -e KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT \
+          -e KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER \
+          -e KAFKA_INTER_BROKER_LISTENER_NAME=INTERNAL \
+          -e KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1 \
+          -e KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1 \
+          -e KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1 \
+          -e KAFKA_AUTO_CREATE_TOPICS_ENABLE=true \
+          -e KAFKA_COMPRESSION_TYPE=lz4 \
+          apache/kafka:3.9.0
+        for _ in {1..60}; do
+          if docker exec udb-bench-kafka \
+            /opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1; then
+            for topic in $KAFKA_TOPICS; do
+              docker exec udb-bench-kafka \
+                /opt/kafka/bin/kafka-topics.sh --create --if-not-exists \
+                --bootstrap-server localhost:9092 \
+                --topic "$topic" --partitions 1 --replication-factor 1
+            done
+            exit 0
+          fi
+          docker ps --filter name=udb-bench-kafka --filter status=running --quiet | grep -q . || {
+            docker logs udb-bench-kafka
+            exit 1
+          }
+          sleep 2
+        done
+        docker logs udb-bench-kafka
+        exit 1
+
+    - name: Start Qdrant (vector backend)
+      if: inputs.qdrant == 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        docker run -d --name udb-bench-qdrant \
+          -p 6333:6333 \
+          qdrant/qdrant:v1.13.4
+        for _ in {1..60}; do
+          curl -fsS http://localhost:6333/readyz >/dev/null 2>&1 && exit 0
+          docker ps --filter name=udb-bench-qdrant --filter status=running --quiet | grep -q . || {
+            docker logs udb-bench-qdrant
+            exit 1
+          }
+          sleep 2
+        done
+        docker logs udb-bench-qdrant
+        exit 1
+
+    - name: Start Redis (cache backend)
+      if: inputs.redis == 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        docker run -d --name udb-bench-redis -p 6379:6379 redis:7-alpine
+        for _ in {1..30}; do
+          docker exec udb-bench-redis redis-cli ping 2>/dev/null | grep -q PONG && exit 0
+          docker ps --filter name=udb-bench-redis --filter status=running --quiet | grep -q . || {
+            docker logs udb-bench-redis
+            exit 1
+          }
+          sleep 2
+        done
+        docker logs udb-bench-redis
+        exit 1
+
+    - name: Start ClickHouse (column backend)
+      if: inputs.clickhouse == 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        # Zero-config default user (no password, `default` db) — the broker resolves CH
+        # auth from UDB_COLUMN_USER/PASSWORD (unset → default/empty), not the DSN userinfo.
+        docker run -d --name udb-bench-clickhouse -p 8123:8123 \
+          -e CLICKHOUSE_SKIP_USER_SETUP=1 \
+          clickhouse/clickhouse-server:24.8
+        for _ in {1..60}; do
+          # Query-level gate (not /ping): the broker issues SQL, so wait until the HTTP
+          # interface actually answers a SELECT, not just liveness.
+          curl -fsS "http://localhost:8123/" --data-binary "SELECT 1" 2>/dev/null | grep -q "^1$" && exit 0
+          docker ps --filter name=udb-bench-clickhouse --filter status=running --quiet | grep -q . || {
+            docker logs udb-bench-clickhouse
+            exit 1
+          }
+          sleep 2
+        done
+        docker logs udb-bench-clickhouse
+        exit 1
+
+    - name: Start Neo4j (graph backend)
+      if: inputs.neo4j == 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        # GraphMutate/GraphQuery resolve to the 'neo4j:default' executor; without a live
+        # neo4j they fail "backend executor 'neo4j:default' is not registered". Broker reads
+        # UDB_GRAPH_DSN (HTTP :7474) + UDB_GRAPH_USER/PASSWORD.
+        docker run -d --name udb-bench-neo4j -p 7474:7474 -p 7687:7687 \
+          -e NEO4J_AUTH=neo4j/test1234 \
+          neo4j:5
+        # REAL query-readiness gate (not just HTTP 200): neo4j:5 serves :7474 ~30s before it
+        # accepts Cypher, and the broker's executor talks to the SAME HTTP tx endpoint. If we
+        # let the broker mount neo4j before it answers queries, Graph* degrade for the whole run.
+        # Poll the tx/commit endpoint until errors==[].
+        for attempt in {1..80}; do
+          if curl -fsS -u neo4j:test1234 -H 'Content-Type: application/json' \
+               -d '{"statements":[{"statement":"RETURN 1"}]}' \
+               http://localhost:7474/db/neo4j/tx/commit 2>/dev/null | grep -q '"errors":\[\]'; then
+            echo "neo4j query-ready after ~$((attempt*3))s"; exit 0
+          fi
+          docker ps --filter name=udb-bench-neo4j --filter status=running --quiet | grep -q . || {
+            docker logs udb-bench-neo4j
+            exit 1
+          }
+          sleep 3
+        done
+        docker logs udb-bench-neo4j
+        exit 1
+
+    - name: Create MinIO bucket(s)
+      if: inputs.minio == 'true'
+      shell: bash
+      env:
+        MINIO_BUCKET: ${{ inputs.minio-bucket }}
+        MINIO_STORAGE_BUCKET: ${{ inputs.minio-storage-bucket }}
+      run: |
+        set -euo pipefail
+        # mc is not pre-installed; keep the downloaded client in runner temp so
+        # this action does not depend on write access to /usr/local/bin.
+        mc_bin="${RUNNER_TEMP:-/tmp}/mc"
+        curl -sSL https://dl.min.io/client/mc/release/linux-amd64/mc -o "${mc_bin}"
+        chmod +x "${mc_bin}"
+        "${mc_bin}" alias set local http://localhost:9000 minio minio123
+        "${mc_bin}" mb --ignore-existing "local/${MINIO_BUCKET}"
+        if [ -n "${MINIO_STORAGE_BUCKET}" ]; then
+          # StorageService object bucket (UDB_OBJECT_BUCKET) for the presigned FinalizeUpload path.
+          "${mc_bin}" mb --ignore-existing "local/${MINIO_STORAGE_BUCKET}"
+        fi

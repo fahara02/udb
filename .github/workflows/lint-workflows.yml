@@ -1,0 +1,45 @@
+name: Lint · Workflows
+
+# 15.0.1 — actionlint over every workflow + composite action. Catches the runner
+# semantics YAML-parse can't (bad `uses:`, shell typos, expression errors,
+# undefined needs). Standalone + additive: does not alter any existing required
+# check. Make it a required check only after the consolidation lands clean.
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/**"
+      - ".github/actions/**"
+  pull_request:
+    paths:
+      - ".github/workflows/**"
+      - ".github/actions/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lint-workflows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  actionlint:
+    name: actionlint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install actionlint
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+          echo "$PWD" >> "$GITHUB_PATH"
+      - name: Run actionlint
+        shell: bash
+        run: |
+          set -euo pipefail
+          # actionlint uses the preinstalled shellcheck (on ubuntu runners) to lint
+          # the run: scripts; -color for readable logs.
+          actionlint -color

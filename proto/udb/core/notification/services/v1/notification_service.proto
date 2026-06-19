@@ -94,7 +94,7 @@ service NotificationService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "send_notification"
+      method_alias: "send_notification" rest_operation_id: "sendNotification"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -155,7 +155,7 @@ service NotificationService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "get_notification"
+      method_alias: "get_notification" rest_operation_id: "getNotification"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -212,7 +212,7 @@ service NotificationService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "list_notifications"
+      method_alias: "list_notifications" rest_operation_id: "listNotifications"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -284,7 +284,7 @@ service NotificationService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "retry_notification"
+      method_alias: "retry_notification" rest_operation_id: "retryNotification"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -346,7 +346,7 @@ service NotificationService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "upsert_template"
+      method_alias: "upsert_template" rest_operation_id: "upsertTemplate"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -406,7 +406,7 @@ service NotificationService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "get_template"
+      method_alias: "get_template" rest_operation_id: "getTemplate"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -463,7 +463,7 @@ service NotificationService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "list_templates"
+      method_alias: "list_templates" rest_operation_id: "listTemplates"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -520,7 +520,7 @@ service NotificationService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "get_delivery_stats"
+      method_alias: "get_delivery_stats" rest_operation_id: "getDeliveryStats"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -579,7 +579,7 @@ service NotificationService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "set_preference"
+      method_alias: "set_preference" rest_operation_id: "setPreference"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -639,7 +639,7 @@ service NotificationService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "get_preference"
+      method_alias: "get_preference" rest_operation_id: "getPreference"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -696,7 +696,7 @@ service NotificationService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "list_preferences"
+      method_alias: "list_preferences" rest_operation_id: "listPreferences"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3

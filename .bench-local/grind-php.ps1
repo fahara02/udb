@@ -65,14 +65,31 @@ ON CONFLICT (dlq_id) DO UPDATE SET tenant_id=EXCLUDED.tenant_id,status='OPEN',up
 $sql | docker exec -i $PGC psql -U udb -d $DB | Out-Null
 
 Write-Host "== run PHP perf bench (docker -> host.docker.internal:50071/50081) ==" -ForegroundColor Cyan
-& docker run --rm --add-host=host.docker.internal:host-gateway `
-  -e UDB_LIVE_SDK_TESTS=1 -e UDB_LIVE_PERF=1 `
-  -e UDB_GRPC_TARGET=host.docker.internal:50071 -e UDB_AUTH_GRPC_TARGET=host.docker.internal:50081 `
-  -e UDB_LIVE_USERNAME=sdk-live-admin -e "UDB_LIVE_PASSWORD=SdkLive#2026Pass" `
-  -e UDB_LIVE_TENANT=sdk-live -e UDB_LIVE_PROJECT=default `
-  -e UDB_LIVE_REQUIRED_BACKENDS=postgres,mongodb,minio -e UDB_LIVE_S3_BUCKET=udb-live-sdk `
-  udb-php-live php vendor/bin/pest tests/Live/GeneratedRpcSurfaceTest.php --filter "measures per-RPC latency" 2>&1 |
-  Tee-Object -FilePath "$ROOT\.bench-local\php-grind.log" | Out-Null
+$container = "udb-php-live-grind-" + ([guid]::NewGuid().ToString("N"))
+$reportHost = Join-Path $ROOT "sdk\php\perf_report_php.md"
+try {
+  & docker create --name $container --add-host=host.docker.internal:host-gateway `
+    -e UDB_LIVE_SDK_TESTS=1 -e UDB_LIVE_PERF=1 `
+    -e UDB_GRPC_TARGET=host.docker.internal:50071 -e UDB_AUTH_GRPC_TARGET=host.docker.internal:50081 `
+    -e UDB_LIVE_USERNAME=sdk-live-admin -e "UDB_LIVE_PASSWORD=SdkLive#2026Pass" `
+    -e UDB_LIVE_TENANT=sdk-live -e UDB_LIVE_PROJECT=default `
+    -e UDB_LIVE_REQUIRED_BACKENDS=postgres,mongodb,minio -e UDB_LIVE_S3_BUCKET=udb-live-sdk `
+    udb-php-live php vendor/bin/pest tests/Live/GeneratedRpcSurfaceTest.php --filter "measures per-RPC latency" | Out-Null
+  if ($LASTEXITCODE -ne 0) { Write-Host "PHP CONTAINER CREATE FAILED"; exit 4 }
+
+  & docker start -a $container 2>&1 |
+    Tee-Object -FilePath "$ROOT\.bench-local\php-grind.log" | Out-Null
+  $testExit = [int](& docker inspect $container --format '{{.State.ExitCode}}')
+  & docker cp "${container}:/sdk/perf_report_php.md" $reportHost 2>$null
+  $copyExit = $LASTEXITCODE
+  if ($copyExit -ne 0) {
+    Write-Host "PHP PERF REPORT COPY FAILED: /sdk/perf_report_php.md was not produced" -ForegroundColor Red
+  }
+  if ($testExit -ne 0) { Write-Host "PHP PERF BENCH FAILED: exit=$testExit"; exit $testExit }
+  if ($copyExit -ne 0) { exit 5 }
+} finally {
+  & docker rm -f $container 2>$null | Out-Null
+}
 
 $fails = Select-String -Path "$ROOT\.bench-local\php-grind.log" -Pattern 'FAILDETAIL'
 Write-Host ("== PHP FAILURES: {0} ==" -f $fails.Count) -ForegroundColor Yellow

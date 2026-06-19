@@ -1,0 +1,171 @@
+name: Release
+
+# THE release orchestrator (Chapter 15.A.3). A single pushed `v*.*.*` tag drives
+# the entire release as ONE chain, replacing the 7 independent tag-triggered
+# workflows that used to race with no ordering and could half-release when one of
+# them failed alone.
+#
+# Graph (one gate, one order, one failure surface):
+#
+#   ci-green      (exact main commit)      ← cheap first gate
+#        │
+#        ▼
+#   version-guard (component: udb)
+#        │
+#        ▼
+#   build-binaries  (release-binaries.yml) ← SOLE producer of the release assets
+#        │
+#        ├──► publish-crates    (release-crates.yml)        ┐
+#        ├──► publish-docker    (release-docker.yml)        │ all parallel,
+#        ├──► publish-ts        (release-typescript-sdk.yml)│ each needs build-binaries,
+#        ├──► publish-py        (release-python-sdk.yml)    │ each secrets: inherit
+#        ├──► publish-csharp    (release-csharp-sdk.yml)    │
+#        └──► publish-packagist (release-packagist.yml)     ┘
+#
+# Single-artifact-system (15.A.2): docker (and the perf benchmark) consume the
+# published RELEASE ASSET via `gh release download` — the broker is compiled once
+# by build-binaries and never rebuilt downstream.
+#
+# Benchmark decision (Chapter 15 — "keep it simple"): the perf suite is NOT called
+# from here. `benchmark-sdks.yml` listens for this top-level `Release` workflow
+# to complete successfully, then consumes the published release asset the same
+# way (no rebuild). That keeps publishing in this release graph and Pages deploy
+# after the post-release benchmark.
+#
+# Uncancellable + re-runnable (Footguns): `concurrency.cancel-in-progress: false`
+# never aborts an in-flight release; every publisher keeps its
+# skip-if-already-published guard so a re-run after a mid-chain failure is
+# idempotent and never double-publishes.
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+# Minimal at the top; each reusable scopes up (packages: write for docker,
+# id-token: write for nuget) inside its own jobs.
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  # Per-tag group; NEVER cancel an in-flight release.
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # Cheap first gate: releases are tag-only and must point at the exact commit
+  # currently at origin/main with a completed green CI push run. That keeps the
+  # release graph duplicate-free: publishers do not re-run CI's Rust/SDK gates.
+  ci-green:
+    name: ci-green
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Require current main and green CI
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin +refs/heads/main:refs/remotes/origin/main
+          main_sha="$(git rev-parse refs/remotes/origin/main)"
+          if [ "${main_sha}" != "${GITHUB_SHA}" ]; then
+            echo "::error::Release tag ${GITHUB_REF_NAME} points at ${GITHUB_SHA}, but origin/main is ${main_sha}."
+            exit 1
+          fi
+
+          conclusion="$(gh run list \
+            --workflow ci.yml \
+            --branch main \
+            --commit "${GITHUB_SHA}" \
+            --json conclusion,event,status \
+            --jq '[.[] | select(.event == "push" and .status == "completed")][0].conclusion // ""')"
+          if [ "${conclusion}" != "success" ]; then
+            echo "::error::No completed successful CI push run found for ${GITHUB_SHA} on main."
+            exit 1
+          fi
+
+  # Cheap first gate: assert the tag matches versions.json `udb` before anything
+  # heavy runs. Each reusable re-guards its own component, but this fails fast.
+  version-guard:
+    name: version-guard
+    needs: ci-green
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-sdk-toolchains
+        with:
+          node: 'true'
+      - uses: ./.github/actions/version-guard
+        with:
+          component: udb
+
+  # SOLE producer of the release binaries; everything else consumes its assets.
+  build-binaries:
+    name: build-binaries
+    needs: version-guard
+    permissions:
+      contents: write
+    uses: ./.github/workflows/release-binaries.yml
+    secrets: inherit
+
+  # ── Parallel publish fan-out (each needs build-binaries) ────────────────────
+  publish-crates:
+    name: publish-crates
+    needs: build-binaries
+    permissions:
+      contents: read
+    uses: ./.github/workflows/release-crates.yml
+    secrets: inherit
+
+  publish-docker:
+    name: publish-docker
+    needs: build-binaries
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/release-docker.yml
+    secrets: inherit
+
+  publish-ts:
+    name: publish-ts
+    needs: build-binaries
+    permissions:
+      contents: read
+    uses: ./.github/workflows/release-typescript-sdk.yml
+    secrets: inherit
+
+  publish-py:
+    name: publish-py
+    needs: build-binaries
+    permissions:
+      contents: read
+    uses: ./.github/workflows/release-python-sdk.yml
+    secrets: inherit
+
+  publish-csharp:
+    name: publish-csharp
+    needs: build-binaries
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/release-csharp-sdk.yml
+    secrets: inherit
+
+  publish-packagist:
+    name: publish-packagist
+    needs: build-binaries
+    permissions:
+      contents: read
+    uses: ./.github/workflows/release-packagist.yml
+    secrets: inherit

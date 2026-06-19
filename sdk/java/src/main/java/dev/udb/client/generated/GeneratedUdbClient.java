@@ -86,7 +86,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
   // plus DEADLINE_EXCEEDED only for read-only RPCs. The optional `deadline`
   // overrides the tuning default.
 
-  /** {@code /udb.core.analytics.services.v1.AnalyticsService/GetExecutorPerformance} — unary call on udb.core.analytics.services.v1.AnalyticsService. */
+  /** {@code /udb.core.analytics.services.v1.AnalyticsService/GetExecutorPerformance} — unary call on udb.core.analytics.services.v1.AnalyticsService; public alias {@code get_executor_performance}. */
   public com.udb.core.analytics.services.v1.GetExecutorPerformanceResponse GetExecutorPerformance(
       com.udb.core.analytics.services.v1.GetExecutorPerformanceRequest request) {
     return GetExecutorPerformance(request, null);
@@ -105,7 +105,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.analytics.services.v1.AnalyticsService/GetPipelineSummary} — unary call on udb.core.analytics.services.v1.AnalyticsService. */
+  /** {@code /udb.core.analytics.services.v1.AnalyticsService/GetPipelineSummary} — unary call on udb.core.analytics.services.v1.AnalyticsService; public alias {@code get_pipeline_summary}. */
   public com.udb.core.analytics.services.v1.GetPipelineSummaryResponse GetPipelineSummary(
       com.udb.core.analytics.services.v1.GetPipelineSummaryRequest request) {
     return GetPipelineSummary(request, null);
@@ -124,7 +124,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.analytics.services.v1.AnalyticsService/GetReconciliationAnalytics} — unary call on udb.core.analytics.services.v1.AnalyticsService. */
+  /** {@code /udb.core.analytics.services.v1.AnalyticsService/GetReconciliationAnalytics} — unary call on udb.core.analytics.services.v1.AnalyticsService; public alias {@code get_reconciliation_analytics}. */
   public com.udb.core.analytics.services.v1.GetReconciliationAnalyticsResponse GetReconciliationAnalytics(
       com.udb.core.analytics.services.v1.GetReconciliationAnalyticsRequest request) {
     return GetReconciliationAnalytics(request, null);
@@ -143,7 +143,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.analytics.services.v1.AnalyticsService/GetSlaCompliance} — unary call on udb.core.analytics.services.v1.AnalyticsService. */
+  /** {@code /udb.core.analytics.services.v1.AnalyticsService/GetSlaCompliance} — unary call on udb.core.analytics.services.v1.AnalyticsService; public alias {@code get_sla_compliance}. */
   public com.udb.core.analytics.services.v1.GetSlaComplianceResponse GetSlaCompliance(
       com.udb.core.analytics.services.v1.GetSlaComplianceRequest request) {
     return GetSlaCompliance(request, null);
@@ -162,7 +162,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.analytics.services.v1.AnalyticsService/GetThroughput} — unary call on udb.core.analytics.services.v1.AnalyticsService. */
+  /** {@code /udb.core.analytics.services.v1.AnalyticsService/GetThroughput} — unary call on udb.core.analytics.services.v1.AnalyticsService; public alias {@code get_throughput}. */
   public com.udb.core.analytics.services.v1.GetThroughputResponse GetThroughput(
       com.udb.core.analytics.services.v1.GetThroughputRequest request) {
     return GetThroughput(request, null);
@@ -181,7 +181,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.analytics.services.v1.AnalyticsService/RecordPipelineMetric} — unary call on udb.core.analytics.services.v1.AnalyticsService. */
+  /** {@code /udb.core.analytics.services.v1.AnalyticsService/RecordPipelineMetric} — unary call on udb.core.analytics.services.v1.AnalyticsService; public alias {@code record_pipeline_metric}. */
   public com.udb.core.analytics.services.v1.RecordPipelineMetricResponse RecordPipelineMetric(
       com.udb.core.analytics.services.v1.RecordPipelineMetricRequest request) {
     return RecordPipelineMetric(request, null);
@@ -200,7 +200,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.analytics.services.v1.AnalyticsService/TriggerSnapshot} — unary call on udb.core.analytics.services.v1.AnalyticsService. */
+  /** {@code /udb.core.analytics.services.v1.AnalyticsService/TriggerSnapshot} — unary call on udb.core.analytics.services.v1.AnalyticsService; public alias {@code trigger_snapshot}. */
   public com.udb.core.analytics.services.v1.TriggerSnapshotResponse TriggerSnapshot(
       com.udb.core.analytics.services.v1.TriggerSnapshotRequest request) {
     return TriggerSnapshot(request, null);
@@ -219,7 +219,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.apikey.services.v1.ApiKeyService/CreateApiKey} — unary call on udb.core.apikey.services.v1.ApiKeyService. */
+  /** {@code /udb.core.apikey.services.v1.ApiKeyService/CreateApiKey} — unary call on udb.core.apikey.services.v1.ApiKeyService; public alias {@code create_api_key}. */
   public com.udb.core.apikey.services.v1.CreateApiKeyResponse CreateApiKey(
       com.udb.core.apikey.services.v1.CreateApiKeyRequest request) {
     return CreateApiKey(request, null);
@@ -238,7 +238,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.apikey.services.v1.ApiKeyService/EmergencyRevokeApiKeys} — unary call on udb.core.apikey.services.v1.ApiKeyService. */
+  /** {@code /udb.core.apikey.services.v1.ApiKeyService/EmergencyRevokeApiKeys} — unary call on udb.core.apikey.services.v1.ApiKeyService; public alias {@code emergency_revoke_api_keys}. */
   public com.udb.core.apikey.services.v1.EmergencyRevokeApiKeysResponse EmergencyRevokeApiKeys(
       com.udb.core.apikey.services.v1.EmergencyRevokeApiKeysRequest request) {
     return EmergencyRevokeApiKeys(request, null);
@@ -257,7 +257,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "destructive".equals("read_only"));
   }
 
-  /** {@code /udb.core.apikey.services.v1.ApiKeyService/GetApiKey} — unary call on udb.core.apikey.services.v1.ApiKeyService. */
+  /** {@code /udb.core.apikey.services.v1.ApiKeyService/GetApiKey} — unary call on udb.core.apikey.services.v1.ApiKeyService; public alias {@code get_api_key}. */
   public com.udb.core.apikey.services.v1.GetApiKeyResponse GetApiKey(
       com.udb.core.apikey.services.v1.GetApiKeyRequest request) {
     return GetApiKey(request, null);
@@ -276,7 +276,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.apikey.services.v1.ApiKeyService/GetApiKeyUsageStats} — unary call on udb.core.apikey.services.v1.ApiKeyService. */
+  /** {@code /udb.core.apikey.services.v1.ApiKeyService/GetApiKeyUsageStats} — unary call on udb.core.apikey.services.v1.ApiKeyService; public alias {@code get_api_key_usage_stats}. */
   public com.udb.core.apikey.services.v1.GetApiKeyUsageStatsResponse GetApiKeyUsageStats(
       com.udb.core.apikey.services.v1.GetApiKeyUsageStatsRequest request) {
     return GetApiKeyUsageStats(request, null);
@@ -295,7 +295,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.apikey.services.v1.ApiKeyService/ListApiKeys} — unary call on udb.core.apikey.services.v1.ApiKeyService. */
+  /** {@code /udb.core.apikey.services.v1.ApiKeyService/ListApiKeys} — unary call on udb.core.apikey.services.v1.ApiKeyService; public alias {@code list_api_keys}. */
   public com.udb.core.apikey.services.v1.ListApiKeysResponse ListApiKeys(
       com.udb.core.apikey.services.v1.ListApiKeysRequest request) {
     return ListApiKeys(request, null);
@@ -314,7 +314,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.apikey.services.v1.ApiKeyService/RevokeApiKey} — unary call on udb.core.apikey.services.v1.ApiKeyService. */
+  /** {@code /udb.core.apikey.services.v1.ApiKeyService/RevokeApiKey} — unary call on udb.core.apikey.services.v1.ApiKeyService; public alias {@code revoke_api_key}. */
   public com.udb.core.apikey.services.v1.RevokeApiKeyResponse RevokeApiKey(
       com.udb.core.apikey.services.v1.RevokeApiKeyRequest request) {
     return RevokeApiKey(request, null);
@@ -333,7 +333,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.apikey.services.v1.ApiKeyService/RotateApiKey} — unary call on udb.core.apikey.services.v1.ApiKeyService. */
+  /** {@code /udb.core.apikey.services.v1.ApiKeyService/RotateApiKey} — unary call on udb.core.apikey.services.v1.ApiKeyService; public alias {@code rotate_api_key}. */
   public com.udb.core.apikey.services.v1.RotateApiKeyResponse RotateApiKey(
       com.udb.core.apikey.services.v1.RotateApiKeyRequest request) {
     return RotateApiKey(request, null);
@@ -352,7 +352,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.apikey.services.v1.ApiKeyService/UpdateApiKey} — unary call on udb.core.apikey.services.v1.ApiKeyService. */
+  /** {@code /udb.core.apikey.services.v1.ApiKeyService/UpdateApiKey} — unary call on udb.core.apikey.services.v1.ApiKeyService; public alias {@code update_api_key}. */
   public com.udb.core.apikey.services.v1.UpdateApiKeyResponse UpdateApiKey(
       com.udb.core.apikey.services.v1.UpdateApiKeyRequest request) {
     return UpdateApiKey(request, null);
@@ -371,7 +371,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.apikey.services.v1.ApiKeyService/ValidateApiKey} — unary call on udb.core.apikey.services.v1.ApiKeyService. */
+  /** {@code /udb.core.apikey.services.v1.ApiKeyService/ValidateApiKey} — unary call on udb.core.apikey.services.v1.ApiKeyService; public alias {@code validate_api_key}. */
   public com.udb.core.apikey.services.v1.ValidateApiKeyResponse ValidateApiKey(
       com.udb.core.apikey.services.v1.ValidateApiKeyRequest request) {
     return ValidateApiKey(request, null);
@@ -390,7 +390,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.asset.services.v1.AssetService/CompleteStep} — unary call on udb.core.asset.services.v1.AssetService. */
+  /** {@code /udb.core.asset.services.v1.AssetService/CompleteStep} — unary call on udb.core.asset.services.v1.AssetService; public alias {@code complete_step}. */
   public com.udb.core.asset.services.v1.CompleteStepResponse CompleteStep(
       com.udb.core.asset.services.v1.CompleteStepRequest request) {
     return CompleteStep(request, null);
@@ -409,7 +409,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.asset.services.v1.AssetService/CreatePipelineDefinition} — unary call on udb.core.asset.services.v1.AssetService. */
+  /** {@code /udb.core.asset.services.v1.AssetService/CreatePipelineDefinition} — unary call on udb.core.asset.services.v1.AssetService; public alias {@code create_pipeline_definition}. */
   public com.udb.core.asset.services.v1.CreatePipelineDefinitionResponse CreatePipelineDefinition(
       com.udb.core.asset.services.v1.CreatePipelineDefinitionRequest request) {
     return CreatePipelineDefinition(request, null);
@@ -428,7 +428,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.asset.services.v1.AssetService/GetAsset} — unary call on udb.core.asset.services.v1.AssetService. */
+  /** {@code /udb.core.asset.services.v1.AssetService/GetAsset} — unary call on udb.core.asset.services.v1.AssetService; public alias {@code get_asset}. */
   public com.udb.core.asset.services.v1.GetAssetResponse GetAsset(
       com.udb.core.asset.services.v1.GetAssetRequest request) {
     return GetAsset(request, null);
@@ -447,7 +447,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.asset.services.v1.AssetService/GetPipeline} — unary call on udb.core.asset.services.v1.AssetService. */
+  /** {@code /udb.core.asset.services.v1.AssetService/GetPipeline} — unary call on udb.core.asset.services.v1.AssetService; public alias {@code get_pipeline}. */
   public com.udb.core.asset.services.v1.GetPipelineResponse GetPipeline(
       com.udb.core.asset.services.v1.GetPipelineRequest request) {
     return GetPipeline(request, null);
@@ -466,7 +466,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.asset.services.v1.AssetService/GetPipelineDefinition} — unary call on udb.core.asset.services.v1.AssetService. */
+  /** {@code /udb.core.asset.services.v1.AssetService/GetPipelineDefinition} — unary call on udb.core.asset.services.v1.AssetService; public alias {@code get_pipeline_definition}. */
   public com.udb.core.asset.services.v1.GetPipelineDefinitionResponse GetPipelineDefinition(
       com.udb.core.asset.services.v1.GetPipelineDefinitionRequest request) {
     return GetPipelineDefinition(request, null);
@@ -485,7 +485,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.asset.services.v1.AssetService/ListAssets} — unary call on udb.core.asset.services.v1.AssetService. */
+  /** {@code /udb.core.asset.services.v1.AssetService/ListAssets} — unary call on udb.core.asset.services.v1.AssetService; public alias {@code list_assets}. */
   public com.udb.core.asset.services.v1.ListAssetsResponse ListAssets(
       com.udb.core.asset.services.v1.ListAssetsRequest request) {
     return ListAssets(request, null);
@@ -504,7 +504,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.asset.services.v1.AssetService/RegisterAsset} — unary call on udb.core.asset.services.v1.AssetService. */
+  /** {@code /udb.core.asset.services.v1.AssetService/RegisterAsset} — unary call on udb.core.asset.services.v1.AssetService; public alias {@code register_asset}. */
   public com.udb.core.asset.services.v1.RegisterAssetResponse RegisterAsset(
       com.udb.core.asset.services.v1.RegisterAssetRequest request) {
     return RegisterAsset(request, null);
@@ -523,7 +523,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.asset.services.v1.AssetService/StartPipeline} — unary call on udb.core.asset.services.v1.AssetService. */
+  /** {@code /udb.core.asset.services.v1.AssetService/StartPipeline} — unary call on udb.core.asset.services.v1.AssetService; public alias {@code start_pipeline}. */
   public com.udb.core.asset.services.v1.StartPipelineResponse StartPipeline(
       com.udb.core.asset.services.v1.StartPipelineRequest request) {
     return StartPipeline(request, null);
@@ -542,7 +542,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/AdminResetMfa} — unary call on udb.core.authn.services.v1.AuthnService. */
+  /** {@code /udb.core.authn.services.v1.AuthnService/AdminResetMfa} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code admin_reset_mfa}. */
   public com.udb.core.authn.services.v1.AdminResetMfaResponse AdminResetMfa(
       com.udb.core.authn.services.v1.AdminResetMfaRequest request) {
     return AdminResetMfa(request, null);
@@ -561,7 +561,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "destructive".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/AdminResetPassword} — unary call on udb.core.authn.services.v1.AuthnService. */
+  /** {@code /udb.core.authn.services.v1.AuthnService/AdminResetPassword} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code admin_reset_password}. */
   public com.udb.core.authn.services.v1.AdminResetPasswordResponse AdminResetPassword(
       com.udb.core.authn.services.v1.AdminResetPasswordRequest request) {
     return AdminResetPassword(request, null);
@@ -580,7 +580,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "destructive".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/AdminRevokeAllTenantSessions} — unary call on udb.core.authn.services.v1.AuthnService. */
+  /** {@code /udb.core.authn.services.v1.AuthnService/AdminRevokeAllTenantSessions} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code admin_revoke_all_tenant_sessions}. */
   public com.udb.core.authn.services.v1.AdminRevokeAllTenantSessionsResponse AdminRevokeAllTenantSessions(
       com.udb.core.authn.services.v1.AdminRevokeAllTenantSessionsRequest request) {
     return AdminRevokeAllTenantSessions(request, null);
@@ -599,7 +599,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "destructive".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/AdminRevokeAllUserSessions} — unary call on udb.core.authn.services.v1.AuthnService. */
+  /** {@code /udb.core.authn.services.v1.AuthnService/AdminRevokeAllUserSessions} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code admin_revoke_all_user_sessions}. */
   public com.udb.core.authn.services.v1.AdminRevokeAllUserSessionsResponse AdminRevokeAllUserSessions(
       com.udb.core.authn.services.v1.AdminRevokeAllUserSessionsRequest request) {
     return AdminRevokeAllUserSessions(request, null);
@@ -618,7 +618,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "destructive".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/AdminRevokeSession} — unary call on udb.core.authn.services.v1.AuthnService. */
+  /** {@code /udb.core.authn.services.v1.AuthnService/AdminRevokeSession} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code admin_revoke_session}. */
   public com.udb.core.authn.services.v1.AdminRevokeSessionResponse AdminRevokeSession(
       com.udb.core.authn.services.v1.AdminRevokeSessionRequest request) {
     return AdminRevokeSession(request, null);
@@ -637,7 +637,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "destructive".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/Authenticate} — unary call on udb.core.authn.services.v1.AuthnService. */
+  /** {@code /udb.core.authn.services.v1.AuthnService/Authenticate} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code authenticate}. */
   public com.udb.core.authn.services.v1.AuthnResponse Authenticate(
       com.udb.core.authn.services.v1.AuthnRequest request) {
     return Authenticate(request, null);
@@ -656,7 +656,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/ChangePassword} — unary call on udb.core.authn.services.v1.AuthnService. */
+  /** {@code /udb.core.authn.services.v1.AuthnService/ChangePassword} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code change_password}. */
   public com.udb.core.authn.services.v1.ChangePasswordResponse ChangePassword(
       com.udb.core.authn.services.v1.ChangePasswordRequest request) {
     return ChangePassword(request, null);
@@ -675,7 +675,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/ChangeUserStatus} — unary call on udb.core.authn.services.v1.AuthnService. */
+  /** {@code /udb.core.authn.services.v1.AuthnService/ChangeUserStatus} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code change_user_status}. */
   public com.udb.core.authn.services.v1.ChangeUserStatusResponse ChangeUserStatus(
       com.udb.core.authn.services.v1.ChangeUserStatusRequest request) {
     return ChangeUserStatus(request, null);
@@ -694,14 +694,14 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "destructive".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/ConfirmMFAEnrollment} — unary call on udb.core.authn.services.v1.AuthnService. */
-  public com.udb.core.authn.services.v1.ConfirmMFAEnrollmentResponse ConfirmMFAEnrollment(
+  /** {@code /udb.core.authn.services.v1.AuthnService/ConfirmMFAEnrollment} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code confirm_mfaenrollment}. */
+  public com.udb.core.authn.services.v1.ConfirmMFAEnrollmentResponse ConfirmMfaenrollment(
       com.udb.core.authn.services.v1.ConfirmMFAEnrollmentRequest request) {
-    return ConfirmMFAEnrollment(request, null);
+    return ConfirmMfaenrollment(request, null);
   }
 
   /** {@code /udb.core.authn.services.v1.AuthnService/ConfirmMFAEnrollment} — unary call with an explicit per-call deadline. */
-  public com.udb.core.authn.services.v1.ConfirmMFAEnrollmentResponse ConfirmMFAEnrollment(
+  public com.udb.core.authn.services.v1.ConfirmMFAEnrollmentResponse ConfirmMfaenrollment(
       com.udb.core.authn.services.v1.ConfirmMFAEnrollmentRequest request, Duration deadline) {
     return GeneratedClientSupport.unary(
         channel,
@@ -713,7 +713,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/CreateSession} — unary call on udb.core.authn.services.v1.AuthnService. */
+  /** {@code /udb.core.authn.services.v1.AuthnService/CreateSession} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code create_session}. */
   public com.udb.core.authn.services.v1.CreateSessionResponse CreateSession(
       com.udb.core.authn.services.v1.CreateSessionRequest request) {
     return CreateSession(request, null);
@@ -732,7 +732,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/CreateUser} — unary call on udb.core.authn.services.v1.AuthnService. */
+  /** {@code /udb.core.authn.services.v1.AuthnService/CreateUser} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code create_user}. */
   public com.udb.core.authn.services.v1.CreateUserResponse CreateUser(
       com.udb.core.authn.services.v1.CreateUserRequest request) {
     return CreateUser(request, null);
@@ -751,7 +751,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/DeleteWebAuthnCredential} — unary call on udb.core.authn.services.v1.AuthnService. */
+  /** {@code /udb.core.authn.services.v1.AuthnService/DeleteWebAuthnCredential} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code delete_web_authn_credential}. */
   public com.udb.core.authn.services.v1.DeleteWebAuthnCredentialResponse DeleteWebAuthnCredential(
       com.udb.core.authn.services.v1.DeleteWebAuthnCredentialRequest request) {
     return DeleteWebAuthnCredential(request, null);
@@ -770,7 +770,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/DisableMfaFactor} — unary call on udb.core.authn.services.v1.AuthnService. */
+  /** {@code /udb.core.authn.services.v1.AuthnService/DisableMfaFactor} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code disable_mfa_factor}. */
   public com.udb.core.authn.services.v1.DisableMfaFactorResponse DisableMfaFactor(
       com.udb.core.authn.services.v1.DisableMfaFactorRequest request) {
     return DisableMfaFactor(request, null);
@@ -789,7 +789,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/EmergencyRevoke} — unary call on udb.core.authn.services.v1.AuthnService. */
+  /** {@code /udb.core.authn.services.v1.AuthnService/EmergencyRevoke} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code emergency_revoke}. */
   public com.udb.core.authn.services.v1.EmergencyRevokeResponse EmergencyRevoke(
       com.udb.core.authn.services.v1.EmergencyRevokeRequest request) {
     return EmergencyRevoke(request, null);
@@ -808,14 +808,14 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "destructive".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/EnrollMFA} — unary call on udb.core.authn.services.v1.AuthnService. */
-  public com.udb.core.authn.services.v1.EnrollMFAResponse EnrollMFA(
+  /** {@code /udb.core.authn.services.v1.AuthnService/EnrollMFA} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code enroll_mfa}. */
+  public com.udb.core.authn.services.v1.EnrollMFAResponse EnrollMfa(
       com.udb.core.authn.services.v1.EnrollMFARequest request) {
-    return EnrollMFA(request, null);
+    return EnrollMfa(request, null);
   }
 
   /** {@code /udb.core.authn.services.v1.AuthnService/EnrollMFA} — unary call with an explicit per-call deadline. */
-  public com.udb.core.authn.services.v1.EnrollMFAResponse EnrollMFA(
+  public com.udb.core.authn.services.v1.EnrollMFAResponse EnrollMfa(
       com.udb.core.authn.services.v1.EnrollMFARequest request, Duration deadline) {
     return GeneratedClientSupport.unary(
         channel,
@@ -827,7 +827,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/FinishWebAuthnAuthentication} — unary call on udb.core.authn.services.v1.AuthnService. */
+  /** {@code /udb.core.authn.services.v1.AuthnService/FinishWebAuthnAuthentication} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code finish_web_authn_authentication}. */
   public com.udb.core.authn.services.v1.FinishWebAuthnAuthenticationResponse FinishWebAuthnAuthentication(
       com.udb.core.authn.services.v1.FinishWebAuthnAuthenticationRequest request) {
     return FinishWebAuthnAuthentication(request, null);
@@ -846,7 +846,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/FinishWebAuthnRegistration} — unary call on udb.core.authn.services.v1.AuthnService. */
+  /** {@code /udb.core.authn.services.v1.AuthnService/FinishWebAuthnRegistration} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code finish_web_authn_registration}. */
   public com.udb.core.authn.services.v1.FinishWebAuthnRegistrationResponse FinishWebAuthnRegistration(
       com.udb.core.authn.services.v1.FinishWebAuthnRegistrationRequest request) {
     return FinishWebAuthnRegistration(request, null);
@@ -865,7 +865,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/ForgotPassword} — unary call on udb.core.authn.services.v1.AuthnService. */
+  /** {@code /udb.core.authn.services.v1.AuthnService/ForgotPassword} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code forgot_password}. */
   public com.udb.core.authn.services.v1.ForgotPasswordResponse ForgotPassword(
       com.udb.core.authn.services.v1.ForgotPasswordRequest request) {
     return ForgotPassword(request, null);
@@ -884,7 +884,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/GenerateRecoveryCodes} — unary call on udb.core.authn.services.v1.AuthnService. */
+  /** {@code /udb.core.authn.services.v1.AuthnService/GenerateRecoveryCodes} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code generate_recovery_codes}. */
   public com.udb.core.authn.services.v1.GenerateRecoveryCodesResponse GenerateRecoveryCodes(
       com.udb.core.authn.services.v1.GenerateRecoveryCodesRequest request) {
     return GenerateRecoveryCodes(request, null);
@@ -903,7 +903,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/GetJwks} — unary call on udb.core.authn.services.v1.AuthnService. */
+  /** {@code /udb.core.authn.services.v1.AuthnService/GetJwks} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code get_jwks}. */
   public com.udb.core.authn.services.v1.GetJwksResponse GetJwks(
       com.udb.core.authn.services.v1.GetJwksRequest request) {
     return GetJwks(request, null);
@@ -922,7 +922,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/GetMfaPolicy} — unary call on udb.core.authn.services.v1.AuthnService. */
+  /** {@code /udb.core.authn.services.v1.AuthnService/GetMfaPolicy} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code get_mfa_policy}. */
   public com.udb.core.authn.services.v1.GetMfaPolicyResponse GetMfaPolicy(
       com.udb.core.authn.services.v1.GetMfaPolicyRequest request) {
     return GetMfaPolicy(request, null);
@@ -941,7 +941,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/GetSession} — unary call on udb.core.authn.services.v1.AuthnService. */
+  /** {@code /udb.core.authn.services.v1.AuthnService/GetSession} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code get_session}. */
   public com.udb.core.authn.services.v1.GetSessionResponse GetSession(
       com.udb.core.authn.services.v1.GetSessionRequest request) {
     return GetSession(request, null);
@@ -960,7 +960,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/GetUser} — unary call on udb.core.authn.services.v1.AuthnService. */
+  /** {@code /udb.core.authn.services.v1.AuthnService/GetUser} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code get_user}. */
   public com.udb.core.authn.services.v1.GetUserResponse GetUser(
       com.udb.core.authn.services.v1.GetUserRequest request) {
     return GetUser(request, null);
@@ -979,7 +979,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/IntrospectToken} — unary call on udb.core.authn.services.v1.AuthnService. */
+  /** {@code /udb.core.authn.services.v1.AuthnService/IntrospectToken} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code introspect_token}. */
   public com.udb.core.authn.services.v1.IntrospectTokenResponse IntrospectToken(
       com.udb.core.authn.services.v1.IntrospectTokenRequest request) {
     return IntrospectToken(request, null);
@@ -998,7 +998,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/IssueMfaChallenge} — unary call on udb.core.authn.services.v1.AuthnService. */
+  /** {@code /udb.core.authn.services.v1.AuthnService/IssueMfaChallenge} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code issue_mfa_challenge}. */
   public com.udb.core.authn.services.v1.IssueMfaChallengeResponse IssueMfaChallenge(
       com.udb.core.authn.services.v1.IssueMfaChallengeRequest request) {
     return IssueMfaChallenge(request, null);
@@ -1017,7 +1017,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/ListDevices} — unary call on udb.core.authn.services.v1.AuthnService. */
+  /** {@code /udb.core.authn.services.v1.AuthnService/ListDevices} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code list_devices}. */
   public com.udb.core.authn.services.v1.ListDevicesResponse ListDevices(
       com.udb.core.authn.services.v1.ListDevicesRequest request) {
     return ListDevices(request, null);
@@ -1036,7 +1036,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/ListMfaFactors} — unary call on udb.core.authn.services.v1.AuthnService. */
+  /** {@code /udb.core.authn.services.v1.AuthnService/ListMfaFactors} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code list_mfa_factors}. */
   public com.udb.core.authn.services.v1.ListMfaFactorsResponse ListMfaFactors(
       com.udb.core.authn.services.v1.ListMfaFactorsRequest request) {
     return ListMfaFactors(request, null);
@@ -1055,7 +1055,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/ListSessions} — unary call on udb.core.authn.services.v1.AuthnService. */
+  /** {@code /udb.core.authn.services.v1.AuthnService/ListSessions} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code list_sessions}. */
   public com.udb.core.authn.services.v1.ListSessionsResponse ListSessions(
       com.udb.core.authn.services.v1.ListSessionsRequest request) {
     return ListSessions(request, null);
@@ -1074,7 +1074,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/ListUsers} — unary call on udb.core.authn.services.v1.AuthnService. */
+  /** {@code /udb.core.authn.services.v1.AuthnService/ListUsers} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code list_users}. */
   public com.udb.core.authn.services.v1.ListUsersResponse ListUsers(
       com.udb.core.authn.services.v1.ListUsersRequest request) {
     return ListUsers(request, null);
@@ -1093,7 +1093,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/ListWebAuthnCredentials} — unary call on udb.core.authn.services.v1.AuthnService. */
+  /** {@code /udb.core.authn.services.v1.AuthnService/ListWebAuthnCredentials} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code list_web_authn_credentials}. */
   public com.udb.core.authn.services.v1.ListWebAuthnCredentialsResponse ListWebAuthnCredentials(
       com.udb.core.authn.services.v1.ListWebAuthnCredentialsRequest request) {
     return ListWebAuthnCredentials(request, null);
@@ -1112,7 +1112,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/Login} — unary call on udb.core.authn.services.v1.AuthnService. */
+  /** {@code /udb.core.authn.services.v1.AuthnService/Login} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code login}. */
   public com.udb.core.authn.services.v1.LoginResponse Login(
       com.udb.core.authn.services.v1.LoginRequest request) {
     return Login(request, null);
@@ -1131,7 +1131,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/Logout} — unary call on udb.core.authn.services.v1.AuthnService. */
+  /** {@code /udb.core.authn.services.v1.AuthnService/Logout} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code logout}. */
   public com.udb.core.authn.services.v1.LogoutResponse Logout(
       com.udb.core.authn.services.v1.LogoutRequest request) {
     return Logout(request, null);
@@ -1150,7 +1150,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/PutMfaPolicy} — unary call on udb.core.authn.services.v1.AuthnService. */
+  /** {@code /udb.core.authn.services.v1.AuthnService/PutMfaPolicy} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code put_mfa_policy}. */
   public com.udb.core.authn.services.v1.PutMfaPolicyResponse PutMfaPolicy(
       com.udb.core.authn.services.v1.PutMfaPolicyRequest request) {
     return PutMfaPolicy(request, null);
@@ -1169,7 +1169,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/RefreshSession} — unary call on udb.core.authn.services.v1.AuthnService. */
+  /** {@code /udb.core.authn.services.v1.AuthnService/RefreshSession} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code refresh_session}. */
   public com.udb.core.authn.services.v1.RefreshSessionResponse RefreshSession(
       com.udb.core.authn.services.v1.RefreshSessionRequest request) {
     return RefreshSession(request, null);
@@ -1188,7 +1188,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/RefreshToken} — unary call on udb.core.authn.services.v1.AuthnService. */
+  /** {@code /udb.core.authn.services.v1.AuthnService/RefreshToken} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code refresh_token}. */
   public com.udb.core.authn.services.v1.RefreshTokenResponse RefreshToken(
       com.udb.core.authn.services.v1.RefreshTokenRequest request) {
     return RefreshToken(request, null);
@@ -1207,7 +1207,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/RenamePasskey} — unary call on udb.core.authn.services.v1.AuthnService. */
+  /** {@code /udb.core.authn.services.v1.AuthnService/RenamePasskey} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code rename_passkey}. */
   public com.udb.core.authn.services.v1.RenamePasskeyResponse RenamePasskey(
       com.udb.core.authn.services.v1.RenamePasskeyRequest request) {
     return RenamePasskey(request, null);
@@ -1226,14 +1226,14 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/ResendOTP} — unary call on udb.core.authn.services.v1.AuthnService. */
-  public com.udb.core.authn.services.v1.ResendOTPResponse ResendOTP(
+  /** {@code /udb.core.authn.services.v1.AuthnService/ResendOTP} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code resend_otp}. */
+  public com.udb.core.authn.services.v1.ResendOTPResponse ResendOtp(
       com.udb.core.authn.services.v1.ResendOTPRequest request) {
-    return ResendOTP(request, null);
+    return ResendOtp(request, null);
   }
 
   /** {@code /udb.core.authn.services.v1.AuthnService/ResendOTP} — unary call with an explicit per-call deadline. */
-  public com.udb.core.authn.services.v1.ResendOTPResponse ResendOTP(
+  public com.udb.core.authn.services.v1.ResendOTPResponse ResendOtp(
       com.udb.core.authn.services.v1.ResendOTPRequest request, Duration deadline) {
     return GeneratedClientSupport.unary(
         channel,
@@ -1245,7 +1245,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/ResetPassword} — unary call on udb.core.authn.services.v1.AuthnService. */
+  /** {@code /udb.core.authn.services.v1.AuthnService/ResetPassword} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code reset_password}. */
   public com.udb.core.authn.services.v1.ResetPasswordResponse ResetPassword(
       com.udb.core.authn.services.v1.ResetPasswordRequest request) {
     return ResetPassword(request, null);
@@ -1264,7 +1264,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/RevokeDevice} — unary call on udb.core.authn.services.v1.AuthnService. */
+  /** {@code /udb.core.authn.services.v1.AuthnService/RevokeDevice} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code revoke_device}. */
   public com.udb.core.authn.services.v1.RevokeDeviceResponse RevokeDevice(
       com.udb.core.authn.services.v1.RevokeDeviceRequest request) {
     return RevokeDevice(request, null);
@@ -1283,7 +1283,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/RevokeRecoveryCodes} — unary call on udb.core.authn.services.v1.AuthnService. */
+  /** {@code /udb.core.authn.services.v1.AuthnService/RevokeRecoveryCodes} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code revoke_recovery_codes}. */
   public com.udb.core.authn.services.v1.RevokeRecoveryCodesResponse RevokeRecoveryCodes(
       com.udb.core.authn.services.v1.RevokeRecoveryCodesRequest request) {
     return RevokeRecoveryCodes(request, null);
@@ -1302,7 +1302,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/RevokeSession} — unary call on udb.core.authn.services.v1.AuthnService. */
+  /** {@code /udb.core.authn.services.v1.AuthnService/RevokeSession} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code revoke_session}. */
   public com.udb.core.authn.services.v1.RevokeSessionResponse RevokeSession(
       com.udb.core.authn.services.v1.RevokeSessionRequest request) {
     return RevokeSession(request, null);
@@ -1321,14 +1321,14 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/SendOTP} — unary call on udb.core.authn.services.v1.AuthnService. */
-  public com.udb.core.authn.services.v1.SendOTPResponse SendOTP(
+  /** {@code /udb.core.authn.services.v1.AuthnService/SendOTP} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code send_otp}. */
+  public com.udb.core.authn.services.v1.SendOTPResponse SendOtp(
       com.udb.core.authn.services.v1.SendOTPRequest request) {
-    return SendOTP(request, null);
+    return SendOtp(request, null);
   }
 
   /** {@code /udb.core.authn.services.v1.AuthnService/SendOTP} — unary call with an explicit per-call deadline. */
-  public com.udb.core.authn.services.v1.SendOTPResponse SendOTP(
+  public com.udb.core.authn.services.v1.SendOTPResponse SendOtp(
       com.udb.core.authn.services.v1.SendOTPRequest request, Duration deadline) {
     return GeneratedClientSupport.unary(
         channel,
@@ -1340,7 +1340,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/SendPhoneVerification} — unary call on udb.core.authn.services.v1.AuthnService. */
+  /** {@code /udb.core.authn.services.v1.AuthnService/SendPhoneVerification} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code send_phone_verification}. */
   public com.udb.core.authn.services.v1.SendPhoneVerificationResponse SendPhoneVerification(
       com.udb.core.authn.services.v1.SendPhoneVerificationRequest request) {
     return SendPhoneVerification(request, null);
@@ -1359,7 +1359,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/StartWebAuthnAuthentication} — unary call on udb.core.authn.services.v1.AuthnService. */
+  /** {@code /udb.core.authn.services.v1.AuthnService/StartWebAuthnAuthentication} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code start_web_authn_authentication}. */
   public com.udb.core.authn.services.v1.StartWebAuthnAuthenticationResponse StartWebAuthnAuthentication(
       com.udb.core.authn.services.v1.StartWebAuthnAuthenticationRequest request) {
     return StartWebAuthnAuthentication(request, null);
@@ -1378,7 +1378,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/StartWebAuthnRegistration} — unary call on udb.core.authn.services.v1.AuthnService. */
+  /** {@code /udb.core.authn.services.v1.AuthnService/StartWebAuthnRegistration} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code start_web_authn_registration}. */
   public com.udb.core.authn.services.v1.StartWebAuthnRegistrationResponse StartWebAuthnRegistration(
       com.udb.core.authn.services.v1.StartWebAuthnRegistrationRequest request) {
     return StartWebAuthnRegistration(request, null);
@@ -1397,7 +1397,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/UpdateUser} — unary call on udb.core.authn.services.v1.AuthnService. */
+  /** {@code /udb.core.authn.services.v1.AuthnService/UpdateUser} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code update_user}. */
   public com.udb.core.authn.services.v1.UpdateUserResponse UpdateUser(
       com.udb.core.authn.services.v1.UpdateUserRequest request) {
     return UpdateUser(request, null);
@@ -1416,14 +1416,14 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/ValidateCSRF} — unary call on udb.core.authn.services.v1.AuthnService. */
-  public com.udb.core.authn.services.v1.ValidateCSRFResponse ValidateCSRF(
+  /** {@code /udb.core.authn.services.v1.AuthnService/ValidateCSRF} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code validate_csrf}. */
+  public com.udb.core.authn.services.v1.ValidateCSRFResponse ValidateCsrf(
       com.udb.core.authn.services.v1.ValidateCSRFRequest request) {
-    return ValidateCSRF(request, null);
+    return ValidateCsrf(request, null);
   }
 
   /** {@code /udb.core.authn.services.v1.AuthnService/ValidateCSRF} — unary call with an explicit per-call deadline. */
-  public com.udb.core.authn.services.v1.ValidateCSRFResponse ValidateCSRF(
+  public com.udb.core.authn.services.v1.ValidateCSRFResponse ValidateCsrf(
       com.udb.core.authn.services.v1.ValidateCSRFRequest request, Duration deadline) {
     return GeneratedClientSupport.unary(
         channel,
@@ -1435,7 +1435,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/ValidateToken} — unary call on udb.core.authn.services.v1.AuthnService. */
+  /** {@code /udb.core.authn.services.v1.AuthnService/ValidateToken} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code validate_token}. */
   public com.udb.core.authn.services.v1.ValidateTokenResponse ValidateToken(
       com.udb.core.authn.services.v1.ValidateTokenRequest request) {
     return ValidateToken(request, null);
@@ -1454,7 +1454,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/VerifyMfaChallenge} — unary call on udb.core.authn.services.v1.AuthnService. */
+  /** {@code /udb.core.authn.services.v1.AuthnService/VerifyMfaChallenge} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code verify_mfa_challenge}. */
   public com.udb.core.authn.services.v1.VerifyMfaChallengeResponse VerifyMfaChallenge(
       com.udb.core.authn.services.v1.VerifyMfaChallengeRequest request) {
     return VerifyMfaChallenge(request, null);
@@ -1473,14 +1473,14 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.authn.services.v1.AuthnService/VerifyOTP} — unary call on udb.core.authn.services.v1.AuthnService. */
-  public com.udb.core.authn.services.v1.VerifyOTPResponse VerifyOTP(
+  /** {@code /udb.core.authn.services.v1.AuthnService/VerifyOTP} — unary call on udb.core.authn.services.v1.AuthnService; public alias {@code verify_otp}. */
+  public com.udb.core.authn.services.v1.VerifyOTPResponse VerifyOtp(
       com.udb.core.authn.services.v1.VerifyOTPRequest request) {
-    return VerifyOTP(request, null);
+    return VerifyOtp(request, null);
   }
 
   /** {@code /udb.core.authn.services.v1.AuthnService/VerifyOTP} — unary call with an explicit per-call deadline. */
-  public com.udb.core.authn.services.v1.VerifyOTPResponse VerifyOTP(
+  public com.udb.core.authn.services.v1.VerifyOTPResponse VerifyOtp(
       com.udb.core.authn.services.v1.VerifyOTPRequest request, Duration deadline) {
     return GeneratedClientSupport.unary(
         channel,
@@ -1492,7 +1492,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.authz.services.v1.AuthzService/ActivateCanary} — unary call on udb.core.authz.services.v1.AuthzService. */
+  /** {@code /udb.core.authz.services.v1.AuthzService/ActivateCanary} — unary call on udb.core.authz.services.v1.AuthzService; public alias {@code activate_canary}. */
   public com.udb.core.authz.services.v1.CanaryResponse ActivateCanary(
       com.udb.core.authz.services.v1.ActivateCanaryRequest request) {
     return ActivateCanary(request, null);
@@ -1511,7 +1511,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "destructive".equals("read_only"));
   }
 
-  /** {@code /udb.core.authz.services.v1.AuthzService/ActivatePolicyVersion} — unary call on udb.core.authz.services.v1.AuthzService. */
+  /** {@code /udb.core.authz.services.v1.AuthzService/ActivatePolicyVersion} — unary call on udb.core.authz.services.v1.AuthzService; public alias {@code activate_policy_version}. */
   public com.udb.core.authz.services.v1.ActivationResponse ActivatePolicyVersion(
       com.udb.core.authz.services.v1.ActivatePolicyVersionRequest request) {
     return ActivatePolicyVersion(request, null);
@@ -1530,7 +1530,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "destructive".equals("read_only"));
   }
 
-  /** {@code /udb.core.authz.services.v1.AuthzService/ApprovePolicyDraft} — unary call on udb.core.authz.services.v1.AuthzService. */
+  /** {@code /udb.core.authz.services.v1.AuthzService/ApprovePolicyDraft} — unary call on udb.core.authz.services.v1.AuthzService; public alias {@code approve_policy_draft}. */
   public com.udb.core.authz.services.v1.PolicyApprovalResponse ApprovePolicyDraft(
       com.udb.core.authz.services.v1.ApprovePolicyDraftRequest request) {
     return ApprovePolicyDraft(request, null);
@@ -1549,7 +1549,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authz.services.v1.AuthzService/AssignRole} — unary call on udb.core.authz.services.v1.AuthzService. */
+  /** {@code /udb.core.authz.services.v1.AuthzService/AssignRole} — unary call on udb.core.authz.services.v1.AuthzService; public alias {@code assign_role}. */
   public com.udb.core.authz.services.v1.AssignRoleResponse AssignRole(
       com.udb.core.authz.services.v1.AssignRoleRequest request) {
     return AssignRole(request, null);
@@ -1568,7 +1568,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authz.services.v1.AuthzService/Authorize} — unary call on udb.core.authz.services.v1.AuthzService. */
+  /** {@code /udb.core.authz.services.v1.AuthzService/Authorize} — unary call on udb.core.authz.services.v1.AuthzService; public alias {@code authorize}. */
   public com.udb.core.authz.services.v1.AuthzResponse Authorize(
       com.udb.core.authz.services.v1.AuthzRequest request) {
     return Authorize(request, null);
@@ -1587,7 +1587,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.authz.services.v1.AuthzService/BatchCheckPermissions} — unary call on udb.core.authz.services.v1.AuthzService. */
+  /** {@code /udb.core.authz.services.v1.AuthzService/BatchCheckPermissions} — unary call on udb.core.authz.services.v1.AuthzService; public alias {@code batch_check_permissions}. */
   public com.udb.core.authz.services.v1.BatchCheckPermissionsResponse BatchCheckPermissions(
       com.udb.core.authz.services.v1.BatchCheckPermissionsRequest request) {
     return BatchCheckPermissions(request, null);
@@ -1606,7 +1606,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.authz.services.v1.AuthzService/CheckAccess} — unary call on udb.core.authz.services.v1.AuthzService. */
+  /** {@code /udb.core.authz.services.v1.AuthzService/CheckAccess} — unary call on udb.core.authz.services.v1.AuthzService; public alias {@code check_access}. */
   public com.udb.core.authz.services.v1.CheckAccessResponse CheckAccess(
       com.udb.core.authz.services.v1.CheckAccessRequest request) {
     return CheckAccess(request, null);
@@ -1625,7 +1625,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.authz.services.v1.AuthzService/CreatePolicyDraft} — unary call on udb.core.authz.services.v1.AuthzService. */
+  /** {@code /udb.core.authz.services.v1.AuthzService/CreatePolicyDraft} — unary call on udb.core.authz.services.v1.AuthzService; public alias {@code create_policy_draft}. */
   public com.udb.core.authz.services.v1.PolicyDraftResponse CreatePolicyDraft(
       com.udb.core.authz.services.v1.CreatePolicyDraftRequest request) {
     return CreatePolicyDraft(request, null);
@@ -1644,7 +1644,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authz.services.v1.AuthzService/CreatePolicyRule} — unary call on udb.core.authz.services.v1.AuthzService. */
+  /** {@code /udb.core.authz.services.v1.AuthzService/CreatePolicyRule} — unary call on udb.core.authz.services.v1.AuthzService; public alias {@code create_policy_rule}. */
   public com.udb.core.authz.services.v1.CreatePolicyRuleResponse CreatePolicyRule(
       com.udb.core.authz.services.v1.CreatePolicyRuleRequest request) {
     return CreatePolicyRule(request, null);
@@ -1663,7 +1663,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authz.services.v1.AuthzService/CreateRole} — unary call on udb.core.authz.services.v1.AuthzService. */
+  /** {@code /udb.core.authz.services.v1.AuthzService/CreateRole} — unary call on udb.core.authz.services.v1.AuthzService; public alias {@code create_role}. */
   public com.udb.core.authz.services.v1.CreateRoleResponse CreateRole(
       com.udb.core.authz.services.v1.CreateRoleRequest request) {
     return CreateRole(request, null);
@@ -1682,7 +1682,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authz.services.v1.AuthzService/DeletePolicyRule} — unary call on udb.core.authz.services.v1.AuthzService. */
+  /** {@code /udb.core.authz.services.v1.AuthzService/DeletePolicyRule} — unary call on udb.core.authz.services.v1.AuthzService; public alias {@code delete_policy_rule}. */
   public com.udb.core.authz.services.v1.DeletePolicyRuleResponse DeletePolicyRule(
       com.udb.core.authz.services.v1.DeletePolicyRuleRequest request) {
     return DeletePolicyRule(request, null);
@@ -1701,7 +1701,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authz.services.v1.AuthzService/DeleteRole} — unary call on udb.core.authz.services.v1.AuthzService. */
+  /** {@code /udb.core.authz.services.v1.AuthzService/DeleteRole} — unary call on udb.core.authz.services.v1.AuthzService; public alias {@code delete_role}. */
   public com.udb.core.authz.services.v1.DeleteRoleResponse DeleteRole(
       com.udb.core.authz.services.v1.DeleteRoleRequest request) {
     return DeleteRole(request, null);
@@ -1720,7 +1720,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authz.services.v1.AuthzService/DiffPolicyDraft} — unary call on udb.core.authz.services.v1.AuthzService. */
+  /** {@code /udb.core.authz.services.v1.AuthzService/DiffPolicyDraft} — unary call on udb.core.authz.services.v1.AuthzService; public alias {@code diff_policy_draft}. */
   public com.udb.core.authz.services.v1.DiffPolicyDraftResponse DiffPolicyDraft(
       com.udb.core.authz.services.v1.DiffPolicyDraftRequest request) {
     return DiffPolicyDraft(request, null);
@@ -1739,7 +1739,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.authz.services.v1.AuthzService/ExplainPolicy} — unary call on udb.core.authz.services.v1.AuthzService. */
+  /** {@code /udb.core.authz.services.v1.AuthzService/ExplainPolicy} — unary call on udb.core.authz.services.v1.AuthzService; public alias {@code explain_policy}. */
   public com.udb.core.authz.services.v1.ExplainPolicyResponse ExplainPolicy(
       com.udb.core.authz.services.v1.ExplainPolicyRequest request) {
     return ExplainPolicy(request, null);
@@ -1758,7 +1758,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.authz.services.v1.AuthzService/GetAuthzRevision} — unary call on udb.core.authz.services.v1.AuthzService. */
+  /** {@code /udb.core.authz.services.v1.AuthzService/GetAuthzRevision} — unary call on udb.core.authz.services.v1.AuthzService; public alias {@code get_authz_revision}. */
   public com.udb.core.authz.services.v1.GetAuthzRevisionResponse GetAuthzRevision(
       com.udb.core.authz.services.v1.GetAuthzRevisionRequest request) {
     return GetAuthzRevision(request, null);
@@ -1777,7 +1777,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.authz.services.v1.AuthzService/GetCanaryStatus} — unary call on udb.core.authz.services.v1.AuthzService. */
+  /** {@code /udb.core.authz.services.v1.AuthzService/GetCanaryStatus} — unary call on udb.core.authz.services.v1.AuthzService; public alias {@code get_canary_status}. */
   public com.udb.core.authz.services.v1.GetCanaryStatusResponse GetCanaryStatus(
       com.udb.core.authz.services.v1.GetCanaryStatusRequest request) {
     return GetCanaryStatus(request, null);
@@ -1796,7 +1796,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.authz.services.v1.AuthzService/GetNativeAccess} — unary call on udb.core.authz.services.v1.AuthzService. */
+  /** {@code /udb.core.authz.services.v1.AuthzService/GetNativeAccess} — unary call on udb.core.authz.services.v1.AuthzService; public alias {@code get_native_access}. */
   public com.udb.core.authz.services.v1.NativeAccessResponse GetNativeAccess(
       com.udb.core.authz.services.v1.NativeAccessRequest request) {
     return GetNativeAccess(request, null);
@@ -1815,7 +1815,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.authz.services.v1.AuthzService/GetPolicyBundle} — unary call on udb.core.authz.services.v1.AuthzService. */
+  /** {@code /udb.core.authz.services.v1.AuthzService/GetPolicyBundle} — unary call on udb.core.authz.services.v1.AuthzService; public alias {@code get_policy_bundle}. */
   public com.udb.core.authz.services.v1.PolicyBundleResponse GetPolicyBundle(
       com.udb.core.authz.services.v1.PolicyBundleRequest request) {
     return GetPolicyBundle(request, null);
@@ -1834,7 +1834,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.authz.services.v1.AuthzService/GetPolicyRule} — unary call on udb.core.authz.services.v1.AuthzService. */
+  /** {@code /udb.core.authz.services.v1.AuthzService/GetPolicyRule} — unary call on udb.core.authz.services.v1.AuthzService; public alias {@code get_policy_rule}. */
   public com.udb.core.authz.services.v1.GetPolicyRuleResponse GetPolicyRule(
       com.udb.core.authz.services.v1.GetPolicyRuleRequest request) {
     return GetPolicyRule(request, null);
@@ -1853,7 +1853,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.authz.services.v1.AuthzService/GetRole} — unary call on udb.core.authz.services.v1.AuthzService. */
+  /** {@code /udb.core.authz.services.v1.AuthzService/GetRole} — unary call on udb.core.authz.services.v1.AuthzService; public alias {@code get_role}. */
   public com.udb.core.authz.services.v1.GetRoleResponse GetRole(
       com.udb.core.authz.services.v1.GetRoleRequest request) {
     return GetRole(request, null);
@@ -1872,7 +1872,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.authz.services.v1.AuthzService/InvalidatePolicyBundles} — unary call on udb.core.authz.services.v1.AuthzService. */
+  /** {@code /udb.core.authz.services.v1.AuthzService/InvalidatePolicyBundles} — unary call on udb.core.authz.services.v1.AuthzService; public alias {@code invalidate_policy_bundles}. */
   public com.udb.core.authz.services.v1.InvalidatePolicyBundlesResponse InvalidatePolicyBundles(
       com.udb.core.authz.services.v1.InvalidatePolicyBundlesRequest request) {
     return InvalidatePolicyBundles(request, null);
@@ -1891,7 +1891,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "destructive".equals("read_only"));
   }
 
-  /** {@code /udb.core.authz.services.v1.AuthzService/LintAuthzPolicies} — unary call on udb.core.authz.services.v1.AuthzService. */
+  /** {@code /udb.core.authz.services.v1.AuthzService/LintAuthzPolicies} — unary call on udb.core.authz.services.v1.AuthzService; public alias {@code lint_authz_policies}. */
   public com.udb.core.authz.services.v1.LintAuthzPoliciesResponse LintAuthzPolicies(
       com.udb.core.authz.services.v1.LintAuthzPoliciesRequest request) {
     return LintAuthzPolicies(request, null);
@@ -1910,7 +1910,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.authz.services.v1.AuthzService/ListAccessDecisionAudits} — unary call on udb.core.authz.services.v1.AuthzService. */
+  /** {@code /udb.core.authz.services.v1.AuthzService/ListAccessDecisionAudits} — unary call on udb.core.authz.services.v1.AuthzService; public alias {@code list_access_decision_audits}. */
   public com.udb.core.authz.services.v1.ListAccessDecisionAuditsResponse ListAccessDecisionAudits(
       com.udb.core.authz.services.v1.ListAccessDecisionAuditsRequest request) {
     return ListAccessDecisionAudits(request, null);
@@ -1929,7 +1929,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.authz.services.v1.AuthzService/ListPolicyRules} — unary call on udb.core.authz.services.v1.AuthzService. */
+  /** {@code /udb.core.authz.services.v1.AuthzService/ListPolicyRules} — unary call on udb.core.authz.services.v1.AuthzService; public alias {@code list_policy_rules}. */
   public com.udb.core.authz.services.v1.ListPolicyRulesResponse ListPolicyRules(
       com.udb.core.authz.services.v1.ListPolicyRulesRequest request) {
     return ListPolicyRules(request, null);
@@ -1948,7 +1948,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.authz.services.v1.AuthzService/ListPolicyVersions} — unary call on udb.core.authz.services.v1.AuthzService. */
+  /** {@code /udb.core.authz.services.v1.AuthzService/ListPolicyVersions} — unary call on udb.core.authz.services.v1.AuthzService; public alias {@code list_policy_versions}. */
   public com.udb.core.authz.services.v1.ListPolicyVersionsResponse ListPolicyVersions(
       com.udb.core.authz.services.v1.ListPolicyVersionsRequest request) {
     return ListPolicyVersions(request, null);
@@ -1967,7 +1967,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.authz.services.v1.AuthzService/ListRoles} — unary call on udb.core.authz.services.v1.AuthzService. */
+  /** {@code /udb.core.authz.services.v1.AuthzService/ListRoles} — unary call on udb.core.authz.services.v1.AuthzService; public alias {@code list_roles}. */
   public com.udb.core.authz.services.v1.ListRolesResponse ListRoles(
       com.udb.core.authz.services.v1.ListRolesRequest request) {
     return ListRoles(request, null);
@@ -1986,7 +1986,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.authz.services.v1.AuthzService/ListUserPermissions} — unary call on udb.core.authz.services.v1.AuthzService. */
+  /** {@code /udb.core.authz.services.v1.AuthzService/ListUserPermissions} — unary call on udb.core.authz.services.v1.AuthzService; public alias {@code list_user_permissions}. */
   public com.udb.core.authz.services.v1.ListUserPermissionsResponse ListUserPermissions(
       com.udb.core.authz.services.v1.ListUserPermissionsRequest request) {
     return ListUserPermissions(request, null);
@@ -2005,7 +2005,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.authz.services.v1.AuthzService/ListUserRoles} — unary call on udb.core.authz.services.v1.AuthzService. */
+  /** {@code /udb.core.authz.services.v1.AuthzService/ListUserRoles} — unary call on udb.core.authz.services.v1.AuthzService; public alias {@code list_user_roles}. */
   public com.udb.core.authz.services.v1.ListUserRolesResponse ListUserRoles(
       com.udb.core.authz.services.v1.ListUserRolesRequest request) {
     return ListUserRoles(request, null);
@@ -2024,7 +2024,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.authz.services.v1.AuthzService/MigrateLegacyPolicies} — unary call on udb.core.authz.services.v1.AuthzService. */
+  /** {@code /udb.core.authz.services.v1.AuthzService/MigrateLegacyPolicies} — unary call on udb.core.authz.services.v1.AuthzService; public alias {@code migrate_legacy_policies}. */
   public com.udb.core.authz.services.v1.MigrateLegacyPoliciesResponse MigrateLegacyPolicies(
       com.udb.core.authz.services.v1.MigrateLegacyPoliciesRequest request) {
     return MigrateLegacyPolicies(request, null);
@@ -2043,7 +2043,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "destructive".equals("read_only"));
   }
 
-  /** {@code /udb.core.authz.services.v1.AuthzService/PromoteCanary} — unary call on udb.core.authz.services.v1.AuthzService. */
+  /** {@code /udb.core.authz.services.v1.AuthzService/PromoteCanary} — unary call on udb.core.authz.services.v1.AuthzService; public alias {@code promote_canary}. */
   public com.udb.core.authz.services.v1.CanaryResponse PromoteCanary(
       com.udb.core.authz.services.v1.PromoteCanaryRequest request) {
     return PromoteCanary(request, null);
@@ -2062,7 +2062,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "destructive".equals("read_only"));
   }
 
-  /** {@code /udb.core.authz.services.v1.AuthzService/PutAuthzPolicy} — unary call on udb.core.authz.services.v1.AuthzService. */
+  /** {@code /udb.core.authz.services.v1.AuthzService/PutAuthzPolicy} — unary call on udb.core.authz.services.v1.AuthzService; public alias {@code put_authz_policy}. */
   public com.udb.core.authz.services.v1.AuthMutationResponse PutAuthzPolicy(
       com.udb.core.authz.services.v1.PutAuthzPolicyRequest request) {
     return PutAuthzPolicy(request, null);
@@ -2081,7 +2081,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authz.services.v1.AuthzService/PutRelationship} — unary call on udb.core.authz.services.v1.AuthzService. */
+  /** {@code /udb.core.authz.services.v1.AuthzService/PutRelationship} — unary call on udb.core.authz.services.v1.AuthzService; public alias {@code put_relationship}. */
   public com.udb.core.authz.services.v1.AuthMutationResponse PutRelationship(
       com.udb.core.authz.services.v1.PutRelationshipRequest request) {
     return PutRelationship(request, null);
@@ -2100,7 +2100,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authz.services.v1.AuthzService/PutRoleBinding} — unary call on udb.core.authz.services.v1.AuthzService. */
+  /** {@code /udb.core.authz.services.v1.AuthzService/PutRoleBinding} — unary call on udb.core.authz.services.v1.AuthzService; public alias {@code put_role_binding}. */
   public com.udb.core.authz.services.v1.AuthMutationResponse PutRoleBinding(
       com.udb.core.authz.services.v1.PutRoleBindingRequest request) {
     return PutRoleBinding(request, null);
@@ -2119,7 +2119,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authz.services.v1.AuthzService/RejectPolicyDraft} — unary call on udb.core.authz.services.v1.AuthzService. */
+  /** {@code /udb.core.authz.services.v1.AuthzService/RejectPolicyDraft} — unary call on udb.core.authz.services.v1.AuthzService; public alias {@code reject_policy_draft}. */
   public com.udb.core.authz.services.v1.PolicyApprovalResponse RejectPolicyDraft(
       com.udb.core.authz.services.v1.RejectPolicyDraftRequest request) {
     return RejectPolicyDraft(request, null);
@@ -2138,7 +2138,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authz.services.v1.AuthzService/RevokeRole} — unary call on udb.core.authz.services.v1.AuthzService. */
+  /** {@code /udb.core.authz.services.v1.AuthzService/RevokeRole} — unary call on udb.core.authz.services.v1.AuthzService; public alias {@code revoke_role}. */
   public com.udb.core.authz.services.v1.RevokeRoleResponse RevokeRole(
       com.udb.core.authz.services.v1.RevokeRoleRequest request) {
     return RevokeRole(request, null);
@@ -2157,7 +2157,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authz.services.v1.AuthzService/RollbackPolicyVersion} — unary call on udb.core.authz.services.v1.AuthzService. */
+  /** {@code /udb.core.authz.services.v1.AuthzService/RollbackPolicyVersion} — unary call on udb.core.authz.services.v1.AuthzService; public alias {@code rollback_policy_version}. */
   public com.udb.core.authz.services.v1.ActivationResponse RollbackPolicyVersion(
       com.udb.core.authz.services.v1.RollbackPolicyVersionRequest request) {
     return RollbackPolicyVersion(request, null);
@@ -2176,7 +2176,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "destructive".equals("read_only"));
   }
 
-  /** {@code /udb.core.authz.services.v1.AuthzService/SeedBuiltinRoles} — unary call on udb.core.authz.services.v1.AuthzService. */
+  /** {@code /udb.core.authz.services.v1.AuthzService/SeedBuiltinRoles} — unary call on udb.core.authz.services.v1.AuthzService; public alias {@code seed_builtin_roles}. */
   public com.udb.core.authz.services.v1.SeedBuiltinRolesResponse SeedBuiltinRoles(
       com.udb.core.authz.services.v1.SeedBuiltinRolesRequest request) {
     return SeedBuiltinRoles(request, null);
@@ -2195,7 +2195,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authz.services.v1.AuthzService/SimulatePolicy} — unary call on udb.core.authz.services.v1.AuthzService. */
+  /** {@code /udb.core.authz.services.v1.AuthzService/SimulatePolicy} — unary call on udb.core.authz.services.v1.AuthzService; public alias {@code simulate_policy}. */
   public com.udb.core.authz.services.v1.SimulatePolicyResponse SimulatePolicy(
       com.udb.core.authz.services.v1.SimulatePolicyRequest request) {
     return SimulatePolicy(request, null);
@@ -2214,7 +2214,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authz.services.v1.AuthzService/SubmitPolicyDraft} — unary call on udb.core.authz.services.v1.AuthzService. */
+  /** {@code /udb.core.authz.services.v1.AuthzService/SubmitPolicyDraft} — unary call on udb.core.authz.services.v1.AuthzService; public alias {@code submit_policy_draft}. */
   public com.udb.core.authz.services.v1.PolicyDraftResponse SubmitPolicyDraft(
       com.udb.core.authz.services.v1.SubmitPolicyDraftRequest request) {
     return SubmitPolicyDraft(request, null);
@@ -2233,7 +2233,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authz.services.v1.AuthzService/UpdatePolicyDraft} — unary call on udb.core.authz.services.v1.AuthzService. */
+  /** {@code /udb.core.authz.services.v1.AuthzService/UpdatePolicyDraft} — unary call on udb.core.authz.services.v1.AuthzService; public alias {@code update_policy_draft}. */
   public com.udb.core.authz.services.v1.PolicyDraftResponse UpdatePolicyDraft(
       com.udb.core.authz.services.v1.UpdatePolicyDraftRequest request) {
     return UpdatePolicyDraft(request, null);
@@ -2252,7 +2252,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.authz.services.v1.AuthzService/UpdateRole} — unary call on udb.core.authz.services.v1.AuthzService. */
+  /** {@code /udb.core.authz.services.v1.AuthzService/UpdateRole} — unary call on udb.core.authz.services.v1.AuthzService; public alias {@code update_role}. */
   public com.udb.core.authz.services.v1.UpdateRoleResponse UpdateRole(
       com.udb.core.authz.services.v1.UpdateRoleRequest request) {
     return UpdateRole(request, null);
@@ -2271,7 +2271,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.control.services.v1.ControlPlaneService/AckStatus} — unary call on udb.core.control.services.v1.ControlPlaneService. */
+  /** {@code /udb.core.control.services.v1.ControlPlaneService/AckStatus} — unary call on udb.core.control.services.v1.ControlPlaneService; public alias {@code ack_status}. */
   public com.udb.core.control.services.v1.AckStatusResponse AckStatus(
       com.udb.core.control.services.v1.AckStatusRequest request) {
     return AckStatus(request, null);
@@ -2290,7 +2290,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.control.services.v1.ControlPlaneService/GetResources} — unary call on udb.core.control.services.v1.ControlPlaneService. */
+  /** {@code /udb.core.control.services.v1.ControlPlaneService/GetResources} — unary call on udb.core.control.services.v1.ControlPlaneService; public alias {@code get_resources}. */
   public com.udb.core.control.services.v1.GetResourcesResponse GetResources(
       com.udb.core.control.services.v1.GetResourcesRequest request) {
     return GetResources(request, null);
@@ -2309,7 +2309,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.control.services.v1.ControlPlaneService/ListNodeStates} — unary call on udb.core.control.services.v1.ControlPlaneService. */
+  /** {@code /udb.core.control.services.v1.ControlPlaneService/ListNodeStates} — unary call on udb.core.control.services.v1.ControlPlaneService; public alias {@code list_node_states}. */
   public com.udb.core.control.services.v1.ListNodeStatesResponse ListNodeStates(
       com.udb.core.control.services.v1.ListNodeStatesRequest request) {
     return ListNodeStates(request, null);
@@ -2328,7 +2328,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.idp.services.v1.IdentityProviderService/CreateProvider} — unary call on udb.core.idp.services.v1.IdentityProviderService. */
+  /** {@code /udb.core.idp.services.v1.IdentityProviderService/CreateProvider} — unary call on udb.core.idp.services.v1.IdentityProviderService; public alias {@code create_provider}. */
   public com.udb.core.idp.services.v1.CreateProviderResponse CreateProvider(
       com.udb.core.idp.services.v1.CreateProviderRequest request) {
     return CreateProvider(request, null);
@@ -2347,7 +2347,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.idp.services.v1.IdentityProviderService/DisableProvider} — unary call on udb.core.idp.services.v1.IdentityProviderService. */
+  /** {@code /udb.core.idp.services.v1.IdentityProviderService/DisableProvider} — unary call on udb.core.idp.services.v1.IdentityProviderService; public alias {@code disable_provider}. */
   public com.udb.core.idp.services.v1.DisableProviderResponse DisableProvider(
       com.udb.core.idp.services.v1.DisableProviderRequest request) {
     return DisableProvider(request, null);
@@ -2366,7 +2366,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.idp.services.v1.IdentityProviderService/ForceJwksRefresh} — unary call on udb.core.idp.services.v1.IdentityProviderService. */
+  /** {@code /udb.core.idp.services.v1.IdentityProviderService/ForceJwksRefresh} — unary call on udb.core.idp.services.v1.IdentityProviderService; public alias {@code force_jwks_refresh}. */
   public com.udb.core.idp.services.v1.ForceJwksRefreshResponse ForceJwksRefresh(
       com.udb.core.idp.services.v1.ForceJwksRefreshRequest request) {
     return ForceJwksRefresh(request, null);
@@ -2385,7 +2385,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.idp.services.v1.IdentityProviderService/GetProvider} — unary call on udb.core.idp.services.v1.IdentityProviderService. */
+  /** {@code /udb.core.idp.services.v1.IdentityProviderService/GetProvider} — unary call on udb.core.idp.services.v1.IdentityProviderService; public alias {@code get_provider}. */
   public com.udb.core.idp.services.v1.GetProviderResponse GetProvider(
       com.udb.core.idp.services.v1.GetProviderRequest request) {
     return GetProvider(request, null);
@@ -2404,7 +2404,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.idp.services.v1.IdentityProviderService/ImportSamlMetadata} — unary call on udb.core.idp.services.v1.IdentityProviderService. */
+  /** {@code /udb.core.idp.services.v1.IdentityProviderService/ImportSamlMetadata} — unary call on udb.core.idp.services.v1.IdentityProviderService; public alias {@code import_saml_metadata}. */
   public com.udb.core.idp.services.v1.ImportSamlMetadataResponse ImportSamlMetadata(
       com.udb.core.idp.services.v1.ImportSamlMetadataRequest request) {
     return ImportSamlMetadata(request, null);
@@ -2423,7 +2423,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.idp.services.v1.IdentityProviderService/LinkIdentity} — unary call on udb.core.idp.services.v1.IdentityProviderService. */
+  /** {@code /udb.core.idp.services.v1.IdentityProviderService/LinkIdentity} — unary call on udb.core.idp.services.v1.IdentityProviderService; public alias {@code link_identity}. */
   public com.udb.core.idp.services.v1.LinkIdentityResponse LinkIdentity(
       com.udb.core.idp.services.v1.LinkIdentityRequest request) {
     return LinkIdentity(request, null);
@@ -2442,7 +2442,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.idp.services.v1.IdentityProviderService/ListExternalIdentities} — unary call on udb.core.idp.services.v1.IdentityProviderService. */
+  /** {@code /udb.core.idp.services.v1.IdentityProviderService/ListExternalIdentities} — unary call on udb.core.idp.services.v1.IdentityProviderService; public alias {@code list_external_identities}. */
   public com.udb.core.idp.services.v1.ListExternalIdentitiesResponse ListExternalIdentities(
       com.udb.core.idp.services.v1.ListExternalIdentitiesRequest request) {
     return ListExternalIdentities(request, null);
@@ -2461,7 +2461,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.idp.services.v1.IdentityProviderService/ListProviders} — unary call on udb.core.idp.services.v1.IdentityProviderService. */
+  /** {@code /udb.core.idp.services.v1.IdentityProviderService/ListProviders} — unary call on udb.core.idp.services.v1.IdentityProviderService; public alias {@code list_providers}. */
   public com.udb.core.idp.services.v1.ListProvidersResponse ListProviders(
       com.udb.core.idp.services.v1.ListProvidersRequest request) {
     return ListProviders(request, null);
@@ -2480,7 +2480,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.idp.services.v1.IdentityProviderService/PreviewClaimMapping} — unary call on udb.core.idp.services.v1.IdentityProviderService. */
+  /** {@code /udb.core.idp.services.v1.IdentityProviderService/PreviewClaimMapping} — unary call on udb.core.idp.services.v1.IdentityProviderService; public alias {@code preview_claim_mapping}. */
   public com.udb.core.idp.services.v1.PreviewClaimMappingResponse PreviewClaimMapping(
       com.udb.core.idp.services.v1.PreviewClaimMappingRequest request) {
     return PreviewClaimMapping(request, null);
@@ -2499,7 +2499,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.idp.services.v1.IdentityProviderService/PreviewGroupMapping} — unary call on udb.core.idp.services.v1.IdentityProviderService. */
+  /** {@code /udb.core.idp.services.v1.IdentityProviderService/PreviewGroupMapping} — unary call on udb.core.idp.services.v1.IdentityProviderService; public alias {@code preview_group_mapping}. */
   public com.udb.core.idp.services.v1.PreviewGroupMappingResponse PreviewGroupMapping(
       com.udb.core.idp.services.v1.PreviewGroupMappingRequest request) {
     return PreviewGroupMapping(request, null);
@@ -2518,7 +2518,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.idp.services.v1.IdentityProviderService/ResolveExternalIdentity} — unary call on udb.core.idp.services.v1.IdentityProviderService. */
+  /** {@code /udb.core.idp.services.v1.IdentityProviderService/ResolveExternalIdentity} — unary call on udb.core.idp.services.v1.IdentityProviderService; public alias {@code resolve_external_identity}. */
   public com.udb.core.idp.services.v1.ResolveExternalIdentityResponse ResolveExternalIdentity(
       com.udb.core.idp.services.v1.ResolveExternalIdentityRequest request) {
     return ResolveExternalIdentity(request, null);
@@ -2537,7 +2537,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.idp.services.v1.IdentityProviderService/SamlAcs} — unary call on udb.core.idp.services.v1.IdentityProviderService. */
+  /** {@code /udb.core.idp.services.v1.IdentityProviderService/SamlAcs} — unary call on udb.core.idp.services.v1.IdentityProviderService; public alias {@code saml_acs}. */
   public com.udb.core.idp.services.v1.SamlAcsResponse SamlAcs(
       com.udb.core.idp.services.v1.SamlAcsRequest request) {
     return SamlAcs(request, null);
@@ -2556,7 +2556,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.idp.services.v1.IdentityProviderService/ScimCreateGroup} — unary call on udb.core.idp.services.v1.IdentityProviderService. */
+  /** {@code /udb.core.idp.services.v1.IdentityProviderService/ScimCreateGroup} — unary call on udb.core.idp.services.v1.IdentityProviderService; public alias {@code scim_create_group}. */
   public com.udb.core.idp.services.v1.ScimCreateGroupResponse ScimCreateGroup(
       com.udb.core.idp.services.v1.ScimCreateGroupRequest request) {
     return ScimCreateGroup(request, null);
@@ -2575,7 +2575,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.idp.services.v1.IdentityProviderService/ScimCreateUser} — unary call on udb.core.idp.services.v1.IdentityProviderService. */
+  /** {@code /udb.core.idp.services.v1.IdentityProviderService/ScimCreateUser} — unary call on udb.core.idp.services.v1.IdentityProviderService; public alias {@code scim_create_user}. */
   public com.udb.core.idp.services.v1.ScimCreateUserResponse ScimCreateUser(
       com.udb.core.idp.services.v1.ScimCreateUserRequest request) {
     return ScimCreateUser(request, null);
@@ -2594,7 +2594,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.idp.services.v1.IdentityProviderService/ScimDeleteGroup} — unary call on udb.core.idp.services.v1.IdentityProviderService. */
+  /** {@code /udb.core.idp.services.v1.IdentityProviderService/ScimDeleteGroup} — unary call on udb.core.idp.services.v1.IdentityProviderService; public alias {@code scim_delete_group}. */
   public com.udb.core.idp.services.v1.ScimDeleteGroupResponse ScimDeleteGroup(
       com.udb.core.idp.services.v1.ScimDeleteGroupRequest request) {
     return ScimDeleteGroup(request, null);
@@ -2613,7 +2613,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.idp.services.v1.IdentityProviderService/ScimDeleteUser} — unary call on udb.core.idp.services.v1.IdentityProviderService. */
+  /** {@code /udb.core.idp.services.v1.IdentityProviderService/ScimDeleteUser} — unary call on udb.core.idp.services.v1.IdentityProviderService; public alias {@code scim_delete_user}. */
   public com.udb.core.idp.services.v1.ScimDeleteUserResponse ScimDeleteUser(
       com.udb.core.idp.services.v1.ScimDeleteUserRequest request) {
     return ScimDeleteUser(request, null);
@@ -2632,7 +2632,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.idp.services.v1.IdentityProviderService/ScimGetGroup} — unary call on udb.core.idp.services.v1.IdentityProviderService. */
+  /** {@code /udb.core.idp.services.v1.IdentityProviderService/ScimGetGroup} — unary call on udb.core.idp.services.v1.IdentityProviderService; public alias {@code scim_get_group}. */
   public com.udb.core.idp.services.v1.ScimGetGroupResponse ScimGetGroup(
       com.udb.core.idp.services.v1.ScimGetGroupRequest request) {
     return ScimGetGroup(request, null);
@@ -2651,7 +2651,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.idp.services.v1.IdentityProviderService/ScimGetUser} — unary call on udb.core.idp.services.v1.IdentityProviderService. */
+  /** {@code /udb.core.idp.services.v1.IdentityProviderService/ScimGetUser} — unary call on udb.core.idp.services.v1.IdentityProviderService; public alias {@code scim_get_user}. */
   public com.udb.core.idp.services.v1.ScimGetUserResponse ScimGetUser(
       com.udb.core.idp.services.v1.ScimGetUserRequest request) {
     return ScimGetUser(request, null);
@@ -2670,7 +2670,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.idp.services.v1.IdentityProviderService/ScimListGroups} — unary call on udb.core.idp.services.v1.IdentityProviderService. */
+  /** {@code /udb.core.idp.services.v1.IdentityProviderService/ScimListGroups} — unary call on udb.core.idp.services.v1.IdentityProviderService; public alias {@code scim_list_groups}. */
   public com.udb.core.idp.services.v1.ScimListGroupsResponse ScimListGroups(
       com.udb.core.idp.services.v1.ScimListGroupsRequest request) {
     return ScimListGroups(request, null);
@@ -2689,7 +2689,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.idp.services.v1.IdentityProviderService/ScimListUsers} — unary call on udb.core.idp.services.v1.IdentityProviderService. */
+  /** {@code /udb.core.idp.services.v1.IdentityProviderService/ScimListUsers} — unary call on udb.core.idp.services.v1.IdentityProviderService; public alias {@code scim_list_users}. */
   public com.udb.core.idp.services.v1.ScimListUsersResponse ScimListUsers(
       com.udb.core.idp.services.v1.ScimListUsersRequest request) {
     return ScimListUsers(request, null);
@@ -2708,7 +2708,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.idp.services.v1.IdentityProviderService/ScimPatchGroup} — unary call on udb.core.idp.services.v1.IdentityProviderService. */
+  /** {@code /udb.core.idp.services.v1.IdentityProviderService/ScimPatchGroup} — unary call on udb.core.idp.services.v1.IdentityProviderService; public alias {@code scim_patch_group}. */
   public com.udb.core.idp.services.v1.ScimPatchGroupResponse ScimPatchGroup(
       com.udb.core.idp.services.v1.ScimPatchGroupRequest request) {
     return ScimPatchGroup(request, null);
@@ -2727,7 +2727,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.idp.services.v1.IdentityProviderService/ScimPatchUser} — unary call on udb.core.idp.services.v1.IdentityProviderService. */
+  /** {@code /udb.core.idp.services.v1.IdentityProviderService/ScimPatchUser} — unary call on udb.core.idp.services.v1.IdentityProviderService; public alias {@code scim_patch_user}. */
   public com.udb.core.idp.services.v1.ScimPatchUserResponse ScimPatchUser(
       com.udb.core.idp.services.v1.ScimPatchUserRequest request) {
     return ScimPatchUser(request, null);
@@ -2746,7 +2746,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.idp.services.v1.IdentityProviderService/ScimReplaceUser} — unary call on udb.core.idp.services.v1.IdentityProviderService. */
+  /** {@code /udb.core.idp.services.v1.IdentityProviderService/ScimReplaceUser} — unary call on udb.core.idp.services.v1.IdentityProviderService; public alias {@code scim_replace_user}. */
   public com.udb.core.idp.services.v1.ScimReplaceUserResponse ScimReplaceUser(
       com.udb.core.idp.services.v1.ScimReplaceUserRequest request) {
     return ScimReplaceUser(request, null);
@@ -2765,7 +2765,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.idp.services.v1.IdentityProviderService/StartSamlLogin} — unary call on udb.core.idp.services.v1.IdentityProviderService. */
+  /** {@code /udb.core.idp.services.v1.IdentityProviderService/StartSamlLogin} — unary call on udb.core.idp.services.v1.IdentityProviderService; public alias {@code start_saml_login}. */
   public com.udb.core.idp.services.v1.StartSamlLoginResponse StartSamlLogin(
       com.udb.core.idp.services.v1.StartSamlLoginRequest request) {
     return StartSamlLogin(request, null);
@@ -2784,7 +2784,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.idp.services.v1.IdentityProviderService/TestProviderDiscovery} — unary call on udb.core.idp.services.v1.IdentityProviderService. */
+  /** {@code /udb.core.idp.services.v1.IdentityProviderService/TestProviderDiscovery} — unary call on udb.core.idp.services.v1.IdentityProviderService; public alias {@code test_provider_discovery}. */
   public com.udb.core.idp.services.v1.TestProviderDiscoveryResponse TestProviderDiscovery(
       com.udb.core.idp.services.v1.TestProviderDiscoveryRequest request) {
     return TestProviderDiscovery(request, null);
@@ -2803,7 +2803,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.idp.services.v1.IdentityProviderService/UnlinkIdentity} — unary call on udb.core.idp.services.v1.IdentityProviderService. */
+  /** {@code /udb.core.idp.services.v1.IdentityProviderService/UnlinkIdentity} — unary call on udb.core.idp.services.v1.IdentityProviderService; public alias {@code unlink_identity}. */
   public com.udb.core.idp.services.v1.UnlinkIdentityResponse UnlinkIdentity(
       com.udb.core.idp.services.v1.UnlinkIdentityRequest request) {
     return UnlinkIdentity(request, null);
@@ -2822,7 +2822,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.idp.services.v1.IdentityProviderService/UpdateProvider} — unary call on udb.core.idp.services.v1.IdentityProviderService. */
+  /** {@code /udb.core.idp.services.v1.IdentityProviderService/UpdateProvider} — unary call on udb.core.idp.services.v1.IdentityProviderService; public alias {@code update_provider}. */
   public com.udb.core.idp.services.v1.UpdateProviderResponse UpdateProvider(
       com.udb.core.idp.services.v1.UpdateProviderRequest request) {
     return UpdateProvider(request, null);
@@ -2841,7 +2841,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.notification.services.v1.NotificationService/GetDeliveryStats} — unary call on udb.core.notification.services.v1.NotificationService. */
+  /** {@code /udb.core.notification.services.v1.NotificationService/GetDeliveryStats} — unary call on udb.core.notification.services.v1.NotificationService; public alias {@code get_delivery_stats}. */
   public com.udb.core.notification.services.v1.GetDeliveryStatsResponse GetDeliveryStats(
       com.udb.core.notification.services.v1.GetDeliveryStatsRequest request) {
     return GetDeliveryStats(request, null);
@@ -2860,7 +2860,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.notification.services.v1.NotificationService/GetNotification} — unary call on udb.core.notification.services.v1.NotificationService. */
+  /** {@code /udb.core.notification.services.v1.NotificationService/GetNotification} — unary call on udb.core.notification.services.v1.NotificationService; public alias {@code get_notification}. */
   public com.udb.core.notification.services.v1.GetNotificationResponse GetNotification(
       com.udb.core.notification.services.v1.GetNotificationRequest request) {
     return GetNotification(request, null);
@@ -2879,7 +2879,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.notification.services.v1.NotificationService/GetPreference} — unary call on udb.core.notification.services.v1.NotificationService. */
+  /** {@code /udb.core.notification.services.v1.NotificationService/GetPreference} — unary call on udb.core.notification.services.v1.NotificationService; public alias {@code get_preference}. */
   public com.udb.core.notification.services.v1.GetPreferenceResponse GetPreference(
       com.udb.core.notification.services.v1.GetPreferenceRequest request) {
     return GetPreference(request, null);
@@ -2898,7 +2898,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.notification.services.v1.NotificationService/GetTemplate} — unary call on udb.core.notification.services.v1.NotificationService. */
+  /** {@code /udb.core.notification.services.v1.NotificationService/GetTemplate} — unary call on udb.core.notification.services.v1.NotificationService; public alias {@code get_template}. */
   public com.udb.core.notification.services.v1.GetTemplateResponse GetTemplate(
       com.udb.core.notification.services.v1.GetTemplateRequest request) {
     return GetTemplate(request, null);
@@ -2917,7 +2917,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.notification.services.v1.NotificationService/ListNotifications} — unary call on udb.core.notification.services.v1.NotificationService. */
+  /** {@code /udb.core.notification.services.v1.NotificationService/ListNotifications} — unary call on udb.core.notification.services.v1.NotificationService; public alias {@code list_notifications}. */
   public com.udb.core.notification.services.v1.ListNotificationsResponse ListNotifications(
       com.udb.core.notification.services.v1.ListNotificationsRequest request) {
     return ListNotifications(request, null);
@@ -2936,7 +2936,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.notification.services.v1.NotificationService/ListPreferences} — unary call on udb.core.notification.services.v1.NotificationService. */
+  /** {@code /udb.core.notification.services.v1.NotificationService/ListPreferences} — unary call on udb.core.notification.services.v1.NotificationService; public alias {@code list_preferences}. */
   public com.udb.core.notification.services.v1.ListPreferencesResponse ListPreferences(
       com.udb.core.notification.services.v1.ListPreferencesRequest request) {
     return ListPreferences(request, null);
@@ -2955,7 +2955,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.notification.services.v1.NotificationService/ListTemplates} — unary call on udb.core.notification.services.v1.NotificationService. */
+  /** {@code /udb.core.notification.services.v1.NotificationService/ListTemplates} — unary call on udb.core.notification.services.v1.NotificationService; public alias {@code list_templates}. */
   public com.udb.core.notification.services.v1.ListTemplatesResponse ListTemplates(
       com.udb.core.notification.services.v1.ListTemplatesRequest request) {
     return ListTemplates(request, null);
@@ -2974,7 +2974,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.notification.services.v1.NotificationService/RetryNotification} — unary call on udb.core.notification.services.v1.NotificationService. */
+  /** {@code /udb.core.notification.services.v1.NotificationService/RetryNotification} — unary call on udb.core.notification.services.v1.NotificationService; public alias {@code retry_notification}. */
   public com.udb.core.notification.services.v1.RetryNotificationResponse RetryNotification(
       com.udb.core.notification.services.v1.RetryNotificationRequest request) {
     return RetryNotification(request, null);
@@ -2993,7 +2993,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.notification.services.v1.NotificationService/SendNotification} — unary call on udb.core.notification.services.v1.NotificationService. */
+  /** {@code /udb.core.notification.services.v1.NotificationService/SendNotification} — unary call on udb.core.notification.services.v1.NotificationService; public alias {@code send_notification}. */
   public com.udb.core.notification.services.v1.SendNotificationResponse SendNotification(
       com.udb.core.notification.services.v1.SendNotificationRequest request) {
     return SendNotification(request, null);
@@ -3012,7 +3012,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.notification.services.v1.NotificationService/SetPreference} — unary call on udb.core.notification.services.v1.NotificationService. */
+  /** {@code /udb.core.notification.services.v1.NotificationService/SetPreference} — unary call on udb.core.notification.services.v1.NotificationService; public alias {@code set_preference}. */
   public com.udb.core.notification.services.v1.SetPreferenceResponse SetPreference(
       com.udb.core.notification.services.v1.SetPreferenceRequest request) {
     return SetPreference(request, null);
@@ -3031,7 +3031,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.notification.services.v1.NotificationService/UpsertTemplate} — unary call on udb.core.notification.services.v1.NotificationService. */
+  /** {@code /udb.core.notification.services.v1.NotificationService/UpsertTemplate} — unary call on udb.core.notification.services.v1.NotificationService; public alias {@code upsert_template}. */
   public com.udb.core.notification.services.v1.UpsertTemplateResponse UpsertTemplate(
       com.udb.core.notification.services.v1.UpsertTemplateRequest request) {
     return UpsertTemplate(request, null);
@@ -3050,7 +3050,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.storage.services.v1.StorageService/DeleteFile} — unary call on udb.core.storage.services.v1.StorageService. */
+  /** {@code /udb.core.storage.services.v1.StorageService/DeleteFile} — unary call on udb.core.storage.services.v1.StorageService; public alias {@code delete_file}. */
   public com.udb.core.storage.services.v1.DeleteFileResponse DeleteFile(
       com.udb.core.storage.services.v1.DeleteFileRequest request) {
     return DeleteFile(request, null);
@@ -3069,7 +3069,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.storage.services.v1.StorageService/FinalizeUpload} — unary call on udb.core.storage.services.v1.StorageService. */
+  /** {@code /udb.core.storage.services.v1.StorageService/FinalizeUpload} — unary call on udb.core.storage.services.v1.StorageService; public alias {@code finalize_upload}. */
   public com.udb.core.storage.services.v1.FinalizeUploadResponse FinalizeUpload(
       com.udb.core.storage.services.v1.FinalizeUploadRequest request) {
     return FinalizeUpload(request, null);
@@ -3088,7 +3088,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.storage.services.v1.StorageService/GetDownloadUrl} — unary call on udb.core.storage.services.v1.StorageService. */
+  /** {@code /udb.core.storage.services.v1.StorageService/GetDownloadUrl} — unary call on udb.core.storage.services.v1.StorageService; public alias {@code get_download_url}. */
   public com.udb.core.storage.services.v1.GetDownloadUrlResponse GetDownloadUrl(
       com.udb.core.storage.services.v1.GetDownloadUrlRequest request) {
     return GetDownloadUrl(request, null);
@@ -3107,7 +3107,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.storage.services.v1.StorageService/GetFile} — unary call on udb.core.storage.services.v1.StorageService. */
+  /** {@code /udb.core.storage.services.v1.StorageService/GetFile} — unary call on udb.core.storage.services.v1.StorageService; public alias {@code get_file}. */
   public com.udb.core.storage.services.v1.GetFileResponse GetFile(
       com.udb.core.storage.services.v1.GetFileRequest request) {
     return GetFile(request, null);
@@ -3126,7 +3126,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.storage.services.v1.StorageService/ListFiles} — unary call on udb.core.storage.services.v1.StorageService. */
+  /** {@code /udb.core.storage.services.v1.StorageService/ListFiles} — unary call on udb.core.storage.services.v1.StorageService; public alias {@code list_files}. */
   public com.udb.core.storage.services.v1.ListFilesResponse ListFiles(
       com.udb.core.storage.services.v1.ListFilesRequest request) {
     return ListFiles(request, null);
@@ -3145,7 +3145,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.storage.services.v1.StorageService/RegisterUpload} — unary call on udb.core.storage.services.v1.StorageService. */
+  /** {@code /udb.core.storage.services.v1.StorageService/RegisterUpload} — unary call on udb.core.storage.services.v1.StorageService; public alias {@code register_upload}. */
   public com.udb.core.storage.services.v1.RegisterUploadResponse RegisterUpload(
       com.udb.core.storage.services.v1.RegisterUploadRequest request) {
     return RegisterUpload(request, null);
@@ -3164,7 +3164,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.storage.services.v1.StorageService/UpdateFile} — unary call on udb.core.storage.services.v1.StorageService. */
+  /** {@code /udb.core.storage.services.v1.StorageService/UpdateFile} — unary call on udb.core.storage.services.v1.StorageService; public alias {@code update_file}. */
   public com.udb.core.storage.services.v1.UpdateFileResponse UpdateFile(
       com.udb.core.storage.services.v1.UpdateFileRequest request) {
     return UpdateFile(request, null);
@@ -3183,7 +3183,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.tenant.services.v1.TenantService/CreateTenant} — unary call on udb.core.tenant.services.v1.TenantService. */
+  /** {@code /udb.core.tenant.services.v1.TenantService/CreateTenant} — unary call on udb.core.tenant.services.v1.TenantService; public alias {@code create_tenant}. */
   public com.udb.core.tenant.services.v1.CreateTenantResponse CreateTenant(
       com.udb.core.tenant.services.v1.CreateTenantRequest request) {
     return CreateTenant(request, null);
@@ -3202,7 +3202,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.tenant.services.v1.TenantService/GetTenant} — unary call on udb.core.tenant.services.v1.TenantService. */
+  /** {@code /udb.core.tenant.services.v1.TenantService/GetTenant} — unary call on udb.core.tenant.services.v1.TenantService; public alias {@code get_tenant}. */
   public com.udb.core.tenant.services.v1.GetTenantResponse GetTenant(
       com.udb.core.tenant.services.v1.GetTenantRequest request) {
     return GetTenant(request, null);
@@ -3221,7 +3221,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.tenant.services.v1.TenantService/GetTenantConfig} — unary call on udb.core.tenant.services.v1.TenantService. */
+  /** {@code /udb.core.tenant.services.v1.TenantService/GetTenantConfig} — unary call on udb.core.tenant.services.v1.TenantService; public alias {@code get_tenant_config}. */
   public com.udb.core.tenant.services.v1.GetTenantConfigResponse GetTenantConfig(
       com.udb.core.tenant.services.v1.GetTenantConfigRequest request) {
     return GetTenantConfig(request, null);
@@ -3240,7 +3240,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.tenant.services.v1.TenantService/ListTenants} — unary call on udb.core.tenant.services.v1.TenantService. */
+  /** {@code /udb.core.tenant.services.v1.TenantService/ListTenants} — unary call on udb.core.tenant.services.v1.TenantService; public alias {@code list_tenants}. */
   public com.udb.core.tenant.services.v1.ListTenantsResponse ListTenants(
       com.udb.core.tenant.services.v1.ListTenantsRequest request) {
     return ListTenants(request, null);
@@ -3259,7 +3259,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.tenant.services.v1.TenantService/UpdateTenant} — unary call on udb.core.tenant.services.v1.TenantService. */
+  /** {@code /udb.core.tenant.services.v1.TenantService/UpdateTenant} — unary call on udb.core.tenant.services.v1.TenantService; public alias {@code update_tenant}. */
   public com.udb.core.tenant.services.v1.UpdateTenantResponse UpdateTenant(
       com.udb.core.tenant.services.v1.UpdateTenantRequest request) {
     return UpdateTenant(request, null);
@@ -3278,7 +3278,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.tenant.services.v1.TenantService/UpdateTenantConfig} — unary call on udb.core.tenant.services.v1.TenantService. */
+  /** {@code /udb.core.tenant.services.v1.TenantService/UpdateTenantConfig} — unary call on udb.core.tenant.services.v1.TenantService; public alias {@code update_tenant_config}. */
   public com.udb.core.tenant.services.v1.UpdateTenantConfigResponse UpdateTenantConfig(
       com.udb.core.tenant.services.v1.UpdateTenantConfigRequest request) {
     return UpdateTenantConfig(request, null);
@@ -3297,7 +3297,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.webrtc.services.v1.PeerService/GetPeer} — unary call on udb.core.webrtc.services.v1.PeerService. */
+  /** {@code /udb.core.webrtc.services.v1.PeerService/GetPeer} — unary call on udb.core.webrtc.services.v1.PeerService; public alias {@code get_peer}. */
   public com.udb.core.webrtc.services.v1.GetPeerResponse GetPeer(
       com.udb.core.webrtc.services.v1.GetPeerRequest request) {
     return GetPeer(request, null);
@@ -3316,7 +3316,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.webrtc.services.v1.PeerService/JoinRoom} — unary call on udb.core.webrtc.services.v1.PeerService. */
+  /** {@code /udb.core.webrtc.services.v1.PeerService/JoinRoom} — unary call on udb.core.webrtc.services.v1.PeerService; public alias {@code join_room}. */
   public com.udb.core.webrtc.services.v1.JoinRoomResponse JoinRoom(
       com.udb.core.webrtc.services.v1.JoinRoomRequest request) {
     return JoinRoom(request, null);
@@ -3335,7 +3335,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.webrtc.services.v1.PeerService/JoinSession} — unary call on udb.core.webrtc.services.v1.PeerService. */
+  /** {@code /udb.core.webrtc.services.v1.PeerService/JoinSession} — unary call on udb.core.webrtc.services.v1.PeerService; public alias {@code join_session}. */
   public com.udb.core.webrtc.services.v1.JoinSessionResponse JoinSession(
       com.udb.core.webrtc.services.v1.JoinSessionRequest request) {
     return JoinSession(request, null);
@@ -3354,7 +3354,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.webrtc.services.v1.PeerService/LeaveRoom} — unary call on udb.core.webrtc.services.v1.PeerService. */
+  /** {@code /udb.core.webrtc.services.v1.PeerService/LeaveRoom} — unary call on udb.core.webrtc.services.v1.PeerService; public alias {@code leave_room}. */
   public com.udb.core.webrtc.services.v1.LeaveRoomResponse LeaveRoom(
       com.udb.core.webrtc.services.v1.LeaveRoomRequest request) {
     return LeaveRoom(request, null);
@@ -3373,7 +3373,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.webrtc.services.v1.PeerService/ListPeers} — unary call on udb.core.webrtc.services.v1.PeerService. */
+  /** {@code /udb.core.webrtc.services.v1.PeerService/ListPeers} — unary call on udb.core.webrtc.services.v1.PeerService; public alias {@code list_peers}. */
   public com.udb.core.webrtc.services.v1.ListPeersResponse ListPeers(
       com.udb.core.webrtc.services.v1.ListPeersRequest request) {
     return ListPeers(request, null);
@@ -3392,7 +3392,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.webrtc.services.v1.RoomService/CloseRoom} — unary call on udb.core.webrtc.services.v1.RoomService. */
+  /** {@code /udb.core.webrtc.services.v1.RoomService/CloseRoom} — unary call on udb.core.webrtc.services.v1.RoomService; public alias {@code close_room}. */
   public com.udb.core.webrtc.services.v1.CloseRoomResponse CloseRoom(
       com.udb.core.webrtc.services.v1.CloseRoomRequest request) {
     return CloseRoom(request, null);
@@ -3411,7 +3411,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.webrtc.services.v1.RoomService/CreateRoom} — unary call on udb.core.webrtc.services.v1.RoomService. */
+  /** {@code /udb.core.webrtc.services.v1.RoomService/CreateRoom} — unary call on udb.core.webrtc.services.v1.RoomService; public alias {@code create_room}. */
   public com.udb.core.webrtc.services.v1.CreateRoomResponse CreateRoom(
       com.udb.core.webrtc.services.v1.CreateRoomRequest request) {
     return CreateRoom(request, null);
@@ -3430,7 +3430,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.webrtc.services.v1.RoomService/GetRoom} — unary call on udb.core.webrtc.services.v1.RoomService. */
+  /** {@code /udb.core.webrtc.services.v1.RoomService/GetRoom} — unary call on udb.core.webrtc.services.v1.RoomService; public alias {@code get_room}. */
   public com.udb.core.webrtc.services.v1.GetRoomResponse GetRoom(
       com.udb.core.webrtc.services.v1.GetRoomRequest request) {
     return GetRoom(request, null);
@@ -3449,7 +3449,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.webrtc.services.v1.RoomService/ListRooms} — unary call on udb.core.webrtc.services.v1.RoomService. */
+  /** {@code /udb.core.webrtc.services.v1.RoomService/ListRooms} — unary call on udb.core.webrtc.services.v1.RoomService; public alias {@code list_rooms}. */
   public com.udb.core.webrtc.services.v1.ListRoomsResponse ListRooms(
       com.udb.core.webrtc.services.v1.ListRoomsRequest request) {
     return ListRooms(request, null);
@@ -3468,7 +3468,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.webrtc.services.v1.RoomService/UpdateRoom} — unary call on udb.core.webrtc.services.v1.RoomService. */
+  /** {@code /udb.core.webrtc.services.v1.RoomService/UpdateRoom} — unary call on udb.core.webrtc.services.v1.RoomService; public alias {@code update_room}. */
   public com.udb.core.webrtc.services.v1.UpdateRoomResponse UpdateRoom(
       com.udb.core.webrtc.services.v1.UpdateRoomRequest request) {
     return UpdateRoom(request, null);
@@ -3487,7 +3487,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.webrtc.services.v1.TrackService/ListTracks} — unary call on udb.core.webrtc.services.v1.TrackService. */
+  /** {@code /udb.core.webrtc.services.v1.TrackService/ListTracks} — unary call on udb.core.webrtc.services.v1.TrackService; public alias {@code list_tracks}. */
   public com.udb.core.webrtc.services.v1.ListTracksResponse ListTracks(
       com.udb.core.webrtc.services.v1.ListTracksRequest request) {
     return ListTracks(request, null);
@@ -3506,7 +3506,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.core.webrtc.services.v1.TrackService/MuteTrack} — unary call on udb.core.webrtc.services.v1.TrackService. */
+  /** {@code /udb.core.webrtc.services.v1.TrackService/MuteTrack} — unary call on udb.core.webrtc.services.v1.TrackService; public alias {@code mute_track}. */
   public com.udb.core.webrtc.services.v1.MuteTrackResponse MuteTrack(
       com.udb.core.webrtc.services.v1.MuteTrackRequest request) {
     return MuteTrack(request, null);
@@ -3525,7 +3525,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.webrtc.services.v1.TrackService/PublishTrack} — unary call on udb.core.webrtc.services.v1.TrackService. */
+  /** {@code /udb.core.webrtc.services.v1.TrackService/PublishTrack} — unary call on udb.core.webrtc.services.v1.TrackService; public alias {@code publish_track}. */
   public com.udb.core.webrtc.services.v1.PublishTrackResponse PublishTrack(
       com.udb.core.webrtc.services.v1.PublishTrackRequest request) {
     return PublishTrack(request, null);
@@ -3544,7 +3544,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.webrtc.services.v1.TrackService/UnpublishTrack} — unary call on udb.core.webrtc.services.v1.TrackService. */
+  /** {@code /udb.core.webrtc.services.v1.TrackService/UnpublishTrack} — unary call on udb.core.webrtc.services.v1.TrackService; public alias {@code unpublish_track}. */
   public com.udb.core.webrtc.services.v1.UnpublishTrackResponse UnpublishTrack(
       com.udb.core.webrtc.services.v1.UnpublishTrackRequest request) {
     return UnpublishTrack(request, null);
@@ -3563,7 +3563,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.core.webrtc.services.v1.TurnService/IssueCredentials} — unary call on udb.core.webrtc.services.v1.TurnService. */
+  /** {@code /udb.core.webrtc.services.v1.TurnService/IssueCredentials} — unary call on udb.core.webrtc.services.v1.TurnService; public alias {@code issue_credentials}. */
   public com.udb.core.webrtc.services.v1.IssueCredentialsResponse IssueCredentials(
       com.udb.core.webrtc.services.v1.IssueCredentialsRequest request) {
     return IssueCredentials(request, null);
@@ -3582,7 +3582,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/ActivateCatalog} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/ActivateCatalog} — unary call on udb.services.v1.DataBroker; public alias {@code activate_catalog}. */
   public com.udb.entity.v1.CatalogVersionResponse ActivateCatalog(
       com.udb.entity.v1.CatalogVersionRequest request) {
     return ActivateCatalog(request, null);
@@ -3601,7 +3601,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "destructive".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/AnalyticalQuery} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/AnalyticalQuery} — unary call on udb.services.v1.DataBroker; public alias {@code analytical_query}. */
   public com.udb.entity.v1.AnalyticalQueryResponse AnalyticalQuery(
       com.udb.entity.v1.AnalyticalQueryRequest request) {
     return AnalyticalQuery(request, null);
@@ -3620,7 +3620,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/ApplyMigration} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/ApplyMigration} — unary call on udb.services.v1.DataBroker; public alias {@code apply_migration}. */
   public com.udb.entity.v1.MigrationStatusResponse ApplyMigration(
       com.udb.entity.v1.MigrationApplyRequest request) {
     return ApplyMigration(request, null);
@@ -3639,7 +3639,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/ApproveMigrationPlan} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/ApproveMigrationPlan} — unary call on udb.services.v1.DataBroker; public alias {@code approve_migration_plan}. */
   public com.udb.entity.v1.MigrationStatusResponse ApproveMigrationPlan(
       com.udb.entity.v1.MigrationRunRequest request) {
     return ApproveMigrationPlan(request, null);
@@ -3658,7 +3658,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/CacheDelete} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/CacheDelete} — unary call on udb.services.v1.DataBroker; public alias {@code cache_delete}. */
   public com.udb.entity.v1.MutationResponse CacheDelete(
       com.udb.entity.v1.CacheDeleteRequest request) {
     return CacheDelete(request, null);
@@ -3677,7 +3677,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/CacheGet} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/CacheGet} — unary call on udb.services.v1.DataBroker; public alias {@code cache_get}. */
   public com.udb.entity.v1.CacheGetResponse CacheGet(
       com.udb.entity.v1.CacheGetRequest request) {
     return CacheGet(request, null);
@@ -3696,7 +3696,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/CacheScan} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/CacheScan} — unary call on udb.services.v1.DataBroker; public alias {@code cache_scan}. */
   public com.udb.entity.v1.CacheScanResponse CacheScan(
       com.udb.entity.v1.CacheScanRequest request) {
     return CacheScan(request, null);
@@ -3715,7 +3715,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/CacheSet} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/CacheSet} — unary call on udb.services.v1.DataBroker; public alias {@code cache_set}. */
   public com.udb.entity.v1.MutationResponse CacheSet(
       com.udb.entity.v1.CacheSetRequest request) {
     return CacheSet(request, null);
@@ -3734,7 +3734,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/CreateMaterializedView} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/CreateMaterializedView} — unary call on udb.services.v1.DataBroker; public alias {@code create_materialized_view}. */
   public com.udb.entity.v1.MutationResponse CreateMaterializedView(
       com.udb.entity.v1.ViewDefinition request) {
     return CreateMaterializedView(request, null);
@@ -3753,7 +3753,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/Delete} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/Delete} — unary call on udb.services.v1.DataBroker; public alias {@code delete}. */
   public com.udb.entity.v1.MutationResponse Delete(
       com.udb.entity.v1.DeleteRequest request) {
     return Delete(request, null);
@@ -3772,7 +3772,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/DeletePolicy} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/DeletePolicy} — unary call on udb.services.v1.DataBroker; public alias {@code delete_policy}. */
   public com.udb.entity.v1.MutationResponse DeletePolicy(
       com.udb.entity.v1.PolicyRequest request) {
     return DeletePolicy(request, null);
@@ -3791,7 +3791,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/DismissDlqEvent} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/DismissDlqEvent} — unary call on udb.services.v1.DataBroker; public alias {@code dismiss_dlq_event}. */
   public com.udb.entity.v1.MutationResponse DismissDlqEvent(
       com.udb.entity.v1.DlqActionRequest request) {
     return DismissDlqEvent(request, null);
@@ -3810,7 +3810,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/DocumentDelete} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/DocumentDelete} — unary call on udb.services.v1.DataBroker; public alias {@code document_delete}. */
   public com.udb.entity.v1.MutationResponse DocumentDelete(
       com.udb.entity.v1.DocumentDeleteRequest request) {
     return DocumentDelete(request, null);
@@ -3829,7 +3829,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/DocumentFind} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/DocumentFind} — unary call on udb.services.v1.DataBroker; public alias {@code document_find}. */
   public com.udb.entity.v1.DocumentSet DocumentFind(
       com.udb.entity.v1.DocumentFindRequest request) {
     return DocumentFind(request, null);
@@ -3848,7 +3848,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/DocumentGet} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/DocumentGet} — unary call on udb.services.v1.DataBroker; public alias {@code document_get}. */
   public com.udb.entity.v1.DocumentSet DocumentGet(
       com.udb.entity.v1.DocumentGetRequest request) {
     return DocumentGet(request, null);
@@ -3867,7 +3867,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/DocumentUpsert} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/DocumentUpsert} — unary call on udb.services.v1.DataBroker; public alias {@code document_upsert}. */
   public com.udb.entity.v1.MutationResponse DocumentUpsert(
       com.udb.entity.v1.DocumentUpsertRequest request) {
     return DocumentUpsert(request, null);
@@ -3886,7 +3886,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/DropResource} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/DropResource} — unary call on udb.services.v1.DataBroker; public alias {@code drop_resource}. */
   public com.udb.entity.v1.MutationResponse DropResource(
       com.udb.entity.v1.ResourceAdminRequest request) {
     return DropResource(request, null);
@@ -3905,7 +3905,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "destructive".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/EnqueueOutboxEvent} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/EnqueueOutboxEvent} — unary call on udb.services.v1.DataBroker; public alias {@code enqueue_outbox_event}. */
   public com.udb.entity.v1.EnqueueOutboxEventResponse EnqueueOutboxEvent(
       com.udb.entity.v1.EnqueueOutboxEventRequest request) {
     return EnqueueOutboxEvent(request, null);
@@ -3924,7 +3924,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/EnsureBaseline} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/EnsureBaseline} — unary call on udb.services.v1.DataBroker; public alias {@code ensure_baseline}. */
   public com.udb.services.v1.EnsureBaselineResponse EnsureBaseline(
       com.udb.services.v1.EnsureBaselineRequest request) {
     return EnsureBaseline(request, null);
@@ -3943,7 +3943,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/EnsureProject} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/EnsureProject} — unary call on udb.services.v1.DataBroker; public alias {@code ensure_project}. */
   public com.udb.entity.v1.MutationResponse EnsureProject(
       com.udb.entity.v1.EnsureProjectRequest request) {
     return EnsureProject(request, null);
@@ -3962,7 +3962,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/EnsureResource} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/EnsureResource} — unary call on udb.services.v1.DataBroker; public alias {@code ensure_resource}. */
   public com.udb.entity.v1.MutationResponse EnsureResource(
       com.udb.entity.v1.ResourceAdminRequest request) {
     return EnsureResource(request, null);
@@ -3981,7 +3981,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/GeneratePresignedUrl} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/GeneratePresignedUrl} — unary call on udb.services.v1.DataBroker; public alias {@code generate_presigned_url}. */
   public com.udb.entity.v1.UrlResponse GeneratePresignedUrl(
       com.udb.entity.v1.UrlRequest request) {
     return GeneratePresignedUrl(request, null);
@@ -4000,7 +4000,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/GenericDispatch} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/GenericDispatch} — unary call on udb.services.v1.DataBroker; public alias {@code generic_dispatch}. */
   public com.udb.entity.v1.GenericDispatchResponse GenericDispatch(
       com.udb.entity.v1.GenericDispatchRequest request) {
     return GenericDispatch(request, null);
@@ -4019,7 +4019,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/GetAdminSummary} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/GetAdminSummary} — unary call on udb.services.v1.DataBroker; public alias {@code get_admin_summary}. */
   public com.udb.entity.v1.AdminSummaryResponse GetAdminSummary(
       com.udb.entity.v1.AdminSummaryRequest request) {
     return GetAdminSummary(request, null);
@@ -4038,7 +4038,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/GetCapabilities} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/GetCapabilities} — unary call on udb.services.v1.DataBroker; public alias {@code get_capabilities}. */
   public com.udb.entity.v1.CapabilitiesResponse GetCapabilities(
       com.udb.entity.v1.CapabilitiesRequest request) {
     return GetCapabilities(request, null);
@@ -4057,7 +4057,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/GetCatalogManifest} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/GetCatalogManifest} — unary call on udb.services.v1.DataBroker; public alias {@code get_catalog_manifest}. */
   public com.udb.entity.v1.CatalogManifestResponse GetCatalogManifest(
       com.udb.entity.v1.CatalogManifestRequest request) {
     return GetCatalogManifest(request, null);
@@ -4076,7 +4076,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/GetCatalogVersion} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/GetCatalogVersion} — unary call on udb.services.v1.DataBroker; public alias {@code get_catalog_version}. */
   public com.udb.entity.v1.CatalogVersionResponse GetCatalogVersion(
       com.udb.entity.v1.CatalogVersionRequest request) {
     return GetCatalogVersion(request, null);
@@ -4095,7 +4095,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/GetCatalogVersions} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/GetCatalogVersions} — unary call on udb.services.v1.DataBroker; public alias {@code get_catalog_versions}. */
   public com.udb.entity.v1.CatalogVersionListResponse GetCatalogVersions(
       com.udb.entity.v1.CatalogManifestRequest request) {
     return GetCatalogVersions(request, null);
@@ -4114,7 +4114,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/GetCdcStatus} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/GetCdcStatus} — unary call on udb.services.v1.DataBroker; public alias {@code get_cdc_status}. */
   public com.udb.entity.v1.CdcStatusResponse GetCdcStatus(
       com.udb.entity.v1.CdcControlRequest request) {
     return GetCdcStatus(request, null);
@@ -4133,7 +4133,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/GetDlqEvent} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/GetDlqEvent} — unary call on udb.services.v1.DataBroker; public alias {@code get_dlq_event}. */
   public com.udb.entity.v1.DlqEventResponse GetDlqEvent(
       com.udb.entity.v1.DlqEventRequest request) {
     return GetDlqEvent(request, null);
@@ -4152,7 +4152,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/GetHealthReport} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/GetHealthReport} — unary call on udb.services.v1.DataBroker; public alias {@code get_health_report}. */
   public com.udb.entity.v1.HealthReportResponse GetHealthReport(
       com.udb.entity.v1.HealthReportRequest request) {
     return GetHealthReport(request, null);
@@ -4171,7 +4171,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/GetMigrationStatus} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/GetMigrationStatus} — unary call on udb.services.v1.DataBroker; public alias {@code get_migration_status}. */
   public com.udb.entity.v1.MigrationStatusResponse GetMigrationStatus(
       com.udb.entity.v1.MigrationRunRequest request) {
     return GetMigrationStatus(request, null);
@@ -4190,7 +4190,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/GetSaga} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/GetSaga} — unary call on udb.services.v1.DataBroker; public alias {@code get_saga}. */
   public com.udb.entity.v1.SagaResponse GetSaga(
       com.udb.entity.v1.SagaRequest request) {
     return GetSaga(request, null);
@@ -4209,7 +4209,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/GraphMutate} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/GraphMutate} — unary call on udb.services.v1.DataBroker; public alias {@code graph_mutate}. */
   public com.udb.entity.v1.MutationResponse GraphMutate(
       com.udb.entity.v1.GraphMutationRequest request) {
     return GraphMutate(request, null);
@@ -4228,7 +4228,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/GraphQuery} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/GraphQuery} — unary call on udb.services.v1.DataBroker; public alias {@code graph_query}. */
   public com.udb.entity.v1.GraphResultSet GraphQuery(
       com.udb.entity.v1.GraphQueryRequest request) {
     return GraphQuery(request, null);
@@ -4247,7 +4247,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/InitiateMultipartUpload} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/InitiateMultipartUpload} — unary call on udb.services.v1.DataBroker; public alias {@code initiate_multipart_upload}. */
   public com.udb.entity.v1.MultipartUploadResponse InitiateMultipartUpload(
       com.udb.entity.v1.MultipartUploadRequest request) {
     return InitiateMultipartUpload(request, null);
@@ -4266,7 +4266,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/LintPolicies} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/LintPolicies} — unary call on udb.services.v1.DataBroker; public alias {@code lint_policies}. */
   public com.udb.entity.v1.PolicyLintResponse LintPolicies(
       com.udb.entity.v1.CapabilitiesRequest request) {
     return LintPolicies(request, null);
@@ -4285,7 +4285,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/ListAdminAuditLogs} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/ListAdminAuditLogs} — unary call on udb.services.v1.DataBroker; public alias {@code list_admin_audit_logs}. */
   public com.udb.entity.v1.AdminAuditLogResponse ListAdminAuditLogs(
       com.udb.entity.v1.AdminAuditLogRequest request) {
     return ListAdminAuditLogs(request, null);
@@ -4304,7 +4304,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/ListDlqEvents} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/ListDlqEvents} — unary call on udb.services.v1.DataBroker; public alias {@code list_dlq_events}. */
   public com.udb.entity.v1.DlqListResponse ListDlqEvents(
       com.udb.entity.v1.DlqListRequest request) {
     return ListDlqEvents(request, null);
@@ -4323,7 +4323,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/ListMessageSchemas} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/ListMessageSchemas} — unary call on udb.services.v1.DataBroker; public alias {@code list_message_schemas}. */
   public com.udb.entity.v1.MessageSchemaListResponse ListMessageSchemas(
       com.udb.entity.v1.MessageSchemaListRequest request) {
     return ListMessageSchemas(request, null);
@@ -4342,7 +4342,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/ListMigrationRuns} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/ListMigrationRuns} — unary call on udb.services.v1.DataBroker; public alias {@code list_migration_runs}. */
   public com.udb.entity.v1.MigrationRunListResponse ListMigrationRuns(
       com.udb.entity.v1.MigrationRunListRequest request) {
     return ListMigrationRuns(request, null);
@@ -4361,7 +4361,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/ListPolicies} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/ListPolicies} — unary call on udb.services.v1.DataBroker; public alias {@code list_policies}. */
   public com.udb.entity.v1.PolicyListResponse ListPolicies(
       com.udb.entity.v1.PolicyListRequest request) {
     return ListPolicies(request, null);
@@ -4380,7 +4380,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/ListProjects} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/ListProjects} — unary call on udb.services.v1.DataBroker; public alias {@code list_projects}. */
   public com.udb.entity.v1.ProjectListResponse ListProjects(
       com.udb.entity.v1.ProjectListRequest request) {
     return ListProjects(request, null);
@@ -4399,7 +4399,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/ListResources} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/ListResources} — unary call on udb.services.v1.DataBroker; public alias {@code list_resources}. */
   public com.udb.entity.v1.ResourceListResponse ListResources(
       com.udb.entity.v1.ResourceAdminRequest request) {
     return ListResources(request, null);
@@ -4418,7 +4418,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/ListSagas} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/ListSagas} — unary call on udb.services.v1.DataBroker; public alias {@code list_sagas}. */
   public com.udb.entity.v1.SagaListResponse ListSagas(
       com.udb.entity.v1.SagaListRequest request) {
     return ListSagas(request, null);
@@ -4437,7 +4437,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/LookupMessageSchema} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/LookupMessageSchema} — unary call on udb.services.v1.DataBroker; public alias {@code lookup_message_schema}. */
   public com.udb.entity.v1.MessageSchemaLookupResponse LookupMessageSchema(
       com.udb.entity.v1.MessageSchemaLookupRequest request) {
     return LookupMessageSchema(request, null);
@@ -4456,7 +4456,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/MarkSagaReviewed} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/MarkSagaReviewed} — unary call on udb.services.v1.DataBroker; public alias {@code mark_saga_reviewed}. */
   public com.udb.entity.v1.SagaResponse MarkSagaReviewed(
       com.udb.entity.v1.SagaRequest request) {
     return MarkSagaReviewed(request, null);
@@ -4475,7 +4475,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/PauseCdc} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/PauseCdc} — unary call on udb.services.v1.DataBroker; public alias {@code pause_cdc}. */
   public com.udb.entity.v1.CdcStatusResponse PauseCdc(
       com.udb.entity.v1.CdcControlRequest request) {
     return PauseCdc(request, null);
@@ -4494,7 +4494,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/PlanMigration} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/PlanMigration} — unary call on udb.services.v1.DataBroker; public alias {@code plan_migration}. */
   public com.udb.entity.v1.MigrationPlanResponse PlanMigration(
       com.udb.entity.v1.MigrationPlanRequest request) {
     return PlanMigration(request, null);
@@ -4513,7 +4513,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/PreviewCdcRedaction} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/PreviewCdcRedaction} — unary call on udb.services.v1.DataBroker; public alias {@code preview_cdc_redaction}. */
   public com.udb.entity.v1.CdcRedactionPreviewResponse PreviewCdcRedaction(
       com.udb.entity.v1.CdcRedactionPreviewRequest request) {
     return PreviewCdcRedaction(request, null);
@@ -4532,7 +4532,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/PutPolicy} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/PutPolicy} — unary call on udb.services.v1.DataBroker; public alias {@code put_policy}. */
   public com.udb.entity.v1.MutationResponse PutPolicy(
       com.udb.entity.v1.PutPolicyRequest request) {
     return PutPolicy(request, null);
@@ -4551,7 +4551,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "destructive".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/QuarantineDlqEvent} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/QuarantineDlqEvent} — unary call on udb.services.v1.DataBroker; public alias {@code quarantine_dlq_event}. */
   public com.udb.entity.v1.MutationResponse QuarantineDlqEvent(
       com.udb.entity.v1.DlqActionRequest request) {
     return QuarantineDlqEvent(request, null);
@@ -4570,7 +4570,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/ReloadPolicies} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/ReloadPolicies} — unary call on udb.services.v1.DataBroker; public alias {@code reload_policies}. */
   public com.udb.entity.v1.MutationResponse ReloadPolicies(
       com.udb.entity.v1.CapabilitiesRequest request) {
     return ReloadPolicies(request, null);
@@ -4589,7 +4589,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "destructive".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/ReplayDlqEvent} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/ReplayDlqEvent} — unary call on udb.services.v1.DataBroker; public alias {@code replay_dlq_event}. */
   public com.udb.entity.v1.MutationResponse ReplayDlqEvent(
       com.udb.entity.v1.DlqActionRequest request) {
     return ReplayDlqEvent(request, null);
@@ -4608,7 +4608,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/ResumeCdc} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/ResumeCdc} — unary call on udb.services.v1.DataBroker; public alias {@code resume_cdc}. */
   public com.udb.entity.v1.CdcStatusResponse ResumeCdc(
       com.udb.entity.v1.CdcControlRequest request) {
     return ResumeCdc(request, null);
@@ -4627,7 +4627,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/RetrySagaCompensation} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/RetrySagaCompensation} — unary call on udb.services.v1.DataBroker; public alias {@code retry_saga_compensation}. */
   public com.udb.entity.v1.SagaResponse RetrySagaCompensation(
       com.udb.entity.v1.SagaRequest request) {
     return RetrySagaCompensation(request, null);
@@ -4646,7 +4646,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/RollbackCatalog} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/RollbackCatalog} — unary call on udb.services.v1.DataBroker; public alias {@code rollback_catalog}. */
   public com.udb.entity.v1.CatalogVersionResponse RollbackCatalog(
       com.udb.entity.v1.CatalogVersionRequest request) {
     return RollbackCatalog(request, null);
@@ -4665,7 +4665,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "destructive".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/ScanProjectionDrift} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/ScanProjectionDrift} — unary call on udb.services.v1.DataBroker; public alias {@code scan_projection_drift}. */
   public com.udb.entity.v1.ProjectionDriftScanResponse ScanProjectionDrift(
       com.udb.entity.v1.ProjectionDriftScanRequest request) {
     return ScanProjectionDrift(request, null);
@@ -4684,7 +4684,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/Select} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/Select} — unary call on udb.services.v1.DataBroker; public alias {@code select}. */
   public com.udb.entity.v1.RecordSet Select(
       com.udb.entity.v1.SelectRequest request) {
     return Select(request, null);
@@ -4703,7 +4703,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/StageCatalog} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/StageCatalog} — unary call on udb.services.v1.DataBroker; public alias {@code stage_catalog}. */
   public com.udb.entity.v1.CatalogVersionResponse StageCatalog(
       com.udb.entity.v1.StageCatalogRequest request) {
     return StageCatalog(request, null);
@@ -4722,7 +4722,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "destructive".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/StepDownCdcLeader} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/StepDownCdcLeader} — unary call on udb.services.v1.DataBroker; public alias {@code step_down_cdc_leader}. */
   public com.udb.entity.v1.CdcStatusResponse StepDownCdcLeader(
       com.udb.entity.v1.CdcControlRequest request) {
     return StepDownCdcLeader(request, null);
@@ -4741,7 +4741,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/TimeSeriesQuery} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/TimeSeriesQuery} — unary call on udb.services.v1.DataBroker; public alias {@code time_series_query}. */
   public com.udb.entity.v1.TimeSeriesQueryResponse TimeSeriesQuery(
       com.udb.entity.v1.TimeSeriesQueryRequest request) {
     return TimeSeriesQuery(request, null);
@@ -4760,7 +4760,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/TimeSeriesWrite} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/TimeSeriesWrite} — unary call on udb.services.v1.DataBroker; public alias {@code time_series_write}. */
   public com.udb.entity.v1.MutationResponse TimeSeriesWrite(
       com.udb.entity.v1.TimeSeriesWriteRequest request) {
     return TimeSeriesWrite(request, null);
@@ -4779,7 +4779,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/Upsert} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/Upsert} — unary call on udb.services.v1.DataBroker; public alias {@code upsert}. */
   public com.udb.entity.v1.MutationResponse Upsert(
       com.udb.entity.v1.UpsertRequest request) {
     return Upsert(request, null);
@@ -4798,7 +4798,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/ValidateCatalog} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/ValidateCatalog} — unary call on udb.services.v1.DataBroker; public alias {@code validate_catalog}. */
   public com.udb.entity.v1.CatalogValidationResponse ValidateCatalog(
       com.udb.entity.v1.StageCatalogRequest request) {
     return ValidateCatalog(request, null);
@@ -4817,7 +4817,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "destructive".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/VectorHybridSearch} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/VectorHybridSearch} — unary call on udb.services.v1.DataBroker; public alias {@code vector_hybrid_search}. */
   public com.udb.entity.v1.VectorSet VectorHybridSearch(
       com.udb.entity.v1.VectorHybridSearchRequest request) {
     return VectorHybridSearch(request, null);
@@ -4836,7 +4836,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/VectorSearch} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/VectorSearch} — unary call on udb.services.v1.DataBroker; public alias {@code vector_search}. */
   public com.udb.entity.v1.VectorSet VectorSearch(
       com.udb.entity.v1.VectorSearchRequest request) {
     return VectorSearch(request, null);
@@ -4855,7 +4855,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "read_only".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/VectorUpsert} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/VectorUpsert} — unary call on udb.services.v1.DataBroker; public alias {@code vector_upsert}. */
   public com.udb.entity.v1.MutationResponse VectorUpsert(
       com.udb.entity.v1.VectorUpsertRequest request) {
     return VectorUpsert(request, null);
@@ -4874,7 +4874,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         "mutation".equals("read_only"));
   }
 
-  /** {@code /udb.services.v1.DataBroker/VerifyAdminAuditLog} — unary call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/VerifyAdminAuditLog} — unary call on udb.services.v1.DataBroker; public alias {@code verify_admin_audit_log}. */
   public com.udb.entity.v1.AdminAuditVerifyResponse VerifyAdminAuditLog(
       com.udb.entity.v1.AdminAuditVerifyRequest request) {
     return VerifyAdminAuditLog(request, null);
@@ -4897,7 +4897,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
   // Single attempt (mid-stream retry is unsafe); drain-time errors are mapped to
   // UdbRpcException by the returned iterator.
 
-  /** {@code /udb.core.storage.services.v1.StorageService/DownloadFile} — server-streaming call on udb.core.storage.services.v1.StorageService. */
+  /** {@code /udb.core.storage.services.v1.StorageService/DownloadFile} — server-streaming call on udb.core.storage.services.v1.StorageService; public alias {@code download_file}. */
   public Iterator<com.udb.core.storage.services.v1.DownloadFileChunk> DownloadFile(
       com.udb.core.storage.services.v1.DownloadFileRequest request) {
     return DownloadFile(request, null);
@@ -4915,7 +4915,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         headers);
   }
 
-  /** {@code /udb.services.v1.DataBroker/GetObject} — server-streaming call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/GetObject} — server-streaming call on udb.services.v1.DataBroker; public alias {@code get_object}. */
   public Iterator<com.udb.entity.v1.Chunk> GetObject(
       com.udb.entity.v1.ObjectRequest request) {
     return GetObject(request, null);
@@ -4933,14 +4933,14 @@ public final class GeneratedUdbClient implements AutoCloseable {
         headers);
   }
 
-  /** {@code /udb.services.v1.DataBroker/PublishCDC} — server-streaming call on udb.services.v1.DataBroker. */
-  public Iterator<com.udb.events.v1.CDCEnvelope> PublishCDC(
+  /** {@code /udb.services.v1.DataBroker/PublishCDC} — server-streaming call on udb.services.v1.DataBroker; public alias {@code publish_cdc}. */
+  public Iterator<com.udb.events.v1.CDCEnvelope> PublishCdc(
       com.udb.entity.v1.CDCSubscriptionRequest request) {
-    return PublishCDC(request, null);
+    return PublishCdc(request, null);
   }
 
   /** {@code /udb.services.v1.DataBroker/PublishCDC} — server-streaming call with an explicit deadline. */
-  public Iterator<com.udb.events.v1.CDCEnvelope> PublishCDC(
+  public Iterator<com.udb.events.v1.CDCEnvelope> PublishCdc(
       com.udb.entity.v1.CDCSubscriptionRequest request, Duration deadline) {
     return GeneratedClientSupport.serverStreaming(
         channel,
@@ -4951,7 +4951,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         headers);
   }
 
-  /** {@code /udb.services.v1.DataBroker/SelectV2} — server-streaming call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/SelectV2} — server-streaming call on udb.services.v1.DataBroker; public alias {@code select_v_2}. */
   public Iterator<com.udb.entity.v1.RecordBatchV2> SelectV2(
       com.udb.entity.v1.SelectRequest request) {
     return SelectV2(request, null);
@@ -4973,7 +4973,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
   // Never retried (the request stream cannot be replayed). Returns the request
   // observer; the supplied responseObserver receives the single response.
 
-  /** {@code /udb.services.v1.DataBroker/PutObject} — client-streaming call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/PutObject} — client-streaming call on udb.services.v1.DataBroker; public alias {@code put_object}. */
   public StreamObserver<com.udb.entity.v1.Chunk> PutObject(
       StreamObserver<com.udb.entity.v1.MutationResponse> responseObserver) {
     return GeneratedClientSupport.clientStreaming(
@@ -4989,7 +4989,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
   // Never retried. Returns the request observer; the supplied responseObserver
   // receives the response stream.
 
-  /** {@code /udb.core.control.services.v1.ControlPlaneService/DeltaResources} — bidi-streaming call on udb.core.control.services.v1.ControlPlaneService. */
+  /** {@code /udb.core.control.services.v1.ControlPlaneService/DeltaResources} — bidi-streaming call on udb.core.control.services.v1.ControlPlaneService; public alias {@code delta_resources}. */
   public StreamObserver<com.udb.core.control.services.v1.DeltaDiscoveryRequest> DeltaResources(
       StreamObserver<com.udb.core.control.services.v1.DeltaDiscoveryResponse> responseObserver) {
     return GeneratedClientSupport.bidiStreaming(
@@ -5001,7 +5001,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         responseObserver);
   }
 
-  /** {@code /udb.core.control.services.v1.ControlPlaneService/StreamResources} — bidi-streaming call on udb.core.control.services.v1.ControlPlaneService. */
+  /** {@code /udb.core.control.services.v1.ControlPlaneService/StreamResources} — bidi-streaming call on udb.core.control.services.v1.ControlPlaneService; public alias {@code stream_resources}. */
   public StreamObserver<com.udb.core.control.services.v1.DiscoveryRequest> StreamResources(
       StreamObserver<com.udb.core.control.services.v1.DiscoveryResponse> responseObserver) {
     return GeneratedClientSupport.bidiStreaming(
@@ -5013,7 +5013,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         responseObserver);
   }
 
-  /** {@code /udb.core.webrtc.services.v1.SignalingService/Signal} — bidi-streaming call on udb.core.webrtc.services.v1.SignalingService. */
+  /** {@code /udb.core.webrtc.services.v1.SignalingService/Signal} — bidi-streaming call on udb.core.webrtc.services.v1.SignalingService; public alias {@code signal}. */
   public StreamObserver<com.udb.core.webrtc.services.v1.SignalRequest> Signal(
       StreamObserver<com.udb.core.webrtc.services.v1.SignalResponse> responseObserver) {
     return GeneratedClientSupport.bidiStreaming(
@@ -5025,7 +5025,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         responseObserver);
   }
 
-  /** {@code /udb.services.v1.DataBroker/BatchSelect} — bidi-streaming call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/BatchSelect} — bidi-streaming call on udb.services.v1.DataBroker; public alias {@code batch_select}. */
   public StreamObserver<com.udb.entity.v1.SelectRequest> BatchSelect(
       StreamObserver<com.udb.entity.v1.RecordSet> responseObserver) {
     return GeneratedClientSupport.bidiStreaming(
@@ -5037,7 +5037,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         responseObserver);
   }
 
-  /** {@code /udb.services.v1.DataBroker/BatchUpsert} — bidi-streaming call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/BatchUpsert} — bidi-streaming call on udb.services.v1.DataBroker; public alias {@code batch_upsert}. */
   public StreamObserver<com.udb.entity.v1.UpsertRequest> BatchUpsert(
       StreamObserver<com.udb.entity.v1.MutationResponse> responseObserver) {
     return GeneratedClientSupport.bidiStreaming(
@@ -5049,7 +5049,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         responseObserver);
   }
 
-  /** {@code /udb.services.v1.DataBroker/BeginTx} — bidi-streaming call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/BeginTx} — bidi-streaming call on udb.services.v1.DataBroker; public alias {@code begin_tx}. */
   public StreamObserver<com.udb.entity.v1.Mutation> BeginTx(
       StreamObserver<com.udb.entity.v1.TxStatus> responseObserver) {
     return GeneratedClientSupport.bidiStreaming(
@@ -5061,7 +5061,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         responseObserver);
   }
 
-  /** {@code /udb.services.v1.DataBroker/VectorBatchUpsert} — bidi-streaming call on udb.services.v1.DataBroker. */
+  /** {@code /udb.services.v1.DataBroker/VectorBatchUpsert} — bidi-streaming call on udb.services.v1.DataBroker; public alias {@code vector_batch_upsert}. */
   public StreamObserver<com.udb.entity.v1.VectorUpsertRequest> VectorBatchUpsert(
       StreamObserver<com.udb.entity.v1.MutationResponse> responseObserver) {
     return GeneratedClientSupport.bidiStreaming(

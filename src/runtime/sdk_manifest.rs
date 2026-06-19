@@ -29,6 +29,18 @@ pub struct RpcDescriptor {
     pub method: String,
     /// `method` in snake_case, e.g. `select`.
     pub method_snake: String,
+    /// SDK-facing method alias from `SdkSurfaceOptions.method_alias`, or the
+    /// wire method name when no alias is annotated.
+    pub method_alias: String,
+    /// SDK alias in snake_case.
+    pub method_alias_snake: String,
+    /// SDK alias in lowerCamelCase.
+    pub method_alias_camel: String,
+    /// SDK alias in PascalCase.
+    pub method_alias_pascal: String,
+    /// REST/OpenAPI operation id from `SdkSurfaceOptions.rest_operation_id`,
+    /// falling back to the SDK alias in lowerCamelCase for old descriptors.
+    pub rest_operation_id: String,
     /// Request message short name, e.g. `SelectRequest`.
     pub input_short: String,
     /// Request message package, e.g. `udb.entity.v1`.
@@ -37,6 +49,10 @@ pub struct RpcDescriptor {
     pub output_short: String,
     /// Response message package.
     pub output_pkg: String,
+    pub http_verb: String,
+    pub http_path: String,
+    pub http_body: String,
+    pub http_response_body: String,
     pub client_streaming: bool,
     pub server_streaming: bool,
     pub native_service_id: String,
@@ -151,15 +167,38 @@ pub fn rpc_manifest() -> Vec<RpcDescriptor> {
         for method in &service.methods {
             let endpoint = method.endpoint_security.as_ref();
             let sdk = method.sdk_surface.as_ref().or(service.sdk_surface.as_ref());
+            let method_alias = sdk
+                .map(|surface| surface.method_alias.trim())
+                .filter(|alias| !alias.is_empty())
+                .unwrap_or(&method.method)
+                .to_string();
+            let method_alias_snake = alias_snake_case(&method_alias);
+            let method_alias_camel = alias_camel_case(&method_alias);
+            let method_alias_pascal = alias_pascal_case(&method_alias);
+            let rest_operation_id = sdk
+                .map(|surface| surface.rest_operation_id.trim())
+                .filter(|id| !id.is_empty())
+                .unwrap_or(&method_alias_camel)
+                .to_string();
+            let http = method.http_rule.as_ref();
             out.push(RpcDescriptor {
                 service_name: service.name.clone(),
                 service_pkg: service.package.clone(),
                 method: method.method.clone(),
                 method_snake: method.method_snake.clone(),
+                method_alias,
+                method_alias_snake,
+                method_alias_camel,
+                method_alias_pascal,
+                rest_operation_id,
                 input_short: method.input_short.clone(),
                 input_pkg: method.input_pkg.clone(),
                 output_short: method.output_short.clone(),
                 output_pkg: method.output_pkg.clone(),
+                http_verb: http.map(|h| h.verb.clone()).unwrap_or_default(),
+                http_path: http.map(|h| h.path.clone()).unwrap_or_default(),
+                http_body: http.map(|h| h.body.clone()).unwrap_or_default(),
+                http_response_body: http.map(|h| h.response_body.clone()).unwrap_or_default(),
                 client_streaming: method.client_streaming,
                 server_streaming: method.server_streaming,
                 native_service_id: native
@@ -338,6 +377,83 @@ fn credential_type_name(value: i32) -> &'static str {
     }
 }
 
+fn alias_words(value: &str) -> Vec<String> {
+    let mut words = Vec::new();
+    let mut current = String::new();
+    let chars: Vec<char> = value.trim().chars().collect();
+    for (idx, ch) in chars.iter().copied().enumerate() {
+        if !ch.is_ascii_alphanumeric() {
+            if !current.is_empty() {
+                words.push(std::mem::take(&mut current));
+            }
+            continue;
+        }
+        if !current.is_empty() {
+            let prev = current.chars().last().unwrap_or_default();
+            let next = chars.get(idx + 1).copied();
+            let lower_to_upper = prev.is_ascii_lowercase() && ch.is_ascii_uppercase();
+            let acronym_to_word = prev.is_ascii_uppercase()
+                && ch.is_ascii_uppercase()
+                && next.is_some_and(|n| n.is_ascii_lowercase());
+            let alpha_digit = prev.is_ascii_alphabetic() && ch.is_ascii_digit();
+            let digit_alpha = prev.is_ascii_digit() && ch.is_ascii_alphabetic();
+            if lower_to_upper || acronym_to_word || alpha_digit || digit_alpha {
+                words.push(std::mem::take(&mut current));
+            }
+        }
+        current.push(ch);
+    }
+    if !current.is_empty() {
+        words.push(current);
+    }
+    if words.is_empty() {
+        vec![value.trim().to_string()]
+    } else {
+        words
+    }
+}
+
+fn title_word(word: &str) -> String {
+    let mut chars = word.chars();
+    let Some(first) = chars.next() else {
+        return String::new();
+    };
+    let mut out = String::new();
+    out.push(first.to_ascii_uppercase());
+    for ch in chars {
+        out.push(ch.to_ascii_lowercase());
+    }
+    out
+}
+
+fn alias_snake_case(value: &str) -> String {
+    alias_words(value)
+        .into_iter()
+        .map(|word| word.to_ascii_lowercase())
+        .collect::<Vec<_>>()
+        .join("_")
+}
+
+fn alias_pascal_case(value: &str) -> String {
+    alias_words(value)
+        .into_iter()
+        .map(|word| title_word(&word))
+        .collect::<String>()
+}
+
+fn alias_camel_case(value: &str) -> String {
+    let words = alias_words(value);
+    let mut out = String::new();
+    for (idx, word) in words.iter().enumerate() {
+        if idx == 0 {
+            out.push_str(&word.to_ascii_lowercase());
+        } else {
+            out.push_str(&title_word(word));
+        }
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -367,9 +483,40 @@ mod tests {
             .expect("DataBroker/Select must be in the manifest");
         assert_eq!(select.service_pkg, "udb.services.v1");
         assert_eq!(select.method_snake, "select");
+        assert_eq!(select.method_alias_snake, "select");
+        assert_eq!(select.method_alias_camel, "select");
+        assert_eq!(select.method_alias_pascal, "Select");
+        assert_eq!(select.rest_operation_id, "select");
         assert_eq!(select.input_short, "SelectRequest");
         assert_eq!(select.kind(), "unary");
         assert_eq!(select.grpc_path(), "/udb.services.v1.DataBroker/Select");
+        assert_eq!(select.operation_kind, "read_only");
+        assert!(select.read_only);
+
+        let upsert = manifest
+            .iter()
+            .find(|r| r.service_name == "DataBroker" && r.method == "Upsert")
+            .expect("DataBroker/Upsert must be in the manifest");
+        assert_eq!(upsert.operation_kind, "mutation");
+        assert!(!upsert.read_only);
+    }
+
+    #[test]
+    fn sdk_alias_identity_is_acronym_safe() {
+        let manifest = rpc_manifest();
+        let jwks = manifest
+            .iter()
+            .find(|r| r.service_name == "AuthnService" && r.method == "GetJwks")
+            .expect("AuthnService/GetJwks must be in the manifest");
+        assert_eq!(jwks.method_alias, "get_jwks");
+        assert_eq!(jwks.method_alias_snake, "get_jwks");
+        assert_eq!(jwks.method_alias_camel, "getJwks");
+        assert_eq!(jwks.method_alias_pascal, "GetJwks");
+        assert_eq!(jwks.rest_operation_id, "getJwks");
+
+        assert_eq!(alias_snake_case("CreateAPIKey"), "create_api_key");
+        assert_eq!(alias_camel_case("CreateAPIKey"), "createApiKey");
+        assert_eq!(alias_pascal_case("CreateAPIKey"), "CreateApiKey");
     }
 
     #[test]

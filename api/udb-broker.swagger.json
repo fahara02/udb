@@ -62,10 +62,10 @@
     "application/json"
   ],
   "paths": {
-    "/v1/analytics/executor_performance": {
+    "/v1/analytics/executor-performance": {
       "get": {
         "summary": "Query daily executor performance roll-ups.",
-        "operationId": "AnalyticsService_GetExecutorPerformance",
+        "operationId": "getExecutorPerformance",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -109,13 +109,26 @@
         ],
         "tags": [
           "AnalyticsService"
-        ]
+        ],
+        "x-udb-sdk-alias": "get_executor_performance",
+        "x-udb-scope": [
+          "udb:analytics:get-executor-performance"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "analytics",
+        "x-udb-operation-kind": "read_only"
       }
     },
-    "/v1/analytics/pipeline_metrics": {
+    "/v1/analytics/pipeline-metrics": {
       "post": {
         "summary": "Record a single pipeline stage request observation (called per-request).",
-        "operationId": "AnalyticsService_RecordPipelineMetric",
+        "operationId": "recordPipelineMetric",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -142,13 +155,26 @@
         ],
         "tags": [
           "AnalyticsService"
-        ]
+        ],
+        "x-udb-sdk-alias": "record_pipeline_metric",
+        "x-udb-scope": [
+          "udb:analytics:record-pipeline-metric"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "analytics",
+        "x-udb-operation-kind": "mutation"
       }
     },
-    "/v1/analytics/pipeline_summaries": {
+    "/v1/analytics/pipeline-summaries": {
       "get": {
         "summary": "Query aggregated pipeline stage performance snapshots.",
-        "operationId": "AnalyticsService_GetPipelineSummary",
+        "operationId": "getPipelineSummary",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -213,13 +239,26 @@
         ],
         "tags": [
           "AnalyticsService"
-        ]
+        ],
+        "x-udb-sdk-alias": "get_pipeline_summary",
+        "x-udb-scope": [
+          "udb:analytics:get-pipeline-summary"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "analytics",
+        "x-udb-operation-kind": "read_only"
       }
     },
-    "/v1/analytics/reconciliation_stats": {
+    "/v1/analytics/reconciliation-stats": {
       "get": {
         "summary": "Query daily reconciliation and conflict analytics.",
-        "operationId": "AnalyticsService_GetReconciliationAnalytics",
+        "operationId": "getReconciliationAnalytics",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -250,13 +289,26 @@
         ],
         "tags": [
           "AnalyticsService"
-        ]
+        ],
+        "x-udb-sdk-alias": "get_reconciliation_analytics",
+        "x-udb-scope": [
+          "udb:analytics:get-reconciliation-analytics"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "analytics",
+        "x-udb-operation-kind": "read_only"
       }
     },
-    "/v1/analytics/sla_compliance": {
+    "/v1/analytics/sla-compliance": {
       "get": {
         "summary": "Get SLA compliance report for a stage and time period.",
-        "operationId": "AnalyticsService_GetSlaCompliance",
+        "operationId": "getSlaCompliance",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -307,13 +359,26 @@
         ],
         "tags": [
           "AnalyticsService"
-        ]
+        ],
+        "x-udb-sdk-alias": "get_sla_compliance",
+        "x-udb-scope": [
+          "udb:analytics:get-sla-compliance"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "analytics",
+        "x-udb-operation-kind": "read_only"
       }
     },
     "/v1/analytics/snapshots:trigger": {
       "post": {
         "summary": "Manually trigger hourly snapshot aggregation (normally a cron job).",
-        "operationId": "AnalyticsService_TriggerSnapshot",
+        "operationId": "triggerSnapshot",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -340,13 +405,26 @@
         ],
         "tags": [
           "AnalyticsService"
-        ]
+        ],
+        "x-udb-sdk-alias": "trigger_snapshot",
+        "x-udb-scope": [
+          "udb:analytics:trigger-snapshot"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "analytics",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/analytics/throughput": {
       "get": {
         "summary": "Get throughput statistics over a time window.",
-        "operationId": "AnalyticsService_GetThroughput",
+        "operationId": "getThroughput",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -383,12 +461,25 @@
         ],
         "tags": [
           "AnalyticsService"
-        ]
+        ],
+        "x-udb-sdk-alias": "get_throughput",
+        "x-udb-scope": [
+          "udb:analytics:get-throughput"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "analytics",
+        "x-udb-operation-kind": "read_only"
       }
     },
-    "/v1/api_keys": {
+    "/v1/api-keys": {
       "get": {
-        "operationId": "ApiKeyService_ListApiKeys",
+        "operationId": "listApiKeys",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -464,11 +555,24 @@
         ],
         "tags": [
           "ApiKeyService"
-        ]
+        ],
+        "x-udb-sdk-alias": "list_api_keys",
+        "x-udb-scope": [
+          "udb:apikey:list-api-keys"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "api-keys",
+        "x-udb-operation-kind": "read_only"
       },
       "post": {
         "summary": "── Key lifecycle (admin-only) ────────────────────────────────────────────\nReturns the plain key ONCE in CreateApiKeyResponse — never again.",
-        "operationId": "ApiKeyService_CreateApiKey",
+        "operationId": "createApiKey",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -495,12 +599,25 @@
         ],
         "tags": [
           "ApiKeyService"
-        ]
+        ],
+        "x-udb-sdk-alias": "create_api_key",
+        "x-udb-scope": [
+          "udb:apikey:create-api-key"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "api-keys",
+        "x-udb-operation-kind": "mutation"
       }
     },
-    "/v1/api_keys/{keyId}": {
+    "/v1/api-keys/{keyId}": {
       "get": {
-        "operationId": "ApiKeyService_GetApiKey",
+        "operationId": "getApiKey",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -525,10 +642,23 @@
         ],
         "tags": [
           "ApiKeyService"
-        ]
+        ],
+        "x-udb-sdk-alias": "get_api_key",
+        "x-udb-scope": [
+          "udb:apikey:get-api-key"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "api-keys",
+        "x-udb-operation-kind": "read_only"
       },
       "delete": {
-        "operationId": "ApiKeyService_RevokeApiKey",
+        "operationId": "revokeApiKey",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -738,10 +868,23 @@
         ],
         "tags": [
           "ApiKeyService"
-        ]
+        ],
+        "x-udb-sdk-alias": "revoke_api_key",
+        "x-udb-scope": [
+          "udb:apikey:revoke-api-key"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "api-keys",
+        "x-udb-operation-kind": "mutation"
       },
       "patch": {
-        "operationId": "ApiKeyService_UpdateApiKey",
+        "operationId": "updateApiKey",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -774,13 +917,26 @@
         ],
         "tags": [
           "ApiKeyService"
-        ]
+        ],
+        "x-udb-sdk-alias": "update_api_key",
+        "x-udb-scope": [
+          "udb:apikey:update-api-key"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "api-keys",
+        "x-udb-operation-kind": "mutation"
       }
     },
-    "/v1/api_keys/{keyId}/stats": {
+    "/v1/api-keys/{keyId}/stats": {
       "get": {
         "summary": "── Usage stats ───────────────────────────────────────────────────────────",
-        "operationId": "ApiKeyService_GetApiKeyUsageStats",
+        "operationId": "getApiKeyUsageStats",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -819,13 +975,26 @@
         ],
         "tags": [
           "ApiKeyService"
-        ]
+        ],
+        "x-udb-sdk-alias": "get_api_key_usage_stats",
+        "x-udb-scope": [
+          "udb:apikey:get-api-key-usage-stats"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "api-keys",
+        "x-udb-operation-kind": "read_only"
       }
     },
-    "/v1/api_keys/{keyId}:rotate": {
+    "/v1/api-keys/{keyId}:rotate": {
       "post": {
         "summary": "Rotate a key's secret in place (same key_id + lineage). Returns the new\nplain key ONCE; the old secret is invalidated immediately.",
-        "operationId": "ApiKeyService_RotateApiKey",
+        "operationId": "rotateApiKey",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -858,13 +1027,26 @@
         ],
         "tags": [
           "ApiKeyService"
-        ]
+        ],
+        "x-udb-sdk-alias": "rotate_api_key",
+        "x-udb-scope": [
+          "udb:apikey:rotate-api-key"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "api-keys",
+        "x-udb-operation-kind": "mutation"
       }
     },
-    "/v1/api_keys:emergency-revoke": {
+    "/v1/api-keys:emergencyRevoke": {
       "post": {
         "summary": "Emergency bulk revoke by selector (prefix/owner/tenant/project/scope/before).",
-        "operationId": "ApiKeyService_EmergencyRevokeApiKeys",
+        "operationId": "emergencyRevokeApiKeys",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -892,13 +1074,26 @@
         ],
         "tags": [
           "ApiKeyService"
-        ]
+        ],
+        "x-udb-sdk-alias": "emergency_revoke_api_keys",
+        "x-udb-scope": [
+          "udb:apikey:emergency-revoke-api-keys"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "api-keys",
+        "x-udb-operation-kind": "destructive"
       }
     },
-    "/v1/api_keys:validate": {
+    "/v1/api-keys:validate": {
       "post": {
         "summary": "── Validation (called by API gateway — internal, not public HTTP) ────────",
-        "operationId": "ApiKeyService_ValidateApiKey",
+        "operationId": "validateApiKey",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -925,13 +1120,26 @@
         ],
         "tags": [
           "ApiKeyService"
-        ]
+        ],
+        "x-udb-sdk-alias": "validate_api_key",
+        "x-udb-scope": [
+          "udb:apikey:validate-api-key"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "api-keys",
+        "x-udb-operation-kind": "read_only"
       }
     },
-    "/v1/asset/assets": {
+    "/v1/assets": {
       "get": {
         "summary": "List assets",
-        "operationId": "AssetService_ListAssets",
+        "operationId": "listAssets",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -982,11 +1190,24 @@
         ],
         "tags": [
           "AssetService"
-        ]
+        ],
+        "x-udb-sdk-alias": "list_assets",
+        "x-udb-scope": [
+          "udb:asset:list-assets"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "assets",
+        "x-udb-operation-kind": "read_only"
       },
       "post": {
         "summary": "Register a managed asset wrapping a storage file",
-        "operationId": "AssetService_RegisterAsset",
+        "operationId": "registerAsset",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -1013,50 +1234,26 @@
         ],
         "tags": [
           "AssetService"
-        ]
-      }
-    },
-    "/v1/asset/assets/{assetId}": {
-      "get": {
-        "summary": "Get an asset",
-        "operationId": "AssetService_GetAsset",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1GetAssetResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "assetId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "tenantId",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
         ],
-        "tags": [
-          "AssetService"
-        ]
+        "x-udb-sdk-alias": "register_asset",
+        "x-udb-scope": [
+          "udb:asset:register-asset"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "assets",
+        "x-udb-operation-kind": "mutation"
       }
     },
-    "/v1/asset/pipeline-definitions": {
+    "/v1/assets/pipeline-definitions": {
       "post": {
         "summary": "Create a reusable pipeline definition",
-        "operationId": "AssetService_CreatePipelineDefinition",
+        "operationId": "createPipelineDefinition",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -1083,13 +1280,26 @@
         ],
         "tags": [
           "AssetService"
-        ]
+        ],
+        "x-udb-sdk-alias": "create_pipeline_definition",
+        "x-udb-scope": [
+          "udb:asset:create-pipeline-definition"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "assets",
+        "x-udb-operation-kind": "mutation"
       }
     },
-    "/v1/asset/pipeline-definitions/{definitionId}": {
+    "/v1/assets/pipeline-definitions/{definitionId}": {
       "get": {
         "summary": "Get a pipeline definition",
-        "operationId": "AssetService_GetPipelineDefinition",
+        "operationId": "getPipelineDefinition",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -1120,13 +1330,26 @@
         ],
         "tags": [
           "AssetService"
-        ]
+        ],
+        "x-udb-sdk-alias": "get_pipeline_definition",
+        "x-udb-scope": [
+          "udb:asset:get-pipeline-definition"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "assets",
+        "x-udb-operation-kind": "read_only"
       }
     },
-    "/v1/asset/pipelines": {
+    "/v1/assets/pipelines": {
       "post": {
         "summary": "Start a pipeline instance for an asset",
-        "operationId": "AssetService_StartPipeline",
+        "operationId": "startPipeline",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -1153,13 +1376,26 @@
         ],
         "tags": [
           "AssetService"
-        ]
+        ],
+        "x-udb-sdk-alias": "start_pipeline",
+        "x-udb-scope": [
+          "udb:asset:start-pipeline"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "correlation_id",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": true
+        },
+        "x-udb-resource": "assets",
+        "x-udb-operation-kind": "mutation"
       }
     },
-    "/v1/asset/pipelines/{instanceId}": {
+    "/v1/assets/pipelines/{instanceId}": {
       "get": {
         "summary": "Get a pipeline instance with its steps",
-        "operationId": "AssetService_GetPipeline",
+        "operationId": "getPipeline",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -1190,13 +1426,26 @@
         ],
         "tags": [
           "AssetService"
-        ]
+        ],
+        "x-udb-sdk-alias": "get_pipeline",
+        "x-udb-scope": [
+          "udb:asset:get-pipeline"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "assets",
+        "x-udb-operation-kind": "read_only"
       }
     },
-    "/v1/asset/steps/{stepId}/complete": {
+    "/v1/assets/steps/{stepId}:complete": {
       "post": {
         "summary": "Complete (or skip/fail) a pipeline step",
-        "operationId": "AssetService_CompleteStep",
+        "operationId": "completeStep",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -1229,13 +1478,76 @@
         ],
         "tags": [
           "AssetService"
-        ]
+        ],
+        "x-udb-sdk-alias": "complete_step",
+        "x-udb-scope": [
+          "udb:asset:complete-step"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "assets",
+        "x-udb-operation-kind": "mutation"
+      }
+    },
+    "/v1/assets/{assetId}": {
+      "get": {
+        "summary": "Get an asset",
+        "operationId": "getAsset",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetAssetResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "assetId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AssetService"
+        ],
+        "x-udb-sdk-alias": "get_asset",
+        "x-udb-scope": [
+          "udb:asset:get-asset"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "assets",
+        "x-udb-operation-kind": "read_only"
       }
     },
     "/v1/auth/.well-known/jwks.json": {
       "get": {
         "summary": "JSON Web Key Set for verifying UDB-issued JWTs. Public.",
-        "operationId": "AuthnService_GetJwks",
+        "operationId": "getJwks",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -1433,12 +1745,23 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "get_jwks",
+        "x-udb-scope": [],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "read_only"
       }
     },
-    "/v1/auth/admin/tenants/{tenantId}/sessions:revoke-all": {
+    "/v1/auth/admin/tenants/{tenantId}/sessions:revokeAll": {
       "post": {
-        "operationId": "AuthnService_AdminRevokeAllTenantSessions",
+        "operationId": "adminRevokeAllTenantSessions",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -1471,12 +1794,25 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "admin_revoke_all_tenant_sessions",
+        "x-udb-scope": [
+          "udb:authn:admin-revoke-all-tenant-sessions"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "destructive"
       }
     },
     "/v1/auth/admin/users/{userId}/mfa:reset": {
       "post": {
-        "operationId": "AuthnService_AdminResetMfa",
+        "operationId": "adminResetMfa",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -1509,12 +1845,25 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "admin_reset_mfa",
+        "x-udb-scope": [
+          "udb:authn:admin-reset-mfa"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "destructive"
       }
     },
     "/v1/auth/admin/users/{userId}/sessions:revoke": {
       "post": {
-        "operationId": "AuthnService_AdminRevokeSession",
+        "operationId": "adminRevokeSession",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -1547,12 +1896,25 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "admin_revoke_session",
+        "x-udb-scope": [
+          "udb:authn:admin-revoke-session"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "destructive"
       }
     },
-    "/v1/auth/admin/users/{userId}/sessions:revoke-all": {
+    "/v1/auth/admin/users/{userId}/sessions:revokeAll": {
       "post": {
-        "operationId": "AuthnService_AdminRevokeAllUserSessions",
+        "operationId": "adminRevokeAllUserSessions",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -1585,12 +1947,25 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "admin_revoke_all_user_sessions",
+        "x-udb-scope": [
+          "udb:authn:admin-revoke-all-user-sessions"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "destructive"
       }
     },
-    "/v1/auth/admin:emergency-revoke": {
+    "/v1/auth/admin:emergencyRevoke": {
       "post": {
-        "operationId": "AuthnService_EmergencyRevoke",
+        "operationId": "emergencyRevoke",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -1618,13 +1993,26 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "emergency_revoke",
+        "x-udb-scope": [
+          "udb:authn:emergency-revoke"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "destructive"
       }
     },
-    "/v1/auth/authenticate": {
+    "/v1/auth/credentials:authenticate": {
       "post": {
         "summary": "── Authentication ───────────────────────────────────────────────────────",
-        "operationId": "AuthnService_Authenticate",
+        "operationId": "authenticate",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -1651,13 +2039,24 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "authenticate",
+        "x-udb-scope": [],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "read_only"
       }
     },
-    "/v1/auth/csrf:validate": {
+    "/v1/auth/csrf-tokens:validate": {
       "post": {
         "summary": "── CSRF (server-side sessions only) ────────────────────────────────────",
-        "operationId": "AuthnService_ValidateCSRF",
+        "operationId": "validateCsrf",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -1684,12 +2083,25 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "validate_csrf",
+        "x-udb-scope": [
+          "udb:authn:validate-csrf"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "read_only"
       }
     },
     "/v1/auth/devices/{deviceId}": {
       "delete": {
-        "operationId": "AuthnService_RevokeDevice",
+        "operationId": "revokeDevice",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -1899,77 +2311,26 @@
         ],
         "tags": [
           "AuthnService"
-        ]
-      }
-    },
-    "/v1/auth/login": {
-      "post": {
-        "operationId": "AuthnService_Login",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1LoginResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1LoginRequest"
-            }
-          }
         ],
-        "tags": [
-          "AuthnService"
-        ]
-      }
-    },
-    "/v1/auth/logout": {
-      "post": {
-        "operationId": "AuthnService_Logout",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1LogoutResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1LogoutRequest"
-            }
-          }
+        "x-udb-sdk-alias": "revoke_device",
+        "x-udb-scope": [
+          "udb:authn:revoke-device"
         ],
-        "tags": [
-          "AuthnService"
-        ]
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/auth/mfa/challenges:issue": {
       "post": {
         "summary": "── MFA challenge + factor lifecycle (Phase 3 / I2.6) ────────────────────",
-        "operationId": "AuthnService_IssueMfaChallenge",
+        "operationId": "issueMfaChallenge",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -1996,12 +2357,25 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "issue_mfa_challenge",
+        "x-udb-scope": [
+          "udb:authn:issue-mfa-challenge"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/auth/mfa/challenges:verify": {
       "post": {
-        "operationId": "AuthnService_VerifyMfaChallenge",
+        "operationId": "verifyMfaChallenge",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -2028,12 +2402,25 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "verify_mfa_challenge",
+        "x-udb-scope": [
+          "udb:authn:verify-mfa-challenge"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "read_only"
       }
     },
-    "/v1/auth/otp:resend": {
+    "/v1/auth/otps:resend": {
       "post": {
-        "operationId": "AuthnService_ResendOTP",
+        "operationId": "resendOtp",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -2060,13 +2447,26 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "resend_otp",
+        "x-udb-scope": [
+          "udb:authn:resend-otp"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "mutation"
       }
     },
-    "/v1/auth/otp:send": {
+    "/v1/auth/otps:send": {
       "post": {
         "summary": "── OTP ──────────────────────────────────────────────────────────────────",
-        "operationId": "AuthnService_SendOTP",
+        "operationId": "sendOtp",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -2093,12 +2493,25 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "send_otp",
+        "x-udb-scope": [
+          "udb:authn:send-otp"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "mutation"
       }
     },
-    "/v1/auth/otp:verify": {
+    "/v1/auth/otps:verify": {
       "post": {
-        "operationId": "AuthnService_VerifyOTP",
+        "operationId": "verifyOtp",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -2125,12 +2538,68 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "verify_otp",
+        "x-udb-scope": [
+          "udb:authn:verify-otp"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "read_only"
       }
     },
-    "/v1/auth/password:change": {
+    "/v1/auth/password-sessions": {
       "post": {
-        "operationId": "AuthnService_ChangePassword",
+        "operationId": "login",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1LoginResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1LoginRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthnService"
+        ],
+        "x-udb-sdk-alias": "login",
+        "x-udb-scope": [],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "mutation"
+      }
+    },
+    "/v1/auth/passwords:change": {
+      "post": {
+        "operationId": "changePassword",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -2157,13 +2626,26 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "change_password",
+        "x-udb-scope": [
+          "udb:authn:change-password"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "mutation"
       }
     },
-    "/v1/auth/password:forgot": {
+    "/v1/auth/passwords:forgot": {
       "post": {
         "summary": "User-initiated password reset: issues a PASSWORD_RESET OTP (delivered to the\naccount's channel). Public — no bearer required.",
-        "operationId": "AuthnService_ForgotPassword",
+        "operationId": "forgotPassword",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -2190,13 +2672,24 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "forgot_password",
+        "x-udb-scope": [],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "mutation"
       }
     },
-    "/v1/auth/password:reset": {
+    "/v1/auth/passwords:reset": {
       "post": {
         "summary": "Complete a password reset with the OTP from ForgotPassword (no current\npassword required). Public — the OTP is the proof of control.",
-        "operationId": "AuthnService_ResetPassword",
+        "operationId": "resetPassword",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -2223,13 +2716,24 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "reset_password",
+        "x-udb-scope": [],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/auth/sessions": {
       "post": {
         "summary": "── Session management ───────────────────────────────────────────────────",
-        "operationId": "AuthnService_CreateSession",
+        "operationId": "createSession",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -2256,12 +2760,25 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "create_session",
+        "x-udb-scope": [
+          "udb:authn:create-session"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/auth/sessions/{sessionId}": {
       "get": {
-        "operationId": "AuthnService_GetSession",
+        "operationId": "getSession",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -2286,10 +2803,23 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "get_session",
+        "x-udb-scope": [
+          "udb:authn:get-session"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "read_only"
       },
       "delete": {
-        "operationId": "AuthnService_RevokeSession",
+        "operationId": "revokeSession",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -2511,12 +3041,25 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "revoke_session",
+        "x-udb-scope": [
+          "udb:authn:revoke-session"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/auth/sessions/{sessionId}:refresh": {
       "post": {
-        "operationId": "AuthnService_RefreshSession",
+        "operationId": "refreshSession",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -2549,13 +3092,71 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "refresh_session",
+        "x-udb-scope": [
+          "udb:authn:refresh-session"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "mutation"
+      }
+    },
+    "/v1/auth/sessions:logout": {
+      "post": {
+        "operationId": "logout",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1LogoutResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1LogoutRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthnService"
+        ],
+        "x-udb-sdk-alias": "logout",
+        "x-udb-scope": [
+          "udb:authn:logout"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/auth/tenants/{tenantId}/mfa-policy": {
       "get": {
         "summary": "Read the per-tenant MFA enforcement policy.",
-        "operationId": "AuthnService_GetMfaPolicy",
+        "operationId": "getMfaPolicy",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -2759,11 +3360,24 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "get_mfa_policy",
+        "x-udb-scope": [
+          "udb:authn:get-mfa-policy"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "read_only"
       },
       "put": {
         "summary": "Set the per-tenant MFA enforcement policy.",
-        "operationId": "AuthnService_PutMfaPolicy",
+        "operationId": "putMfaPolicy",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -2796,13 +3410,26 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "put_mfa_policy",
+        "x-udb-scope": [
+          "udb:authn:put-mfa-policy"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "mutation"
       }
     },
-    "/v1/auth/token:introspect": {
+    "/v1/auth/tokens:introspect": {
       "post": {
         "summary": "OAuth2-style token introspection for a UDB-issued JWT.",
-        "operationId": "AuthnService_IntrospectToken",
+        "operationId": "introspectToken",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -2829,12 +3456,25 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "introspect_token",
+        "x-udb-scope": [
+          "udb:authn:introspect-token"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "read_only"
       }
     },
-    "/v1/auth/token:refresh": {
+    "/v1/auth/tokens:refresh": {
       "post": {
-        "operationId": "AuthnService_RefreshToken",
+        "operationId": "refreshToken",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -2861,13 +3501,24 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "refresh_token",
+        "x-udb-scope": [],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "mutation"
       }
     },
-    "/v1/auth/token:validate": {
+    "/v1/auth/tokens:validate": {
       "post": {
         "summary": "── Token validation (called by gateway + per-service interceptors) ───────",
-        "operationId": "AuthnService_ValidateToken",
+        "operationId": "validateToken",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -2894,12 +3545,25 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "validate_token",
+        "x-udb-scope": [
+          "udb:authn:validate-token"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "read_only"
       }
     },
     "/v1/auth/users": {
       "get": {
-        "operationId": "AuthnService_ListUsers",
+        "operationId": "listUsers",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -2976,11 +3640,24 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "list_users",
+        "x-udb-scope": [
+          "udb:authn:list-users"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "read_only"
       },
       "post": {
         "summary": "── User management (admin-only) ─────────────────────────────────────────",
-        "operationId": "AuthnService_CreateUser",
+        "operationId": "createUser",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -3007,12 +3684,25 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "create_user",
+        "x-udb-scope": [
+          "udb:authn:create-user"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/auth/users/{userId}": {
       "get": {
-        "operationId": "AuthnService_GetUser",
+        "operationId": "getUser",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -3052,10 +3742,23 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "get_user",
+        "x-udb-scope": [
+          "udb:authn:get-user"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "read_only"
       },
       "patch": {
-        "operationId": "AuthnService_UpdateUser",
+        "operationId": "updateUser",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -3088,13 +3791,26 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "update_user",
+        "x-udb-scope": [
+          "udb:authn:update-user"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/auth/users/{userId}/devices": {
       "get": {
         "summary": "── Device + session revocation lifecycle (Phase 3 / I2.4) ───────────────",
-        "operationId": "AuthnService_ListDevices",
+        "operationId": "listDevices",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -3318,12 +4034,25 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "list_devices",
+        "x-udb-scope": [
+          "udb:authn:list-devices"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "read_only"
       }
     },
     "/v1/auth/users/{userId}/mfa/factors": {
       "get": {
-        "operationId": "AuthnService_ListMfaFactors",
+        "operationId": "listMfaFactors",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -3527,12 +4256,25 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "list_mfa_factors",
+        "x-udb-scope": [
+          "udb:authn:list-mfa-factors"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "read_only"
       }
     },
     "/v1/auth/users/{userId}/mfa/factors:disable": {
       "post": {
-        "operationId": "AuthnService_DisableMfaFactor",
+        "operationId": "disableMfaFactor",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -3565,13 +4307,26 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "disable_mfa_factor",
+        "x-udb-scope": [
+          "udb:authn:disable-mfa-factor"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/auth/users/{userId}/mfa:confirm": {
       "post": {
         "summary": "Step 2: confirm with first TOTP code (or email OTP)",
-        "operationId": "AuthnService_ConfirmMFAEnrollment",
+        "operationId": "confirmMfaenrollment",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -3604,13 +4359,26 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "confirm_mfaenrollment",
+        "x-udb-scope": [
+          "udb:authn:confirm-mfa-enrollment"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/auth/users/{userId}/mfa:enroll": {
       "post": {
         "summary": "── MFA enrollment ───────────────────────────────────────────────────────\nStep 1: initiate enrollment — returns TOTP secret / QR URI",
-        "operationId": "AuthnService_EnrollMFA",
+        "operationId": "enrollMfa",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -3643,13 +4411,26 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "enroll_mfa",
+        "x-udb-scope": [
+          "udb:authn:enroll-mfa"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "mutation"
       }
     },
-    "/v1/auth/users/{userId}/password:reset": {
+    "/v1/auth/users/{userId}/passwords:reset": {
       "post": {
         "summary": "Admin-triggered password reset — sends email OTP to complete flow",
-        "operationId": "AuthnService_AdminResetPassword",
+        "operationId": "adminResetPassword",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -3682,13 +4463,26 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "admin_reset_password",
+        "x-udb-scope": [
+          "udb:authn:admin-reset-password"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "destructive"
       }
     },
-    "/v1/auth/users/{userId}/phone:verify": {
+    "/v1/auth/users/{userId}/phones:verify": {
       "post": {
         "summary": "Set the user's phone number and send an SMS verification OTP. Complete with\nVerifyOTP (the response is verified the same way as email).",
-        "operationId": "AuthnService_SendPhoneVerification",
+        "operationId": "sendPhoneVerification",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -3721,13 +4515,26 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "send_phone_verification",
+        "x-udb-scope": [
+          "udb:authn:send-phone-verification"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/auth/users/{userId}/recovery-codes:generate": {
       "post": {
         "summary": "Generate a fresh set of single-use MFA recovery/backup codes (returned once;\nany prior codes for the user are invalidated).",
-        "operationId": "AuthnService_GenerateRecoveryCodes",
+        "operationId": "generateRecoveryCodes",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -3760,12 +4567,25 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "generate_recovery_codes",
+        "x-udb-scope": [
+          "udb:authn:generate-recovery-codes"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/auth/users/{userId}/recovery-codes:revoke": {
       "post": {
-        "operationId": "AuthnService_RevokeRecoveryCodes",
+        "operationId": "revokeRecoveryCodes",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -3798,12 +4618,25 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "revoke_recovery_codes",
+        "x-udb-scope": [
+          "udb:authn:revoke-recovery-codes"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/auth/users/{userId}/sessions": {
       "get": {
-        "operationId": "AuthnService_ListSessions",
+        "operationId": "listSessions",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -3854,13 +4687,26 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "list_sessions",
+        "x-udb-scope": [
+          "udb:authn:list-sessions"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "read_only"
       }
     },
     "/v1/auth/users/{userId}/webauthn/credentials": {
       "get": {
         "summary": "── WebAuthn enterprise credential lifecycle (Phase 3 / I2.7) ────────────",
-        "operationId": "AuthnService_ListWebAuthnCredentials",
+        "operationId": "listWebAuthnCredentials",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -4064,12 +4910,25 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "list_web_authn_credentials",
+        "x-udb-scope": [
+          "udb:authn:list-web-authn-credentials"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "read_only"
       }
     },
     "/v1/auth/users/{userId}/webauthn/credentials/{credentialId}": {
       "delete": {
-        "operationId": "AuthnService_DeleteWebAuthnCredential",
+        "operationId": "deleteWebAuthnCredential",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -4279,12 +5138,25 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "delete_web_authn_credential",
+        "x-udb-scope": [
+          "udb:authn:delete-web-authn-credential"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/auth/users/{userId}/webauthn/credentials:rename": {
       "post": {
-        "operationId": "AuthnService_RenamePasskey",
+        "operationId": "renamePasskey",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -4317,13 +5189,26 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "rename_passkey",
+        "x-udb-scope": [
+          "udb:authn:rename-passkey"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/auth/users/{userId}/webauthn/registration:start": {
       "post": {
         "summary": "── WebAuthn / passkeys ─────────────────────────────────────────────────",
-        "operationId": "AuthnService_StartWebAuthnRegistration",
+        "operationId": "startWebAuthnRegistration",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -4356,12 +5241,25 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "start_web_authn_registration",
+        "x-udb-scope": [
+          "udb:authn:start-web-authn-registration"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "mutation"
       }
     },
-    "/v1/auth/users/{userId}:change-status": {
+    "/v1/auth/users/{userId}:changeStatus": {
       "post": {
-        "operationId": "AuthnService_ChangeUserStatus",
+        "operationId": "changeUserStatus",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -4394,12 +5292,25 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "change_user_status",
+        "x-udb-scope": [
+          "udb:authn:change-user-status"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "destructive"
       }
     },
     "/v1/auth/webauthn/authentication:finish": {
       "post": {
-        "operationId": "AuthnService_FinishWebAuthnAuthentication",
+        "operationId": "finishWebAuthnAuthentication",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -4426,12 +5337,23 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "finish_web_authn_authentication",
+        "x-udb-scope": [],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/auth/webauthn/authentication:start": {
       "post": {
-        "operationId": "AuthnService_StartWebAuthnAuthentication",
+        "operationId": "startWebAuthnAuthentication",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -4458,12 +5380,23 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "start_web_authn_authentication",
+        "x-udb-scope": [],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/auth/webauthn/registration:finish": {
       "post": {
-        "operationId": "AuthnService_FinishWebAuthnRegistration",
+        "operationId": "finishWebAuthnRegistration",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -4490,12 +5423,25 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "finish_web_authn_registration",
+        "x-udb-scope": [
+          "udb:authn:finish-web-authn-registration"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/authz/audits": {
       "get": {
-        "operationId": "AuthzService_ListAccessDecisionAudits",
+        "operationId": "listAccessDecisionAudits",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -4552,12 +5498,25 @@
         ],
         "tags": [
           "AuthzService"
-        ]
+        ],
+        "x-udb-sdk-alias": "list_access_decision_audits",
+        "x-udb-scope": [
+          "udb:authz:list-access-decision-audits"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "authz",
+        "x-udb-operation-kind": "read_only"
       }
     },
     "/v1/authz/authorize": {
       "post": {
-        "operationId": "AuthzService_Authorize",
+        "operationId": "authorize",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -4584,12 +5543,25 @@
         ],
         "tags": [
           "AuthzService"
-        ]
+        ],
+        "x-udb-sdk-alias": "authorize",
+        "x-udb-scope": [
+          "udb:authz:authorize"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "authz",
+        "x-udb-operation-kind": "read_only"
       }
     },
     "/v1/authz/checks": {
       "post": {
-        "operationId": "AuthzService_CheckAccess",
+        "operationId": "checkAccess",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -4616,13 +5588,26 @@
         ],
         "tags": [
           "AuthzService"
-        ]
+        ],
+        "x-udb-sdk-alias": "check_access",
+        "x-udb-scope": [
+          "udb:authz:check-access"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "authz",
+        "x-udb-operation-kind": "read_only"
       }
     },
     "/v1/authz/checks:batch": {
       "post": {
         "summary": "Batch check multiple permissions at once.",
-        "operationId": "AuthzService_BatchCheckPermissions",
+        "operationId": "batchCheckPermissions",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -4649,12 +5634,25 @@
         ],
         "tags": [
           "AuthzService"
-        ]
+        ],
+        "x-udb-sdk-alias": "batch_check_permissions",
+        "x-udb-scope": [
+          "udb:authz:batch-check-permissions"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "authz",
+        "x-udb-operation-kind": "read_only"
       }
     },
     "/v1/authz/governance/bundles:invalidate": {
       "post": {
-        "operationId": "AuthzService_InvalidatePolicyBundles",
+        "operationId": "invalidatePolicyBundles",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -4681,13 +5679,128 @@
         ],
         "tags": [
           "AuthzService"
-        ]
+        ],
+        "x-udb-sdk-alias": "invalidate_policy_bundles",
+        "x-udb-scope": [
+          "udb:authz:admin"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "authz",
+        "x-udb-operation-kind": "destructive"
+      }
+    },
+    "/v1/authz/governance/canaries/{canaryId}": {
+      "get": {
+        "summary": "Read a canary's current state + promote-eligibility.",
+        "operationId": "getCanaryStatus",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetCanaryStatusResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "canaryId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "actor.subject",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "actor.tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "actor.projectId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "actor.scopes",
+            "in": "query",
+            "required": false,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi"
+          },
+          {
+            "name": "actor.roles",
+            "in": "query",
+            "required": false,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi"
+          },
+          {
+            "name": "actor.breakGlass",
+            "description": "Break-glass: when set, a short-TTL emergency bypass with a recorded reason.",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "actor.breakGlassReason",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "actor.breakGlassExpiresAtUnix",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "AuthzService"
+        ],
+        "x-udb-sdk-alias": "get_canary_status",
+        "x-udb-scope": [
+          "udb:authz:policy:read"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "authz",
+        "x-udb-operation-kind": "read_only"
       }
     },
     "/v1/authz/governance/canaries:activate": {
       "post": {
         "summary": "Activate a policy version to a canary scope (subset of the fleet) before\nfleet-wide. A metric-based evaluator then auto-rolls back on breach.",
-        "operationId": "AuthzService_ActivateCanary",
+        "operationId": "activateCanary",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -4715,13 +5828,26 @@
         ],
         "tags": [
           "AuthzService"
-        ]
+        ],
+        "x-udb-sdk-alias": "activate_canary",
+        "x-udb-scope": [
+          "udb:authz:admin"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "authz",
+        "x-udb-operation-kind": "destructive"
       }
     },
     "/v1/authz/governance/canaries:promote": {
       "post": {
         "summary": "Promote a baked, within-threshold canary to fleet-wide enforcement.",
-        "operationId": "AuthzService_PromoteCanary",
+        "operationId": "promoteCanary",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -4749,45 +5875,25 @@
         ],
         "tags": [
           "AuthzService"
-        ]
-      }
-    },
-    "/v1/authz/governance/canaries:status": {
-      "post": {
-        "summary": "Read a canary's current state + promote-eligibility.",
-        "operationId": "AuthzService_GetCanaryStatus",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1GetCanaryStatusResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1GetCanaryStatusRequest"
-            }
-          }
         ],
-        "tags": [
-          "AuthzService"
-        ]
+        "x-udb-sdk-alias": "promote_canary",
+        "x-udb-scope": [
+          "udb:authz:admin"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "authz",
+        "x-udb-operation-kind": "destructive"
       }
     },
     "/v1/authz/governance/drafts": {
       "post": {
-        "operationId": "AuthzService_CreatePolicyDraft",
+        "operationId": "createPolicyDraft",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -4814,12 +5920,25 @@
         ],
         "tags": [
           "AuthzService"
-        ]
+        ],
+        "x-udb-sdk-alias": "create_policy_draft",
+        "x-udb-scope": [
+          "udb:authz:policy:write"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "authz",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/authz/governance/drafts:approve": {
       "post": {
-        "operationId": "AuthzService_ApprovePolicyDraft",
+        "operationId": "approvePolicyDraft",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -4846,12 +5965,25 @@
         ],
         "tags": [
           "AuthzService"
-        ]
+        ],
+        "x-udb-sdk-alias": "approve_policy_draft",
+        "x-udb-scope": [
+          "udb:authz:policy:approve"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "authz",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/authz/governance/drafts:diff": {
       "post": {
-        "operationId": "AuthzService_DiffPolicyDraft",
+        "operationId": "diffPolicyDraft",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -4878,12 +6010,25 @@
         ],
         "tags": [
           "AuthzService"
-        ]
+        ],
+        "x-udb-sdk-alias": "diff_policy_draft",
+        "x-udb-scope": [
+          "udb:authz:policy:read"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "authz",
+        "x-udb-operation-kind": "read_only"
       }
     },
     "/v1/authz/governance/drafts:reject": {
       "post": {
-        "operationId": "AuthzService_RejectPolicyDraft",
+        "operationId": "rejectPolicyDraft",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -4910,12 +6055,25 @@
         ],
         "tags": [
           "AuthzService"
-        ]
+        ],
+        "x-udb-sdk-alias": "reject_policy_draft",
+        "x-udb-scope": [
+          "udb:authz:policy:approve"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "authz",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/authz/governance/drafts:submit": {
       "post": {
-        "operationId": "AuthzService_SubmitPolicyDraft",
+        "operationId": "submitPolicyDraft",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -4942,12 +6100,25 @@
         ],
         "tags": [
           "AuthzService"
-        ]
+        ],
+        "x-udb-sdk-alias": "submit_policy_draft",
+        "x-udb-scope": [
+          "udb:authz:policy:write"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "authz",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/authz/governance/drafts:update": {
       "post": {
-        "operationId": "AuthzService_UpdatePolicyDraft",
+        "operationId": "updatePolicyDraft",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -4974,44 +6145,25 @@
         ],
         "tags": [
           "AuthzService"
-        ]
-      }
-    },
-    "/v1/authz/governance/explain": {
-      "post": {
-        "operationId": "AuthzService_ExplainPolicy",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ExplainPolicyResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1ExplainPolicyRequest"
-            }
-          }
         ],
-        "tags": [
-          "AuthzService"
-        ]
+        "x-udb-sdk-alias": "update_policy_draft",
+        "x-udb-scope": [
+          "udb:authz:policy:write"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "authz",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/authz/governance/legacy:migrate": {
       "post": {
-        "operationId": "AuthzService_MigrateLegacyPolicies",
+        "operationId": "migrateLegacyPolicies",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -5038,17 +6190,30 @@
         ],
         "tags": [
           "AuthzService"
-        ]
+        ],
+        "x-udb-sdk-alias": "migrate_legacy_policies",
+        "x-udb-scope": [
+          "udb:authz:admin"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "authz",
+        "x-udb-operation-kind": "destructive"
       }
     },
-    "/v1/authz/governance/revision": {
+    "/v1/authz/governance/policy-explanations": {
       "post": {
-        "operationId": "AuthzService_GetAuthzRevision",
+        "operationId": "explainPolicy",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1GetAuthzRevisionResponse"
+              "$ref": "#/definitions/v1ExplainPolicyResponse"
             }
           },
           "default": {
@@ -5064,50 +6229,31 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/v1GetAuthzRevisionRequest"
+              "$ref": "#/definitions/v1ExplainPolicyRequest"
             }
           }
         ],
         "tags": [
           "AuthzService"
-        ]
-      }
-    },
-    "/v1/authz/governance/roles:seed": {
-      "post": {
-        "operationId": "AuthzService_SeedBuiltinRoles",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1SeedBuiltinRolesResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
+        ],
+        "x-udb-sdk-alias": "explain_policy",
+        "x-udb-scope": [
+          "udb:authz:policy:read"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
         },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1SeedBuiltinRolesRequest"
-            }
-          }
-        ],
-        "tags": [
-          "AuthzService"
-        ]
+        "x-udb-resource": "authz",
+        "x-udb-operation-kind": "read_only"
       }
     },
-    "/v1/authz/governance/simulate": {
+    "/v1/authz/governance/policy-simulations": {
       "post": {
-        "operationId": "AuthzService_SimulatePolicy",
+        "operationId": "simulatePolicy",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -5134,12 +6280,269 @@
         ],
         "tags": [
           "AuthzService"
-        ]
+        ],
+        "x-udb-sdk-alias": "simulate_policy",
+        "x-udb-scope": [
+          "udb:authz:policy:read"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "authz",
+        "x-udb-operation-kind": "mutation"
+      }
+    },
+    "/v1/authz/governance/revisions/current": {
+      "get": {
+        "operationId": "getAuthzRevision",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetAuthzRevisionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "projectId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AuthzService"
+        ],
+        "x-udb-sdk-alias": "get_authz_revision",
+        "x-udb-scope": [
+          "udb:authz:policy:read"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "authz",
+        "x-udb-operation-kind": "read_only"
+      }
+    },
+    "/v1/authz/governance/roles:seed": {
+      "post": {
+        "operationId": "seedBuiltinRoles",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SeedBuiltinRolesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1SeedBuiltinRolesRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthzService"
+        ],
+        "x-udb-sdk-alias": "seed_builtin_roles",
+        "x-udb-scope": [
+          "udb:authz:admin"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "authz",
+        "x-udb-operation-kind": "mutation"
+      }
+    },
+    "/v1/authz/governance/versions": {
+      "get": {
+        "operationId": "listPolicyVersions",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListPolicyVersionsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "actor.subject",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "actor.tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "actor.projectId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "actor.scopes",
+            "in": "query",
+            "required": false,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi"
+          },
+          {
+            "name": "actor.roles",
+            "in": "query",
+            "required": false,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi"
+          },
+          {
+            "name": "actor.breakGlass",
+            "description": "Break-glass: when set, a short-TTL emergency bypass with a recorded reason.",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "actor.breakGlassReason",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "actor.breakGlassExpiresAtUnix",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "projectId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "policySetId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "POLICY_VERSION_STATE_UNSPECIFIED",
+              "POLICY_VERSION_STATE_DRAFT",
+              "POLICY_VERSION_STATE_PENDING_REVIEW",
+              "POLICY_VERSION_STATE_APPROVED",
+              "POLICY_VERSION_STATE_ACTIVE",
+              "POLICY_VERSION_STATE_SUPERSEDED",
+              "POLICY_VERSION_STATE_REJECTED",
+              "POLICY_VERSION_STATE_ROLLED_BACK"
+            ],
+            "default": "POLICY_VERSION_STATE_UNSPECIFIED"
+          },
+          {
+            "name": "page.page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "page.pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "page.pageToken",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AuthzService"
+        ],
+        "x-udb-sdk-alias": "list_policy_versions",
+        "x-udb-scope": [
+          "udb:authz:policy:read"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "authz",
+        "x-udb-operation-kind": "read_only"
       }
     },
     "/v1/authz/governance/versions:activate": {
       "post": {
-        "operationId": "AuthzService_ActivatePolicyVersion",
+        "operationId": "activatePolicyVersion",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -5166,44 +6569,25 @@
         ],
         "tags": [
           "AuthzService"
-        ]
-      }
-    },
-    "/v1/authz/governance/versions:list": {
-      "post": {
-        "operationId": "AuthzService_ListPolicyVersions",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ListPolicyVersionsResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1ListPolicyVersionsRequest"
-            }
-          }
         ],
-        "tags": [
-          "AuthzService"
-        ]
+        "x-udb-sdk-alias": "activate_policy_version",
+        "x-udb-scope": [
+          "udb:authz:admin"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "authz",
+        "x-udb-operation-kind": "destructive"
       }
     },
     "/v1/authz/governance/versions:rollback": {
       "post": {
-        "operationId": "AuthzService_RollbackPolicyVersion",
+        "operationId": "rollbackPolicyVersion",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -5230,13 +6614,26 @@
         ],
         "tags": [
           "AuthzService"
-        ]
+        ],
+        "x-udb-sdk-alias": "rollback_policy_version",
+        "x-udb-scope": [
+          "udb:authz:admin"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "authz",
+        "x-udb-operation-kind": "destructive"
       }
     },
     "/v1/authz/native-access": {
       "post": {
         "summary": "Stage 2: authorize and, when allowed, mint a short-lived native-access\ncontract (restricted role + scoped DSN + RLS session variables).",
-        "operationId": "AuthzService_GetNativeAccess",
+        "operationId": "getNativeAccess",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -5264,13 +6661,26 @@
         ],
         "tags": [
           "AuthzService"
-        ]
+        ],
+        "x-udb-sdk-alias": "get_native_access",
+        "x-udb-scope": [
+          "udb:authz:get-native-access"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "authz",
+        "x-udb-operation-kind": "read_only"
       }
     },
     "/v1/authz/policies": {
       "get": {
         "summary": "List policy rules with optional domain/subject/object filters.",
-        "operationId": "AuthzService_ListPolicyRules",
+        "operationId": "listPolicyRules",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -5333,10 +6743,23 @@
         ],
         "tags": [
           "AuthzService"
-        ]
+        ],
+        "x-udb-sdk-alias": "list_policy_rules",
+        "x-udb-scope": [
+          "udb:authz:list-policy-rules"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "authz",
+        "x-udb-operation-kind": "read_only"
       },
       "post": {
-        "operationId": "AuthzService_CreatePolicyRule",
+        "operationId": "createPolicyRule",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -5363,10 +6786,23 @@
         ],
         "tags": [
           "AuthzService"
-        ]
+        ],
+        "x-udb-sdk-alias": "create_policy_rule",
+        "x-udb-scope": [
+          "udb:authz:create-policy-rule"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "authz",
+        "x-udb-operation-kind": "mutation"
       },
       "put": {
-        "operationId": "AuthzService_PutAuthzPolicy",
+        "operationId": "putAuthzPolicy",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -5393,13 +6829,26 @@
         ],
         "tags": [
           "AuthzService"
-        ]
+        ],
+        "x-udb-sdk-alias": "put_authz_policy",
+        "x-udb-scope": [
+          "udb:authz:put-authz-policy"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "authz",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/authz/policies/{policyId}": {
       "get": {
         "summary": "Get a single policy rule by ID.",
-        "operationId": "AuthzService_GetPolicyRule",
+        "operationId": "getPolicyRule",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -5424,11 +6873,24 @@
         ],
         "tags": [
           "AuthzService"
-        ]
+        ],
+        "x-udb-sdk-alias": "get_policy_rule",
+        "x-udb-scope": [
+          "udb:authz:get-policy-rule"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "authz",
+        "x-udb-operation-kind": "read_only"
       },
       "delete": {
         "summary": "Delete a policy rule.",
-        "operationId": "AuthzService_DeletePolicyRule",
+        "operationId": "deletePolicyRule",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -5459,12 +6921,25 @@
         ],
         "tags": [
           "AuthzService"
-        ]
+        ],
+        "x-udb-sdk-alias": "delete_policy_rule",
+        "x-udb-scope": [
+          "udb:authz:delete-policy-rule"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "authz",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/authz/policies:lint": {
       "post": {
-        "operationId": "AuthzService_LintAuthzPolicies",
+        "operationId": "lintAuthzPolicies",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -5491,13 +6966,26 @@
         ],
         "tags": [
           "AuthzService"
-        ]
+        ],
+        "x-udb-sdk-alias": "lint_authz_policies",
+        "x-udb-scope": [
+          "udb:authz:lint-authz-policies"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "authz",
+        "x-udb-operation-kind": "read_only"
       }
     },
     "/v1/authz/policy-bundle": {
       "post": {
         "summary": "Stage 2: return a signed policy bundle for local SDK authorization caches.",
-        "operationId": "AuthzService_GetPolicyBundle",
+        "operationId": "getPolicyBundle",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -5525,12 +7013,25 @@
         ],
         "tags": [
           "AuthzService"
-        ]
+        ],
+        "x-udb-sdk-alias": "get_policy_bundle",
+        "x-udb-scope": [
+          "udb:authz:get-policy-bundle"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "authz",
+        "x-udb-operation-kind": "read_only"
       }
     },
     "/v1/authz/relationships": {
       "put": {
-        "operationId": "AuthzService_PutRelationship",
+        "operationId": "putRelationship",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -5557,12 +7058,25 @@
         ],
         "tags": [
           "AuthzService"
-        ]
+        ],
+        "x-udb-sdk-alias": "put_relationship",
+        "x-udb-scope": [
+          "udb:authz:put-relationship"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "authz",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/authz/role-bindings": {
       "put": {
-        "operationId": "AuthzService_PutRoleBinding",
+        "operationId": "putRoleBinding",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -5589,13 +7103,26 @@
         ],
         "tags": [
           "AuthzService"
-        ]
+        ],
+        "x-udb-sdk-alias": "put_role_binding",
+        "x-udb-scope": [
+          "udb:authz:put-role-binding"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "authz",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/authz/roles": {
       "get": {
         "summary": "List all roles for a domain/tenant.",
-        "operationId": "AuthzService_ListRoles",
+        "operationId": "listRoles",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -5646,10 +7173,23 @@
         ],
         "tags": [
           "AuthzService"
-        ]
+        ],
+        "x-udb-sdk-alias": "list_roles",
+        "x-udb-scope": [
+          "udb:authz:list-roles"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "authz",
+        "x-udb-operation-kind": "read_only"
       },
       "post": {
-        "operationId": "AuthzService_CreateRole",
+        "operationId": "createRole",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -5676,13 +7216,26 @@
         ],
         "tags": [
           "AuthzService"
-        ]
+        ],
+        "x-udb-sdk-alias": "create_role",
+        "x-udb-scope": [
+          "udb:authz:create-role"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "authz",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/authz/roles/{roleId}": {
       "get": {
         "summary": "Get a role by ID.",
-        "operationId": "AuthzService_GetRole",
+        "operationId": "getRole",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -5720,11 +7273,24 @@
         ],
         "tags": [
           "AuthzService"
-        ]
+        ],
+        "x-udb-sdk-alias": "get_role",
+        "x-udb-scope": [
+          "udb:authz:get-role"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "authz",
+        "x-udb-operation-kind": "read_only"
       },
       "delete": {
         "summary": "Delete a role (soft-delete; existing assignments are revoked).",
-        "operationId": "AuthzService_DeleteRole",
+        "operationId": "deleteRole",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -5755,11 +7321,24 @@
         ],
         "tags": [
           "AuthzService"
-        ]
+        ],
+        "x-udb-sdk-alias": "delete_role",
+        "x-udb-scope": [
+          "udb:authz:delete-role"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "authz",
+        "x-udb-operation-kind": "mutation"
       },
       "patch": {
         "summary": "Update a role's name, description, or active status.",
-        "operationId": "AuthzService_UpdateRole",
+        "operationId": "updateRole",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -5792,12 +7371,25 @@
         ],
         "tags": [
           "AuthzService"
-        ]
+        ],
+        "x-udb-sdk-alias": "update_role",
+        "x-udb-scope": [
+          "udb:authz:update-role"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "authz",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/authz/users/{userId}/permissions": {
       "get": {
-        "operationId": "AuthzService_ListUserPermissions",
+        "operationId": "listUserPermissions",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -5828,13 +7420,26 @@
         ],
         "tags": [
           "AuthzService"
-        ]
+        ],
+        "x-udb-sdk-alias": "list_user_permissions",
+        "x-udb-scope": [
+          "udb:authz:list-user-permissions"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "authz",
+        "x-udb-operation-kind": "read_only"
       }
     },
     "/v1/authz/users/{userId}/roles": {
       "get": {
         "summary": "List all role assignments for a user.",
-        "operationId": "AuthzService_ListUserRoles",
+        "operationId": "listUserRoles",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -5871,10 +7476,23 @@
         ],
         "tags": [
           "AuthzService"
-        ]
+        ],
+        "x-udb-sdk-alias": "list_user_roles",
+        "x-udb-scope": [
+          "udb:authz:list-user-roles"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "authz",
+        "x-udb-operation-kind": "read_only"
       },
       "post": {
-        "operationId": "AuthzService_AssignRole",
+        "operationId": "assignRole",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -5907,13 +7525,26 @@
         ],
         "tags": [
           "AuthzService"
-        ]
+        ],
+        "x-udb-sdk-alias": "assign_role",
+        "x-udb-scope": [
+          "udb:authz:assign-role"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "authz",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/authz/users/{userId}/roles/{userRoleId}:revoke": {
       "post": {
         "summary": "Revoke a role from a user.",
-        "operationId": "AuthzService_RevokeRole",
+        "operationId": "revokeRole",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -5952,13 +7583,26 @@
         ],
         "tags": [
           "AuthzService"
-        ]
+        ],
+        "x-udb-sdk-alias": "revoke_role",
+        "x-udb-scope": [
+          "udb:authz:revoke-role"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "authz",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/control/node-states": {
       "get": {
         "summary": "── Admin visibility ──────────────────────────────────────────────────────",
-        "operationId": "ControlPlaneService_ListNodeStates",
+        "operationId": "listNodeStates",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -6199,12 +7843,25 @@
         ],
         "tags": [
           "ControlPlaneService"
-        ]
+        ],
+        "x-udb-sdk-alias": "listNodeStates",
+        "x-udb-scope": [
+          "udb:control:list-node-states"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "control",
+        "x-udb-operation-kind": "read_only"
       }
     },
-    "/v1/control/node-states/{nodeId}:ack-status": {
-      "get": {
-        "operationId": "ControlPlaneService_AckStatus",
+    "/v1/control/node-states/{nodeId}:ackStatus": {
+      "post": {
+        "operationId": "ackStatus",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -6227,210 +7884,36 @@
             "type": "string"
           },
           {
-            "name": "resourceType",
-            "description": " - RESOURCE_TYPE_ROUTING_POLICY: Request routing / backend selection policy (references backend targets).\n - RESOURCE_TYPE_METHOD_SECURITY_POLICY: Per-RPC method-security policy (the proto endpoint_security map).\n - RESOURCE_TYPE_RLS_TENANT_POLICY: Row-level-security / tenant isolation policy (references backend targets).\n - RESOURCE_TYPE_NATIVE_SERVICE_ENABLEMENT: Which native control-plane services are enabled on a node.\n - RESOURCE_TYPE_BACKEND_TARGET_DEFINITION: Backend target/cluster definitions — the \"definitions\" that routing and\nRLS policies reference. Pushed BEFORE the referencing policies.",
-            "in": "query",
-            "required": false,
-            "type": "string",
-            "enum": [
-              "RESOURCE_TYPE_UNSPECIFIED",
-              "RESOURCE_TYPE_ROUTING_POLICY",
-              "RESOURCE_TYPE_METHOD_SECURITY_POLICY",
-              "RESOURCE_TYPE_RLS_TENANT_POLICY",
-              "RESOURCE_TYPE_NATIVE_SERVICE_ENABLEMENT",
-              "RESOURCE_TYPE_BACKEND_TARGET_DEFINITION"
-            ],
-            "default": "RESOURCE_TYPE_UNSPECIFIED"
-          },
-          {
-            "name": "context.tenant.tenantId",
-            "description": "Tenant or account boundary chosen by the caller or resolved by UDB.",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "context.tenant.organizationId",
-            "description": "Optional owning organization/workspace above the tenant boundary.",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "context.tenant.projectId",
-            "description": "Project/application namespace inside the tenant.",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "context.tenant.environment",
-            "description": "Deployment environment, for example prod, staging, dev, or test.",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "context.tenant.region",
-            "description": "Region, shard, or residency boundary when routing matters.",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "context.tenant.partitionId",
-            "description": "Optional data partition or workspace identifier for fine-grained isolation.",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "context.tenant.accessSurface",
-            "description": "UI/API surface or workload channel such as web, mobile, api, worker.",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "context.tenant.attributes",
-            "description": "Consumer-defined labels for policy routing and audit enrichment.",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "context.requestId",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "context.correlationId",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "context.userId",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "context.headers",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "context.traceId",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "context.spanId",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "context.ipAddress",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "context.userAgent",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "context.timestamp",
-            "in": "query",
-            "required": false,
-            "type": "string",
-            "format": "date-time"
-          },
-          {
-            "name": "context.principalId",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "context.serviceIdentity",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "context.scopes",
-            "in": "query",
-            "required": false,
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "collectionFormat": "multi"
-          },
-          {
-            "name": "context.roles",
-            "in": "query",
-            "required": false,
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "collectionFormat": "multi"
-          },
-          {
-            "name": "context.purpose",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "context.idempotencyKey",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "context.clientCatalogVersion",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "context.consistency",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "context.attributes",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "context.traceparent",
-            "in": "query",
-            "required": false,
-            "type": "string"
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ControlPlaneServiceAckStatusBody"
+            }
           }
         ],
         "tags": [
           "ControlPlaneService"
-        ]
+        ],
+        "x-udb-sdk-alias": "ackStatus",
+        "x-udb-scope": [
+          "udb:control:ack-status"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "control",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/control/resources": {
       "get": {
         "summary": "── On-demand fetch (incl. by tenant) ─────────────────────────────────────",
-        "operationId": "ControlPlaneService_GetResources",
+        "operationId": "getResources",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -6682,12 +8165,25 @@
         ],
         "tags": [
           "ControlPlaneService"
-        ]
+        ],
+        "x-udb-sdk-alias": "getResources",
+        "x-udb-scope": [
+          "udb:control:get-resources"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "control",
+        "x-udb-operation-kind": "read_only"
       }
     },
     "/v1/idp/external-identities": {
       "get": {
-        "operationId": "IdentityProviderService_ListExternalIdentities",
+        "operationId": "listExternalIdentities",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -6746,12 +8242,25 @@
         ],
         "tags": [
           "IdentityProviderService"
-        ]
+        ],
+        "x-udb-sdk-alias": "listExternalIdentities",
+        "x-udb-scope": [
+          "udb:idp:list-external-identities"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "idp",
+        "x-udb-operation-kind": "read_only"
       }
     },
     "/v1/idp/external-identities/{externalIdentityId}:unlink": {
       "post": {
-        "operationId": "IdentityProviderService_UnlinkIdentity",
+        "operationId": "unlinkIdentity",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -6784,12 +8293,25 @@
         ],
         "tags": [
           "IdentityProviderService"
-        ]
+        ],
+        "x-udb-sdk-alias": "unlinkIdentity",
+        "x-udb-scope": [
+          "udb:idp:unlink-identity"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "idp",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/idp/external-identities:link": {
       "post": {
-        "operationId": "IdentityProviderService_LinkIdentity",
+        "operationId": "linkIdentity",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -6817,12 +8339,25 @@
         ],
         "tags": [
           "IdentityProviderService"
-        ]
+        ],
+        "x-udb-sdk-alias": "linkIdentity",
+        "x-udb-scope": [
+          "udb:idp:link-identity"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "idp",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/idp/providers": {
       "get": {
-        "operationId": "IdentityProviderService_ListProviders",
+        "operationId": "listProviders",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -6890,11 +8425,24 @@
         ],
         "tags": [
           "IdentityProviderService"
-        ]
+        ],
+        "x-udb-sdk-alias": "listProviders",
+        "x-udb-scope": [
+          "udb:idp:list-providers"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "idp",
+        "x-udb-operation-kind": "read_only"
       },
       "post": {
         "summary": "── Provider administration (J2.6) ────────────────────────────────────────",
-        "operationId": "IdentityProviderService_CreateProvider",
+        "operationId": "createProvider",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -6921,12 +8469,25 @@
         ],
         "tags": [
           "IdentityProviderService"
-        ]
+        ],
+        "x-udb-sdk-alias": "createProvider",
+        "x-udb-scope": [
+          "udb:idp:create-provider"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "idp",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/idp/providers/{providerId}": {
       "get": {
-        "operationId": "IdentityProviderService_GetProvider",
+        "operationId": "getProvider",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -6957,10 +8518,23 @@
         ],
         "tags": [
           "IdentityProviderService"
-        ]
+        ],
+        "x-udb-sdk-alias": "getProvider",
+        "x-udb-scope": [
+          "udb:idp:get-provider"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "idp",
+        "x-udb-operation-kind": "read_only"
       },
       "patch": {
-        "operationId": "IdentityProviderService_UpdateProvider",
+        "operationId": "updateProvider",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -6993,12 +8567,25 @@
         ],
         "tags": [
           "IdentityProviderService"
-        ]
+        ],
+        "x-udb-sdk-alias": "updateProvider",
+        "x-udb-scope": [
+          "udb:idp:update-provider"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "idp",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/idp/providers/{providerId}:disable": {
       "post": {
-        "operationId": "IdentityProviderService_DisableProvider",
+        "operationId": "disableProvider",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -7031,13 +8618,26 @@
         ],
         "tags": [
           "IdentityProviderService"
-        ]
+        ],
+        "x-udb-sdk-alias": "disableProvider",
+        "x-udb-scope": [
+          "udb:idp:disable-provider"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "idp",
+        "x-udb-operation-kind": "mutation"
       }
     },
-    "/v1/idp/providers/{providerId}:import-saml-metadata": {
+    "/v1/idp/providers/{providerId}:importSamlMetadata": {
       "post": {
         "summary": "── SAML 2.0 (J2.2) ───────────────────────────────────────────────────────",
-        "operationId": "IdentityProviderService_ImportSamlMetadata",
+        "operationId": "importSamlMetadata",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -7070,12 +8670,25 @@
         ],
         "tags": [
           "IdentityProviderService"
-        ]
+        ],
+        "x-udb-sdk-alias": "importSamlMetadata",
+        "x-udb-scope": [
+          "udb:idp:import-saml-metadata"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "idp",
+        "x-udb-operation-kind": "mutation"
       }
     },
-    "/v1/idp/providers/{providerId}:preview-claim-mapping": {
+    "/v1/idp/providers/{providerId}:previewClaimMapping": {
       "post": {
-        "operationId": "IdentityProviderService_PreviewClaimMapping",
+        "operationId": "previewClaimMapping",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -7108,12 +8721,25 @@
         ],
         "tags": [
           "IdentityProviderService"
-        ]
+        ],
+        "x-udb-sdk-alias": "previewClaimMapping",
+        "x-udb-scope": [
+          "udb:idp:preview-claim-mapping"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "idp",
+        "x-udb-operation-kind": "read_only"
       }
     },
-    "/v1/idp/providers/{providerId}:preview-group-mapping": {
+    "/v1/idp/providers/{providerId}:previewGroupMapping": {
       "post": {
-        "operationId": "IdentityProviderService_PreviewGroupMapping",
+        "operationId": "previewGroupMapping",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -7146,12 +8772,25 @@
         ],
         "tags": [
           "IdentityProviderService"
-        ]
+        ],
+        "x-udb-sdk-alias": "previewGroupMapping",
+        "x-udb-scope": [
+          "udb:idp:preview-group-mapping"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "idp",
+        "x-udb-operation-kind": "read_only"
       }
     },
-    "/v1/idp/providers/{providerId}:refresh-jwks": {
+    "/v1/idp/providers/{providerId}:refreshJwks": {
       "post": {
-        "operationId": "IdentityProviderService_ForceJwksRefresh",
+        "operationId": "forceJwksRefresh",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -7184,13 +8823,26 @@
         ],
         "tags": [
           "IdentityProviderService"
-        ]
+        ],
+        "x-udb-sdk-alias": "forceJwksRefresh",
+        "x-udb-scope": [
+          "udb:idp:force-jwks-refresh"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "idp",
+        "x-udb-operation-kind": "mutation"
       }
     },
-    "/v1/idp/providers/{providerId}:resolve-identity": {
+    "/v1/idp/providers/{providerId}:resolveIdentity": {
       "post": {
         "summary": "── JIT provisioning + assurance (J2.4 / J2.5) ────────────────────────────",
-        "operationId": "IdentityProviderService_ResolveExternalIdentity",
+        "operationId": "resolveExternalIdentity",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -7223,12 +8875,25 @@
         ],
         "tags": [
           "IdentityProviderService"
-        ]
+        ],
+        "x-udb-sdk-alias": "resolveExternalIdentity",
+        "x-udb-scope": [
+          "udb:idp:resolve-external-identity"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "idp",
+        "x-udb-operation-kind": "mutation"
       }
     },
-    "/v1/idp/providers/{providerId}:saml-acs": {
+    "/v1/idp/providers/{providerId}:samlAcs": {
       "post": {
-        "operationId": "IdentityProviderService_SamlAcs",
+        "operationId": "samlAcs",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -7261,12 +8926,25 @@
         ],
         "tags": [
           "IdentityProviderService"
-        ]
+        ],
+        "x-udb-sdk-alias": "samlAcs",
+        "x-udb-scope": [
+          "udb:idp:saml-acs"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "idp",
+        "x-udb-operation-kind": "mutation"
       }
     },
-    "/v1/idp/providers/{providerId}:start-saml-login": {
+    "/v1/idp/providers/{providerId}:startSamlLogin": {
       "post": {
-        "operationId": "IdentityProviderService_StartSamlLogin",
+        "operationId": "startSamlLogin",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -7299,12 +8977,25 @@
         ],
         "tags": [
           "IdentityProviderService"
-        ]
+        ],
+        "x-udb-sdk-alias": "startSamlLogin",
+        "x-udb-scope": [
+          "udb:idp:start-saml-login"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "idp",
+        "x-udb-operation-kind": "mutation"
       }
     },
-    "/v1/idp/providers/{providerId}:test-discovery": {
+    "/v1/idp/providers/{providerId}:testDiscovery": {
       "post": {
-        "operationId": "IdentityProviderService_TestProviderDiscovery",
+        "operationId": "testProviderDiscovery",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -7337,12 +9028,25 @@
         ],
         "tags": [
           "IdentityProviderService"
-        ]
+        ],
+        "x-udb-sdk-alias": "testProviderDiscovery",
+        "x-udb-scope": [
+          "udb:idp:test-provider-discovery"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "idp",
+        "x-udb-operation-kind": "read_only"
       }
     },
     "/v1/idp/scim/{providerId}/Groups": {
       "get": {
-        "operationId": "IdentityProviderService_ScimListGroups",
+        "operationId": "scimListGroups",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -7399,10 +9103,23 @@
         ],
         "tags": [
           "IdentityProviderService"
-        ]
+        ],
+        "x-udb-sdk-alias": "scimListGroups",
+        "x-udb-scope": [
+          "udb:idp:scim-list-groups"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "idp",
+        "x-udb-operation-kind": "mutation"
       },
       "post": {
-        "operationId": "IdentityProviderService_ScimCreateGroup",
+        "operationId": "scimCreateGroup",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -7435,12 +9152,25 @@
         ],
         "tags": [
           "IdentityProviderService"
-        ]
+        ],
+        "x-udb-sdk-alias": "scimCreateGroup",
+        "x-udb-scope": [
+          "udb:idp:scim-create-group"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "idp",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/idp/scim/{providerId}/Groups/{scimGroupId}": {
       "get": {
-        "operationId": "IdentityProviderService_ScimGetGroup",
+        "operationId": "scimGetGroup",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -7477,10 +9207,23 @@
         ],
         "tags": [
           "IdentityProviderService"
-        ]
+        ],
+        "x-udb-sdk-alias": "scimGetGroup",
+        "x-udb-scope": [
+          "udb:idp:scim-get-group"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "idp",
+        "x-udb-operation-kind": "mutation"
       },
       "delete": {
-        "operationId": "IdentityProviderService_ScimDeleteGroup",
+        "operationId": "scimDeleteGroup",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -7696,10 +9439,23 @@
         ],
         "tags": [
           "IdentityProviderService"
-        ]
+        ],
+        "x-udb-sdk-alias": "scimDeleteGroup",
+        "x-udb-scope": [
+          "udb:idp:scim-delete-group"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "idp",
+        "x-udb-operation-kind": "mutation"
       },
       "patch": {
-        "operationId": "IdentityProviderService_ScimPatchGroup",
+        "operationId": "scimPatchGroup",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -7738,12 +9494,25 @@
         ],
         "tags": [
           "IdentityProviderService"
-        ]
+        ],
+        "x-udb-sdk-alias": "scimPatchGroup",
+        "x-udb-scope": [
+          "udb:idp:scim-patch-group"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "idp",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/idp/scim/{providerId}/Users": {
       "get": {
-        "operationId": "IdentityProviderService_ScimListUsers",
+        "operationId": "scimListUsers",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -7801,11 +9570,24 @@
         ],
         "tags": [
           "IdentityProviderService"
-        ]
+        ],
+        "x-udb-sdk-alias": "scimListUsers",
+        "x-udb-scope": [
+          "udb:idp:scim-list-users"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "idp",
+        "x-udb-operation-kind": "mutation"
       },
       "post": {
         "summary": "── SCIM 2.0 (J2.3) ───────────────────────────────────────────────────────",
-        "operationId": "IdentityProviderService_ScimCreateUser",
+        "operationId": "scimCreateUser",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -7838,12 +9620,25 @@
         ],
         "tags": [
           "IdentityProviderService"
-        ]
+        ],
+        "x-udb-sdk-alias": "scimCreateUser",
+        "x-udb-scope": [
+          "udb:idp:scim-create-user"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "idp",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/idp/scim/{providerId}/Users/{scimUserId}": {
       "get": {
-        "operationId": "IdentityProviderService_ScimGetUser",
+        "operationId": "scimGetUser",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -7880,10 +9675,23 @@
         ],
         "tags": [
           "IdentityProviderService"
-        ]
+        ],
+        "x-udb-sdk-alias": "scimGetUser",
+        "x-udb-scope": [
+          "udb:idp:scim-get-user"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "idp",
+        "x-udb-operation-kind": "mutation"
       },
       "delete": {
-        "operationId": "IdentityProviderService_ScimDeleteUser",
+        "operationId": "scimDeleteUser",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -8099,10 +9907,23 @@
         ],
         "tags": [
           "IdentityProviderService"
-        ]
+        ],
+        "x-udb-sdk-alias": "scimDeleteUser",
+        "x-udb-scope": [
+          "udb:idp:scim-delete-user"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "idp",
+        "x-udb-operation-kind": "mutation"
       },
       "put": {
-        "operationId": "IdentityProviderService_ScimReplaceUser",
+        "operationId": "scimReplaceUser",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -8141,10 +9962,23 @@
         ],
         "tags": [
           "IdentityProviderService"
-        ]
+        ],
+        "x-udb-sdk-alias": "scimReplaceUser",
+        "x-udb-scope": [
+          "udb:idp:scim-replace-user"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "idp",
+        "x-udb-operation-kind": "mutation"
       },
       "patch": {
-        "operationId": "IdentityProviderService_ScimPatchUser",
+        "operationId": "scimPatchUser",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -8183,13 +10017,26 @@
         ],
         "tags": [
           "IdentityProviderService"
-        ]
+        ],
+        "x-udb-sdk-alias": "scimPatchUser",
+        "x-udb-scope": [
+          "udb:idp:scim-patch-user"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "idp",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/notifications": {
       "get": {
         "summary": "List notification logs with rich filters.",
-        "operationId": "NotificationService_ListNotifications",
+        "operationId": "listNotifications",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -8296,11 +10143,24 @@
         ],
         "tags": [
           "NotificationService"
-        ]
+        ],
+        "x-udb-sdk-alias": "list_notifications",
+        "x-udb-scope": [
+          "udb:notification:list-notifications"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "notifications",
+        "x-udb-operation-kind": "read_only"
       },
       "post": {
         "summary": "Send a notification (or enqueue it for async delivery).",
-        "operationId": "NotificationService_SendNotification",
+        "operationId": "sendNotification",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -8327,13 +10187,26 @@
         ],
         "tags": [
           "NotificationService"
-        ]
+        ],
+        "x-udb-sdk-alias": "send_notification",
+        "x-udb-scope": [
+          "udb:notification:send-notification"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "notifications",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/notifications/preferences/{userId}": {
       "get": {
         "summary": "List all preferences for a user.",
-        "operationId": "NotificationService_ListPreferences",
+        "operationId": "listPreferences",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -8384,13 +10257,26 @@
         ],
         "tags": [
           "NotificationService"
-        ]
+        ],
+        "x-udb-sdk-alias": "list_preferences",
+        "x-udb-scope": [
+          "udb:notification:list-preferences"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "notifications",
+        "x-udb-operation-kind": "read_only"
       }
     },
     "/v1/notifications/preferences/{userId}/{channel}": {
       "get": {
         "summary": "Get a single preference entry.",
-        "operationId": "NotificationService_GetPreference",
+        "operationId": "getPreference",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -8441,11 +10327,24 @@
         ],
         "tags": [
           "NotificationService"
-        ]
+        ],
+        "x-udb-sdk-alias": "get_preference",
+        "x-udb-scope": [
+          "udb:notification:get-preference"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "notifications",
+        "x-udb-operation-kind": "read_only"
       },
       "put": {
         "summary": "Set (upsert) a per-user channel/event opt-out preference.",
-        "operationId": "NotificationService_SetPreference",
+        "operationId": "setPreference",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -8492,13 +10391,26 @@
         ],
         "tags": [
           "NotificationService"
-        ]
+        ],
+        "x-udb-sdk-alias": "set_preference",
+        "x-udb-scope": [
+          "udb:notification:set-preference"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "notifications",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/notifications/stats": {
       "get": {
         "summary": "Get delivery statistics.",
-        "operationId": "NotificationService_GetDeliveryStats",
+        "operationId": "getDeliveryStats",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -8542,13 +10454,26 @@
         ],
         "tags": [
           "NotificationService"
-        ]
+        ],
+        "x-udb-sdk-alias": "get_delivery_stats",
+        "x-udb-scope": [
+          "udb:notification:get-delivery-stats"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "notifications",
+        "x-udb-operation-kind": "read_only"
       }
     },
     "/v1/notifications/templates": {
       "get": {
         "summary": "List all templates.",
-        "operationId": "NotificationService_ListTemplates",
+        "operationId": "listTemplates",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -8615,13 +10540,26 @@
         ],
         "tags": [
           "NotificationService"
-        ]
+        ],
+        "x-udb-sdk-alias": "list_templates",
+        "x-udb-scope": [
+          "udb:notification:list-templates"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "notifications",
+        "x-udb-operation-kind": "read_only"
       }
     },
     "/v1/notifications/templates/{eventType}/{channel}": {
       "get": {
         "summary": "Get a template by event_type + channel + locale.",
-        "operationId": "NotificationService_GetTemplate",
+        "operationId": "getTemplate",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -8666,11 +10604,24 @@
         ],
         "tags": [
           "NotificationService"
-        ]
+        ],
+        "x-udb-sdk-alias": "get_template",
+        "x-udb-scope": [
+          "udb:notification:get-template"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "notifications",
+        "x-udb-operation-kind": "read_only"
       },
       "put": {
         "summary": "Upsert a notification template.",
-        "operationId": "NotificationService_UpsertTemplate",
+        "operationId": "upsertTemplate",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -8717,13 +10668,26 @@
         ],
         "tags": [
           "NotificationService"
-        ]
+        ],
+        "x-udb-sdk-alias": "upsert_template",
+        "x-udb-scope": [
+          "udb:notification:upsert-template"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "notifications",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/notifications/{logId}": {
       "get": {
         "summary": "Get delivery status for a specific log entry.",
-        "operationId": "NotificationService_GetNotification",
+        "operationId": "getNotification",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -8748,13 +10712,26 @@
         ],
         "tags": [
           "NotificationService"
-        ]
+        ],
+        "x-udb-sdk-alias": "get_notification",
+        "x-udb-scope": [
+          "udb:notification:get-notification"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "notifications",
+        "x-udb-operation-kind": "read_only"
       }
     },
     "/v1/notifications/{logId}:retry": {
       "post": {
         "summary": "Retry a failed notification.",
-        "operationId": "NotificationService_RetryNotification",
+        "operationId": "retryNotification",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -8787,13 +10764,26 @@
         ],
         "tags": [
           "NotificationService"
-        ]
+        ],
+        "x-udb-sdk-alias": "retry_notification",
+        "x-udb-scope": [
+          "udb:notification:retry-notification"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "notifications",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/storage/files": {
       "get": {
         "summary": "List files",
-        "operationId": "StorageService_ListFiles",
+        "operationId": "listFiles",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -8856,13 +10846,26 @@
         ],
         "tags": [
           "StorageService"
-        ]
+        ],
+        "x-udb-sdk-alias": "list_files",
+        "x-udb-scope": [
+          "udb:storage:list-files"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "storage",
+        "x-udb-operation-kind": "read_only"
       }
     },
     "/v1/storage/files/{fileId}": {
       "get": {
         "summary": "Get file metadata",
-        "operationId": "StorageService_GetFile",
+        "operationId": "getFile",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -8893,11 +10896,24 @@
         ],
         "tags": [
           "StorageService"
-        ]
+        ],
+        "x-udb-sdk-alias": "get_file",
+        "x-udb-scope": [
+          "udb:storage:get-file"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "storage",
+        "x-udb-operation-kind": "read_only"
       },
       "delete": {
         "summary": "Delete a file (soft delete)",
-        "operationId": "StorageService_DeleteFile",
+        "operationId": "deleteFile",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -8928,11 +10944,24 @@
         ],
         "tags": [
           "StorageService"
-        ]
+        ],
+        "x-udb-sdk-alias": "delete_file",
+        "x-udb-scope": [
+          "udb:storage:delete-file"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "storage",
+        "x-udb-operation-kind": "mutation"
       },
       "patch": {
         "summary": "Update file metadata",
-        "operationId": "StorageService_UpdateFile",
+        "operationId": "updateFile",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -8965,13 +10994,26 @@
         ],
         "tags": [
           "StorageService"
-        ]
+        ],
+        "x-udb-sdk-alias": "update_file",
+        "x-udb-scope": [
+          "udb:storage:update-file"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "storage",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/storage/files/{fileId}/download": {
       "get": {
         "summary": "Stream a file's bytes directly through the broker. FALLBACK for clients\nthat cannot use the presigned `GetDownloadUrl` HTTP GET (no egress to the\nobject store, corporate proxy, etc.). The broker streams the object bytes\nin bounded chunks server-side; it never buffers the whole object.",
-        "operationId": "StorageService_DownloadFile",
+        "operationId": "downloadFile",
         "responses": {
           "200": {
             "description": "A successful response.(streaming responses)",
@@ -9019,13 +11061,26 @@
         ],
         "tags": [
           "StorageService"
-        ]
+        ],
+        "x-udb-sdk-alias": "download_file",
+        "x-udb-scope": [
+          "udb:storage:get-download-url"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "storage",
+        "x-udb-operation-kind": "read_only"
       }
     },
     "/v1/storage/files/{fileId}/download-url": {
       "get": {
         "summary": "Get a pre-signed download URL for a file",
-        "operationId": "StorageService_GetDownloadUrl",
+        "operationId": "getDownloadUrl",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -9063,13 +11118,26 @@
         ],
         "tags": [
           "StorageService"
-        ]
+        ],
+        "x-udb-sdk-alias": "get_download_url",
+        "x-udb-scope": [
+          "udb:storage:get-download-url"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "storage",
+        "x-udb-operation-kind": "read_only"
       }
     },
     "/v1/storage/uploads": {
       "post": {
         "summary": "Register a new upload and obtain a pre-signed upload URL",
-        "operationId": "StorageService_RegisterUpload",
+        "operationId": "registerUpload",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -9096,13 +11164,26 @@
         ],
         "tags": [
           "StorageService"
-        ]
+        ],
+        "x-udb-sdk-alias": "register_upload",
+        "x-udb-scope": [
+          "udb:storage:register-upload"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "storage",
+        "x-udb-operation-kind": "mutation"
       }
     },
-    "/v1/storage/uploads/{fileId}/finalize": {
+    "/v1/storage/uploads/{fileId}:finalize": {
       "post": {
         "summary": "Finalize an upload after the object has been written to the store",
-        "operationId": "StorageService_FinalizeUpload",
+        "operationId": "finalizeUpload",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -9135,13 +11216,26 @@
         ],
         "tags": [
           "StorageService"
-        ]
+        ],
+        "x-udb-sdk-alias": "finalize_upload",
+        "x-udb-scope": [
+          "udb:storage:finalize-upload"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "storage",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/tenants": {
       "get": {
         "summary": "List tenants",
-        "operationId": "TenantService_ListTenants",
+        "operationId": "listTenants",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -9186,11 +11280,24 @@
         ],
         "tags": [
           "TenantService"
-        ]
+        ],
+        "x-udb-sdk-alias": "list_tenants",
+        "x-udb-scope": [
+          "udb:tenant:list-tenants"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "tenants",
+        "x-udb-operation-kind": "read_only"
       },
       "post": {
         "summary": "Create tenant",
-        "operationId": "TenantService_CreateTenant",
+        "operationId": "createTenant",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -9217,13 +11324,26 @@
         ],
         "tags": [
           "TenantService"
-        ]
+        ],
+        "x-udb-sdk-alias": "create_tenant",
+        "x-udb-scope": [
+          "udb:tenant:create-tenant"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "tenants",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/tenants/{tenantId}": {
       "get": {
         "summary": "Get tenant",
-        "operationId": "TenantService_GetTenant",
+        "operationId": "getTenant",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -9248,11 +11368,24 @@
         ],
         "tags": [
           "TenantService"
-        ]
+        ],
+        "x-udb-sdk-alias": "get_tenant",
+        "x-udb-scope": [
+          "udb:tenant:get-tenant"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "tenants",
+        "x-udb-operation-kind": "read_only"
       },
       "patch": {
         "summary": "Update tenant",
-        "operationId": "TenantService_UpdateTenant",
+        "operationId": "updateTenant",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -9285,13 +11418,26 @@
         ],
         "tags": [
           "TenantService"
-        ]
+        ],
+        "x-udb-sdk-alias": "update_tenant",
+        "x-udb-scope": [
+          "udb:tenant:update-tenant"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "tenants",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/tenants/{tenantId}/config": {
       "get": {
         "summary": "Get tenant config",
-        "operationId": "TenantService_GetTenantConfig",
+        "operationId": "getTenantConfig",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -9316,11 +11462,24 @@
         ],
         "tags": [
           "TenantService"
-        ]
+        ],
+        "x-udb-sdk-alias": "get_tenant_config",
+        "x-udb-scope": [
+          "udb:tenant:get-tenant-config"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "tenants",
+        "x-udb-operation-kind": "read_only"
       },
       "put": {
         "summary": "Update tenant config",
-        "operationId": "TenantService_UpdateTenantConfig",
+        "operationId": "updateTenantConfig",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -9353,13 +11512,26 @@
         ],
         "tags": [
           "TenantService"
-        ]
+        ],
+        "x-udb-sdk-alias": "update_tenant_config",
+        "x-udb-scope": [
+          "udb:tenant:update-tenant-config"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "tenants",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/webrtc/peers/{peerId}": {
       "get": {
         "summary": "Get a peer",
-        "operationId": "PeerService_GetPeer",
+        "operationId": "getPeer",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -9390,13 +11562,26 @@
         ],
         "tags": [
           "PeerService"
-        ]
+        ],
+        "x-udb-sdk-alias": "get_peer",
+        "x-udb-scope": [
+          "udb:webrtc:peer:get-peer"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "webrtc",
+        "x-udb-operation-kind": "read_only"
       }
     },
     "/v1/webrtc/rooms": {
       "get": {
         "summary": "List rooms",
-        "operationId": "RoomService_ListRooms",
+        "operationId": "listRooms",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -9441,11 +11626,24 @@
         ],
         "tags": [
           "RoomService"
-        ]
+        ],
+        "x-udb-sdk-alias": "list_rooms",
+        "x-udb-scope": [
+          "udb:webrtc:room:list-rooms"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "webrtc",
+        "x-udb-operation-kind": "read_only"
       },
       "post": {
         "summary": "Create a room",
-        "operationId": "RoomService_CreateRoom",
+        "operationId": "createRoom",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -9472,13 +11670,26 @@
         ],
         "tags": [
           "RoomService"
-        ]
+        ],
+        "x-udb-sdk-alias": "create_room",
+        "x-udb-scope": [
+          "udb:webrtc:room:create-room"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "webrtc",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/webrtc/rooms/{roomId}": {
       "get": {
         "summary": "Get a room",
-        "operationId": "RoomService_GetRoom",
+        "operationId": "getRoom",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -9509,11 +11720,24 @@
         ],
         "tags": [
           "RoomService"
-        ]
+        ],
+        "x-udb-sdk-alias": "get_room",
+        "x-udb-scope": [
+          "udb:webrtc:room:get-room"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "webrtc",
+        "x-udb-operation-kind": "read_only"
       },
       "patch": {
         "summary": "Update a room",
-        "operationId": "RoomService_UpdateRoom",
+        "operationId": "updateRoom",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -9546,52 +11770,26 @@
         ],
         "tags": [
           "RoomService"
-        ]
-      }
-    },
-    "/v1/webrtc/rooms/{roomId}/close": {
-      "post": {
-        "summary": "Close a room",
-        "operationId": "RoomService_CloseRoom",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1CloseRoomResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "roomId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/RoomServiceCloseRoomBody"
-            }
-          }
         ],
-        "tags": [
-          "RoomService"
-        ]
+        "x-udb-sdk-alias": "update_room",
+        "x-udb-scope": [
+          "udb:webrtc:room:update-room"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "webrtc",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/webrtc/rooms/{roomId}/peers": {
       "get": {
         "summary": "List peers",
-        "operationId": "PeerService_ListPeers",
+        "operationId": "listPeers",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -9628,11 +11826,24 @@
         ],
         "tags": [
           "PeerService"
-        ]
+        ],
+        "x-udb-sdk-alias": "list_peers",
+        "x-udb-scope": [
+          "udb:webrtc:peer:list-peers"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "webrtc",
+        "x-udb-operation-kind": "read_only"
       },
       "post": {
         "summary": "Join a room",
-        "operationId": "PeerService_JoinRoom",
+        "operationId": "joinRoom",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -9665,13 +11876,26 @@
         ],
         "tags": [
           "PeerService"
-        ]
+        ],
+        "x-udb-sdk-alias": "join_room",
+        "x-udb-scope": [
+          "udb:webrtc:peer:join-room"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "webrtc",
+        "x-udb-operation-kind": "mutation"
       }
     },
-    "/v1/webrtc/rooms/{roomId}/peers/{peerId}/leave": {
+    "/v1/webrtc/rooms/{roomId}/peers/{peerId}:leave": {
       "post": {
         "summary": "Leave a room",
-        "operationId": "PeerService_LeaveRoom",
+        "operationId": "leaveRoom",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -9710,13 +11934,26 @@
         ],
         "tags": [
           "PeerService"
-        ]
+        ],
+        "x-udb-sdk-alias": "leave_room",
+        "x-udb-scope": [
+          "udb:webrtc:peer:leave-room"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "webrtc",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/webrtc/rooms/{roomId}/tracks": {
       "get": {
         "summary": "List tracks",
-        "operationId": "TrackService_ListTracks",
+        "operationId": "listTracks",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -9759,13 +11996,78 @@
         ],
         "tags": [
           "TrackService"
-        ]
+        ],
+        "x-udb-sdk-alias": "list_tracks",
+        "x-udb-scope": [
+          "udb:webrtc:track:list-tracks"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "webrtc",
+        "x-udb-operation-kind": "read_only"
+      }
+    },
+    "/v1/webrtc/rooms/{roomId}:close": {
+      "post": {
+        "summary": "Close a room",
+        "operationId": "closeRoom",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CloseRoomResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "roomId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/RoomServiceCloseRoomBody"
+            }
+          }
+        ],
+        "tags": [
+          "RoomService"
+        ],
+        "x-udb-sdk-alias": "close_room",
+        "x-udb-scope": [
+          "udb:webrtc:room:close-room"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "webrtc",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/webrtc/tracks": {
       "post": {
         "summary": "Publish a track",
-        "operationId": "TrackService_PublishTrack",
+        "operationId": "publishTrack",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -9792,13 +12094,26 @@
         ],
         "tags": [
           "TrackService"
-        ]
+        ],
+        "x-udb-sdk-alias": "publish_track",
+        "x-udb-scope": [
+          "udb:webrtc:track:publish-track"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "webrtc",
+        "x-udb-operation-kind": "mutation"
       }
     },
-    "/v1/webrtc/tracks/{trackId}/mute": {
+    "/v1/webrtc/tracks/{trackId}:mute": {
       "post": {
         "summary": "Mute or unmute a track",
-        "operationId": "TrackService_MuteTrack",
+        "operationId": "muteTrack",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -9831,13 +12146,26 @@
         ],
         "tags": [
           "TrackService"
-        ]
+        ],
+        "x-udb-sdk-alias": "mute_track",
+        "x-udb-scope": [
+          "udb:webrtc:track:mute-track"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "webrtc",
+        "x-udb-operation-kind": "mutation"
       }
     },
-    "/v1/webrtc/tracks/{trackId}/unpublish": {
+    "/v1/webrtc/tracks/{trackId}:unpublish": {
       "post": {
         "summary": "Unpublish a track",
-        "operationId": "TrackService_UnpublishTrack",
+        "operationId": "unpublishTrack",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -9870,13 +12198,26 @@
         ],
         "tags": [
           "TrackService"
-        ]
+        ],
+        "x-udb-sdk-alias": "unpublish_track",
+        "x-udb-scope": [
+          "udb:webrtc:track:unpublish-track"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "webrtc",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/webrtc/turn/credentials": {
       "post": {
         "summary": "Issue ephemeral TURN/STUN credentials",
-        "operationId": "TurnService_IssueCredentials",
+        "operationId": "issueCredentials",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -9903,7 +12244,20 @@
         ],
         "tags": [
           "TurnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "issue_credentials",
+        "x-udb-scope": [
+          "udb:webrtc:turn:issue-credentials"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "webrtc",
+        "x-udb-operation-kind": "mutation"
       }
     }
   },
@@ -10270,6 +12624,17 @@
       "required": [
         "updatedBy"
       ]
+    },
+    "ControlPlaneServiceAckStatusBody": {
+      "type": "object",
+      "properties": {
+        "resourceType": {
+          "$ref": "#/definitions/v1ResourceType"
+        },
+        "context": {
+          "$ref": "#/definitions/coreCommonV1RequestContext"
+        }
+      }
     },
     "IdentityProviderServiceDisableProviderBody": {
       "type": "object",
@@ -10969,7 +13334,7 @@
         }
       },
       "additionalProperties": {},
-      "description": "`Any` contains an arbitrary serialized protocol buffer message along with a\nURL that describes the type of the serialized message.\n\nProtobuf library provides support to pack/unpack Any values in the form\nof utility functions or additional generated methods of the Any type.\n\nExample 1: Pack and unpack a message in C++.\n\n    Foo foo = ...;\n    Any any;\n    any.PackFrom(foo);\n    ...\n    if (any.UnpackTo(\u0026foo)) {\n      ...\n    }\n\nExample 2: Pack and unpack a message in Java.\n\n    Foo foo = ...;\n    Any any = Any.pack(foo);\n    ...\n    if (any.is(Foo.class)) {\n      foo = any.unpack(Foo.class);\n    }\n    // or ...\n    if (any.isSameTypeAs(Foo.getDefaultInstance())) {\n      foo = any.unpack(Foo.getDefaultInstance());\n    }\n\n Example 3: Pack and unpack a message in Python.\n\n    foo = Foo(...)\n    any = Any()\n    any.Pack(foo)\n    ...\n    if any.Is(Foo.DESCRIPTOR):\n      any.Unpack(foo)\n      ...\n\n Example 4: Pack and unpack a message in Go\n\n     foo := \u0026pb.Foo{...}\n     any, err := anypb.New(foo)\n     if err != nil {\n       ...\n     }\n     ...\n     foo := \u0026pb.Foo{}\n     if err := any.UnmarshalTo(foo); err != nil {\n       ...\n     }\n\nThe pack methods provided by protobuf library will by default use\n'type.googleapis.com/full.type.name' as the type URL and the unpack\nmethods only use the fully qualified type name after the last '/'\nin the type URL, for example \"foo.bar.com/x/y.z\" will yield type\nname \"y.z\".\n\nJSON\n====\nThe JSON representation of an `Any` value uses the regular\nrepresentation of the deserialized, embedded message, with an\nadditional field `@type` which contains the type URL. Example:\n\n    package google.profile;\n    message Person {\n      string first_name = 1;\n      string last_name = 2;\n    }\n\n    {\n      \"@type\": \"type.googleapis.com/google.profile.Person\",\n      \"firstName\": \u003cstring\u003e,\n      \"lastName\": \u003cstring\u003e\n    }\n\nIf the embedded message type is well-known and has a custom JSON\nrepresentation, that representation will be embedded adding a field\n`value` which holds the custom JSON in addition to the `@type`\nfield. Example (for message [google.protobuf.Duration][]):\n\n    {\n      \"@type\": \"type.googleapis.com/google.protobuf.Duration\",\n      \"value\": \"1.212s\"\n    }"
+      "description": "`Any` contains an arbitrary serialized protocol buffer message along with a\nURL that describes the type of the serialized message.\n\nProtobuf library provides support to pack/unpack Any values in the form\nof utility functions or additional generated methods of the Any type.\n\nExample 1: Pack and unpack a message in C++.\n\n    Foo foo = ...;\n    Any any;\n    any.PackFrom(foo);\n    ...\n    if (any.UnpackTo(&foo)) {\n      ...\n    }\n\nExample 2: Pack and unpack a message in Java.\n\n    Foo foo = ...;\n    Any any = Any.pack(foo);\n    ...\n    if (any.is(Foo.class)) {\n      foo = any.unpack(Foo.class);\n    }\n    // or ...\n    if (any.isSameTypeAs(Foo.getDefaultInstance())) {\n      foo = any.unpack(Foo.getDefaultInstance());\n    }\n\n Example 3: Pack and unpack a message in Python.\n\n    foo = Foo(...)\n    any = Any()\n    any.Pack(foo)\n    ...\n    if any.Is(Foo.DESCRIPTOR):\n      any.Unpack(foo)\n      ...\n\n Example 4: Pack and unpack a message in Go\n\n     foo := &pb.Foo{...}\n     any, err := anypb.New(foo)\n     if err != nil {\n       ...\n     }\n     ...\n     foo := &pb.Foo{}\n     if err := any.UnmarshalTo(foo); err != nil {\n       ...\n     }\n\nThe pack methods provided by protobuf library will by default use\n'type.googleapis.com/full.type.name' as the type URL and the unpack\nmethods only use the fully qualified type name after the last '/'\nin the type URL, for example \"foo.bar.com/x/y.z\" will yield type\nname \"y.z\".\n\nJSON\n====\nThe JSON representation of an `Any` value uses the regular\nrepresentation of the deserialized, embedded message, with an\nadditional field `@type` which contains the type URL. Example:\n\n    package google.profile;\n    message Person {\n      string first_name = 1;\n      string last_name = 2;\n    }\n\n    {\n      \"@type\": \"type.googleapis.com/google.profile.Person\",\n      \"firstName\": <string>,\n      \"lastName\": <string>\n    }\n\nIf the embedded message type is well-known and has a custom JSON\nrepresentation, that representation will be embedded adding a field\n`value` which holds the custom JSON in addition to the `@type`\nfield. Example (for message [google.protobuf.Duration][]):\n\n    {\n      \"@type\": \"type.googleapis.com/google.protobuf.Duration\",\n      \"value\": \"1.212s\"\n    }"
     },
     "rpcStatus": {
       "type": "object",
@@ -13344,17 +15709,6 @@
         }
       }
     },
-    "v1GetAuthzRevisionRequest": {
-      "type": "object",
-      "properties": {
-        "tenantId": {
-          "type": "string"
-        },
-        "projectId": {
-          "type": "string"
-        }
-      }
-    },
     "v1GetAuthzRevisionResponse": {
       "type": "object",
       "properties": {
@@ -13372,17 +15726,6 @@
         "changedAt": {
           "type": "string",
           "format": "date-time"
-        }
-      }
-    },
-    "v1GetCanaryStatusRequest": {
-      "type": "object",
-      "properties": {
-        "actor": {
-          "$ref": "#/definitions/v1GovernanceActor"
-        },
-        "canaryId": {
-          "type": "string"
         }
       }
     },
@@ -14355,29 +16698,6 @@
         }
       }
     },
-    "v1ListPolicyVersionsRequest": {
-      "type": "object",
-      "properties": {
-        "actor": {
-          "$ref": "#/definitions/v1GovernanceActor"
-        },
-        "tenantId": {
-          "type": "string"
-        },
-        "projectId": {
-          "type": "string"
-        },
-        "policySetId": {
-          "type": "string"
-        },
-        "state": {
-          "$ref": "#/definitions/v1PolicyVersionState"
-        },
-        "page": {
-          "$ref": "#/definitions/v1PageRequest"
-        }
-      }
-    },
     "v1ListPolicyVersionsResponse": {
       "type": "object",
       "properties": {
@@ -14665,7 +16985,7 @@
         "refreshTokenExpiresIn": {
           "type": "integer",
           "format": "int32",
-          "description": "Absolute lifetime (seconds) of the rotating refresh token (field 4). The\nrefresh token is a token-family credential (rt_\u003cfamily\u003e.\u003cjti\u003e), rotated on\nevery RefreshToken call; reuse of a superseded value revokes the family."
+          "description": "Absolute lifetime (seconds) of the rotating refresh token (field 4). The\nrefresh token is a token-family credential (rt_<family>.<jti>), rotated on\nevery RefreshToken call; reuse of a superseded value revokes the family."
         }
       }
     },
@@ -15888,7 +18208,7 @@
           "description": "The PolicyDraft this version was promoted from, if any."
         }
       },
-      "description": "An immutable, numbered version of a policy set. A `PolicyDraft` that passes\nreview is promoted into a `PolicyVersion` whose frozen `payload_json`\n(policies + role bindings + relationship tuples) is what\n`ActivatePolicyVersion` loads into the live authorization snapshot. Drafts\nremain editable; versions never change once created — they only transition\nstate (draft -\u003e pending_review -\u003e approved -\u003e active -\u003e superseded /\nrejected / rolled_back). `revision` provides optimistic concurrency over the\nversion's state transitions; `content_hash` detects no-op promotions."
+      "description": "An immutable, numbered version of a policy set. A `PolicyDraft` that passes\nreview is promoted into a `PolicyVersion` whose frozen `payload_json`\n(policies + role bindings + relationship tuples) is what\n`ActivatePolicyVersion` loads into the live authorization snapshot. Drafts\nremain editable; versions never change once created — they only transition\nstate (draft -> pending_review -> approved -> active -> superseded /\nrejected / rolled_back). `revision` provides optimistic concurrency over the\nversion's state transitions; `content_hash` detects no-op promotions."
     },
     "v1PolicyVersionState": {
       "type": "string",
@@ -18035,7 +20355,7 @@
         },
         "email": {
           "type": "string",
-          "title": "SCIM-2 (bug_report.md G): email stays NOT NULL (always a value, maybe '');\nthe column-level `unique` is dropped and uniqueness is enforced by the\nTABLE-level PARTIAL unique index `idx_users_email` (WHERE email \u003c\u003e '')\ndeclared in the pg_table option above — so email-less SCIM users don't\ncollide. (The column's singular `index` is intentionally NOT used: the\ndescriptor decode drops its where_clause.)"
+          "title": "SCIM-2 (bug_report.md G): email stays NOT NULL (always a value, maybe '');\nthe column-level `unique` is dropped and uniqueness is enforced by the\nTABLE-level PARTIAL unique index `idx_users_email` (WHERE email <> '')\ndeclared in the pg_table option above — so email-less SCIM users don't\ncollide. (The column's singular `index` is intentionally NOT used: the\ndescriptor decode drops its where_clause.)"
         },
         "passwordHash": {
           "type": "string"

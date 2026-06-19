@@ -1661,6 +1661,7 @@ type SdkSurfaceOptions struct {
 	ServerOnly                 bool                   `protobuf:"varint,8,opt,name=server_only,json=serverOnly,proto3" json:"server_only,omitempty"`
 	BoilerplateRecipeTags      []string               `protobuf:"bytes,9,rep,name=boilerplate_recipe_tags,json=boilerplateRecipeTags,proto3" json:"boilerplate_recipe_tags,omitempty"`
 	GenerateMinimalExample     bool                   `protobuf:"varint,10,opt,name=generate_minimal_example,json=generateMinimalExample,proto3" json:"generate_minimal_example,omitempty"`
+	RestOperationId            string                 `protobuf:"bytes,11,opt,name=rest_operation_id,json=restOperationId,proto3" json:"rest_operation_id,omitempty"`
 	unknownFields              protoimpl.UnknownFields
 	sizeCache                  protoimpl.SizeCache
 }
@@ -1763,6 +1764,13 @@ func (x *SdkSurfaceOptions) GetGenerateMinimalExample() bool {
 		return x.GenerateMinimalExample
 	}
 	return false
+}
+
+func (x *SdkSurfaceOptions) GetRestOperationId() string {
+	if x != nil {
+		return x.RestOperationId
+	}
+	return ""
 }
 
 type CliScaffoldOptions struct {
@@ -2689,7 +2697,7 @@ const file_udb_core_common_v1_security_proto_rawDesc = "" +
 	" \x01(\bR\n" +
 	"ownerField\x12!\n" +
 	"\ftenant_field\x18\v \x01(\bR\vtenantField\x12#\n" +
-	"\rproject_field\x18\f \x01(\bR\fprojectField\"\xf0\x03\n" +
+	"\rproject_field\x18\f \x01(\bR\fprojectField\"\x9c\x04\n" +
 	"\x11SdkSurfaceOptions\x12*\n" +
 	"\x11include_in_facade\x18\x01 \x01(\bR\x0fincludeInFacade\x12!\n" +
 	"\fmethod_alias\x18\x02 \x01(\tR\vmethodAlias\x12@\n" +
@@ -2702,7 +2710,8 @@ const file_udb_core_common_v1_security_proto_rawDesc = "" +
 	"serverOnly\x126\n" +
 	"\x17boilerplate_recipe_tags\x18\t \x03(\tR\x15boilerplateRecipeTags\x128\n" +
 	"\x18generate_minimal_example\x18\n" +
-	" \x01(\bR\x16generateMinimalExample\"\x81\x04\n" +
+	" \x01(\bR\x16generateMinimalExample\x12*\n" +
+	"\x11rest_operation_id\x18\v \x01(\tR\x0frestOperationId\"\x81\x04\n" +
 	"\x12CliScaffoldOptions\x12)\n" +
 	"\x10scaffold_package\x18\x01 \x01(\tR\x0fscaffoldPackage\x12\x1f\n" +
 	"\vimport_path\x18\x02 \x01(\tR\n" +

@@ -593,7 +593,7 @@ export const RPC_REPLAY_SAFE: Record<string, boolean> = {
   "/udb.core.asset.services.v1.AssetService/GetPipelineDefinition": false,
   "/udb.core.asset.services.v1.AssetService/ListAssets": false,
   "/udb.core.asset.services.v1.AssetService/RegisterAsset": false,
-  "/udb.core.asset.services.v1.AssetService/StartPipeline": false,
+  "/udb.core.asset.services.v1.AssetService/StartPipeline": true,
   "/udb.core.authn.services.v1.AuthnService/AdminResetMfa": false,
   "/udb.core.authn.services.v1.AuthnService/AdminResetPassword": false,
   "/udb.core.authn.services.v1.AuthnService/AdminRevokeAllTenantSessions": false,
@@ -1616,7 +1616,7 @@ export interface DataBrokerApi {
 }
 
 // Method signatures, appended to each service interface via declaration merging.
-/** udb.core.analytics.services.v1.AnalyticsService · unary · `/udb.core.analytics.services.v1.AnalyticsService/GetExecutorPerformance` · (udb.core.analytics.services.v1.GetExecutorPerformanceRequest) → (udb.core.analytics.services.v1.GetExecutorPerformanceResponse)
+/** udb.core.analytics.services.v1.AnalyticsService · unary · `/udb.core.analytics.services.v1.AnalyticsService/GetExecutorPerformance` · alias `get_executor_performance` · (udb.core.analytics.services.v1.GetExecutorPerformanceRequest) → (udb.core.analytics.services.v1.GetExecutorPerformanceResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -1626,8 +1626,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AnalyticsServiceApi {
   get_executor_performance(request: any, call?: CallOptions): Promise<any>;
+  getExecutorPerformance(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.analytics.services.v1.AnalyticsService · unary · `/udb.core.analytics.services.v1.AnalyticsService/GetPipelineSummary` · (udb.core.analytics.services.v1.GetPipelineSummaryRequest) → (udb.core.analytics.services.v1.GetPipelineSummaryResponse)
+/** udb.core.analytics.services.v1.AnalyticsService · unary · `/udb.core.analytics.services.v1.AnalyticsService/GetPipelineSummary` · alias `get_pipeline_summary` · (udb.core.analytics.services.v1.GetPipelineSummaryRequest) → (udb.core.analytics.services.v1.GetPipelineSummaryResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -1637,8 +1638,9 @@ export interface AnalyticsServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AnalyticsServiceApi {
   get_pipeline_summary(request: any, call?: CallOptions): Promise<any>;
+  getPipelineSummary(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.analytics.services.v1.AnalyticsService · unary · `/udb.core.analytics.services.v1.AnalyticsService/GetReconciliationAnalytics` · (udb.core.analytics.services.v1.GetReconciliationAnalyticsRequest) → (udb.core.analytics.services.v1.GetReconciliationAnalyticsResponse)
+/** udb.core.analytics.services.v1.AnalyticsService · unary · `/udb.core.analytics.services.v1.AnalyticsService/GetReconciliationAnalytics` · alias `get_reconciliation_analytics` · (udb.core.analytics.services.v1.GetReconciliationAnalyticsRequest) → (udb.core.analytics.services.v1.GetReconciliationAnalyticsResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -1648,8 +1650,9 @@ export interface AnalyticsServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AnalyticsServiceApi {
   get_reconciliation_analytics(request: any, call?: CallOptions): Promise<any>;
+  getReconciliationAnalytics(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.analytics.services.v1.AnalyticsService · unary · `/udb.core.analytics.services.v1.AnalyticsService/GetSlaCompliance` · (udb.core.analytics.services.v1.GetSlaComplianceRequest) → (udb.core.analytics.services.v1.GetSlaComplianceResponse)
+/** udb.core.analytics.services.v1.AnalyticsService · unary · `/udb.core.analytics.services.v1.AnalyticsService/GetSlaCompliance` · alias `get_sla_compliance` · (udb.core.analytics.services.v1.GetSlaComplianceRequest) → (udb.core.analytics.services.v1.GetSlaComplianceResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -1659,8 +1662,9 @@ export interface AnalyticsServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AnalyticsServiceApi {
   get_sla_compliance(request: any, call?: CallOptions): Promise<any>;
+  getSlaCompliance(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.analytics.services.v1.AnalyticsService · unary · `/udb.core.analytics.services.v1.AnalyticsService/GetThroughput` · (udb.core.analytics.services.v1.GetThroughputRequest) → (udb.core.analytics.services.v1.GetThroughputResponse)
+/** udb.core.analytics.services.v1.AnalyticsService · unary · `/udb.core.analytics.services.v1.AnalyticsService/GetThroughput` · alias `get_throughput` · (udb.core.analytics.services.v1.GetThroughputRequest) → (udb.core.analytics.services.v1.GetThroughputResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -1670,8 +1674,9 @@ export interface AnalyticsServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AnalyticsServiceApi {
   get_throughput(request: any, call?: CallOptions): Promise<any>;
+  getThroughput(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.analytics.services.v1.AnalyticsService · unary · `/udb.core.analytics.services.v1.AnalyticsService/RecordPipelineMetric` · (udb.core.analytics.services.v1.RecordPipelineMetricRequest) → (udb.core.analytics.services.v1.RecordPipelineMetricResponse)
+/** udb.core.analytics.services.v1.AnalyticsService · unary · `/udb.core.analytics.services.v1.AnalyticsService/RecordPipelineMetric` · alias `record_pipeline_metric` · (udb.core.analytics.services.v1.RecordPipelineMetricRequest) → (udb.core.analytics.services.v1.RecordPipelineMetricResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -1681,8 +1686,9 @@ export interface AnalyticsServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AnalyticsServiceApi {
   record_pipeline_metric(request: any, call?: CallOptions): Promise<any>;
+  recordPipelineMetric(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.analytics.services.v1.AnalyticsService · unary · `/udb.core.analytics.services.v1.AnalyticsService/TriggerSnapshot` · (udb.core.analytics.services.v1.TriggerSnapshotRequest) → (udb.core.analytics.services.v1.TriggerSnapshotResponse)
+/** udb.core.analytics.services.v1.AnalyticsService · unary · `/udb.core.analytics.services.v1.AnalyticsService/TriggerSnapshot` · alias `trigger_snapshot` · (udb.core.analytics.services.v1.TriggerSnapshotRequest) → (udb.core.analytics.services.v1.TriggerSnapshotResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -1692,8 +1698,9 @@ export interface AnalyticsServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AnalyticsServiceApi {
   trigger_snapshot(request: any, call?: CallOptions): Promise<any>;
+  triggerSnapshot(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.apikey.services.v1.ApiKeyService · unary · `/udb.core.apikey.services.v1.ApiKeyService/CreateApiKey` · (udb.core.apikey.services.v1.CreateApiKeyRequest) → (udb.core.apikey.services.v1.CreateApiKeyResponse)
+/** udb.core.apikey.services.v1.ApiKeyService · unary · `/udb.core.apikey.services.v1.ApiKeyService/CreateApiKey` · alias `create_api_key` · (udb.core.apikey.services.v1.CreateApiKeyRequest) → (udb.core.apikey.services.v1.CreateApiKeyResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -1703,8 +1710,9 @@ export interface AnalyticsServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface ApiKeyServiceApi {
   create_api_key(request: any, call?: CallOptions): Promise<any>;
+  createApiKey(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.apikey.services.v1.ApiKeyService · unary · `/udb.core.apikey.services.v1.ApiKeyService/EmergencyRevokeApiKeys` · (udb.core.apikey.services.v1.EmergencyRevokeApiKeysRequest) → (udb.core.apikey.services.v1.EmergencyRevokeApiKeysResponse)
+/** udb.core.apikey.services.v1.ApiKeyService · unary · `/udb.core.apikey.services.v1.ApiKeyService/EmergencyRevokeApiKeys` · alias `emergency_revoke_api_keys` · (udb.core.apikey.services.v1.EmergencyRevokeApiKeysRequest) → (udb.core.apikey.services.v1.EmergencyRevokeApiKeysResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -1714,8 +1722,9 @@ export interface ApiKeyServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface ApiKeyServiceApi {
   emergency_revoke_api_keys(request: any, call?: CallOptions): Promise<any>;
+  emergencyRevokeApiKeys(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.apikey.services.v1.ApiKeyService · unary · `/udb.core.apikey.services.v1.ApiKeyService/GetApiKey` · (udb.core.apikey.services.v1.GetApiKeyRequest) → (udb.core.apikey.services.v1.GetApiKeyResponse)
+/** udb.core.apikey.services.v1.ApiKeyService · unary · `/udb.core.apikey.services.v1.ApiKeyService/GetApiKey` · alias `get_api_key` · (udb.core.apikey.services.v1.GetApiKeyRequest) → (udb.core.apikey.services.v1.GetApiKeyResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -1725,8 +1734,9 @@ export interface ApiKeyServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface ApiKeyServiceApi {
   get_api_key(request: any, call?: CallOptions): Promise<any>;
+  getApiKey(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.apikey.services.v1.ApiKeyService · unary · `/udb.core.apikey.services.v1.ApiKeyService/GetApiKeyUsageStats` · (udb.core.apikey.services.v1.GetApiKeyUsageStatsRequest) → (udb.core.apikey.services.v1.GetApiKeyUsageStatsResponse)
+/** udb.core.apikey.services.v1.ApiKeyService · unary · `/udb.core.apikey.services.v1.ApiKeyService/GetApiKeyUsageStats` · alias `get_api_key_usage_stats` · (udb.core.apikey.services.v1.GetApiKeyUsageStatsRequest) → (udb.core.apikey.services.v1.GetApiKeyUsageStatsResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -1736,8 +1746,9 @@ export interface ApiKeyServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface ApiKeyServiceApi {
   get_api_key_usage_stats(request: any, call?: CallOptions): Promise<any>;
+  getApiKeyUsageStats(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.apikey.services.v1.ApiKeyService · unary · `/udb.core.apikey.services.v1.ApiKeyService/ListApiKeys` · (udb.core.apikey.services.v1.ListApiKeysRequest) → (udb.core.apikey.services.v1.ListApiKeysResponse)
+/** udb.core.apikey.services.v1.ApiKeyService · unary · `/udb.core.apikey.services.v1.ApiKeyService/ListApiKeys` · alias `list_api_keys` · (udb.core.apikey.services.v1.ListApiKeysRequest) → (udb.core.apikey.services.v1.ListApiKeysResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -1747,8 +1758,9 @@ export interface ApiKeyServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface ApiKeyServiceApi {
   list_api_keys(request: any, call?: CallOptions): Promise<any>;
+  listApiKeys(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.apikey.services.v1.ApiKeyService · unary · `/udb.core.apikey.services.v1.ApiKeyService/RevokeApiKey` · (udb.core.apikey.services.v1.RevokeApiKeyRequest) → (udb.core.apikey.services.v1.RevokeApiKeyResponse)
+/** udb.core.apikey.services.v1.ApiKeyService · unary · `/udb.core.apikey.services.v1.ApiKeyService/RevokeApiKey` · alias `revoke_api_key` · (udb.core.apikey.services.v1.RevokeApiKeyRequest) → (udb.core.apikey.services.v1.RevokeApiKeyResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -1758,8 +1770,9 @@ export interface ApiKeyServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface ApiKeyServiceApi {
   revoke_api_key(request: any, call?: CallOptions): Promise<any>;
+  revokeApiKey(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.apikey.services.v1.ApiKeyService · unary · `/udb.core.apikey.services.v1.ApiKeyService/RotateApiKey` · (udb.core.apikey.services.v1.RotateApiKeyRequest) → (udb.core.apikey.services.v1.RotateApiKeyResponse)
+/** udb.core.apikey.services.v1.ApiKeyService · unary · `/udb.core.apikey.services.v1.ApiKeyService/RotateApiKey` · alias `rotate_api_key` · (udb.core.apikey.services.v1.RotateApiKeyRequest) → (udb.core.apikey.services.v1.RotateApiKeyResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -1769,8 +1782,9 @@ export interface ApiKeyServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface ApiKeyServiceApi {
   rotate_api_key(request: any, call?: CallOptions): Promise<any>;
+  rotateApiKey(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.apikey.services.v1.ApiKeyService · unary · `/udb.core.apikey.services.v1.ApiKeyService/UpdateApiKey` · (udb.core.apikey.services.v1.UpdateApiKeyRequest) → (udb.core.apikey.services.v1.UpdateApiKeyResponse)
+/** udb.core.apikey.services.v1.ApiKeyService · unary · `/udb.core.apikey.services.v1.ApiKeyService/UpdateApiKey` · alias `update_api_key` · (udb.core.apikey.services.v1.UpdateApiKeyRequest) → (udb.core.apikey.services.v1.UpdateApiKeyResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -1780,8 +1794,9 @@ export interface ApiKeyServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface ApiKeyServiceApi {
   update_api_key(request: any, call?: CallOptions): Promise<any>;
+  updateApiKey(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.apikey.services.v1.ApiKeyService · unary · `/udb.core.apikey.services.v1.ApiKeyService/ValidateApiKey` · (udb.core.apikey.services.v1.ValidateApiKeyRequest) → (udb.core.apikey.services.v1.ValidateApiKeyResponse)
+/** udb.core.apikey.services.v1.ApiKeyService · unary · `/udb.core.apikey.services.v1.ApiKeyService/ValidateApiKey` · alias `validate_api_key` · (udb.core.apikey.services.v1.ValidateApiKeyRequest) → (udb.core.apikey.services.v1.ValidateApiKeyResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -1791,8 +1806,9 @@ export interface ApiKeyServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface ApiKeyServiceApi {
   validate_api_key(request: any, call?: CallOptions): Promise<any>;
+  validateApiKey(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.asset.services.v1.AssetService · unary · `/udb.core.asset.services.v1.AssetService/CompleteStep` · (udb.core.asset.services.v1.CompleteStepRequest) → (udb.core.asset.services.v1.CompleteStepResponse)
+/** udb.core.asset.services.v1.AssetService · unary · `/udb.core.asset.services.v1.AssetService/CompleteStep` · alias `complete_step` · (udb.core.asset.services.v1.CompleteStepRequest) → (udb.core.asset.services.v1.CompleteStepResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -1802,8 +1818,9 @@ export interface ApiKeyServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AssetServiceApi {
   complete_step(request: any, call?: CallOptions): Promise<any>;
+  completeStep(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.asset.services.v1.AssetService · unary · `/udb.core.asset.services.v1.AssetService/CreatePipelineDefinition` · (udb.core.asset.services.v1.CreatePipelineDefinitionRequest) → (udb.core.asset.services.v1.CreatePipelineDefinitionResponse)
+/** udb.core.asset.services.v1.AssetService · unary · `/udb.core.asset.services.v1.AssetService/CreatePipelineDefinition` · alias `create_pipeline_definition` · (udb.core.asset.services.v1.CreatePipelineDefinitionRequest) → (udb.core.asset.services.v1.CreatePipelineDefinitionResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -1813,8 +1830,9 @@ export interface AssetServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AssetServiceApi {
   create_pipeline_definition(request: any, call?: CallOptions): Promise<any>;
+  createPipelineDefinition(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.asset.services.v1.AssetService · unary · `/udb.core.asset.services.v1.AssetService/GetAsset` · (udb.core.asset.services.v1.GetAssetRequest) → (udb.core.asset.services.v1.GetAssetResponse)
+/** udb.core.asset.services.v1.AssetService · unary · `/udb.core.asset.services.v1.AssetService/GetAsset` · alias `get_asset` · (udb.core.asset.services.v1.GetAssetRequest) → (udb.core.asset.services.v1.GetAssetResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -1824,8 +1842,9 @@ export interface AssetServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AssetServiceApi {
   get_asset(request: any, call?: CallOptions): Promise<any>;
+  getAsset(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.asset.services.v1.AssetService · unary · `/udb.core.asset.services.v1.AssetService/GetPipeline` · (udb.core.asset.services.v1.GetPipelineRequest) → (udb.core.asset.services.v1.GetPipelineResponse)
+/** udb.core.asset.services.v1.AssetService · unary · `/udb.core.asset.services.v1.AssetService/GetPipeline` · alias `get_pipeline` · (udb.core.asset.services.v1.GetPipelineRequest) → (udb.core.asset.services.v1.GetPipelineResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -1835,8 +1854,9 @@ export interface AssetServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AssetServiceApi {
   get_pipeline(request: any, call?: CallOptions): Promise<any>;
+  getPipeline(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.asset.services.v1.AssetService · unary · `/udb.core.asset.services.v1.AssetService/GetPipelineDefinition` · (udb.core.asset.services.v1.GetPipelineDefinitionRequest) → (udb.core.asset.services.v1.GetPipelineDefinitionResponse)
+/** udb.core.asset.services.v1.AssetService · unary · `/udb.core.asset.services.v1.AssetService/GetPipelineDefinition` · alias `get_pipeline_definition` · (udb.core.asset.services.v1.GetPipelineDefinitionRequest) → (udb.core.asset.services.v1.GetPipelineDefinitionResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -1846,8 +1866,9 @@ export interface AssetServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AssetServiceApi {
   get_pipeline_definition(request: any, call?: CallOptions): Promise<any>;
+  getPipelineDefinition(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.asset.services.v1.AssetService · unary · `/udb.core.asset.services.v1.AssetService/ListAssets` · (udb.core.asset.services.v1.ListAssetsRequest) → (udb.core.asset.services.v1.ListAssetsResponse)
+/** udb.core.asset.services.v1.AssetService · unary · `/udb.core.asset.services.v1.AssetService/ListAssets` · alias `list_assets` · (udb.core.asset.services.v1.ListAssetsRequest) → (udb.core.asset.services.v1.ListAssetsResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -1857,8 +1878,9 @@ export interface AssetServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AssetServiceApi {
   list_assets(request: any, call?: CallOptions): Promise<any>;
+  listAssets(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.asset.services.v1.AssetService · unary · `/udb.core.asset.services.v1.AssetService/RegisterAsset` · (udb.core.asset.services.v1.RegisterAssetRequest) → (udb.core.asset.services.v1.RegisterAssetResponse)
+/** udb.core.asset.services.v1.AssetService · unary · `/udb.core.asset.services.v1.AssetService/RegisterAsset` · alias `register_asset` · (udb.core.asset.services.v1.RegisterAssetRequest) → (udb.core.asset.services.v1.RegisterAssetResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -1868,8 +1890,9 @@ export interface AssetServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AssetServiceApi {
   register_asset(request: any, call?: CallOptions): Promise<any>;
+  registerAsset(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.asset.services.v1.AssetService · unary · `/udb.core.asset.services.v1.AssetService/StartPipeline` · (udb.core.asset.services.v1.StartPipelineRequest) → (udb.core.asset.services.v1.StartPipelineResponse)
+/** udb.core.asset.services.v1.AssetService · unary · `/udb.core.asset.services.v1.AssetService/StartPipeline` · alias `start_pipeline` · (udb.core.asset.services.v1.StartPipelineRequest) → (udb.core.asset.services.v1.StartPipelineResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -1879,8 +1902,9 @@ export interface AssetServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AssetServiceApi {
   start_pipeline(request: any, call?: CallOptions): Promise<any>;
+  startPipeline(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/AdminResetMfa` · (udb.core.authn.services.v1.AdminResetMfaRequest) → (udb.core.authn.services.v1.AdminResetMfaResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/AdminResetMfa` · alias `admin_reset_mfa` · (udb.core.authn.services.v1.AdminResetMfaRequest) → (udb.core.authn.services.v1.AdminResetMfaResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -1890,8 +1914,9 @@ export interface AssetServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
   admin_reset_mfa(request: any, call?: CallOptions): Promise<any>;
+  adminResetMfa(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/AdminResetPassword` · (udb.core.authn.services.v1.AdminResetPasswordRequest) → (udb.core.authn.services.v1.AdminResetPasswordResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/AdminResetPassword` · alias `admin_reset_password` · (udb.core.authn.services.v1.AdminResetPasswordRequest) → (udb.core.authn.services.v1.AdminResetPasswordResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -1901,8 +1926,9 @@ export interface AuthnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
   admin_reset_password(request: any, call?: CallOptions): Promise<any>;
+  adminResetPassword(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/AdminRevokeAllTenantSessions` · (udb.core.authn.services.v1.AdminRevokeAllTenantSessionsRequest) → (udb.core.authn.services.v1.AdminRevokeAllTenantSessionsResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/AdminRevokeAllTenantSessions` · alias `admin_revoke_all_tenant_sessions` · (udb.core.authn.services.v1.AdminRevokeAllTenantSessionsRequest) → (udb.core.authn.services.v1.AdminRevokeAllTenantSessionsResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -1912,8 +1938,9 @@ export interface AuthnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
   admin_revoke_all_tenant_sessions(request: any, call?: CallOptions): Promise<any>;
+  adminRevokeAllTenantSessions(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/AdminRevokeAllUserSessions` · (udb.core.authn.services.v1.AdminRevokeAllUserSessionsRequest) → (udb.core.authn.services.v1.AdminRevokeAllUserSessionsResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/AdminRevokeAllUserSessions` · alias `admin_revoke_all_user_sessions` · (udb.core.authn.services.v1.AdminRevokeAllUserSessionsRequest) → (udb.core.authn.services.v1.AdminRevokeAllUserSessionsResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -1923,8 +1950,9 @@ export interface AuthnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
   admin_revoke_all_user_sessions(request: any, call?: CallOptions): Promise<any>;
+  adminRevokeAllUserSessions(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/AdminRevokeSession` · (udb.core.authn.services.v1.AdminRevokeSessionRequest) → (udb.core.authn.services.v1.AdminRevokeSessionResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/AdminRevokeSession` · alias `admin_revoke_session` · (udb.core.authn.services.v1.AdminRevokeSessionRequest) → (udb.core.authn.services.v1.AdminRevokeSessionResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -1934,8 +1962,9 @@ export interface AuthnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
   admin_revoke_session(request: any, call?: CallOptions): Promise<any>;
+  adminRevokeSession(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/Authenticate` · (udb.core.authn.services.v1.AuthnRequest) → (udb.core.authn.services.v1.AuthnResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/Authenticate` · alias `authenticate` · (udb.core.authn.services.v1.AuthnRequest) → (udb.core.authn.services.v1.AuthnResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -1945,8 +1974,9 @@ export interface AuthnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
   authenticate(request: any, call?: CallOptions): Promise<any>;
+  authenticate(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/ChangePassword` · (udb.core.authn.services.v1.ChangePasswordRequest) → (udb.core.authn.services.v1.ChangePasswordResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/ChangePassword` · alias `change_password` · (udb.core.authn.services.v1.ChangePasswordRequest) → (udb.core.authn.services.v1.ChangePasswordResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -1956,8 +1986,9 @@ export interface AuthnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
   change_password(request: any, call?: CallOptions): Promise<any>;
+  changePassword(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/ChangeUserStatus` · (udb.core.authn.services.v1.ChangeUserStatusRequest) → (udb.core.authn.services.v1.ChangeUserStatusResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/ChangeUserStatus` · alias `change_user_status` · (udb.core.authn.services.v1.ChangeUserStatusRequest) → (udb.core.authn.services.v1.ChangeUserStatusResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -1967,8 +1998,9 @@ export interface AuthnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
   change_user_status(request: any, call?: CallOptions): Promise<any>;
+  changeUserStatus(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/ConfirmMFAEnrollment` · (udb.core.authn.services.v1.ConfirmMFAEnrollmentRequest) → (udb.core.authn.services.v1.ConfirmMFAEnrollmentResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/ConfirmMFAEnrollment` · alias `confirm_mfaenrollment` · (udb.core.authn.services.v1.ConfirmMFAEnrollmentRequest) → (udb.core.authn.services.v1.ConfirmMFAEnrollmentResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -1977,9 +2009,10 @@ export interface AuthnServiceApi {
  *  signature emit is deferred (D10). Callers wanting compile-time field checking
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
-  confirm_m_f_a_enrollment(request: any, call?: CallOptions): Promise<any>;
+  confirm_mfaenrollment(request: any, call?: CallOptions): Promise<any>;
+  confirmMfaenrollment(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/CreateSession` · (udb.core.authn.services.v1.CreateSessionRequest) → (udb.core.authn.services.v1.CreateSessionResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/CreateSession` · alias `create_session` · (udb.core.authn.services.v1.CreateSessionRequest) → (udb.core.authn.services.v1.CreateSessionResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -1989,8 +2022,9 @@ export interface AuthnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
   create_session(request: any, call?: CallOptions): Promise<any>;
+  createSession(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/CreateUser` · (udb.core.authn.services.v1.CreateUserRequest) → (udb.core.authn.services.v1.CreateUserResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/CreateUser` · alias `create_user` · (udb.core.authn.services.v1.CreateUserRequest) → (udb.core.authn.services.v1.CreateUserResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2000,8 +2034,9 @@ export interface AuthnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
   create_user(request: any, call?: CallOptions): Promise<any>;
+  createUser(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/DeleteWebAuthnCredential` · (udb.core.authn.services.v1.DeleteWebAuthnCredentialRequest) → (udb.core.authn.services.v1.DeleteWebAuthnCredentialResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/DeleteWebAuthnCredential` · alias `delete_web_authn_credential` · (udb.core.authn.services.v1.DeleteWebAuthnCredentialRequest) → (udb.core.authn.services.v1.DeleteWebAuthnCredentialResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2011,8 +2046,9 @@ export interface AuthnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
   delete_web_authn_credential(request: any, call?: CallOptions): Promise<any>;
+  deleteWebAuthnCredential(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/DisableMfaFactor` · (udb.core.authn.services.v1.DisableMfaFactorRequest) → (udb.core.authn.services.v1.DisableMfaFactorResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/DisableMfaFactor` · alias `disable_mfa_factor` · (udb.core.authn.services.v1.DisableMfaFactorRequest) → (udb.core.authn.services.v1.DisableMfaFactorResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2022,8 +2058,9 @@ export interface AuthnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
   disable_mfa_factor(request: any, call?: CallOptions): Promise<any>;
+  disableMfaFactor(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/EmergencyRevoke` · (udb.core.authn.services.v1.EmergencyRevokeRequest) → (udb.core.authn.services.v1.EmergencyRevokeResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/EmergencyRevoke` · alias `emergency_revoke` · (udb.core.authn.services.v1.EmergencyRevokeRequest) → (udb.core.authn.services.v1.EmergencyRevokeResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2033,8 +2070,9 @@ export interface AuthnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
   emergency_revoke(request: any, call?: CallOptions): Promise<any>;
+  emergencyRevoke(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/EnrollMFA` · (udb.core.authn.services.v1.EnrollMFARequest) → (udb.core.authn.services.v1.EnrollMFAResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/EnrollMFA` · alias `enroll_mfa` · (udb.core.authn.services.v1.EnrollMFARequest) → (udb.core.authn.services.v1.EnrollMFAResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2043,9 +2081,10 @@ export interface AuthnServiceApi {
  *  signature emit is deferred (D10). Callers wanting compile-time field checking
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
-  enroll_m_f_a(request: any, call?: CallOptions): Promise<any>;
+  enroll_mfa(request: any, call?: CallOptions): Promise<any>;
+  enrollMfa(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/FinishWebAuthnAuthentication` · (udb.core.authn.services.v1.FinishWebAuthnAuthenticationRequest) → (udb.core.authn.services.v1.FinishWebAuthnAuthenticationResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/FinishWebAuthnAuthentication` · alias `finish_web_authn_authentication` · (udb.core.authn.services.v1.FinishWebAuthnAuthenticationRequest) → (udb.core.authn.services.v1.FinishWebAuthnAuthenticationResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2055,8 +2094,9 @@ export interface AuthnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
   finish_web_authn_authentication(request: any, call?: CallOptions): Promise<any>;
+  finishWebAuthnAuthentication(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/FinishWebAuthnRegistration` · (udb.core.authn.services.v1.FinishWebAuthnRegistrationRequest) → (udb.core.authn.services.v1.FinishWebAuthnRegistrationResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/FinishWebAuthnRegistration` · alias `finish_web_authn_registration` · (udb.core.authn.services.v1.FinishWebAuthnRegistrationRequest) → (udb.core.authn.services.v1.FinishWebAuthnRegistrationResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2066,8 +2106,9 @@ export interface AuthnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
   finish_web_authn_registration(request: any, call?: CallOptions): Promise<any>;
+  finishWebAuthnRegistration(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/ForgotPassword` · (udb.core.authn.services.v1.ForgotPasswordRequest) → (udb.core.authn.services.v1.ForgotPasswordResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/ForgotPassword` · alias `forgot_password` · (udb.core.authn.services.v1.ForgotPasswordRequest) → (udb.core.authn.services.v1.ForgotPasswordResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2077,8 +2118,9 @@ export interface AuthnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
   forgot_password(request: any, call?: CallOptions): Promise<any>;
+  forgotPassword(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/GenerateRecoveryCodes` · (udb.core.authn.services.v1.GenerateRecoveryCodesRequest) → (udb.core.authn.services.v1.GenerateRecoveryCodesResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/GenerateRecoveryCodes` · alias `generate_recovery_codes` · (udb.core.authn.services.v1.GenerateRecoveryCodesRequest) → (udb.core.authn.services.v1.GenerateRecoveryCodesResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2088,8 +2130,9 @@ export interface AuthnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
   generate_recovery_codes(request: any, call?: CallOptions): Promise<any>;
+  generateRecoveryCodes(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/GetJwks` · (udb.core.authn.services.v1.GetJwksRequest) → (udb.core.authn.services.v1.GetJwksResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/GetJwks` · alias `get_jwks` · (udb.core.authn.services.v1.GetJwksRequest) → (udb.core.authn.services.v1.GetJwksResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2099,8 +2142,9 @@ export interface AuthnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
   get_jwks(request: any, call?: CallOptions): Promise<any>;
+  getJwks(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/GetMfaPolicy` · (udb.core.authn.services.v1.GetMfaPolicyRequest) → (udb.core.authn.services.v1.GetMfaPolicyResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/GetMfaPolicy` · alias `get_mfa_policy` · (udb.core.authn.services.v1.GetMfaPolicyRequest) → (udb.core.authn.services.v1.GetMfaPolicyResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2110,8 +2154,9 @@ export interface AuthnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
   get_mfa_policy(request: any, call?: CallOptions): Promise<any>;
+  getMfaPolicy(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/GetSession` · (udb.core.authn.services.v1.GetSessionRequest) → (udb.core.authn.services.v1.GetSessionResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/GetSession` · alias `get_session` · (udb.core.authn.services.v1.GetSessionRequest) → (udb.core.authn.services.v1.GetSessionResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2121,8 +2166,9 @@ export interface AuthnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
   get_session(request: any, call?: CallOptions): Promise<any>;
+  getSession(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/GetUser` · (udb.core.authn.services.v1.GetUserRequest) → (udb.core.authn.services.v1.GetUserResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/GetUser` · alias `get_user` · (udb.core.authn.services.v1.GetUserRequest) → (udb.core.authn.services.v1.GetUserResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2132,8 +2178,9 @@ export interface AuthnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
   get_user(request: any, call?: CallOptions): Promise<any>;
+  getUser(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/IntrospectToken` · (udb.core.authn.services.v1.IntrospectTokenRequest) → (udb.core.authn.services.v1.IntrospectTokenResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/IntrospectToken` · alias `introspect_token` · (udb.core.authn.services.v1.IntrospectTokenRequest) → (udb.core.authn.services.v1.IntrospectTokenResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2143,8 +2190,9 @@ export interface AuthnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
   introspect_token(request: any, call?: CallOptions): Promise<any>;
+  introspectToken(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/IssueMfaChallenge` · (udb.core.authn.services.v1.IssueMfaChallengeRequest) → (udb.core.authn.services.v1.IssueMfaChallengeResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/IssueMfaChallenge` · alias `issue_mfa_challenge` · (udb.core.authn.services.v1.IssueMfaChallengeRequest) → (udb.core.authn.services.v1.IssueMfaChallengeResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2154,8 +2202,9 @@ export interface AuthnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
   issue_mfa_challenge(request: any, call?: CallOptions): Promise<any>;
+  issueMfaChallenge(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/ListDevices` · (udb.core.authn.services.v1.ListDevicesRequest) → (udb.core.authn.services.v1.ListDevicesResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/ListDevices` · alias `list_devices` · (udb.core.authn.services.v1.ListDevicesRequest) → (udb.core.authn.services.v1.ListDevicesResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2165,8 +2214,9 @@ export interface AuthnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
   list_devices(request: any, call?: CallOptions): Promise<any>;
+  listDevices(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/ListMfaFactors` · (udb.core.authn.services.v1.ListMfaFactorsRequest) → (udb.core.authn.services.v1.ListMfaFactorsResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/ListMfaFactors` · alias `list_mfa_factors` · (udb.core.authn.services.v1.ListMfaFactorsRequest) → (udb.core.authn.services.v1.ListMfaFactorsResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2176,8 +2226,9 @@ export interface AuthnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
   list_mfa_factors(request: any, call?: CallOptions): Promise<any>;
+  listMfaFactors(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/ListSessions` · (udb.core.authn.services.v1.ListSessionsRequest) → (udb.core.authn.services.v1.ListSessionsResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/ListSessions` · alias `list_sessions` · (udb.core.authn.services.v1.ListSessionsRequest) → (udb.core.authn.services.v1.ListSessionsResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2187,8 +2238,9 @@ export interface AuthnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
   list_sessions(request: any, call?: CallOptions): Promise<any>;
+  listSessions(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/ListUsers` · (udb.core.authn.services.v1.ListUsersRequest) → (udb.core.authn.services.v1.ListUsersResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/ListUsers` · alias `list_users` · (udb.core.authn.services.v1.ListUsersRequest) → (udb.core.authn.services.v1.ListUsersResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2198,8 +2250,9 @@ export interface AuthnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
   list_users(request: any, call?: CallOptions): Promise<any>;
+  listUsers(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/ListWebAuthnCredentials` · (udb.core.authn.services.v1.ListWebAuthnCredentialsRequest) → (udb.core.authn.services.v1.ListWebAuthnCredentialsResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/ListWebAuthnCredentials` · alias `list_web_authn_credentials` · (udb.core.authn.services.v1.ListWebAuthnCredentialsRequest) → (udb.core.authn.services.v1.ListWebAuthnCredentialsResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2209,8 +2262,9 @@ export interface AuthnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
   list_web_authn_credentials(request: any, call?: CallOptions): Promise<any>;
+  listWebAuthnCredentials(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/Login` · (udb.core.authn.services.v1.LoginRequest) → (udb.core.authn.services.v1.LoginResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/Login` · alias `login` · (udb.core.authn.services.v1.LoginRequest) → (udb.core.authn.services.v1.LoginResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2220,8 +2274,9 @@ export interface AuthnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
   login(request: any, call?: CallOptions): Promise<any>;
+  login(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/Logout` · (udb.core.authn.services.v1.LogoutRequest) → (udb.core.authn.services.v1.LogoutResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/Logout` · alias `logout` · (udb.core.authn.services.v1.LogoutRequest) → (udb.core.authn.services.v1.LogoutResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2231,8 +2286,9 @@ export interface AuthnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
   logout(request: any, call?: CallOptions): Promise<any>;
+  logout(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/PutMfaPolicy` · (udb.core.authn.services.v1.PutMfaPolicyRequest) → (udb.core.authn.services.v1.PutMfaPolicyResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/PutMfaPolicy` · alias `put_mfa_policy` · (udb.core.authn.services.v1.PutMfaPolicyRequest) → (udb.core.authn.services.v1.PutMfaPolicyResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2242,8 +2298,9 @@ export interface AuthnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
   put_mfa_policy(request: any, call?: CallOptions): Promise<any>;
+  putMfaPolicy(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/RefreshSession` · (udb.core.authn.services.v1.RefreshSessionRequest) → (udb.core.authn.services.v1.RefreshSessionResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/RefreshSession` · alias `refresh_session` · (udb.core.authn.services.v1.RefreshSessionRequest) → (udb.core.authn.services.v1.RefreshSessionResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2253,8 +2310,9 @@ export interface AuthnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
   refresh_session(request: any, call?: CallOptions): Promise<any>;
+  refreshSession(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/RefreshToken` · (udb.core.authn.services.v1.RefreshTokenRequest) → (udb.core.authn.services.v1.RefreshTokenResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/RefreshToken` · alias `refresh_token` · (udb.core.authn.services.v1.RefreshTokenRequest) → (udb.core.authn.services.v1.RefreshTokenResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2264,8 +2322,9 @@ export interface AuthnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
   refresh_token(request: any, call?: CallOptions): Promise<any>;
+  refreshToken(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/RenamePasskey` · (udb.core.authn.services.v1.RenamePasskeyRequest) → (udb.core.authn.services.v1.RenamePasskeyResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/RenamePasskey` · alias `rename_passkey` · (udb.core.authn.services.v1.RenamePasskeyRequest) → (udb.core.authn.services.v1.RenamePasskeyResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2275,8 +2334,9 @@ export interface AuthnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
   rename_passkey(request: any, call?: CallOptions): Promise<any>;
+  renamePasskey(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/ResendOTP` · (udb.core.authn.services.v1.ResendOTPRequest) → (udb.core.authn.services.v1.ResendOTPResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/ResendOTP` · alias `resend_otp` · (udb.core.authn.services.v1.ResendOTPRequest) → (udb.core.authn.services.v1.ResendOTPResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2285,9 +2345,10 @@ export interface AuthnServiceApi {
  *  signature emit is deferred (D10). Callers wanting compile-time field checking
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
-  resend_o_t_p(request: any, call?: CallOptions): Promise<any>;
+  resend_otp(request: any, call?: CallOptions): Promise<any>;
+  resendOtp(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/ResetPassword` · (udb.core.authn.services.v1.ResetPasswordRequest) → (udb.core.authn.services.v1.ResetPasswordResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/ResetPassword` · alias `reset_password` · (udb.core.authn.services.v1.ResetPasswordRequest) → (udb.core.authn.services.v1.ResetPasswordResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2297,8 +2358,9 @@ export interface AuthnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
   reset_password(request: any, call?: CallOptions): Promise<any>;
+  resetPassword(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/RevokeDevice` · (udb.core.authn.services.v1.RevokeDeviceRequest) → (udb.core.authn.services.v1.RevokeDeviceResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/RevokeDevice` · alias `revoke_device` · (udb.core.authn.services.v1.RevokeDeviceRequest) → (udb.core.authn.services.v1.RevokeDeviceResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2308,8 +2370,9 @@ export interface AuthnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
   revoke_device(request: any, call?: CallOptions): Promise<any>;
+  revokeDevice(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/RevokeRecoveryCodes` · (udb.core.authn.services.v1.RevokeRecoveryCodesRequest) → (udb.core.authn.services.v1.RevokeRecoveryCodesResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/RevokeRecoveryCodes` · alias `revoke_recovery_codes` · (udb.core.authn.services.v1.RevokeRecoveryCodesRequest) → (udb.core.authn.services.v1.RevokeRecoveryCodesResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2319,8 +2382,9 @@ export interface AuthnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
   revoke_recovery_codes(request: any, call?: CallOptions): Promise<any>;
+  revokeRecoveryCodes(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/RevokeSession` · (udb.core.authn.services.v1.RevokeSessionRequest) → (udb.core.authn.services.v1.RevokeSessionResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/RevokeSession` · alias `revoke_session` · (udb.core.authn.services.v1.RevokeSessionRequest) → (udb.core.authn.services.v1.RevokeSessionResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2330,8 +2394,9 @@ export interface AuthnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
   revoke_session(request: any, call?: CallOptions): Promise<any>;
+  revokeSession(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/SendOTP` · (udb.core.authn.services.v1.SendOTPRequest) → (udb.core.authn.services.v1.SendOTPResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/SendOTP` · alias `send_otp` · (udb.core.authn.services.v1.SendOTPRequest) → (udb.core.authn.services.v1.SendOTPResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2340,9 +2405,10 @@ export interface AuthnServiceApi {
  *  signature emit is deferred (D10). Callers wanting compile-time field checking
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
-  send_o_t_p(request: any, call?: CallOptions): Promise<any>;
+  send_otp(request: any, call?: CallOptions): Promise<any>;
+  sendOtp(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/SendPhoneVerification` · (udb.core.authn.services.v1.SendPhoneVerificationRequest) → (udb.core.authn.services.v1.SendPhoneVerificationResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/SendPhoneVerification` · alias `send_phone_verification` · (udb.core.authn.services.v1.SendPhoneVerificationRequest) → (udb.core.authn.services.v1.SendPhoneVerificationResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2352,8 +2418,9 @@ export interface AuthnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
   send_phone_verification(request: any, call?: CallOptions): Promise<any>;
+  sendPhoneVerification(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/StartWebAuthnAuthentication` · (udb.core.authn.services.v1.StartWebAuthnAuthenticationRequest) → (udb.core.authn.services.v1.StartWebAuthnAuthenticationResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/StartWebAuthnAuthentication` · alias `start_web_authn_authentication` · (udb.core.authn.services.v1.StartWebAuthnAuthenticationRequest) → (udb.core.authn.services.v1.StartWebAuthnAuthenticationResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2363,8 +2430,9 @@ export interface AuthnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
   start_web_authn_authentication(request: any, call?: CallOptions): Promise<any>;
+  startWebAuthnAuthentication(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/StartWebAuthnRegistration` · (udb.core.authn.services.v1.StartWebAuthnRegistrationRequest) → (udb.core.authn.services.v1.StartWebAuthnRegistrationResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/StartWebAuthnRegistration` · alias `start_web_authn_registration` · (udb.core.authn.services.v1.StartWebAuthnRegistrationRequest) → (udb.core.authn.services.v1.StartWebAuthnRegistrationResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2374,8 +2442,9 @@ export interface AuthnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
   start_web_authn_registration(request: any, call?: CallOptions): Promise<any>;
+  startWebAuthnRegistration(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/UpdateUser` · (udb.core.authn.services.v1.UpdateUserRequest) → (udb.core.authn.services.v1.UpdateUserResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/UpdateUser` · alias `update_user` · (udb.core.authn.services.v1.UpdateUserRequest) → (udb.core.authn.services.v1.UpdateUserResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2385,8 +2454,9 @@ export interface AuthnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
   update_user(request: any, call?: CallOptions): Promise<any>;
+  updateUser(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/ValidateCSRF` · (udb.core.authn.services.v1.ValidateCSRFRequest) → (udb.core.authn.services.v1.ValidateCSRFResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/ValidateCSRF` · alias `validate_csrf` · (udb.core.authn.services.v1.ValidateCSRFRequest) → (udb.core.authn.services.v1.ValidateCSRFResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2395,9 +2465,10 @@ export interface AuthnServiceApi {
  *  signature emit is deferred (D10). Callers wanting compile-time field checking
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
-  validate_c_s_r_f(request: any, call?: CallOptions): Promise<any>;
+  validate_csrf(request: any, call?: CallOptions): Promise<any>;
+  validateCsrf(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/ValidateToken` · (udb.core.authn.services.v1.ValidateTokenRequest) → (udb.core.authn.services.v1.ValidateTokenResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/ValidateToken` · alias `validate_token` · (udb.core.authn.services.v1.ValidateTokenRequest) → (udb.core.authn.services.v1.ValidateTokenResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2407,8 +2478,9 @@ export interface AuthnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
   validate_token(request: any, call?: CallOptions): Promise<any>;
+  validateToken(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/VerifyMfaChallenge` · (udb.core.authn.services.v1.VerifyMfaChallengeRequest) → (udb.core.authn.services.v1.VerifyMfaChallengeResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/VerifyMfaChallenge` · alias `verify_mfa_challenge` · (udb.core.authn.services.v1.VerifyMfaChallengeRequest) → (udb.core.authn.services.v1.VerifyMfaChallengeResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2418,8 +2490,9 @@ export interface AuthnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
   verify_mfa_challenge(request: any, call?: CallOptions): Promise<any>;
+  verifyMfaChallenge(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/VerifyOTP` · (udb.core.authn.services.v1.VerifyOTPRequest) → (udb.core.authn.services.v1.VerifyOTPResponse)
+/** udb.core.authn.services.v1.AuthnService · unary · `/udb.core.authn.services.v1.AuthnService/VerifyOTP` · alias `verify_otp` · (udb.core.authn.services.v1.VerifyOTPRequest) → (udb.core.authn.services.v1.VerifyOTPResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2428,9 +2501,10 @@ export interface AuthnServiceApi {
  *  signature emit is deferred (D10). Callers wanting compile-time field checking
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthnServiceApi {
-  verify_o_t_p(request: any, call?: CallOptions): Promise<any>;
+  verify_otp(request: any, call?: CallOptions): Promise<any>;
+  verifyOtp(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/ActivateCanary` · (udb.core.authz.services.v1.ActivateCanaryRequest) → (udb.core.authz.services.v1.CanaryResponse)
+/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/ActivateCanary` · alias `activate_canary` · (udb.core.authz.services.v1.ActivateCanaryRequest) → (udb.core.authz.services.v1.CanaryResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2440,8 +2514,9 @@ export interface AuthnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthzServiceApi {
   activate_canary(request: any, call?: CallOptions): Promise<any>;
+  activateCanary(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/ActivatePolicyVersion` · (udb.core.authz.services.v1.ActivatePolicyVersionRequest) → (udb.core.authz.services.v1.ActivationResponse)
+/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/ActivatePolicyVersion` · alias `activate_policy_version` · (udb.core.authz.services.v1.ActivatePolicyVersionRequest) → (udb.core.authz.services.v1.ActivationResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2451,8 +2526,9 @@ export interface AuthzServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthzServiceApi {
   activate_policy_version(request: any, call?: CallOptions): Promise<any>;
+  activatePolicyVersion(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/ApprovePolicyDraft` · (udb.core.authz.services.v1.ApprovePolicyDraftRequest) → (udb.core.authz.services.v1.PolicyApprovalResponse)
+/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/ApprovePolicyDraft` · alias `approve_policy_draft` · (udb.core.authz.services.v1.ApprovePolicyDraftRequest) → (udb.core.authz.services.v1.PolicyApprovalResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2462,8 +2538,9 @@ export interface AuthzServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthzServiceApi {
   approve_policy_draft(request: any, call?: CallOptions): Promise<any>;
+  approvePolicyDraft(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/AssignRole` · (udb.core.authz.services.v1.AssignRoleRequest) → (udb.core.authz.services.v1.AssignRoleResponse)
+/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/AssignRole` · alias `assign_role` · (udb.core.authz.services.v1.AssignRoleRequest) → (udb.core.authz.services.v1.AssignRoleResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2473,8 +2550,9 @@ export interface AuthzServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthzServiceApi {
   assign_role(request: any, call?: CallOptions): Promise<any>;
+  assignRole(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/Authorize` · (udb.core.authz.services.v1.AuthzRequest) → (udb.core.authz.services.v1.AuthzResponse)
+/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/Authorize` · alias `authorize` · (udb.core.authz.services.v1.AuthzRequest) → (udb.core.authz.services.v1.AuthzResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2484,8 +2562,9 @@ export interface AuthzServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthzServiceApi {
   authorize(request: any, call?: CallOptions): Promise<any>;
+  authorize(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/BatchCheckPermissions` · (udb.core.authz.services.v1.BatchCheckPermissionsRequest) → (udb.core.authz.services.v1.BatchCheckPermissionsResponse)
+/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/BatchCheckPermissions` · alias `batch_check_permissions` · (udb.core.authz.services.v1.BatchCheckPermissionsRequest) → (udb.core.authz.services.v1.BatchCheckPermissionsResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2495,8 +2574,9 @@ export interface AuthzServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthzServiceApi {
   batch_check_permissions(request: any, call?: CallOptions): Promise<any>;
+  batchCheckPermissions(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/CheckAccess` · (udb.core.authz.services.v1.CheckAccessRequest) → (udb.core.authz.services.v1.CheckAccessResponse)
+/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/CheckAccess` · alias `check_access` · (udb.core.authz.services.v1.CheckAccessRequest) → (udb.core.authz.services.v1.CheckAccessResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2506,8 +2586,9 @@ export interface AuthzServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthzServiceApi {
   check_access(request: any, call?: CallOptions): Promise<any>;
+  checkAccess(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/CreatePolicyDraft` · (udb.core.authz.services.v1.CreatePolicyDraftRequest) → (udb.core.authz.services.v1.PolicyDraftResponse)
+/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/CreatePolicyDraft` · alias `create_policy_draft` · (udb.core.authz.services.v1.CreatePolicyDraftRequest) → (udb.core.authz.services.v1.PolicyDraftResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2517,8 +2598,9 @@ export interface AuthzServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthzServiceApi {
   create_policy_draft(request: any, call?: CallOptions): Promise<any>;
+  createPolicyDraft(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/CreatePolicyRule` · (udb.core.authz.services.v1.CreatePolicyRuleRequest) → (udb.core.authz.services.v1.CreatePolicyRuleResponse)
+/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/CreatePolicyRule` · alias `create_policy_rule` · (udb.core.authz.services.v1.CreatePolicyRuleRequest) → (udb.core.authz.services.v1.CreatePolicyRuleResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2528,8 +2610,9 @@ export interface AuthzServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthzServiceApi {
   create_policy_rule(request: any, call?: CallOptions): Promise<any>;
+  createPolicyRule(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/CreateRole` · (udb.core.authz.services.v1.CreateRoleRequest) → (udb.core.authz.services.v1.CreateRoleResponse)
+/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/CreateRole` · alias `create_role` · (udb.core.authz.services.v1.CreateRoleRequest) → (udb.core.authz.services.v1.CreateRoleResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2539,8 +2622,9 @@ export interface AuthzServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthzServiceApi {
   create_role(request: any, call?: CallOptions): Promise<any>;
+  createRole(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/DeletePolicyRule` · (udb.core.authz.services.v1.DeletePolicyRuleRequest) → (udb.core.authz.services.v1.DeletePolicyRuleResponse)
+/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/DeletePolicyRule` · alias `delete_policy_rule` · (udb.core.authz.services.v1.DeletePolicyRuleRequest) → (udb.core.authz.services.v1.DeletePolicyRuleResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2550,8 +2634,9 @@ export interface AuthzServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthzServiceApi {
   delete_policy_rule(request: any, call?: CallOptions): Promise<any>;
+  deletePolicyRule(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/DeleteRole` · (udb.core.authz.services.v1.DeleteRoleRequest) → (udb.core.authz.services.v1.DeleteRoleResponse)
+/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/DeleteRole` · alias `delete_role` · (udb.core.authz.services.v1.DeleteRoleRequest) → (udb.core.authz.services.v1.DeleteRoleResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2561,8 +2646,9 @@ export interface AuthzServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthzServiceApi {
   delete_role(request: any, call?: CallOptions): Promise<any>;
+  deleteRole(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/DiffPolicyDraft` · (udb.core.authz.services.v1.DiffPolicyDraftRequest) → (udb.core.authz.services.v1.DiffPolicyDraftResponse)
+/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/DiffPolicyDraft` · alias `diff_policy_draft` · (udb.core.authz.services.v1.DiffPolicyDraftRequest) → (udb.core.authz.services.v1.DiffPolicyDraftResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2572,8 +2658,9 @@ export interface AuthzServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthzServiceApi {
   diff_policy_draft(request: any, call?: CallOptions): Promise<any>;
+  diffPolicyDraft(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/ExplainPolicy` · (udb.core.authz.services.v1.ExplainPolicyRequest) → (udb.core.authz.services.v1.ExplainPolicyResponse)
+/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/ExplainPolicy` · alias `explain_policy` · (udb.core.authz.services.v1.ExplainPolicyRequest) → (udb.core.authz.services.v1.ExplainPolicyResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2583,8 +2670,9 @@ export interface AuthzServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthzServiceApi {
   explain_policy(request: any, call?: CallOptions): Promise<any>;
+  explainPolicy(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/GetAuthzRevision` · (udb.core.authz.services.v1.GetAuthzRevisionRequest) → (udb.core.authz.services.v1.GetAuthzRevisionResponse)
+/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/GetAuthzRevision` · alias `get_authz_revision` · (udb.core.authz.services.v1.GetAuthzRevisionRequest) → (udb.core.authz.services.v1.GetAuthzRevisionResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2594,8 +2682,9 @@ export interface AuthzServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthzServiceApi {
   get_authz_revision(request: any, call?: CallOptions): Promise<any>;
+  getAuthzRevision(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/GetCanaryStatus` · (udb.core.authz.services.v1.GetCanaryStatusRequest) → (udb.core.authz.services.v1.GetCanaryStatusResponse)
+/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/GetCanaryStatus` · alias `get_canary_status` · (udb.core.authz.services.v1.GetCanaryStatusRequest) → (udb.core.authz.services.v1.GetCanaryStatusResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2605,8 +2694,9 @@ export interface AuthzServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthzServiceApi {
   get_canary_status(request: any, call?: CallOptions): Promise<any>;
+  getCanaryStatus(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/GetNativeAccess` · (udb.core.authz.services.v1.NativeAccessRequest) → (udb.core.authz.services.v1.NativeAccessResponse)
+/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/GetNativeAccess` · alias `get_native_access` · (udb.core.authz.services.v1.NativeAccessRequest) → (udb.core.authz.services.v1.NativeAccessResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2616,8 +2706,9 @@ export interface AuthzServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthzServiceApi {
   get_native_access(request: any, call?: CallOptions): Promise<any>;
+  getNativeAccess(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/GetPolicyBundle` · (udb.core.authz.services.v1.PolicyBundleRequest) → (udb.core.authz.services.v1.PolicyBundleResponse)
+/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/GetPolicyBundle` · alias `get_policy_bundle` · (udb.core.authz.services.v1.PolicyBundleRequest) → (udb.core.authz.services.v1.PolicyBundleResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2627,8 +2718,9 @@ export interface AuthzServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthzServiceApi {
   get_policy_bundle(request: any, call?: CallOptions): Promise<any>;
+  getPolicyBundle(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/GetPolicyRule` · (udb.core.authz.services.v1.GetPolicyRuleRequest) → (udb.core.authz.services.v1.GetPolicyRuleResponse)
+/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/GetPolicyRule` · alias `get_policy_rule` · (udb.core.authz.services.v1.GetPolicyRuleRequest) → (udb.core.authz.services.v1.GetPolicyRuleResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2638,8 +2730,9 @@ export interface AuthzServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthzServiceApi {
   get_policy_rule(request: any, call?: CallOptions): Promise<any>;
+  getPolicyRule(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/GetRole` · (udb.core.authz.services.v1.GetRoleRequest) → (udb.core.authz.services.v1.GetRoleResponse)
+/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/GetRole` · alias `get_role` · (udb.core.authz.services.v1.GetRoleRequest) → (udb.core.authz.services.v1.GetRoleResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2649,8 +2742,9 @@ export interface AuthzServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthzServiceApi {
   get_role(request: any, call?: CallOptions): Promise<any>;
+  getRole(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/InvalidatePolicyBundles` · (udb.core.authz.services.v1.InvalidatePolicyBundlesRequest) → (udb.core.authz.services.v1.InvalidatePolicyBundlesResponse)
+/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/InvalidatePolicyBundles` · alias `invalidate_policy_bundles` · (udb.core.authz.services.v1.InvalidatePolicyBundlesRequest) → (udb.core.authz.services.v1.InvalidatePolicyBundlesResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2660,8 +2754,9 @@ export interface AuthzServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthzServiceApi {
   invalidate_policy_bundles(request: any, call?: CallOptions): Promise<any>;
+  invalidatePolicyBundles(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/LintAuthzPolicies` · (udb.core.authz.services.v1.LintAuthzPoliciesRequest) → (udb.core.authz.services.v1.LintAuthzPoliciesResponse)
+/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/LintAuthzPolicies` · alias `lint_authz_policies` · (udb.core.authz.services.v1.LintAuthzPoliciesRequest) → (udb.core.authz.services.v1.LintAuthzPoliciesResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2671,8 +2766,9 @@ export interface AuthzServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthzServiceApi {
   lint_authz_policies(request: any, call?: CallOptions): Promise<any>;
+  lintAuthzPolicies(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/ListAccessDecisionAudits` · (udb.core.authz.services.v1.ListAccessDecisionAuditsRequest) → (udb.core.authz.services.v1.ListAccessDecisionAuditsResponse)
+/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/ListAccessDecisionAudits` · alias `list_access_decision_audits` · (udb.core.authz.services.v1.ListAccessDecisionAuditsRequest) → (udb.core.authz.services.v1.ListAccessDecisionAuditsResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2682,8 +2778,9 @@ export interface AuthzServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthzServiceApi {
   list_access_decision_audits(request: any, call?: CallOptions): Promise<any>;
+  listAccessDecisionAudits(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/ListPolicyRules` · (udb.core.authz.services.v1.ListPolicyRulesRequest) → (udb.core.authz.services.v1.ListPolicyRulesResponse)
+/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/ListPolicyRules` · alias `list_policy_rules` · (udb.core.authz.services.v1.ListPolicyRulesRequest) → (udb.core.authz.services.v1.ListPolicyRulesResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2693,8 +2790,9 @@ export interface AuthzServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthzServiceApi {
   list_policy_rules(request: any, call?: CallOptions): Promise<any>;
+  listPolicyRules(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/ListPolicyVersions` · (udb.core.authz.services.v1.ListPolicyVersionsRequest) → (udb.core.authz.services.v1.ListPolicyVersionsResponse)
+/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/ListPolicyVersions` · alias `list_policy_versions` · (udb.core.authz.services.v1.ListPolicyVersionsRequest) → (udb.core.authz.services.v1.ListPolicyVersionsResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2704,8 +2802,9 @@ export interface AuthzServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthzServiceApi {
   list_policy_versions(request: any, call?: CallOptions): Promise<any>;
+  listPolicyVersions(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/ListRoles` · (udb.core.authz.services.v1.ListRolesRequest) → (udb.core.authz.services.v1.ListRolesResponse)
+/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/ListRoles` · alias `list_roles` · (udb.core.authz.services.v1.ListRolesRequest) → (udb.core.authz.services.v1.ListRolesResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2715,8 +2814,9 @@ export interface AuthzServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthzServiceApi {
   list_roles(request: any, call?: CallOptions): Promise<any>;
+  listRoles(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/ListUserPermissions` · (udb.core.authz.services.v1.ListUserPermissionsRequest) → (udb.core.authz.services.v1.ListUserPermissionsResponse)
+/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/ListUserPermissions` · alias `list_user_permissions` · (udb.core.authz.services.v1.ListUserPermissionsRequest) → (udb.core.authz.services.v1.ListUserPermissionsResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2726,8 +2826,9 @@ export interface AuthzServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthzServiceApi {
   list_user_permissions(request: any, call?: CallOptions): Promise<any>;
+  listUserPermissions(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/ListUserRoles` · (udb.core.authz.services.v1.ListUserRolesRequest) → (udb.core.authz.services.v1.ListUserRolesResponse)
+/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/ListUserRoles` · alias `list_user_roles` · (udb.core.authz.services.v1.ListUserRolesRequest) → (udb.core.authz.services.v1.ListUserRolesResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2737,8 +2838,9 @@ export interface AuthzServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthzServiceApi {
   list_user_roles(request: any, call?: CallOptions): Promise<any>;
+  listUserRoles(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/MigrateLegacyPolicies` · (udb.core.authz.services.v1.MigrateLegacyPoliciesRequest) → (udb.core.authz.services.v1.MigrateLegacyPoliciesResponse)
+/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/MigrateLegacyPolicies` · alias `migrate_legacy_policies` · (udb.core.authz.services.v1.MigrateLegacyPoliciesRequest) → (udb.core.authz.services.v1.MigrateLegacyPoliciesResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2748,8 +2850,9 @@ export interface AuthzServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthzServiceApi {
   migrate_legacy_policies(request: any, call?: CallOptions): Promise<any>;
+  migrateLegacyPolicies(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/PromoteCanary` · (udb.core.authz.services.v1.PromoteCanaryRequest) → (udb.core.authz.services.v1.CanaryResponse)
+/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/PromoteCanary` · alias `promote_canary` · (udb.core.authz.services.v1.PromoteCanaryRequest) → (udb.core.authz.services.v1.CanaryResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2759,8 +2862,9 @@ export interface AuthzServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthzServiceApi {
   promote_canary(request: any, call?: CallOptions): Promise<any>;
+  promoteCanary(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/PutAuthzPolicy` · (udb.core.authz.services.v1.PutAuthzPolicyRequest) → (udb.core.authz.services.v1.AuthMutationResponse)
+/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/PutAuthzPolicy` · alias `put_authz_policy` · (udb.core.authz.services.v1.PutAuthzPolicyRequest) → (udb.core.authz.services.v1.AuthMutationResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2770,8 +2874,9 @@ export interface AuthzServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthzServiceApi {
   put_authz_policy(request: any, call?: CallOptions): Promise<any>;
+  putAuthzPolicy(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/PutRelationship` · (udb.core.authz.services.v1.PutRelationshipRequest) → (udb.core.authz.services.v1.AuthMutationResponse)
+/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/PutRelationship` · alias `put_relationship` · (udb.core.authz.services.v1.PutRelationshipRequest) → (udb.core.authz.services.v1.AuthMutationResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2781,8 +2886,9 @@ export interface AuthzServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthzServiceApi {
   put_relationship(request: any, call?: CallOptions): Promise<any>;
+  putRelationship(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/PutRoleBinding` · (udb.core.authz.services.v1.PutRoleBindingRequest) → (udb.core.authz.services.v1.AuthMutationResponse)
+/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/PutRoleBinding` · alias `put_role_binding` · (udb.core.authz.services.v1.PutRoleBindingRequest) → (udb.core.authz.services.v1.AuthMutationResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2792,8 +2898,9 @@ export interface AuthzServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthzServiceApi {
   put_role_binding(request: any, call?: CallOptions): Promise<any>;
+  putRoleBinding(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/RejectPolicyDraft` · (udb.core.authz.services.v1.RejectPolicyDraftRequest) → (udb.core.authz.services.v1.PolicyApprovalResponse)
+/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/RejectPolicyDraft` · alias `reject_policy_draft` · (udb.core.authz.services.v1.RejectPolicyDraftRequest) → (udb.core.authz.services.v1.PolicyApprovalResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2803,8 +2910,9 @@ export interface AuthzServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthzServiceApi {
   reject_policy_draft(request: any, call?: CallOptions): Promise<any>;
+  rejectPolicyDraft(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/RevokeRole` · (udb.core.authz.services.v1.RevokeRoleRequest) → (udb.core.authz.services.v1.RevokeRoleResponse)
+/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/RevokeRole` · alias `revoke_role` · (udb.core.authz.services.v1.RevokeRoleRequest) → (udb.core.authz.services.v1.RevokeRoleResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2814,8 +2922,9 @@ export interface AuthzServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthzServiceApi {
   revoke_role(request: any, call?: CallOptions): Promise<any>;
+  revokeRole(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/RollbackPolicyVersion` · (udb.core.authz.services.v1.RollbackPolicyVersionRequest) → (udb.core.authz.services.v1.ActivationResponse)
+/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/RollbackPolicyVersion` · alias `rollback_policy_version` · (udb.core.authz.services.v1.RollbackPolicyVersionRequest) → (udb.core.authz.services.v1.ActivationResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2825,8 +2934,9 @@ export interface AuthzServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthzServiceApi {
   rollback_policy_version(request: any, call?: CallOptions): Promise<any>;
+  rollbackPolicyVersion(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/SeedBuiltinRoles` · (udb.core.authz.services.v1.SeedBuiltinRolesRequest) → (udb.core.authz.services.v1.SeedBuiltinRolesResponse)
+/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/SeedBuiltinRoles` · alias `seed_builtin_roles` · (udb.core.authz.services.v1.SeedBuiltinRolesRequest) → (udb.core.authz.services.v1.SeedBuiltinRolesResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2836,8 +2946,9 @@ export interface AuthzServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthzServiceApi {
   seed_builtin_roles(request: any, call?: CallOptions): Promise<any>;
+  seedBuiltinRoles(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/SimulatePolicy` · (udb.core.authz.services.v1.SimulatePolicyRequest) → (udb.core.authz.services.v1.SimulatePolicyResponse)
+/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/SimulatePolicy` · alias `simulate_policy` · (udb.core.authz.services.v1.SimulatePolicyRequest) → (udb.core.authz.services.v1.SimulatePolicyResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2847,8 +2958,9 @@ export interface AuthzServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthzServiceApi {
   simulate_policy(request: any, call?: CallOptions): Promise<any>;
+  simulatePolicy(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/SubmitPolicyDraft` · (udb.core.authz.services.v1.SubmitPolicyDraftRequest) → (udb.core.authz.services.v1.PolicyDraftResponse)
+/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/SubmitPolicyDraft` · alias `submit_policy_draft` · (udb.core.authz.services.v1.SubmitPolicyDraftRequest) → (udb.core.authz.services.v1.PolicyDraftResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2858,8 +2970,9 @@ export interface AuthzServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthzServiceApi {
   submit_policy_draft(request: any, call?: CallOptions): Promise<any>;
+  submitPolicyDraft(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/UpdatePolicyDraft` · (udb.core.authz.services.v1.UpdatePolicyDraftRequest) → (udb.core.authz.services.v1.PolicyDraftResponse)
+/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/UpdatePolicyDraft` · alias `update_policy_draft` · (udb.core.authz.services.v1.UpdatePolicyDraftRequest) → (udb.core.authz.services.v1.PolicyDraftResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2869,8 +2982,9 @@ export interface AuthzServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthzServiceApi {
   update_policy_draft(request: any, call?: CallOptions): Promise<any>;
+  updatePolicyDraft(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/UpdateRole` · (udb.core.authz.services.v1.UpdateRoleRequest) → (udb.core.authz.services.v1.UpdateRoleResponse)
+/** udb.core.authz.services.v1.AuthzService · unary · `/udb.core.authz.services.v1.AuthzService/UpdateRole` · alias `update_role` · (udb.core.authz.services.v1.UpdateRoleRequest) → (udb.core.authz.services.v1.UpdateRoleResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2880,8 +2994,9 @@ export interface AuthzServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface AuthzServiceApi {
   update_role(request: any, call?: CallOptions): Promise<any>;
+  updateRole(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.control.services.v1.ControlPlaneService · unary · `/udb.core.control.services.v1.ControlPlaneService/AckStatus` · (udb.core.control.services.v1.AckStatusRequest) → (udb.core.control.services.v1.AckStatusResponse)
+/** udb.core.control.services.v1.ControlPlaneService · unary · `/udb.core.control.services.v1.ControlPlaneService/AckStatus` · alias `ack_status` · (udb.core.control.services.v1.AckStatusRequest) → (udb.core.control.services.v1.AckStatusResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2891,8 +3006,9 @@ export interface AuthzServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface ControlPlaneServiceApi {
   ack_status(request: any, call?: CallOptions): Promise<any>;
+  ackStatus(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.control.services.v1.ControlPlaneService · unary · `/udb.core.control.services.v1.ControlPlaneService/GetResources` · (udb.core.control.services.v1.GetResourcesRequest) → (udb.core.control.services.v1.GetResourcesResponse)
+/** udb.core.control.services.v1.ControlPlaneService · unary · `/udb.core.control.services.v1.ControlPlaneService/GetResources` · alias `get_resources` · (udb.core.control.services.v1.GetResourcesRequest) → (udb.core.control.services.v1.GetResourcesResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2902,8 +3018,9 @@ export interface ControlPlaneServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface ControlPlaneServiceApi {
   get_resources(request: any, call?: CallOptions): Promise<any>;
+  getResources(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.control.services.v1.ControlPlaneService · unary · `/udb.core.control.services.v1.ControlPlaneService/ListNodeStates` · (udb.core.control.services.v1.ListNodeStatesRequest) → (udb.core.control.services.v1.ListNodeStatesResponse)
+/** udb.core.control.services.v1.ControlPlaneService · unary · `/udb.core.control.services.v1.ControlPlaneService/ListNodeStates` · alias `list_node_states` · (udb.core.control.services.v1.ListNodeStatesRequest) → (udb.core.control.services.v1.ListNodeStatesResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2913,8 +3030,9 @@ export interface ControlPlaneServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface ControlPlaneServiceApi {
   list_node_states(request: any, call?: CallOptions): Promise<any>;
+  listNodeStates(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/CreateProvider` · (udb.core.idp.services.v1.CreateProviderRequest) → (udb.core.idp.services.v1.CreateProviderResponse)
+/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/CreateProvider` · alias `create_provider` · (udb.core.idp.services.v1.CreateProviderRequest) → (udb.core.idp.services.v1.CreateProviderResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2924,8 +3042,9 @@ export interface ControlPlaneServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface IdentityProviderServiceApi {
   create_provider(request: any, call?: CallOptions): Promise<any>;
+  createProvider(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/DisableProvider` · (udb.core.idp.services.v1.DisableProviderRequest) → (udb.core.idp.services.v1.DisableProviderResponse)
+/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/DisableProvider` · alias `disable_provider` · (udb.core.idp.services.v1.DisableProviderRequest) → (udb.core.idp.services.v1.DisableProviderResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2935,8 +3054,9 @@ export interface IdentityProviderServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface IdentityProviderServiceApi {
   disable_provider(request: any, call?: CallOptions): Promise<any>;
+  disableProvider(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/ForceJwksRefresh` · (udb.core.idp.services.v1.ForceJwksRefreshRequest) → (udb.core.idp.services.v1.ForceJwksRefreshResponse)
+/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/ForceJwksRefresh` · alias `force_jwks_refresh` · (udb.core.idp.services.v1.ForceJwksRefreshRequest) → (udb.core.idp.services.v1.ForceJwksRefreshResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2946,8 +3066,9 @@ export interface IdentityProviderServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface IdentityProviderServiceApi {
   force_jwks_refresh(request: any, call?: CallOptions): Promise<any>;
+  forceJwksRefresh(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/GetProvider` · (udb.core.idp.services.v1.GetProviderRequest) → (udb.core.idp.services.v1.GetProviderResponse)
+/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/GetProvider` · alias `get_provider` · (udb.core.idp.services.v1.GetProviderRequest) → (udb.core.idp.services.v1.GetProviderResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2957,8 +3078,9 @@ export interface IdentityProviderServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface IdentityProviderServiceApi {
   get_provider(request: any, call?: CallOptions): Promise<any>;
+  getProvider(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/ImportSamlMetadata` · (udb.core.idp.services.v1.ImportSamlMetadataRequest) → (udb.core.idp.services.v1.ImportSamlMetadataResponse)
+/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/ImportSamlMetadata` · alias `import_saml_metadata` · (udb.core.idp.services.v1.ImportSamlMetadataRequest) → (udb.core.idp.services.v1.ImportSamlMetadataResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2968,8 +3090,9 @@ export interface IdentityProviderServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface IdentityProviderServiceApi {
   import_saml_metadata(request: any, call?: CallOptions): Promise<any>;
+  importSamlMetadata(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/LinkIdentity` · (udb.core.idp.services.v1.LinkIdentityRequest) → (udb.core.idp.services.v1.LinkIdentityResponse)
+/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/LinkIdentity` · alias `link_identity` · (udb.core.idp.services.v1.LinkIdentityRequest) → (udb.core.idp.services.v1.LinkIdentityResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2979,8 +3102,9 @@ export interface IdentityProviderServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface IdentityProviderServiceApi {
   link_identity(request: any, call?: CallOptions): Promise<any>;
+  linkIdentity(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/ListExternalIdentities` · (udb.core.idp.services.v1.ListExternalIdentitiesRequest) → (udb.core.idp.services.v1.ListExternalIdentitiesResponse)
+/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/ListExternalIdentities` · alias `list_external_identities` · (udb.core.idp.services.v1.ListExternalIdentitiesRequest) → (udb.core.idp.services.v1.ListExternalIdentitiesResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -2990,8 +3114,9 @@ export interface IdentityProviderServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface IdentityProviderServiceApi {
   list_external_identities(request: any, call?: CallOptions): Promise<any>;
+  listExternalIdentities(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/ListProviders` · (udb.core.idp.services.v1.ListProvidersRequest) → (udb.core.idp.services.v1.ListProvidersResponse)
+/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/ListProviders` · alias `list_providers` · (udb.core.idp.services.v1.ListProvidersRequest) → (udb.core.idp.services.v1.ListProvidersResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3001,8 +3126,9 @@ export interface IdentityProviderServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface IdentityProviderServiceApi {
   list_providers(request: any, call?: CallOptions): Promise<any>;
+  listProviders(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/PreviewClaimMapping` · (udb.core.idp.services.v1.PreviewClaimMappingRequest) → (udb.core.idp.services.v1.PreviewClaimMappingResponse)
+/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/PreviewClaimMapping` · alias `preview_claim_mapping` · (udb.core.idp.services.v1.PreviewClaimMappingRequest) → (udb.core.idp.services.v1.PreviewClaimMappingResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3012,8 +3138,9 @@ export interface IdentityProviderServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface IdentityProviderServiceApi {
   preview_claim_mapping(request: any, call?: CallOptions): Promise<any>;
+  previewClaimMapping(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/PreviewGroupMapping` · (udb.core.idp.services.v1.PreviewGroupMappingRequest) → (udb.core.idp.services.v1.PreviewGroupMappingResponse)
+/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/PreviewGroupMapping` · alias `preview_group_mapping` · (udb.core.idp.services.v1.PreviewGroupMappingRequest) → (udb.core.idp.services.v1.PreviewGroupMappingResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3023,8 +3150,9 @@ export interface IdentityProviderServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface IdentityProviderServiceApi {
   preview_group_mapping(request: any, call?: CallOptions): Promise<any>;
+  previewGroupMapping(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/ResolveExternalIdentity` · (udb.core.idp.services.v1.ResolveExternalIdentityRequest) → (udb.core.idp.services.v1.ResolveExternalIdentityResponse)
+/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/ResolveExternalIdentity` · alias `resolve_external_identity` · (udb.core.idp.services.v1.ResolveExternalIdentityRequest) → (udb.core.idp.services.v1.ResolveExternalIdentityResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3034,8 +3162,9 @@ export interface IdentityProviderServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface IdentityProviderServiceApi {
   resolve_external_identity(request: any, call?: CallOptions): Promise<any>;
+  resolveExternalIdentity(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/SamlAcs` · (udb.core.idp.services.v1.SamlAcsRequest) → (udb.core.idp.services.v1.SamlAcsResponse)
+/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/SamlAcs` · alias `saml_acs` · (udb.core.idp.services.v1.SamlAcsRequest) → (udb.core.idp.services.v1.SamlAcsResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3045,8 +3174,9 @@ export interface IdentityProviderServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface IdentityProviderServiceApi {
   saml_acs(request: any, call?: CallOptions): Promise<any>;
+  samlAcs(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/ScimCreateGroup` · (udb.core.idp.services.v1.ScimCreateGroupRequest) → (udb.core.idp.services.v1.ScimCreateGroupResponse)
+/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/ScimCreateGroup` · alias `scim_create_group` · (udb.core.idp.services.v1.ScimCreateGroupRequest) → (udb.core.idp.services.v1.ScimCreateGroupResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3056,8 +3186,9 @@ export interface IdentityProviderServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface IdentityProviderServiceApi {
   scim_create_group(request: any, call?: CallOptions): Promise<any>;
+  scimCreateGroup(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/ScimCreateUser` · (udb.core.idp.services.v1.ScimCreateUserRequest) → (udb.core.idp.services.v1.ScimCreateUserResponse)
+/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/ScimCreateUser` · alias `scim_create_user` · (udb.core.idp.services.v1.ScimCreateUserRequest) → (udb.core.idp.services.v1.ScimCreateUserResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3067,8 +3198,9 @@ export interface IdentityProviderServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface IdentityProviderServiceApi {
   scim_create_user(request: any, call?: CallOptions): Promise<any>;
+  scimCreateUser(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/ScimDeleteGroup` · (udb.core.idp.services.v1.ScimDeleteGroupRequest) → (udb.core.idp.services.v1.ScimDeleteGroupResponse)
+/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/ScimDeleteGroup` · alias `scim_delete_group` · (udb.core.idp.services.v1.ScimDeleteGroupRequest) → (udb.core.idp.services.v1.ScimDeleteGroupResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3078,8 +3210,9 @@ export interface IdentityProviderServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface IdentityProviderServiceApi {
   scim_delete_group(request: any, call?: CallOptions): Promise<any>;
+  scimDeleteGroup(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/ScimDeleteUser` · (udb.core.idp.services.v1.ScimDeleteUserRequest) → (udb.core.idp.services.v1.ScimDeleteUserResponse)
+/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/ScimDeleteUser` · alias `scim_delete_user` · (udb.core.idp.services.v1.ScimDeleteUserRequest) → (udb.core.idp.services.v1.ScimDeleteUserResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3089,8 +3222,9 @@ export interface IdentityProviderServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface IdentityProviderServiceApi {
   scim_delete_user(request: any, call?: CallOptions): Promise<any>;
+  scimDeleteUser(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/ScimGetGroup` · (udb.core.idp.services.v1.ScimGetGroupRequest) → (udb.core.idp.services.v1.ScimGetGroupResponse)
+/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/ScimGetGroup` · alias `scim_get_group` · (udb.core.idp.services.v1.ScimGetGroupRequest) → (udb.core.idp.services.v1.ScimGetGroupResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3100,8 +3234,9 @@ export interface IdentityProviderServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface IdentityProviderServiceApi {
   scim_get_group(request: any, call?: CallOptions): Promise<any>;
+  scimGetGroup(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/ScimGetUser` · (udb.core.idp.services.v1.ScimGetUserRequest) → (udb.core.idp.services.v1.ScimGetUserResponse)
+/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/ScimGetUser` · alias `scim_get_user` · (udb.core.idp.services.v1.ScimGetUserRequest) → (udb.core.idp.services.v1.ScimGetUserResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3111,8 +3246,9 @@ export interface IdentityProviderServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface IdentityProviderServiceApi {
   scim_get_user(request: any, call?: CallOptions): Promise<any>;
+  scimGetUser(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/ScimListGroups` · (udb.core.idp.services.v1.ScimListGroupsRequest) → (udb.core.idp.services.v1.ScimListGroupsResponse)
+/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/ScimListGroups` · alias `scim_list_groups` · (udb.core.idp.services.v1.ScimListGroupsRequest) → (udb.core.idp.services.v1.ScimListGroupsResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3122,8 +3258,9 @@ export interface IdentityProviderServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface IdentityProviderServiceApi {
   scim_list_groups(request: any, call?: CallOptions): Promise<any>;
+  scimListGroups(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/ScimListUsers` · (udb.core.idp.services.v1.ScimListUsersRequest) → (udb.core.idp.services.v1.ScimListUsersResponse)
+/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/ScimListUsers` · alias `scim_list_users` · (udb.core.idp.services.v1.ScimListUsersRequest) → (udb.core.idp.services.v1.ScimListUsersResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3133,8 +3270,9 @@ export interface IdentityProviderServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface IdentityProviderServiceApi {
   scim_list_users(request: any, call?: CallOptions): Promise<any>;
+  scimListUsers(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/ScimPatchGroup` · (udb.core.idp.services.v1.ScimPatchGroupRequest) → (udb.core.idp.services.v1.ScimPatchGroupResponse)
+/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/ScimPatchGroup` · alias `scim_patch_group` · (udb.core.idp.services.v1.ScimPatchGroupRequest) → (udb.core.idp.services.v1.ScimPatchGroupResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3144,8 +3282,9 @@ export interface IdentityProviderServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface IdentityProviderServiceApi {
   scim_patch_group(request: any, call?: CallOptions): Promise<any>;
+  scimPatchGroup(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/ScimPatchUser` · (udb.core.idp.services.v1.ScimPatchUserRequest) → (udb.core.idp.services.v1.ScimPatchUserResponse)
+/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/ScimPatchUser` · alias `scim_patch_user` · (udb.core.idp.services.v1.ScimPatchUserRequest) → (udb.core.idp.services.v1.ScimPatchUserResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3155,8 +3294,9 @@ export interface IdentityProviderServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface IdentityProviderServiceApi {
   scim_patch_user(request: any, call?: CallOptions): Promise<any>;
+  scimPatchUser(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/ScimReplaceUser` · (udb.core.idp.services.v1.ScimReplaceUserRequest) → (udb.core.idp.services.v1.ScimReplaceUserResponse)
+/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/ScimReplaceUser` · alias `scim_replace_user` · (udb.core.idp.services.v1.ScimReplaceUserRequest) → (udb.core.idp.services.v1.ScimReplaceUserResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3166,8 +3306,9 @@ export interface IdentityProviderServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface IdentityProviderServiceApi {
   scim_replace_user(request: any, call?: CallOptions): Promise<any>;
+  scimReplaceUser(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/StartSamlLogin` · (udb.core.idp.services.v1.StartSamlLoginRequest) → (udb.core.idp.services.v1.StartSamlLoginResponse)
+/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/StartSamlLogin` · alias `start_saml_login` · (udb.core.idp.services.v1.StartSamlLoginRequest) → (udb.core.idp.services.v1.StartSamlLoginResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3177,8 +3318,9 @@ export interface IdentityProviderServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface IdentityProviderServiceApi {
   start_saml_login(request: any, call?: CallOptions): Promise<any>;
+  startSamlLogin(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/TestProviderDiscovery` · (udb.core.idp.services.v1.TestProviderDiscoveryRequest) → (udb.core.idp.services.v1.TestProviderDiscoveryResponse)
+/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/TestProviderDiscovery` · alias `test_provider_discovery` · (udb.core.idp.services.v1.TestProviderDiscoveryRequest) → (udb.core.idp.services.v1.TestProviderDiscoveryResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3188,8 +3330,9 @@ export interface IdentityProviderServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface IdentityProviderServiceApi {
   test_provider_discovery(request: any, call?: CallOptions): Promise<any>;
+  testProviderDiscovery(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/UnlinkIdentity` · (udb.core.idp.services.v1.UnlinkIdentityRequest) → (udb.core.idp.services.v1.UnlinkIdentityResponse)
+/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/UnlinkIdentity` · alias `unlink_identity` · (udb.core.idp.services.v1.UnlinkIdentityRequest) → (udb.core.idp.services.v1.UnlinkIdentityResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3199,8 +3342,9 @@ export interface IdentityProviderServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface IdentityProviderServiceApi {
   unlink_identity(request: any, call?: CallOptions): Promise<any>;
+  unlinkIdentity(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/UpdateProvider` · (udb.core.idp.services.v1.UpdateProviderRequest) → (udb.core.idp.services.v1.UpdateProviderResponse)
+/** udb.core.idp.services.v1.IdentityProviderService · unary · `/udb.core.idp.services.v1.IdentityProviderService/UpdateProvider` · alias `update_provider` · (udb.core.idp.services.v1.UpdateProviderRequest) → (udb.core.idp.services.v1.UpdateProviderResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3210,8 +3354,9 @@ export interface IdentityProviderServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface IdentityProviderServiceApi {
   update_provider(request: any, call?: CallOptions): Promise<any>;
+  updateProvider(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.notification.services.v1.NotificationService · unary · `/udb.core.notification.services.v1.NotificationService/GetDeliveryStats` · (udb.core.notification.services.v1.GetDeliveryStatsRequest) → (udb.core.notification.services.v1.GetDeliveryStatsResponse)
+/** udb.core.notification.services.v1.NotificationService · unary · `/udb.core.notification.services.v1.NotificationService/GetDeliveryStats` · alias `get_delivery_stats` · (udb.core.notification.services.v1.GetDeliveryStatsRequest) → (udb.core.notification.services.v1.GetDeliveryStatsResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3221,8 +3366,9 @@ export interface IdentityProviderServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface NotificationServiceApi {
   get_delivery_stats(request: any, call?: CallOptions): Promise<any>;
+  getDeliveryStats(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.notification.services.v1.NotificationService · unary · `/udb.core.notification.services.v1.NotificationService/GetNotification` · (udb.core.notification.services.v1.GetNotificationRequest) → (udb.core.notification.services.v1.GetNotificationResponse)
+/** udb.core.notification.services.v1.NotificationService · unary · `/udb.core.notification.services.v1.NotificationService/GetNotification` · alias `get_notification` · (udb.core.notification.services.v1.GetNotificationRequest) → (udb.core.notification.services.v1.GetNotificationResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3232,8 +3378,9 @@ export interface NotificationServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface NotificationServiceApi {
   get_notification(request: any, call?: CallOptions): Promise<any>;
+  getNotification(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.notification.services.v1.NotificationService · unary · `/udb.core.notification.services.v1.NotificationService/GetPreference` · (udb.core.notification.services.v1.GetPreferenceRequest) → (udb.core.notification.services.v1.GetPreferenceResponse)
+/** udb.core.notification.services.v1.NotificationService · unary · `/udb.core.notification.services.v1.NotificationService/GetPreference` · alias `get_preference` · (udb.core.notification.services.v1.GetPreferenceRequest) → (udb.core.notification.services.v1.GetPreferenceResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3243,8 +3390,9 @@ export interface NotificationServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface NotificationServiceApi {
   get_preference(request: any, call?: CallOptions): Promise<any>;
+  getPreference(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.notification.services.v1.NotificationService · unary · `/udb.core.notification.services.v1.NotificationService/GetTemplate` · (udb.core.notification.services.v1.GetTemplateRequest) → (udb.core.notification.services.v1.GetTemplateResponse)
+/** udb.core.notification.services.v1.NotificationService · unary · `/udb.core.notification.services.v1.NotificationService/GetTemplate` · alias `get_template` · (udb.core.notification.services.v1.GetTemplateRequest) → (udb.core.notification.services.v1.GetTemplateResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3254,8 +3402,9 @@ export interface NotificationServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface NotificationServiceApi {
   get_template(request: any, call?: CallOptions): Promise<any>;
+  getTemplate(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.notification.services.v1.NotificationService · unary · `/udb.core.notification.services.v1.NotificationService/ListNotifications` · (udb.core.notification.services.v1.ListNotificationsRequest) → (udb.core.notification.services.v1.ListNotificationsResponse)
+/** udb.core.notification.services.v1.NotificationService · unary · `/udb.core.notification.services.v1.NotificationService/ListNotifications` · alias `list_notifications` · (udb.core.notification.services.v1.ListNotificationsRequest) → (udb.core.notification.services.v1.ListNotificationsResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3265,8 +3414,9 @@ export interface NotificationServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface NotificationServiceApi {
   list_notifications(request: any, call?: CallOptions): Promise<any>;
+  listNotifications(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.notification.services.v1.NotificationService · unary · `/udb.core.notification.services.v1.NotificationService/ListPreferences` · (udb.core.notification.services.v1.ListPreferencesRequest) → (udb.core.notification.services.v1.ListPreferencesResponse)
+/** udb.core.notification.services.v1.NotificationService · unary · `/udb.core.notification.services.v1.NotificationService/ListPreferences` · alias `list_preferences` · (udb.core.notification.services.v1.ListPreferencesRequest) → (udb.core.notification.services.v1.ListPreferencesResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3276,8 +3426,9 @@ export interface NotificationServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface NotificationServiceApi {
   list_preferences(request: any, call?: CallOptions): Promise<any>;
+  listPreferences(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.notification.services.v1.NotificationService · unary · `/udb.core.notification.services.v1.NotificationService/ListTemplates` · (udb.core.notification.services.v1.ListTemplatesRequest) → (udb.core.notification.services.v1.ListTemplatesResponse)
+/** udb.core.notification.services.v1.NotificationService · unary · `/udb.core.notification.services.v1.NotificationService/ListTemplates` · alias `list_templates` · (udb.core.notification.services.v1.ListTemplatesRequest) → (udb.core.notification.services.v1.ListTemplatesResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3287,8 +3438,9 @@ export interface NotificationServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface NotificationServiceApi {
   list_templates(request: any, call?: CallOptions): Promise<any>;
+  listTemplates(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.notification.services.v1.NotificationService · unary · `/udb.core.notification.services.v1.NotificationService/RetryNotification` · (udb.core.notification.services.v1.RetryNotificationRequest) → (udb.core.notification.services.v1.RetryNotificationResponse)
+/** udb.core.notification.services.v1.NotificationService · unary · `/udb.core.notification.services.v1.NotificationService/RetryNotification` · alias `retry_notification` · (udb.core.notification.services.v1.RetryNotificationRequest) → (udb.core.notification.services.v1.RetryNotificationResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3298,8 +3450,9 @@ export interface NotificationServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface NotificationServiceApi {
   retry_notification(request: any, call?: CallOptions): Promise<any>;
+  retryNotification(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.notification.services.v1.NotificationService · unary · `/udb.core.notification.services.v1.NotificationService/SendNotification` · (udb.core.notification.services.v1.SendNotificationRequest) → (udb.core.notification.services.v1.SendNotificationResponse)
+/** udb.core.notification.services.v1.NotificationService · unary · `/udb.core.notification.services.v1.NotificationService/SendNotification` · alias `send_notification` · (udb.core.notification.services.v1.SendNotificationRequest) → (udb.core.notification.services.v1.SendNotificationResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3309,8 +3462,9 @@ export interface NotificationServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface NotificationServiceApi {
   send_notification(request: any, call?: CallOptions): Promise<any>;
+  sendNotification(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.notification.services.v1.NotificationService · unary · `/udb.core.notification.services.v1.NotificationService/SetPreference` · (udb.core.notification.services.v1.SetPreferenceRequest) → (udb.core.notification.services.v1.SetPreferenceResponse)
+/** udb.core.notification.services.v1.NotificationService · unary · `/udb.core.notification.services.v1.NotificationService/SetPreference` · alias `set_preference` · (udb.core.notification.services.v1.SetPreferenceRequest) → (udb.core.notification.services.v1.SetPreferenceResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3320,8 +3474,9 @@ export interface NotificationServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface NotificationServiceApi {
   set_preference(request: any, call?: CallOptions): Promise<any>;
+  setPreference(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.notification.services.v1.NotificationService · unary · `/udb.core.notification.services.v1.NotificationService/UpsertTemplate` · (udb.core.notification.services.v1.UpsertTemplateRequest) → (udb.core.notification.services.v1.UpsertTemplateResponse)
+/** udb.core.notification.services.v1.NotificationService · unary · `/udb.core.notification.services.v1.NotificationService/UpsertTemplate` · alias `upsert_template` · (udb.core.notification.services.v1.UpsertTemplateRequest) → (udb.core.notification.services.v1.UpsertTemplateResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3331,8 +3486,9 @@ export interface NotificationServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface NotificationServiceApi {
   upsert_template(request: any, call?: CallOptions): Promise<any>;
+  upsertTemplate(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.storage.services.v1.StorageService · unary · `/udb.core.storage.services.v1.StorageService/DeleteFile` · (udb.core.storage.services.v1.DeleteFileRequest) → (udb.core.storage.services.v1.DeleteFileResponse)
+/** udb.core.storage.services.v1.StorageService · unary · `/udb.core.storage.services.v1.StorageService/DeleteFile` · alias `delete_file` · (udb.core.storage.services.v1.DeleteFileRequest) → (udb.core.storage.services.v1.DeleteFileResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3342,8 +3498,9 @@ export interface NotificationServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface StorageServiceApi {
   delete_file(request: any, call?: CallOptions): Promise<any>;
+  deleteFile(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.storage.services.v1.StorageService · unary · `/udb.core.storage.services.v1.StorageService/FinalizeUpload` · (udb.core.storage.services.v1.FinalizeUploadRequest) → (udb.core.storage.services.v1.FinalizeUploadResponse)
+/** udb.core.storage.services.v1.StorageService · unary · `/udb.core.storage.services.v1.StorageService/FinalizeUpload` · alias `finalize_upload` · (udb.core.storage.services.v1.FinalizeUploadRequest) → (udb.core.storage.services.v1.FinalizeUploadResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3353,8 +3510,9 @@ export interface StorageServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface StorageServiceApi {
   finalize_upload(request: any, call?: CallOptions): Promise<any>;
+  finalizeUpload(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.storage.services.v1.StorageService · unary · `/udb.core.storage.services.v1.StorageService/GetDownloadUrl` · (udb.core.storage.services.v1.GetDownloadUrlRequest) → (udb.core.storage.services.v1.GetDownloadUrlResponse)
+/** udb.core.storage.services.v1.StorageService · unary · `/udb.core.storage.services.v1.StorageService/GetDownloadUrl` · alias `get_download_url` · (udb.core.storage.services.v1.GetDownloadUrlRequest) → (udb.core.storage.services.v1.GetDownloadUrlResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3364,8 +3522,9 @@ export interface StorageServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface StorageServiceApi {
   get_download_url(request: any, call?: CallOptions): Promise<any>;
+  getDownloadUrl(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.storage.services.v1.StorageService · unary · `/udb.core.storage.services.v1.StorageService/GetFile` · (udb.core.storage.services.v1.GetFileRequest) → (udb.core.storage.services.v1.GetFileResponse)
+/** udb.core.storage.services.v1.StorageService · unary · `/udb.core.storage.services.v1.StorageService/GetFile` · alias `get_file` · (udb.core.storage.services.v1.GetFileRequest) → (udb.core.storage.services.v1.GetFileResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3375,8 +3534,9 @@ export interface StorageServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface StorageServiceApi {
   get_file(request: any, call?: CallOptions): Promise<any>;
+  getFile(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.storage.services.v1.StorageService · unary · `/udb.core.storage.services.v1.StorageService/ListFiles` · (udb.core.storage.services.v1.ListFilesRequest) → (udb.core.storage.services.v1.ListFilesResponse)
+/** udb.core.storage.services.v1.StorageService · unary · `/udb.core.storage.services.v1.StorageService/ListFiles` · alias `list_files` · (udb.core.storage.services.v1.ListFilesRequest) → (udb.core.storage.services.v1.ListFilesResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3386,8 +3546,9 @@ export interface StorageServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface StorageServiceApi {
   list_files(request: any, call?: CallOptions): Promise<any>;
+  listFiles(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.storage.services.v1.StorageService · unary · `/udb.core.storage.services.v1.StorageService/RegisterUpload` · (udb.core.storage.services.v1.RegisterUploadRequest) → (udb.core.storage.services.v1.RegisterUploadResponse)
+/** udb.core.storage.services.v1.StorageService · unary · `/udb.core.storage.services.v1.StorageService/RegisterUpload` · alias `register_upload` · (udb.core.storage.services.v1.RegisterUploadRequest) → (udb.core.storage.services.v1.RegisterUploadResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3397,8 +3558,9 @@ export interface StorageServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface StorageServiceApi {
   register_upload(request: any, call?: CallOptions): Promise<any>;
+  registerUpload(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.storage.services.v1.StorageService · unary · `/udb.core.storage.services.v1.StorageService/UpdateFile` · (udb.core.storage.services.v1.UpdateFileRequest) → (udb.core.storage.services.v1.UpdateFileResponse)
+/** udb.core.storage.services.v1.StorageService · unary · `/udb.core.storage.services.v1.StorageService/UpdateFile` · alias `update_file` · (udb.core.storage.services.v1.UpdateFileRequest) → (udb.core.storage.services.v1.UpdateFileResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3408,8 +3570,9 @@ export interface StorageServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface StorageServiceApi {
   update_file(request: any, call?: CallOptions): Promise<any>;
+  updateFile(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.tenant.services.v1.TenantService · unary · `/udb.core.tenant.services.v1.TenantService/CreateTenant` · (udb.core.tenant.services.v1.CreateTenantRequest) → (udb.core.tenant.services.v1.CreateTenantResponse)
+/** udb.core.tenant.services.v1.TenantService · unary · `/udb.core.tenant.services.v1.TenantService/CreateTenant` · alias `create_tenant` · (udb.core.tenant.services.v1.CreateTenantRequest) → (udb.core.tenant.services.v1.CreateTenantResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3419,8 +3582,9 @@ export interface StorageServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface TenantServiceApi {
   create_tenant(request: any, call?: CallOptions): Promise<any>;
+  createTenant(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.tenant.services.v1.TenantService · unary · `/udb.core.tenant.services.v1.TenantService/GetTenant` · (udb.core.tenant.services.v1.GetTenantRequest) → (udb.core.tenant.services.v1.GetTenantResponse)
+/** udb.core.tenant.services.v1.TenantService · unary · `/udb.core.tenant.services.v1.TenantService/GetTenant` · alias `get_tenant` · (udb.core.tenant.services.v1.GetTenantRequest) → (udb.core.tenant.services.v1.GetTenantResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3430,8 +3594,9 @@ export interface TenantServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface TenantServiceApi {
   get_tenant(request: any, call?: CallOptions): Promise<any>;
+  getTenant(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.tenant.services.v1.TenantService · unary · `/udb.core.tenant.services.v1.TenantService/GetTenantConfig` · (udb.core.tenant.services.v1.GetTenantConfigRequest) → (udb.core.tenant.services.v1.GetTenantConfigResponse)
+/** udb.core.tenant.services.v1.TenantService · unary · `/udb.core.tenant.services.v1.TenantService/GetTenantConfig` · alias `get_tenant_config` · (udb.core.tenant.services.v1.GetTenantConfigRequest) → (udb.core.tenant.services.v1.GetTenantConfigResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3441,8 +3606,9 @@ export interface TenantServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface TenantServiceApi {
   get_tenant_config(request: any, call?: CallOptions): Promise<any>;
+  getTenantConfig(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.tenant.services.v1.TenantService · unary · `/udb.core.tenant.services.v1.TenantService/ListTenants` · (udb.core.tenant.services.v1.ListTenantsRequest) → (udb.core.tenant.services.v1.ListTenantsResponse)
+/** udb.core.tenant.services.v1.TenantService · unary · `/udb.core.tenant.services.v1.TenantService/ListTenants` · alias `list_tenants` · (udb.core.tenant.services.v1.ListTenantsRequest) → (udb.core.tenant.services.v1.ListTenantsResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3452,8 +3618,9 @@ export interface TenantServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface TenantServiceApi {
   list_tenants(request: any, call?: CallOptions): Promise<any>;
+  listTenants(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.tenant.services.v1.TenantService · unary · `/udb.core.tenant.services.v1.TenantService/UpdateTenant` · (udb.core.tenant.services.v1.UpdateTenantRequest) → (udb.core.tenant.services.v1.UpdateTenantResponse)
+/** udb.core.tenant.services.v1.TenantService · unary · `/udb.core.tenant.services.v1.TenantService/UpdateTenant` · alias `update_tenant` · (udb.core.tenant.services.v1.UpdateTenantRequest) → (udb.core.tenant.services.v1.UpdateTenantResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3463,8 +3630,9 @@ export interface TenantServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface TenantServiceApi {
   update_tenant(request: any, call?: CallOptions): Promise<any>;
+  updateTenant(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.tenant.services.v1.TenantService · unary · `/udb.core.tenant.services.v1.TenantService/UpdateTenantConfig` · (udb.core.tenant.services.v1.UpdateTenantConfigRequest) → (udb.core.tenant.services.v1.UpdateTenantConfigResponse)
+/** udb.core.tenant.services.v1.TenantService · unary · `/udb.core.tenant.services.v1.TenantService/UpdateTenantConfig` · alias `update_tenant_config` · (udb.core.tenant.services.v1.UpdateTenantConfigRequest) → (udb.core.tenant.services.v1.UpdateTenantConfigResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3474,8 +3642,9 @@ export interface TenantServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface TenantServiceApi {
   update_tenant_config(request: any, call?: CallOptions): Promise<any>;
+  updateTenantConfig(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.webrtc.services.v1.PeerService · unary · `/udb.core.webrtc.services.v1.PeerService/GetPeer` · (udb.core.webrtc.services.v1.GetPeerRequest) → (udb.core.webrtc.services.v1.GetPeerResponse)
+/** udb.core.webrtc.services.v1.PeerService · unary · `/udb.core.webrtc.services.v1.PeerService/GetPeer` · alias `get_peer` · (udb.core.webrtc.services.v1.GetPeerRequest) → (udb.core.webrtc.services.v1.GetPeerResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3485,8 +3654,9 @@ export interface TenantServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface PeerServiceApi {
   get_peer(request: any, call?: CallOptions): Promise<any>;
+  getPeer(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.webrtc.services.v1.PeerService · unary · `/udb.core.webrtc.services.v1.PeerService/JoinRoom` · (udb.core.webrtc.services.v1.JoinRoomRequest) → (udb.core.webrtc.services.v1.JoinRoomResponse)
+/** udb.core.webrtc.services.v1.PeerService · unary · `/udb.core.webrtc.services.v1.PeerService/JoinRoom` · alias `join_room` · (udb.core.webrtc.services.v1.JoinRoomRequest) → (udb.core.webrtc.services.v1.JoinRoomResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3496,8 +3666,9 @@ export interface PeerServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface PeerServiceApi {
   join_room(request: any, call?: CallOptions): Promise<any>;
+  joinRoom(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.webrtc.services.v1.PeerService · unary · `/udb.core.webrtc.services.v1.PeerService/JoinSession` · (udb.core.webrtc.services.v1.JoinSessionRequest) → (udb.core.webrtc.services.v1.JoinSessionResponse)
+/** udb.core.webrtc.services.v1.PeerService · unary · `/udb.core.webrtc.services.v1.PeerService/JoinSession` · alias `join_session` · (udb.core.webrtc.services.v1.JoinSessionRequest) → (udb.core.webrtc.services.v1.JoinSessionResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3507,8 +3678,9 @@ export interface PeerServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface PeerServiceApi {
   join_session(request: any, call?: CallOptions): Promise<any>;
+  joinSession(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.webrtc.services.v1.PeerService · unary · `/udb.core.webrtc.services.v1.PeerService/LeaveRoom` · (udb.core.webrtc.services.v1.LeaveRoomRequest) → (udb.core.webrtc.services.v1.LeaveRoomResponse)
+/** udb.core.webrtc.services.v1.PeerService · unary · `/udb.core.webrtc.services.v1.PeerService/LeaveRoom` · alias `leave_room` · (udb.core.webrtc.services.v1.LeaveRoomRequest) → (udb.core.webrtc.services.v1.LeaveRoomResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3518,8 +3690,9 @@ export interface PeerServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface PeerServiceApi {
   leave_room(request: any, call?: CallOptions): Promise<any>;
+  leaveRoom(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.webrtc.services.v1.PeerService · unary · `/udb.core.webrtc.services.v1.PeerService/ListPeers` · (udb.core.webrtc.services.v1.ListPeersRequest) → (udb.core.webrtc.services.v1.ListPeersResponse)
+/** udb.core.webrtc.services.v1.PeerService · unary · `/udb.core.webrtc.services.v1.PeerService/ListPeers` · alias `list_peers` · (udb.core.webrtc.services.v1.ListPeersRequest) → (udb.core.webrtc.services.v1.ListPeersResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3529,8 +3702,9 @@ export interface PeerServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface PeerServiceApi {
   list_peers(request: any, call?: CallOptions): Promise<any>;
+  listPeers(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.webrtc.services.v1.RoomService · unary · `/udb.core.webrtc.services.v1.RoomService/CloseRoom` · (udb.core.webrtc.services.v1.CloseRoomRequest) → (udb.core.webrtc.services.v1.CloseRoomResponse)
+/** udb.core.webrtc.services.v1.RoomService · unary · `/udb.core.webrtc.services.v1.RoomService/CloseRoom` · alias `close_room` · (udb.core.webrtc.services.v1.CloseRoomRequest) → (udb.core.webrtc.services.v1.CloseRoomResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3540,8 +3714,9 @@ export interface PeerServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface RoomServiceApi {
   close_room(request: any, call?: CallOptions): Promise<any>;
+  closeRoom(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.webrtc.services.v1.RoomService · unary · `/udb.core.webrtc.services.v1.RoomService/CreateRoom` · (udb.core.webrtc.services.v1.CreateRoomRequest) → (udb.core.webrtc.services.v1.CreateRoomResponse)
+/** udb.core.webrtc.services.v1.RoomService · unary · `/udb.core.webrtc.services.v1.RoomService/CreateRoom` · alias `create_room` · (udb.core.webrtc.services.v1.CreateRoomRequest) → (udb.core.webrtc.services.v1.CreateRoomResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3551,8 +3726,9 @@ export interface RoomServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface RoomServiceApi {
   create_room(request: any, call?: CallOptions): Promise<any>;
+  createRoom(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.webrtc.services.v1.RoomService · unary · `/udb.core.webrtc.services.v1.RoomService/GetRoom` · (udb.core.webrtc.services.v1.GetRoomRequest) → (udb.core.webrtc.services.v1.GetRoomResponse)
+/** udb.core.webrtc.services.v1.RoomService · unary · `/udb.core.webrtc.services.v1.RoomService/GetRoom` · alias `get_room` · (udb.core.webrtc.services.v1.GetRoomRequest) → (udb.core.webrtc.services.v1.GetRoomResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3562,8 +3738,9 @@ export interface RoomServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface RoomServiceApi {
   get_room(request: any, call?: CallOptions): Promise<any>;
+  getRoom(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.webrtc.services.v1.RoomService · unary · `/udb.core.webrtc.services.v1.RoomService/ListRooms` · (udb.core.webrtc.services.v1.ListRoomsRequest) → (udb.core.webrtc.services.v1.ListRoomsResponse)
+/** udb.core.webrtc.services.v1.RoomService · unary · `/udb.core.webrtc.services.v1.RoomService/ListRooms` · alias `list_rooms` · (udb.core.webrtc.services.v1.ListRoomsRequest) → (udb.core.webrtc.services.v1.ListRoomsResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3573,8 +3750,9 @@ export interface RoomServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface RoomServiceApi {
   list_rooms(request: any, call?: CallOptions): Promise<any>;
+  listRooms(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.webrtc.services.v1.RoomService · unary · `/udb.core.webrtc.services.v1.RoomService/UpdateRoom` · (udb.core.webrtc.services.v1.UpdateRoomRequest) → (udb.core.webrtc.services.v1.UpdateRoomResponse)
+/** udb.core.webrtc.services.v1.RoomService · unary · `/udb.core.webrtc.services.v1.RoomService/UpdateRoom` · alias `update_room` · (udb.core.webrtc.services.v1.UpdateRoomRequest) → (udb.core.webrtc.services.v1.UpdateRoomResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3584,8 +3762,9 @@ export interface RoomServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface RoomServiceApi {
   update_room(request: any, call?: CallOptions): Promise<any>;
+  updateRoom(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.webrtc.services.v1.TrackService · unary · `/udb.core.webrtc.services.v1.TrackService/ListTracks` · (udb.core.webrtc.services.v1.ListTracksRequest) → (udb.core.webrtc.services.v1.ListTracksResponse)
+/** udb.core.webrtc.services.v1.TrackService · unary · `/udb.core.webrtc.services.v1.TrackService/ListTracks` · alias `list_tracks` · (udb.core.webrtc.services.v1.ListTracksRequest) → (udb.core.webrtc.services.v1.ListTracksResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3595,8 +3774,9 @@ export interface RoomServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface TrackServiceApi {
   list_tracks(request: any, call?: CallOptions): Promise<any>;
+  listTracks(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.webrtc.services.v1.TrackService · unary · `/udb.core.webrtc.services.v1.TrackService/MuteTrack` · (udb.core.webrtc.services.v1.MuteTrackRequest) → (udb.core.webrtc.services.v1.MuteTrackResponse)
+/** udb.core.webrtc.services.v1.TrackService · unary · `/udb.core.webrtc.services.v1.TrackService/MuteTrack` · alias `mute_track` · (udb.core.webrtc.services.v1.MuteTrackRequest) → (udb.core.webrtc.services.v1.MuteTrackResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3606,8 +3786,9 @@ export interface TrackServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface TrackServiceApi {
   mute_track(request: any, call?: CallOptions): Promise<any>;
+  muteTrack(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.webrtc.services.v1.TrackService · unary · `/udb.core.webrtc.services.v1.TrackService/PublishTrack` · (udb.core.webrtc.services.v1.PublishTrackRequest) → (udb.core.webrtc.services.v1.PublishTrackResponse)
+/** udb.core.webrtc.services.v1.TrackService · unary · `/udb.core.webrtc.services.v1.TrackService/PublishTrack` · alias `publish_track` · (udb.core.webrtc.services.v1.PublishTrackRequest) → (udb.core.webrtc.services.v1.PublishTrackResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3617,8 +3798,9 @@ export interface TrackServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface TrackServiceApi {
   publish_track(request: any, call?: CallOptions): Promise<any>;
+  publishTrack(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.webrtc.services.v1.TrackService · unary · `/udb.core.webrtc.services.v1.TrackService/UnpublishTrack` · (udb.core.webrtc.services.v1.UnpublishTrackRequest) → (udb.core.webrtc.services.v1.UnpublishTrackResponse)
+/** udb.core.webrtc.services.v1.TrackService · unary · `/udb.core.webrtc.services.v1.TrackService/UnpublishTrack` · alias `unpublish_track` · (udb.core.webrtc.services.v1.UnpublishTrackRequest) → (udb.core.webrtc.services.v1.UnpublishTrackResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3628,8 +3810,9 @@ export interface TrackServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface TrackServiceApi {
   unpublish_track(request: any, call?: CallOptions): Promise<any>;
+  unpublishTrack(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.webrtc.services.v1.TurnService · unary · `/udb.core.webrtc.services.v1.TurnService/IssueCredentials` · (udb.core.webrtc.services.v1.IssueCredentialsRequest) → (udb.core.webrtc.services.v1.IssueCredentialsResponse)
+/** udb.core.webrtc.services.v1.TurnService · unary · `/udb.core.webrtc.services.v1.TurnService/IssueCredentials` · alias `issue_credentials` · (udb.core.webrtc.services.v1.IssueCredentialsRequest) → (udb.core.webrtc.services.v1.IssueCredentialsResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3639,8 +3822,9 @@ export interface TrackServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface TurnServiceApi {
   issue_credentials(request: any, call?: CallOptions): Promise<any>;
+  issueCredentials(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/ActivateCatalog` · (udb.entity.v1.CatalogVersionRequest) → (udb.entity.v1.CatalogVersionResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/ActivateCatalog` · alias `activate_catalog` · (udb.entity.v1.CatalogVersionRequest) → (udb.entity.v1.CatalogVersionResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3650,8 +3834,9 @@ export interface TurnServiceApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   activate_catalog(request: any, call?: CallOptions): Promise<any>;
+  activateCatalog(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/AnalyticalQuery` · (udb.entity.v1.AnalyticalQueryRequest) → (udb.entity.v1.AnalyticalQueryResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/AnalyticalQuery` · alias `analytical_query` · (udb.entity.v1.AnalyticalQueryRequest) → (udb.entity.v1.AnalyticalQueryResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3661,8 +3846,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   analytical_query(request: any, call?: CallOptions): Promise<any>;
+  analyticalQuery(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/ApplyMigration` · (udb.entity.v1.MigrationApplyRequest) → (udb.entity.v1.MigrationStatusResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/ApplyMigration` · alias `apply_migration` · (udb.entity.v1.MigrationApplyRequest) → (udb.entity.v1.MigrationStatusResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3672,8 +3858,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   apply_migration(request: any, call?: CallOptions): Promise<any>;
+  applyMigration(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/ApproveMigrationPlan` · (udb.entity.v1.MigrationRunRequest) → (udb.entity.v1.MigrationStatusResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/ApproveMigrationPlan` · alias `approve_migration_plan` · (udb.entity.v1.MigrationRunRequest) → (udb.entity.v1.MigrationStatusResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3683,8 +3870,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   approve_migration_plan(request: any, call?: CallOptions): Promise<any>;
+  approveMigrationPlan(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/CacheDelete` · (udb.entity.v1.CacheDeleteRequest) → (udb.entity.v1.MutationResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/CacheDelete` · alias `cache_delete` · (udb.entity.v1.CacheDeleteRequest) → (udb.entity.v1.MutationResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3694,8 +3882,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   cache_delete(request: any, call?: CallOptions): Promise<any>;
+  cacheDelete(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/CacheGet` · (udb.entity.v1.CacheGetRequest) → (udb.entity.v1.CacheGetResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/CacheGet` · alias `cache_get` · (udb.entity.v1.CacheGetRequest) → (udb.entity.v1.CacheGetResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3705,8 +3894,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   cache_get(request: any, call?: CallOptions): Promise<any>;
+  cacheGet(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/CacheScan` · (udb.entity.v1.CacheScanRequest) → (udb.entity.v1.CacheScanResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/CacheScan` · alias `cache_scan` · (udb.entity.v1.CacheScanRequest) → (udb.entity.v1.CacheScanResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3716,8 +3906,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   cache_scan(request: any, call?: CallOptions): Promise<any>;
+  cacheScan(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/CacheSet` · (udb.entity.v1.CacheSetRequest) → (udb.entity.v1.MutationResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/CacheSet` · alias `cache_set` · (udb.entity.v1.CacheSetRequest) → (udb.entity.v1.MutationResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3727,8 +3918,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   cache_set(request: any, call?: CallOptions): Promise<any>;
+  cacheSet(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/CreateMaterializedView` · (udb.entity.v1.ViewDefinition) → (udb.entity.v1.MutationResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/CreateMaterializedView` · alias `create_materialized_view` · (udb.entity.v1.ViewDefinition) → (udb.entity.v1.MutationResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3738,8 +3930,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   create_materialized_view(request: any, call?: CallOptions): Promise<any>;
+  createMaterializedView(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/Delete` · (udb.entity.v1.DeleteRequest) → (udb.entity.v1.MutationResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/Delete` · alias `delete` · (udb.entity.v1.DeleteRequest) → (udb.entity.v1.MutationResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3749,8 +3942,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   delete(request: any, call?: CallOptions): Promise<any>;
+  delete(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/DeletePolicy` · (udb.entity.v1.PolicyRequest) → (udb.entity.v1.MutationResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/DeletePolicy` · alias `delete_policy` · (udb.entity.v1.PolicyRequest) → (udb.entity.v1.MutationResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3760,8 +3954,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   delete_policy(request: any, call?: CallOptions): Promise<any>;
+  deletePolicy(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/DismissDlqEvent` · (udb.entity.v1.DlqActionRequest) → (udb.entity.v1.MutationResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/DismissDlqEvent` · alias `dismiss_dlq_event` · (udb.entity.v1.DlqActionRequest) → (udb.entity.v1.MutationResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3771,8 +3966,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   dismiss_dlq_event(request: any, call?: CallOptions): Promise<any>;
+  dismissDlqEvent(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/DocumentDelete` · (udb.entity.v1.DocumentDeleteRequest) → (udb.entity.v1.MutationResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/DocumentDelete` · alias `document_delete` · (udb.entity.v1.DocumentDeleteRequest) → (udb.entity.v1.MutationResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3782,8 +3978,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   document_delete(request: any, call?: CallOptions): Promise<any>;
+  documentDelete(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/DocumentFind` · (udb.entity.v1.DocumentFindRequest) → (udb.entity.v1.DocumentSet)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/DocumentFind` · alias `document_find` · (udb.entity.v1.DocumentFindRequest) → (udb.entity.v1.DocumentSet)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3793,8 +3990,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   document_find(request: any, call?: CallOptions): Promise<any>;
+  documentFind(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/DocumentGet` · (udb.entity.v1.DocumentGetRequest) → (udb.entity.v1.DocumentSet)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/DocumentGet` · alias `document_get` · (udb.entity.v1.DocumentGetRequest) → (udb.entity.v1.DocumentSet)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3804,8 +4002,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   document_get(request: any, call?: CallOptions): Promise<any>;
+  documentGet(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/DocumentUpsert` · (udb.entity.v1.DocumentUpsertRequest) → (udb.entity.v1.MutationResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/DocumentUpsert` · alias `document_upsert` · (udb.entity.v1.DocumentUpsertRequest) → (udb.entity.v1.MutationResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3815,8 +4014,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   document_upsert(request: any, call?: CallOptions): Promise<any>;
+  documentUpsert(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/DropResource` · (udb.entity.v1.ResourceAdminRequest) → (udb.entity.v1.MutationResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/DropResource` · alias `drop_resource` · (udb.entity.v1.ResourceAdminRequest) → (udb.entity.v1.MutationResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3826,8 +4026,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   drop_resource(request: any, call?: CallOptions): Promise<any>;
+  dropResource(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/EnqueueOutboxEvent` · (udb.entity.v1.EnqueueOutboxEventRequest) → (udb.entity.v1.EnqueueOutboxEventResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/EnqueueOutboxEvent` · alias `enqueue_outbox_event` · (udb.entity.v1.EnqueueOutboxEventRequest) → (udb.entity.v1.EnqueueOutboxEventResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3837,8 +4038,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   enqueue_outbox_event(request: any, call?: CallOptions): Promise<any>;
+  enqueueOutboxEvent(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/EnsureBaseline` · (udb.services.v1.EnsureBaselineRequest) → (udb.services.v1.EnsureBaselineResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/EnsureBaseline` · alias `ensure_baseline` · (udb.services.v1.EnsureBaselineRequest) → (udb.services.v1.EnsureBaselineResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3848,8 +4050,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   ensure_baseline(request: any, call?: CallOptions): Promise<any>;
+  ensureBaseline(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/EnsureProject` · (udb.entity.v1.EnsureProjectRequest) → (udb.entity.v1.MutationResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/EnsureProject` · alias `ensure_project` · (udb.entity.v1.EnsureProjectRequest) → (udb.entity.v1.MutationResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3859,8 +4062,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   ensure_project(request: any, call?: CallOptions): Promise<any>;
+  ensureProject(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/EnsureResource` · (udb.entity.v1.ResourceAdminRequest) → (udb.entity.v1.MutationResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/EnsureResource` · alias `ensure_resource` · (udb.entity.v1.ResourceAdminRequest) → (udb.entity.v1.MutationResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3870,8 +4074,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   ensure_resource(request: any, call?: CallOptions): Promise<any>;
+  ensureResource(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/GeneratePresignedUrl` · (udb.entity.v1.UrlRequest) → (udb.entity.v1.UrlResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/GeneratePresignedUrl` · alias `generate_presigned_url` · (udb.entity.v1.UrlRequest) → (udb.entity.v1.UrlResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3881,8 +4086,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   generate_presigned_url(request: any, call?: CallOptions): Promise<any>;
+  generatePresignedUrl(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/GenericDispatch` · (udb.entity.v1.GenericDispatchRequest) → (udb.entity.v1.GenericDispatchResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/GenericDispatch` · alias `generic_dispatch` · (udb.entity.v1.GenericDispatchRequest) → (udb.entity.v1.GenericDispatchResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3892,8 +4098,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   generic_dispatch(request: any, call?: CallOptions): Promise<any>;
+  genericDispatch(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/GetAdminSummary` · (udb.entity.v1.AdminSummaryRequest) → (udb.entity.v1.AdminSummaryResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/GetAdminSummary` · alias `get_admin_summary` · (udb.entity.v1.AdminSummaryRequest) → (udb.entity.v1.AdminSummaryResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3903,8 +4110,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   get_admin_summary(request: any, call?: CallOptions): Promise<any>;
+  getAdminSummary(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/GetCapabilities` · (udb.entity.v1.CapabilitiesRequest) → (udb.entity.v1.CapabilitiesResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/GetCapabilities` · alias `get_capabilities` · (udb.entity.v1.CapabilitiesRequest) → (udb.entity.v1.CapabilitiesResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3914,8 +4122,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   get_capabilities(request: any, call?: CallOptions): Promise<any>;
+  getCapabilities(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/GetCatalogManifest` · (udb.entity.v1.CatalogManifestRequest) → (udb.entity.v1.CatalogManifestResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/GetCatalogManifest` · alias `get_catalog_manifest` · (udb.entity.v1.CatalogManifestRequest) → (udb.entity.v1.CatalogManifestResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3925,8 +4134,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   get_catalog_manifest(request: any, call?: CallOptions): Promise<any>;
+  getCatalogManifest(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/GetCatalogVersion` · (udb.entity.v1.CatalogVersionRequest) → (udb.entity.v1.CatalogVersionResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/GetCatalogVersion` · alias `get_catalog_version` · (udb.entity.v1.CatalogVersionRequest) → (udb.entity.v1.CatalogVersionResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3936,8 +4146,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   get_catalog_version(request: any, call?: CallOptions): Promise<any>;
+  getCatalogVersion(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/GetCatalogVersions` · (udb.entity.v1.CatalogManifestRequest) → (udb.entity.v1.CatalogVersionListResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/GetCatalogVersions` · alias `get_catalog_versions` · (udb.entity.v1.CatalogManifestRequest) → (udb.entity.v1.CatalogVersionListResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3947,8 +4158,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   get_catalog_versions(request: any, call?: CallOptions): Promise<any>;
+  getCatalogVersions(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/GetCdcStatus` · (udb.entity.v1.CdcControlRequest) → (udb.entity.v1.CdcStatusResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/GetCdcStatus` · alias `get_cdc_status` · (udb.entity.v1.CdcControlRequest) → (udb.entity.v1.CdcStatusResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3958,8 +4170,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   get_cdc_status(request: any, call?: CallOptions): Promise<any>;
+  getCdcStatus(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/GetDlqEvent` · (udb.entity.v1.DlqEventRequest) → (udb.entity.v1.DlqEventResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/GetDlqEvent` · alias `get_dlq_event` · (udb.entity.v1.DlqEventRequest) → (udb.entity.v1.DlqEventResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3969,8 +4182,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   get_dlq_event(request: any, call?: CallOptions): Promise<any>;
+  getDlqEvent(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/GetHealthReport` · (udb.entity.v1.HealthReportRequest) → (udb.entity.v1.HealthReportResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/GetHealthReport` · alias `get_health_report` · (udb.entity.v1.HealthReportRequest) → (udb.entity.v1.HealthReportResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3980,8 +4194,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   get_health_report(request: any, call?: CallOptions): Promise<any>;
+  getHealthReport(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/GetMigrationStatus` · (udb.entity.v1.MigrationRunRequest) → (udb.entity.v1.MigrationStatusResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/GetMigrationStatus` · alias `get_migration_status` · (udb.entity.v1.MigrationRunRequest) → (udb.entity.v1.MigrationStatusResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -3991,8 +4206,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   get_migration_status(request: any, call?: CallOptions): Promise<any>;
+  getMigrationStatus(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/GetSaga` · (udb.entity.v1.SagaRequest) → (udb.entity.v1.SagaResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/GetSaga` · alias `get_saga` · (udb.entity.v1.SagaRequest) → (udb.entity.v1.SagaResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -4002,8 +4218,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   get_saga(request: any, call?: CallOptions): Promise<any>;
+  getSaga(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/GraphMutate` · (udb.entity.v1.GraphMutationRequest) → (udb.entity.v1.MutationResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/GraphMutate` · alias `graph_mutate` · (udb.entity.v1.GraphMutationRequest) → (udb.entity.v1.MutationResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -4013,8 +4230,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   graph_mutate(request: any, call?: CallOptions): Promise<any>;
+  graphMutate(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/GraphQuery` · (udb.entity.v1.GraphQueryRequest) → (udb.entity.v1.GraphResultSet)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/GraphQuery` · alias `graph_query` · (udb.entity.v1.GraphQueryRequest) → (udb.entity.v1.GraphResultSet)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -4024,8 +4242,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   graph_query(request: any, call?: CallOptions): Promise<any>;
+  graphQuery(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/InitiateMultipartUpload` · (udb.entity.v1.MultipartUploadRequest) → (udb.entity.v1.MultipartUploadResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/InitiateMultipartUpload` · alias `initiate_multipart_upload` · (udb.entity.v1.MultipartUploadRequest) → (udb.entity.v1.MultipartUploadResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -4035,8 +4254,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   initiate_multipart_upload(request: any, call?: CallOptions): Promise<any>;
+  initiateMultipartUpload(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/LintPolicies` · (udb.entity.v1.CapabilitiesRequest) → (udb.entity.v1.PolicyLintResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/LintPolicies` · alias `lint_policies` · (udb.entity.v1.CapabilitiesRequest) → (udb.entity.v1.PolicyLintResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -4046,8 +4266,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   lint_policies(request: any, call?: CallOptions): Promise<any>;
+  lintPolicies(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/ListAdminAuditLogs` · (udb.entity.v1.AdminAuditLogRequest) → (udb.entity.v1.AdminAuditLogResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/ListAdminAuditLogs` · alias `list_admin_audit_logs` · (udb.entity.v1.AdminAuditLogRequest) → (udb.entity.v1.AdminAuditLogResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -4057,8 +4278,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   list_admin_audit_logs(request: any, call?: CallOptions): Promise<any>;
+  listAdminAuditLogs(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/ListDlqEvents` · (udb.entity.v1.DlqListRequest) → (udb.entity.v1.DlqListResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/ListDlqEvents` · alias `list_dlq_events` · (udb.entity.v1.DlqListRequest) → (udb.entity.v1.DlqListResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -4068,8 +4290,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   list_dlq_events(request: any, call?: CallOptions): Promise<any>;
+  listDlqEvents(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/ListMessageSchemas` · (udb.entity.v1.MessageSchemaListRequest) → (udb.entity.v1.MessageSchemaListResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/ListMessageSchemas` · alias `list_message_schemas` · (udb.entity.v1.MessageSchemaListRequest) → (udb.entity.v1.MessageSchemaListResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -4079,8 +4302,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   list_message_schemas(request: any, call?: CallOptions): Promise<any>;
+  listMessageSchemas(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/ListMigrationRuns` · (udb.entity.v1.MigrationRunListRequest) → (udb.entity.v1.MigrationRunListResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/ListMigrationRuns` · alias `list_migration_runs` · (udb.entity.v1.MigrationRunListRequest) → (udb.entity.v1.MigrationRunListResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -4090,8 +4314,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   list_migration_runs(request: any, call?: CallOptions): Promise<any>;
+  listMigrationRuns(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/ListPolicies` · (udb.entity.v1.PolicyListRequest) → (udb.entity.v1.PolicyListResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/ListPolicies` · alias `list_policies` · (udb.entity.v1.PolicyListRequest) → (udb.entity.v1.PolicyListResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -4101,8 +4326,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   list_policies(request: any, call?: CallOptions): Promise<any>;
+  listPolicies(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/ListProjects` · (udb.entity.v1.ProjectListRequest) → (udb.entity.v1.ProjectListResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/ListProjects` · alias `list_projects` · (udb.entity.v1.ProjectListRequest) → (udb.entity.v1.ProjectListResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -4112,8 +4338,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   list_projects(request: any, call?: CallOptions): Promise<any>;
+  listProjects(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/ListResources` · (udb.entity.v1.ResourceAdminRequest) → (udb.entity.v1.ResourceListResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/ListResources` · alias `list_resources` · (udb.entity.v1.ResourceAdminRequest) → (udb.entity.v1.ResourceListResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -4123,8 +4350,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   list_resources(request: any, call?: CallOptions): Promise<any>;
+  listResources(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/ListSagas` · (udb.entity.v1.SagaListRequest) → (udb.entity.v1.SagaListResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/ListSagas` · alias `list_sagas` · (udb.entity.v1.SagaListRequest) → (udb.entity.v1.SagaListResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -4134,8 +4362,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   list_sagas(request: any, call?: CallOptions): Promise<any>;
+  listSagas(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/LookupMessageSchema` · (udb.entity.v1.MessageSchemaLookupRequest) → (udb.entity.v1.MessageSchemaLookupResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/LookupMessageSchema` · alias `lookup_message_schema` · (udb.entity.v1.MessageSchemaLookupRequest) → (udb.entity.v1.MessageSchemaLookupResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -4145,8 +4374,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   lookup_message_schema(request: any, call?: CallOptions): Promise<any>;
+  lookupMessageSchema(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/MarkSagaReviewed` · (udb.entity.v1.SagaRequest) → (udb.entity.v1.SagaResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/MarkSagaReviewed` · alias `mark_saga_reviewed` · (udb.entity.v1.SagaRequest) → (udb.entity.v1.SagaResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -4156,8 +4386,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   mark_saga_reviewed(request: any, call?: CallOptions): Promise<any>;
+  markSagaReviewed(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/PauseCdc` · (udb.entity.v1.CdcControlRequest) → (udb.entity.v1.CdcStatusResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/PauseCdc` · alias `pause_cdc` · (udb.entity.v1.CdcControlRequest) → (udb.entity.v1.CdcStatusResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -4167,8 +4398,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   pause_cdc(request: any, call?: CallOptions): Promise<any>;
+  pauseCdc(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/PlanMigration` · (udb.entity.v1.MigrationPlanRequest) → (udb.entity.v1.MigrationPlanResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/PlanMigration` · alias `plan_migration` · (udb.entity.v1.MigrationPlanRequest) → (udb.entity.v1.MigrationPlanResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -4178,8 +4410,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   plan_migration(request: any, call?: CallOptions): Promise<any>;
+  planMigration(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/PreviewCdcRedaction` · (udb.entity.v1.CdcRedactionPreviewRequest) → (udb.entity.v1.CdcRedactionPreviewResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/PreviewCdcRedaction` · alias `preview_cdc_redaction` · (udb.entity.v1.CdcRedactionPreviewRequest) → (udb.entity.v1.CdcRedactionPreviewResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -4189,8 +4422,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   preview_cdc_redaction(request: any, call?: CallOptions): Promise<any>;
+  previewCdcRedaction(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/PutPolicy` · (udb.entity.v1.PutPolicyRequest) → (udb.entity.v1.MutationResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/PutPolicy` · alias `put_policy` · (udb.entity.v1.PutPolicyRequest) → (udb.entity.v1.MutationResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -4200,8 +4434,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   put_policy(request: any, call?: CallOptions): Promise<any>;
+  putPolicy(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/QuarantineDlqEvent` · (udb.entity.v1.DlqActionRequest) → (udb.entity.v1.MutationResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/QuarantineDlqEvent` · alias `quarantine_dlq_event` · (udb.entity.v1.DlqActionRequest) → (udb.entity.v1.MutationResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -4211,8 +4446,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   quarantine_dlq_event(request: any, call?: CallOptions): Promise<any>;
+  quarantineDlqEvent(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/ReloadPolicies` · (udb.entity.v1.CapabilitiesRequest) → (udb.entity.v1.MutationResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/ReloadPolicies` · alias `reload_policies` · (udb.entity.v1.CapabilitiesRequest) → (udb.entity.v1.MutationResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -4222,8 +4458,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   reload_policies(request: any, call?: CallOptions): Promise<any>;
+  reloadPolicies(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/ReplayDlqEvent` · (udb.entity.v1.DlqActionRequest) → (udb.entity.v1.MutationResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/ReplayDlqEvent` · alias `replay_dlq_event` · (udb.entity.v1.DlqActionRequest) → (udb.entity.v1.MutationResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -4233,8 +4470,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   replay_dlq_event(request: any, call?: CallOptions): Promise<any>;
+  replayDlqEvent(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/ResumeCdc` · (udb.entity.v1.CdcControlRequest) → (udb.entity.v1.CdcStatusResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/ResumeCdc` · alias `resume_cdc` · (udb.entity.v1.CdcControlRequest) → (udb.entity.v1.CdcStatusResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -4244,8 +4482,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   resume_cdc(request: any, call?: CallOptions): Promise<any>;
+  resumeCdc(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/RetrySagaCompensation` · (udb.entity.v1.SagaRequest) → (udb.entity.v1.SagaResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/RetrySagaCompensation` · alias `retry_saga_compensation` · (udb.entity.v1.SagaRequest) → (udb.entity.v1.SagaResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -4255,8 +4494,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   retry_saga_compensation(request: any, call?: CallOptions): Promise<any>;
+  retrySagaCompensation(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/RollbackCatalog` · (udb.entity.v1.CatalogVersionRequest) → (udb.entity.v1.CatalogVersionResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/RollbackCatalog` · alias `rollback_catalog` · (udb.entity.v1.CatalogVersionRequest) → (udb.entity.v1.CatalogVersionResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -4266,8 +4506,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   rollback_catalog(request: any, call?: CallOptions): Promise<any>;
+  rollbackCatalog(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/ScanProjectionDrift` · (udb.entity.v1.ProjectionDriftScanRequest) → (udb.entity.v1.ProjectionDriftScanResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/ScanProjectionDrift` · alias `scan_projection_drift` · (udb.entity.v1.ProjectionDriftScanRequest) → (udb.entity.v1.ProjectionDriftScanResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -4277,8 +4518,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   scan_projection_drift(request: any, call?: CallOptions): Promise<any>;
+  scanProjectionDrift(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/Select` · (udb.entity.v1.SelectRequest) → (udb.entity.v1.RecordSet)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/Select` · alias `select` · (udb.entity.v1.SelectRequest) → (udb.entity.v1.RecordSet)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -4288,8 +4530,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   select(request: any, call?: CallOptions): Promise<any>;
+  select(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/StageCatalog` · (udb.entity.v1.StageCatalogRequest) → (udb.entity.v1.CatalogVersionResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/StageCatalog` · alias `stage_catalog` · (udb.entity.v1.StageCatalogRequest) → (udb.entity.v1.CatalogVersionResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -4299,8 +4542,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   stage_catalog(request: any, call?: CallOptions): Promise<any>;
+  stageCatalog(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/StepDownCdcLeader` · (udb.entity.v1.CdcControlRequest) → (udb.entity.v1.CdcStatusResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/StepDownCdcLeader` · alias `step_down_cdc_leader` · (udb.entity.v1.CdcControlRequest) → (udb.entity.v1.CdcStatusResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -4310,8 +4554,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   step_down_cdc_leader(request: any, call?: CallOptions): Promise<any>;
+  stepDownCdcLeader(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/TimeSeriesQuery` · (udb.entity.v1.TimeSeriesQueryRequest) → (udb.entity.v1.TimeSeriesQueryResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/TimeSeriesQuery` · alias `time_series_query` · (udb.entity.v1.TimeSeriesQueryRequest) → (udb.entity.v1.TimeSeriesQueryResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -4321,8 +4566,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   time_series_query(request: any, call?: CallOptions): Promise<any>;
+  timeSeriesQuery(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/TimeSeriesWrite` · (udb.entity.v1.TimeSeriesWriteRequest) → (udb.entity.v1.MutationResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/TimeSeriesWrite` · alias `time_series_write` · (udb.entity.v1.TimeSeriesWriteRequest) → (udb.entity.v1.MutationResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -4332,8 +4578,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   time_series_write(request: any, call?: CallOptions): Promise<any>;
+  timeSeriesWrite(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/Upsert` · (udb.entity.v1.UpsertRequest) → (udb.entity.v1.MutationResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/Upsert` · alias `upsert` · (udb.entity.v1.UpsertRequest) → (udb.entity.v1.MutationResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -4343,8 +4590,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   upsert(request: any, call?: CallOptions): Promise<any>;
+  upsert(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/ValidateCatalog` · (udb.entity.v1.StageCatalogRequest) → (udb.entity.v1.CatalogValidationResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/ValidateCatalog` · alias `validate_catalog` · (udb.entity.v1.StageCatalogRequest) → (udb.entity.v1.CatalogValidationResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -4354,8 +4602,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   validate_catalog(request: any, call?: CallOptions): Promise<any>;
+  validateCatalog(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/VectorHybridSearch` · (udb.entity.v1.VectorHybridSearchRequest) → (udb.entity.v1.VectorSet)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/VectorHybridSearch` · alias `vector_hybrid_search` · (udb.entity.v1.VectorHybridSearchRequest) → (udb.entity.v1.VectorSet)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -4365,8 +4614,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   vector_hybrid_search(request: any, call?: CallOptions): Promise<any>;
+  vectorHybridSearch(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/VectorSearch` · (udb.entity.v1.VectorSearchRequest) → (udb.entity.v1.VectorSet)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/VectorSearch` · alias `vector_search` · (udb.entity.v1.VectorSearchRequest) → (udb.entity.v1.VectorSet)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -4376,8 +4626,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   vector_search(request: any, call?: CallOptions): Promise<any>;
+  vectorSearch(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/VectorUpsert` · (udb.entity.v1.VectorUpsertRequest) → (udb.entity.v1.MutationResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/VectorUpsert` · alias `vector_upsert` · (udb.entity.v1.VectorUpsertRequest) → (udb.entity.v1.MutationResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -4387,8 +4638,9 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   vector_upsert(request: any, call?: CallOptions): Promise<any>;
+  vectorUpsert(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/VerifyAdminAuditLog` · (udb.entity.v1.AdminAuditVerifyRequest) → (udb.entity.v1.AdminAuditVerifyResponse)
+/** udb.services.v1.DataBroker · unary · `/udb.services.v1.DataBroker/VerifyAdminAuditLog` · alias `verify_admin_audit_log` · (udb.entity.v1.AdminAuditVerifyRequest) → (udb.entity.v1.AdminAuditVerifyResponse)
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -4398,54 +4650,67 @@ export interface DataBrokerApi {
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface DataBrokerApi {
   verify_admin_audit_log(request: any, call?: CallOptions): Promise<any>;
+  verifyAdminAuditLog(request: any, call?: CallOptions): Promise<any>;
 }
-/** udb.core.storage.services.v1.StorageService · server_streaming · `/udb.core.storage.services.v1.StorageService/DownloadFile` · (udb.core.storage.services.v1.DownloadFileRequest) → stream (udb.core.storage.services.v1.DownloadFileChunk) */
+/** udb.core.storage.services.v1.StorageService · server_streaming · `/udb.core.storage.services.v1.StorageService/DownloadFile` · alias `download_file` · (udb.core.storage.services.v1.DownloadFileRequest) → stream (udb.core.storage.services.v1.DownloadFileChunk) */
 export interface StorageServiceApi {
   download_file(request: any, call?: CallOptions): grpc.ClientReadableStream<any>;
+  downloadFile(request: any, call?: CallOptions): grpc.ClientReadableStream<any>;
 }
-/** udb.services.v1.DataBroker · server_streaming · `/udb.services.v1.DataBroker/GetObject` · (udb.entity.v1.ObjectRequest) → stream (udb.entity.v1.Chunk) */
+/** udb.services.v1.DataBroker · server_streaming · `/udb.services.v1.DataBroker/GetObject` · alias `get_object` · (udb.entity.v1.ObjectRequest) → stream (udb.entity.v1.Chunk) */
 export interface DataBrokerApi {
   get_object(request: any, call?: CallOptions): grpc.ClientReadableStream<any>;
+  getObject(request: any, call?: CallOptions): grpc.ClientReadableStream<any>;
 }
-/** udb.services.v1.DataBroker · server_streaming · `/udb.services.v1.DataBroker/PublishCDC` · (udb.entity.v1.CDCSubscriptionRequest) → stream (udb.events.v1.CDCEnvelope) */
+/** udb.services.v1.DataBroker · server_streaming · `/udb.services.v1.DataBroker/PublishCDC` · alias `publish_cdc` · (udb.entity.v1.CDCSubscriptionRequest) → stream (udb.events.v1.CDCEnvelope) */
 export interface DataBrokerApi {
-  publish_c_d_c(request: any, call?: CallOptions): grpc.ClientReadableStream<any>;
+  publish_cdc(request: any, call?: CallOptions): grpc.ClientReadableStream<any>;
+  publishCdc(request: any, call?: CallOptions): grpc.ClientReadableStream<any>;
 }
-/** udb.services.v1.DataBroker · server_streaming · `/udb.services.v1.DataBroker/SelectV2` · (udb.entity.v1.SelectRequest) → stream (udb.entity.v1.RecordBatchV2) */
+/** udb.services.v1.DataBroker · server_streaming · `/udb.services.v1.DataBroker/SelectV2` · alias `select_v_2` · (udb.entity.v1.SelectRequest) → stream (udb.entity.v1.RecordBatchV2) */
 export interface DataBrokerApi {
-  select_v2(request: any, call?: CallOptions): grpc.ClientReadableStream<any>;
+  select_v_2(request: any, call?: CallOptions): grpc.ClientReadableStream<any>;
+  selectV2(request: any, call?: CallOptions): grpc.ClientReadableStream<any>;
 }
-/** udb.services.v1.DataBroker · client_streaming · `/udb.services.v1.DataBroker/PutObject` · stream (udb.entity.v1.Chunk) → (udb.entity.v1.MutationResponse) */
+/** udb.services.v1.DataBroker · client_streaming · `/udb.services.v1.DataBroker/PutObject` · alias `put_object` · stream (udb.entity.v1.Chunk) → (udb.entity.v1.MutationResponse) */
 export interface DataBrokerApi {
   put_object(call?: CallOptions): { stream: grpc.ClientWritableStream<any>; response: Promise<any> };
+  putObject(call?: CallOptions): { stream: grpc.ClientWritableStream<any>; response: Promise<any> };
 }
-/** udb.core.control.services.v1.ControlPlaneService · bidi · `/udb.core.control.services.v1.ControlPlaneService/DeltaResources` · stream (udb.core.control.services.v1.DeltaDiscoveryRequest) → stream (udb.core.control.services.v1.DeltaDiscoveryResponse) */
+/** udb.core.control.services.v1.ControlPlaneService · bidi · `/udb.core.control.services.v1.ControlPlaneService/DeltaResources` · alias `delta_resources` · stream (udb.core.control.services.v1.DeltaDiscoveryRequest) → stream (udb.core.control.services.v1.DeltaDiscoveryResponse) */
 export interface ControlPlaneServiceApi {
   delta_resources(call?: CallOptions): grpc.ClientDuplexStream<any, any>;
+  deltaResources(call?: CallOptions): grpc.ClientDuplexStream<any, any>;
 }
-/** udb.core.control.services.v1.ControlPlaneService · bidi · `/udb.core.control.services.v1.ControlPlaneService/StreamResources` · stream (udb.core.control.services.v1.DiscoveryRequest) → stream (udb.core.control.services.v1.DiscoveryResponse) */
+/** udb.core.control.services.v1.ControlPlaneService · bidi · `/udb.core.control.services.v1.ControlPlaneService/StreamResources` · alias `stream_resources` · stream (udb.core.control.services.v1.DiscoveryRequest) → stream (udb.core.control.services.v1.DiscoveryResponse) */
 export interface ControlPlaneServiceApi {
   stream_resources(call?: CallOptions): grpc.ClientDuplexStream<any, any>;
+  streamResources(call?: CallOptions): grpc.ClientDuplexStream<any, any>;
 }
-/** udb.core.webrtc.services.v1.SignalingService · bidi · `/udb.core.webrtc.services.v1.SignalingService/Signal` · stream (udb.core.webrtc.services.v1.SignalRequest) → stream (udb.core.webrtc.services.v1.SignalResponse) */
+/** udb.core.webrtc.services.v1.SignalingService · bidi · `/udb.core.webrtc.services.v1.SignalingService/Signal` · alias `signal` · stream (udb.core.webrtc.services.v1.SignalRequest) → stream (udb.core.webrtc.services.v1.SignalResponse) */
 export interface SignalingServiceApi {
   signal(call?: CallOptions): grpc.ClientDuplexStream<any, any>;
+  signal(call?: CallOptions): grpc.ClientDuplexStream<any, any>;
 }
-/** udb.services.v1.DataBroker · bidi · `/udb.services.v1.DataBroker/BatchSelect` · stream (udb.entity.v1.SelectRequest) → stream (udb.entity.v1.RecordSet) */
+/** udb.services.v1.DataBroker · bidi · `/udb.services.v1.DataBroker/BatchSelect` · alias `batch_select` · stream (udb.entity.v1.SelectRequest) → stream (udb.entity.v1.RecordSet) */
 export interface DataBrokerApi {
   batch_select(call?: CallOptions): grpc.ClientDuplexStream<any, any>;
+  batchSelect(call?: CallOptions): grpc.ClientDuplexStream<any, any>;
 }
-/** udb.services.v1.DataBroker · bidi · `/udb.services.v1.DataBroker/BatchUpsert` · stream (udb.entity.v1.UpsertRequest) → stream (udb.entity.v1.MutationResponse) */
+/** udb.services.v1.DataBroker · bidi · `/udb.services.v1.DataBroker/BatchUpsert` · alias `batch_upsert` · stream (udb.entity.v1.UpsertRequest) → stream (udb.entity.v1.MutationResponse) */
 export interface DataBrokerApi {
   batch_upsert(call?: CallOptions): grpc.ClientDuplexStream<any, any>;
+  batchUpsert(call?: CallOptions): grpc.ClientDuplexStream<any, any>;
 }
-/** udb.services.v1.DataBroker · bidi · `/udb.services.v1.DataBroker/BeginTx` · stream (udb.entity.v1.Mutation) → stream (udb.entity.v1.TxStatus) */
+/** udb.services.v1.DataBroker · bidi · `/udb.services.v1.DataBroker/BeginTx` · alias `begin_tx` · stream (udb.entity.v1.Mutation) → stream (udb.entity.v1.TxStatus) */
 export interface DataBrokerApi {
   begin_tx(call?: CallOptions): grpc.ClientDuplexStream<any, any>;
+  beginTx(call?: CallOptions): grpc.ClientDuplexStream<any, any>;
 }
-/** udb.services.v1.DataBroker · bidi · `/udb.services.v1.DataBroker/VectorBatchUpsert` · stream (udb.entity.v1.VectorUpsertRequest) → stream (udb.entity.v1.MutationResponse) */
+/** udb.services.v1.DataBroker · bidi · `/udb.services.v1.DataBroker/VectorBatchUpsert` · alias `vector_batch_upsert` · stream (udb.entity.v1.VectorUpsertRequest) → stream (udb.entity.v1.MutationResponse) */
 export interface DataBrokerApi {
   vector_batch_upsert(call?: CallOptions): grpc.ClientDuplexStream<any, any>;
+  vectorBatchUpsert(call?: CallOptions): grpc.ClientDuplexStream<any, any>;
 }
 
 /**
@@ -4525,1328 +4790,1858 @@ const SERVICE_METHOD_INSTALLERS: Array<(core: UdbCore, api: any) => void> = [];
 
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.analytics.services.v1.AnalyticsService") return;
-  api.get_executor_performance = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.analytics.services.v1.AnalyticsService", "GetExecutorPerformance", request, call);
+  api.get_executor_performance = call;
+  api.getExecutorPerformance = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.analytics.services.v1.AnalyticsService") return;
-  api.get_pipeline_summary = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.analytics.services.v1.AnalyticsService", "GetPipelineSummary", request, call);
+  api.get_pipeline_summary = call;
+  api.getPipelineSummary = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.analytics.services.v1.AnalyticsService") return;
-  api.get_reconciliation_analytics = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.analytics.services.v1.AnalyticsService", "GetReconciliationAnalytics", request, call);
+  api.get_reconciliation_analytics = call;
+  api.getReconciliationAnalytics = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.analytics.services.v1.AnalyticsService") return;
-  api.get_sla_compliance = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.analytics.services.v1.AnalyticsService", "GetSlaCompliance", request, call);
+  api.get_sla_compliance = call;
+  api.getSlaCompliance = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.analytics.services.v1.AnalyticsService") return;
-  api.get_throughput = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.analytics.services.v1.AnalyticsService", "GetThroughput", request, call);
+  api.get_throughput = call;
+  api.getThroughput = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.analytics.services.v1.AnalyticsService") return;
-  api.record_pipeline_metric = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.analytics.services.v1.AnalyticsService", "RecordPipelineMetric", request, call);
+  api.record_pipeline_metric = call;
+  api.recordPipelineMetric = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.analytics.services.v1.AnalyticsService") return;
-  api.trigger_snapshot = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.analytics.services.v1.AnalyticsService", "TriggerSnapshot", request, call);
+  api.trigger_snapshot = call;
+  api.triggerSnapshot = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.apikey.services.v1.ApiKeyService") return;
-  api.create_api_key = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.apikey.services.v1.ApiKeyService", "CreateApiKey", request, call);
+  api.create_api_key = call;
+  api.createApiKey = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.apikey.services.v1.ApiKeyService") return;
-  api.emergency_revoke_api_keys = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.apikey.services.v1.ApiKeyService", "EmergencyRevokeApiKeys", request, call);
+  api.emergency_revoke_api_keys = call;
+  api.emergencyRevokeApiKeys = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.apikey.services.v1.ApiKeyService") return;
-  api.get_api_key = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.apikey.services.v1.ApiKeyService", "GetApiKey", request, call);
+  api.get_api_key = call;
+  api.getApiKey = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.apikey.services.v1.ApiKeyService") return;
-  api.get_api_key_usage_stats = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.apikey.services.v1.ApiKeyService", "GetApiKeyUsageStats", request, call);
+  api.get_api_key_usage_stats = call;
+  api.getApiKeyUsageStats = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.apikey.services.v1.ApiKeyService") return;
-  api.list_api_keys = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.apikey.services.v1.ApiKeyService", "ListApiKeys", request, call);
+  api.list_api_keys = call;
+  api.listApiKeys = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.apikey.services.v1.ApiKeyService") return;
-  api.revoke_api_key = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.apikey.services.v1.ApiKeyService", "RevokeApiKey", request, call);
+  api.revoke_api_key = call;
+  api.revokeApiKey = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.apikey.services.v1.ApiKeyService") return;
-  api.rotate_api_key = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.apikey.services.v1.ApiKeyService", "RotateApiKey", request, call);
+  api.rotate_api_key = call;
+  api.rotateApiKey = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.apikey.services.v1.ApiKeyService") return;
-  api.update_api_key = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.apikey.services.v1.ApiKeyService", "UpdateApiKey", request, call);
+  api.update_api_key = call;
+  api.updateApiKey = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.apikey.services.v1.ApiKeyService") return;
-  api.validate_api_key = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.apikey.services.v1.ApiKeyService", "ValidateApiKey", request, call);
+  api.validate_api_key = call;
+  api.validateApiKey = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.asset.services.v1.AssetService") return;
-  api.complete_step = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.asset.services.v1.AssetService", "CompleteStep", request, call);
+  api.complete_step = call;
+  api.completeStep = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.asset.services.v1.AssetService") return;
-  api.create_pipeline_definition = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.asset.services.v1.AssetService", "CreatePipelineDefinition", request, call);
+  api.create_pipeline_definition = call;
+  api.createPipelineDefinition = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.asset.services.v1.AssetService") return;
-  api.get_asset = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.asset.services.v1.AssetService", "GetAsset", request, call);
+  api.get_asset = call;
+  api.getAsset = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.asset.services.v1.AssetService") return;
-  api.get_pipeline = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.asset.services.v1.AssetService", "GetPipeline", request, call);
+  api.get_pipeline = call;
+  api.getPipeline = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.asset.services.v1.AssetService") return;
-  api.get_pipeline_definition = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.asset.services.v1.AssetService", "GetPipelineDefinition", request, call);
+  api.get_pipeline_definition = call;
+  api.getPipelineDefinition = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.asset.services.v1.AssetService") return;
-  api.list_assets = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.asset.services.v1.AssetService", "ListAssets", request, call);
+  api.list_assets = call;
+  api.listAssets = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.asset.services.v1.AssetService") return;
-  api.register_asset = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.asset.services.v1.AssetService", "RegisterAsset", request, call);
+  api.register_asset = call;
+  api.registerAsset = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.asset.services.v1.AssetService") return;
-  api.start_pipeline = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.asset.services.v1.AssetService", "StartPipeline", request, call);
+  api.start_pipeline = call;
+  api.startPipeline = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.admin_reset_mfa = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "AdminResetMfa", request, call);
+  api.admin_reset_mfa = call;
+  api.adminResetMfa = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.admin_reset_password = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "AdminResetPassword", request, call);
+  api.admin_reset_password = call;
+  api.adminResetPassword = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.admin_revoke_all_tenant_sessions = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "AdminRevokeAllTenantSessions", request, call);
+  api.admin_revoke_all_tenant_sessions = call;
+  api.adminRevokeAllTenantSessions = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.admin_revoke_all_user_sessions = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "AdminRevokeAllUserSessions", request, call);
+  api.admin_revoke_all_user_sessions = call;
+  api.adminRevokeAllUserSessions = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.admin_revoke_session = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "AdminRevokeSession", request, call);
+  api.admin_revoke_session = call;
+  api.adminRevokeSession = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.authenticate = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "Authenticate", request, call);
+  api.authenticate = call;
+  api.authenticate = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.change_password = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "ChangePassword", request, call);
+  api.change_password = call;
+  api.changePassword = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.change_user_status = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "ChangeUserStatus", request, call);
+  api.change_user_status = call;
+  api.changeUserStatus = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.confirm_m_f_a_enrollment = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "ConfirmMFAEnrollment", request, call);
+  api.confirm_mfaenrollment = call;
+  api.confirmMfaenrollment = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.create_session = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "CreateSession", request, call);
+  api.create_session = call;
+  api.createSession = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.create_user = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "CreateUser", request, call);
+  api.create_user = call;
+  api.createUser = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.delete_web_authn_credential = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "DeleteWebAuthnCredential", request, call);
+  api.delete_web_authn_credential = call;
+  api.deleteWebAuthnCredential = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.disable_mfa_factor = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "DisableMfaFactor", request, call);
+  api.disable_mfa_factor = call;
+  api.disableMfaFactor = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.emergency_revoke = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "EmergencyRevoke", request, call);
+  api.emergency_revoke = call;
+  api.emergencyRevoke = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.enroll_m_f_a = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "EnrollMFA", request, call);
+  api.enroll_mfa = call;
+  api.enrollMfa = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.finish_web_authn_authentication = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "FinishWebAuthnAuthentication", request, call);
+  api.finish_web_authn_authentication = call;
+  api.finishWebAuthnAuthentication = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.finish_web_authn_registration = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "FinishWebAuthnRegistration", request, call);
+  api.finish_web_authn_registration = call;
+  api.finishWebAuthnRegistration = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.forgot_password = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "ForgotPassword", request, call);
+  api.forgot_password = call;
+  api.forgotPassword = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.generate_recovery_codes = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "GenerateRecoveryCodes", request, call);
+  api.generate_recovery_codes = call;
+  api.generateRecoveryCodes = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.get_jwks = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "GetJwks", request, call);
+  api.get_jwks = call;
+  api.getJwks = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.get_mfa_policy = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "GetMfaPolicy", request, call);
+  api.get_mfa_policy = call;
+  api.getMfaPolicy = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.get_session = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "GetSession", request, call);
+  api.get_session = call;
+  api.getSession = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.get_user = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "GetUser", request, call);
+  api.get_user = call;
+  api.getUser = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.introspect_token = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "IntrospectToken", request, call);
+  api.introspect_token = call;
+  api.introspectToken = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.issue_mfa_challenge = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "IssueMfaChallenge", request, call);
+  api.issue_mfa_challenge = call;
+  api.issueMfaChallenge = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.list_devices = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "ListDevices", request, call);
+  api.list_devices = call;
+  api.listDevices = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.list_mfa_factors = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "ListMfaFactors", request, call);
+  api.list_mfa_factors = call;
+  api.listMfaFactors = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.list_sessions = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "ListSessions", request, call);
+  api.list_sessions = call;
+  api.listSessions = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.list_users = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "ListUsers", request, call);
+  api.list_users = call;
+  api.listUsers = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.list_web_authn_credentials = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "ListWebAuthnCredentials", request, call);
+  api.list_web_authn_credentials = call;
+  api.listWebAuthnCredentials = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.login = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "Login", request, call);
+  api.login = call;
+  api.login = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.logout = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "Logout", request, call);
+  api.logout = call;
+  api.logout = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.put_mfa_policy = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "PutMfaPolicy", request, call);
+  api.put_mfa_policy = call;
+  api.putMfaPolicy = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.refresh_session = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "RefreshSession", request, call);
+  api.refresh_session = call;
+  api.refreshSession = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.refresh_token = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "RefreshToken", request, call);
+  api.refresh_token = call;
+  api.refreshToken = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.rename_passkey = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "RenamePasskey", request, call);
+  api.rename_passkey = call;
+  api.renamePasskey = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.resend_o_t_p = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "ResendOTP", request, call);
+  api.resend_otp = call;
+  api.resendOtp = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.reset_password = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "ResetPassword", request, call);
+  api.reset_password = call;
+  api.resetPassword = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.revoke_device = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "RevokeDevice", request, call);
+  api.revoke_device = call;
+  api.revokeDevice = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.revoke_recovery_codes = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "RevokeRecoveryCodes", request, call);
+  api.revoke_recovery_codes = call;
+  api.revokeRecoveryCodes = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.revoke_session = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "RevokeSession", request, call);
+  api.revoke_session = call;
+  api.revokeSession = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.send_o_t_p = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "SendOTP", request, call);
+  api.send_otp = call;
+  api.sendOtp = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.send_phone_verification = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "SendPhoneVerification", request, call);
+  api.send_phone_verification = call;
+  api.sendPhoneVerification = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.start_web_authn_authentication = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "StartWebAuthnAuthentication", request, call);
+  api.start_web_authn_authentication = call;
+  api.startWebAuthnAuthentication = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.start_web_authn_registration = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "StartWebAuthnRegistration", request, call);
+  api.start_web_authn_registration = call;
+  api.startWebAuthnRegistration = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.update_user = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "UpdateUser", request, call);
+  api.update_user = call;
+  api.updateUser = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.validate_c_s_r_f = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "ValidateCSRF", request, call);
+  api.validate_csrf = call;
+  api.validateCsrf = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.validate_token = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "ValidateToken", request, call);
+  api.validate_token = call;
+  api.validateToken = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.verify_mfa_challenge = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "VerifyMfaChallenge", request, call);
+  api.verify_mfa_challenge = call;
+  api.verifyMfaChallenge = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService") return;
-  api.verify_o_t_p = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authn.services.v1.AuthnService", "VerifyOTP", request, call);
+  api.verify_otp = call;
+  api.verifyOtp = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService") return;
-  api.activate_canary = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authz.services.v1.AuthzService", "ActivateCanary", request, call);
+  api.activate_canary = call;
+  api.activateCanary = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService") return;
-  api.activate_policy_version = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authz.services.v1.AuthzService", "ActivatePolicyVersion", request, call);
+  api.activate_policy_version = call;
+  api.activatePolicyVersion = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService") return;
-  api.approve_policy_draft = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authz.services.v1.AuthzService", "ApprovePolicyDraft", request, call);
+  api.approve_policy_draft = call;
+  api.approvePolicyDraft = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService") return;
-  api.assign_role = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authz.services.v1.AuthzService", "AssignRole", request, call);
+  api.assign_role = call;
+  api.assignRole = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService") return;
-  api.authorize = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authz.services.v1.AuthzService", "Authorize", request, call);
+  api.authorize = call;
+  api.authorize = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService") return;
-  api.batch_check_permissions = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authz.services.v1.AuthzService", "BatchCheckPermissions", request, call);
+  api.batch_check_permissions = call;
+  api.batchCheckPermissions = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService") return;
-  api.check_access = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authz.services.v1.AuthzService", "CheckAccess", request, call);
+  api.check_access = call;
+  api.checkAccess = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService") return;
-  api.create_policy_draft = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authz.services.v1.AuthzService", "CreatePolicyDraft", request, call);
+  api.create_policy_draft = call;
+  api.createPolicyDraft = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService") return;
-  api.create_policy_rule = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authz.services.v1.AuthzService", "CreatePolicyRule", request, call);
+  api.create_policy_rule = call;
+  api.createPolicyRule = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService") return;
-  api.create_role = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authz.services.v1.AuthzService", "CreateRole", request, call);
+  api.create_role = call;
+  api.createRole = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService") return;
-  api.delete_policy_rule = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authz.services.v1.AuthzService", "DeletePolicyRule", request, call);
+  api.delete_policy_rule = call;
+  api.deletePolicyRule = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService") return;
-  api.delete_role = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authz.services.v1.AuthzService", "DeleteRole", request, call);
+  api.delete_role = call;
+  api.deleteRole = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService") return;
-  api.diff_policy_draft = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authz.services.v1.AuthzService", "DiffPolicyDraft", request, call);
+  api.diff_policy_draft = call;
+  api.diffPolicyDraft = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService") return;
-  api.explain_policy = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authz.services.v1.AuthzService", "ExplainPolicy", request, call);
+  api.explain_policy = call;
+  api.explainPolicy = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService") return;
-  api.get_authz_revision = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authz.services.v1.AuthzService", "GetAuthzRevision", request, call);
+  api.get_authz_revision = call;
+  api.getAuthzRevision = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService") return;
-  api.get_canary_status = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authz.services.v1.AuthzService", "GetCanaryStatus", request, call);
+  api.get_canary_status = call;
+  api.getCanaryStatus = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService") return;
-  api.get_native_access = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authz.services.v1.AuthzService", "GetNativeAccess", request, call);
+  api.get_native_access = call;
+  api.getNativeAccess = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService") return;
-  api.get_policy_bundle = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authz.services.v1.AuthzService", "GetPolicyBundle", request, call);
+  api.get_policy_bundle = call;
+  api.getPolicyBundle = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService") return;
-  api.get_policy_rule = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authz.services.v1.AuthzService", "GetPolicyRule", request, call);
+  api.get_policy_rule = call;
+  api.getPolicyRule = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService") return;
-  api.get_role = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authz.services.v1.AuthzService", "GetRole", request, call);
+  api.get_role = call;
+  api.getRole = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService") return;
-  api.invalidate_policy_bundles = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authz.services.v1.AuthzService", "InvalidatePolicyBundles", request, call);
+  api.invalidate_policy_bundles = call;
+  api.invalidatePolicyBundles = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService") return;
-  api.lint_authz_policies = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authz.services.v1.AuthzService", "LintAuthzPolicies", request, call);
+  api.lint_authz_policies = call;
+  api.lintAuthzPolicies = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService") return;
-  api.list_access_decision_audits = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authz.services.v1.AuthzService", "ListAccessDecisionAudits", request, call);
+  api.list_access_decision_audits = call;
+  api.listAccessDecisionAudits = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService") return;
-  api.list_policy_rules = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authz.services.v1.AuthzService", "ListPolicyRules", request, call);
+  api.list_policy_rules = call;
+  api.listPolicyRules = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService") return;
-  api.list_policy_versions = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authz.services.v1.AuthzService", "ListPolicyVersions", request, call);
+  api.list_policy_versions = call;
+  api.listPolicyVersions = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService") return;
-  api.list_roles = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authz.services.v1.AuthzService", "ListRoles", request, call);
+  api.list_roles = call;
+  api.listRoles = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService") return;
-  api.list_user_permissions = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authz.services.v1.AuthzService", "ListUserPermissions", request, call);
+  api.list_user_permissions = call;
+  api.listUserPermissions = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService") return;
-  api.list_user_roles = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authz.services.v1.AuthzService", "ListUserRoles", request, call);
+  api.list_user_roles = call;
+  api.listUserRoles = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService") return;
-  api.migrate_legacy_policies = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authz.services.v1.AuthzService", "MigrateLegacyPolicies", request, call);
+  api.migrate_legacy_policies = call;
+  api.migrateLegacyPolicies = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService") return;
-  api.promote_canary = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authz.services.v1.AuthzService", "PromoteCanary", request, call);
+  api.promote_canary = call;
+  api.promoteCanary = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService") return;
-  api.put_authz_policy = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authz.services.v1.AuthzService", "PutAuthzPolicy", request, call);
+  api.put_authz_policy = call;
+  api.putAuthzPolicy = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService") return;
-  api.put_relationship = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authz.services.v1.AuthzService", "PutRelationship", request, call);
+  api.put_relationship = call;
+  api.putRelationship = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService") return;
-  api.put_role_binding = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authz.services.v1.AuthzService", "PutRoleBinding", request, call);
+  api.put_role_binding = call;
+  api.putRoleBinding = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService") return;
-  api.reject_policy_draft = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authz.services.v1.AuthzService", "RejectPolicyDraft", request, call);
+  api.reject_policy_draft = call;
+  api.rejectPolicyDraft = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService") return;
-  api.revoke_role = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authz.services.v1.AuthzService", "RevokeRole", request, call);
+  api.revoke_role = call;
+  api.revokeRole = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService") return;
-  api.rollback_policy_version = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authz.services.v1.AuthzService", "RollbackPolicyVersion", request, call);
+  api.rollback_policy_version = call;
+  api.rollbackPolicyVersion = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService") return;
-  api.seed_builtin_roles = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authz.services.v1.AuthzService", "SeedBuiltinRoles", request, call);
+  api.seed_builtin_roles = call;
+  api.seedBuiltinRoles = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService") return;
-  api.simulate_policy = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authz.services.v1.AuthzService", "SimulatePolicy", request, call);
+  api.simulate_policy = call;
+  api.simulatePolicy = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService") return;
-  api.submit_policy_draft = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authz.services.v1.AuthzService", "SubmitPolicyDraft", request, call);
+  api.submit_policy_draft = call;
+  api.submitPolicyDraft = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService") return;
-  api.update_policy_draft = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authz.services.v1.AuthzService", "UpdatePolicyDraft", request, call);
+  api.update_policy_draft = call;
+  api.updatePolicyDraft = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService") return;
-  api.update_role = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.authz.services.v1.AuthzService", "UpdateRole", request, call);
+  api.update_role = call;
+  api.updateRole = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.control.services.v1.ControlPlaneService") return;
-  api.ack_status = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.control.services.v1.ControlPlaneService", "AckStatus", request, call);
+  api.ack_status = call;
+  api.ackStatus = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.control.services.v1.ControlPlaneService") return;
-  api.get_resources = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.control.services.v1.ControlPlaneService", "GetResources", request, call);
+  api.get_resources = call;
+  api.getResources = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.control.services.v1.ControlPlaneService") return;
-  api.list_node_states = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.control.services.v1.ControlPlaneService", "ListNodeStates", request, call);
+  api.list_node_states = call;
+  api.listNodeStates = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService") return;
-  api.create_provider = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.idp.services.v1.IdentityProviderService", "CreateProvider", request, call);
+  api.create_provider = call;
+  api.createProvider = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService") return;
-  api.disable_provider = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.idp.services.v1.IdentityProviderService", "DisableProvider", request, call);
+  api.disable_provider = call;
+  api.disableProvider = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService") return;
-  api.force_jwks_refresh = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.idp.services.v1.IdentityProviderService", "ForceJwksRefresh", request, call);
+  api.force_jwks_refresh = call;
+  api.forceJwksRefresh = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService") return;
-  api.get_provider = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.idp.services.v1.IdentityProviderService", "GetProvider", request, call);
+  api.get_provider = call;
+  api.getProvider = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService") return;
-  api.import_saml_metadata = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.idp.services.v1.IdentityProviderService", "ImportSamlMetadata", request, call);
+  api.import_saml_metadata = call;
+  api.importSamlMetadata = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService") return;
-  api.link_identity = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.idp.services.v1.IdentityProviderService", "LinkIdentity", request, call);
+  api.link_identity = call;
+  api.linkIdentity = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService") return;
-  api.list_external_identities = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.idp.services.v1.IdentityProviderService", "ListExternalIdentities", request, call);
+  api.list_external_identities = call;
+  api.listExternalIdentities = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService") return;
-  api.list_providers = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.idp.services.v1.IdentityProviderService", "ListProviders", request, call);
+  api.list_providers = call;
+  api.listProviders = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService") return;
-  api.preview_claim_mapping = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.idp.services.v1.IdentityProviderService", "PreviewClaimMapping", request, call);
+  api.preview_claim_mapping = call;
+  api.previewClaimMapping = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService") return;
-  api.preview_group_mapping = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.idp.services.v1.IdentityProviderService", "PreviewGroupMapping", request, call);
+  api.preview_group_mapping = call;
+  api.previewGroupMapping = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService") return;
-  api.resolve_external_identity = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.idp.services.v1.IdentityProviderService", "ResolveExternalIdentity", request, call);
+  api.resolve_external_identity = call;
+  api.resolveExternalIdentity = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService") return;
-  api.saml_acs = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.idp.services.v1.IdentityProviderService", "SamlAcs", request, call);
+  api.saml_acs = call;
+  api.samlAcs = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService") return;
-  api.scim_create_group = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.idp.services.v1.IdentityProviderService", "ScimCreateGroup", request, call);
+  api.scim_create_group = call;
+  api.scimCreateGroup = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService") return;
-  api.scim_create_user = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.idp.services.v1.IdentityProviderService", "ScimCreateUser", request, call);
+  api.scim_create_user = call;
+  api.scimCreateUser = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService") return;
-  api.scim_delete_group = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.idp.services.v1.IdentityProviderService", "ScimDeleteGroup", request, call);
+  api.scim_delete_group = call;
+  api.scimDeleteGroup = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService") return;
-  api.scim_delete_user = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.idp.services.v1.IdentityProviderService", "ScimDeleteUser", request, call);
+  api.scim_delete_user = call;
+  api.scimDeleteUser = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService") return;
-  api.scim_get_group = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.idp.services.v1.IdentityProviderService", "ScimGetGroup", request, call);
+  api.scim_get_group = call;
+  api.scimGetGroup = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService") return;
-  api.scim_get_user = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.idp.services.v1.IdentityProviderService", "ScimGetUser", request, call);
+  api.scim_get_user = call;
+  api.scimGetUser = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService") return;
-  api.scim_list_groups = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.idp.services.v1.IdentityProviderService", "ScimListGroups", request, call);
+  api.scim_list_groups = call;
+  api.scimListGroups = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService") return;
-  api.scim_list_users = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.idp.services.v1.IdentityProviderService", "ScimListUsers", request, call);
+  api.scim_list_users = call;
+  api.scimListUsers = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService") return;
-  api.scim_patch_group = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.idp.services.v1.IdentityProviderService", "ScimPatchGroup", request, call);
+  api.scim_patch_group = call;
+  api.scimPatchGroup = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService") return;
-  api.scim_patch_user = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.idp.services.v1.IdentityProviderService", "ScimPatchUser", request, call);
+  api.scim_patch_user = call;
+  api.scimPatchUser = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService") return;
-  api.scim_replace_user = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.idp.services.v1.IdentityProviderService", "ScimReplaceUser", request, call);
+  api.scim_replace_user = call;
+  api.scimReplaceUser = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService") return;
-  api.start_saml_login = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.idp.services.v1.IdentityProviderService", "StartSamlLogin", request, call);
+  api.start_saml_login = call;
+  api.startSamlLogin = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService") return;
-  api.test_provider_discovery = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.idp.services.v1.IdentityProviderService", "TestProviderDiscovery", request, call);
+  api.test_provider_discovery = call;
+  api.testProviderDiscovery = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService") return;
-  api.unlink_identity = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.idp.services.v1.IdentityProviderService", "UnlinkIdentity", request, call);
+  api.unlink_identity = call;
+  api.unlinkIdentity = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService") return;
-  api.update_provider = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.idp.services.v1.IdentityProviderService", "UpdateProvider", request, call);
+  api.update_provider = call;
+  api.updateProvider = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.notification.services.v1.NotificationService") return;
-  api.get_delivery_stats = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.notification.services.v1.NotificationService", "GetDeliveryStats", request, call);
+  api.get_delivery_stats = call;
+  api.getDeliveryStats = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.notification.services.v1.NotificationService") return;
-  api.get_notification = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.notification.services.v1.NotificationService", "GetNotification", request, call);
+  api.get_notification = call;
+  api.getNotification = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.notification.services.v1.NotificationService") return;
-  api.get_preference = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.notification.services.v1.NotificationService", "GetPreference", request, call);
+  api.get_preference = call;
+  api.getPreference = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.notification.services.v1.NotificationService") return;
-  api.get_template = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.notification.services.v1.NotificationService", "GetTemplate", request, call);
+  api.get_template = call;
+  api.getTemplate = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.notification.services.v1.NotificationService") return;
-  api.list_notifications = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.notification.services.v1.NotificationService", "ListNotifications", request, call);
+  api.list_notifications = call;
+  api.listNotifications = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.notification.services.v1.NotificationService") return;
-  api.list_preferences = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.notification.services.v1.NotificationService", "ListPreferences", request, call);
+  api.list_preferences = call;
+  api.listPreferences = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.notification.services.v1.NotificationService") return;
-  api.list_templates = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.notification.services.v1.NotificationService", "ListTemplates", request, call);
+  api.list_templates = call;
+  api.listTemplates = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.notification.services.v1.NotificationService") return;
-  api.retry_notification = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.notification.services.v1.NotificationService", "RetryNotification", request, call);
+  api.retry_notification = call;
+  api.retryNotification = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.notification.services.v1.NotificationService") return;
-  api.send_notification = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.notification.services.v1.NotificationService", "SendNotification", request, call);
+  api.send_notification = call;
+  api.sendNotification = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.notification.services.v1.NotificationService") return;
-  api.set_preference = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.notification.services.v1.NotificationService", "SetPreference", request, call);
+  api.set_preference = call;
+  api.setPreference = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.notification.services.v1.NotificationService") return;
-  api.upsert_template = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.notification.services.v1.NotificationService", "UpsertTemplate", request, call);
+  api.upsert_template = call;
+  api.upsertTemplate = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.storage.services.v1.StorageService") return;
-  api.delete_file = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.storage.services.v1.StorageService", "DeleteFile", request, call);
+  api.delete_file = call;
+  api.deleteFile = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.storage.services.v1.StorageService") return;
-  api.finalize_upload = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.storage.services.v1.StorageService", "FinalizeUpload", request, call);
+  api.finalize_upload = call;
+  api.finalizeUpload = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.storage.services.v1.StorageService") return;
-  api.get_download_url = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.storage.services.v1.StorageService", "GetDownloadUrl", request, call);
+  api.get_download_url = call;
+  api.getDownloadUrl = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.storage.services.v1.StorageService") return;
-  api.get_file = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.storage.services.v1.StorageService", "GetFile", request, call);
+  api.get_file = call;
+  api.getFile = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.storage.services.v1.StorageService") return;
-  api.list_files = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.storage.services.v1.StorageService", "ListFiles", request, call);
+  api.list_files = call;
+  api.listFiles = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.storage.services.v1.StorageService") return;
-  api.register_upload = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.storage.services.v1.StorageService", "RegisterUpload", request, call);
+  api.register_upload = call;
+  api.registerUpload = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.storage.services.v1.StorageService") return;
-  api.update_file = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.storage.services.v1.StorageService", "UpdateFile", request, call);
+  api.update_file = call;
+  api.updateFile = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.tenant.services.v1.TenantService") return;
-  api.create_tenant = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.tenant.services.v1.TenantService", "CreateTenant", request, call);
+  api.create_tenant = call;
+  api.createTenant = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.tenant.services.v1.TenantService") return;
-  api.get_tenant = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.tenant.services.v1.TenantService", "GetTenant", request, call);
+  api.get_tenant = call;
+  api.getTenant = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.tenant.services.v1.TenantService") return;
-  api.get_tenant_config = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.tenant.services.v1.TenantService", "GetTenantConfig", request, call);
+  api.get_tenant_config = call;
+  api.getTenantConfig = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.tenant.services.v1.TenantService") return;
-  api.list_tenants = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.tenant.services.v1.TenantService", "ListTenants", request, call);
+  api.list_tenants = call;
+  api.listTenants = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.tenant.services.v1.TenantService") return;
-  api.update_tenant = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.tenant.services.v1.TenantService", "UpdateTenant", request, call);
+  api.update_tenant = call;
+  api.updateTenant = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.tenant.services.v1.TenantService") return;
-  api.update_tenant_config = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.tenant.services.v1.TenantService", "UpdateTenantConfig", request, call);
+  api.update_tenant_config = call;
+  api.updateTenantConfig = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.webrtc.services.v1.PeerService") return;
-  api.get_peer = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.webrtc.services.v1.PeerService", "GetPeer", request, call);
+  api.get_peer = call;
+  api.getPeer = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.webrtc.services.v1.PeerService") return;
-  api.join_room = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.webrtc.services.v1.PeerService", "JoinRoom", request, call);
+  api.join_room = call;
+  api.joinRoom = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.webrtc.services.v1.PeerService") return;
-  api.join_session = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.webrtc.services.v1.PeerService", "JoinSession", request, call);
+  api.join_session = call;
+  api.joinSession = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.webrtc.services.v1.PeerService") return;
-  api.leave_room = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.webrtc.services.v1.PeerService", "LeaveRoom", request, call);
+  api.leave_room = call;
+  api.leaveRoom = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.webrtc.services.v1.PeerService") return;
-  api.list_peers = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.webrtc.services.v1.PeerService", "ListPeers", request, call);
+  api.list_peers = call;
+  api.listPeers = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.webrtc.services.v1.RoomService") return;
-  api.close_room = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.webrtc.services.v1.RoomService", "CloseRoom", request, call);
+  api.close_room = call;
+  api.closeRoom = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.webrtc.services.v1.RoomService") return;
-  api.create_room = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.webrtc.services.v1.RoomService", "CreateRoom", request, call);
+  api.create_room = call;
+  api.createRoom = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.webrtc.services.v1.RoomService") return;
-  api.get_room = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.webrtc.services.v1.RoomService", "GetRoom", request, call);
+  api.get_room = call;
+  api.getRoom = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.webrtc.services.v1.RoomService") return;
-  api.list_rooms = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.webrtc.services.v1.RoomService", "ListRooms", request, call);
+  api.list_rooms = call;
+  api.listRooms = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.webrtc.services.v1.RoomService") return;
-  api.update_room = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.webrtc.services.v1.RoomService", "UpdateRoom", request, call);
+  api.update_room = call;
+  api.updateRoom = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.webrtc.services.v1.TrackService") return;
-  api.list_tracks = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.webrtc.services.v1.TrackService", "ListTracks", request, call);
+  api.list_tracks = call;
+  api.listTracks = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.webrtc.services.v1.TrackService") return;
-  api.mute_track = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.webrtc.services.v1.TrackService", "MuteTrack", request, call);
+  api.mute_track = call;
+  api.muteTrack = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.webrtc.services.v1.TrackService") return;
-  api.publish_track = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.webrtc.services.v1.TrackService", "PublishTrack", request, call);
+  api.publish_track = call;
+  api.publishTrack = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.webrtc.services.v1.TrackService") return;
-  api.unpublish_track = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.webrtc.services.v1.TrackService", "UnpublishTrack", request, call);
+  api.unpublish_track = call;
+  api.unpublishTrack = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.webrtc.services.v1.TurnService") return;
-  api.issue_credentials = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.core.webrtc.services.v1.TurnService", "IssueCredentials", request, call);
+  api.issue_credentials = call;
+  api.issueCredentials = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.activate_catalog = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "ActivateCatalog", request, call);
+  api.activate_catalog = call;
+  api.activateCatalog = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.analytical_query = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "AnalyticalQuery", request, call);
+  api.analytical_query = call;
+  api.analyticalQuery = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.apply_migration = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "ApplyMigration", request, call);
+  api.apply_migration = call;
+  api.applyMigration = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.approve_migration_plan = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "ApproveMigrationPlan", request, call);
+  api.approve_migration_plan = call;
+  api.approveMigrationPlan = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.cache_delete = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "CacheDelete", request, call);
+  api.cache_delete = call;
+  api.cacheDelete = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.cache_get = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "CacheGet", request, call);
+  api.cache_get = call;
+  api.cacheGet = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.cache_scan = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "CacheScan", request, call);
+  api.cache_scan = call;
+  api.cacheScan = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.cache_set = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "CacheSet", request, call);
+  api.cache_set = call;
+  api.cacheSet = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.create_materialized_view = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "CreateMaterializedView", request, call);
+  api.create_materialized_view = call;
+  api.createMaterializedView = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.delete = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "Delete", request, call);
+  api.delete = call;
+  api.delete = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.delete_policy = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "DeletePolicy", request, call);
+  api.delete_policy = call;
+  api.deletePolicy = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.dismiss_dlq_event = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "DismissDlqEvent", request, call);
+  api.dismiss_dlq_event = call;
+  api.dismissDlqEvent = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.document_delete = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "DocumentDelete", request, call);
+  api.document_delete = call;
+  api.documentDelete = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.document_find = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "DocumentFind", request, call);
+  api.document_find = call;
+  api.documentFind = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.document_get = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "DocumentGet", request, call);
+  api.document_get = call;
+  api.documentGet = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.document_upsert = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "DocumentUpsert", request, call);
+  api.document_upsert = call;
+  api.documentUpsert = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.drop_resource = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "DropResource", request, call);
+  api.drop_resource = call;
+  api.dropResource = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.enqueue_outbox_event = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "EnqueueOutboxEvent", request, call);
+  api.enqueue_outbox_event = call;
+  api.enqueueOutboxEvent = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.ensure_baseline = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "EnsureBaseline", request, call);
+  api.ensure_baseline = call;
+  api.ensureBaseline = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.ensure_project = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "EnsureProject", request, call);
+  api.ensure_project = call;
+  api.ensureProject = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.ensure_resource = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "EnsureResource", request, call);
+  api.ensure_resource = call;
+  api.ensureResource = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.generate_presigned_url = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "GeneratePresignedUrl", request, call);
+  api.generate_presigned_url = call;
+  api.generatePresignedUrl = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.generic_dispatch = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "GenericDispatch", request, call);
+  api.generic_dispatch = call;
+  api.genericDispatch = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.get_admin_summary = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "GetAdminSummary", request, call);
+  api.get_admin_summary = call;
+  api.getAdminSummary = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.get_capabilities = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "GetCapabilities", request, call);
+  api.get_capabilities = call;
+  api.getCapabilities = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.get_catalog_manifest = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "GetCatalogManifest", request, call);
+  api.get_catalog_manifest = call;
+  api.getCatalogManifest = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.get_catalog_version = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "GetCatalogVersion", request, call);
+  api.get_catalog_version = call;
+  api.getCatalogVersion = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.get_catalog_versions = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "GetCatalogVersions", request, call);
+  api.get_catalog_versions = call;
+  api.getCatalogVersions = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.get_cdc_status = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "GetCdcStatus", request, call);
+  api.get_cdc_status = call;
+  api.getCdcStatus = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.get_dlq_event = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "GetDlqEvent", request, call);
+  api.get_dlq_event = call;
+  api.getDlqEvent = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.get_health_report = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "GetHealthReport", request, call);
+  api.get_health_report = call;
+  api.getHealthReport = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.get_migration_status = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "GetMigrationStatus", request, call);
+  api.get_migration_status = call;
+  api.getMigrationStatus = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.get_saga = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "GetSaga", request, call);
+  api.get_saga = call;
+  api.getSaga = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.graph_mutate = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "GraphMutate", request, call);
+  api.graph_mutate = call;
+  api.graphMutate = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.graph_query = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "GraphQuery", request, call);
+  api.graph_query = call;
+  api.graphQuery = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.initiate_multipart_upload = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "InitiateMultipartUpload", request, call);
+  api.initiate_multipart_upload = call;
+  api.initiateMultipartUpload = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.lint_policies = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "LintPolicies", request, call);
+  api.lint_policies = call;
+  api.lintPolicies = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.list_admin_audit_logs = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "ListAdminAuditLogs", request, call);
+  api.list_admin_audit_logs = call;
+  api.listAdminAuditLogs = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.list_dlq_events = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "ListDlqEvents", request, call);
+  api.list_dlq_events = call;
+  api.listDlqEvents = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.list_message_schemas = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "ListMessageSchemas", request, call);
+  api.list_message_schemas = call;
+  api.listMessageSchemas = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.list_migration_runs = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "ListMigrationRuns", request, call);
+  api.list_migration_runs = call;
+  api.listMigrationRuns = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.list_policies = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "ListPolicies", request, call);
+  api.list_policies = call;
+  api.listPolicies = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.list_projects = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "ListProjects", request, call);
+  api.list_projects = call;
+  api.listProjects = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.list_resources = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "ListResources", request, call);
+  api.list_resources = call;
+  api.listResources = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.list_sagas = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "ListSagas", request, call);
+  api.list_sagas = call;
+  api.listSagas = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.lookup_message_schema = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "LookupMessageSchema", request, call);
+  api.lookup_message_schema = call;
+  api.lookupMessageSchema = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.mark_saga_reviewed = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "MarkSagaReviewed", request, call);
+  api.mark_saga_reviewed = call;
+  api.markSagaReviewed = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.pause_cdc = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "PauseCdc", request, call);
+  api.pause_cdc = call;
+  api.pauseCdc = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.plan_migration = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "PlanMigration", request, call);
+  api.plan_migration = call;
+  api.planMigration = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.preview_cdc_redaction = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "PreviewCdcRedaction", request, call);
+  api.preview_cdc_redaction = call;
+  api.previewCdcRedaction = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.put_policy = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "PutPolicy", request, call);
+  api.put_policy = call;
+  api.putPolicy = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.quarantine_dlq_event = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "QuarantineDlqEvent", request, call);
+  api.quarantine_dlq_event = call;
+  api.quarantineDlqEvent = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.reload_policies = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "ReloadPolicies", request, call);
+  api.reload_policies = call;
+  api.reloadPolicies = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.replay_dlq_event = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "ReplayDlqEvent", request, call);
+  api.replay_dlq_event = call;
+  api.replayDlqEvent = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.resume_cdc = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "ResumeCdc", request, call);
+  api.resume_cdc = call;
+  api.resumeCdc = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.retry_saga_compensation = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "RetrySagaCompensation", request, call);
+  api.retry_saga_compensation = call;
+  api.retrySagaCompensation = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.rollback_catalog = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "RollbackCatalog", request, call);
+  api.rollback_catalog = call;
+  api.rollbackCatalog = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.scan_projection_drift = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "ScanProjectionDrift", request, call);
+  api.scan_projection_drift = call;
+  api.scanProjectionDrift = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.select = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "Select", request, call);
+  api.select = call;
+  api.select = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.stage_catalog = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "StageCatalog", request, call);
+  api.stage_catalog = call;
+  api.stageCatalog = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.step_down_cdc_leader = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "StepDownCdcLeader", request, call);
+  api.step_down_cdc_leader = call;
+  api.stepDownCdcLeader = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.time_series_query = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "TimeSeriesQuery", request, call);
+  api.time_series_query = call;
+  api.timeSeriesQuery = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.time_series_write = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "TimeSeriesWrite", request, call);
+  api.time_series_write = call;
+  api.timeSeriesWrite = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.upsert = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "Upsert", request, call);
+  api.upsert = call;
+  api.upsert = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.validate_catalog = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "ValidateCatalog", request, call);
+  api.validate_catalog = call;
+  api.validateCatalog = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.vector_hybrid_search = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "VectorHybridSearch", request, call);
+  api.vector_hybrid_search = call;
+  api.vectorHybridSearch = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.vector_search = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "VectorSearch", request, call);
+  api.vector_search = call;
+  api.vectorSearch = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.vector_upsert = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "VectorUpsert", request, call);
+  api.vector_upsert = call;
+  api.vectorUpsert = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.verify_admin_audit_log = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.unary("udb.services.v1.DataBroker", "VerifyAdminAuditLog", request, call);
+  api.verify_admin_audit_log = call;
+  api.verifyAdminAuditLog = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.storage.services.v1.StorageService") return;
-  api.download_file = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.serverStream("udb.core.storage.services.v1.StorageService", "DownloadFile", request, call);
+  api.download_file = call;
+  api.downloadFile = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.get_object = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.serverStream("udb.services.v1.DataBroker", "GetObject", request, call);
+  api.get_object = call;
+  api.getObject = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.publish_c_d_c = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.serverStream("udb.services.v1.DataBroker", "PublishCDC", request, call);
+  api.publish_cdc = call;
+  api.publishCdc = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.select_v2 = (request: any, call?: CallOptions) =>
+  const call = (request: any, call?: CallOptions) =>
     core.serverStream("udb.services.v1.DataBroker", "SelectV2", request, call);
+  api.select_v_2 = call;
+  api.selectV2 = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.put_object = (call?: CallOptions) =>
+  const call = (call?: CallOptions) =>
     core.clientStream("udb.services.v1.DataBroker", "PutObject", call);
+  api.put_object = call;
+  api.putObject = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.control.services.v1.ControlPlaneService") return;
-  api.delta_resources = (call?: CallOptions) =>
+  const call = (call?: CallOptions) =>
     core.bidiStream("udb.core.control.services.v1.ControlPlaneService", "DeltaResources", call);
+  api.delta_resources = call;
+  api.deltaResources = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.control.services.v1.ControlPlaneService") return;
-  api.stream_resources = (call?: CallOptions) =>
+  const call = (call?: CallOptions) =>
     core.bidiStream("udb.core.control.services.v1.ControlPlaneService", "StreamResources", call);
+  api.stream_resources = call;
+  api.streamResources = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.core.webrtc.services.v1.SignalingService") return;
-  api.signal = (call?: CallOptions) =>
+  const call = (call?: CallOptions) =>
     core.bidiStream("udb.core.webrtc.services.v1.SignalingService", "Signal", call);
+  api.signal = call;
+  api.signal = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.batch_select = (call?: CallOptions) =>
+  const call = (call?: CallOptions) =>
     core.bidiStream("udb.services.v1.DataBroker", "BatchSelect", call);
+  api.batch_select = call;
+  api.batchSelect = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.batch_upsert = (call?: CallOptions) =>
+  const call = (call?: CallOptions) =>
     core.bidiStream("udb.services.v1.DataBroker", "BatchUpsert", call);
+  api.batch_upsert = call;
+  api.batchUpsert = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.begin_tx = (call?: CallOptions) =>
+  const call = (call?: CallOptions) =>
     core.bidiStream("udb.services.v1.DataBroker", "BeginTx", call);
+  api.begin_tx = call;
+  api.beginTx = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "udb.services.v1.DataBroker") return;
-  api.vector_batch_upsert = (call?: CallOptions) =>
+  const call = (call?: CallOptions) =>
     core.bidiStream("udb.services.v1.DataBroker", "VectorBatchUpsert", call);
+  api.vector_batch_upsert = call;
+  api.vectorBatchUpsert = call;
 });
 
 function installMethods(core: UdbCore, api: any): void {

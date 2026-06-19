@@ -1,0 +1,117 @@
+name: "Launch UDB broker"
+description: >-
+  Single source for the broker launch sequence used by the CI smoke/live jobs
+  and the SDK benchmark harness: optionally bootstrap an admin/user, launch
+  `serve proto` in the background, and poll until the broker is ready (fail
+  closed on timeout, dumping the log tail).
+
+inputs:
+  bin:
+    description: "Path to the udb binary (e.g. target/debug/udb)."
+    required: true
+  grpc-addr:
+    description: "Address the broker binds its gRPC listener to."
+    required: false
+    default: "127.0.0.1:50051"
+  bootstrap:
+    description: "When 'true', run `auth bootstrap user` before launching."
+    required: false
+    default: "false"
+  username:
+    description: "Bootstrap user --username (only when bootstrap == 'true')."
+    required: false
+    default: ""
+  password:
+    description: "Bootstrap user --password (only when bootstrap == 'true')."
+    required: false
+    default: ""
+  tenant:
+    description: "Bootstrap user --tenant (only when bootstrap == 'true')."
+    required: false
+    default: ""
+  project:
+    description: "Bootstrap user --project (only when bootstrap == 'true')."
+    required: false
+    default: ""
+  ready-timeout-secs:
+    description: "Maximum seconds to wait for the broker to become ready."
+    required: false
+    default: "120"
+  log-file:
+    description: "File the broker stdout/stderr is redirected to."
+    required: false
+    default: "/tmp/udb-server.log"
+
+outputs:
+  pid:
+    description: "PID of the launched broker process."
+    value: ${{ steps.launch.outputs.pid }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Bootstrap user
+      if: inputs.bootstrap == 'true'
+      shell: bash
+      env:
+        BIN: ${{ inputs.bin }}
+        USERNAME: ${{ inputs.username }}
+        PASSWORD: ${{ inputs.password }}
+        TENANT: ${{ inputs.tenant }}
+        PROJECT: ${{ inputs.project }}
+      run: |
+        set -euo pipefail
+        "${BIN}" auth bootstrap user \
+          --username "${USERNAME}" \
+          --email "${USERNAME}" \
+          --password "${PASSWORD}" \
+          --tenant "${TENANT}" \
+          --project "${PROJECT}"
+
+    - name: Launch broker
+      id: launch
+      shell: bash
+      env:
+        BIN: ${{ inputs.bin }}
+        GRPC_ADDR: ${{ inputs.grpc-addr }}
+        LOG: ${{ inputs.log-file }}
+      run: |
+        set -euo pipefail
+        "${BIN}" serve proto "" "${GRPC_ADDR}" > "${LOG}" 2>&1 &
+        PID=$!
+        echo "pid=${PID}" >> "$GITHUB_OUTPUT"
+        echo "UDB_BROKER_PID=${PID}" >> "$GITHUB_ENV"
+        echo "Launched broker PID ${PID} on ${GRPC_ADDR} (log: ${LOG})"
+
+    - name: Wait for broker ready
+      shell: bash
+      env:
+        GRPC_ADDR: ${{ inputs.grpc-addr }}
+        LOG: ${{ inputs.log-file }}
+        READY_TIMEOUT_SECS: ${{ inputs.ready-timeout-secs }}
+        PID: ${{ steps.launch.outputs.pid }}
+      run: |
+        set -uo pipefail
+        # Split host:port for the bash /dev/tcp readiness probe.
+        HOST="${GRPC_ADDR%:*}"
+        PORT="${GRPC_ADDR##*:}"
+        # The native auth/loopback listener sits on the gRPC port + 10 (mirrors
+        # ci.yml sdk-live + benchmark reset.sh, which probe both 50051 and 50061).
+        AUTH_PORT=$((PORT + 10))
+        DEADLINE=$(( $(date +%s) + READY_TIMEOUT_SECS ))
+        while [ "$(date +%s)" -lt "${DEADLINE}" ]; do
+          if (echo > "/dev/tcp/${HOST}/${PORT}") >/dev/null 2>&1 \
+            && (echo > "/dev/tcp/${HOST}/${AUTH_PORT}") >/dev/null 2>&1; then
+            echo "Broker ready on ${HOST}:${PORT} (auth ${HOST}:${AUTH_PORT})"
+            exit 0
+          fi
+          if ! kill -0 "${PID}" 2>/dev/null; then
+            echo "Broker process ${PID} exited before becoming ready; log tail:"
+            tail -n 200 "${LOG}" || true
+            exit 1
+          fi
+          sleep 2
+        done
+        echo "Broker not ready within ${READY_TIMEOUT_SECS}s; log tail:"
+        tail -n 200 "${LOG}" || true
+        exit 1

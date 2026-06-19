@@ -753,10 +753,10 @@ var perfBodySpecs = map[string][]bodyField{
 	"udb.core.idp.services.v1.IdentityProviderService/ScimGetGroup":    {fld("tenant_id", seed("tenant_id")), fld("provider_id", seed("provider_id")), fld("scim_group_id", seed("scim_group_id"))},
 	"udb.core.idp.services.v1.IdentityProviderService/ScimListGroups":  {fld("tenant_id", seed("tenant_id")), fld("provider_id", seed("provider_id")), fld("filter", litS("")), fld("page", sub(fld("page", litI(1)), fld("page_size", litI(20))))},
 	"udb.core.idp.services.v1.IdentityProviderService/ScimPatchGroup": {
-		fld("tenant_id", seed("tenant_id")), fld("provider_id", seed("provider_id")), fld("scim_group_id", seed("record_id")),
+		fld("tenant_id", seed("tenant_id")), fld("provider_id", seed("provider_id")), fld("scim_group_id", seed("scim_group_id")),
 		fld("operations", list(sub(fld("op", litS("add")), fld("path", litS("members")), fld("value_json", litS(`["x"]`))))), ctxField(),
 	},
-	"udb.core.idp.services.v1.IdentityProviderService/ScimDeleteGroup": {fld("tenant_id", seed("tenant_id")), fld("provider_id", seed("provider_id")), fld("scim_group_id", seed("record_id")), ctxField()},
+	"udb.core.idp.services.v1.IdentityProviderService/ScimDeleteGroup": {fld("tenant_id", seed("tenant_id")), fld("provider_id", seed("provider_id")), fld("scim_group_id", seed("scim_group_id")), ctxField()},
 
 	// ── AssetService ────────────────────────────────────────────────────────
 	"udb.core.asset.services.v1.AssetService/CreatePipelineDefinition": {

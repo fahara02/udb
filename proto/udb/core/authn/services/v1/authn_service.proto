@@ -77,7 +77,7 @@ service AuthnService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "create_user"
+      method_alias: "create_user" rest_operation_id: "createUser"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -134,7 +134,7 @@ service AuthnService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "get_user"
+      method_alias: "get_user" rest_operation_id: "getUser"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -188,7 +188,7 @@ service AuthnService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "list_users"
+      method_alias: "list_users" rest_operation_id: "listUsers"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -242,7 +242,7 @@ service AuthnService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "update_user"
+      method_alias: "update_user" rest_operation_id: "updateUser"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -299,7 +299,7 @@ service AuthnService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "change_user_status"
+      method_alias: "change_user_status" rest_operation_id: "changeUserStatus"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -339,7 +339,7 @@ service AuthnService {
       explicit_nulls: true
     };
     option (google.api.http) = {
-      post: "/v1/auth/users/{user_id}:change-status"
+      post: "/v1/auth/users/{user_id}:changeStatus"
       body: "*"
     };
   }
@@ -357,7 +357,7 @@ service AuthnService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "admin_reset_password"
+      method_alias: "admin_reset_password" rest_operation_id: "adminResetPassword"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -397,7 +397,7 @@ service AuthnService {
       explicit_nulls: true
     };
     option (google.api.http) = {
-      post: "/v1/auth/users/{user_id}/password:reset"
+      post: "/v1/auth/users/{user_id}/passwords:reset"
       body: "*"
     };
   }
@@ -416,7 +416,7 @@ service AuthnService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "send_otp"
+      method_alias: "send_otp" rest_operation_id: "sendOtp"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -456,7 +456,7 @@ service AuthnService {
       explicit_nulls: true
     };
     option (google.api.http) = {
-      post: "/v1/auth/otp:send"
+      post: "/v1/auth/otps:send"
       body: "*"
     };
   }
@@ -473,7 +473,7 @@ service AuthnService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "verify_otp"
+      method_alias: "verify_otp" rest_operation_id: "verifyOtp"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -513,7 +513,7 @@ service AuthnService {
       explicit_nulls: true
     };
     option (google.api.http) = {
-      post: "/v1/auth/otp:verify"
+      post: "/v1/auth/otps:verify"
       body: "*"
     };
   }
@@ -530,7 +530,7 @@ service AuthnService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "resend_otp"
+      method_alias: "resend_otp" rest_operation_id: "resendOtp"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -570,7 +570,7 @@ service AuthnService {
       explicit_nulls: true
     };
     option (google.api.http) = {
-      post: "/v1/auth/otp:resend"
+      post: "/v1/auth/otps:resend"
       body: "*"
     };
   }
@@ -588,7 +588,7 @@ service AuthnService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "authenticate"
+      method_alias: "authenticate" rest_operation_id: "authenticate"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -628,7 +628,7 @@ service AuthnService {
       explicit_nulls: true
     };
     option (google.api.http) = {
-      post: "/v1/auth/authenticate"
+      post: "/v1/auth/credentials:authenticate"
       body: "*"
     };
   }
@@ -646,7 +646,7 @@ service AuthnService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "login"
+      method_alias: "login" rest_operation_id: "login"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -686,7 +686,7 @@ service AuthnService {
       explicit_nulls: true
     };
     option (google.api.http) = {
-      post: "/v1/auth/login"
+      post: "/v1/auth/password-sessions"
       body: "*"
     };
   }
@@ -703,7 +703,7 @@ service AuthnService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "refresh_token"
+      method_alias: "refresh_token" rest_operation_id: "refreshToken"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -743,7 +743,7 @@ service AuthnService {
       explicit_nulls: true
     };
     option (google.api.http) = {
-      post: "/v1/auth/token:refresh"
+      post: "/v1/auth/tokens:refresh"
       body: "*"
     };
   }
@@ -760,7 +760,7 @@ service AuthnService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "logout"
+      method_alias: "logout" rest_operation_id: "logout"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -800,7 +800,7 @@ service AuthnService {
       explicit_nulls: true
     };
     option (google.api.http) = {
-      post: "/v1/auth/logout"
+      post: "/v1/auth/sessions:logout"
       body: "*"
     };
   }
@@ -817,7 +817,7 @@ service AuthnService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "change_password"
+      method_alias: "change_password" rest_operation_id: "changePassword"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -857,7 +857,7 @@ service AuthnService {
       explicit_nulls: true
     };
     option (google.api.http) = {
-      post: "/v1/auth/password:change"
+      post: "/v1/auth/passwords:change"
       body: "*"
     };
   }
@@ -876,7 +876,7 @@ service AuthnService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "validate_token"
+      method_alias: "validate_token" rest_operation_id: "validateToken"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -916,7 +916,7 @@ service AuthnService {
       explicit_nulls: true
     };
     option (google.api.http) = {
-      post: "/v1/auth/token:validate"
+      post: "/v1/auth/tokens:validate"
       body: "*"
     };
   }
@@ -935,7 +935,7 @@ service AuthnService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "create_session"
+      method_alias: "create_session" rest_operation_id: "createSession"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -993,7 +993,7 @@ service AuthnService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "refresh_session"
+      method_alias: "refresh_session" rest_operation_id: "refreshSession"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -1051,7 +1051,7 @@ service AuthnService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "get_session"
+      method_alias: "get_session" rest_operation_id: "getSession"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -1105,7 +1105,7 @@ service AuthnService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "list_sessions"
+      method_alias: "list_sessions" rest_operation_id: "listSessions"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -1159,7 +1159,7 @@ service AuthnService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "revoke_session"
+      method_alias: "revoke_session" rest_operation_id: "revokeSession"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -1215,7 +1215,7 @@ service AuthnService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "validate_csrf"
+      method_alias: "validate_csrf" rest_operation_id: "validateCsrf"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -1255,7 +1255,7 @@ service AuthnService {
       explicit_nulls: true
     };
     option (google.api.http) = {
-      post: "/v1/auth/csrf:validate"
+      post: "/v1/auth/csrf-tokens:validate"
       body: "*"
     };
   }
@@ -1275,7 +1275,7 @@ service AuthnService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "enroll_mfa"
+      method_alias: "enroll_mfa" rest_operation_id: "enrollMfa"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -1333,7 +1333,7 @@ service AuthnService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "confirm_mfaenrollment"
+      method_alias: "confirm_mfaenrollment" rest_operation_id: "confirmMfaenrollment"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -1393,7 +1393,7 @@ service AuthnService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "generate_recovery_codes"
+      method_alias: "generate_recovery_codes" rest_operation_id: "generateRecoveryCodes"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -1452,7 +1452,7 @@ service AuthnService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "put_mfa_policy"
+      method_alias: "put_mfa_policy" rest_operation_id: "putMfaPolicy"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -1511,7 +1511,7 @@ service AuthnService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "get_mfa_policy"
+      method_alias: "get_mfa_policy" rest_operation_id: "getMfaPolicy"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -1568,7 +1568,7 @@ service AuthnService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "forgot_password"
+      method_alias: "forgot_password" rest_operation_id: "forgotPassword"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -1608,7 +1608,7 @@ service AuthnService {
       explicit_nulls: true
     };
     option (google.api.http) = {
-      post: "/v1/auth/password:forgot"
+      post: "/v1/auth/passwords:forgot"
       body: "*"
     };
   }
@@ -1626,7 +1626,7 @@ service AuthnService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "reset_password"
+      method_alias: "reset_password" rest_operation_id: "resetPassword"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -1666,7 +1666,7 @@ service AuthnService {
       explicit_nulls: true
     };
     option (google.api.http) = {
-      post: "/v1/auth/password:reset"
+      post: "/v1/auth/passwords:reset"
       body: "*"
     };
   }
@@ -1684,7 +1684,7 @@ service AuthnService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "introspect_token"
+      method_alias: "introspect_token" rest_operation_id: "introspectToken"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -1724,7 +1724,7 @@ service AuthnService {
       explicit_nulls: true
     };
     option (google.api.http) = {
-      post: "/v1/auth/token:introspect"
+      post: "/v1/auth/tokens:introspect"
       body: "*"
     };
   }
@@ -1744,7 +1744,7 @@ service AuthnService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "send_phone_verification"
+      method_alias: "send_phone_verification" rest_operation_id: "sendPhoneVerification"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -1784,7 +1784,7 @@ service AuthnService {
       explicit_nulls: true
     };
     option (google.api.http) = {
-      post: "/v1/auth/users/{user_id}/phone:verify"
+      post: "/v1/auth/users/{user_id}/phones:verify"
       body: "*"
     };
   }
@@ -1799,7 +1799,7 @@ service AuthnService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "get_jwks"
+      method_alias: "get_jwks" rest_operation_id: "getJwks"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -1856,7 +1856,7 @@ service AuthnService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "start_web_authn_registration"
+      method_alias: "start_web_authn_registration" rest_operation_id: "startWebAuthnRegistration"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -1908,7 +1908,7 @@ service AuthnService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "finish_web_authn_registration"
+      method_alias: "finish_web_authn_registration" rest_operation_id: "finishWebAuthnRegistration"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -1959,7 +1959,7 @@ service AuthnService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "start_web_authn_authentication"
+      method_alias: "start_web_authn_authentication" rest_operation_id: "startWebAuthnAuthentication"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -2010,7 +2010,7 @@ service AuthnService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "finish_web_authn_authentication"
+      method_alias: "finish_web_authn_authentication" rest_operation_id: "finishWebAuthnAuthentication"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -2062,7 +2062,7 @@ service AuthnService {
       request_context_required: true
       tenant_required: true
     };
-    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "list_devices" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "list_devices" rest_operation_id: "listDevices" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
     option (udb.core.common.v1.rest_contract) = { response_envelope: true api_error: true explicit_nulls: true };
     option (google.api.http) = {get: "/v1/auth/users/{user_id}/devices"};
   }
@@ -2077,7 +2077,7 @@ service AuthnService {
       request_context_required: true
       tenant_required: true
     };
-    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "revoke_device" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "revoke_device" rest_operation_id: "revokeDevice" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
     option (udb.core.common.v1.method_event_contract) = { event_type: "authn.RevokeDevice" outbox_topic: "authn.events" partition_key_field: "tenant_id" payload_redaction_profile: "standard" delivery_guarantee: "at_least_once" replay_compatibility: "stable" };
     option (udb.core.common.v1.rest_contract) = { response_envelope: true api_error: true explicit_nulls: true };
     option (google.api.http) = {delete: "/v1/auth/devices/{device_id}"};
@@ -2093,7 +2093,7 @@ service AuthnService {
       request_context_required: true
       tenant_required: true
     };
-    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "admin_revoke_session" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "admin_revoke_session" rest_operation_id: "adminRevokeSession" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
     option (udb.core.common.v1.method_event_contract) = { event_type: "authn.AdminRevokeSession" outbox_topic: "authn.events" partition_key_field: "tenant_id" payload_redaction_profile: "standard" delivery_guarantee: "at_least_once" replay_compatibility: "stable" };
     option (udb.core.common.v1.rest_contract) = { response_envelope: true api_error: true explicit_nulls: true };
     option (google.api.http) = { post: "/v1/auth/admin/users/{user_id}/sessions:revoke" body: "*" };
@@ -2109,10 +2109,10 @@ service AuthnService {
       request_context_required: true
       tenant_required: true
     };
-    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "admin_revoke_all_user_sessions" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "admin_revoke_all_user_sessions" rest_operation_id: "adminRevokeAllUserSessions" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
     option (udb.core.common.v1.method_event_contract) = { event_type: "authn.AdminRevokeAllUserSessions" outbox_topic: "authn.events" partition_key_field: "tenant_id" payload_redaction_profile: "standard" delivery_guarantee: "at_least_once" replay_compatibility: "stable" };
     option (udb.core.common.v1.rest_contract) = { response_envelope: true api_error: true explicit_nulls: true };
-    option (google.api.http) = { post: "/v1/auth/admin/users/{user_id}/sessions:revoke-all" body: "*" };
+    option (google.api.http) = { post: "/v1/auth/admin/users/{user_id}/sessions:revokeAll" body: "*" };
   }
   rpc AdminRevokeAllTenantSessions(AdminRevokeAllTenantSessionsRequest) returns (AdminRevokeAllTenantSessionsResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
@@ -2125,10 +2125,10 @@ service AuthnService {
       request_context_required: true
       tenant_required: true
     };
-    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "admin_revoke_all_tenant_sessions" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "admin_revoke_all_tenant_sessions" rest_operation_id: "adminRevokeAllTenantSessions" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
     option (udb.core.common.v1.method_event_contract) = { event_type: "authn.AdminRevokeAllTenantSessions" outbox_topic: "authn.events" partition_key_field: "tenant_id" payload_redaction_profile: "standard" delivery_guarantee: "at_least_once" replay_compatibility: "stable" };
     option (udb.core.common.v1.rest_contract) = { response_envelope: true api_error: true explicit_nulls: true };
-    option (google.api.http) = { post: "/v1/auth/admin/tenants/{tenant_id}/sessions:revoke-all" body: "*" };
+    option (google.api.http) = { post: "/v1/auth/admin/tenants/{tenant_id}/sessions:revokeAll" body: "*" };
   }
   rpc EmergencyRevoke(EmergencyRevokeRequest) returns (EmergencyRevokeResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
@@ -2141,10 +2141,10 @@ service AuthnService {
       request_context_required: true
       tenant_required: true
     };
-    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "emergency_revoke" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "emergency_revoke" rest_operation_id: "emergencyRevoke" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
     option (udb.core.common.v1.method_event_contract) = { event_type: "authn.EmergencyRevoke" outbox_topic: "authn.events" partition_key_field: "tenant_id" payload_redaction_profile: "standard" delivery_guarantee: "at_least_once" replay_compatibility: "stable" };
     option (udb.core.common.v1.rest_contract) = { response_envelope: true api_error: true explicit_nulls: true };
-    option (google.api.http) = { post: "/v1/auth/admin:emergency-revoke" body: "*" };
+    option (google.api.http) = { post: "/v1/auth/admin:emergencyRevoke" body: "*" };
   }
 
   // ── MFA challenge + factor lifecycle (Phase 3 / I2.6) ────────────────────
@@ -2159,7 +2159,7 @@ service AuthnService {
       request_context_required: true
       tenant_required: true
     };
-    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "issue_mfa_challenge" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "issue_mfa_challenge" rest_operation_id: "issueMfaChallenge" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
     option (udb.core.common.v1.rest_contract) = { response_envelope: true api_error: true explicit_nulls: true };
     option (google.api.http) = { post: "/v1/auth/mfa/challenges:issue" body: "*" };
   }
@@ -2174,7 +2174,7 @@ service AuthnService {
       request_context_required: true
       tenant_required: true
     };
-    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "verify_mfa_challenge" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "verify_mfa_challenge" rest_operation_id: "verifyMfaChallenge" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
     option (udb.core.common.v1.rest_contract) = { response_envelope: true api_error: true explicit_nulls: true };
     option (google.api.http) = { post: "/v1/auth/mfa/challenges:verify" body: "*" };
   }
@@ -2189,7 +2189,7 @@ service AuthnService {
       request_context_required: true
       tenant_required: true
     };
-    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "list_mfa_factors" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "list_mfa_factors" rest_operation_id: "listMfaFactors" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
     option (udb.core.common.v1.rest_contract) = { response_envelope: true api_error: true explicit_nulls: true };
     option (google.api.http) = {get: "/v1/auth/users/{user_id}/mfa/factors"};
   }
@@ -2204,7 +2204,7 @@ service AuthnService {
       request_context_required: true
       tenant_required: true
     };
-    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "disable_mfa_factor" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "disable_mfa_factor" rest_operation_id: "disableMfaFactor" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
     option (udb.core.common.v1.method_event_contract) = { event_type: "authn.DisableMfaFactor" outbox_topic: "authn.events" partition_key_field: "tenant_id" payload_redaction_profile: "standard" delivery_guarantee: "at_least_once" replay_compatibility: "stable" };
     option (udb.core.common.v1.rest_contract) = { response_envelope: true api_error: true explicit_nulls: true };
     option (google.api.http) = { post: "/v1/auth/users/{user_id}/mfa/factors:disable" body: "*" };
@@ -2220,7 +2220,7 @@ service AuthnService {
       request_context_required: true
       tenant_required: true
     };
-    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "rename_passkey" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "rename_passkey" rest_operation_id: "renamePasskey" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
     option (udb.core.common.v1.rest_contract) = { response_envelope: true api_error: true explicit_nulls: true };
     option (google.api.http) = { post: "/v1/auth/users/{user_id}/webauthn/credentials:rename" body: "*" };
   }
@@ -2235,7 +2235,7 @@ service AuthnService {
       request_context_required: true
       tenant_required: true
     };
-    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "revoke_recovery_codes" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "revoke_recovery_codes" rest_operation_id: "revokeRecoveryCodes" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
     option (udb.core.common.v1.method_event_contract) = { event_type: "authn.RevokeRecoveryCodes" outbox_topic: "authn.events" partition_key_field: "tenant_id" payload_redaction_profile: "standard" delivery_guarantee: "at_least_once" replay_compatibility: "stable" };
     option (udb.core.common.v1.rest_contract) = { response_envelope: true api_error: true explicit_nulls: true };
     option (google.api.http) = { post: "/v1/auth/users/{user_id}/recovery-codes:revoke" body: "*" };
@@ -2251,7 +2251,7 @@ service AuthnService {
       request_context_required: true
       tenant_required: true
     };
-    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "admin_reset_mfa" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "admin_reset_mfa" rest_operation_id: "adminResetMfa" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
     option (udb.core.common.v1.method_event_contract) = { event_type: "authn.AdminResetMfa" outbox_topic: "authn.events" partition_key_field: "tenant_id" payload_redaction_profile: "standard" delivery_guarantee: "at_least_once" replay_compatibility: "stable" };
     option (udb.core.common.v1.rest_contract) = { response_envelope: true api_error: true explicit_nulls: true };
     option (google.api.http) = { post: "/v1/auth/admin/users/{user_id}/mfa:reset" body: "*" };
@@ -2269,7 +2269,7 @@ service AuthnService {
       request_context_required: true
       tenant_required: true
     };
-    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "list_web_authn_credentials" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "list_web_authn_credentials" rest_operation_id: "listWebAuthnCredentials" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
     option (udb.core.common.v1.rest_contract) = { response_envelope: true api_error: true explicit_nulls: true };
     option (google.api.http) = {get: "/v1/auth/users/{user_id}/webauthn/credentials"};
   }
@@ -2284,7 +2284,7 @@ service AuthnService {
       request_context_required: true
       tenant_required: true
     };
-    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "delete_web_authn_credential" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "delete_web_authn_credential" rest_operation_id: "deleteWebAuthnCredential" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
     option (udb.core.common.v1.method_event_contract) = { event_type: "authn.DeleteWebAuthnCredential" outbox_topic: "authn.events" partition_key_field: "tenant_id" payload_redaction_profile: "standard" delivery_guarantee: "at_least_once" replay_compatibility: "stable" };
     option (udb.core.common.v1.rest_contract) = { response_envelope: true api_error: true explicit_nulls: true };
     option (google.api.http) = {delete: "/v1/auth/users/{user_id}/webauthn/credentials/{credential_id}"};

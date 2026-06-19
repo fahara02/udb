@@ -2,7 +2,7 @@ name: Cleanup · Stale packages
 
 # Removes stale/broken package versions across all UDB registries.
 #
-# Runs automatically after every Docker release, on a weekly schedule
+# Runs automatically after every successful top-level release, on a weekly schedule
 # (Sunday 02:00 UTC), and can be triggered manually at any time.
 #
 # What is cleaned:
@@ -23,7 +23,7 @@ name: Cleanup · Stale packages
 
 on:
   workflow_run:
-    workflows: ["Release · Docker image"]
+    workflows: ["Release"]
     types: [completed]
   schedule:
     - cron: "0 2 * * 0"   # every Sunday 02:00 UTC
@@ -48,7 +48,7 @@ jobs:
     name: GHCR · ghcr.io/fahara02/udb
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    # Only run when triggered manually, on schedule, or when the Docker release
+    # Only run when triggered manually, on schedule, or when the top-level release
     # workflow succeeded (skip when it fails — nothing new was pushed).
     if: >
       github.event_name == 'workflow_dispatch' ||

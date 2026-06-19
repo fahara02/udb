@@ -15,8 +15,8 @@ option php_namespace = "Udb\\Core\\Apikey\\Services\\V1";
 // ---------------------------------------------------------------------------
 // ApiKeyService — Machine-to-machine key lifecycle and validation.
 //
-// HTTP prefix: /v1/api_keys
-// URL conventions (Rule 07): snake_case paths, :<verb> custom method suffix, kebab-case query params.
+// HTTP prefix: /v1/api-keys
+// URL conventions: kebab-case paths, :lowerCamel custom method suffix, kebab-case query params.
 //
 // The gateway calls ValidateApiKey on every inbound API request to:
 //   1. Verify key hash
@@ -80,7 +80,7 @@ service ApiKeyService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "create_api_key"
+      method_alias: "create_api_key" rest_operation_id: "createApiKey"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -120,7 +120,7 @@ service ApiKeyService {
       explicit_nulls: true
     };
     option (google.api.http) = {
-      post: "/v1/api_keys"
+      post: "/v1/api-keys"
       body: "*"
     };
   }
@@ -137,7 +137,7 @@ service ApiKeyService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "get_api_key"
+      method_alias: "get_api_key" rest_operation_id: "getApiKey"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -176,7 +176,7 @@ service ApiKeyService {
       api_error: true
       explicit_nulls: true
     };
-    option (google.api.http) = {get: "/v1/api_keys/{key_id}"};
+    option (google.api.http) = {get: "/v1/api-keys/{key_id}"};
   }
   rpc ListApiKeys(ListApiKeysRequest) returns (ListApiKeysResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
@@ -191,7 +191,7 @@ service ApiKeyService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "list_api_keys"
+      method_alias: "list_api_keys" rest_operation_id: "listApiKeys"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -230,7 +230,7 @@ service ApiKeyService {
       api_error: true
       explicit_nulls: true
     };
-    option (google.api.http) = {get: "/v1/api_keys"};
+    option (google.api.http) = {get: "/v1/api-keys"};
   }
   rpc UpdateApiKey(UpdateApiKeyRequest) returns (UpdateApiKeyResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
@@ -245,7 +245,7 @@ service ApiKeyService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "update_api_key"
+      method_alias: "update_api_key" rest_operation_id: "updateApiKey"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -285,7 +285,7 @@ service ApiKeyService {
       explicit_nulls: true
     };
     option (google.api.http) = {
-      patch: "/v1/api_keys/{key_id}"
+      patch: "/v1/api-keys/{key_id}"
       body: "*"
     };
   }
@@ -302,7 +302,7 @@ service ApiKeyService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "revoke_api_key"
+      method_alias: "revoke_api_key" rest_operation_id: "revokeApiKey"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -341,7 +341,7 @@ service ApiKeyService {
       api_error: true
       explicit_nulls: true
     };
-    option (google.api.http) = {delete: "/v1/api_keys/{key_id}"};
+    option (google.api.http) = {delete: "/v1/api-keys/{key_id}"};
   }
 
   // Rotate a key's secret in place (same key_id + lineage). Returns the new
@@ -359,7 +359,7 @@ service ApiKeyService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "rotate_api_key"
+      method_alias: "rotate_api_key" rest_operation_id: "rotateApiKey"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -381,7 +381,7 @@ service ApiKeyService {
       explicit_nulls: true
     };
     option (google.api.http) = {
-      post: "/v1/api_keys/{key_id}:rotate"
+      post: "/v1/api-keys/{key_id}:rotate"
       body: "*"
     };
   }
@@ -400,7 +400,7 @@ service ApiKeyService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "emergency_revoke_api_keys"
+      method_alias: "emergency_revoke_api_keys" rest_operation_id: "emergencyRevokeApiKeys"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -422,7 +422,7 @@ service ApiKeyService {
       explicit_nulls: true
     };
     option (google.api.http) = {
-      post: "/v1/api_keys:emergency-revoke"
+      post: "/v1/api-keys:emergencyRevoke"
       body: "*"
     };
   }
@@ -441,7 +441,7 @@ service ApiKeyService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "validate_api_key"
+      method_alias: "validate_api_key" rest_operation_id: "validateApiKey"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -481,7 +481,7 @@ service ApiKeyService {
       explicit_nulls: true
     };
     option (google.api.http) = {
-      post: "/v1/api_keys:validate"
+      post: "/v1/api-keys:validate"
       body: "*"
     };
   }
@@ -500,7 +500,7 @@ service ApiKeyService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "get_api_key_usage_stats"
+      method_alias: "get_api_key_usage_stats" rest_operation_id: "getApiKeyUsageStats"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -539,6 +539,6 @@ service ApiKeyService {
       api_error: true
       explicit_nulls: true
     };
-    option (google.api.http) = {get: "/v1/api_keys/{key_id}/stats"};
+    option (google.api.http) = {get: "/v1/api-keys/{key_id}/stats"};
   }
 }

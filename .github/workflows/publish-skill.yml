@@ -30,6 +30,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-sdk-toolchains
+        with:
+          node: true
       - name: Validate manifests + structure (hard gate)
         run: |
           set -euo pipefail
@@ -102,6 +105,9 @@ jobs:
     continue-on-error: true   # non-deterministic LLM output must never block publish
     steps:
       - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-sdk-toolchains
+        with:
+          node: true
       - name: Headless skill activation test
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -141,7 +147,7 @@ jobs:
           ns="${OLLAMA_NAMESPACE:-fahara02}"
           curl -fsSL https://ollama.com/install.sh | sh
           ollama serve >/tmp/ollama.log 2>&1 &
-          for i in $(seq 1 30); do ollama list >/dev/null 2>&1 && break; sleep 1; done
+          for _ in $(seq 1 30); do ollama list >/dev/null 2>&1 && break; sleep 1; done
           cd udb-skill/ollama
           ollama create "$ns/udb-assistant" -f ./Modelfile
           ollama create "$ns/udb-coding" -f ./Modelfile.udb-coding

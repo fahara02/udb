@@ -1,0 +1,119 @@
+name: Setup SDK toolchains
+description: >-
+  ONE toggle-able source for the SDK language toolchains (node/python/go/dotnet/
+  java/php) at the exact versions used across ci.yml and benchmark-sdks.yml.
+  Each toolchain is installed only when its boolean input is 'true', so a caller
+  requests just the languages its job needs via a single `uses:`. Replaces the
+  repeated `setup-*` blocks in ci.yml, benchmark-sdks.yml, and the release-*-sdk
+  workflows (Chapter 15, todo 15.9.1).
+
+inputs:
+  # ── toggles (which toolchains to install) ─────────────────────────
+  node:
+    description: Install Node.js (actions/setup-node).
+    required: false
+    default: "false"
+  python:
+    description: Install Python (actions/setup-python).
+    required: false
+    default: "false"
+  go:
+    description: Install Go (actions/setup-go).
+    required: false
+    default: "false"
+  dotnet:
+    description: Install .NET SDK (actions/setup-dotnet).
+    required: false
+    default: "false"
+  java:
+    description: Install Java / Temurin JDK (actions/setup-java).
+    required: false
+    default: "false"
+  php:
+    description: Install PHP (shivammathur/setup-php).
+    required: false
+    default: "false"
+
+  # ── pinned versions (defaults match what CI uses today) ───────────
+  node-version:
+    description: Node.js version (ci.yml uses 20).
+    required: false
+    default: "20"
+  python-version:
+    description: Python version (ci.yml uses 3.12).
+    required: false
+    default: "3.12"
+  go-version:
+    description: Go version (ci.yml uses 1.22).
+    required: false
+    default: "1.22"
+  dotnet-version:
+    description: .NET SDK version (ci.yml uses 8.0.x).
+    required: false
+    default: "8.0.x"
+  java-version:
+    description: Java/Temurin version (ci.yml uses 17).
+    required: false
+    default: "17"
+  php-version:
+    description: >-
+      PHP version. Default 8.2 (ci.yml). benchmark-sdks.yml uses 8.3 to mirror
+      sdk/php/Dockerfile.live-test — pass php-version: "8.3" there.
+    required: false
+    default: "8.2"
+
+  # ── optional extras ───────────────────────────────────────────────
+  node-registry-url:
+    description: >-
+      Optional npm registry URL for actions/setup-node (sets up auth / .npmrc
+      for publishing). Empty means the action's default is used.
+    required: false
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Node.js
+      if: inputs.node == 'true'
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        registry-url: ${{ inputs.node-registry-url }}
+
+    - name: Set up Python
+      if: inputs.python == 'true'
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Set up Go
+      if: inputs.go == 'true'
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ inputs.go-version }}
+
+    - name: Set up .NET
+      if: inputs.dotnet == 'true'
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ inputs.dotnet-version }}
+
+    - name: Set up Java (Temurin)
+      if: inputs.java == 'true'
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: ${{ inputs.java-version }}
+
+    - name: Set up PHP
+      if: inputs.php == 'true'
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ inputs.php-version }}
+        # NOT the protobuf PECL C extension: it fatals on the SDK's
+        # `import public` descriptors ("public_dep N is out of range"). The
+        # pure-PHP google/protobuf runtime (composer) handles public imports
+        # correctly. Mirrors sdk/php/Dockerfile.live-test and ci.yml.
+        extensions: grpc, mbstring, intl
+        coverage: none
+        tools: composer:v2

@@ -25,6 +25,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..');
 const swaggerPath = resolve(repoRoot, 'api/udb-broker.swagger.json');
 const versionsPath = resolve(repoRoot, 'versions.json');
+const nativeContractPath = resolve(repoRoot, 'docs/generated/udb-native-contract.json');
 
 const TITLE = 'UDB Control-Plane API';
 const DESCRIPTION =
@@ -39,6 +40,81 @@ if (!udbVersion) {
 }
 
 let text = readFileSync(swaggerPath, 'utf8');
+
+function toLowerCamel(value) {
+  return String(value || '')
+    .split(/[_\-\s]+/)
+    .filter(Boolean)
+    .map((part, index) => {
+      const lower = part.toLowerCase();
+      return index === 0 ? lower : lower.charAt(0).toUpperCase() + lower.slice(1);
+    })
+    .join('');
+}
+
+function normalizeSwaggerPath(path) {
+  // The openapiv2 plugin may render proto field names as JSON-style path
+  // variables. Compare route literals structurally and ignore variable spelling.
+  return String(path || '').replace(/\{[^}]+\}/g, '{}');
+}
+
+function resourceFromPath(path) {
+  const segments = String(path || '')
+    .split('/')
+    .filter(Boolean)
+    .filter((segment) => segment !== 'v1');
+  const resource = segments.find((segment) => !segment.startsWith('{'));
+  return resource ? resource.replace(/:.+$/, '') : '';
+}
+
+function idempotencySummary(rpc) {
+  const contract = rpc.idempotency_contract || {};
+  return {
+    request_key_field: contract.request_key_field || '',
+    server_generated_key: Boolean(contract.server_generated_key),
+    duplicate_response_field: contract.duplicate_response_field || '',
+    replay_safe: Boolean(contract.replay_safe),
+  };
+}
+
+function buildOperationMetadata() {
+  let contract;
+  try {
+    contract = JSON.parse(readFileSync(nativeContractPath, 'utf8'));
+  } catch (err) {
+    console.warn(`openapi-postprocess: native contract unavailable, skipping descriptor operation metadata: ${err.message}`);
+    return { byGeneratedId: new Map(), byRoute: new Map() };
+  }
+
+  const byGeneratedId = new Map();
+  const byRoute = new Map();
+  for (const service of contract.services || []) {
+    const serviceName = String(service.service || '').split('.').pop();
+    if (!serviceName) continue;
+    for (const rpc of service.rpcs || []) {
+      if (!rpc.http) continue;
+      const sdkSurface = rpc.sdk_surface || {};
+      const annotatedAlias = sdkSurface.method_alias || '';
+      const restOperationId = sdkSurface.rest_operation_id || toLowerCamel(annotatedAlias) || toLowerCamel(rpc.method);
+      const methodAlias = annotatedAlias || restOperationId;
+      const operationKind = rpc.operation_kind || '';
+      const metadata = {
+        generatedId: `${serviceName}_${rpc.method}`,
+        operationId: restOperationId,
+        sdkAlias: methodAlias,
+        scopes: Array.isArray(rpc.scopes) ? rpc.scopes : [],
+        retrySafe: Boolean(rpc.idempotency_contract?.replay_safe || rpc.read_only),
+        idempotency: idempotencySummary(rpc),
+        resource: resourceFromPath(rpc.http.path),
+        operationKind,
+        routeKey: `${String(rpc.http.verb || '').toLowerCase()} ${normalizeSwaggerPath(rpc.http.path)}`,
+      };
+      byGeneratedId.set(metadata.generatedId, metadata);
+      byRoute.set(metadata.routeKey, metadata);
+    }
+  }
+  return { byGeneratedId, byRoute };
+}
 
 // Replace the `info.title` value (first occurrence, inside the info block).
 text = text.replace(
@@ -114,5 +190,34 @@ if (!/"info":\s*\{[\s\S]*?"title":\s*"UDB Control-Plane API"[\s\S]*?"version":\s
   process.exit(1);
 }
 
+const swagger = JSON.parse(text);
+const operationMetadata = buildOperationMetadata();
+let operationMetadataApplied = 0;
+for (const [path, pathItem] of Object.entries(swagger.paths || {})) {
+  for (const [verb, operation] of Object.entries(pathItem || {})) {
+    if (!['get', 'put', 'post', 'patch', 'delete'].includes(verb) || !operation) {
+      continue;
+    }
+    const routeKey = `${verb} ${normalizeSwaggerPath(path)}`;
+    const metadata =
+      operationMetadata.byGeneratedId.get(operation.operationId) ||
+      operationMetadata.byRoute.get(routeKey);
+    if (!metadata) {
+      continue;
+    }
+    operation.operationId = metadata.operationId;
+    operation['x-udb-sdk-alias'] = metadata.sdkAlias;
+    operation['x-udb-scope'] = metadata.scopes;
+    operation['x-udb-retry-safe'] = metadata.retrySafe;
+    operation['x-udb-idempotency'] = metadata.idempotency;
+    operation['x-udb-resource'] = metadata.resource;
+    operation['x-udb-operation-kind'] = metadata.operationKind;
+    operationMetadataApplied += 1;
+  }
+}
+
+text = JSON.stringify(swagger, null, 2) + '\n';
 writeFileSync(swaggerPath, text);
-console.log(`openapi-postprocess: set title="${TITLE}", version="${udbVersion}" in api/udb-broker.swagger.json`);
+console.log(
+  `openapi-postprocess: set title="${TITLE}", version="${udbVersion}", descriptor metadata on ${operationMetadataApplied} operations in api/udb-broker.swagger.json`,
+);

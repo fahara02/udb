@@ -703,6 +703,10 @@ fn generated_native_contract_json_matches_embedded_descriptor() {
             rpc.get("read_only").is_some(),
             "contract JSON RPC node missing read_only: {rpc:#}"
         );
+        assert!(
+            rpc.get("rest_operation_id").is_some(),
+            "contract JSON RPC node missing rest_operation_id: {rpc:#}"
+        );
     }
 }
 

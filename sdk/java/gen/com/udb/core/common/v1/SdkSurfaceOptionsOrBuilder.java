@@ -106,4 +106,16 @@ public interface SdkSurfaceOptionsOrBuilder extends
    * @return The generateMinimalExample.
    */
   boolean getGenerateMinimalExample();
+
+  /**
+   * <code>string rest_operation_id = 11 [json_name = "restOperationId"];</code>
+   * @return The restOperationId.
+   */
+  java.lang.String getRestOperationId();
+  /**
+   * <code>string rest_operation_id = 11 [json_name = "restOperationId"];</code>
+   * @return The bytes for restOperationId.
+   */
+  com.google.protobuf.ByteString
+      getRestOperationIdBytes();
 }

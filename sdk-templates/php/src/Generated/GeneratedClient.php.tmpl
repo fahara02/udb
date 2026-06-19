@@ -63,7 +63,7 @@ final class GeneratedClient
      */
     public const OPERATION_KIND = [
         // @@UDB_RPC_BEGIN
-        "{{RPC_NAME}}" => "{{RPC_OPERATION_KIND}}",
+        "{{RPC_WIRE_NAME}}" => "{{RPC_OPERATION_KIND}}",
         // @@UDB_RPC_END
     ];
 
@@ -80,6 +80,20 @@ final class GeneratedClient
     public const REPLAY_SAFE = [
         "Delete" => true,
         "Upsert" => true,
+    ];
+
+    /**
+     * Public snake_case aliases advertised by the descriptor SDK surface. PHP's
+     * concrete methods use camelCase by convention; __call routes snake aliases
+     * to the same implementations so docs, benches, and callers can use either.
+     *
+     * @var array<string, string>
+     */
+    public const METHOD_ALIASES = [
+        // @@UDB_RPC_BEGIN
+        "{{RPC_ALIAS_SNAKE}}" => "{{RPC_ALIAS_CAMEL}}",
+        "{{RPC_SNAKE}}" => "{{RPC_ALIAS_CAMEL}}",
+        // @@UDB_RPC_END
     ];
 
     private ?UdbMetadata $boundContext = null;
@@ -134,6 +148,16 @@ final class GeneratedClient
         $this->boundContext = $metadata;
     }
 
+    public function __call(string $name, array $arguments)
+    {
+        $target = self::METHOD_ALIASES[$name] ?? null;
+        if ($target !== null && $target !== $name && method_exists($this, $target)) {
+            return $this->{$target}(...$arguments);
+        }
+
+        throw new \BadMethodCallException("Undefined generated UDB method {$name}");
+    }
+
     private function context(): UdbMetadata
     {
         if ($this->boundContext === null) {
@@ -154,21 +178,21 @@ final class GeneratedClient
 
     // @@UDB_RPC_BEGIN kind=unary
     /**
-     * {{SERVICE_FULL}} / {{RPC_NAME}} ({{RPC_KIND}}).
+     * {{SERVICE_FULL}} / {{RPC_WIRE_NAME}} ({{RPC_KIND}}), public alias {{RPC_ALIAS_SNAKE}}.
      *
-     * Forwards to {@see stubFor()}->{{RPC_NAME}}(); retries transient codes.
+     * Forwards to {@see stubFor()}->{{RPC_WIRE_NAME}}(); retries transient codes.
      * Path: {{RPC_PATH}}
      *
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded {{RPC_OUTPUT}}
      */
-    public function {{RPC_SNAKE}}($request, ?UdbMetadata $metadata = null)
+    public function {{RPC_ALIAS_CAMEL}}($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
-            '{{RPC_NAME}}',
+            '{{RPC_WIRE_NAME}}',
             '{{SERVICE_NAME}}',
             '{{SERVICE_PKG}}',
-            fn (BaseStub $stub, array $md, array $opts) => $stub->{{RPC_NAME}}($request, $md, $opts),
+            fn (BaseStub $stub, array $md, array $opts) => $stub->{{RPC_WIRE_NAME}}($request, $md, $opts),
             $metadata,
             '{{RPC_OPERATION_KIND}}' === 'read_only',
             $request,
@@ -178,7 +202,7 @@ final class GeneratedClient
 
     // @@UDB_RPC_BEGIN kind=server_streaming
     /**
-     * {{SERVICE_FULL}} / {{RPC_NAME}} ({{RPC_KIND}}).
+     * {{SERVICE_FULL}} / {{RPC_WIRE_NAME}} ({{RPC_KIND}}), public alias {{RPC_ALIAS_SNAKE}}.
      *
      * Returns the live {@see \Grpc\ServerStreamingCall}; iterate
      * `->responses()` then check `->getStatus()`. Path: {{RPC_PATH}}
@@ -186,16 +210,16 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Grpc\ServerStreamingCall
      */
-    public function {{RPC_SNAKE}}($request, ?UdbMetadata $metadata = null)
+    public function {{RPC_ALIAS_CAMEL}}($request, ?UdbMetadata $metadata = null)
     {
         $stub = $this->stubFor('{{SERVICE_NAME}}', '{{SERVICE_PKG}}');
-        return $stub->{{RPC_NAME}}($request, $this->headers($metadata), $this->callOptions());
+        return $stub->{{RPC_WIRE_NAME}}($request, $this->headers($metadata), $this->callOptions());
     }
     // @@UDB_RPC_END
 
     // @@UDB_RPC_BEGIN kind=client_streaming
     /**
-     * {{SERVICE_FULL}} / {{RPC_NAME}} ({{RPC_KIND}}).
+     * {{SERVICE_FULL}} / {{RPC_WIRE_NAME}} ({{RPC_KIND}}), public alias {{RPC_ALIAS_SNAKE}}.
      *
      * Returns the live {@see \Grpc\ClientStreamingCall}; `->write()` each
      * message then `->wait()`. Not retried — re-driving a partially-written
@@ -203,26 +227,26 @@ final class GeneratedClient
      *
      * @return \Grpc\ClientStreamingCall
      */
-    public function {{RPC_SNAKE}}(?UdbMetadata $metadata = null)
+    public function {{RPC_ALIAS_CAMEL}}(?UdbMetadata $metadata = null)
     {
         $stub = $this->stubFor('{{SERVICE_NAME}}', '{{SERVICE_PKG}}');
-        return $stub->{{RPC_NAME}}($this->headers($metadata), $this->callOptions());
+        return $stub->{{RPC_WIRE_NAME}}($this->headers($metadata), $this->callOptions());
     }
     // @@UDB_RPC_END
 
     // @@UDB_RPC_BEGIN kind=bidi
     /**
-     * {{SERVICE_FULL}} / {{RPC_NAME}} ({{RPC_KIND}}).
+     * {{SERVICE_FULL}} / {{RPC_WIRE_NAME}} ({{RPC_KIND}}), public alias {{RPC_ALIAS_SNAKE}}.
      *
      * Returns the live {@see \Grpc\BidiStreamingCall}; `->write()` /
      * `->read()` / `->writesDone()`. Not retried. Path: {{RPC_PATH}}
      *
      * @return \Grpc\BidiStreamingCall
      */
-    public function {{RPC_SNAKE}}(?UdbMetadata $metadata = null)
+    public function {{RPC_ALIAS_CAMEL}}(?UdbMetadata $metadata = null)
     {
         $stub = $this->stubFor('{{SERVICE_NAME}}', '{{SERVICE_PKG}}');
-        return $stub->{{RPC_NAME}}($this->headers($metadata), $this->callOptions());
+        return $stub->{{RPC_WIRE_NAME}}($this->headers($metadata), $this->callOptions());
     }
     // @@UDB_RPC_END
 

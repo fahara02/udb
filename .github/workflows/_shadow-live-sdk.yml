@@ -1,0 +1,28 @@
+name: Shadow · live-sdk-suite
+
+# 15.A.7 — SHADOW caller. Lets you run the new `_live-sdk-suite` reusable (and
+# therefore broker-env + start-backends + setup-* composites) on the real runner
+# via Run-workflow, WITHOUT touching the release-triggered benchmark.
+# Dispatch-only + non-gating: it can never block a merge.
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Release tag to benchmark, or latest"
+        default: "latest"
+        required: true
+      release_asset:
+        description: "Linux release asset to run"
+        default: "udb-linux-amd64-full"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  shadow:
+    uses: ./.github/workflows/_live-sdk-suite.yml
+    with:
+      release-tag: ${{ inputs.release_tag }}
+      release-asset: ${{ inputs.release_asset }}
+    secrets: inherit

@@ -77,6 +77,19 @@ def _cells(line: str) -> list[str]:
     return [c.strip() for c in line.strip().strip("|").split("|")]
 
 
+def _first(row: dict[str, str], *keys: str) -> str:
+    for key in keys:
+        value = row.get(key)
+        if value:
+            return value.strip()
+    return ""
+
+
+def _identity(service: str, rpc: str, api_alias: str = "", operation_id: str = "") -> tuple[str, str]:
+    wire_api = f"{service}/{rpc}" if service and rpc else rpc
+    return operation_id or api_alias or wire_api, wire_api
+
+
 def _parse_report(path: Path) -> dict[str, Any]:
     text = path.read_text(encoding="utf-8", errors="replace")
     lines = text.splitlines()
@@ -150,8 +163,22 @@ def _parse_report(path: Path) -> dict[str, Any]:
             rpc = row.get("rpc")
             if not rpc:
                 continue
+            service = row.get("service", "")
+            if "/" in rpc and not service:
+                service, rpc_name = rpc.split("/", 1)
+            else:
+                rpc_name = rpc
+            api_alias = _first(row, "api_alias", "alias", "sdk_alias")
+            operation_id = _first(row, "operation_id", "operationid", "operation")
+            api, wire_api = _identity(service, rpc_name, api_alias, operation_id)
             slowest.append({
                 "rpc": rpc,
+                "service": service,
+                "wire_rpc": rpc_name,
+                "wire_api": wire_api,
+                "api": api,
+                "api_alias": api_alias,
+                "operation_id": operation_id,
                 "kind": row.get("kind", ""),
                 # err_code: None for OK rows; absent column (older report) also → None.
                 "err_code": _norm_err(row.get("err")),
@@ -163,8 +190,22 @@ def _parse_report(path: Path) -> dict[str, Any]:
             rpc = row.get("rpc")
             if not rpc:
                 continue
+            service = row.get("service", "")
+            if "/" in rpc and not service:
+                service, rpc_name = rpc.split("/", 1)
+            else:
+                rpc_name = rpc
+            api_alias = _first(row, "api_alias", "alias", "sdk_alias")
+            operation_id = _first(row, "operation_id", "operationid", "operation")
+            api, wire_api = _identity(service, rpc_name, api_alias, operation_id)
             failures.append({
                 "rpc": rpc,
+                "service": service,
+                "wire_rpc": rpc_name,
+                "wire_api": wire_api,
+                "api": api,
+                "api_alias": api_alias,
+                "operation_id": operation_id,
                 "kind": row.get("kind", ""),
                 "err_code": _norm_err(row.get("err")) or "UNKNOWN",
                 "p99_ms": _duration_ms(row.get("p99_ms") or row.get("p99") or ""),
@@ -175,6 +216,9 @@ def _parse_report(path: Path) -> dict[str, Any]:
             rpc = row.get("rpc")
             if not service or not rpc:
                 continue
+            api_alias = _first(row, "api_alias", "alias", "sdk_alias")
+            operation_id = _first(row, "operation_id", "operationid", "operation")
+            api, wire_api = _identity(service, rpc, api_alias, operation_id)
             iters = None
             try:
                 raw_iters = row.get("iters") or row.get("iterations") or ""
@@ -184,7 +228,10 @@ def _parse_report(path: Path) -> dict[str, Any]:
             full_rpcs.append({
                 "service": service,
                 "rpc": rpc,
-                "api": f"{service}/{rpc}",
+                "wire_api": wire_api,
+                "api": api,
+                "api_alias": api_alias,
+                "operation_id": operation_id,
                 "kind": row.get("kind", ""),
                 "err_code": _norm_err(row.get("err")),
                 "p50_ms": _duration_ms(row.get("p50_ms") or row.get("p50") or ""),
@@ -376,14 +423,11 @@ def main() -> int:
         display_out = out
     print(f"wrote {display_out}")
     print(json.dumps(payload["summary"], indent=2))
-    # This is a REPORTING step: per-SDK and per-RPC failures are DATA — they are
-    # written to the JSON above and rendered on the dashboard, so they must NOT fail
-    # the CI job. Returning non-zero here froze the GitHub Pages deploy (gated on job
-    # success) and made the workflow_run-gated next benchmark skip, so a single failing
-    # SDK stalled the whole pipeline and the published dashboard went stale. Real infra
-    # failures (broker never started) are already caught upstream at the broker-start
-    # step. Only a TOTAL collection breakdown — no runnable SDK produced any data — is
-    # a genuine error worth failing on.
+    # This is the REPORTING step: per-SDK and per-RPC failures are DATA and must
+    # be written before the workflow decides pass/fail. The benchmark workflow
+    # uploads this JSON first, then a final gate fails the job on any bad SDK or
+    # failed RPC so the debug artifact is still available. Only a TOTAL collection
+    # breakdown is fatal here.
     if ok == 0 and skipped < len(sdks):
         print("ERROR: no SDK produced benchmark data (total collection failure)")
         return 1

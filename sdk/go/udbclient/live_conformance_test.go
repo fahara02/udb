@@ -87,7 +87,7 @@ func TestLiveGeneratedRPCSurface(t *testing.T) {
 	// it from our own principal and use it for every request body (and the metadata
 	// header, before the generated clients are built below), so the body tenant
 	// matches the claim and the UUID-strict services (storage/webrtc/asset) accept
-	// it. ONE admin now serves all 265 RPCs.
+	// it. ONE admin now serves the full AllRPCs surface.
 	if pt := authResp.GetPrincipal().GetTenantId(); pt != "" {
 		tenant = pt
 		meta.TenantID = tenant
@@ -184,7 +184,7 @@ func TestLiveGeneratedRPCSurface(t *testing.T) {
 	if populated < 230 {
 		t.Fatalf("only %d/%d RPCs received a populated typed request; full-surface coverage regressed", populated, probed)
 	}
-	t.Logf("full-surface probe: %d/265 RPCs reached, %d sent populated typed requests (%d dangerous/unresolved sent typed-empty)", probed, populated, probed-populated)
+	t.Logf("full-surface probe: %d/%d RPCs reached, %d sent populated typed requests (%d dangerous/unresolved sent typed-empty)", probed, len(AllRPCs), populated, probed-populated)
 }
 
 // runLiveAuthLifecycle drives a full session lifecycle on a throwaway login and

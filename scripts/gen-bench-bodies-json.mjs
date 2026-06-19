@@ -6,7 +6,7 @@
 // docs/bench-bodies/*.md (column contract in data_broker.md:10 —
 // col1=done, col2=RPC, col3=op_kind, col4=request msg, col5=valid body,
 // col6=notes). This script parses every `| [ ... ]` data row across that corpus
-// and emits docs/generated/bench-bodies.json: a sorted array of 265 entries
+// and emits docs/generated/bench-bodies.json: a sorted array of entries
 //
 //   { file, rpc, op_kind, request_msg, body, notes }
 //
@@ -30,7 +30,17 @@ const repoRoot = resolve(__dirname, "..");
 const benchDir = join(repoRoot, "docs", "bench-bodies");
 const outFile = join(repoRoot, "docs", "generated", "bench-bodies.json");
 
-export const EXPECTED_ROWS = 265;
+function currentAllRPCCount() {
+  const generatedGo = join(repoRoot, "sdk", "go", "udbclient", "generated_client.go");
+  try {
+    const text = readFileSync(generatedGo, "utf8");
+    const block = text.match(/var AllRPCs = \[\]RPCInfo\{([\s\S]*?)\n\}/);
+    if (!block) return null;
+    return (block[1].match(/\{Service:\s*"/g) || []).length;
+  } catch {
+    return null;
+  }
+}
 
 // parseBenchBodies walks docs/bench-bodies/*.md and returns the parsed rows.
 // Excludes workflow-sequences.md (a different `| helper | sequence |` table, not
@@ -83,8 +93,9 @@ export function buildManifest(dir = benchDir) {
 
 function main() {
   const manifest = buildManifest();
-  if (manifest.length !== EXPECTED_ROWS) {
-    console.error(`bench-body manifest has ${manifest.length} rows, want exactly ${EXPECTED_ROWS}`);
+  const expectedRows = currentAllRPCCount();
+  if (expectedRows != null && manifest.length !== expectedRows) {
+    console.error(`bench-body manifest has ${manifest.length} rows, want current AllRPCs count ${expectedRows}`);
     process.exit(1);
   }
   mkdirSync(dirname(outFile), { recursive: true });

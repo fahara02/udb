@@ -51,11 +51,11 @@ function decodeRecord<T>(raw: unknown): T | null {
  * record_json so callers work in plain JS records.
  */
 export class EntityHandle<T = any> {
+  /** `context` is merged into each request body, for example tenant_id/project_id. */
   constructor(
     private readonly core: UdbCore,
     private readonly messageType: string,
     private readonly opts: EntityHandleOptions,
-    /** Shared request context (tenant_id/project_id/…) merged into each call. */
     private readonly context: Record<string, unknown> = {},
   ) {}
 

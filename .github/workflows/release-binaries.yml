@@ -25,25 +25,17 @@ name: Release · binaries
 #     plus OIDC/WebAuthn. SDK launchers can select it with UDB_BIN_VARIANT=full.
 # A disabled backend's RPCs return FailedPrecondition rather than disappearing.
 #
-# Trigger: a pushed `v*.*.*` tag, or manual dispatch for a build-only dry run.
+# Trigger: this is a `workflow_call` REUSABLE — `release.yml` (the tag-driven
+# orchestrator) invokes it as the FIRST publish stage; every other publisher
+# `needs:` it. It also keeps `workflow_dispatch` for a build-only dry run.
+# It deliberately has NO tag trigger: `release.yml` is the sole tag entrypoint,
+# otherwise the same release assets and manifest are produced twice.
+# The Chapter-15 single-artifact-system: this workflow is the SOLE producer of the
+# release binaries; docker + bench consume the published RELEASE ASSET, never
+# rebuild the broker.
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - '.github/workflows/release-binaries.yml'
-      - 'scripts/gen-release-manifest.mjs'
-      - 'scripts/check-launcher-assets.mjs'
-      - 'sdk/go/cmd/udb/main.go'
-      - 'sdk/python/udb_client/_cli.py'
-      - 'sdk/typescript/bin/udb.js'
-      - 'sdk/java/src/main/java/dev/udb/cli/Launcher.java'
-      - 'sdk/csharp/Udb.Cli/UdbCli.cs'
-      - 'sdk/php/bin/udb'
-      - 'sdk-templates/**'
-    tags:
-      - 'v*.*.*'
+  workflow_call:
   workflow_dispatch:
 
 env:
@@ -54,7 +46,7 @@ env:
     oidc,webauthn
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: release-binaries-${{ github.ref }}
@@ -62,38 +54,34 @@ concurrency:
 
 jobs:
   # Gate the whole release on version consistency: the `v<x.y.z>` tag must equal
-  # the crate version in Cargo.toml, and every manifest/protocol constant must
-  # match versions.json. No binary is built or attached otherwise.
+  # the crate version in versions.json, and every manifest/protocol constant must
+  # match. No binary is built or attached otherwise. Node is set up first because
+  # the version-guard composite runs `check-versions.mjs` and reads versions.json
+  # with Node (it does not install Node itself, by design).
   version-guard:
     name: Version guard
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: ./.github/actions/setup-sdk-toolchains
         with:
-          node-version: '20'
-      - name: Versions consistent with versions.json
-        run: node scripts/check-versions.mjs
-      - name: Tag matches crate version
-        if: startsWith(github.ref, 'refs/tags/')
-        shell: bash
-        run: |
-          set -euo pipefail
-          crate="$(node -p "require('./versions.json').components.udb.version")"
-          tag="${GITHUB_REF_NAME#v}"
-          if [[ "${tag}" != "${crate}" ]]; then
-            echo "Tag ${GITHUB_REF_NAME} does not match udb crate version ${crate}" >&2
-            exit 1
-          fi
+          node: 'true'
+      - uses: ./.github/actions/version-guard
+        with:
+          component: udb
 
   build:
     name: build (${{ matrix.asset }})
     needs: version-guard
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
+    permissions:
+      contents: write
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         include:
           # target_cpu = the per-OS micro-arch floor the shipped binary is tuned for.
@@ -140,56 +128,36 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+      # Rust toolchain + Swatinem cache (keyed per target) + per-platform native
+      # build deps (cmake/NASM/Perl/MSVC) — the single-source setup-rust composite.
+      - uses: ./.github/actions/setup-rust
         with:
-          targets: ${{ matrix.target }}
-
-      - uses: Swatinem/rust-cache@v2
-        with:
-          key: ${{ matrix.target }}
-
-      # Native build deps. aws-lc-sys (s3) needs cmake + NASM; WebAuthn pulls
-      # vendored OpenSSL and requires a platform-native Perl plus compiler tools.
-      - name: Install build deps (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends build-essential cmake clang perl nasm ninja-build pkg-config libssl-dev
-
-      - name: Install build deps (macOS)
-        if: runner.os == 'macOS'
-        run: brew install cmake nasm ninja
-
-      - name: Install build deps (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          choco install strawberryperl nasm --no-progress -y
-          "C:\Strawberry\perl\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          "C:\Program Files\NASM" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-
-      - name: Configure MSVC build tools (Windows)
-        if: runner.os == 'Windows'
-        uses: ilammy/msvc-dev-cmd@v1
+          target: ${{ matrix.target }}
+          cache-key: ${{ matrix.target }}
 
       - name: Build
         shell: bash
+        env:
+          RUNNER_OS_NAME: ${{ runner.os }}
+          MATRIX_TARGET: ${{ matrix.target }}
+          MATRIX_TARGET_CPU: ${{ matrix.target_cpu }}
+          MATRIX_VARIANT: ${{ matrix.variant }}
         run: |
-          if [ "${{ runner.os }}" = "Windows" ]; then
+          set -euo pipefail
+          if [ "${RUNNER_OS_NAME}" = "Windows" ]; then
             msvc_bin="$(cygpath -u "${VCToolsInstallDir}bin\\Hostx64\\x64")"
             export PATH="${msvc_bin}:/c/Strawberry/perl/bin:/c/Program Files/NASM:${PATH}"
             export CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER="${msvc_bin}/link.exe"
           fi
           # Tune the SHIPPED artifact to this target's safe micro-arch floor (applies to
           # the whole dep graph). `dist` profile = fat LTO + 1 codegen unit + symbol strip.
-          export RUSTFLAGS="-C target-cpu=${{ matrix.target_cpu }} ${RUSTFLAGS:-}"
-          if [ "${{ matrix.variant }}" = "full" ]; then
-            cargo build --profile dist --locked --target ${{ matrix.target }} \
+          export RUSTFLAGS="-C target-cpu=${MATRIX_TARGET_CPU} ${RUSTFLAGS:-}"
+          if [ "${MATRIX_VARIANT}" = "full" ]; then
+            cargo build --profile dist --locked --target "${MATRIX_TARGET}" \
               --bin udb \
               --features "${FULL_FEATURES}"
           else
-            cargo build --profile dist --locked --target ${{ matrix.target }} \
+            cargo build --profile dist --locked --target "${MATRIX_TARGET}" \
               --bin udb \
               --no-default-features --features "${PORTABLE_FEATURES}"
           fi
@@ -197,15 +165,20 @@ jobs:
       - name: Stage asset + checksum
         id: stage
         shell: bash
+        env:
+          MATRIX_TARGET: ${{ matrix.target }}
+          MATRIX_ASSET: ${{ matrix.asset }}
+          MATRIX_EXT: ${{ matrix.ext }}
         run: |
+          set -euo pipefail
           mkdir -p dist
           # `--profile dist` outputs under target/<target>/dist/ (distinct from this ./dist staging dir).
-          cp "target/${{ matrix.target }}/dist/udb${{ matrix.ext }}" "dist/${{ matrix.asset }}"
+          cp "target/${MATRIX_TARGET}/dist/udb${MATRIX_EXT}" "dist/${MATRIX_ASSET}"
           cd dist
           if command -v sha256sum >/dev/null 2>&1; then
-            sha256sum "${{ matrix.asset }}" > "${{ matrix.asset }}.sha256"
+            sha256sum "${MATRIX_ASSET}" > "${MATRIX_ASSET}.sha256"
           else
-            shasum -a 256 "${{ matrix.asset }}" > "${{ matrix.asset }}.sha256"
+            shasum -a 256 "${MATRIX_ASSET}" > "${MATRIX_ASSET}.sha256"
           fi
 
       - name: Upload workflow artifact
@@ -255,11 +228,13 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: ./.github/actions/setup-sdk-toolchains
         with:
-          node-version: '20'
+          node: 'true'
       - name: Guard tag still points at this commit
         env:
           GH_TOKEN: ${{ github.token }}

@@ -574,7 +574,7 @@ RPC_REPLAY_SAFE: dict[str, str] = {
     "/udb.core.asset.services.v1.AssetService/GetPipelineDefinition": "false",
     "/udb.core.asset.services.v1.AssetService/ListAssets": "false",
     "/udb.core.asset.services.v1.AssetService/RegisterAsset": "false",
-    "/udb.core.asset.services.v1.AssetService/StartPipeline": "false",
+    "/udb.core.asset.services.v1.AssetService/StartPipeline": "true",
     "/udb.core.authn.services.v1.AuthnService/AdminResetMfa": "false",
     "/udb.core.authn.services.v1.AuthnService/AdminResetPassword": "false",
     "/udb.core.authn.services.v1.AuthnService/AdminRevokeAllTenantSessions": "false",
@@ -1096,7 +1096,7 @@ class AnalyticsServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GetExecutorPerformance`` — unary call to ``/udb.core.analytics.services.v1.AnalyticsService/GetExecutorPerformance``.
+        """``get_executor_performance`` — unary call to wire RPC ``/udb.core.analytics.services.v1.AnalyticsService/GetExecutorPerformance``.
 
         Forwards ``GetExecutorPerformanceRequest`` (udb.core.analytics.services.v1) and returns
         ``GetExecutorPerformanceResponse`` (udb.core.analytics.services.v1).
@@ -1120,7 +1120,7 @@ class AnalyticsServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GetPipelineSummary`` — unary call to ``/udb.core.analytics.services.v1.AnalyticsService/GetPipelineSummary``.
+        """``get_pipeline_summary`` — unary call to wire RPC ``/udb.core.analytics.services.v1.AnalyticsService/GetPipelineSummary``.
 
         Forwards ``GetPipelineSummaryRequest`` (udb.core.analytics.services.v1) and returns
         ``GetPipelineSummaryResponse`` (udb.core.analytics.services.v1).
@@ -1144,7 +1144,7 @@ class AnalyticsServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GetReconciliationAnalytics`` — unary call to ``/udb.core.analytics.services.v1.AnalyticsService/GetReconciliationAnalytics``.
+        """``get_reconciliation_analytics`` — unary call to wire RPC ``/udb.core.analytics.services.v1.AnalyticsService/GetReconciliationAnalytics``.
 
         Forwards ``GetReconciliationAnalyticsRequest`` (udb.core.analytics.services.v1) and returns
         ``GetReconciliationAnalyticsResponse`` (udb.core.analytics.services.v1).
@@ -1168,7 +1168,7 @@ class AnalyticsServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GetSlaCompliance`` — unary call to ``/udb.core.analytics.services.v1.AnalyticsService/GetSlaCompliance``.
+        """``get_sla_compliance`` — unary call to wire RPC ``/udb.core.analytics.services.v1.AnalyticsService/GetSlaCompliance``.
 
         Forwards ``GetSlaComplianceRequest`` (udb.core.analytics.services.v1) and returns
         ``GetSlaComplianceResponse`` (udb.core.analytics.services.v1).
@@ -1192,7 +1192,7 @@ class AnalyticsServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GetThroughput`` — unary call to ``/udb.core.analytics.services.v1.AnalyticsService/GetThroughput``.
+        """``get_throughput`` — unary call to wire RPC ``/udb.core.analytics.services.v1.AnalyticsService/GetThroughput``.
 
         Forwards ``GetThroughputRequest`` (udb.core.analytics.services.v1) and returns
         ``GetThroughputResponse`` (udb.core.analytics.services.v1).
@@ -1216,7 +1216,7 @@ class AnalyticsServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``RecordPipelineMetric`` — unary call to ``/udb.core.analytics.services.v1.AnalyticsService/RecordPipelineMetric``.
+        """``record_pipeline_metric`` — unary call to wire RPC ``/udb.core.analytics.services.v1.AnalyticsService/RecordPipelineMetric``.
 
         Forwards ``RecordPipelineMetricRequest`` (udb.core.analytics.services.v1) and returns
         ``RecordPipelineMetricResponse`` (udb.core.analytics.services.v1).
@@ -1240,7 +1240,7 @@ class AnalyticsServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``TriggerSnapshot`` — unary call to ``/udb.core.analytics.services.v1.AnalyticsService/TriggerSnapshot``.
+        """``trigger_snapshot`` — unary call to wire RPC ``/udb.core.analytics.services.v1.AnalyticsService/TriggerSnapshot``.
 
         Forwards ``TriggerSnapshotRequest`` (udb.core.analytics.services.v1) and returns
         ``TriggerSnapshotResponse`` (udb.core.analytics.services.v1).
@@ -1283,7 +1283,7 @@ class ApiKeyServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``CreateApiKey`` — unary call to ``/udb.core.apikey.services.v1.ApiKeyService/CreateApiKey``.
+        """``create_api_key`` — unary call to wire RPC ``/udb.core.apikey.services.v1.ApiKeyService/CreateApiKey``.
 
         Forwards ``CreateApiKeyRequest`` (udb.core.apikey.services.v1) and returns
         ``CreateApiKeyResponse`` (udb.core.apikey.services.v1).
@@ -1307,7 +1307,7 @@ class ApiKeyServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``EmergencyRevokeApiKeys`` — unary call to ``/udb.core.apikey.services.v1.ApiKeyService/EmergencyRevokeApiKeys``.
+        """``emergency_revoke_api_keys`` — unary call to wire RPC ``/udb.core.apikey.services.v1.ApiKeyService/EmergencyRevokeApiKeys``.
 
         Forwards ``EmergencyRevokeApiKeysRequest`` (udb.core.apikey.services.v1) and returns
         ``EmergencyRevokeApiKeysResponse`` (udb.core.apikey.services.v1).
@@ -1331,7 +1331,7 @@ class ApiKeyServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GetApiKey`` — unary call to ``/udb.core.apikey.services.v1.ApiKeyService/GetApiKey``.
+        """``get_api_key`` — unary call to wire RPC ``/udb.core.apikey.services.v1.ApiKeyService/GetApiKey``.
 
         Forwards ``GetApiKeyRequest`` (udb.core.apikey.services.v1) and returns
         ``GetApiKeyResponse`` (udb.core.apikey.services.v1).
@@ -1355,7 +1355,7 @@ class ApiKeyServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GetApiKeyUsageStats`` — unary call to ``/udb.core.apikey.services.v1.ApiKeyService/GetApiKeyUsageStats``.
+        """``get_api_key_usage_stats`` — unary call to wire RPC ``/udb.core.apikey.services.v1.ApiKeyService/GetApiKeyUsageStats``.
 
         Forwards ``GetApiKeyUsageStatsRequest`` (udb.core.apikey.services.v1) and returns
         ``GetApiKeyUsageStatsResponse`` (udb.core.apikey.services.v1).
@@ -1379,7 +1379,7 @@ class ApiKeyServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ListApiKeys`` — unary call to ``/udb.core.apikey.services.v1.ApiKeyService/ListApiKeys``.
+        """``list_api_keys`` — unary call to wire RPC ``/udb.core.apikey.services.v1.ApiKeyService/ListApiKeys``.
 
         Forwards ``ListApiKeysRequest`` (udb.core.apikey.services.v1) and returns
         ``ListApiKeysResponse`` (udb.core.apikey.services.v1).
@@ -1403,7 +1403,7 @@ class ApiKeyServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``RevokeApiKey`` — unary call to ``/udb.core.apikey.services.v1.ApiKeyService/RevokeApiKey``.
+        """``revoke_api_key`` — unary call to wire RPC ``/udb.core.apikey.services.v1.ApiKeyService/RevokeApiKey``.
 
         Forwards ``RevokeApiKeyRequest`` (udb.core.apikey.services.v1) and returns
         ``RevokeApiKeyResponse`` (udb.core.apikey.services.v1).
@@ -1427,7 +1427,7 @@ class ApiKeyServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``RotateApiKey`` — unary call to ``/udb.core.apikey.services.v1.ApiKeyService/RotateApiKey``.
+        """``rotate_api_key`` — unary call to wire RPC ``/udb.core.apikey.services.v1.ApiKeyService/RotateApiKey``.
 
         Forwards ``RotateApiKeyRequest`` (udb.core.apikey.services.v1) and returns
         ``RotateApiKeyResponse`` (udb.core.apikey.services.v1).
@@ -1451,7 +1451,7 @@ class ApiKeyServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``UpdateApiKey`` — unary call to ``/udb.core.apikey.services.v1.ApiKeyService/UpdateApiKey``.
+        """``update_api_key`` — unary call to wire RPC ``/udb.core.apikey.services.v1.ApiKeyService/UpdateApiKey``.
 
         Forwards ``UpdateApiKeyRequest`` (udb.core.apikey.services.v1) and returns
         ``UpdateApiKeyResponse`` (udb.core.apikey.services.v1).
@@ -1475,7 +1475,7 @@ class ApiKeyServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ValidateApiKey`` — unary call to ``/udb.core.apikey.services.v1.ApiKeyService/ValidateApiKey``.
+        """``validate_api_key`` — unary call to wire RPC ``/udb.core.apikey.services.v1.ApiKeyService/ValidateApiKey``.
 
         Forwards ``ValidateApiKeyRequest`` (udb.core.apikey.services.v1) and returns
         ``ValidateApiKeyResponse`` (udb.core.apikey.services.v1).
@@ -1518,7 +1518,7 @@ class AssetServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``CompleteStep`` — unary call to ``/udb.core.asset.services.v1.AssetService/CompleteStep``.
+        """``complete_step`` — unary call to wire RPC ``/udb.core.asset.services.v1.AssetService/CompleteStep``.
 
         Forwards ``CompleteStepRequest`` (udb.core.asset.services.v1) and returns
         ``CompleteStepResponse`` (udb.core.asset.services.v1).
@@ -1542,7 +1542,7 @@ class AssetServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``CreatePipelineDefinition`` — unary call to ``/udb.core.asset.services.v1.AssetService/CreatePipelineDefinition``.
+        """``create_pipeline_definition`` — unary call to wire RPC ``/udb.core.asset.services.v1.AssetService/CreatePipelineDefinition``.
 
         Forwards ``CreatePipelineDefinitionRequest`` (udb.core.asset.services.v1) and returns
         ``CreatePipelineDefinitionResponse`` (udb.core.asset.services.v1).
@@ -1566,7 +1566,7 @@ class AssetServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GetAsset`` — unary call to ``/udb.core.asset.services.v1.AssetService/GetAsset``.
+        """``get_asset`` — unary call to wire RPC ``/udb.core.asset.services.v1.AssetService/GetAsset``.
 
         Forwards ``GetAssetRequest`` (udb.core.asset.services.v1) and returns
         ``GetAssetResponse`` (udb.core.asset.services.v1).
@@ -1590,7 +1590,7 @@ class AssetServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GetPipeline`` — unary call to ``/udb.core.asset.services.v1.AssetService/GetPipeline``.
+        """``get_pipeline`` — unary call to wire RPC ``/udb.core.asset.services.v1.AssetService/GetPipeline``.
 
         Forwards ``GetPipelineRequest`` (udb.core.asset.services.v1) and returns
         ``GetPipelineResponse`` (udb.core.asset.services.v1).
@@ -1614,7 +1614,7 @@ class AssetServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GetPipelineDefinition`` — unary call to ``/udb.core.asset.services.v1.AssetService/GetPipelineDefinition``.
+        """``get_pipeline_definition`` — unary call to wire RPC ``/udb.core.asset.services.v1.AssetService/GetPipelineDefinition``.
 
         Forwards ``GetPipelineDefinitionRequest`` (udb.core.asset.services.v1) and returns
         ``GetPipelineDefinitionResponse`` (udb.core.asset.services.v1).
@@ -1638,7 +1638,7 @@ class AssetServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ListAssets`` — unary call to ``/udb.core.asset.services.v1.AssetService/ListAssets``.
+        """``list_assets`` — unary call to wire RPC ``/udb.core.asset.services.v1.AssetService/ListAssets``.
 
         Forwards ``ListAssetsRequest`` (udb.core.asset.services.v1) and returns
         ``ListAssetsResponse`` (udb.core.asset.services.v1).
@@ -1662,7 +1662,7 @@ class AssetServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``RegisterAsset`` — unary call to ``/udb.core.asset.services.v1.AssetService/RegisterAsset``.
+        """``register_asset`` — unary call to wire RPC ``/udb.core.asset.services.v1.AssetService/RegisterAsset``.
 
         Forwards ``RegisterAssetRequest`` (udb.core.asset.services.v1) and returns
         ``RegisterAssetResponse`` (udb.core.asset.services.v1).
@@ -1686,7 +1686,7 @@ class AssetServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``StartPipeline`` — unary call to ``/udb.core.asset.services.v1.AssetService/StartPipeline``.
+        """``start_pipeline`` — unary call to wire RPC ``/udb.core.asset.services.v1.AssetService/StartPipeline``.
 
         Forwards ``StartPipelineRequest`` (udb.core.asset.services.v1) and returns
         ``StartPipelineResponse`` (udb.core.asset.services.v1).
@@ -1729,7 +1729,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``AdminResetMfa`` — unary call to ``/udb.core.authn.services.v1.AuthnService/AdminResetMfa``.
+        """``admin_reset_mfa`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/AdminResetMfa``.
 
         Forwards ``AdminResetMfaRequest`` (udb.core.authn.services.v1) and returns
         ``AdminResetMfaResponse`` (udb.core.authn.services.v1).
@@ -1753,7 +1753,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``AdminResetPassword`` — unary call to ``/udb.core.authn.services.v1.AuthnService/AdminResetPassword``.
+        """``admin_reset_password`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/AdminResetPassword``.
 
         Forwards ``AdminResetPasswordRequest`` (udb.core.authn.services.v1) and returns
         ``AdminResetPasswordResponse`` (udb.core.authn.services.v1).
@@ -1777,7 +1777,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``AdminRevokeAllTenantSessions`` — unary call to ``/udb.core.authn.services.v1.AuthnService/AdminRevokeAllTenantSessions``.
+        """``admin_revoke_all_tenant_sessions`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/AdminRevokeAllTenantSessions``.
 
         Forwards ``AdminRevokeAllTenantSessionsRequest`` (udb.core.authn.services.v1) and returns
         ``AdminRevokeAllTenantSessionsResponse`` (udb.core.authn.services.v1).
@@ -1801,7 +1801,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``AdminRevokeAllUserSessions`` — unary call to ``/udb.core.authn.services.v1.AuthnService/AdminRevokeAllUserSessions``.
+        """``admin_revoke_all_user_sessions`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/AdminRevokeAllUserSessions``.
 
         Forwards ``AdminRevokeAllUserSessionsRequest`` (udb.core.authn.services.v1) and returns
         ``AdminRevokeAllUserSessionsResponse`` (udb.core.authn.services.v1).
@@ -1825,7 +1825,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``AdminRevokeSession`` — unary call to ``/udb.core.authn.services.v1.AuthnService/AdminRevokeSession``.
+        """``admin_revoke_session`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/AdminRevokeSession``.
 
         Forwards ``AdminRevokeSessionRequest`` (udb.core.authn.services.v1) and returns
         ``AdminRevokeSessionResponse`` (udb.core.authn.services.v1).
@@ -1849,7 +1849,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``Authenticate`` — unary call to ``/udb.core.authn.services.v1.AuthnService/Authenticate``.
+        """``authenticate`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/Authenticate``.
 
         Forwards ``AuthnRequest`` (udb.core.authn.services.v1) and returns
         ``AuthnResponse`` (udb.core.authn.services.v1).
@@ -1873,7 +1873,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ChangePassword`` — unary call to ``/udb.core.authn.services.v1.AuthnService/ChangePassword``.
+        """``change_password`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/ChangePassword``.
 
         Forwards ``ChangePasswordRequest`` (udb.core.authn.services.v1) and returns
         ``ChangePasswordResponse`` (udb.core.authn.services.v1).
@@ -1897,7 +1897,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ChangeUserStatus`` — unary call to ``/udb.core.authn.services.v1.AuthnService/ChangeUserStatus``.
+        """``change_user_status`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/ChangeUserStatus``.
 
         Forwards ``ChangeUserStatusRequest`` (udb.core.authn.services.v1) and returns
         ``ChangeUserStatusResponse`` (udb.core.authn.services.v1).
@@ -1913,7 +1913,7 @@ class AuthnServiceClient(_ServiceClientBase):
             read_only=("destructive" == "read_only"),
         )
 
-    def confirm_m_f_a_enrollment(
+    def confirm_mfaenrollment(
         self,
         request: Any,
         *,
@@ -1921,7 +1921,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ConfirmMFAEnrollment`` — unary call to ``/udb.core.authn.services.v1.AuthnService/ConfirmMFAEnrollment``.
+        """``confirm_mfaenrollment`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/ConfirmMFAEnrollment``.
 
         Forwards ``ConfirmMFAEnrollmentRequest`` (udb.core.authn.services.v1) and returns
         ``ConfirmMFAEnrollmentResponse`` (udb.core.authn.services.v1).
@@ -1945,7 +1945,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``CreateSession`` — unary call to ``/udb.core.authn.services.v1.AuthnService/CreateSession``.
+        """``create_session`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/CreateSession``.
 
         Forwards ``CreateSessionRequest`` (udb.core.authn.services.v1) and returns
         ``CreateSessionResponse`` (udb.core.authn.services.v1).
@@ -1969,7 +1969,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``CreateUser`` — unary call to ``/udb.core.authn.services.v1.AuthnService/CreateUser``.
+        """``create_user`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/CreateUser``.
 
         Forwards ``CreateUserRequest`` (udb.core.authn.services.v1) and returns
         ``CreateUserResponse`` (udb.core.authn.services.v1).
@@ -1993,7 +1993,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``DeleteWebAuthnCredential`` — unary call to ``/udb.core.authn.services.v1.AuthnService/DeleteWebAuthnCredential``.
+        """``delete_web_authn_credential`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/DeleteWebAuthnCredential``.
 
         Forwards ``DeleteWebAuthnCredentialRequest`` (udb.core.authn.services.v1) and returns
         ``DeleteWebAuthnCredentialResponse`` (udb.core.authn.services.v1).
@@ -2017,7 +2017,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``DisableMfaFactor`` — unary call to ``/udb.core.authn.services.v1.AuthnService/DisableMfaFactor``.
+        """``disable_mfa_factor`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/DisableMfaFactor``.
 
         Forwards ``DisableMfaFactorRequest`` (udb.core.authn.services.v1) and returns
         ``DisableMfaFactorResponse`` (udb.core.authn.services.v1).
@@ -2041,7 +2041,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``EmergencyRevoke`` — unary call to ``/udb.core.authn.services.v1.AuthnService/EmergencyRevoke``.
+        """``emergency_revoke`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/EmergencyRevoke``.
 
         Forwards ``EmergencyRevokeRequest`` (udb.core.authn.services.v1) and returns
         ``EmergencyRevokeResponse`` (udb.core.authn.services.v1).
@@ -2057,7 +2057,7 @@ class AuthnServiceClient(_ServiceClientBase):
             read_only=("destructive" == "read_only"),
         )
 
-    def enroll_m_f_a(
+    def enroll_mfa(
         self,
         request: Any,
         *,
@@ -2065,7 +2065,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``EnrollMFA`` — unary call to ``/udb.core.authn.services.v1.AuthnService/EnrollMFA``.
+        """``enroll_mfa`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/EnrollMFA``.
 
         Forwards ``EnrollMFARequest`` (udb.core.authn.services.v1) and returns
         ``EnrollMFAResponse`` (udb.core.authn.services.v1).
@@ -2089,7 +2089,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``FinishWebAuthnAuthentication`` — unary call to ``/udb.core.authn.services.v1.AuthnService/FinishWebAuthnAuthentication``.
+        """``finish_web_authn_authentication`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/FinishWebAuthnAuthentication``.
 
         Forwards ``FinishWebAuthnAuthenticationRequest`` (udb.core.authn.services.v1) and returns
         ``FinishWebAuthnAuthenticationResponse`` (udb.core.authn.services.v1).
@@ -2113,7 +2113,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``FinishWebAuthnRegistration`` — unary call to ``/udb.core.authn.services.v1.AuthnService/FinishWebAuthnRegistration``.
+        """``finish_web_authn_registration`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/FinishWebAuthnRegistration``.
 
         Forwards ``FinishWebAuthnRegistrationRequest`` (udb.core.authn.services.v1) and returns
         ``FinishWebAuthnRegistrationResponse`` (udb.core.authn.services.v1).
@@ -2137,7 +2137,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ForgotPassword`` — unary call to ``/udb.core.authn.services.v1.AuthnService/ForgotPassword``.
+        """``forgot_password`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/ForgotPassword``.
 
         Forwards ``ForgotPasswordRequest`` (udb.core.authn.services.v1) and returns
         ``ForgotPasswordResponse`` (udb.core.authn.services.v1).
@@ -2161,7 +2161,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GenerateRecoveryCodes`` — unary call to ``/udb.core.authn.services.v1.AuthnService/GenerateRecoveryCodes``.
+        """``generate_recovery_codes`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/GenerateRecoveryCodes``.
 
         Forwards ``GenerateRecoveryCodesRequest`` (udb.core.authn.services.v1) and returns
         ``GenerateRecoveryCodesResponse`` (udb.core.authn.services.v1).
@@ -2185,7 +2185,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GetJwks`` — unary call to ``/udb.core.authn.services.v1.AuthnService/GetJwks``.
+        """``get_jwks`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/GetJwks``.
 
         Forwards ``GetJwksRequest`` (udb.core.authn.services.v1) and returns
         ``GetJwksResponse`` (udb.core.authn.services.v1).
@@ -2209,7 +2209,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GetMfaPolicy`` — unary call to ``/udb.core.authn.services.v1.AuthnService/GetMfaPolicy``.
+        """``get_mfa_policy`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/GetMfaPolicy``.
 
         Forwards ``GetMfaPolicyRequest`` (udb.core.authn.services.v1) and returns
         ``GetMfaPolicyResponse`` (udb.core.authn.services.v1).
@@ -2233,7 +2233,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GetSession`` — unary call to ``/udb.core.authn.services.v1.AuthnService/GetSession``.
+        """``get_session`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/GetSession``.
 
         Forwards ``GetSessionRequest`` (udb.core.authn.services.v1) and returns
         ``GetSessionResponse`` (udb.core.authn.services.v1).
@@ -2257,7 +2257,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GetUser`` — unary call to ``/udb.core.authn.services.v1.AuthnService/GetUser``.
+        """``get_user`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/GetUser``.
 
         Forwards ``GetUserRequest`` (udb.core.authn.services.v1) and returns
         ``GetUserResponse`` (udb.core.authn.services.v1).
@@ -2281,7 +2281,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``IntrospectToken`` — unary call to ``/udb.core.authn.services.v1.AuthnService/IntrospectToken``.
+        """``introspect_token`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/IntrospectToken``.
 
         Forwards ``IntrospectTokenRequest`` (udb.core.authn.services.v1) and returns
         ``IntrospectTokenResponse`` (udb.core.authn.services.v1).
@@ -2305,7 +2305,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``IssueMfaChallenge`` — unary call to ``/udb.core.authn.services.v1.AuthnService/IssueMfaChallenge``.
+        """``issue_mfa_challenge`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/IssueMfaChallenge``.
 
         Forwards ``IssueMfaChallengeRequest`` (udb.core.authn.services.v1) and returns
         ``IssueMfaChallengeResponse`` (udb.core.authn.services.v1).
@@ -2329,7 +2329,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ListDevices`` — unary call to ``/udb.core.authn.services.v1.AuthnService/ListDevices``.
+        """``list_devices`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/ListDevices``.
 
         Forwards ``ListDevicesRequest`` (udb.core.authn.services.v1) and returns
         ``ListDevicesResponse`` (udb.core.authn.services.v1).
@@ -2353,7 +2353,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ListMfaFactors`` — unary call to ``/udb.core.authn.services.v1.AuthnService/ListMfaFactors``.
+        """``list_mfa_factors`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/ListMfaFactors``.
 
         Forwards ``ListMfaFactorsRequest`` (udb.core.authn.services.v1) and returns
         ``ListMfaFactorsResponse`` (udb.core.authn.services.v1).
@@ -2377,7 +2377,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ListSessions`` — unary call to ``/udb.core.authn.services.v1.AuthnService/ListSessions``.
+        """``list_sessions`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/ListSessions``.
 
         Forwards ``ListSessionsRequest`` (udb.core.authn.services.v1) and returns
         ``ListSessionsResponse`` (udb.core.authn.services.v1).
@@ -2401,7 +2401,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ListUsers`` — unary call to ``/udb.core.authn.services.v1.AuthnService/ListUsers``.
+        """``list_users`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/ListUsers``.
 
         Forwards ``ListUsersRequest`` (udb.core.authn.services.v1) and returns
         ``ListUsersResponse`` (udb.core.authn.services.v1).
@@ -2425,7 +2425,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ListWebAuthnCredentials`` — unary call to ``/udb.core.authn.services.v1.AuthnService/ListWebAuthnCredentials``.
+        """``list_web_authn_credentials`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/ListWebAuthnCredentials``.
 
         Forwards ``ListWebAuthnCredentialsRequest`` (udb.core.authn.services.v1) and returns
         ``ListWebAuthnCredentialsResponse`` (udb.core.authn.services.v1).
@@ -2449,7 +2449,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``Login`` — unary call to ``/udb.core.authn.services.v1.AuthnService/Login``.
+        """``login`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/Login``.
 
         Forwards ``LoginRequest`` (udb.core.authn.services.v1) and returns
         ``LoginResponse`` (udb.core.authn.services.v1).
@@ -2473,7 +2473,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``Logout`` — unary call to ``/udb.core.authn.services.v1.AuthnService/Logout``.
+        """``logout`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/Logout``.
 
         Forwards ``LogoutRequest`` (udb.core.authn.services.v1) and returns
         ``LogoutResponse`` (udb.core.authn.services.v1).
@@ -2497,7 +2497,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``PutMfaPolicy`` — unary call to ``/udb.core.authn.services.v1.AuthnService/PutMfaPolicy``.
+        """``put_mfa_policy`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/PutMfaPolicy``.
 
         Forwards ``PutMfaPolicyRequest`` (udb.core.authn.services.v1) and returns
         ``PutMfaPolicyResponse`` (udb.core.authn.services.v1).
@@ -2521,7 +2521,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``RefreshSession`` — unary call to ``/udb.core.authn.services.v1.AuthnService/RefreshSession``.
+        """``refresh_session`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/RefreshSession``.
 
         Forwards ``RefreshSessionRequest`` (udb.core.authn.services.v1) and returns
         ``RefreshSessionResponse`` (udb.core.authn.services.v1).
@@ -2545,7 +2545,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``RefreshToken`` — unary call to ``/udb.core.authn.services.v1.AuthnService/RefreshToken``.
+        """``refresh_token`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/RefreshToken``.
 
         Forwards ``RefreshTokenRequest`` (udb.core.authn.services.v1) and returns
         ``RefreshTokenResponse`` (udb.core.authn.services.v1).
@@ -2569,7 +2569,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``RenamePasskey`` — unary call to ``/udb.core.authn.services.v1.AuthnService/RenamePasskey``.
+        """``rename_passkey`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/RenamePasskey``.
 
         Forwards ``RenamePasskeyRequest`` (udb.core.authn.services.v1) and returns
         ``RenamePasskeyResponse`` (udb.core.authn.services.v1).
@@ -2585,7 +2585,7 @@ class AuthnServiceClient(_ServiceClientBase):
             read_only=("mutation" == "read_only"),
         )
 
-    def resend_o_t_p(
+    def resend_otp(
         self,
         request: Any,
         *,
@@ -2593,7 +2593,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ResendOTP`` — unary call to ``/udb.core.authn.services.v1.AuthnService/ResendOTP``.
+        """``resend_otp`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/ResendOTP``.
 
         Forwards ``ResendOTPRequest`` (udb.core.authn.services.v1) and returns
         ``ResendOTPResponse`` (udb.core.authn.services.v1).
@@ -2617,7 +2617,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ResetPassword`` — unary call to ``/udb.core.authn.services.v1.AuthnService/ResetPassword``.
+        """``reset_password`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/ResetPassword``.
 
         Forwards ``ResetPasswordRequest`` (udb.core.authn.services.v1) and returns
         ``ResetPasswordResponse`` (udb.core.authn.services.v1).
@@ -2641,7 +2641,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``RevokeDevice`` — unary call to ``/udb.core.authn.services.v1.AuthnService/RevokeDevice``.
+        """``revoke_device`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/RevokeDevice``.
 
         Forwards ``RevokeDeviceRequest`` (udb.core.authn.services.v1) and returns
         ``RevokeDeviceResponse`` (udb.core.authn.services.v1).
@@ -2665,7 +2665,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``RevokeRecoveryCodes`` — unary call to ``/udb.core.authn.services.v1.AuthnService/RevokeRecoveryCodes``.
+        """``revoke_recovery_codes`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/RevokeRecoveryCodes``.
 
         Forwards ``RevokeRecoveryCodesRequest`` (udb.core.authn.services.v1) and returns
         ``RevokeRecoveryCodesResponse`` (udb.core.authn.services.v1).
@@ -2689,7 +2689,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``RevokeSession`` — unary call to ``/udb.core.authn.services.v1.AuthnService/RevokeSession``.
+        """``revoke_session`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/RevokeSession``.
 
         Forwards ``RevokeSessionRequest`` (udb.core.authn.services.v1) and returns
         ``RevokeSessionResponse`` (udb.core.authn.services.v1).
@@ -2705,7 +2705,7 @@ class AuthnServiceClient(_ServiceClientBase):
             read_only=("mutation" == "read_only"),
         )
 
-    def send_o_t_p(
+    def send_otp(
         self,
         request: Any,
         *,
@@ -2713,7 +2713,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``SendOTP`` — unary call to ``/udb.core.authn.services.v1.AuthnService/SendOTP``.
+        """``send_otp`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/SendOTP``.
 
         Forwards ``SendOTPRequest`` (udb.core.authn.services.v1) and returns
         ``SendOTPResponse`` (udb.core.authn.services.v1).
@@ -2737,7 +2737,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``SendPhoneVerification`` — unary call to ``/udb.core.authn.services.v1.AuthnService/SendPhoneVerification``.
+        """``send_phone_verification`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/SendPhoneVerification``.
 
         Forwards ``SendPhoneVerificationRequest`` (udb.core.authn.services.v1) and returns
         ``SendPhoneVerificationResponse`` (udb.core.authn.services.v1).
@@ -2761,7 +2761,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``StartWebAuthnAuthentication`` — unary call to ``/udb.core.authn.services.v1.AuthnService/StartWebAuthnAuthentication``.
+        """``start_web_authn_authentication`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/StartWebAuthnAuthentication``.
 
         Forwards ``StartWebAuthnAuthenticationRequest`` (udb.core.authn.services.v1) and returns
         ``StartWebAuthnAuthenticationResponse`` (udb.core.authn.services.v1).
@@ -2785,7 +2785,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``StartWebAuthnRegistration`` — unary call to ``/udb.core.authn.services.v1.AuthnService/StartWebAuthnRegistration``.
+        """``start_web_authn_registration`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/StartWebAuthnRegistration``.
 
         Forwards ``StartWebAuthnRegistrationRequest`` (udb.core.authn.services.v1) and returns
         ``StartWebAuthnRegistrationResponse`` (udb.core.authn.services.v1).
@@ -2809,7 +2809,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``UpdateUser`` — unary call to ``/udb.core.authn.services.v1.AuthnService/UpdateUser``.
+        """``update_user`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/UpdateUser``.
 
         Forwards ``UpdateUserRequest`` (udb.core.authn.services.v1) and returns
         ``UpdateUserResponse`` (udb.core.authn.services.v1).
@@ -2825,7 +2825,7 @@ class AuthnServiceClient(_ServiceClientBase):
             read_only=("mutation" == "read_only"),
         )
 
-    def validate_c_s_r_f(
+    def validate_csrf(
         self,
         request: Any,
         *,
@@ -2833,7 +2833,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ValidateCSRF`` — unary call to ``/udb.core.authn.services.v1.AuthnService/ValidateCSRF``.
+        """``validate_csrf`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/ValidateCSRF``.
 
         Forwards ``ValidateCSRFRequest`` (udb.core.authn.services.v1) and returns
         ``ValidateCSRFResponse`` (udb.core.authn.services.v1).
@@ -2857,7 +2857,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ValidateToken`` — unary call to ``/udb.core.authn.services.v1.AuthnService/ValidateToken``.
+        """``validate_token`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/ValidateToken``.
 
         Forwards ``ValidateTokenRequest`` (udb.core.authn.services.v1) and returns
         ``ValidateTokenResponse`` (udb.core.authn.services.v1).
@@ -2881,7 +2881,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``VerifyMfaChallenge`` — unary call to ``/udb.core.authn.services.v1.AuthnService/VerifyMfaChallenge``.
+        """``verify_mfa_challenge`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/VerifyMfaChallenge``.
 
         Forwards ``VerifyMfaChallengeRequest`` (udb.core.authn.services.v1) and returns
         ``VerifyMfaChallengeResponse`` (udb.core.authn.services.v1).
@@ -2897,7 +2897,7 @@ class AuthnServiceClient(_ServiceClientBase):
             read_only=("read_only" == "read_only"),
         )
 
-    def verify_o_t_p(
+    def verify_otp(
         self,
         request: Any,
         *,
@@ -2905,7 +2905,7 @@ class AuthnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``VerifyOTP`` — unary call to ``/udb.core.authn.services.v1.AuthnService/VerifyOTP``.
+        """``verify_otp`` — unary call to wire RPC ``/udb.core.authn.services.v1.AuthnService/VerifyOTP``.
 
         Forwards ``VerifyOTPRequest`` (udb.core.authn.services.v1) and returns
         ``VerifyOTPResponse`` (udb.core.authn.services.v1).
@@ -2948,7 +2948,7 @@ class AuthzServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ActivateCanary`` — unary call to ``/udb.core.authz.services.v1.AuthzService/ActivateCanary``.
+        """``activate_canary`` — unary call to wire RPC ``/udb.core.authz.services.v1.AuthzService/ActivateCanary``.
 
         Forwards ``ActivateCanaryRequest`` (udb.core.authz.services.v1) and returns
         ``CanaryResponse`` (udb.core.authz.services.v1).
@@ -2972,7 +2972,7 @@ class AuthzServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ActivatePolicyVersion`` — unary call to ``/udb.core.authz.services.v1.AuthzService/ActivatePolicyVersion``.
+        """``activate_policy_version`` — unary call to wire RPC ``/udb.core.authz.services.v1.AuthzService/ActivatePolicyVersion``.
 
         Forwards ``ActivatePolicyVersionRequest`` (udb.core.authz.services.v1) and returns
         ``ActivationResponse`` (udb.core.authz.services.v1).
@@ -2996,7 +2996,7 @@ class AuthzServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ApprovePolicyDraft`` — unary call to ``/udb.core.authz.services.v1.AuthzService/ApprovePolicyDraft``.
+        """``approve_policy_draft`` — unary call to wire RPC ``/udb.core.authz.services.v1.AuthzService/ApprovePolicyDraft``.
 
         Forwards ``ApprovePolicyDraftRequest`` (udb.core.authz.services.v1) and returns
         ``PolicyApprovalResponse`` (udb.core.authz.services.v1).
@@ -3020,7 +3020,7 @@ class AuthzServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``AssignRole`` — unary call to ``/udb.core.authz.services.v1.AuthzService/AssignRole``.
+        """``assign_role`` — unary call to wire RPC ``/udb.core.authz.services.v1.AuthzService/AssignRole``.
 
         Forwards ``AssignRoleRequest`` (udb.core.authz.services.v1) and returns
         ``AssignRoleResponse`` (udb.core.authz.services.v1).
@@ -3044,7 +3044,7 @@ class AuthzServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``Authorize`` — unary call to ``/udb.core.authz.services.v1.AuthzService/Authorize``.
+        """``authorize`` — unary call to wire RPC ``/udb.core.authz.services.v1.AuthzService/Authorize``.
 
         Forwards ``AuthzRequest`` (udb.core.authz.services.v1) and returns
         ``AuthzResponse`` (udb.core.authz.services.v1).
@@ -3068,7 +3068,7 @@ class AuthzServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``BatchCheckPermissions`` — unary call to ``/udb.core.authz.services.v1.AuthzService/BatchCheckPermissions``.
+        """``batch_check_permissions`` — unary call to wire RPC ``/udb.core.authz.services.v1.AuthzService/BatchCheckPermissions``.
 
         Forwards ``BatchCheckPermissionsRequest`` (udb.core.authz.services.v1) and returns
         ``BatchCheckPermissionsResponse`` (udb.core.authz.services.v1).
@@ -3092,7 +3092,7 @@ class AuthzServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``CheckAccess`` — unary call to ``/udb.core.authz.services.v1.AuthzService/CheckAccess``.
+        """``check_access`` — unary call to wire RPC ``/udb.core.authz.services.v1.AuthzService/CheckAccess``.
 
         Forwards ``CheckAccessRequest`` (udb.core.authz.services.v1) and returns
         ``CheckAccessResponse`` (udb.core.authz.services.v1).
@@ -3116,7 +3116,7 @@ class AuthzServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``CreatePolicyDraft`` — unary call to ``/udb.core.authz.services.v1.AuthzService/CreatePolicyDraft``.
+        """``create_policy_draft`` — unary call to wire RPC ``/udb.core.authz.services.v1.AuthzService/CreatePolicyDraft``.
 
         Forwards ``CreatePolicyDraftRequest`` (udb.core.authz.services.v1) and returns
         ``PolicyDraftResponse`` (udb.core.authz.services.v1).
@@ -3140,7 +3140,7 @@ class AuthzServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``CreatePolicyRule`` — unary call to ``/udb.core.authz.services.v1.AuthzService/CreatePolicyRule``.
+        """``create_policy_rule`` — unary call to wire RPC ``/udb.core.authz.services.v1.AuthzService/CreatePolicyRule``.
 
         Forwards ``CreatePolicyRuleRequest`` (udb.core.authz.services.v1) and returns
         ``CreatePolicyRuleResponse`` (udb.core.authz.services.v1).
@@ -3164,7 +3164,7 @@ class AuthzServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``CreateRole`` — unary call to ``/udb.core.authz.services.v1.AuthzService/CreateRole``.
+        """``create_role`` — unary call to wire RPC ``/udb.core.authz.services.v1.AuthzService/CreateRole``.
 
         Forwards ``CreateRoleRequest`` (udb.core.authz.services.v1) and returns
         ``CreateRoleResponse`` (udb.core.authz.services.v1).
@@ -3188,7 +3188,7 @@ class AuthzServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``DeletePolicyRule`` — unary call to ``/udb.core.authz.services.v1.AuthzService/DeletePolicyRule``.
+        """``delete_policy_rule`` — unary call to wire RPC ``/udb.core.authz.services.v1.AuthzService/DeletePolicyRule``.
 
         Forwards ``DeletePolicyRuleRequest`` (udb.core.authz.services.v1) and returns
         ``DeletePolicyRuleResponse`` (udb.core.authz.services.v1).
@@ -3212,7 +3212,7 @@ class AuthzServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``DeleteRole`` — unary call to ``/udb.core.authz.services.v1.AuthzService/DeleteRole``.
+        """``delete_role`` — unary call to wire RPC ``/udb.core.authz.services.v1.AuthzService/DeleteRole``.
 
         Forwards ``DeleteRoleRequest`` (udb.core.authz.services.v1) and returns
         ``DeleteRoleResponse`` (udb.core.authz.services.v1).
@@ -3236,7 +3236,7 @@ class AuthzServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``DiffPolicyDraft`` — unary call to ``/udb.core.authz.services.v1.AuthzService/DiffPolicyDraft``.
+        """``diff_policy_draft`` — unary call to wire RPC ``/udb.core.authz.services.v1.AuthzService/DiffPolicyDraft``.
 
         Forwards ``DiffPolicyDraftRequest`` (udb.core.authz.services.v1) and returns
         ``DiffPolicyDraftResponse`` (udb.core.authz.services.v1).
@@ -3260,7 +3260,7 @@ class AuthzServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ExplainPolicy`` — unary call to ``/udb.core.authz.services.v1.AuthzService/ExplainPolicy``.
+        """``explain_policy`` — unary call to wire RPC ``/udb.core.authz.services.v1.AuthzService/ExplainPolicy``.
 
         Forwards ``ExplainPolicyRequest`` (udb.core.authz.services.v1) and returns
         ``ExplainPolicyResponse`` (udb.core.authz.services.v1).
@@ -3284,7 +3284,7 @@ class AuthzServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GetAuthzRevision`` — unary call to ``/udb.core.authz.services.v1.AuthzService/GetAuthzRevision``.
+        """``get_authz_revision`` — unary call to wire RPC ``/udb.core.authz.services.v1.AuthzService/GetAuthzRevision``.
 
         Forwards ``GetAuthzRevisionRequest`` (udb.core.authz.services.v1) and returns
         ``GetAuthzRevisionResponse`` (udb.core.authz.services.v1).
@@ -3308,7 +3308,7 @@ class AuthzServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GetCanaryStatus`` — unary call to ``/udb.core.authz.services.v1.AuthzService/GetCanaryStatus``.
+        """``get_canary_status`` — unary call to wire RPC ``/udb.core.authz.services.v1.AuthzService/GetCanaryStatus``.
 
         Forwards ``GetCanaryStatusRequest`` (udb.core.authz.services.v1) and returns
         ``GetCanaryStatusResponse`` (udb.core.authz.services.v1).
@@ -3332,7 +3332,7 @@ class AuthzServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GetNativeAccess`` — unary call to ``/udb.core.authz.services.v1.AuthzService/GetNativeAccess``.
+        """``get_native_access`` — unary call to wire RPC ``/udb.core.authz.services.v1.AuthzService/GetNativeAccess``.
 
         Forwards ``NativeAccessRequest`` (udb.core.authz.services.v1) and returns
         ``NativeAccessResponse`` (udb.core.authz.services.v1).
@@ -3356,7 +3356,7 @@ class AuthzServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GetPolicyBundle`` — unary call to ``/udb.core.authz.services.v1.AuthzService/GetPolicyBundle``.
+        """``get_policy_bundle`` — unary call to wire RPC ``/udb.core.authz.services.v1.AuthzService/GetPolicyBundle``.
 
         Forwards ``PolicyBundleRequest`` (udb.core.authz.services.v1) and returns
         ``PolicyBundleResponse`` (udb.core.authz.services.v1).
@@ -3380,7 +3380,7 @@ class AuthzServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GetPolicyRule`` — unary call to ``/udb.core.authz.services.v1.AuthzService/GetPolicyRule``.
+        """``get_policy_rule`` — unary call to wire RPC ``/udb.core.authz.services.v1.AuthzService/GetPolicyRule``.
 
         Forwards ``GetPolicyRuleRequest`` (udb.core.authz.services.v1) and returns
         ``GetPolicyRuleResponse`` (udb.core.authz.services.v1).
@@ -3404,7 +3404,7 @@ class AuthzServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GetRole`` — unary call to ``/udb.core.authz.services.v1.AuthzService/GetRole``.
+        """``get_role`` — unary call to wire RPC ``/udb.core.authz.services.v1.AuthzService/GetRole``.
 
         Forwards ``GetRoleRequest`` (udb.core.authz.services.v1) and returns
         ``GetRoleResponse`` (udb.core.authz.services.v1).
@@ -3428,7 +3428,7 @@ class AuthzServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``InvalidatePolicyBundles`` — unary call to ``/udb.core.authz.services.v1.AuthzService/InvalidatePolicyBundles``.
+        """``invalidate_policy_bundles`` — unary call to wire RPC ``/udb.core.authz.services.v1.AuthzService/InvalidatePolicyBundles``.
 
         Forwards ``InvalidatePolicyBundlesRequest`` (udb.core.authz.services.v1) and returns
         ``InvalidatePolicyBundlesResponse`` (udb.core.authz.services.v1).
@@ -3452,7 +3452,7 @@ class AuthzServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``LintAuthzPolicies`` — unary call to ``/udb.core.authz.services.v1.AuthzService/LintAuthzPolicies``.
+        """``lint_authz_policies`` — unary call to wire RPC ``/udb.core.authz.services.v1.AuthzService/LintAuthzPolicies``.
 
         Forwards ``LintAuthzPoliciesRequest`` (udb.core.authz.services.v1) and returns
         ``LintAuthzPoliciesResponse`` (udb.core.authz.services.v1).
@@ -3476,7 +3476,7 @@ class AuthzServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ListAccessDecisionAudits`` — unary call to ``/udb.core.authz.services.v1.AuthzService/ListAccessDecisionAudits``.
+        """``list_access_decision_audits`` — unary call to wire RPC ``/udb.core.authz.services.v1.AuthzService/ListAccessDecisionAudits``.
 
         Forwards ``ListAccessDecisionAuditsRequest`` (udb.core.authz.services.v1) and returns
         ``ListAccessDecisionAuditsResponse`` (udb.core.authz.services.v1).
@@ -3500,7 +3500,7 @@ class AuthzServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ListPolicyRules`` — unary call to ``/udb.core.authz.services.v1.AuthzService/ListPolicyRules``.
+        """``list_policy_rules`` — unary call to wire RPC ``/udb.core.authz.services.v1.AuthzService/ListPolicyRules``.
 
         Forwards ``ListPolicyRulesRequest`` (udb.core.authz.services.v1) and returns
         ``ListPolicyRulesResponse`` (udb.core.authz.services.v1).
@@ -3524,7 +3524,7 @@ class AuthzServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ListPolicyVersions`` — unary call to ``/udb.core.authz.services.v1.AuthzService/ListPolicyVersions``.
+        """``list_policy_versions`` — unary call to wire RPC ``/udb.core.authz.services.v1.AuthzService/ListPolicyVersions``.
 
         Forwards ``ListPolicyVersionsRequest`` (udb.core.authz.services.v1) and returns
         ``ListPolicyVersionsResponse`` (udb.core.authz.services.v1).
@@ -3548,7 +3548,7 @@ class AuthzServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ListRoles`` — unary call to ``/udb.core.authz.services.v1.AuthzService/ListRoles``.
+        """``list_roles`` — unary call to wire RPC ``/udb.core.authz.services.v1.AuthzService/ListRoles``.
 
         Forwards ``ListRolesRequest`` (udb.core.authz.services.v1) and returns
         ``ListRolesResponse`` (udb.core.authz.services.v1).
@@ -3572,7 +3572,7 @@ class AuthzServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ListUserPermissions`` — unary call to ``/udb.core.authz.services.v1.AuthzService/ListUserPermissions``.
+        """``list_user_permissions`` — unary call to wire RPC ``/udb.core.authz.services.v1.AuthzService/ListUserPermissions``.
 
         Forwards ``ListUserPermissionsRequest`` (udb.core.authz.services.v1) and returns
         ``ListUserPermissionsResponse`` (udb.core.authz.services.v1).
@@ -3596,7 +3596,7 @@ class AuthzServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ListUserRoles`` — unary call to ``/udb.core.authz.services.v1.AuthzService/ListUserRoles``.
+        """``list_user_roles`` — unary call to wire RPC ``/udb.core.authz.services.v1.AuthzService/ListUserRoles``.
 
         Forwards ``ListUserRolesRequest`` (udb.core.authz.services.v1) and returns
         ``ListUserRolesResponse`` (udb.core.authz.services.v1).
@@ -3620,7 +3620,7 @@ class AuthzServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``MigrateLegacyPolicies`` — unary call to ``/udb.core.authz.services.v1.AuthzService/MigrateLegacyPolicies``.
+        """``migrate_legacy_policies`` — unary call to wire RPC ``/udb.core.authz.services.v1.AuthzService/MigrateLegacyPolicies``.
 
         Forwards ``MigrateLegacyPoliciesRequest`` (udb.core.authz.services.v1) and returns
         ``MigrateLegacyPoliciesResponse`` (udb.core.authz.services.v1).
@@ -3644,7 +3644,7 @@ class AuthzServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``PromoteCanary`` — unary call to ``/udb.core.authz.services.v1.AuthzService/PromoteCanary``.
+        """``promote_canary`` — unary call to wire RPC ``/udb.core.authz.services.v1.AuthzService/PromoteCanary``.
 
         Forwards ``PromoteCanaryRequest`` (udb.core.authz.services.v1) and returns
         ``CanaryResponse`` (udb.core.authz.services.v1).
@@ -3668,7 +3668,7 @@ class AuthzServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``PutAuthzPolicy`` — unary call to ``/udb.core.authz.services.v1.AuthzService/PutAuthzPolicy``.
+        """``put_authz_policy`` — unary call to wire RPC ``/udb.core.authz.services.v1.AuthzService/PutAuthzPolicy``.
 
         Forwards ``PutAuthzPolicyRequest`` (udb.core.authz.services.v1) and returns
         ``AuthMutationResponse`` (udb.core.authz.services.v1).
@@ -3692,7 +3692,7 @@ class AuthzServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``PutRelationship`` — unary call to ``/udb.core.authz.services.v1.AuthzService/PutRelationship``.
+        """``put_relationship`` — unary call to wire RPC ``/udb.core.authz.services.v1.AuthzService/PutRelationship``.
 
         Forwards ``PutRelationshipRequest`` (udb.core.authz.services.v1) and returns
         ``AuthMutationResponse`` (udb.core.authz.services.v1).
@@ -3716,7 +3716,7 @@ class AuthzServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``PutRoleBinding`` — unary call to ``/udb.core.authz.services.v1.AuthzService/PutRoleBinding``.
+        """``put_role_binding`` — unary call to wire RPC ``/udb.core.authz.services.v1.AuthzService/PutRoleBinding``.
 
         Forwards ``PutRoleBindingRequest`` (udb.core.authz.services.v1) and returns
         ``AuthMutationResponse`` (udb.core.authz.services.v1).
@@ -3740,7 +3740,7 @@ class AuthzServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``RejectPolicyDraft`` — unary call to ``/udb.core.authz.services.v1.AuthzService/RejectPolicyDraft``.
+        """``reject_policy_draft`` — unary call to wire RPC ``/udb.core.authz.services.v1.AuthzService/RejectPolicyDraft``.
 
         Forwards ``RejectPolicyDraftRequest`` (udb.core.authz.services.v1) and returns
         ``PolicyApprovalResponse`` (udb.core.authz.services.v1).
@@ -3764,7 +3764,7 @@ class AuthzServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``RevokeRole`` — unary call to ``/udb.core.authz.services.v1.AuthzService/RevokeRole``.
+        """``revoke_role`` — unary call to wire RPC ``/udb.core.authz.services.v1.AuthzService/RevokeRole``.
 
         Forwards ``RevokeRoleRequest`` (udb.core.authz.services.v1) and returns
         ``RevokeRoleResponse`` (udb.core.authz.services.v1).
@@ -3788,7 +3788,7 @@ class AuthzServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``RollbackPolicyVersion`` — unary call to ``/udb.core.authz.services.v1.AuthzService/RollbackPolicyVersion``.
+        """``rollback_policy_version`` — unary call to wire RPC ``/udb.core.authz.services.v1.AuthzService/RollbackPolicyVersion``.
 
         Forwards ``RollbackPolicyVersionRequest`` (udb.core.authz.services.v1) and returns
         ``ActivationResponse`` (udb.core.authz.services.v1).
@@ -3812,7 +3812,7 @@ class AuthzServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``SeedBuiltinRoles`` — unary call to ``/udb.core.authz.services.v1.AuthzService/SeedBuiltinRoles``.
+        """``seed_builtin_roles`` — unary call to wire RPC ``/udb.core.authz.services.v1.AuthzService/SeedBuiltinRoles``.
 
         Forwards ``SeedBuiltinRolesRequest`` (udb.core.authz.services.v1) and returns
         ``SeedBuiltinRolesResponse`` (udb.core.authz.services.v1).
@@ -3836,7 +3836,7 @@ class AuthzServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``SimulatePolicy`` — unary call to ``/udb.core.authz.services.v1.AuthzService/SimulatePolicy``.
+        """``simulate_policy`` — unary call to wire RPC ``/udb.core.authz.services.v1.AuthzService/SimulatePolicy``.
 
         Forwards ``SimulatePolicyRequest`` (udb.core.authz.services.v1) and returns
         ``SimulatePolicyResponse`` (udb.core.authz.services.v1).
@@ -3860,7 +3860,7 @@ class AuthzServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``SubmitPolicyDraft`` — unary call to ``/udb.core.authz.services.v1.AuthzService/SubmitPolicyDraft``.
+        """``submit_policy_draft`` — unary call to wire RPC ``/udb.core.authz.services.v1.AuthzService/SubmitPolicyDraft``.
 
         Forwards ``SubmitPolicyDraftRequest`` (udb.core.authz.services.v1) and returns
         ``PolicyDraftResponse`` (udb.core.authz.services.v1).
@@ -3884,7 +3884,7 @@ class AuthzServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``UpdatePolicyDraft`` — unary call to ``/udb.core.authz.services.v1.AuthzService/UpdatePolicyDraft``.
+        """``update_policy_draft`` — unary call to wire RPC ``/udb.core.authz.services.v1.AuthzService/UpdatePolicyDraft``.
 
         Forwards ``UpdatePolicyDraftRequest`` (udb.core.authz.services.v1) and returns
         ``PolicyDraftResponse`` (udb.core.authz.services.v1).
@@ -3908,7 +3908,7 @@ class AuthzServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``UpdateRole`` — unary call to ``/udb.core.authz.services.v1.AuthzService/UpdateRole``.
+        """``update_role`` — unary call to wire RPC ``/udb.core.authz.services.v1.AuthzService/UpdateRole``.
 
         Forwards ``UpdateRoleRequest`` (udb.core.authz.services.v1) and returns
         ``UpdateRoleResponse`` (udb.core.authz.services.v1).
@@ -3951,7 +3951,7 @@ class ControlPlaneServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``AckStatus`` — unary call to ``/udb.core.control.services.v1.ControlPlaneService/AckStatus``.
+        """``ack_status`` — unary call to wire RPC ``/udb.core.control.services.v1.ControlPlaneService/AckStatus``.
 
         Forwards ``AckStatusRequest`` (udb.core.control.services.v1) and returns
         ``AckStatusResponse`` (udb.core.control.services.v1).
@@ -3975,7 +3975,7 @@ class ControlPlaneServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GetResources`` — unary call to ``/udb.core.control.services.v1.ControlPlaneService/GetResources``.
+        """``get_resources`` — unary call to wire RPC ``/udb.core.control.services.v1.ControlPlaneService/GetResources``.
 
         Forwards ``GetResourcesRequest`` (udb.core.control.services.v1) and returns
         ``GetResourcesResponse`` (udb.core.control.services.v1).
@@ -3999,7 +3999,7 @@ class ControlPlaneServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ListNodeStates`` — unary call to ``/udb.core.control.services.v1.ControlPlaneService/ListNodeStates``.
+        """``list_node_states`` — unary call to wire RPC ``/udb.core.control.services.v1.ControlPlaneService/ListNodeStates``.
 
         Forwards ``ListNodeStatesRequest`` (udb.core.control.services.v1) and returns
         ``ListNodeStatesResponse`` (udb.core.control.services.v1).
@@ -4028,7 +4028,7 @@ class ControlPlaneServiceClient(_ServiceClientBase):
         metadata: Metadata | None = None,
         timeout: float | None = None,
     ) -> Iterator[Any]:
-        """``DeltaResources`` — bidirectional-streaming call to ``/udb.core.control.services.v1.ControlPlaneService/DeltaResources``.
+        """``delta_resources`` — bidirectional-streaming call to wire RPC ``/udb.core.control.services.v1.ControlPlaneService/DeltaResources``.
 
         Consumes an iterator of ``DeltaDiscoveryRequest`` (udb.core.control.services.v1) and yields
         ``DeltaDiscoveryResponse`` (udb.core.control.services.v1). Not auto-retried.
@@ -4054,7 +4054,7 @@ class ControlPlaneServiceClient(_ServiceClientBase):
         metadata: Metadata | None = None,
         timeout: float | None = None,
     ) -> Iterator[Any]:
-        """``StreamResources`` — bidirectional-streaming call to ``/udb.core.control.services.v1.ControlPlaneService/StreamResources``.
+        """``stream_resources`` — bidirectional-streaming call to wire RPC ``/udb.core.control.services.v1.ControlPlaneService/StreamResources``.
 
         Consumes an iterator of ``DiscoveryRequest`` (udb.core.control.services.v1) and yields
         ``DiscoveryResponse`` (udb.core.control.services.v1). Not auto-retried.
@@ -4094,7 +4094,7 @@ class IdentityProviderServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``CreateProvider`` — unary call to ``/udb.core.idp.services.v1.IdentityProviderService/CreateProvider``.
+        """``create_provider`` — unary call to wire RPC ``/udb.core.idp.services.v1.IdentityProviderService/CreateProvider``.
 
         Forwards ``CreateProviderRequest`` (udb.core.idp.services.v1) and returns
         ``CreateProviderResponse`` (udb.core.idp.services.v1).
@@ -4118,7 +4118,7 @@ class IdentityProviderServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``DisableProvider`` — unary call to ``/udb.core.idp.services.v1.IdentityProviderService/DisableProvider``.
+        """``disable_provider`` — unary call to wire RPC ``/udb.core.idp.services.v1.IdentityProviderService/DisableProvider``.
 
         Forwards ``DisableProviderRequest`` (udb.core.idp.services.v1) and returns
         ``DisableProviderResponse`` (udb.core.idp.services.v1).
@@ -4142,7 +4142,7 @@ class IdentityProviderServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ForceJwksRefresh`` — unary call to ``/udb.core.idp.services.v1.IdentityProviderService/ForceJwksRefresh``.
+        """``force_jwks_refresh`` — unary call to wire RPC ``/udb.core.idp.services.v1.IdentityProviderService/ForceJwksRefresh``.
 
         Forwards ``ForceJwksRefreshRequest`` (udb.core.idp.services.v1) and returns
         ``ForceJwksRefreshResponse`` (udb.core.idp.services.v1).
@@ -4166,7 +4166,7 @@ class IdentityProviderServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GetProvider`` — unary call to ``/udb.core.idp.services.v1.IdentityProviderService/GetProvider``.
+        """``get_provider`` — unary call to wire RPC ``/udb.core.idp.services.v1.IdentityProviderService/GetProvider``.
 
         Forwards ``GetProviderRequest`` (udb.core.idp.services.v1) and returns
         ``GetProviderResponse`` (udb.core.idp.services.v1).
@@ -4190,7 +4190,7 @@ class IdentityProviderServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ImportSamlMetadata`` — unary call to ``/udb.core.idp.services.v1.IdentityProviderService/ImportSamlMetadata``.
+        """``import_saml_metadata`` — unary call to wire RPC ``/udb.core.idp.services.v1.IdentityProviderService/ImportSamlMetadata``.
 
         Forwards ``ImportSamlMetadataRequest`` (udb.core.idp.services.v1) and returns
         ``ImportSamlMetadataResponse`` (udb.core.idp.services.v1).
@@ -4214,7 +4214,7 @@ class IdentityProviderServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``LinkIdentity`` — unary call to ``/udb.core.idp.services.v1.IdentityProviderService/LinkIdentity``.
+        """``link_identity`` — unary call to wire RPC ``/udb.core.idp.services.v1.IdentityProviderService/LinkIdentity``.
 
         Forwards ``LinkIdentityRequest`` (udb.core.idp.services.v1) and returns
         ``LinkIdentityResponse`` (udb.core.idp.services.v1).
@@ -4238,7 +4238,7 @@ class IdentityProviderServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ListExternalIdentities`` — unary call to ``/udb.core.idp.services.v1.IdentityProviderService/ListExternalIdentities``.
+        """``list_external_identities`` — unary call to wire RPC ``/udb.core.idp.services.v1.IdentityProviderService/ListExternalIdentities``.
 
         Forwards ``ListExternalIdentitiesRequest`` (udb.core.idp.services.v1) and returns
         ``ListExternalIdentitiesResponse`` (udb.core.idp.services.v1).
@@ -4262,7 +4262,7 @@ class IdentityProviderServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ListProviders`` — unary call to ``/udb.core.idp.services.v1.IdentityProviderService/ListProviders``.
+        """``list_providers`` — unary call to wire RPC ``/udb.core.idp.services.v1.IdentityProviderService/ListProviders``.
 
         Forwards ``ListProvidersRequest`` (udb.core.idp.services.v1) and returns
         ``ListProvidersResponse`` (udb.core.idp.services.v1).
@@ -4286,7 +4286,7 @@ class IdentityProviderServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``PreviewClaimMapping`` — unary call to ``/udb.core.idp.services.v1.IdentityProviderService/PreviewClaimMapping``.
+        """``preview_claim_mapping`` — unary call to wire RPC ``/udb.core.idp.services.v1.IdentityProviderService/PreviewClaimMapping``.
 
         Forwards ``PreviewClaimMappingRequest`` (udb.core.idp.services.v1) and returns
         ``PreviewClaimMappingResponse`` (udb.core.idp.services.v1).
@@ -4310,7 +4310,7 @@ class IdentityProviderServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``PreviewGroupMapping`` — unary call to ``/udb.core.idp.services.v1.IdentityProviderService/PreviewGroupMapping``.
+        """``preview_group_mapping`` — unary call to wire RPC ``/udb.core.idp.services.v1.IdentityProviderService/PreviewGroupMapping``.
 
         Forwards ``PreviewGroupMappingRequest`` (udb.core.idp.services.v1) and returns
         ``PreviewGroupMappingResponse`` (udb.core.idp.services.v1).
@@ -4334,7 +4334,7 @@ class IdentityProviderServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ResolveExternalIdentity`` — unary call to ``/udb.core.idp.services.v1.IdentityProviderService/ResolveExternalIdentity``.
+        """``resolve_external_identity`` — unary call to wire RPC ``/udb.core.idp.services.v1.IdentityProviderService/ResolveExternalIdentity``.
 
         Forwards ``ResolveExternalIdentityRequest`` (udb.core.idp.services.v1) and returns
         ``ResolveExternalIdentityResponse`` (udb.core.idp.services.v1).
@@ -4358,7 +4358,7 @@ class IdentityProviderServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``SamlAcs`` — unary call to ``/udb.core.idp.services.v1.IdentityProviderService/SamlAcs``.
+        """``saml_acs`` — unary call to wire RPC ``/udb.core.idp.services.v1.IdentityProviderService/SamlAcs``.
 
         Forwards ``SamlAcsRequest`` (udb.core.idp.services.v1) and returns
         ``SamlAcsResponse`` (udb.core.idp.services.v1).
@@ -4382,7 +4382,7 @@ class IdentityProviderServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ScimCreateGroup`` — unary call to ``/udb.core.idp.services.v1.IdentityProviderService/ScimCreateGroup``.
+        """``scim_create_group`` — unary call to wire RPC ``/udb.core.idp.services.v1.IdentityProviderService/ScimCreateGroup``.
 
         Forwards ``ScimCreateGroupRequest`` (udb.core.idp.services.v1) and returns
         ``ScimCreateGroupResponse`` (udb.core.idp.services.v1).
@@ -4406,7 +4406,7 @@ class IdentityProviderServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ScimCreateUser`` — unary call to ``/udb.core.idp.services.v1.IdentityProviderService/ScimCreateUser``.
+        """``scim_create_user`` — unary call to wire RPC ``/udb.core.idp.services.v1.IdentityProviderService/ScimCreateUser``.
 
         Forwards ``ScimCreateUserRequest`` (udb.core.idp.services.v1) and returns
         ``ScimCreateUserResponse`` (udb.core.idp.services.v1).
@@ -4430,7 +4430,7 @@ class IdentityProviderServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ScimDeleteGroup`` — unary call to ``/udb.core.idp.services.v1.IdentityProviderService/ScimDeleteGroup``.
+        """``scim_delete_group`` — unary call to wire RPC ``/udb.core.idp.services.v1.IdentityProviderService/ScimDeleteGroup``.
 
         Forwards ``ScimDeleteGroupRequest`` (udb.core.idp.services.v1) and returns
         ``ScimDeleteGroupResponse`` (udb.core.idp.services.v1).
@@ -4454,7 +4454,7 @@ class IdentityProviderServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ScimDeleteUser`` — unary call to ``/udb.core.idp.services.v1.IdentityProviderService/ScimDeleteUser``.
+        """``scim_delete_user`` — unary call to wire RPC ``/udb.core.idp.services.v1.IdentityProviderService/ScimDeleteUser``.
 
         Forwards ``ScimDeleteUserRequest`` (udb.core.idp.services.v1) and returns
         ``ScimDeleteUserResponse`` (udb.core.idp.services.v1).
@@ -4478,7 +4478,7 @@ class IdentityProviderServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ScimGetGroup`` — unary call to ``/udb.core.idp.services.v1.IdentityProviderService/ScimGetGroup``.
+        """``scim_get_group`` — unary call to wire RPC ``/udb.core.idp.services.v1.IdentityProviderService/ScimGetGroup``.
 
         Forwards ``ScimGetGroupRequest`` (udb.core.idp.services.v1) and returns
         ``ScimGetGroupResponse`` (udb.core.idp.services.v1).
@@ -4502,7 +4502,7 @@ class IdentityProviderServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ScimGetUser`` — unary call to ``/udb.core.idp.services.v1.IdentityProviderService/ScimGetUser``.
+        """``scim_get_user`` — unary call to wire RPC ``/udb.core.idp.services.v1.IdentityProviderService/ScimGetUser``.
 
         Forwards ``ScimGetUserRequest`` (udb.core.idp.services.v1) and returns
         ``ScimGetUserResponse`` (udb.core.idp.services.v1).
@@ -4526,7 +4526,7 @@ class IdentityProviderServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ScimListGroups`` — unary call to ``/udb.core.idp.services.v1.IdentityProviderService/ScimListGroups``.
+        """``scim_list_groups`` — unary call to wire RPC ``/udb.core.idp.services.v1.IdentityProviderService/ScimListGroups``.
 
         Forwards ``ScimListGroupsRequest`` (udb.core.idp.services.v1) and returns
         ``ScimListGroupsResponse`` (udb.core.idp.services.v1).
@@ -4550,7 +4550,7 @@ class IdentityProviderServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ScimListUsers`` — unary call to ``/udb.core.idp.services.v1.IdentityProviderService/ScimListUsers``.
+        """``scim_list_users`` — unary call to wire RPC ``/udb.core.idp.services.v1.IdentityProviderService/ScimListUsers``.
 
         Forwards ``ScimListUsersRequest`` (udb.core.idp.services.v1) and returns
         ``ScimListUsersResponse`` (udb.core.idp.services.v1).
@@ -4574,7 +4574,7 @@ class IdentityProviderServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ScimPatchGroup`` — unary call to ``/udb.core.idp.services.v1.IdentityProviderService/ScimPatchGroup``.
+        """``scim_patch_group`` — unary call to wire RPC ``/udb.core.idp.services.v1.IdentityProviderService/ScimPatchGroup``.
 
         Forwards ``ScimPatchGroupRequest`` (udb.core.idp.services.v1) and returns
         ``ScimPatchGroupResponse`` (udb.core.idp.services.v1).
@@ -4598,7 +4598,7 @@ class IdentityProviderServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ScimPatchUser`` — unary call to ``/udb.core.idp.services.v1.IdentityProviderService/ScimPatchUser``.
+        """``scim_patch_user`` — unary call to wire RPC ``/udb.core.idp.services.v1.IdentityProviderService/ScimPatchUser``.
 
         Forwards ``ScimPatchUserRequest`` (udb.core.idp.services.v1) and returns
         ``ScimPatchUserResponse`` (udb.core.idp.services.v1).
@@ -4622,7 +4622,7 @@ class IdentityProviderServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ScimReplaceUser`` — unary call to ``/udb.core.idp.services.v1.IdentityProviderService/ScimReplaceUser``.
+        """``scim_replace_user`` — unary call to wire RPC ``/udb.core.idp.services.v1.IdentityProviderService/ScimReplaceUser``.
 
         Forwards ``ScimReplaceUserRequest`` (udb.core.idp.services.v1) and returns
         ``ScimReplaceUserResponse`` (udb.core.idp.services.v1).
@@ -4646,7 +4646,7 @@ class IdentityProviderServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``StartSamlLogin`` — unary call to ``/udb.core.idp.services.v1.IdentityProviderService/StartSamlLogin``.
+        """``start_saml_login`` — unary call to wire RPC ``/udb.core.idp.services.v1.IdentityProviderService/StartSamlLogin``.
 
         Forwards ``StartSamlLoginRequest`` (udb.core.idp.services.v1) and returns
         ``StartSamlLoginResponse`` (udb.core.idp.services.v1).
@@ -4670,7 +4670,7 @@ class IdentityProviderServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``TestProviderDiscovery`` — unary call to ``/udb.core.idp.services.v1.IdentityProviderService/TestProviderDiscovery``.
+        """``test_provider_discovery`` — unary call to wire RPC ``/udb.core.idp.services.v1.IdentityProviderService/TestProviderDiscovery``.
 
         Forwards ``TestProviderDiscoveryRequest`` (udb.core.idp.services.v1) and returns
         ``TestProviderDiscoveryResponse`` (udb.core.idp.services.v1).
@@ -4694,7 +4694,7 @@ class IdentityProviderServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``UnlinkIdentity`` — unary call to ``/udb.core.idp.services.v1.IdentityProviderService/UnlinkIdentity``.
+        """``unlink_identity`` — unary call to wire RPC ``/udb.core.idp.services.v1.IdentityProviderService/UnlinkIdentity``.
 
         Forwards ``UnlinkIdentityRequest`` (udb.core.idp.services.v1) and returns
         ``UnlinkIdentityResponse`` (udb.core.idp.services.v1).
@@ -4718,7 +4718,7 @@ class IdentityProviderServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``UpdateProvider`` — unary call to ``/udb.core.idp.services.v1.IdentityProviderService/UpdateProvider``.
+        """``update_provider`` — unary call to wire RPC ``/udb.core.idp.services.v1.IdentityProviderService/UpdateProvider``.
 
         Forwards ``UpdateProviderRequest`` (udb.core.idp.services.v1) and returns
         ``UpdateProviderResponse`` (udb.core.idp.services.v1).
@@ -4761,7 +4761,7 @@ class NotificationServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GetDeliveryStats`` — unary call to ``/udb.core.notification.services.v1.NotificationService/GetDeliveryStats``.
+        """``get_delivery_stats`` — unary call to wire RPC ``/udb.core.notification.services.v1.NotificationService/GetDeliveryStats``.
 
         Forwards ``GetDeliveryStatsRequest`` (udb.core.notification.services.v1) and returns
         ``GetDeliveryStatsResponse`` (udb.core.notification.services.v1).
@@ -4785,7 +4785,7 @@ class NotificationServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GetNotification`` — unary call to ``/udb.core.notification.services.v1.NotificationService/GetNotification``.
+        """``get_notification`` — unary call to wire RPC ``/udb.core.notification.services.v1.NotificationService/GetNotification``.
 
         Forwards ``GetNotificationRequest`` (udb.core.notification.services.v1) and returns
         ``GetNotificationResponse`` (udb.core.notification.services.v1).
@@ -4809,7 +4809,7 @@ class NotificationServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GetPreference`` — unary call to ``/udb.core.notification.services.v1.NotificationService/GetPreference``.
+        """``get_preference`` — unary call to wire RPC ``/udb.core.notification.services.v1.NotificationService/GetPreference``.
 
         Forwards ``GetPreferenceRequest`` (udb.core.notification.services.v1) and returns
         ``GetPreferenceResponse`` (udb.core.notification.services.v1).
@@ -4833,7 +4833,7 @@ class NotificationServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GetTemplate`` — unary call to ``/udb.core.notification.services.v1.NotificationService/GetTemplate``.
+        """``get_template`` — unary call to wire RPC ``/udb.core.notification.services.v1.NotificationService/GetTemplate``.
 
         Forwards ``GetTemplateRequest`` (udb.core.notification.services.v1) and returns
         ``GetTemplateResponse`` (udb.core.notification.services.v1).
@@ -4857,7 +4857,7 @@ class NotificationServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ListNotifications`` — unary call to ``/udb.core.notification.services.v1.NotificationService/ListNotifications``.
+        """``list_notifications`` — unary call to wire RPC ``/udb.core.notification.services.v1.NotificationService/ListNotifications``.
 
         Forwards ``ListNotificationsRequest`` (udb.core.notification.services.v1) and returns
         ``ListNotificationsResponse`` (udb.core.notification.services.v1).
@@ -4881,7 +4881,7 @@ class NotificationServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ListPreferences`` — unary call to ``/udb.core.notification.services.v1.NotificationService/ListPreferences``.
+        """``list_preferences`` — unary call to wire RPC ``/udb.core.notification.services.v1.NotificationService/ListPreferences``.
 
         Forwards ``ListPreferencesRequest`` (udb.core.notification.services.v1) and returns
         ``ListPreferencesResponse`` (udb.core.notification.services.v1).
@@ -4905,7 +4905,7 @@ class NotificationServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ListTemplates`` — unary call to ``/udb.core.notification.services.v1.NotificationService/ListTemplates``.
+        """``list_templates`` — unary call to wire RPC ``/udb.core.notification.services.v1.NotificationService/ListTemplates``.
 
         Forwards ``ListTemplatesRequest`` (udb.core.notification.services.v1) and returns
         ``ListTemplatesResponse`` (udb.core.notification.services.v1).
@@ -4929,7 +4929,7 @@ class NotificationServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``RetryNotification`` — unary call to ``/udb.core.notification.services.v1.NotificationService/RetryNotification``.
+        """``retry_notification`` — unary call to wire RPC ``/udb.core.notification.services.v1.NotificationService/RetryNotification``.
 
         Forwards ``RetryNotificationRequest`` (udb.core.notification.services.v1) and returns
         ``RetryNotificationResponse`` (udb.core.notification.services.v1).
@@ -4953,7 +4953,7 @@ class NotificationServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``SendNotification`` — unary call to ``/udb.core.notification.services.v1.NotificationService/SendNotification``.
+        """``send_notification`` — unary call to wire RPC ``/udb.core.notification.services.v1.NotificationService/SendNotification``.
 
         Forwards ``SendNotificationRequest`` (udb.core.notification.services.v1) and returns
         ``SendNotificationResponse`` (udb.core.notification.services.v1).
@@ -4977,7 +4977,7 @@ class NotificationServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``SetPreference`` — unary call to ``/udb.core.notification.services.v1.NotificationService/SetPreference``.
+        """``set_preference`` — unary call to wire RPC ``/udb.core.notification.services.v1.NotificationService/SetPreference``.
 
         Forwards ``SetPreferenceRequest`` (udb.core.notification.services.v1) and returns
         ``SetPreferenceResponse`` (udb.core.notification.services.v1).
@@ -5001,7 +5001,7 @@ class NotificationServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``UpsertTemplate`` — unary call to ``/udb.core.notification.services.v1.NotificationService/UpsertTemplate``.
+        """``upsert_template`` — unary call to wire RPC ``/udb.core.notification.services.v1.NotificationService/UpsertTemplate``.
 
         Forwards ``UpsertTemplateRequest`` (udb.core.notification.services.v1) and returns
         ``UpsertTemplateResponse`` (udb.core.notification.services.v1).
@@ -5044,7 +5044,7 @@ class StorageServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``DeleteFile`` — unary call to ``/udb.core.storage.services.v1.StorageService/DeleteFile``.
+        """``delete_file`` — unary call to wire RPC ``/udb.core.storage.services.v1.StorageService/DeleteFile``.
 
         Forwards ``DeleteFileRequest`` (udb.core.storage.services.v1) and returns
         ``DeleteFileResponse`` (udb.core.storage.services.v1).
@@ -5068,7 +5068,7 @@ class StorageServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``FinalizeUpload`` — unary call to ``/udb.core.storage.services.v1.StorageService/FinalizeUpload``.
+        """``finalize_upload`` — unary call to wire RPC ``/udb.core.storage.services.v1.StorageService/FinalizeUpload``.
 
         Forwards ``FinalizeUploadRequest`` (udb.core.storage.services.v1) and returns
         ``FinalizeUploadResponse`` (udb.core.storage.services.v1).
@@ -5092,7 +5092,7 @@ class StorageServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GetDownloadUrl`` — unary call to ``/udb.core.storage.services.v1.StorageService/GetDownloadUrl``.
+        """``get_download_url`` — unary call to wire RPC ``/udb.core.storage.services.v1.StorageService/GetDownloadUrl``.
 
         Forwards ``GetDownloadUrlRequest`` (udb.core.storage.services.v1) and returns
         ``GetDownloadUrlResponse`` (udb.core.storage.services.v1).
@@ -5116,7 +5116,7 @@ class StorageServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GetFile`` — unary call to ``/udb.core.storage.services.v1.StorageService/GetFile``.
+        """``get_file`` — unary call to wire RPC ``/udb.core.storage.services.v1.StorageService/GetFile``.
 
         Forwards ``GetFileRequest`` (udb.core.storage.services.v1) and returns
         ``GetFileResponse`` (udb.core.storage.services.v1).
@@ -5140,7 +5140,7 @@ class StorageServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ListFiles`` — unary call to ``/udb.core.storage.services.v1.StorageService/ListFiles``.
+        """``list_files`` — unary call to wire RPC ``/udb.core.storage.services.v1.StorageService/ListFiles``.
 
         Forwards ``ListFilesRequest`` (udb.core.storage.services.v1) and returns
         ``ListFilesResponse`` (udb.core.storage.services.v1).
@@ -5164,7 +5164,7 @@ class StorageServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``RegisterUpload`` — unary call to ``/udb.core.storage.services.v1.StorageService/RegisterUpload``.
+        """``register_upload`` — unary call to wire RPC ``/udb.core.storage.services.v1.StorageService/RegisterUpload``.
 
         Forwards ``RegisterUploadRequest`` (udb.core.storage.services.v1) and returns
         ``RegisterUploadResponse`` (udb.core.storage.services.v1).
@@ -5188,7 +5188,7 @@ class StorageServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``UpdateFile`` — unary call to ``/udb.core.storage.services.v1.StorageService/UpdateFile``.
+        """``update_file`` — unary call to wire RPC ``/udb.core.storage.services.v1.StorageService/UpdateFile``.
 
         Forwards ``UpdateFileRequest`` (udb.core.storage.services.v1) and returns
         ``UpdateFileResponse`` (udb.core.storage.services.v1).
@@ -5214,7 +5214,7 @@ class StorageServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Iterator[Any]:
-        """``DownloadFile`` — server-streaming call to ``/udb.core.storage.services.v1.StorageService/DownloadFile``.
+        """``download_file`` — server-streaming call to wire RPC ``/udb.core.storage.services.v1.StorageService/DownloadFile``.
 
         Forwards ``DownloadFileRequest`` (udb.core.storage.services.v1) and yields
         ``DownloadFileChunk`` (udb.core.storage.services.v1) messages. Retry applies only
@@ -5256,7 +5256,7 @@ class TenantServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``CreateTenant`` — unary call to ``/udb.core.tenant.services.v1.TenantService/CreateTenant``.
+        """``create_tenant`` — unary call to wire RPC ``/udb.core.tenant.services.v1.TenantService/CreateTenant``.
 
         Forwards ``CreateTenantRequest`` (udb.core.tenant.services.v1) and returns
         ``CreateTenantResponse`` (udb.core.tenant.services.v1).
@@ -5280,7 +5280,7 @@ class TenantServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GetTenant`` — unary call to ``/udb.core.tenant.services.v1.TenantService/GetTenant``.
+        """``get_tenant`` — unary call to wire RPC ``/udb.core.tenant.services.v1.TenantService/GetTenant``.
 
         Forwards ``GetTenantRequest`` (udb.core.tenant.services.v1) and returns
         ``GetTenantResponse`` (udb.core.tenant.services.v1).
@@ -5304,7 +5304,7 @@ class TenantServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GetTenantConfig`` — unary call to ``/udb.core.tenant.services.v1.TenantService/GetTenantConfig``.
+        """``get_tenant_config`` — unary call to wire RPC ``/udb.core.tenant.services.v1.TenantService/GetTenantConfig``.
 
         Forwards ``GetTenantConfigRequest`` (udb.core.tenant.services.v1) and returns
         ``GetTenantConfigResponse`` (udb.core.tenant.services.v1).
@@ -5328,7 +5328,7 @@ class TenantServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ListTenants`` — unary call to ``/udb.core.tenant.services.v1.TenantService/ListTenants``.
+        """``list_tenants`` — unary call to wire RPC ``/udb.core.tenant.services.v1.TenantService/ListTenants``.
 
         Forwards ``ListTenantsRequest`` (udb.core.tenant.services.v1) and returns
         ``ListTenantsResponse`` (udb.core.tenant.services.v1).
@@ -5352,7 +5352,7 @@ class TenantServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``UpdateTenant`` — unary call to ``/udb.core.tenant.services.v1.TenantService/UpdateTenant``.
+        """``update_tenant`` — unary call to wire RPC ``/udb.core.tenant.services.v1.TenantService/UpdateTenant``.
 
         Forwards ``UpdateTenantRequest`` (udb.core.tenant.services.v1) and returns
         ``UpdateTenantResponse`` (udb.core.tenant.services.v1).
@@ -5376,7 +5376,7 @@ class TenantServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``UpdateTenantConfig`` — unary call to ``/udb.core.tenant.services.v1.TenantService/UpdateTenantConfig``.
+        """``update_tenant_config`` — unary call to wire RPC ``/udb.core.tenant.services.v1.TenantService/UpdateTenantConfig``.
 
         Forwards ``UpdateTenantConfigRequest`` (udb.core.tenant.services.v1) and returns
         ``UpdateTenantConfigResponse`` (udb.core.tenant.services.v1).
@@ -5419,7 +5419,7 @@ class PeerServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GetPeer`` — unary call to ``/udb.core.webrtc.services.v1.PeerService/GetPeer``.
+        """``get_peer`` — unary call to wire RPC ``/udb.core.webrtc.services.v1.PeerService/GetPeer``.
 
         Forwards ``GetPeerRequest`` (udb.core.webrtc.services.v1) and returns
         ``GetPeerResponse`` (udb.core.webrtc.services.v1).
@@ -5443,7 +5443,7 @@ class PeerServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``JoinRoom`` — unary call to ``/udb.core.webrtc.services.v1.PeerService/JoinRoom``.
+        """``join_room`` — unary call to wire RPC ``/udb.core.webrtc.services.v1.PeerService/JoinRoom``.
 
         Forwards ``JoinRoomRequest`` (udb.core.webrtc.services.v1) and returns
         ``JoinRoomResponse`` (udb.core.webrtc.services.v1).
@@ -5467,7 +5467,7 @@ class PeerServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``JoinSession`` — unary call to ``/udb.core.webrtc.services.v1.PeerService/JoinSession``.
+        """``join_session`` — unary call to wire RPC ``/udb.core.webrtc.services.v1.PeerService/JoinSession``.
 
         Forwards ``JoinSessionRequest`` (udb.core.webrtc.services.v1) and returns
         ``JoinSessionResponse`` (udb.core.webrtc.services.v1).
@@ -5491,7 +5491,7 @@ class PeerServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``LeaveRoom`` — unary call to ``/udb.core.webrtc.services.v1.PeerService/LeaveRoom``.
+        """``leave_room`` — unary call to wire RPC ``/udb.core.webrtc.services.v1.PeerService/LeaveRoom``.
 
         Forwards ``LeaveRoomRequest`` (udb.core.webrtc.services.v1) and returns
         ``LeaveRoomResponse`` (udb.core.webrtc.services.v1).
@@ -5515,7 +5515,7 @@ class PeerServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ListPeers`` — unary call to ``/udb.core.webrtc.services.v1.PeerService/ListPeers``.
+        """``list_peers`` — unary call to wire RPC ``/udb.core.webrtc.services.v1.PeerService/ListPeers``.
 
         Forwards ``ListPeersRequest`` (udb.core.webrtc.services.v1) and returns
         ``ListPeersResponse`` (udb.core.webrtc.services.v1).
@@ -5558,7 +5558,7 @@ class RoomServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``CloseRoom`` — unary call to ``/udb.core.webrtc.services.v1.RoomService/CloseRoom``.
+        """``close_room`` — unary call to wire RPC ``/udb.core.webrtc.services.v1.RoomService/CloseRoom``.
 
         Forwards ``CloseRoomRequest`` (udb.core.webrtc.services.v1) and returns
         ``CloseRoomResponse`` (udb.core.webrtc.services.v1).
@@ -5582,7 +5582,7 @@ class RoomServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``CreateRoom`` — unary call to ``/udb.core.webrtc.services.v1.RoomService/CreateRoom``.
+        """``create_room`` — unary call to wire RPC ``/udb.core.webrtc.services.v1.RoomService/CreateRoom``.
 
         Forwards ``CreateRoomRequest`` (udb.core.webrtc.services.v1) and returns
         ``CreateRoomResponse`` (udb.core.webrtc.services.v1).
@@ -5606,7 +5606,7 @@ class RoomServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GetRoom`` — unary call to ``/udb.core.webrtc.services.v1.RoomService/GetRoom``.
+        """``get_room`` — unary call to wire RPC ``/udb.core.webrtc.services.v1.RoomService/GetRoom``.
 
         Forwards ``GetRoomRequest`` (udb.core.webrtc.services.v1) and returns
         ``GetRoomResponse`` (udb.core.webrtc.services.v1).
@@ -5630,7 +5630,7 @@ class RoomServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ListRooms`` — unary call to ``/udb.core.webrtc.services.v1.RoomService/ListRooms``.
+        """``list_rooms`` — unary call to wire RPC ``/udb.core.webrtc.services.v1.RoomService/ListRooms``.
 
         Forwards ``ListRoomsRequest`` (udb.core.webrtc.services.v1) and returns
         ``ListRoomsResponse`` (udb.core.webrtc.services.v1).
@@ -5654,7 +5654,7 @@ class RoomServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``UpdateRoom`` — unary call to ``/udb.core.webrtc.services.v1.RoomService/UpdateRoom``.
+        """``update_room`` — unary call to wire RPC ``/udb.core.webrtc.services.v1.RoomService/UpdateRoom``.
 
         Forwards ``UpdateRoomRequest`` (udb.core.webrtc.services.v1) and returns
         ``UpdateRoomResponse`` (udb.core.webrtc.services.v1).
@@ -5702,7 +5702,7 @@ class SignalingServiceClient(_ServiceClientBase):
         metadata: Metadata | None = None,
         timeout: float | None = None,
     ) -> Iterator[Any]:
-        """``Signal`` — bidirectional-streaming call to ``/udb.core.webrtc.services.v1.SignalingService/Signal``.
+        """``signal`` — bidirectional-streaming call to wire RPC ``/udb.core.webrtc.services.v1.SignalingService/Signal``.
 
         Consumes an iterator of ``SignalRequest`` (udb.core.webrtc.services.v1) and yields
         ``SignalResponse`` (udb.core.webrtc.services.v1). Not auto-retried.
@@ -5742,7 +5742,7 @@ class TrackServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ListTracks`` — unary call to ``/udb.core.webrtc.services.v1.TrackService/ListTracks``.
+        """``list_tracks`` — unary call to wire RPC ``/udb.core.webrtc.services.v1.TrackService/ListTracks``.
 
         Forwards ``ListTracksRequest`` (udb.core.webrtc.services.v1) and returns
         ``ListTracksResponse`` (udb.core.webrtc.services.v1).
@@ -5766,7 +5766,7 @@ class TrackServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``MuteTrack`` — unary call to ``/udb.core.webrtc.services.v1.TrackService/MuteTrack``.
+        """``mute_track`` — unary call to wire RPC ``/udb.core.webrtc.services.v1.TrackService/MuteTrack``.
 
         Forwards ``MuteTrackRequest`` (udb.core.webrtc.services.v1) and returns
         ``MuteTrackResponse`` (udb.core.webrtc.services.v1).
@@ -5790,7 +5790,7 @@ class TrackServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``PublishTrack`` — unary call to ``/udb.core.webrtc.services.v1.TrackService/PublishTrack``.
+        """``publish_track`` — unary call to wire RPC ``/udb.core.webrtc.services.v1.TrackService/PublishTrack``.
 
         Forwards ``PublishTrackRequest`` (udb.core.webrtc.services.v1) and returns
         ``PublishTrackResponse`` (udb.core.webrtc.services.v1).
@@ -5814,7 +5814,7 @@ class TrackServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``UnpublishTrack`` — unary call to ``/udb.core.webrtc.services.v1.TrackService/UnpublishTrack``.
+        """``unpublish_track`` — unary call to wire RPC ``/udb.core.webrtc.services.v1.TrackService/UnpublishTrack``.
 
         Forwards ``UnpublishTrackRequest`` (udb.core.webrtc.services.v1) and returns
         ``UnpublishTrackResponse`` (udb.core.webrtc.services.v1).
@@ -5857,7 +5857,7 @@ class TurnServiceClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``IssueCredentials`` — unary call to ``/udb.core.webrtc.services.v1.TurnService/IssueCredentials``.
+        """``issue_credentials`` — unary call to wire RPC ``/udb.core.webrtc.services.v1.TurnService/IssueCredentials``.
 
         Forwards ``IssueCredentialsRequest`` (udb.core.webrtc.services.v1) and returns
         ``IssueCredentialsResponse`` (udb.core.webrtc.services.v1).
@@ -5900,7 +5900,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ActivateCatalog`` — unary call to ``/udb.services.v1.DataBroker/ActivateCatalog``.
+        """``activate_catalog`` — unary call to wire RPC ``/udb.services.v1.DataBroker/ActivateCatalog``.
 
         Forwards ``CatalogVersionRequest`` (udb.entity.v1) and returns
         ``CatalogVersionResponse`` (udb.entity.v1).
@@ -5924,7 +5924,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``AnalyticalQuery`` — unary call to ``/udb.services.v1.DataBroker/AnalyticalQuery``.
+        """``analytical_query`` — unary call to wire RPC ``/udb.services.v1.DataBroker/AnalyticalQuery``.
 
         Forwards ``AnalyticalQueryRequest`` (udb.entity.v1) and returns
         ``AnalyticalQueryResponse`` (udb.entity.v1).
@@ -5948,7 +5948,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ApplyMigration`` — unary call to ``/udb.services.v1.DataBroker/ApplyMigration``.
+        """``apply_migration`` — unary call to wire RPC ``/udb.services.v1.DataBroker/ApplyMigration``.
 
         Forwards ``MigrationApplyRequest`` (udb.entity.v1) and returns
         ``MigrationStatusResponse`` (udb.entity.v1).
@@ -5972,7 +5972,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ApproveMigrationPlan`` — unary call to ``/udb.services.v1.DataBroker/ApproveMigrationPlan``.
+        """``approve_migration_plan`` — unary call to wire RPC ``/udb.services.v1.DataBroker/ApproveMigrationPlan``.
 
         Forwards ``MigrationRunRequest`` (udb.entity.v1) and returns
         ``MigrationStatusResponse`` (udb.entity.v1).
@@ -5996,7 +5996,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``CacheDelete`` — unary call to ``/udb.services.v1.DataBroker/CacheDelete``.
+        """``cache_delete`` — unary call to wire RPC ``/udb.services.v1.DataBroker/CacheDelete``.
 
         Forwards ``CacheDeleteRequest`` (udb.entity.v1) and returns
         ``MutationResponse`` (udb.entity.v1).
@@ -6020,7 +6020,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``CacheGet`` — unary call to ``/udb.services.v1.DataBroker/CacheGet``.
+        """``cache_get`` — unary call to wire RPC ``/udb.services.v1.DataBroker/CacheGet``.
 
         Forwards ``CacheGetRequest`` (udb.entity.v1) and returns
         ``CacheGetResponse`` (udb.entity.v1).
@@ -6044,7 +6044,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``CacheScan`` — unary call to ``/udb.services.v1.DataBroker/CacheScan``.
+        """``cache_scan`` — unary call to wire RPC ``/udb.services.v1.DataBroker/CacheScan``.
 
         Forwards ``CacheScanRequest`` (udb.entity.v1) and returns
         ``CacheScanResponse`` (udb.entity.v1).
@@ -6068,7 +6068,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``CacheSet`` — unary call to ``/udb.services.v1.DataBroker/CacheSet``.
+        """``cache_set`` — unary call to wire RPC ``/udb.services.v1.DataBroker/CacheSet``.
 
         Forwards ``CacheSetRequest`` (udb.entity.v1) and returns
         ``MutationResponse`` (udb.entity.v1).
@@ -6092,7 +6092,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``CreateMaterializedView`` — unary call to ``/udb.services.v1.DataBroker/CreateMaterializedView``.
+        """``create_materialized_view`` — unary call to wire RPC ``/udb.services.v1.DataBroker/CreateMaterializedView``.
 
         Forwards ``ViewDefinition`` (udb.entity.v1) and returns
         ``MutationResponse`` (udb.entity.v1).
@@ -6116,7 +6116,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``Delete`` — unary call to ``/udb.services.v1.DataBroker/Delete``.
+        """``delete`` — unary call to wire RPC ``/udb.services.v1.DataBroker/Delete``.
 
         Forwards ``DeleteRequest`` (udb.entity.v1) and returns
         ``MutationResponse`` (udb.entity.v1).
@@ -6140,7 +6140,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``DeletePolicy`` — unary call to ``/udb.services.v1.DataBroker/DeletePolicy``.
+        """``delete_policy`` — unary call to wire RPC ``/udb.services.v1.DataBroker/DeletePolicy``.
 
         Forwards ``PolicyRequest`` (udb.entity.v1) and returns
         ``MutationResponse`` (udb.entity.v1).
@@ -6164,7 +6164,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``DismissDlqEvent`` — unary call to ``/udb.services.v1.DataBroker/DismissDlqEvent``.
+        """``dismiss_dlq_event`` — unary call to wire RPC ``/udb.services.v1.DataBroker/DismissDlqEvent``.
 
         Forwards ``DlqActionRequest`` (udb.entity.v1) and returns
         ``MutationResponse`` (udb.entity.v1).
@@ -6188,7 +6188,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``DocumentDelete`` — unary call to ``/udb.services.v1.DataBroker/DocumentDelete``.
+        """``document_delete`` — unary call to wire RPC ``/udb.services.v1.DataBroker/DocumentDelete``.
 
         Forwards ``DocumentDeleteRequest`` (udb.entity.v1) and returns
         ``MutationResponse`` (udb.entity.v1).
@@ -6212,7 +6212,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``DocumentFind`` — unary call to ``/udb.services.v1.DataBroker/DocumentFind``.
+        """``document_find`` — unary call to wire RPC ``/udb.services.v1.DataBroker/DocumentFind``.
 
         Forwards ``DocumentFindRequest`` (udb.entity.v1) and returns
         ``DocumentSet`` (udb.entity.v1).
@@ -6236,7 +6236,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``DocumentGet`` — unary call to ``/udb.services.v1.DataBroker/DocumentGet``.
+        """``document_get`` — unary call to wire RPC ``/udb.services.v1.DataBroker/DocumentGet``.
 
         Forwards ``DocumentGetRequest`` (udb.entity.v1) and returns
         ``DocumentSet`` (udb.entity.v1).
@@ -6260,7 +6260,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``DocumentUpsert`` — unary call to ``/udb.services.v1.DataBroker/DocumentUpsert``.
+        """``document_upsert`` — unary call to wire RPC ``/udb.services.v1.DataBroker/DocumentUpsert``.
 
         Forwards ``DocumentUpsertRequest`` (udb.entity.v1) and returns
         ``MutationResponse`` (udb.entity.v1).
@@ -6284,7 +6284,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``DropResource`` — unary call to ``/udb.services.v1.DataBroker/DropResource``.
+        """``drop_resource`` — unary call to wire RPC ``/udb.services.v1.DataBroker/DropResource``.
 
         Forwards ``ResourceAdminRequest`` (udb.entity.v1) and returns
         ``MutationResponse`` (udb.entity.v1).
@@ -6308,7 +6308,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``EnqueueOutboxEvent`` — unary call to ``/udb.services.v1.DataBroker/EnqueueOutboxEvent``.
+        """``enqueue_outbox_event`` — unary call to wire RPC ``/udb.services.v1.DataBroker/EnqueueOutboxEvent``.
 
         Forwards ``EnqueueOutboxEventRequest`` (udb.entity.v1) and returns
         ``EnqueueOutboxEventResponse`` (udb.entity.v1).
@@ -6332,7 +6332,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``EnsureBaseline`` — unary call to ``/udb.services.v1.DataBroker/EnsureBaseline``.
+        """``ensure_baseline`` — unary call to wire RPC ``/udb.services.v1.DataBroker/EnsureBaseline``.
 
         Forwards ``EnsureBaselineRequest`` (udb.services.v1) and returns
         ``EnsureBaselineResponse`` (udb.services.v1).
@@ -6356,7 +6356,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``EnsureProject`` — unary call to ``/udb.services.v1.DataBroker/EnsureProject``.
+        """``ensure_project`` — unary call to wire RPC ``/udb.services.v1.DataBroker/EnsureProject``.
 
         Forwards ``EnsureProjectRequest`` (udb.entity.v1) and returns
         ``MutationResponse`` (udb.entity.v1).
@@ -6380,7 +6380,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``EnsureResource`` — unary call to ``/udb.services.v1.DataBroker/EnsureResource``.
+        """``ensure_resource`` — unary call to wire RPC ``/udb.services.v1.DataBroker/EnsureResource``.
 
         Forwards ``ResourceAdminRequest`` (udb.entity.v1) and returns
         ``MutationResponse`` (udb.entity.v1).
@@ -6404,7 +6404,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GeneratePresignedUrl`` — unary call to ``/udb.services.v1.DataBroker/GeneratePresignedUrl``.
+        """``generate_presigned_url`` — unary call to wire RPC ``/udb.services.v1.DataBroker/GeneratePresignedUrl``.
 
         Forwards ``UrlRequest`` (udb.entity.v1) and returns
         ``UrlResponse`` (udb.entity.v1).
@@ -6428,7 +6428,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GenericDispatch`` — unary call to ``/udb.services.v1.DataBroker/GenericDispatch``.
+        """``generic_dispatch`` — unary call to wire RPC ``/udb.services.v1.DataBroker/GenericDispatch``.
 
         Forwards ``GenericDispatchRequest`` (udb.entity.v1) and returns
         ``GenericDispatchResponse`` (udb.entity.v1).
@@ -6452,7 +6452,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GetAdminSummary`` — unary call to ``/udb.services.v1.DataBroker/GetAdminSummary``.
+        """``get_admin_summary`` — unary call to wire RPC ``/udb.services.v1.DataBroker/GetAdminSummary``.
 
         Forwards ``AdminSummaryRequest`` (udb.entity.v1) and returns
         ``AdminSummaryResponse`` (udb.entity.v1).
@@ -6476,7 +6476,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GetCapabilities`` — unary call to ``/udb.services.v1.DataBroker/GetCapabilities``.
+        """``get_capabilities`` — unary call to wire RPC ``/udb.services.v1.DataBroker/GetCapabilities``.
 
         Forwards ``CapabilitiesRequest`` (udb.entity.v1) and returns
         ``CapabilitiesResponse`` (udb.entity.v1).
@@ -6500,7 +6500,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GetCatalogManifest`` — unary call to ``/udb.services.v1.DataBroker/GetCatalogManifest``.
+        """``get_catalog_manifest`` — unary call to wire RPC ``/udb.services.v1.DataBroker/GetCatalogManifest``.
 
         Forwards ``CatalogManifestRequest`` (udb.entity.v1) and returns
         ``CatalogManifestResponse`` (udb.entity.v1).
@@ -6524,7 +6524,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GetCatalogVersion`` — unary call to ``/udb.services.v1.DataBroker/GetCatalogVersion``.
+        """``get_catalog_version`` — unary call to wire RPC ``/udb.services.v1.DataBroker/GetCatalogVersion``.
 
         Forwards ``CatalogVersionRequest`` (udb.entity.v1) and returns
         ``CatalogVersionResponse`` (udb.entity.v1).
@@ -6548,7 +6548,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GetCatalogVersions`` — unary call to ``/udb.services.v1.DataBroker/GetCatalogVersions``.
+        """``get_catalog_versions`` — unary call to wire RPC ``/udb.services.v1.DataBroker/GetCatalogVersions``.
 
         Forwards ``CatalogManifestRequest`` (udb.entity.v1) and returns
         ``CatalogVersionListResponse`` (udb.entity.v1).
@@ -6572,7 +6572,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GetCdcStatus`` — unary call to ``/udb.services.v1.DataBroker/GetCdcStatus``.
+        """``get_cdc_status`` — unary call to wire RPC ``/udb.services.v1.DataBroker/GetCdcStatus``.
 
         Forwards ``CdcControlRequest`` (udb.entity.v1) and returns
         ``CdcStatusResponse`` (udb.entity.v1).
@@ -6596,7 +6596,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GetDlqEvent`` — unary call to ``/udb.services.v1.DataBroker/GetDlqEvent``.
+        """``get_dlq_event`` — unary call to wire RPC ``/udb.services.v1.DataBroker/GetDlqEvent``.
 
         Forwards ``DlqEventRequest`` (udb.entity.v1) and returns
         ``DlqEventResponse`` (udb.entity.v1).
@@ -6620,7 +6620,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GetHealthReport`` — unary call to ``/udb.services.v1.DataBroker/GetHealthReport``.
+        """``get_health_report`` — unary call to wire RPC ``/udb.services.v1.DataBroker/GetHealthReport``.
 
         Forwards ``HealthReportRequest`` (udb.entity.v1) and returns
         ``HealthReportResponse`` (udb.entity.v1).
@@ -6644,7 +6644,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GetMigrationStatus`` — unary call to ``/udb.services.v1.DataBroker/GetMigrationStatus``.
+        """``get_migration_status`` — unary call to wire RPC ``/udb.services.v1.DataBroker/GetMigrationStatus``.
 
         Forwards ``MigrationRunRequest`` (udb.entity.v1) and returns
         ``MigrationStatusResponse`` (udb.entity.v1).
@@ -6668,7 +6668,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GetSaga`` — unary call to ``/udb.services.v1.DataBroker/GetSaga``.
+        """``get_saga`` — unary call to wire RPC ``/udb.services.v1.DataBroker/GetSaga``.
 
         Forwards ``SagaRequest`` (udb.entity.v1) and returns
         ``SagaResponse`` (udb.entity.v1).
@@ -6692,7 +6692,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GraphMutate`` — unary call to ``/udb.services.v1.DataBroker/GraphMutate``.
+        """``graph_mutate`` — unary call to wire RPC ``/udb.services.v1.DataBroker/GraphMutate``.
 
         Forwards ``GraphMutationRequest`` (udb.entity.v1) and returns
         ``MutationResponse`` (udb.entity.v1).
@@ -6716,7 +6716,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``GraphQuery`` — unary call to ``/udb.services.v1.DataBroker/GraphQuery``.
+        """``graph_query`` — unary call to wire RPC ``/udb.services.v1.DataBroker/GraphQuery``.
 
         Forwards ``GraphQueryRequest`` (udb.entity.v1) and returns
         ``GraphResultSet`` (udb.entity.v1).
@@ -6740,7 +6740,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``InitiateMultipartUpload`` — unary call to ``/udb.services.v1.DataBroker/InitiateMultipartUpload``.
+        """``initiate_multipart_upload`` — unary call to wire RPC ``/udb.services.v1.DataBroker/InitiateMultipartUpload``.
 
         Forwards ``MultipartUploadRequest`` (udb.entity.v1) and returns
         ``MultipartUploadResponse`` (udb.entity.v1).
@@ -6764,7 +6764,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``LintPolicies`` — unary call to ``/udb.services.v1.DataBroker/LintPolicies``.
+        """``lint_policies`` — unary call to wire RPC ``/udb.services.v1.DataBroker/LintPolicies``.
 
         Forwards ``CapabilitiesRequest`` (udb.entity.v1) and returns
         ``PolicyLintResponse`` (udb.entity.v1).
@@ -6788,7 +6788,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ListAdminAuditLogs`` — unary call to ``/udb.services.v1.DataBroker/ListAdminAuditLogs``.
+        """``list_admin_audit_logs`` — unary call to wire RPC ``/udb.services.v1.DataBroker/ListAdminAuditLogs``.
 
         Forwards ``AdminAuditLogRequest`` (udb.entity.v1) and returns
         ``AdminAuditLogResponse`` (udb.entity.v1).
@@ -6812,7 +6812,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ListDlqEvents`` — unary call to ``/udb.services.v1.DataBroker/ListDlqEvents``.
+        """``list_dlq_events`` — unary call to wire RPC ``/udb.services.v1.DataBroker/ListDlqEvents``.
 
         Forwards ``DlqListRequest`` (udb.entity.v1) and returns
         ``DlqListResponse`` (udb.entity.v1).
@@ -6836,7 +6836,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ListMessageSchemas`` — unary call to ``/udb.services.v1.DataBroker/ListMessageSchemas``.
+        """``list_message_schemas`` — unary call to wire RPC ``/udb.services.v1.DataBroker/ListMessageSchemas``.
 
         Forwards ``MessageSchemaListRequest`` (udb.entity.v1) and returns
         ``MessageSchemaListResponse`` (udb.entity.v1).
@@ -6860,7 +6860,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ListMigrationRuns`` — unary call to ``/udb.services.v1.DataBroker/ListMigrationRuns``.
+        """``list_migration_runs`` — unary call to wire RPC ``/udb.services.v1.DataBroker/ListMigrationRuns``.
 
         Forwards ``MigrationRunListRequest`` (udb.entity.v1) and returns
         ``MigrationRunListResponse`` (udb.entity.v1).
@@ -6884,7 +6884,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ListPolicies`` — unary call to ``/udb.services.v1.DataBroker/ListPolicies``.
+        """``list_policies`` — unary call to wire RPC ``/udb.services.v1.DataBroker/ListPolicies``.
 
         Forwards ``PolicyListRequest`` (udb.entity.v1) and returns
         ``PolicyListResponse`` (udb.entity.v1).
@@ -6908,7 +6908,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ListProjects`` — unary call to ``/udb.services.v1.DataBroker/ListProjects``.
+        """``list_projects`` — unary call to wire RPC ``/udb.services.v1.DataBroker/ListProjects``.
 
         Forwards ``ProjectListRequest`` (udb.entity.v1) and returns
         ``ProjectListResponse`` (udb.entity.v1).
@@ -6932,7 +6932,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ListResources`` — unary call to ``/udb.services.v1.DataBroker/ListResources``.
+        """``list_resources`` — unary call to wire RPC ``/udb.services.v1.DataBroker/ListResources``.
 
         Forwards ``ResourceAdminRequest`` (udb.entity.v1) and returns
         ``ResourceListResponse`` (udb.entity.v1).
@@ -6956,7 +6956,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ListSagas`` — unary call to ``/udb.services.v1.DataBroker/ListSagas``.
+        """``list_sagas`` — unary call to wire RPC ``/udb.services.v1.DataBroker/ListSagas``.
 
         Forwards ``SagaListRequest`` (udb.entity.v1) and returns
         ``SagaListResponse`` (udb.entity.v1).
@@ -6980,7 +6980,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``LookupMessageSchema`` — unary call to ``/udb.services.v1.DataBroker/LookupMessageSchema``.
+        """``lookup_message_schema`` — unary call to wire RPC ``/udb.services.v1.DataBroker/LookupMessageSchema``.
 
         Forwards ``MessageSchemaLookupRequest`` (udb.entity.v1) and returns
         ``MessageSchemaLookupResponse`` (udb.entity.v1).
@@ -7004,7 +7004,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``MarkSagaReviewed`` — unary call to ``/udb.services.v1.DataBroker/MarkSagaReviewed``.
+        """``mark_saga_reviewed`` — unary call to wire RPC ``/udb.services.v1.DataBroker/MarkSagaReviewed``.
 
         Forwards ``SagaRequest`` (udb.entity.v1) and returns
         ``SagaResponse`` (udb.entity.v1).
@@ -7028,7 +7028,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``PauseCdc`` — unary call to ``/udb.services.v1.DataBroker/PauseCdc``.
+        """``pause_cdc`` — unary call to wire RPC ``/udb.services.v1.DataBroker/PauseCdc``.
 
         Forwards ``CdcControlRequest`` (udb.entity.v1) and returns
         ``CdcStatusResponse`` (udb.entity.v1).
@@ -7052,7 +7052,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``PlanMigration`` — unary call to ``/udb.services.v1.DataBroker/PlanMigration``.
+        """``plan_migration`` — unary call to wire RPC ``/udb.services.v1.DataBroker/PlanMigration``.
 
         Forwards ``MigrationPlanRequest`` (udb.entity.v1) and returns
         ``MigrationPlanResponse`` (udb.entity.v1).
@@ -7076,7 +7076,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``PreviewCdcRedaction`` — unary call to ``/udb.services.v1.DataBroker/PreviewCdcRedaction``.
+        """``preview_cdc_redaction`` — unary call to wire RPC ``/udb.services.v1.DataBroker/PreviewCdcRedaction``.
 
         Forwards ``CdcRedactionPreviewRequest`` (udb.entity.v1) and returns
         ``CdcRedactionPreviewResponse`` (udb.entity.v1).
@@ -7100,7 +7100,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``PutPolicy`` — unary call to ``/udb.services.v1.DataBroker/PutPolicy``.
+        """``put_policy`` — unary call to wire RPC ``/udb.services.v1.DataBroker/PutPolicy``.
 
         Forwards ``PutPolicyRequest`` (udb.entity.v1) and returns
         ``MutationResponse`` (udb.entity.v1).
@@ -7124,7 +7124,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``QuarantineDlqEvent`` — unary call to ``/udb.services.v1.DataBroker/QuarantineDlqEvent``.
+        """``quarantine_dlq_event`` — unary call to wire RPC ``/udb.services.v1.DataBroker/QuarantineDlqEvent``.
 
         Forwards ``DlqActionRequest`` (udb.entity.v1) and returns
         ``MutationResponse`` (udb.entity.v1).
@@ -7148,7 +7148,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ReloadPolicies`` — unary call to ``/udb.services.v1.DataBroker/ReloadPolicies``.
+        """``reload_policies`` — unary call to wire RPC ``/udb.services.v1.DataBroker/ReloadPolicies``.
 
         Forwards ``CapabilitiesRequest`` (udb.entity.v1) and returns
         ``MutationResponse`` (udb.entity.v1).
@@ -7172,7 +7172,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ReplayDlqEvent`` — unary call to ``/udb.services.v1.DataBroker/ReplayDlqEvent``.
+        """``replay_dlq_event`` — unary call to wire RPC ``/udb.services.v1.DataBroker/ReplayDlqEvent``.
 
         Forwards ``DlqActionRequest`` (udb.entity.v1) and returns
         ``MutationResponse`` (udb.entity.v1).
@@ -7196,7 +7196,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ResumeCdc`` — unary call to ``/udb.services.v1.DataBroker/ResumeCdc``.
+        """``resume_cdc`` — unary call to wire RPC ``/udb.services.v1.DataBroker/ResumeCdc``.
 
         Forwards ``CdcControlRequest`` (udb.entity.v1) and returns
         ``CdcStatusResponse`` (udb.entity.v1).
@@ -7220,7 +7220,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``RetrySagaCompensation`` — unary call to ``/udb.services.v1.DataBroker/RetrySagaCompensation``.
+        """``retry_saga_compensation`` — unary call to wire RPC ``/udb.services.v1.DataBroker/RetrySagaCompensation``.
 
         Forwards ``SagaRequest`` (udb.entity.v1) and returns
         ``SagaResponse`` (udb.entity.v1).
@@ -7244,7 +7244,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``RollbackCatalog`` — unary call to ``/udb.services.v1.DataBroker/RollbackCatalog``.
+        """``rollback_catalog`` — unary call to wire RPC ``/udb.services.v1.DataBroker/RollbackCatalog``.
 
         Forwards ``CatalogVersionRequest`` (udb.entity.v1) and returns
         ``CatalogVersionResponse`` (udb.entity.v1).
@@ -7268,7 +7268,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ScanProjectionDrift`` — unary call to ``/udb.services.v1.DataBroker/ScanProjectionDrift``.
+        """``scan_projection_drift`` — unary call to wire RPC ``/udb.services.v1.DataBroker/ScanProjectionDrift``.
 
         Forwards ``ProjectionDriftScanRequest`` (udb.entity.v1) and returns
         ``ProjectionDriftScanResponse`` (udb.entity.v1).
@@ -7292,7 +7292,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``Select`` — unary call to ``/udb.services.v1.DataBroker/Select``.
+        """``select`` — unary call to wire RPC ``/udb.services.v1.DataBroker/Select``.
 
         Forwards ``SelectRequest`` (udb.entity.v1) and returns
         ``RecordSet`` (udb.entity.v1).
@@ -7316,7 +7316,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``StageCatalog`` — unary call to ``/udb.services.v1.DataBroker/StageCatalog``.
+        """``stage_catalog`` — unary call to wire RPC ``/udb.services.v1.DataBroker/StageCatalog``.
 
         Forwards ``StageCatalogRequest`` (udb.entity.v1) and returns
         ``CatalogVersionResponse`` (udb.entity.v1).
@@ -7340,7 +7340,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``StepDownCdcLeader`` — unary call to ``/udb.services.v1.DataBroker/StepDownCdcLeader``.
+        """``step_down_cdc_leader`` — unary call to wire RPC ``/udb.services.v1.DataBroker/StepDownCdcLeader``.
 
         Forwards ``CdcControlRequest`` (udb.entity.v1) and returns
         ``CdcStatusResponse`` (udb.entity.v1).
@@ -7364,7 +7364,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``TimeSeriesQuery`` — unary call to ``/udb.services.v1.DataBroker/TimeSeriesQuery``.
+        """``time_series_query`` — unary call to wire RPC ``/udb.services.v1.DataBroker/TimeSeriesQuery``.
 
         Forwards ``TimeSeriesQueryRequest`` (udb.entity.v1) and returns
         ``TimeSeriesQueryResponse`` (udb.entity.v1).
@@ -7388,7 +7388,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``TimeSeriesWrite`` — unary call to ``/udb.services.v1.DataBroker/TimeSeriesWrite``.
+        """``time_series_write`` — unary call to wire RPC ``/udb.services.v1.DataBroker/TimeSeriesWrite``.
 
         Forwards ``TimeSeriesWriteRequest`` (udb.entity.v1) and returns
         ``MutationResponse`` (udb.entity.v1).
@@ -7412,7 +7412,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``Upsert`` — unary call to ``/udb.services.v1.DataBroker/Upsert``.
+        """``upsert`` — unary call to wire RPC ``/udb.services.v1.DataBroker/Upsert``.
 
         Forwards ``UpsertRequest`` (udb.entity.v1) and returns
         ``MutationResponse`` (udb.entity.v1).
@@ -7436,7 +7436,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``ValidateCatalog`` — unary call to ``/udb.services.v1.DataBroker/ValidateCatalog``.
+        """``validate_catalog`` — unary call to wire RPC ``/udb.services.v1.DataBroker/ValidateCatalog``.
 
         Forwards ``StageCatalogRequest`` (udb.entity.v1) and returns
         ``CatalogValidationResponse`` (udb.entity.v1).
@@ -7460,7 +7460,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``VectorHybridSearch`` — unary call to ``/udb.services.v1.DataBroker/VectorHybridSearch``.
+        """``vector_hybrid_search`` — unary call to wire RPC ``/udb.services.v1.DataBroker/VectorHybridSearch``.
 
         Forwards ``VectorHybridSearchRequest`` (udb.entity.v1) and returns
         ``VectorSet`` (udb.entity.v1).
@@ -7484,7 +7484,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``VectorSearch`` — unary call to ``/udb.services.v1.DataBroker/VectorSearch``.
+        """``vector_search`` — unary call to wire RPC ``/udb.services.v1.DataBroker/VectorSearch``.
 
         Forwards ``VectorSearchRequest`` (udb.entity.v1) and returns
         ``VectorSet`` (udb.entity.v1).
@@ -7508,7 +7508,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``VectorUpsert`` — unary call to ``/udb.services.v1.DataBroker/VectorUpsert``.
+        """``vector_upsert`` — unary call to wire RPC ``/udb.services.v1.DataBroker/VectorUpsert``.
 
         Forwards ``VectorUpsertRequest`` (udb.entity.v1) and returns
         ``MutationResponse`` (udb.entity.v1).
@@ -7532,7 +7532,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Any:
-        """``VerifyAdminAuditLog`` — unary call to ``/udb.services.v1.DataBroker/VerifyAdminAuditLog``.
+        """``verify_admin_audit_log`` — unary call to wire RPC ``/udb.services.v1.DataBroker/VerifyAdminAuditLog``.
 
         Forwards ``AdminAuditVerifyRequest`` (udb.entity.v1) and returns
         ``AdminAuditVerifyResponse`` (udb.entity.v1).
@@ -7558,7 +7558,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Iterator[Any]:
-        """``GetObject`` — server-streaming call to ``/udb.services.v1.DataBroker/GetObject``.
+        """``get_object`` — server-streaming call to wire RPC ``/udb.services.v1.DataBroker/GetObject``.
 
         Forwards ``ObjectRequest`` (udb.entity.v1) and yields
         ``Chunk`` (udb.entity.v1) messages. Retry applies only
@@ -7575,7 +7575,7 @@ class DataBrokerClient(_ServiceClientBase):
             read_only=("read_only" == "read_only"),
         )
 
-    def publish_c_d_c(
+    def publish_cdc(
         self,
         request: Any,
         *,
@@ -7583,7 +7583,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Iterator[Any]:
-        """``PublishCDC`` — server-streaming call to ``/udb.services.v1.DataBroker/PublishCDC``.
+        """``publish_cdc`` — server-streaming call to wire RPC ``/udb.services.v1.DataBroker/PublishCDC``.
 
         Forwards ``CDCSubscriptionRequest`` (udb.entity.v1) and yields
         ``CDCEnvelope`` (udb.events.v1) messages. Retry applies only
@@ -7600,7 +7600,7 @@ class DataBrokerClient(_ServiceClientBase):
             read_only=("mutation" == "read_only"),
         )
 
-    def select_v2(
+    def select_v_2(
         self,
         request: Any,
         *,
@@ -7608,7 +7608,7 @@ class DataBrokerClient(_ServiceClientBase):
         timeout: float | None = None,
         retry: bool = True,
     ) -> Iterator[Any]:
-        """``SelectV2`` — server-streaming call to ``/udb.services.v1.DataBroker/SelectV2``.
+        """``select_v_2`` — server-streaming call to wire RPC ``/udb.services.v1.DataBroker/SelectV2``.
 
         Forwards ``SelectRequest`` (udb.entity.v1) and yields
         ``RecordBatchV2`` (udb.entity.v1) messages. Retry applies only
@@ -7634,7 +7634,7 @@ class DataBrokerClient(_ServiceClientBase):
         metadata: Metadata | None = None,
         timeout: float | None = None,
     ) -> Any:
-        """``PutObject`` — client-streaming call to ``/udb.services.v1.DataBroker/PutObject``.
+        """``put_object`` — client-streaming call to wire RPC ``/udb.services.v1.DataBroker/PutObject``.
 
         Consumes an iterator of ``Chunk`` (udb.entity.v1) and returns
         ``MutationResponse`` (udb.entity.v1). Not auto-retried (request stream
@@ -7658,7 +7658,7 @@ class DataBrokerClient(_ServiceClientBase):
         metadata: Metadata | None = None,
         timeout: float | None = None,
     ) -> Iterator[Any]:
-        """``BatchSelect`` — bidirectional-streaming call to ``/udb.services.v1.DataBroker/BatchSelect``.
+        """``batch_select`` — bidirectional-streaming call to wire RPC ``/udb.services.v1.DataBroker/BatchSelect``.
 
         Consumes an iterator of ``SelectRequest`` (udb.entity.v1) and yields
         ``RecordSet`` (udb.entity.v1). Not auto-retried.
@@ -7684,7 +7684,7 @@ class DataBrokerClient(_ServiceClientBase):
         metadata: Metadata | None = None,
         timeout: float | None = None,
     ) -> Iterator[Any]:
-        """``BatchUpsert`` — bidirectional-streaming call to ``/udb.services.v1.DataBroker/BatchUpsert``.
+        """``batch_upsert`` — bidirectional-streaming call to wire RPC ``/udb.services.v1.DataBroker/BatchUpsert``.
 
         Consumes an iterator of ``UpsertRequest`` (udb.entity.v1) and yields
         ``MutationResponse`` (udb.entity.v1). Not auto-retried.
@@ -7710,7 +7710,7 @@ class DataBrokerClient(_ServiceClientBase):
         metadata: Metadata | None = None,
         timeout: float | None = None,
     ) -> Iterator[Any]:
-        """``BeginTx`` — bidirectional-streaming call to ``/udb.services.v1.DataBroker/BeginTx``.
+        """``begin_tx`` — bidirectional-streaming call to wire RPC ``/udb.services.v1.DataBroker/BeginTx``.
 
         Consumes an iterator of ``Mutation`` (udb.entity.v1) and yields
         ``TxStatus`` (udb.entity.v1). Not auto-retried.
@@ -7736,7 +7736,7 @@ class DataBrokerClient(_ServiceClientBase):
         metadata: Metadata | None = None,
         timeout: float | None = None,
     ) -> Iterator[Any]:
-        """``VectorBatchUpsert`` — bidirectional-streaming call to ``/udb.services.v1.DataBroker/VectorBatchUpsert``.
+        """``vector_batch_upsert`` — bidirectional-streaming call to wire RPC ``/udb.services.v1.DataBroker/VectorBatchUpsert``.
 
         Consumes an iterator of ``VectorUpsertRequest`` (udb.entity.v1) and yields
         ``MutationResponse`` (udb.entity.v1). Not auto-retried.

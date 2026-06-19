@@ -1,0 +1,480 @@
+name: _live-sdk-suite
+
+# Reusable live-SDK suite (Chapter 15, todo 15.7.1).
+#
+# ONE `workflow_call` workflow that stands up the live backend stack + broker and
+# runs the post-release SDK benchmark.
+#
+# It declares the `postgres`/`mongodb` `services:` (the part composite actions
+# cannot do) and otherwise builds entirely on the existing composite actions:
+#   - .github/actions/setup-sdk-toolchains  (SDK language toolchains)
+#   - .github/actions/start-backends        (docker run minio/kafka/qdrant/...)
+#   - .github/actions/broker-env            (canonical UDB_* env to $GITHUB_ENV)
+#
+# This reproduces benchmark-sdks.yml::benchmark: download the release binary,
+# then run all four SDK perf benches with a fresh DB+broker re-seed between each
+# (the reset pattern), then collect results.
+#
+# This is now the shared implementation for benchmark-sdks.yml::benchmark;
+# _shadow-live-sdk.yml remains dispatch-only for manual runner probes.
+
+on:
+  workflow_call:
+    inputs:
+      release-tag:
+        description: "Release tag to benchmark, or 'latest' (perf / release-asset)."
+        required: false
+        type: string
+        default: latest
+      release-asset:
+        description: "Linux release asset name to download (perf / release-asset)."
+        required: false
+        type: string
+        default: udb-linux-amd64-full
+    secrets:
+      # The live/bench harness uses only test-fixture secrets baked into
+      # broker-env; no real secrets are required. Declared (optional) so a caller
+      # may still pass `secrets: inherit` without error.
+      gh_token:
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  live-suite:
+    name: Live SDK benchmark
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      # Pass inputs through env (script-injection-safe — never interpolate
+      # inputs.* directly into a run: shell body).
+      RELEASE_TAG: ${{ inputs.release-tag }}
+      RELEASE_ASSET: ${{ inputs.release-asset }}
+      # Live tests are always opted-in here; perf adds the perf opt-in below.
+      UDB_LIVE_SDK_TESTS: "1"
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: udb_ci
+          POSTGRES_USER: udb
+          POSTGRES_PASSWORD: udb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U udb -d udb_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ ping: 1 }).ok'"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialize benchmark output
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p bench-output/bin bench-output/status bench-output/logs docs/site
+          rm -f docs/site/bench-results.json \
+            sdk/go/udbclient/perf_report_go.md \
+            sdk/python/perf_report_python.md \
+            sdk/typescript/perf_report_ts.md \
+            sdk/php/perf_report_php.md
+
+      # ── SDK toolchains ────────────────────────────────────────────────
+      # Perf needs Go/Python/TS/PHP SDK toolchains (PHP 8.3 mirrors the
+      # live-test Dockerfile).
+      - name: Set up SDK toolchains
+        uses: ./.github/actions/setup-sdk-toolchains
+        with:
+          node: "true"
+          python: "true"
+          go: "true"
+          php: "true"
+          php-version: "8.3"
+
+      # ── Broker binary (mode-dependent) ────────────────────────────────
+      - name: Resolve release binary (perf)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="${RELEASE_TAG}"
+          if [ -z "${tag}" ] || [ "${tag}" = "latest" ]; then
+            tag="$(gh release view --repo "${GITHUB_REPOSITORY}" --json tagName --jq .tagName)"
+          fi
+          if [[ ! "${tag}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            echo "::error::Benchmark requires a released SemVer tag, got '${tag}'"
+            exit 1
+          fi
+          gh release view "${tag}" --repo "${GITHUB_REPOSITORY}" >/dev/null
+          gh release download "${tag}" --repo "${GITHUB_REPOSITORY}" --pattern "${RELEASE_ASSET}" --dir bench-output/bin
+          chmod +x "bench-output/bin/${RELEASE_ASSET}"
+          {
+            echo "UDB_BENCH_RELEASE_TAG=${tag}"
+            echo "UDB_BENCH_RELEASE_ASSET=${RELEASE_ASSET}"
+            echo "UDB_BENCH_RELEASE_URL=https://github.com/${GITHUB_REPOSITORY}/releases/tag/${tag}"
+            echo "UDB_BENCH_BIN=${GITHUB_WORKSPACE}/bench-output/bin/${RELEASE_ASSET}"
+          } >> "$GITHUB_ENV"
+
+      - name: Resolve broker binary path
+        id: bin
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "path=${UDB_BENCH_BIN}" >> "$GITHUB_OUTPUT"
+
+      # ── Backend stack (docker-run backends; pg/mongo are services above) ──
+      - name: Start backends
+        uses: ./.github/actions/start-backends
+        with:
+          minio: "true"
+          kafka: "true"
+          qdrant: "true"
+          redis: "true"
+          clickhouse: "true"
+          neo4j: "true"
+
+      # ── Canonical broker env (single source; fixes the env-drift bug) ──
+      - name: Write broker env
+        uses: ./.github/actions/broker-env
+        with:
+          pg_dsn: postgres://udb:udb@localhost:5432/udb_ci
+          nosql_dsn: mongodb://localhost:27017/udb_live_sdk?directConnection=true
+          mongodb_dsn: mongodb://localhost:27017/udb_live_sdk?directConnection=true
+          nosql_database: udb_live_sdk
+          grpc_addr: 127.0.0.1:50051
+          grpc_target: 127.0.0.1:50051
+          auth_grpc_addr: 127.0.0.1:50061
+          auth_grpc_target: 127.0.0.1:50061
+          cdc_enabled: "true"
+          startup_dry_run: "false"
+          object_bucket: udb-storage
+
+      - name: Enable perf opt-in
+        shell: bash
+        run: echo "UDB_LIVE_PERF=1" >> "$GITHUB_ENV"
+
+      # ── Install SDK dependencies ──────────────────────────────────────
+      - name: Install TypeScript SDK dependencies
+        working-directory: sdk/typescript
+        run: npm ci --no-audit --no-fund
+
+      - name: Install Python/PHP SDK dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -e "sdk/python[dev]"
+          # composer.lock + vendor/ are gitignored, so this is a fresh resolve
+          # scoped to the CI PHP version. No --ignore-platform-reqs.
+          ( cd sdk/php && composer install --no-interaction --no-progress --prefer-dist )
+
+      # ── PERF: per-SDK fresh-DB + broker reset, then all four benches ──
+      - name: Prepare per-SDK reset script (fresh DB + broker + bootstrap + seed)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # psql for the reset/seed.
+          if ! command -v psql >/dev/null 2>&1; then
+            export DEBIAN_FRONTEND=noninteractive
+            sudo timeout 120s apt-get -o DPkg::Lock::Timeout=60 update
+            sudo timeout 120s apt-get -o DPkg::Lock::Timeout=60 install -y postgresql-client
+          fi
+          psql --version
+          mkdir -p bench-output/status bench-output/logs
+          # reset.sh runs BEFORE each SDK bench. It reproduces grind-once.ps1:
+          # stop the previous broker, recreate udb_ci, bootstrap, start a FRESH
+          # broker, re-seed. Each SDK runs against a pristine PG + broker so
+          # cross-SDK state in PG cannot leak between SDKs.
+          # Quoted <<'RESET' → nothing expands at write-time; $vars resolve at run-time.
+          cat > bench-output/reset.sh <<'RESET'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          export PGPASSWORD=udb
+          if [ -f /tmp/udb-bench.pid ]; then kill "$(cat /tmp/udb-bench.pid)" 2>/dev/null || true; fi
+          for i in $(seq 1 10); do (echo > /dev/tcp/127.0.0.1/50051) 2>/dev/null || break; sleep 1; done
+          psql -h localhost -p 5432 -U udb -d postgres -c "DROP DATABASE IF EXISTS udb_ci WITH (FORCE);"
+          psql -h localhost -p 5432 -U udb -d postgres -c "CREATE DATABASE udb_ci;"
+          "${UDB_BENCH_BIN}" auth bootstrap user --username "${UDB_LIVE_USERNAME}" --password "${UDB_LIVE_PASSWORD}" --tenant "${UDB_LIVE_TENANT}" --project "${UDB_LIVE_PROJECT}"
+          "${UDB_BENCH_BIN}" serve proto "" 127.0.0.1:50051 > /tmp/udb-bench.log 2>&1 &
+          echo $! > /tmp/udb-bench.pid
+          ok=0
+          for attempt in $(seq 1 90); do
+            if (echo > /dev/tcp/127.0.0.1/50051) 2>/dev/null && (echo > /dev/tcp/127.0.0.1/50061) 2>/dev/null; then ok=1; break; fi
+            if ! kill -0 "$(cat /tmp/udb-bench.pid)" 2>/dev/null; then cat /tmp/udb-bench.log; exit 1; fi
+            sleep 2
+          done
+          [ "$ok" = 1 ] || { echo "broker not ready"; cat /tmp/udb-bench.log; exit 1; }
+          tid="$(psql -h localhost -p 5432 -U udb -d udb_ci -tAq -c "SELECT tenant_id::text FROM udb_tenant.tenants WHERE code='sdk-live' OR name='sdk-live' LIMIT 1;")"
+          [ -n "$tid" ] || { echo "no tenant_id for sdk-live"; exit 1; }
+          psql -h localhost -p 5432 -U udb -d udb_ci -v ON_ERROR_STOP=1 -c "INSERT INTO udb_system.udb_sagas (saga_id,tx_id,tenant_id,correlation_id,status,backend_instance,operation,current_step,retry_count,recovery_attempts,compensation_status,steps,compensations,last_error,created_at,updated_at) VALUES ('11111111-1111-4111-8111-111111111101','t1','$tid','c1','manual_review','postgres:primary','mutate',0,0,0,'manual_review','[]'::jsonb,'[]'::jsonb,'seed',NOW(),NOW()),('11111111-1111-4111-8111-111111111102','t2','$tid','c2','manual_review','postgres:primary','mutate',0,0,0,'manual_review','[]'::jsonb,'[]'::jsonb,'seed',NOW(),NOW()),('11111111-1111-4111-8111-111111111103','t3','$tid','c3','manual_review','postgres:primary','mutate',0,0,0,'manual_review','[]'::jsonb,'[]'::jsonb,'seed',NOW(),NOW()) ON CONFLICT (saga_id) DO NOTHING;"
+          psql -h localhost -p 5432 -U udb -d udb_ci -v ON_ERROR_STOP=1 -c "INSERT INTO udb_system.udb_cdc_dlq_events (dlq_id,event_id,topic,tenant_id,project_id,payload,error_type,error_message,retry_count,status,created_at,updated_at) VALUES ('22222222-2222-4222-8222-222222222201',gen_random_uuid(),'udb.sdk.live.records.cdc','$tid','default','{}'::jsonb,'seed','err',0,'OPEN',NOW(),NOW()),('22222222-2222-4222-8222-222222222202',gen_random_uuid(),'udb.sdk.live.records.cdc','$tid','default','{}'::jsonb,'seed','err',0,'OPEN',NOW(),NOW()),('22222222-2222-4222-8222-222222222203',gen_random_uuid(),'udb.sdk.live.records.cdc','$tid','default','{}'::jsonb,'seed','err',0,'OPEN',NOW(),NOW()),('22222222-2222-4222-8222-222222222204',gen_random_uuid(),'udb.sdk.live.records.cdc','$tid','default','{}'::jsonb,'seed','err',0,'OPEN',NOW(),NOW()) ON CONFLICT (dlq_id) DO NOTHING;"
+          RESET
+          chmod +x bench-output/reset.sh
+
+      - name: Benchmark Go SDK
+        shell: bash
+        run: |
+          set +e
+          mkdir -p bench-output/logs
+          bash bench-output/reset.sh 2>&1 | tee bench-output/logs/go-reset.log
+          reset_code=${PIPESTATUS[0]}
+          if [ "$reset_code" -ne 0 ]; then
+            code=$reset_code
+            {
+              echo "# UDB SDK Live Perf — Go"
+              echo
+              echo "RPCs measured: 0"
+              echo
+              echo "## Harness error"
+              echo
+              echo "Reset failed with code ${reset_code} before running the Go benchmark."
+              echo
+              echo '```text'
+              tail -200 bench-output/logs/go-reset.log
+              echo '```'
+            } > sdk/go/udbclient/perf_report_go.md
+          else
+            ( cd sdk/go && go test ./udbclient -run '^TestLivePerf$' -count=1 -timeout 15m ) 2>&1 | tee bench-output/logs/go.log
+            code=${PIPESTATUS[0]}
+          fi
+          if [ ! -f sdk/go/udbclient/perf_report_go.md ]; then
+            {
+              echo "# UDB SDK Live Perf — Go"
+              echo
+              echo "RPCs measured: 0"
+              echo
+              echo "## Harness error"
+              echo
+              echo "Benchmark command exited with code ${code} before writing perf_report_go.md."
+              echo
+              echo '```text'
+              tail -200 bench-output/logs/go.log
+              echo '```'
+            } > sdk/go/udbclient/perf_report_go.md
+          fi
+          printf '{"exit_code":%d,"note":"%s"}\n' "$code" "$([ "${reset_code:-0}" -ne 0 ] && echo "reset failed before Go benchmark" || echo "")" > bench-output/status/go.json
+          exit 0
+
+      - name: Benchmark Python SDK
+        shell: bash
+        run: |
+          set +e
+          mkdir -p bench-output/logs
+          bash bench-output/reset.sh 2>&1 | tee bench-output/logs/python-reset.log
+          reset_code=${PIPESTATUS[0]}
+          if [ "$reset_code" -ne 0 ]; then
+            code=$reset_code
+            {
+              echo "# UDB SDK Live Perf — Python"
+              echo
+              echo "RPCs measured: 0"
+              echo
+              echo "## Harness error"
+              echo
+              echo "Reset failed with code ${reset_code} before running the Python benchmark."
+              echo
+              echo '```text'
+              tail -200 bench-output/logs/python-reset.log
+              echo '```'
+            } > sdk/python/perf_report_python.md
+          else
+            ( cd sdk/python && python -m pytest -q tests/test_live_conformance.py -k test_live_perf ) 2>&1 | tee bench-output/logs/python.log
+            code=${PIPESTATUS[0]}
+          fi
+          if [ ! -f sdk/python/perf_report_python.md ]; then
+            {
+              echo "# UDB SDK Live Perf — Python"
+              echo
+              echo "RPCs measured: 0"
+              echo
+              echo "## Harness error"
+              echo
+              echo "Benchmark command exited with code ${code} before writing perf_report_python.md."
+              echo
+              echo '```text'
+              tail -200 bench-output/logs/python.log
+              echo '```'
+            } > sdk/python/perf_report_python.md
+          fi
+          printf '{"exit_code":%d,"note":"%s"}\n' "$code" "$([ "${reset_code:-0}" -ne 0 ] && echo "reset failed before Python benchmark" || echo "")" > bench-output/status/python.json
+          exit 0
+
+      - name: Benchmark TypeScript SDK
+        shell: bash
+        run: |
+          set +e
+          mkdir -p bench-output/logs
+          bash bench-output/reset.sh 2>&1 | tee bench-output/logs/typescript-reset.log
+          reset_code=${PIPESTATUS[0]}
+          if [ "$reset_code" -ne 0 ]; then
+            code=$reset_code
+            {
+              echo "# UDB SDK Live Perf — TypeScript"
+              echo
+              echo "RPCs measured: 0"
+              echo
+              echo "## Harness error"
+              echo
+              echo "Reset failed with code ${reset_code} before running the TypeScript benchmark."
+              echo
+              echo '```text'
+              tail -200 bench-output/logs/typescript-reset.log
+              echo '```'
+            } > sdk/typescript/perf_report_ts.md
+          else
+            ( cd sdk/typescript && npm run bundle-proto && npx tsc -p tsconfig.test.json && node --test --test-name-pattern 'live per-RPC perf' dist-test/live-auth.test.js ) 2>&1 | tee bench-output/logs/typescript.log
+            code=${PIPESTATUS[0]}
+          fi
+          if [ ! -f sdk/typescript/perf_report_ts.md ]; then
+            {
+              echo "# UDB SDK Live Perf — TypeScript"
+              echo
+              echo "RPCs measured: 0"
+              echo
+              echo "## Harness error"
+              echo
+              echo "Benchmark command exited with code ${code} before writing perf_report_ts.md."
+              echo
+              echo '```text'
+              tail -200 bench-output/logs/typescript.log
+              echo '```'
+            } > sdk/typescript/perf_report_ts.md
+          fi
+          printf '{"exit_code":%d,"note":"%s"}\n' "$code" "$([ "${reset_code:-0}" -ne 0 ] && echo "reset failed before TypeScript benchmark" || echo "")" > bench-output/status/typescript.json
+          exit 0
+
+      - name: Benchmark PHP SDK
+        shell: bash
+        run: |
+          set +e
+          mkdir -p bench-output/logs
+          bash bench-output/reset.sh 2>&1 | tee bench-output/logs/php-reset.log
+          reset_code=${PIPESTATUS[0]}
+          if [ "$reset_code" -ne 0 ]; then
+            code=$reset_code
+            {
+              echo "# UDB SDK Live Perf — PHP"
+              echo
+              echo "RPCs measured: 0"
+              echo
+              echo "## Harness error"
+              echo
+              echo "Reset failed with code ${reset_code} before running the PHP benchmark."
+              echo
+              echo '```text'
+              tail -200 bench-output/logs/php-reset.log
+              echo '```'
+            } > sdk/php/perf_report_php.md
+          else
+            ( cd sdk/php && vendor/bin/pest tests/Live/GeneratedRpcSurfaceTest.php --filter 'measures per-RPC latency' ) 2>&1 | tee bench-output/logs/php.log
+            code=${PIPESTATUS[0]}
+          fi
+          if [ ! -f sdk/php/perf_report_php.md ]; then
+            {
+              echo "# UDB SDK Live Perf — PHP"
+              echo
+              echo "RPCs measured: 0"
+              echo
+              echo "## Harness error"
+              echo
+              echo "Benchmark command exited with code ${code} before writing perf_report_php.md."
+              echo
+              echo '```text'
+              tail -200 bench-output/logs/php.log
+              echo '```'
+            } > sdk/php/perf_report_php.md
+          fi
+          printf '{"exit_code":%d,"note":"%s"}\n' "$code" "$([ "${reset_code:-0}" -ne 0 ] && echo "reset failed before PHP benchmark" || echo "")" > bench-output/status/php.json
+          exit 0
+
+      - name: Fetch previous benchmark history
+        if: always()
+        shell: bash
+        run: |
+          curl -fsSL "https://${GITHUB_REPOSITORY_OWNER}.github.io/udb/bench-results.json" \
+            -o bench-output/previous-bench-results.json || true
+
+      - name: Collect benchmark JSON
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/collect_sdk_bench_results.py \
+            --out docs/site/bench-results.json \
+            --status-dir bench-output/status \
+            --previous bench-output/previous-bench-results.json \
+            --release-tag "${UDB_BENCH_RELEASE_TAG:-}" \
+            --release-asset "${UDB_BENCH_RELEASE_ASSET:-}" \
+            --release-url "${UDB_BENCH_RELEASE_URL:-}"
+
+      - name: Upload benchmark report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdk-benchmark-results
+          path: |
+            docs/site/bench-results.json
+            sdk/go/udbclient/perf_report_go.md
+            sdk/python/perf_report_python.md
+            sdk/typescript/perf_report_ts.md
+            sdk/php/perf_report_php.md
+            bench-output/logs/**
+            bench-output/status/**
+            /tmp/udb-bench.log
+          if-no-files-found: ignore
+
+      - name: Fail on benchmark failures
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path("docs/site/bench-results.json")
+          if not path.is_file():
+              raise SystemExit("benchmark results JSON was not produced")
+          data = json.loads(path.read_text(encoding="utf-8"))
+          summary = data.get("summary", {})
+          bad_sdks = [
+              s.get("name") or s.get("id")
+              for s in data.get("sdks", [])
+              if s.get("status") not in {"ok", "skipped"}
+          ]
+          failed_rpcs = int(summary.get("failed_rpc_count") or 0)
+          if bad_sdks or failed_rpcs:
+              print(f"Benchmark failures: bad_sdks={bad_sdks}, failed_rpc_count={failed_rpcs}")
+              raise SystemExit(1)
+          print("Benchmark gate passed: no failed SDKs and no failed RPCs.")
+          PY
+
+      # ── Always-run cleanup: stop broker(s) + docker ──────────────────
+      - name: Stop broker and backends
+        if: always()
+        shell: bash
+        run: |
+          if [ -n "${UDB_BROKER_PID:-}" ]; then
+            kill "${UDB_BROKER_PID}" 2>/dev/null || true
+          fi
+          if [ -f /tmp/udb-bench.pid ]; then
+            kill "$(cat /tmp/udb-bench.pid)" 2>/dev/null || true
+          fi
+          docker rm -f udb-bench-minio 2>/dev/null || true
+          docker rm -f udb-bench-kafka 2>/dev/null || true
+          docker rm -f udb-bench-qdrant 2>/dev/null || true
+          docker rm -f udb-bench-redis 2>/dev/null || true
+          docker rm -f udb-bench-clickhouse 2>/dev/null || true
+          docker rm -f udb-bench-neo4j 2>/dev/null || true

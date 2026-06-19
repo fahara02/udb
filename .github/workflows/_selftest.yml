@@ -1,0 +1,141 @@
+# Composite-action self-test (Chapter 15, todo 15.0.3).
+#
+# Dispatch-only, ADDITIVE + NON-GATING. Composite actions cannot be tested
+# locally (actionlint catches syntax only — behavior surfaces on the runner),
+# so this workflow exercises each primitive on the real runner BEFORE any
+# gating pipeline adopts it. A broken primitive fails HERE, not in CI/release.
+#
+# Each job is independent (no `needs:`) and proves one composite loads + does
+# its core effect. It builds nothing release-grade and gates no merge.
+name: _selftest
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_launch:
+        description: >-
+          Also run the launch-broker job for real (needs a built broker +
+          postgres). Left false by default — launch-broker is exercised for
+          real by the _live-sdk-suite self-run; here it is just documented.
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: selftest-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # broker-env: assert the composite writes the canonical UDB_* env to
+  # $GITHUB_ENV (it must populate at least UDB_TLS_REQUIRED and many UDB_* keys).
+  broker-env:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Write broker env
+        uses: ./.github/actions/broker-env
+      - name: Assert UDB_* keys are set
+        run: |
+          test -n "$UDB_TLS_REQUIRED"
+          count="$(env | grep -c '^UDB_')"
+          echo "broker-env wrote ${count} UDB_* keys; UDB_TLS_REQUIRED=${UDB_TLS_REQUIRED}"
+          test "${count}" -ge 1
+
+  # setup-rust: prove the toolchain composite loads and yields a usable rust.
+  # install-build-deps:false keeps it fast (no apt/brew/choco native deps).
+  setup-rust:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Rust
+        uses: ./.github/actions/setup-rust
+        with:
+          install-build-deps: "false"
+          cache-key: selftest
+      - name: Assert toolchain is usable
+        run: |
+          cargo --version
+          rustc --version
+
+  # version-guard: with no tag ref and no dispatch-version, the composite only
+  # runs check-versions.mjs + the self-consistency check (must pass). Needs Node.
+  version-guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Run version guard (self-consistency only)
+        uses: ./.github/actions/version-guard
+        with:
+          component: udb
+
+  # setup-sdk-toolchains: toggle node+python+go on, the rest off, then assert
+  # each requested toolchain is actually on PATH.
+  setup-sdk-toolchains:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up SDK toolchains
+        uses: ./.github/actions/setup-sdk-toolchains
+        with:
+          node: "true"
+          python: "true"
+          go: "true"
+      - name: Assert toolchains are usable
+        run: |
+          node -v
+          python --version
+          go version
+
+  # start-backends: bring up only minio+kafka, assert their containers are
+  # running, then stop them so the runner is left clean.
+  start-backends:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start backends (minio + kafka)
+        uses: ./.github/actions/start-backends
+        with:
+          minio: "true"
+          kafka: "true"
+          qdrant: "false"
+          redis: "false"
+          clickhouse: "false"
+          neo4j: "false"
+      - name: Assert containers are up
+        run: |
+          docker ps
+          docker ps --filter name=udb-bench-minio --filter status=running --quiet | grep -q .
+          docker ps --filter name=udb-bench-kafka --filter status=running --quiet | grep -q .
+      - name: Stop backends
+        if: always()
+        run: |
+          docker rm -f udb-bench-minio udb-bench-kafka 2>/dev/null || true
+
+  # launch-broker: a real launch needs a built broker + postgres, which the
+  # _live-sdk-suite self-run already exercises end-to-end. Here it is documented
+  # and only runs (still non-failing) when the test_launch dispatch input is set.
+  launch-broker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Document coverage
+        run: |
+          echo "launch-broker is exercised for real (built broker + postgres) by"
+          echo "the _live-sdk-suite self-run; a real launch is intentionally skipped here."
+      - name: Note dispatch flag
+        if: ${{ inputs.test_launch }}
+        run: |
+          echo "test_launch=true requested, but this self-test job does not build a"
+          echo "broker; use _live-sdk-suite for an end-to-end launch-broker test."

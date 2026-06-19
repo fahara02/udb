@@ -109,7 +109,7 @@
         <div class="bench-chart-head">
           <div>
             <h3 id="full-performance-title">Full performance data</h3>
-            <p>Select any number of SDK languages and APIs. Empty selections mean all rows.</p>
+            <p>Select SDK languages and canonical API identities. Wire RPC names remain visible in the row details.</p>
           </div>
         </div>
         <div class="bench-controls">
@@ -120,7 +120,7 @@
             <select id="bench-api-filter" multiple size="8"></select>
           </label>
           <label>Search
-            <input id="bench-search" type="search" placeholder="Filter service, RPC, kind, note">
+            <input id="bench-search" type="search" placeholder="Filter alias, operation ID, wire RPC, kind, note">
           </label>
         </div>
         <div class="bench-table-meta" id="bench-full-meta"></div>
@@ -129,7 +129,8 @@
             <thead>
               <tr>
                 <th>SDK</th>
-                <th>API</th>
+                <th>Canonical API</th>
+                <th>Wire RPC</th>
                 <th>Kind</th>
                 <th>Status</th>
                 <th>p50</th>

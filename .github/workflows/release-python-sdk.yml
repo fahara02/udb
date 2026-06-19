@@ -1,14 +1,19 @@
 name: Release Python SDK
 
+# Reusable publisher invoked by `release.yml` after the release binaries are
+# built. Builds and publishes udb-client to PyPI.
+
 on:
+  workflow_call:
+    secrets:
+      PYPI_API_TOKEN:
+        description: PyPI API token used by `twine upload`.
+        required: false
   workflow_dispatch:
     inputs:
       version:
         description: "Expected UDB release version, for example 0.2.0"
         required: true
-  push:
-    tags:
-      - "v*"
 
 permissions:
   contents: read
@@ -18,58 +23,42 @@ jobs:
     name: Build and publish udb-client
     runs-on: ubuntu-latest
     environment: production
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      # Python + Node (for version-guard) via the single-source composite.
+      - uses: ./.github/actions/setup-sdk-toolchains
         with:
-          python-version: "3.12"
+          python: 'true'
+          node: 'true'
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v6
 
-      - name: Set up Node
-        uses: actions/setup-node@v4
+      - uses: ./.github/actions/version-guard
         with:
-          node-version: "20"
-
-      - name: Versions consistent with versions.json
-        run: node scripts/check-versions.mjs
+          component: sdk-python
+          dispatch-version: ${{ github.event.inputs.version }}
 
       - name: Install dependencies
         working-directory: sdk/python
         run: uv sync --extra dev
-
-      - name: Check version
-        shell: bash
-        env:
-          INPUT_VERSION: ${{ github.event.inputs.version }}
-        run: |
-          version="$(python -c 'import tomllib; print(tomllib.load(open("sdk/python/pyproject.toml", "rb"))["project"]["version"])')"
-          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
-            tag="${GITHUB_REF_NAME#v}"
-            if [[ "${tag}" != "${version}" ]]; then
-              echo "Tag ${GITHUB_REF_NAME} does not match sdk/python version ${version}" >&2
-              exit 1
-            fi
-          fi
-          if [[ -n "${INPUT_VERSION}" && "${INPUT_VERSION}" != "${version}" ]]; then
-            echo "Input version ${INPUT_VERSION} does not match sdk/python version ${version}" >&2
-            exit 1
-          fi
 
       # No codegen here: the committed `sdk/python/gen` tree (full `udb.*`
       # surface + vendored `google.api` stubs) is the source of truth and is
       # hard-verified against `buf generate --include-imports` by the CI `buf`
       # job on every change, so the wheel is built straight from it.
       - name: Run tests
+        if: github.event_name == 'workflow_dispatch'
         working-directory: sdk/python
         run: uv run pytest
 
       - name: Type check
+        if: github.event_name == 'workflow_dispatch'
         continue-on-error: true
         working-directory: sdk/python
         run: uv run pyrefly check

@@ -296,7 +296,7 @@ function decodeErrorDetail(err: grpc.ServiceError): UdbErrorDetail | undefined {
 // method name), so `unary` looks it up directly from the method it dispatches.
 export const RPC_OPERATION_KIND: Record<string, string> = {
   // @@UDB_RPC_BEGIN
-  "/{{SERVICE_FULL}}/{{RPC_NAME}}": "{{RPC_OPERATION_KIND}}",
+  "{{RPC_PATH}}": "{{RPC_OPERATION_KIND}}",
   // @@UDB_RPC_END
 };
 
@@ -309,7 +309,7 @@ export const RPC_OPERATION_KIND: Record<string, string> = {
 // (R1.1) -- NEVER guessed from the method name. Absent/false => never retry.
 export const RPC_REPLAY_SAFE: Record<string, boolean> = {
   // @@UDB_RPC_BEGIN
-  "/{{SERVICE_FULL}}/{{RPC_NAME}}": {{RPC_REPLAY_SAFE}},
+  "{{RPC_PATH}}": {{RPC_REPLAY_SAFE}},
   // @@UDB_RPC_END
 };
 
@@ -653,7 +653,7 @@ export interface {{SERVICE_NAME}}Api {
 
 // Method signatures, appended to each service interface via declaration merging.
 // @@UDB_RPC_BEGIN kind=unary
-/** {{SERVICE_FULL}} · {{RPC_KIND}} · `{{RPC_PATH}}` · ({{RPC_INPUT_PKG}}.{{RPC_INPUT}}) → ({{RPC_OUTPUT_PKG}}.{{RPC_OUTPUT}})
+/** {{SERVICE_FULL}} · {{RPC_KIND}} · `{{RPC_PATH}}` · alias `{{RPC_ALIAS_SNAKE}}` · ({{RPC_INPUT_PKG}}.{{RPC_INPUT}}) → ({{RPC_OUTPUT_PKG}}.{{RPC_OUTPUT}})
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
  *  The signature stays `any`/`Promise<any>` here because the per-message typed
@@ -662,25 +662,29 @@ export interface {{SERVICE_NAME}}Api {
  *  signature emit is deferred (D10). Callers wanting compile-time field checking
  *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
 export interface {{SERVICE_NAME}}Api {
-  {{RPC_SNAKE}}(request: any, call?: CallOptions): Promise<any>;
+  {{RPC_ALIAS_SNAKE}}(request: any, call?: CallOptions): Promise<any>;
+  {{RPC_ALIAS_CAMEL}}(request: any, call?: CallOptions): Promise<any>;
 }
 // @@UDB_RPC_END
 // @@UDB_RPC_BEGIN kind=server_streaming
-/** {{SERVICE_FULL}} · {{RPC_KIND}} · `{{RPC_PATH}}` · ({{RPC_INPUT_PKG}}.{{RPC_INPUT}}) → stream ({{RPC_OUTPUT_PKG}}.{{RPC_OUTPUT}}) */
+/** {{SERVICE_FULL}} · {{RPC_KIND}} · `{{RPC_PATH}}` · alias `{{RPC_ALIAS_SNAKE}}` · ({{RPC_INPUT_PKG}}.{{RPC_INPUT}}) → stream ({{RPC_OUTPUT_PKG}}.{{RPC_OUTPUT}}) */
 export interface {{SERVICE_NAME}}Api {
-  {{RPC_SNAKE}}(request: any, call?: CallOptions): grpc.ClientReadableStream<any>;
+  {{RPC_ALIAS_SNAKE}}(request: any, call?: CallOptions): grpc.ClientReadableStream<any>;
+  {{RPC_ALIAS_CAMEL}}(request: any, call?: CallOptions): grpc.ClientReadableStream<any>;
 }
 // @@UDB_RPC_END
 // @@UDB_RPC_BEGIN kind=client_streaming
-/** {{SERVICE_FULL}} · {{RPC_KIND}} · `{{RPC_PATH}}` · stream ({{RPC_INPUT_PKG}}.{{RPC_INPUT}}) → ({{RPC_OUTPUT_PKG}}.{{RPC_OUTPUT}}) */
+/** {{SERVICE_FULL}} · {{RPC_KIND}} · `{{RPC_PATH}}` · alias `{{RPC_ALIAS_SNAKE}}` · stream ({{RPC_INPUT_PKG}}.{{RPC_INPUT}}) → ({{RPC_OUTPUT_PKG}}.{{RPC_OUTPUT}}) */
 export interface {{SERVICE_NAME}}Api {
-  {{RPC_SNAKE}}(call?: CallOptions): { stream: grpc.ClientWritableStream<any>; response: Promise<any> };
+  {{RPC_ALIAS_SNAKE}}(call?: CallOptions): { stream: grpc.ClientWritableStream<any>; response: Promise<any> };
+  {{RPC_ALIAS_CAMEL}}(call?: CallOptions): { stream: grpc.ClientWritableStream<any>; response: Promise<any> };
 }
 // @@UDB_RPC_END
 // @@UDB_RPC_BEGIN kind=bidi
-/** {{SERVICE_FULL}} · {{RPC_KIND}} · `{{RPC_PATH}}` · stream ({{RPC_INPUT_PKG}}.{{RPC_INPUT}}) → stream ({{RPC_OUTPUT_PKG}}.{{RPC_OUTPUT}}) */
+/** {{SERVICE_FULL}} · {{RPC_KIND}} · `{{RPC_PATH}}` · alias `{{RPC_ALIAS_SNAKE}}` · stream ({{RPC_INPUT_PKG}}.{{RPC_INPUT}}) → stream ({{RPC_OUTPUT_PKG}}.{{RPC_OUTPUT}}) */
 export interface {{SERVICE_NAME}}Api {
-  {{RPC_SNAKE}}(call?: CallOptions): grpc.ClientDuplexStream<any, any>;
+  {{RPC_ALIAS_SNAKE}}(call?: CallOptions): grpc.ClientDuplexStream<any, any>;
+  {{RPC_ALIAS_CAMEL}}(call?: CallOptions): grpc.ClientDuplexStream<any, any>;
 }
 // @@UDB_RPC_END
 
@@ -704,29 +708,37 @@ const SERVICE_METHOD_INSTALLERS: Array<(core: UdbCore, api: any) => void> = [];
 // @@UDB_RPC_BEGIN kind=unary
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "{{SERVICE_FULL}}") return;
-  api.{{RPC_SNAKE}} = (request: any, call?: CallOptions) =>
-    core.unary("{{SERVICE_FULL}}", "{{RPC_NAME}}", request, call);
+  const call = (request: any, call?: CallOptions) =>
+    core.unary("{{SERVICE_FULL}}", "{{RPC_WIRE_NAME}}", request, call);
+  api.{{RPC_ALIAS_SNAKE}} = call;
+  api.{{RPC_ALIAS_CAMEL}} = call;
 });
 // @@UDB_RPC_END
 // @@UDB_RPC_BEGIN kind=server_streaming
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "{{SERVICE_FULL}}") return;
-  api.{{RPC_SNAKE}} = (request: any, call?: CallOptions) =>
-    core.serverStream("{{SERVICE_FULL}}", "{{RPC_NAME}}", request, call);
+  const call = (request: any, call?: CallOptions) =>
+    core.serverStream("{{SERVICE_FULL}}", "{{RPC_WIRE_NAME}}", request, call);
+  api.{{RPC_ALIAS_SNAKE}} = call;
+  api.{{RPC_ALIAS_CAMEL}} = call;
 });
 // @@UDB_RPC_END
 // @@UDB_RPC_BEGIN kind=client_streaming
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "{{SERVICE_FULL}}") return;
-  api.{{RPC_SNAKE}} = (call?: CallOptions) =>
-    core.clientStream("{{SERVICE_FULL}}", "{{RPC_NAME}}", call);
+  const call = (call?: CallOptions) =>
+    core.clientStream("{{SERVICE_FULL}}", "{{RPC_WIRE_NAME}}", call);
+  api.{{RPC_ALIAS_SNAKE}} = call;
+  api.{{RPC_ALIAS_CAMEL}} = call;
 });
 // @@UDB_RPC_END
 // @@UDB_RPC_BEGIN kind=bidi
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "{{SERVICE_FULL}}") return;
-  api.{{RPC_SNAKE}} = (call?: CallOptions) =>
-    core.bidiStream("{{SERVICE_FULL}}", "{{RPC_NAME}}", call);
+  const call = (call?: CallOptions) =>
+    core.bidiStream("{{SERVICE_FULL}}", "{{RPC_WIRE_NAME}}", call);
+  api.{{RPC_ALIAS_SNAKE}} = call;
+  api.{{RPC_ALIAS_CAMEL}} = call;
 });
 // @@UDB_RPC_END
 

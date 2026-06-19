@@ -1,0 +1,216 @@
+name: "broker-env"
+description: >-
+  Write the ONE canonical dev-posture UDB_* environment for the UDB broker to
+  $GITHUB_ENV, so any job that uses this action inherits it. This is the single
+  source of truth for the broker's dev/live/bench environment (mirrors
+  .bench-local/launch-verify.ps1 and the benchmark-sdks.yml env block); it kills
+  the env drift that was previously copy-pasted across ci.yml and
+  benchmark-sdks.yml. Values that legitimately differ per lane (ports, DSNs,
+  live creds, which optional backends, dry-run, object plane) are inputs with the
+  benchmark values as defaults; the dev-posture / secret / test-mode constants are
+  hardcoded here so a new UDB_* key is added in exactly one place.
+
+inputs:
+  pg_dsn:
+    description: "Primary Postgres DSN (UDB_PG_DSN)."
+    default: "postgres://udb:udb@localhost:5432/udb_ci"
+  nosql_dsn:
+    description: "NoSQL/Mongo DSN (UDB_NOSQL_DSN)."
+    default: "mongodb://localhost:27017/udb_live_sdk?directConnection=true"
+  mongodb_dsn:
+    description: "MongoDB DSN (UDB_MONGODB_DSN); usually equal to nosql_dsn."
+    default: "mongodb://localhost:27017/udb_live_sdk?directConnection=true"
+  nosql_database:
+    description: "NoSQL/Mongo database name (UDB_NOSQL_DATABASE)."
+    default: "udb_live_sdk"
+  grpc_addr:
+    description: "Broker DataBroker gRPC listen address (UDB_GRPC_ADDR)."
+    default: "127.0.0.1:50051"
+  grpc_target:
+    description: "Broker DataBroker gRPC client target (UDB_GRPC_TARGET)."
+    default: "127.0.0.1:50051"
+  auth_grpc_addr:
+    description: "Auth gRPC listen address (UDB_AUTH_GRPC_ADDR)."
+    default: "127.0.0.1:50061"
+  auth_grpc_target:
+    description: "Auth gRPC client target (UDB_AUTH_GRPC_TARGET)."
+    default: "127.0.0.1:50061"
+  metrics_addr:
+    description: "Metrics listen address (UDB_METRICS_ADDR)."
+    default: "127.0.0.1:19092"
+  live_username:
+    description: "Live/bench bootstrap+login username (UDB_LIVE_USERNAME)."
+    default: "sdk-live-admin"
+  live_password:
+    description: "Live/bench bootstrap+login password (UDB_LIVE_PASSWORD)."
+    default: "SdkLive#2026Pass"
+  live_tenant:
+    description: "Live/bench tenant code (UDB_LIVE_TENANT)."
+    default: "sdk-live"
+  live_project:
+    description: "Live/bench project (UDB_LIVE_PROJECT)."
+    default: "default"
+  cdc_enabled:
+    description: "Enable the CDC tailer (UDB_CDC_ENABLED)."
+    default: "true"
+  startup_dry_run:
+    description: "Run startup DDL sync as a dry run (UDB_STARTUP_DRY_RUN)."
+    default: "false"
+  object_bucket:
+    description: "StorageService object bucket (UDB_OBJECT_BUCKET)."
+    default: "udb-storage"
+  object_backend:
+    description: "StorageService object backend (UDB_OBJECT_BACKEND)."
+    default: "minio"
+  live_required_backends:
+    description: "Comma-separated backends the live harness requires (UDB_LIVE_REQUIRED_BACKENDS)."
+    default: "postgres,mongodb,minio"
+  live_s3_bucket:
+    description: "S3 bucket the live harness uses (UDB_LIVE_S3_BUCKET)."
+    default: "udb-live-sdk"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Write canonical broker dev-posture env to $GITHUB_ENV
+      shell: bash
+      # Per-lane inputs are passed via env: (NOT interpolated into the script) so a
+      # value can never inject shell, and shellcheck doesn't choke on GHA `${{ }}`.
+      env:
+        PG_DSN: ${{ inputs.pg_dsn }}
+        NOSQL_DSN: ${{ inputs.nosql_dsn }}
+        MONGODB_DSN: ${{ inputs.mongodb_dsn }}
+        NOSQL_DATABASE: ${{ inputs.nosql_database }}
+        GRPC_ADDR: ${{ inputs.grpc_addr }}
+        GRPC_TARGET: ${{ inputs.grpc_target }}
+        AUTH_GRPC_ADDR: ${{ inputs.auth_grpc_addr }}
+        AUTH_GRPC_TARGET: ${{ inputs.auth_grpc_target }}
+        METRICS_ADDR: ${{ inputs.metrics_addr }}
+        LIVE_USERNAME: ${{ inputs.live_username }}
+        LIVE_PASSWORD: ${{ inputs.live_password }}
+        LIVE_TENANT: ${{ inputs.live_tenant }}
+        LIVE_PROJECT: ${{ inputs.live_project }}
+        LIVE_REQUIRED_BACKENDS: ${{ inputs.live_required_backends }}
+        LIVE_S3_BUCKET: ${{ inputs.live_s3_bucket }}
+        CDC_ENABLED: ${{ inputs.cdc_enabled }}
+        STARTUP_DRY_RUN: ${{ inputs.startup_dry_run }}
+        OBJECT_BACKEND: ${{ inputs.object_backend }}
+        OBJECT_BUCKET: ${{ inputs.object_bucket }}
+      run: |
+        # shellcheck disable=SC2129
+        set -euo pipefail
+        env_file="$GITHUB_ENV"
+
+        # ---- Per-lane inputs (passed via env: above; injection-safe) ----
+        # Postgres
+        echo "UDB_PG_DSN=${PG_DSN}" >> "$env_file"
+        # NoSQL / Mongo
+        echo "UDB_NOSQL_DSN=${NOSQL_DSN}" >> "$env_file"
+        echo "UDB_MONGODB_DSN=${MONGODB_DSN}" >> "$env_file"
+        echo "UDB_NOSQL_DATABASE=${NOSQL_DATABASE}" >> "$env_file"
+        # Addresses
+        echo "UDB_GRPC_ADDR=${GRPC_ADDR}" >> "$env_file"
+        echo "UDB_GRPC_TARGET=${GRPC_TARGET}" >> "$env_file"
+        echo "UDB_AUTH_GRPC_ADDR=${AUTH_GRPC_ADDR}" >> "$env_file"
+        echo "UDB_AUTH_GRPC_TARGET=${AUTH_GRPC_TARGET}" >> "$env_file"
+        echo "UDB_METRICS_ADDR=${METRICS_ADDR}" >> "$env_file"
+        # Live/bench identity
+        echo "UDB_LIVE_USERNAME=${LIVE_USERNAME}" >> "$env_file"
+        echo "UDB_LIVE_PASSWORD=${LIVE_PASSWORD}" >> "$env_file"
+        echo "UDB_LIVE_TENANT=${LIVE_TENANT}" >> "$env_file"
+        echo "UDB_LIVE_PROJECT=${LIVE_PROJECT}" >> "$env_file"
+        echo "UDB_LIVE_REQUIRED_BACKENDS=${LIVE_REQUIRED_BACKENDS}" >> "$env_file"
+        echo "UDB_LIVE_S3_BUCKET=${LIVE_S3_BUCKET}" >> "$env_file"
+        # CDC / startup / object plane
+        echo "UDB_CDC_ENABLED=${CDC_ENABLED}" >> "$env_file"
+        echo "UDB_STARTUP_DRY_RUN=${STARTUP_DRY_RUN}" >> "$env_file"
+        echo "UDB_OBJECT_BACKEND=${OBJECT_BACKEND}" >> "$env_file"
+        echo "UDB_OBJECT_BUCKET=${OBJECT_BUCKET}" >> "$env_file"
+
+        # ---- Constants (dev posture, secrets, test-mode) ----
+        # Postgres pool sizing
+        echo "UDB_PG_MAX_CONNECTIONS=40" >> "$env_file"
+        echo "UDB_PG_MIN_CONNECTIONS=4" >> "$env_file"
+        echo "UDB_PG_ACQUIRE_TIMEOUT=60" >> "$env_file"
+
+        # Optional object/cache/vector/column backends (started as docker
+        # containers by start-backends). Without them the Vector*/Cache*/
+        # TimeSeries*/AnalyticalQuery RPCs fail in the dashboard.
+        echo "UDB_MINIO_ENDPOINT=http://localhost:9000" >> "$env_file"
+        echo "UDB_MINIO_ACCESS_KEY=minio" >> "$env_file"
+        echo "UDB_MINIO_SECRET_KEY=minio123" >> "$env_file"
+        echo "UDB_MINIO_REGION=us-east-1" >> "$env_file"
+        echo "UDB_KAFKA_BROKERS=localhost:59192" >> "$env_file"
+        echo "UDB_QDRANT_URL=http://localhost:6333" >> "$env_file"
+        echo "UDB_REDIS_DSN=redis://localhost:6379/0" >> "$env_file"
+        # ClickHouse over HTTP; broker reads UDB_COLUMN_* labels, not DSN userinfo.
+        echo "UDB_COLUMN_DSN=http://localhost:8123" >> "$env_file"
+
+        # Graph backend (GraphMutate/GraphQuery) — neo4j HTTP tx API. Without
+        # these the executor fails "backend executor 'neo4j:default' is not
+        # registered" across all SDKs.
+        echo "UDB_GRAPH_DSN=http://localhost:7474" >> "$env_file"
+        echo "UDB_GRAPH_USER=neo4j" >> "$env_file"
+        echo "UDB_GRAPH_PASSWORD=test1234" >> "$env_file"
+        echo "UDB_GRAPH_DATABASE=neo4j" >> "$env_file"
+
+        # Don't abort broker startup if an optional backend is briefly unready.
+        echo "UDB_ALLOW_DEGRADED_BACKENDS=true" >> "$env_file"
+
+        # Dev security posture: is_production() = tls_required &&
+        # service_identity_required (security.rs). Force dev so the harness drives
+        # the real success path (WebAuthn/auth RPCs reject the localhost dev origin
+        # under production posture even with TEST_MODE).
+        echo "UDB_TLS_REQUIRED=false" >> "$env_file"
+        echo "UDB_SERVICE_IDENTITY_REQUIRED=false" >> "$env_file"
+        # EnsureBaseline (DataBroker admin baseline seed) fails closed unless set.
+        echo "UDB_ENABLE_ADMIN_SEED=1" >> "$env_file"
+        # ABAC default allow for the dev/bench harness.
+        echo "UDB_ABAC_DEFAULT_ALLOW=true" >> "$env_file"
+
+        # Background workers off for the bench (deterministic harness).
+        echo "UDB_PROJECTION_WORKER_ENABLED=false" >> "$env_file"
+        echo "UDB_RECONCILIATION_ENABLED=false" >> "$env_file"
+        echo "UDB_SAGA_RECOVERY_ENABLED=false" >> "$env_file"
+        echo "UDB_STARTUP_FORCE_SYNC=true" >> "$env_file"
+
+        # Admission headroom so rapid seed/measured calls don't become
+        # RESOURCE_EXHAUSTED artifacts.
+        echo "UDB_MIGRATION_MAX_CONCURRENT=16" >> "$env_file"
+        echo "UDB_MIGRATION_QUEUE_TIMEOUT_MS=1000" >> "$env_file"
+        echo "UDB_FAIR_MIGRATION_TOKENS_PER_SEC=5000" >> "$env_file"
+        echo "UDB_FAIR_MIGRATION_BURST=10000" >> "$env_file"
+        echo "UDB_READ_MAX_CONCURRENT=16" >> "$env_file"
+        echo "UDB_READ_QUEUE_TIMEOUT_MS=1000" >> "$env_file"
+        echo "UDB_FAIR_READ_TOKENS_PER_SEC=5000" >> "$env_file"
+        echo "UDB_FAIR_READ_BURST=10000" >> "$env_file"
+
+        # Audit sink + secrets (JWT/encryption/session/hash). Test fixtures only.
+        echo "UDB_AUDIT_SINK_URL=file:///tmp/udb-bench-audit.jsonl" >> "$env_file"
+        echo "UDB_ENCRYPTION_KEY=QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=" >> "$env_file"
+        echo "UDB_JWT_PRIVATE_KEY=src/runtime/testdata/jwt_rs256_private.pem" >> "$env_file"
+        echo "UDB_JWT_PUBLIC_KEY=src/runtime/testdata/jwt_rs256_public.pem" >> "$env_file"
+        echo "UDB_SESSION_ENABLED=true" >> "$env_file"
+        echo "UDB_SESSION_HASH_SECRET=ci-bench-session-hash-secret" >> "$env_file"
+        echo "UDB_PASSWORD_HASH_SECRET=ci-bench-password-hash-secret" >> "$env_file"
+
+        # WebAuthn: RP id/origin required by StartWebAuthnRegistration; TEST_MODE
+        # enables the dev soft-authenticator so the harness mints+verifies a REAL
+        # credential through the production verification path.
+        echo "UDB_WEBAUTHN_RP_ID=localhost" >> "$env_file"
+        echo "UDB_WEBAUTHN_ORIGIN=http://localhost" >> "$env_file"
+        echo "UDB_WEBAUTHN_TEST_MODE=1" >> "$env_file"
+        # SAML: dev self-asserted IdP for the SamlAcs sentinel path.
+        echo "UDB_SAML_TEST_MODE=1" >> "$env_file"
+        # OTP: echo the dev code in SendOTP/IssueMfaChallenge so Verify*/Reset*
+        # resolve; cooldown 0 so measured SendOTP/ResendOTP don't race the cooldown.
+        echo "UDB_OTP_DEV_ECHO=1" >> "$env_file"
+        echo "UDB_OTP_COOLDOWN_SECONDS=0" >> "$env_file"
+
+        # Reapers off: the perf seed joins a WebRTC peer via a unary call (no live
+        # signaling stream to heartbeat), so the 60s reaper would disconnect it
+        # before measurement -> "peer is not an active member".
+        echo "UDB_WEBRTC_REAP_INTERVAL_SECS=0" >> "$env_file"
+        echo "UDB_STORAGE_REAP_INTERVAL_SECS=0" >> "$env_file"
+
+        echo "broker-env: canonical dev-posture UDB_* env written to \$GITHUB_ENV"

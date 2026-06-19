@@ -96,6 +96,7 @@ service ControlPlaneService {
       request_context_required: true
       tenant_required: false
     };
+    option (udb.core.common.v1.sdk_surface) = { rest_operation_id: "getResources" };
     option (google.api.http) = {get: "/v1/control/resources"};
   }
 
@@ -111,6 +112,7 @@ service ControlPlaneService {
       request_context_required: true
       tenant_required: false
     };
+    option (udb.core.common.v1.sdk_surface) = { rest_operation_id: "listNodeStates" };
     option (google.api.http) = {get: "/v1/control/node-states"};
   }
 
@@ -125,6 +127,7 @@ service ControlPlaneService {
       request_context_required: true
       tenant_required: false
     };
-    option (google.api.http) = {get: "/v1/control/node-states/{node_id}:ack-status"};
+    option (udb.core.common.v1.sdk_surface) = { rest_operation_id: "ackStatus" };
+    option (google.api.http) = {post: "/v1/control/node-states/{node_id}:ackStatus" body: "*"};
   }
 }

@@ -46,6 +46,38 @@ last two release attempts:
 - Go uses the module tag shape `sdk/go/v<x.y.z>` because the Go module lives in a
   subdirectory. It still follows the same UDB product version.
 
+## Pre-1.0 Beta Compatibility
+
+UDB `0.x` releases are beta. Before `1.0.0`, HTTP routes, OpenAPI
+`operationId`s, SDK public method names, generated examples, and benchmark/API
+labels may change when the change simplifies the long-term public contract. The
+wire protocol version remains factual metadata; it is not a promise that the
+product API and SDK surface are stable during `0.x`.
+
+Breaking `0.x` changes must be documented with migration notes, but those notes
+are not a backward-compatibility guarantee. Permanent compatibility shims should
+not be added for every beta route or SDK method name unless a specific release
+requires a temporary bridge.
+
+The normative API/SDK rules are in [docs/api-rules.md](docs/api-rules.md).
+
+### Beta Breaking-Change Note Template
+
+Use this template for any breaking API or SDK change before `1.0.0`:
+
+```markdown
+### Beta breaking change: <short title>
+
+- Product version: `0.x.y`
+- Old HTTP route or SDK method:
+- New HTTP route or SDK method:
+- Reason:
+- Affected SDK languages:
+- Migration snippet:
+- Removal/deprecation posture:
+- Related API rule:
+```
+
 ## Check And Fix Versions
 
 ```bash

@@ -1,6 +1,7 @@
 name: Release · Packagist
 
-# Triggers on a SemVer tag push (`v*.*.*`). Does three things:
+# Reusable publisher invoked by `release.yml` after the release binaries are
+# built. Does three things:
 #
 #   1. Validates `sdk/php/composer.json` is well-formed and the
 #      generated PHP stubs are committed (no broken release).
@@ -14,9 +15,7 @@ name: Release · Packagist
 #
 # Required `production` environment secrets:
 #   UDB_LARAVEL_DEPLOY_KEY   SSH private key (deploy key with write
-#                            access to fahara02/udb-laravel). See
-#                            docs/publishing-laravel-sdk.md for the
-#                            ssh-keygen + GitHub registration steps.
+#                            access to fahara02/udb-laravel).
 #   PACKAGIST_USERNAME       Your packagist.org username.
 #   PACKAGIST_API_TOKEN      https://packagist.org/profile/ → API Token.
 #
@@ -25,12 +24,24 @@ name: Release · Packagist
 #                            Defaults to `fahara02/udb-laravel`.
 
 on:
-  push:
-    tags:
-      - 'v*.*.*'
+  workflow_call:
+    secrets:
+      UDB_LARAVEL_DEPLOY_KEY:
+        description: SSH deploy key for the udb-laravel satellite repo.
+        required: false
+      PACKAGIST_USERNAME:
+        description: packagist.org username for the update hook.
+        required: false
+      PACKAGIST_API_TOKEN:
+        description: packagist.org API token for the update hook.
+        required: false
+  workflow_dispatch:
 
 env:
   SATELLITE_REPO: git@github.com:fahara02/udb-laravel.git
+
+permissions:
+  contents: read
 
 jobs:
   # ── 1. Validate the SDK before touching the satellite ─────────────
@@ -38,16 +49,23 @@ jobs:
     name: composer validate
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
     defaults:
       run:
         working-directory: sdk/php
     steps:
       - uses: actions/checkout@v4
-      - uses: shivammathur/setup-php@v2
+
+      # PHP + Node (for version-guard) via the single-source composite.
+      - uses: ./.github/actions/setup-sdk-toolchains
         with:
-          php-version: '8.2'
-          extensions: grpc, mbstring
-          tools: composer:v2
+          php: 'true'
+          node: 'true'
+        # The composite runs from the repo root regardless of this job's
+        # `defaults.run.working-directory`, because `uses:` steps are not
+        # affected by `defaults`.
+
       - name: composer validate (strict)
         # `--no-check-publish` skips Packagist-side name/license checks
         # because the package's metadata is enforced server-side
@@ -64,26 +82,15 @@ jobs:
           fi
           count=$(find gen -type f | wc -l)
           echo "Generated stubs present: $count files"
+
       # Version guard: PHP is tag-driven (Composer/VCS), so the `v<x.y.z>` tag is
-      # the package version — assert it equals versions.json `sdk-php`, and that
-      # every manifest/protocol constant is consistent. See VERSIONING.md.
-      - uses: actions/setup-node@v4
+      # the package version — version-guard asserts it equals versions.json
+      # `sdk-php` and that every manifest/protocol constant is consistent.
+      - uses: ./.github/actions/version-guard
         with:
-          node-version: '20'
-      - name: Versions consistent with versions.json
-        working-directory: ${{ github.workspace }}
-        run: node scripts/check-versions.mjs
-      - name: Tag matches sdk-php version
-        working-directory: ${{ github.workspace }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          want="$(node -p "require('./versions.json').components['sdk-php'].version")"
-          tag="${GITHUB_REF_NAME#v}"
-          if [[ "${tag}" != "${want}" ]]; then
-            echo "Tag ${GITHUB_REF_NAME} does not match versions.json sdk-php ${want}" >&2
-            exit 1
-          fi
+          component: sdk-php
+        # version-guard reads scripts/check-versions.mjs + versions.json from the
+        # repo root; `uses:` steps ignore `defaults.run.working-directory`.
 
   # ── 2. Split sdk/php into the satellite repo + mirror the tag ─────
   push-satellite:
@@ -91,6 +98,8 @@ jobs:
     needs: validate-php-sdk
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
     environment:
       name: production
     steps:
@@ -149,16 +158,17 @@ jobs:
           git push --force "$SATELLITE_REPO" sdk-php-split:main
 
       - name: Mirror release tag onto satellite
+        env:
+          TAG_NAME: ${{ steps.tag.outputs.name }}
         run: |
           set -euo pipefail
-          tag="${{ steps.tag.outputs.name }}"
           # Push the same tag pointing at the satellite's split HEAD.
           # Packagist reads tags to determine versions; without this
           # the satellite's `main` would update but no new version
           # would publish.
-          git tag -f "$tag" sdk-php-split
-          git push --force "$SATELLITE_REPO" "refs/tags/$tag"
-          echo "Tagged satellite at $tag"
+          git tag -f "${TAG_NAME}" sdk-php-split
+          git push --force "$SATELLITE_REPO" "refs/tags/${TAG_NAME}"
+          echo "Tagged satellite at ${TAG_NAME}"
 
   # ── 3. Tell Packagist to re-index immediately ─────────────────────
   notify-packagist:
@@ -166,6 +176,8 @@ jobs:
     needs: push-satellite
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
     environment:
       name: production
       url: https://packagist.org/packages/${{ vars.PACKAGIST_PACKAGE || 'fahara02/udb-laravel' }}

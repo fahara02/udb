@@ -222,4 +222,24 @@ mod tests {
         .expect_err("newlines are invalid gRPC metadata");
         assert_eq!(err.code(), tonic::Code::InvalidArgument);
     }
+
+    #[test]
+    fn embedded_context_forwards_read_fence_metadata() {
+        let request = request_with_context(
+            HealthReportRequest::default(),
+            &RequestContext {
+                read_fence_json: r#"{"source":"test","lsn":42}"#.to_string(),
+                ..RequestContext::default()
+            },
+        )
+        .expect("read fence metadata is valid ASCII");
+
+        assert_eq!(
+            request
+                .metadata()
+                .get("x-udb-read-fence")
+                .and_then(|value| value.to_str().ok()),
+            Some(r#"{"source":"test","lsn":42}"#)
+        );
+    }
 }

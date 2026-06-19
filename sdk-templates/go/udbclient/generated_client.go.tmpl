@@ -514,7 +514,9 @@ type RPCInfo struct {
 	Service    string  // e.g. DataBroker
 	ServicePkg string  // e.g. udb.services.v1
 	FullMethod string  // e.g. /udb.services.v1.DataBroker/Select
-	Name       string  // e.g. Select
+	Name       string  // wire RPC name, e.g. Select
+	APIAlias   string  // descriptor SDK alias, e.g. select
+	OperationID string // OpenAPI operationId, e.g. selectRecords
 	Kind       RPCKind // streaming shape
 	ReadOnly   bool    // proto EndpointSecurity.operation_kind == READ_ONLY; the
 	// authoritative retry-safety flag (never guessed from the name)
@@ -528,7 +530,7 @@ type RPCInfo struct {
 // AllRPCs lists every RPC across every UDB service in this build.
 var AllRPCs = []RPCInfo{
 	// @@UDB_RPC_BEGIN
-	{Service: "{{SERVICE_NAME}}", ServicePkg: "{{SERVICE_PKG}}", FullMethod: "{{RPC_PATH}}", Name: "{{RPC_NAME}}", Kind: RPCKind("{{RPC_KIND}}"), ReadOnly: {{RPC_READ_ONLY}}, OperationKind: "{{RPC_OPERATION_KIND}}", ReplaySafe: {{RPC_REPLAY_SAFE}}},
+	{Service: "{{SERVICE_NAME}}", ServicePkg: "{{SERVICE_PKG}}", FullMethod: "{{RPC_PATH}}", Name: "{{RPC_WIRE_NAME}}", APIAlias: "{{RPC_ALIAS_SNAKE}}", OperationID: "{{REST_OPERATION_ID}}", Kind: RPCKind("{{RPC_KIND}}"), ReadOnly: {{RPC_READ_ONLY}}, OperationKind: "{{RPC_OPERATION_KIND}}", ReplaySafe: {{RPC_REPLAY_SAFE}}},
 	// @@UDB_RPC_END
 }
 

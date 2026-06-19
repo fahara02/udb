@@ -344,6 +344,546 @@ final class GeneratedClient
         "Upsert" => true,
     ];
 
+    /**
+     * Public snake_case aliases advertised by the descriptor SDK surface. PHP's
+     * concrete methods use camelCase by convention; __call routes snake aliases
+     * to the same implementations so docs, benches, and callers can use either.
+     *
+     * @var array<string, string>
+     */
+    public const METHOD_ALIASES = [
+        "get_executor_performance" => "getExecutorPerformance",
+        "get_executor_performance" => "getExecutorPerformance",
+        "get_pipeline_summary" => "getPipelineSummary",
+        "get_pipeline_summary" => "getPipelineSummary",
+        "get_reconciliation_analytics" => "getReconciliationAnalytics",
+        "get_reconciliation_analytics" => "getReconciliationAnalytics",
+        "get_sla_compliance" => "getSlaCompliance",
+        "get_sla_compliance" => "getSlaCompliance",
+        "get_throughput" => "getThroughput",
+        "get_throughput" => "getThroughput",
+        "record_pipeline_metric" => "recordPipelineMetric",
+        "record_pipeline_metric" => "recordPipelineMetric",
+        "trigger_snapshot" => "triggerSnapshot",
+        "trigger_snapshot" => "triggerSnapshot",
+        "create_api_key" => "createApiKey",
+        "create_api_key" => "createApiKey",
+        "emergency_revoke_api_keys" => "emergencyRevokeApiKeys",
+        "emergency_revoke_api_keys" => "emergencyRevokeApiKeys",
+        "get_api_key" => "getApiKey",
+        "get_api_key" => "getApiKey",
+        "get_api_key_usage_stats" => "getApiKeyUsageStats",
+        "get_api_key_usage_stats" => "getApiKeyUsageStats",
+        "list_api_keys" => "listApiKeys",
+        "list_api_keys" => "listApiKeys",
+        "revoke_api_key" => "revokeApiKey",
+        "revoke_api_key" => "revokeApiKey",
+        "rotate_api_key" => "rotateApiKey",
+        "rotate_api_key" => "rotateApiKey",
+        "update_api_key" => "updateApiKey",
+        "update_api_key" => "updateApiKey",
+        "validate_api_key" => "validateApiKey",
+        "validate_api_key" => "validateApiKey",
+        "complete_step" => "completeStep",
+        "complete_step" => "completeStep",
+        "create_pipeline_definition" => "createPipelineDefinition",
+        "create_pipeline_definition" => "createPipelineDefinition",
+        "get_asset" => "getAsset",
+        "get_asset" => "getAsset",
+        "get_pipeline" => "getPipeline",
+        "get_pipeline" => "getPipeline",
+        "get_pipeline_definition" => "getPipelineDefinition",
+        "get_pipeline_definition" => "getPipelineDefinition",
+        "list_assets" => "listAssets",
+        "list_assets" => "listAssets",
+        "register_asset" => "registerAsset",
+        "register_asset" => "registerAsset",
+        "start_pipeline" => "startPipeline",
+        "start_pipeline" => "startPipeline",
+        "admin_reset_mfa" => "adminResetMfa",
+        "admin_reset_mfa" => "adminResetMfa",
+        "admin_reset_password" => "adminResetPassword",
+        "admin_reset_password" => "adminResetPassword",
+        "admin_revoke_all_tenant_sessions" => "adminRevokeAllTenantSessions",
+        "admin_revoke_all_tenant_sessions" => "adminRevokeAllTenantSessions",
+        "admin_revoke_all_user_sessions" => "adminRevokeAllUserSessions",
+        "admin_revoke_all_user_sessions" => "adminRevokeAllUserSessions",
+        "admin_revoke_session" => "adminRevokeSession",
+        "admin_revoke_session" => "adminRevokeSession",
+        "authenticate" => "authenticate",
+        "authenticate" => "authenticate",
+        "change_password" => "changePassword",
+        "change_password" => "changePassword",
+        "change_user_status" => "changeUserStatus",
+        "change_user_status" => "changeUserStatus",
+        "confirm_mfaenrollment" => "confirmMfaenrollment",
+        "confirm_m_f_a_enrollment" => "confirmMfaenrollment",
+        "create_session" => "createSession",
+        "create_session" => "createSession",
+        "create_user" => "createUser",
+        "create_user" => "createUser",
+        "delete_web_authn_credential" => "deleteWebAuthnCredential",
+        "delete_web_authn_credential" => "deleteWebAuthnCredential",
+        "disable_mfa_factor" => "disableMfaFactor",
+        "disable_mfa_factor" => "disableMfaFactor",
+        "emergency_revoke" => "emergencyRevoke",
+        "emergency_revoke" => "emergencyRevoke",
+        "enroll_mfa" => "enrollMfa",
+        "enroll_m_f_a" => "enrollMfa",
+        "finish_web_authn_authentication" => "finishWebAuthnAuthentication",
+        "finish_web_authn_authentication" => "finishWebAuthnAuthentication",
+        "finish_web_authn_registration" => "finishWebAuthnRegistration",
+        "finish_web_authn_registration" => "finishWebAuthnRegistration",
+        "forgot_password" => "forgotPassword",
+        "forgot_password" => "forgotPassword",
+        "generate_recovery_codes" => "generateRecoveryCodes",
+        "generate_recovery_codes" => "generateRecoveryCodes",
+        "get_jwks" => "getJwks",
+        "get_jwks" => "getJwks",
+        "get_mfa_policy" => "getMfaPolicy",
+        "get_mfa_policy" => "getMfaPolicy",
+        "get_session" => "getSession",
+        "get_session" => "getSession",
+        "get_user" => "getUser",
+        "get_user" => "getUser",
+        "introspect_token" => "introspectToken",
+        "introspect_token" => "introspectToken",
+        "issue_mfa_challenge" => "issueMfaChallenge",
+        "issue_mfa_challenge" => "issueMfaChallenge",
+        "list_devices" => "listDevices",
+        "list_devices" => "listDevices",
+        "list_mfa_factors" => "listMfaFactors",
+        "list_mfa_factors" => "listMfaFactors",
+        "list_sessions" => "listSessions",
+        "list_sessions" => "listSessions",
+        "list_users" => "listUsers",
+        "list_users" => "listUsers",
+        "list_web_authn_credentials" => "listWebAuthnCredentials",
+        "list_web_authn_credentials" => "listWebAuthnCredentials",
+        "login" => "login",
+        "login" => "login",
+        "logout" => "logout",
+        "logout" => "logout",
+        "put_mfa_policy" => "putMfaPolicy",
+        "put_mfa_policy" => "putMfaPolicy",
+        "refresh_session" => "refreshSession",
+        "refresh_session" => "refreshSession",
+        "refresh_token" => "refreshToken",
+        "refresh_token" => "refreshToken",
+        "rename_passkey" => "renamePasskey",
+        "rename_passkey" => "renamePasskey",
+        "resend_otp" => "resendOtp",
+        "resend_o_t_p" => "resendOtp",
+        "reset_password" => "resetPassword",
+        "reset_password" => "resetPassword",
+        "revoke_device" => "revokeDevice",
+        "revoke_device" => "revokeDevice",
+        "revoke_recovery_codes" => "revokeRecoveryCodes",
+        "revoke_recovery_codes" => "revokeRecoveryCodes",
+        "revoke_session" => "revokeSession",
+        "revoke_session" => "revokeSession",
+        "send_otp" => "sendOtp",
+        "send_o_t_p" => "sendOtp",
+        "send_phone_verification" => "sendPhoneVerification",
+        "send_phone_verification" => "sendPhoneVerification",
+        "start_web_authn_authentication" => "startWebAuthnAuthentication",
+        "start_web_authn_authentication" => "startWebAuthnAuthentication",
+        "start_web_authn_registration" => "startWebAuthnRegistration",
+        "start_web_authn_registration" => "startWebAuthnRegistration",
+        "update_user" => "updateUser",
+        "update_user" => "updateUser",
+        "validate_csrf" => "validateCsrf",
+        "validate_c_s_r_f" => "validateCsrf",
+        "validate_token" => "validateToken",
+        "validate_token" => "validateToken",
+        "verify_mfa_challenge" => "verifyMfaChallenge",
+        "verify_mfa_challenge" => "verifyMfaChallenge",
+        "verify_otp" => "verifyOtp",
+        "verify_o_t_p" => "verifyOtp",
+        "activate_canary" => "activateCanary",
+        "activate_canary" => "activateCanary",
+        "activate_policy_version" => "activatePolicyVersion",
+        "activate_policy_version" => "activatePolicyVersion",
+        "approve_policy_draft" => "approvePolicyDraft",
+        "approve_policy_draft" => "approvePolicyDraft",
+        "assign_role" => "assignRole",
+        "assign_role" => "assignRole",
+        "authorize" => "authorize",
+        "authorize" => "authorize",
+        "batch_check_permissions" => "batchCheckPermissions",
+        "batch_check_permissions" => "batchCheckPermissions",
+        "check_access" => "checkAccess",
+        "check_access" => "checkAccess",
+        "create_policy_draft" => "createPolicyDraft",
+        "create_policy_draft" => "createPolicyDraft",
+        "create_policy_rule" => "createPolicyRule",
+        "create_policy_rule" => "createPolicyRule",
+        "create_role" => "createRole",
+        "create_role" => "createRole",
+        "delete_policy_rule" => "deletePolicyRule",
+        "delete_policy_rule" => "deletePolicyRule",
+        "delete_role" => "deleteRole",
+        "delete_role" => "deleteRole",
+        "diff_policy_draft" => "diffPolicyDraft",
+        "diff_policy_draft" => "diffPolicyDraft",
+        "explain_policy" => "explainPolicy",
+        "explain_policy" => "explainPolicy",
+        "get_authz_revision" => "getAuthzRevision",
+        "get_authz_revision" => "getAuthzRevision",
+        "get_canary_status" => "getCanaryStatus",
+        "get_canary_status" => "getCanaryStatus",
+        "get_native_access" => "getNativeAccess",
+        "get_native_access" => "getNativeAccess",
+        "get_policy_bundle" => "getPolicyBundle",
+        "get_policy_bundle" => "getPolicyBundle",
+        "get_policy_rule" => "getPolicyRule",
+        "get_policy_rule" => "getPolicyRule",
+        "get_role" => "getRole",
+        "get_role" => "getRole",
+        "invalidate_policy_bundles" => "invalidatePolicyBundles",
+        "invalidate_policy_bundles" => "invalidatePolicyBundles",
+        "lint_authz_policies" => "lintAuthzPolicies",
+        "lint_authz_policies" => "lintAuthzPolicies",
+        "list_access_decision_audits" => "listAccessDecisionAudits",
+        "list_access_decision_audits" => "listAccessDecisionAudits",
+        "list_policy_rules" => "listPolicyRules",
+        "list_policy_rules" => "listPolicyRules",
+        "list_policy_versions" => "listPolicyVersions",
+        "list_policy_versions" => "listPolicyVersions",
+        "list_roles" => "listRoles",
+        "list_roles" => "listRoles",
+        "list_user_permissions" => "listUserPermissions",
+        "list_user_permissions" => "listUserPermissions",
+        "list_user_roles" => "listUserRoles",
+        "list_user_roles" => "listUserRoles",
+        "migrate_legacy_policies" => "migrateLegacyPolicies",
+        "migrate_legacy_policies" => "migrateLegacyPolicies",
+        "promote_canary" => "promoteCanary",
+        "promote_canary" => "promoteCanary",
+        "put_authz_policy" => "putAuthzPolicy",
+        "put_authz_policy" => "putAuthzPolicy",
+        "put_relationship" => "putRelationship",
+        "put_relationship" => "putRelationship",
+        "put_role_binding" => "putRoleBinding",
+        "put_role_binding" => "putRoleBinding",
+        "reject_policy_draft" => "rejectPolicyDraft",
+        "reject_policy_draft" => "rejectPolicyDraft",
+        "revoke_role" => "revokeRole",
+        "revoke_role" => "revokeRole",
+        "rollback_policy_version" => "rollbackPolicyVersion",
+        "rollback_policy_version" => "rollbackPolicyVersion",
+        "seed_builtin_roles" => "seedBuiltinRoles",
+        "seed_builtin_roles" => "seedBuiltinRoles",
+        "simulate_policy" => "simulatePolicy",
+        "simulate_policy" => "simulatePolicy",
+        "submit_policy_draft" => "submitPolicyDraft",
+        "submit_policy_draft" => "submitPolicyDraft",
+        "update_policy_draft" => "updatePolicyDraft",
+        "update_policy_draft" => "updatePolicyDraft",
+        "update_role" => "updateRole",
+        "update_role" => "updateRole",
+        "ack_status" => "ackStatus",
+        "ack_status" => "ackStatus",
+        "delta_resources" => "deltaResources",
+        "delta_resources" => "deltaResources",
+        "get_resources" => "getResources",
+        "get_resources" => "getResources",
+        "list_node_states" => "listNodeStates",
+        "list_node_states" => "listNodeStates",
+        "stream_resources" => "streamResources",
+        "stream_resources" => "streamResources",
+        "create_provider" => "createProvider",
+        "create_provider" => "createProvider",
+        "disable_provider" => "disableProvider",
+        "disable_provider" => "disableProvider",
+        "force_jwks_refresh" => "forceJwksRefresh",
+        "force_jwks_refresh" => "forceJwksRefresh",
+        "get_provider" => "getProvider",
+        "get_provider" => "getProvider",
+        "import_saml_metadata" => "importSamlMetadata",
+        "import_saml_metadata" => "importSamlMetadata",
+        "link_identity" => "linkIdentity",
+        "link_identity" => "linkIdentity",
+        "list_external_identities" => "listExternalIdentities",
+        "list_external_identities" => "listExternalIdentities",
+        "list_providers" => "listProviders",
+        "list_providers" => "listProviders",
+        "preview_claim_mapping" => "previewClaimMapping",
+        "preview_claim_mapping" => "previewClaimMapping",
+        "preview_group_mapping" => "previewGroupMapping",
+        "preview_group_mapping" => "previewGroupMapping",
+        "resolve_external_identity" => "resolveExternalIdentity",
+        "resolve_external_identity" => "resolveExternalIdentity",
+        "saml_acs" => "samlAcs",
+        "saml_acs" => "samlAcs",
+        "scim_create_group" => "scimCreateGroup",
+        "scim_create_group" => "scimCreateGroup",
+        "scim_create_user" => "scimCreateUser",
+        "scim_create_user" => "scimCreateUser",
+        "scim_delete_group" => "scimDeleteGroup",
+        "scim_delete_group" => "scimDeleteGroup",
+        "scim_delete_user" => "scimDeleteUser",
+        "scim_delete_user" => "scimDeleteUser",
+        "scim_get_group" => "scimGetGroup",
+        "scim_get_group" => "scimGetGroup",
+        "scim_get_user" => "scimGetUser",
+        "scim_get_user" => "scimGetUser",
+        "scim_list_groups" => "scimListGroups",
+        "scim_list_groups" => "scimListGroups",
+        "scim_list_users" => "scimListUsers",
+        "scim_list_users" => "scimListUsers",
+        "scim_patch_group" => "scimPatchGroup",
+        "scim_patch_group" => "scimPatchGroup",
+        "scim_patch_user" => "scimPatchUser",
+        "scim_patch_user" => "scimPatchUser",
+        "scim_replace_user" => "scimReplaceUser",
+        "scim_replace_user" => "scimReplaceUser",
+        "start_saml_login" => "startSamlLogin",
+        "start_saml_login" => "startSamlLogin",
+        "test_provider_discovery" => "testProviderDiscovery",
+        "test_provider_discovery" => "testProviderDiscovery",
+        "unlink_identity" => "unlinkIdentity",
+        "unlink_identity" => "unlinkIdentity",
+        "update_provider" => "updateProvider",
+        "update_provider" => "updateProvider",
+        "get_delivery_stats" => "getDeliveryStats",
+        "get_delivery_stats" => "getDeliveryStats",
+        "get_notification" => "getNotification",
+        "get_notification" => "getNotification",
+        "get_preference" => "getPreference",
+        "get_preference" => "getPreference",
+        "get_template" => "getTemplate",
+        "get_template" => "getTemplate",
+        "list_notifications" => "listNotifications",
+        "list_notifications" => "listNotifications",
+        "list_preferences" => "listPreferences",
+        "list_preferences" => "listPreferences",
+        "list_templates" => "listTemplates",
+        "list_templates" => "listTemplates",
+        "retry_notification" => "retryNotification",
+        "retry_notification" => "retryNotification",
+        "send_notification" => "sendNotification",
+        "send_notification" => "sendNotification",
+        "set_preference" => "setPreference",
+        "set_preference" => "setPreference",
+        "upsert_template" => "upsertTemplate",
+        "upsert_template" => "upsertTemplate",
+        "delete_file" => "deleteFile",
+        "delete_file" => "deleteFile",
+        "download_file" => "downloadFile",
+        "download_file" => "downloadFile",
+        "finalize_upload" => "finalizeUpload",
+        "finalize_upload" => "finalizeUpload",
+        "get_download_url" => "getDownloadUrl",
+        "get_download_url" => "getDownloadUrl",
+        "get_file" => "getFile",
+        "get_file" => "getFile",
+        "list_files" => "listFiles",
+        "list_files" => "listFiles",
+        "register_upload" => "registerUpload",
+        "register_upload" => "registerUpload",
+        "update_file" => "updateFile",
+        "update_file" => "updateFile",
+        "create_tenant" => "createTenant",
+        "create_tenant" => "createTenant",
+        "get_tenant" => "getTenant",
+        "get_tenant" => "getTenant",
+        "get_tenant_config" => "getTenantConfig",
+        "get_tenant_config" => "getTenantConfig",
+        "list_tenants" => "listTenants",
+        "list_tenants" => "listTenants",
+        "update_tenant" => "updateTenant",
+        "update_tenant" => "updateTenant",
+        "update_tenant_config" => "updateTenantConfig",
+        "update_tenant_config" => "updateTenantConfig",
+        "get_peer" => "getPeer",
+        "get_peer" => "getPeer",
+        "join_room" => "joinRoom",
+        "join_room" => "joinRoom",
+        "join_session" => "joinSession",
+        "join_session" => "joinSession",
+        "leave_room" => "leaveRoom",
+        "leave_room" => "leaveRoom",
+        "list_peers" => "listPeers",
+        "list_peers" => "listPeers",
+        "close_room" => "closeRoom",
+        "close_room" => "closeRoom",
+        "create_room" => "createRoom",
+        "create_room" => "createRoom",
+        "get_room" => "getRoom",
+        "get_room" => "getRoom",
+        "list_rooms" => "listRooms",
+        "list_rooms" => "listRooms",
+        "update_room" => "updateRoom",
+        "update_room" => "updateRoom",
+        "signal" => "signal",
+        "signal" => "signal",
+        "list_tracks" => "listTracks",
+        "list_tracks" => "listTracks",
+        "mute_track" => "muteTrack",
+        "mute_track" => "muteTrack",
+        "publish_track" => "publishTrack",
+        "publish_track" => "publishTrack",
+        "unpublish_track" => "unpublishTrack",
+        "unpublish_track" => "unpublishTrack",
+        "issue_credentials" => "issueCredentials",
+        "issue_credentials" => "issueCredentials",
+        "activate_catalog" => "activateCatalog",
+        "activate_catalog" => "activateCatalog",
+        "analytical_query" => "analyticalQuery",
+        "analytical_query" => "analyticalQuery",
+        "apply_migration" => "applyMigration",
+        "apply_migration" => "applyMigration",
+        "approve_migration_plan" => "approveMigrationPlan",
+        "approve_migration_plan" => "approveMigrationPlan",
+        "batch_select" => "batchSelect",
+        "batch_select" => "batchSelect",
+        "batch_upsert" => "batchUpsert",
+        "batch_upsert" => "batchUpsert",
+        "begin_tx" => "beginTx",
+        "begin_tx" => "beginTx",
+        "cache_delete" => "cacheDelete",
+        "cache_delete" => "cacheDelete",
+        "cache_get" => "cacheGet",
+        "cache_get" => "cacheGet",
+        "cache_scan" => "cacheScan",
+        "cache_scan" => "cacheScan",
+        "cache_set" => "cacheSet",
+        "cache_set" => "cacheSet",
+        "create_materialized_view" => "createMaterializedView",
+        "create_materialized_view" => "createMaterializedView",
+        "delete" => "delete",
+        "delete" => "delete",
+        "delete_policy" => "deletePolicy",
+        "delete_policy" => "deletePolicy",
+        "dismiss_dlq_event" => "dismissDlqEvent",
+        "dismiss_dlq_event" => "dismissDlqEvent",
+        "document_delete" => "documentDelete",
+        "document_delete" => "documentDelete",
+        "document_find" => "documentFind",
+        "document_find" => "documentFind",
+        "document_get" => "documentGet",
+        "document_get" => "documentGet",
+        "document_upsert" => "documentUpsert",
+        "document_upsert" => "documentUpsert",
+        "drop_resource" => "dropResource",
+        "drop_resource" => "dropResource",
+        "enqueue_outbox_event" => "enqueueOutboxEvent",
+        "enqueue_outbox_event" => "enqueueOutboxEvent",
+        "ensure_baseline" => "ensureBaseline",
+        "ensure_baseline" => "ensureBaseline",
+        "ensure_project" => "ensureProject",
+        "ensure_project" => "ensureProject",
+        "ensure_resource" => "ensureResource",
+        "ensure_resource" => "ensureResource",
+        "generate_presigned_url" => "generatePresignedUrl",
+        "generate_presigned_url" => "generatePresignedUrl",
+        "generic_dispatch" => "genericDispatch",
+        "generic_dispatch" => "genericDispatch",
+        "get_admin_summary" => "getAdminSummary",
+        "get_admin_summary" => "getAdminSummary",
+        "get_capabilities" => "getCapabilities",
+        "get_capabilities" => "getCapabilities",
+        "get_catalog_manifest" => "getCatalogManifest",
+        "get_catalog_manifest" => "getCatalogManifest",
+        "get_catalog_version" => "getCatalogVersion",
+        "get_catalog_version" => "getCatalogVersion",
+        "get_catalog_versions" => "getCatalogVersions",
+        "get_catalog_versions" => "getCatalogVersions",
+        "get_cdc_status" => "getCdcStatus",
+        "get_cdc_status" => "getCdcStatus",
+        "get_dlq_event" => "getDlqEvent",
+        "get_dlq_event" => "getDlqEvent",
+        "get_health_report" => "getHealthReport",
+        "get_health_report" => "getHealthReport",
+        "get_migration_status" => "getMigrationStatus",
+        "get_migration_status" => "getMigrationStatus",
+        "get_object" => "getObject",
+        "get_object" => "getObject",
+        "get_saga" => "getSaga",
+        "get_saga" => "getSaga",
+        "graph_mutate" => "graphMutate",
+        "graph_mutate" => "graphMutate",
+        "graph_query" => "graphQuery",
+        "graph_query" => "graphQuery",
+        "initiate_multipart_upload" => "initiateMultipartUpload",
+        "initiate_multipart_upload" => "initiateMultipartUpload",
+        "lint_policies" => "lintPolicies",
+        "lint_policies" => "lintPolicies",
+        "list_admin_audit_logs" => "listAdminAuditLogs",
+        "list_admin_audit_logs" => "listAdminAuditLogs",
+        "list_dlq_events" => "listDlqEvents",
+        "list_dlq_events" => "listDlqEvents",
+        "list_message_schemas" => "listMessageSchemas",
+        "list_message_schemas" => "listMessageSchemas",
+        "list_migration_runs" => "listMigrationRuns",
+        "list_migration_runs" => "listMigrationRuns",
+        "list_policies" => "listPolicies",
+        "list_policies" => "listPolicies",
+        "list_projects" => "listProjects",
+        "list_projects" => "listProjects",
+        "list_resources" => "listResources",
+        "list_resources" => "listResources",
+        "list_sagas" => "listSagas",
+        "list_sagas" => "listSagas",
+        "lookup_message_schema" => "lookupMessageSchema",
+        "lookup_message_schema" => "lookupMessageSchema",
+        "mark_saga_reviewed" => "markSagaReviewed",
+        "mark_saga_reviewed" => "markSagaReviewed",
+        "pause_cdc" => "pauseCdc",
+        "pause_cdc" => "pauseCdc",
+        "plan_migration" => "planMigration",
+        "plan_migration" => "planMigration",
+        "preview_cdc_redaction" => "previewCdcRedaction",
+        "preview_cdc_redaction" => "previewCdcRedaction",
+        "publish_cdc" => "publishCdc",
+        "publish_c_d_c" => "publishCdc",
+        "put_object" => "putObject",
+        "put_object" => "putObject",
+        "put_policy" => "putPolicy",
+        "put_policy" => "putPolicy",
+        "quarantine_dlq_event" => "quarantineDlqEvent",
+        "quarantine_dlq_event" => "quarantineDlqEvent",
+        "reload_policies" => "reloadPolicies",
+        "reload_policies" => "reloadPolicies",
+        "replay_dlq_event" => "replayDlqEvent",
+        "replay_dlq_event" => "replayDlqEvent",
+        "resume_cdc" => "resumeCdc",
+        "resume_cdc" => "resumeCdc",
+        "retry_saga_compensation" => "retrySagaCompensation",
+        "retry_saga_compensation" => "retrySagaCompensation",
+        "rollback_catalog" => "rollbackCatalog",
+        "rollback_catalog" => "rollbackCatalog",
+        "scan_projection_drift" => "scanProjectionDrift",
+        "scan_projection_drift" => "scanProjectionDrift",
+        "select" => "select",
+        "select" => "select",
+        "select_v_2" => "selectV2",
+        "select_v2" => "selectV2",
+        "stage_catalog" => "stageCatalog",
+        "stage_catalog" => "stageCatalog",
+        "step_down_cdc_leader" => "stepDownCdcLeader",
+        "step_down_cdc_leader" => "stepDownCdcLeader",
+        "time_series_query" => "timeSeriesQuery",
+        "time_series_query" => "timeSeriesQuery",
+        "time_series_write" => "timeSeriesWrite",
+        "time_series_write" => "timeSeriesWrite",
+        "upsert" => "upsert",
+        "upsert" => "upsert",
+        "validate_catalog" => "validateCatalog",
+        "validate_catalog" => "validateCatalog",
+        "vector_batch_upsert" => "vectorBatchUpsert",
+        "vector_batch_upsert" => "vectorBatchUpsert",
+        "vector_hybrid_search" => "vectorHybridSearch",
+        "vector_hybrid_search" => "vectorHybridSearch",
+        "vector_search" => "vectorSearch",
+        "vector_search" => "vectorSearch",
+        "vector_upsert" => "vectorUpsert",
+        "vector_upsert" => "vectorUpsert",
+        "verify_admin_audit_log" => "verifyAdminAuditLog",
+        "verify_admin_audit_log" => "verifyAdminAuditLog",
+    ];
+
     private ?UdbMetadata $boundContext = null;
 
     /** @var array<class-string, BaseStub> Lazily-built, channel-sharing stubs. */
@@ -396,6 +936,16 @@ final class GeneratedClient
         $this->boundContext = $metadata;
     }
 
+    public function __call(string $name, array $arguments)
+    {
+        $target = self::METHOD_ALIASES[$name] ?? null;
+        if ($target !== null && $target !== $name && method_exists($this, $target)) {
+            return $this->{$target}(...$arguments);
+        }
+
+        throw new \BadMethodCallException("Undefined generated UDB method {$name}");
+    }
+
     private function context(): UdbMetadata
     {
         if ($this->boundContext === null) {
@@ -415,7 +965,7 @@ final class GeneratedClient
     // method. Unary calls retry; streaming calls return the live call object.
 
     /**
-     * udb.core.analytics.services.v1.AnalyticsService / GetExecutorPerformance (unary).
+     * udb.core.analytics.services.v1.AnalyticsService / GetExecutorPerformance (unary), public alias get_executor_performance.
      *
      * Forwards to {@see stubFor()}->GetExecutorPerformance(); retries transient codes.
      * Path: /udb.core.analytics.services.v1.AnalyticsService/GetExecutorPerformance
@@ -423,7 +973,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded GetExecutorPerformanceResponse
      */
-    public function get_executor_performance($request, ?UdbMetadata $metadata = null)
+    public function getExecutorPerformance($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GetExecutorPerformance',
@@ -436,7 +986,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.analytics.services.v1.AnalyticsService / GetPipelineSummary (unary).
+     * udb.core.analytics.services.v1.AnalyticsService / GetPipelineSummary (unary), public alias get_pipeline_summary.
      *
      * Forwards to {@see stubFor()}->GetPipelineSummary(); retries transient codes.
      * Path: /udb.core.analytics.services.v1.AnalyticsService/GetPipelineSummary
@@ -444,7 +994,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded GetPipelineSummaryResponse
      */
-    public function get_pipeline_summary($request, ?UdbMetadata $metadata = null)
+    public function getPipelineSummary($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GetPipelineSummary',
@@ -457,7 +1007,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.analytics.services.v1.AnalyticsService / GetReconciliationAnalytics (unary).
+     * udb.core.analytics.services.v1.AnalyticsService / GetReconciliationAnalytics (unary), public alias get_reconciliation_analytics.
      *
      * Forwards to {@see stubFor()}->GetReconciliationAnalytics(); retries transient codes.
      * Path: /udb.core.analytics.services.v1.AnalyticsService/GetReconciliationAnalytics
@@ -465,7 +1015,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded GetReconciliationAnalyticsResponse
      */
-    public function get_reconciliation_analytics($request, ?UdbMetadata $metadata = null)
+    public function getReconciliationAnalytics($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GetReconciliationAnalytics',
@@ -478,7 +1028,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.analytics.services.v1.AnalyticsService / GetSlaCompliance (unary).
+     * udb.core.analytics.services.v1.AnalyticsService / GetSlaCompliance (unary), public alias get_sla_compliance.
      *
      * Forwards to {@see stubFor()}->GetSlaCompliance(); retries transient codes.
      * Path: /udb.core.analytics.services.v1.AnalyticsService/GetSlaCompliance
@@ -486,7 +1036,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded GetSlaComplianceResponse
      */
-    public function get_sla_compliance($request, ?UdbMetadata $metadata = null)
+    public function getSlaCompliance($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GetSlaCompliance',
@@ -499,7 +1049,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.analytics.services.v1.AnalyticsService / GetThroughput (unary).
+     * udb.core.analytics.services.v1.AnalyticsService / GetThroughput (unary), public alias get_throughput.
      *
      * Forwards to {@see stubFor()}->GetThroughput(); retries transient codes.
      * Path: /udb.core.analytics.services.v1.AnalyticsService/GetThroughput
@@ -507,7 +1057,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded GetThroughputResponse
      */
-    public function get_throughput($request, ?UdbMetadata $metadata = null)
+    public function getThroughput($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GetThroughput',
@@ -520,7 +1070,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.analytics.services.v1.AnalyticsService / RecordPipelineMetric (unary).
+     * udb.core.analytics.services.v1.AnalyticsService / RecordPipelineMetric (unary), public alias record_pipeline_metric.
      *
      * Forwards to {@see stubFor()}->RecordPipelineMetric(); retries transient codes.
      * Path: /udb.core.analytics.services.v1.AnalyticsService/RecordPipelineMetric
@@ -528,7 +1078,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded RecordPipelineMetricResponse
      */
-    public function record_pipeline_metric($request, ?UdbMetadata $metadata = null)
+    public function recordPipelineMetric($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'RecordPipelineMetric',
@@ -541,7 +1091,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.analytics.services.v1.AnalyticsService / TriggerSnapshot (unary).
+     * udb.core.analytics.services.v1.AnalyticsService / TriggerSnapshot (unary), public alias trigger_snapshot.
      *
      * Forwards to {@see stubFor()}->TriggerSnapshot(); retries transient codes.
      * Path: /udb.core.analytics.services.v1.AnalyticsService/TriggerSnapshot
@@ -549,7 +1099,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded TriggerSnapshotResponse
      */
-    public function trigger_snapshot($request, ?UdbMetadata $metadata = null)
+    public function triggerSnapshot($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'TriggerSnapshot',
@@ -562,7 +1112,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.apikey.services.v1.ApiKeyService / CreateApiKey (unary).
+     * udb.core.apikey.services.v1.ApiKeyService / CreateApiKey (unary), public alias create_api_key.
      *
      * Forwards to {@see stubFor()}->CreateApiKey(); retries transient codes.
      * Path: /udb.core.apikey.services.v1.ApiKeyService/CreateApiKey
@@ -570,7 +1120,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded CreateApiKeyResponse
      */
-    public function create_api_key($request, ?UdbMetadata $metadata = null)
+    public function createApiKey($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'CreateApiKey',
@@ -583,7 +1133,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.apikey.services.v1.ApiKeyService / EmergencyRevokeApiKeys (unary).
+     * udb.core.apikey.services.v1.ApiKeyService / EmergencyRevokeApiKeys (unary), public alias emergency_revoke_api_keys.
      *
      * Forwards to {@see stubFor()}->EmergencyRevokeApiKeys(); retries transient codes.
      * Path: /udb.core.apikey.services.v1.ApiKeyService/EmergencyRevokeApiKeys
@@ -591,7 +1141,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded EmergencyRevokeApiKeysResponse
      */
-    public function emergency_revoke_api_keys($request, ?UdbMetadata $metadata = null)
+    public function emergencyRevokeApiKeys($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'EmergencyRevokeApiKeys',
@@ -604,7 +1154,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.apikey.services.v1.ApiKeyService / GetApiKey (unary).
+     * udb.core.apikey.services.v1.ApiKeyService / GetApiKey (unary), public alias get_api_key.
      *
      * Forwards to {@see stubFor()}->GetApiKey(); retries transient codes.
      * Path: /udb.core.apikey.services.v1.ApiKeyService/GetApiKey
@@ -612,7 +1162,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded GetApiKeyResponse
      */
-    public function get_api_key($request, ?UdbMetadata $metadata = null)
+    public function getApiKey($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GetApiKey',
@@ -625,7 +1175,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.apikey.services.v1.ApiKeyService / GetApiKeyUsageStats (unary).
+     * udb.core.apikey.services.v1.ApiKeyService / GetApiKeyUsageStats (unary), public alias get_api_key_usage_stats.
      *
      * Forwards to {@see stubFor()}->GetApiKeyUsageStats(); retries transient codes.
      * Path: /udb.core.apikey.services.v1.ApiKeyService/GetApiKeyUsageStats
@@ -633,7 +1183,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded GetApiKeyUsageStatsResponse
      */
-    public function get_api_key_usage_stats($request, ?UdbMetadata $metadata = null)
+    public function getApiKeyUsageStats($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GetApiKeyUsageStats',
@@ -646,7 +1196,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.apikey.services.v1.ApiKeyService / ListApiKeys (unary).
+     * udb.core.apikey.services.v1.ApiKeyService / ListApiKeys (unary), public alias list_api_keys.
      *
      * Forwards to {@see stubFor()}->ListApiKeys(); retries transient codes.
      * Path: /udb.core.apikey.services.v1.ApiKeyService/ListApiKeys
@@ -654,7 +1204,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ListApiKeysResponse
      */
-    public function list_api_keys($request, ?UdbMetadata $metadata = null)
+    public function listApiKeys($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ListApiKeys',
@@ -667,7 +1217,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.apikey.services.v1.ApiKeyService / RevokeApiKey (unary).
+     * udb.core.apikey.services.v1.ApiKeyService / RevokeApiKey (unary), public alias revoke_api_key.
      *
      * Forwards to {@see stubFor()}->RevokeApiKey(); retries transient codes.
      * Path: /udb.core.apikey.services.v1.ApiKeyService/RevokeApiKey
@@ -675,7 +1225,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded RevokeApiKeyResponse
      */
-    public function revoke_api_key($request, ?UdbMetadata $metadata = null)
+    public function revokeApiKey($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'RevokeApiKey',
@@ -688,7 +1238,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.apikey.services.v1.ApiKeyService / RotateApiKey (unary).
+     * udb.core.apikey.services.v1.ApiKeyService / RotateApiKey (unary), public alias rotate_api_key.
      *
      * Forwards to {@see stubFor()}->RotateApiKey(); retries transient codes.
      * Path: /udb.core.apikey.services.v1.ApiKeyService/RotateApiKey
@@ -696,7 +1246,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded RotateApiKeyResponse
      */
-    public function rotate_api_key($request, ?UdbMetadata $metadata = null)
+    public function rotateApiKey($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'RotateApiKey',
@@ -709,7 +1259,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.apikey.services.v1.ApiKeyService / UpdateApiKey (unary).
+     * udb.core.apikey.services.v1.ApiKeyService / UpdateApiKey (unary), public alias update_api_key.
      *
      * Forwards to {@see stubFor()}->UpdateApiKey(); retries transient codes.
      * Path: /udb.core.apikey.services.v1.ApiKeyService/UpdateApiKey
@@ -717,7 +1267,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded UpdateApiKeyResponse
      */
-    public function update_api_key($request, ?UdbMetadata $metadata = null)
+    public function updateApiKey($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'UpdateApiKey',
@@ -730,7 +1280,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.apikey.services.v1.ApiKeyService / ValidateApiKey (unary).
+     * udb.core.apikey.services.v1.ApiKeyService / ValidateApiKey (unary), public alias validate_api_key.
      *
      * Forwards to {@see stubFor()}->ValidateApiKey(); retries transient codes.
      * Path: /udb.core.apikey.services.v1.ApiKeyService/ValidateApiKey
@@ -738,7 +1288,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ValidateApiKeyResponse
      */
-    public function validate_api_key($request, ?UdbMetadata $metadata = null)
+    public function validateApiKey($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ValidateApiKey',
@@ -751,7 +1301,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.asset.services.v1.AssetService / CompleteStep (unary).
+     * udb.core.asset.services.v1.AssetService / CompleteStep (unary), public alias complete_step.
      *
      * Forwards to {@see stubFor()}->CompleteStep(); retries transient codes.
      * Path: /udb.core.asset.services.v1.AssetService/CompleteStep
@@ -759,7 +1309,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded CompleteStepResponse
      */
-    public function complete_step($request, ?UdbMetadata $metadata = null)
+    public function completeStep($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'CompleteStep',
@@ -772,7 +1322,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.asset.services.v1.AssetService / CreatePipelineDefinition (unary).
+     * udb.core.asset.services.v1.AssetService / CreatePipelineDefinition (unary), public alias create_pipeline_definition.
      *
      * Forwards to {@see stubFor()}->CreatePipelineDefinition(); retries transient codes.
      * Path: /udb.core.asset.services.v1.AssetService/CreatePipelineDefinition
@@ -780,7 +1330,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded CreatePipelineDefinitionResponse
      */
-    public function create_pipeline_definition($request, ?UdbMetadata $metadata = null)
+    public function createPipelineDefinition($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'CreatePipelineDefinition',
@@ -793,7 +1343,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.asset.services.v1.AssetService / GetAsset (unary).
+     * udb.core.asset.services.v1.AssetService / GetAsset (unary), public alias get_asset.
      *
      * Forwards to {@see stubFor()}->GetAsset(); retries transient codes.
      * Path: /udb.core.asset.services.v1.AssetService/GetAsset
@@ -801,7 +1351,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded GetAssetResponse
      */
-    public function get_asset($request, ?UdbMetadata $metadata = null)
+    public function getAsset($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GetAsset',
@@ -814,7 +1364,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.asset.services.v1.AssetService / GetPipeline (unary).
+     * udb.core.asset.services.v1.AssetService / GetPipeline (unary), public alias get_pipeline.
      *
      * Forwards to {@see stubFor()}->GetPipeline(); retries transient codes.
      * Path: /udb.core.asset.services.v1.AssetService/GetPipeline
@@ -822,7 +1372,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded GetPipelineResponse
      */
-    public function get_pipeline($request, ?UdbMetadata $metadata = null)
+    public function getPipeline($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GetPipeline',
@@ -835,7 +1385,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.asset.services.v1.AssetService / GetPipelineDefinition (unary).
+     * udb.core.asset.services.v1.AssetService / GetPipelineDefinition (unary), public alias get_pipeline_definition.
      *
      * Forwards to {@see stubFor()}->GetPipelineDefinition(); retries transient codes.
      * Path: /udb.core.asset.services.v1.AssetService/GetPipelineDefinition
@@ -843,7 +1393,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded GetPipelineDefinitionResponse
      */
-    public function get_pipeline_definition($request, ?UdbMetadata $metadata = null)
+    public function getPipelineDefinition($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GetPipelineDefinition',
@@ -856,7 +1406,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.asset.services.v1.AssetService / ListAssets (unary).
+     * udb.core.asset.services.v1.AssetService / ListAssets (unary), public alias list_assets.
      *
      * Forwards to {@see stubFor()}->ListAssets(); retries transient codes.
      * Path: /udb.core.asset.services.v1.AssetService/ListAssets
@@ -864,7 +1414,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ListAssetsResponse
      */
-    public function list_assets($request, ?UdbMetadata $metadata = null)
+    public function listAssets($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ListAssets',
@@ -877,7 +1427,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.asset.services.v1.AssetService / RegisterAsset (unary).
+     * udb.core.asset.services.v1.AssetService / RegisterAsset (unary), public alias register_asset.
      *
      * Forwards to {@see stubFor()}->RegisterAsset(); retries transient codes.
      * Path: /udb.core.asset.services.v1.AssetService/RegisterAsset
@@ -885,7 +1435,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded RegisterAssetResponse
      */
-    public function register_asset($request, ?UdbMetadata $metadata = null)
+    public function registerAsset($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'RegisterAsset',
@@ -898,7 +1448,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.asset.services.v1.AssetService / StartPipeline (unary).
+     * udb.core.asset.services.v1.AssetService / StartPipeline (unary), public alias start_pipeline.
      *
      * Forwards to {@see stubFor()}->StartPipeline(); retries transient codes.
      * Path: /udb.core.asset.services.v1.AssetService/StartPipeline
@@ -906,7 +1456,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded StartPipelineResponse
      */
-    public function start_pipeline($request, ?UdbMetadata $metadata = null)
+    public function startPipeline($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'StartPipeline',
@@ -919,7 +1469,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / AdminResetMfa (unary).
+     * udb.core.authn.services.v1.AuthnService / AdminResetMfa (unary), public alias admin_reset_mfa.
      *
      * Forwards to {@see stubFor()}->AdminResetMfa(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/AdminResetMfa
@@ -927,7 +1477,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded AdminResetMfaResponse
      */
-    public function admin_reset_mfa($request, ?UdbMetadata $metadata = null)
+    public function adminResetMfa($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'AdminResetMfa',
@@ -940,7 +1490,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / AdminResetPassword (unary).
+     * udb.core.authn.services.v1.AuthnService / AdminResetPassword (unary), public alias admin_reset_password.
      *
      * Forwards to {@see stubFor()}->AdminResetPassword(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/AdminResetPassword
@@ -948,7 +1498,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded AdminResetPasswordResponse
      */
-    public function admin_reset_password($request, ?UdbMetadata $metadata = null)
+    public function adminResetPassword($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'AdminResetPassword',
@@ -961,7 +1511,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / AdminRevokeAllTenantSessions (unary).
+     * udb.core.authn.services.v1.AuthnService / AdminRevokeAllTenantSessions (unary), public alias admin_revoke_all_tenant_sessions.
      *
      * Forwards to {@see stubFor()}->AdminRevokeAllTenantSessions(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/AdminRevokeAllTenantSessions
@@ -969,7 +1519,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded AdminRevokeAllTenantSessionsResponse
      */
-    public function admin_revoke_all_tenant_sessions($request, ?UdbMetadata $metadata = null)
+    public function adminRevokeAllTenantSessions($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'AdminRevokeAllTenantSessions',
@@ -982,7 +1532,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / AdminRevokeAllUserSessions (unary).
+     * udb.core.authn.services.v1.AuthnService / AdminRevokeAllUserSessions (unary), public alias admin_revoke_all_user_sessions.
      *
      * Forwards to {@see stubFor()}->AdminRevokeAllUserSessions(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/AdminRevokeAllUserSessions
@@ -990,7 +1540,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded AdminRevokeAllUserSessionsResponse
      */
-    public function admin_revoke_all_user_sessions($request, ?UdbMetadata $metadata = null)
+    public function adminRevokeAllUserSessions($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'AdminRevokeAllUserSessions',
@@ -1003,7 +1553,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / AdminRevokeSession (unary).
+     * udb.core.authn.services.v1.AuthnService / AdminRevokeSession (unary), public alias admin_revoke_session.
      *
      * Forwards to {@see stubFor()}->AdminRevokeSession(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/AdminRevokeSession
@@ -1011,7 +1561,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded AdminRevokeSessionResponse
      */
-    public function admin_revoke_session($request, ?UdbMetadata $metadata = null)
+    public function adminRevokeSession($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'AdminRevokeSession',
@@ -1024,7 +1574,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / Authenticate (unary).
+     * udb.core.authn.services.v1.AuthnService / Authenticate (unary), public alias authenticate.
      *
      * Forwards to {@see stubFor()}->Authenticate(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/Authenticate
@@ -1045,7 +1595,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / ChangePassword (unary).
+     * udb.core.authn.services.v1.AuthnService / ChangePassword (unary), public alias change_password.
      *
      * Forwards to {@see stubFor()}->ChangePassword(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/ChangePassword
@@ -1053,7 +1603,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ChangePasswordResponse
      */
-    public function change_password($request, ?UdbMetadata $metadata = null)
+    public function changePassword($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ChangePassword',
@@ -1066,7 +1616,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / ChangeUserStatus (unary).
+     * udb.core.authn.services.v1.AuthnService / ChangeUserStatus (unary), public alias change_user_status.
      *
      * Forwards to {@see stubFor()}->ChangeUserStatus(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/ChangeUserStatus
@@ -1074,7 +1624,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ChangeUserStatusResponse
      */
-    public function change_user_status($request, ?UdbMetadata $metadata = null)
+    public function changeUserStatus($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ChangeUserStatus',
@@ -1087,7 +1637,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / ConfirmMFAEnrollment (unary).
+     * udb.core.authn.services.v1.AuthnService / ConfirmMFAEnrollment (unary), public alias confirm_mfaenrollment.
      *
      * Forwards to {@see stubFor()}->ConfirmMFAEnrollment(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/ConfirmMFAEnrollment
@@ -1095,7 +1645,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ConfirmMFAEnrollmentResponse
      */
-    public function confirm_m_f_a_enrollment($request, ?UdbMetadata $metadata = null)
+    public function confirmMfaenrollment($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ConfirmMFAEnrollment',
@@ -1108,7 +1658,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / CreateSession (unary).
+     * udb.core.authn.services.v1.AuthnService / CreateSession (unary), public alias create_session.
      *
      * Forwards to {@see stubFor()}->CreateSession(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/CreateSession
@@ -1116,7 +1666,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded CreateSessionResponse
      */
-    public function create_session($request, ?UdbMetadata $metadata = null)
+    public function createSession($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'CreateSession',
@@ -1129,7 +1679,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / CreateUser (unary).
+     * udb.core.authn.services.v1.AuthnService / CreateUser (unary), public alias create_user.
      *
      * Forwards to {@see stubFor()}->CreateUser(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/CreateUser
@@ -1137,7 +1687,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded CreateUserResponse
      */
-    public function create_user($request, ?UdbMetadata $metadata = null)
+    public function createUser($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'CreateUser',
@@ -1150,7 +1700,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / DeleteWebAuthnCredential (unary).
+     * udb.core.authn.services.v1.AuthnService / DeleteWebAuthnCredential (unary), public alias delete_web_authn_credential.
      *
      * Forwards to {@see stubFor()}->DeleteWebAuthnCredential(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/DeleteWebAuthnCredential
@@ -1158,7 +1708,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded DeleteWebAuthnCredentialResponse
      */
-    public function delete_web_authn_credential($request, ?UdbMetadata $metadata = null)
+    public function deleteWebAuthnCredential($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'DeleteWebAuthnCredential',
@@ -1171,7 +1721,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / DisableMfaFactor (unary).
+     * udb.core.authn.services.v1.AuthnService / DisableMfaFactor (unary), public alias disable_mfa_factor.
      *
      * Forwards to {@see stubFor()}->DisableMfaFactor(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/DisableMfaFactor
@@ -1179,7 +1729,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded DisableMfaFactorResponse
      */
-    public function disable_mfa_factor($request, ?UdbMetadata $metadata = null)
+    public function disableMfaFactor($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'DisableMfaFactor',
@@ -1192,7 +1742,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / EmergencyRevoke (unary).
+     * udb.core.authn.services.v1.AuthnService / EmergencyRevoke (unary), public alias emergency_revoke.
      *
      * Forwards to {@see stubFor()}->EmergencyRevoke(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/EmergencyRevoke
@@ -1200,7 +1750,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded EmergencyRevokeResponse
      */
-    public function emergency_revoke($request, ?UdbMetadata $metadata = null)
+    public function emergencyRevoke($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'EmergencyRevoke',
@@ -1213,7 +1763,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / EnrollMFA (unary).
+     * udb.core.authn.services.v1.AuthnService / EnrollMFA (unary), public alias enroll_mfa.
      *
      * Forwards to {@see stubFor()}->EnrollMFA(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/EnrollMFA
@@ -1221,7 +1771,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded EnrollMFAResponse
      */
-    public function enroll_m_f_a($request, ?UdbMetadata $metadata = null)
+    public function enrollMfa($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'EnrollMFA',
@@ -1234,7 +1784,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / FinishWebAuthnAuthentication (unary).
+     * udb.core.authn.services.v1.AuthnService / FinishWebAuthnAuthentication (unary), public alias finish_web_authn_authentication.
      *
      * Forwards to {@see stubFor()}->FinishWebAuthnAuthentication(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/FinishWebAuthnAuthentication
@@ -1242,7 +1792,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded FinishWebAuthnAuthenticationResponse
      */
-    public function finish_web_authn_authentication($request, ?UdbMetadata $metadata = null)
+    public function finishWebAuthnAuthentication($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'FinishWebAuthnAuthentication',
@@ -1255,7 +1805,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / FinishWebAuthnRegistration (unary).
+     * udb.core.authn.services.v1.AuthnService / FinishWebAuthnRegistration (unary), public alias finish_web_authn_registration.
      *
      * Forwards to {@see stubFor()}->FinishWebAuthnRegistration(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/FinishWebAuthnRegistration
@@ -1263,7 +1813,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded FinishWebAuthnRegistrationResponse
      */
-    public function finish_web_authn_registration($request, ?UdbMetadata $metadata = null)
+    public function finishWebAuthnRegistration($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'FinishWebAuthnRegistration',
@@ -1276,7 +1826,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / ForgotPassword (unary).
+     * udb.core.authn.services.v1.AuthnService / ForgotPassword (unary), public alias forgot_password.
      *
      * Forwards to {@see stubFor()}->ForgotPassword(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/ForgotPassword
@@ -1284,7 +1834,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ForgotPasswordResponse
      */
-    public function forgot_password($request, ?UdbMetadata $metadata = null)
+    public function forgotPassword($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ForgotPassword',
@@ -1297,7 +1847,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / GenerateRecoveryCodes (unary).
+     * udb.core.authn.services.v1.AuthnService / GenerateRecoveryCodes (unary), public alias generate_recovery_codes.
      *
      * Forwards to {@see stubFor()}->GenerateRecoveryCodes(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/GenerateRecoveryCodes
@@ -1305,7 +1855,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded GenerateRecoveryCodesResponse
      */
-    public function generate_recovery_codes($request, ?UdbMetadata $metadata = null)
+    public function generateRecoveryCodes($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GenerateRecoveryCodes',
@@ -1318,7 +1868,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / GetJwks (unary).
+     * udb.core.authn.services.v1.AuthnService / GetJwks (unary), public alias get_jwks.
      *
      * Forwards to {@see stubFor()}->GetJwks(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/GetJwks
@@ -1326,7 +1876,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded GetJwksResponse
      */
-    public function get_jwks($request, ?UdbMetadata $metadata = null)
+    public function getJwks($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GetJwks',
@@ -1339,7 +1889,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / GetMfaPolicy (unary).
+     * udb.core.authn.services.v1.AuthnService / GetMfaPolicy (unary), public alias get_mfa_policy.
      *
      * Forwards to {@see stubFor()}->GetMfaPolicy(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/GetMfaPolicy
@@ -1347,7 +1897,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded GetMfaPolicyResponse
      */
-    public function get_mfa_policy($request, ?UdbMetadata $metadata = null)
+    public function getMfaPolicy($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GetMfaPolicy',
@@ -1360,7 +1910,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / GetSession (unary).
+     * udb.core.authn.services.v1.AuthnService / GetSession (unary), public alias get_session.
      *
      * Forwards to {@see stubFor()}->GetSession(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/GetSession
@@ -1368,7 +1918,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded GetSessionResponse
      */
-    public function get_session($request, ?UdbMetadata $metadata = null)
+    public function getSession($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GetSession',
@@ -1381,7 +1931,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / GetUser (unary).
+     * udb.core.authn.services.v1.AuthnService / GetUser (unary), public alias get_user.
      *
      * Forwards to {@see stubFor()}->GetUser(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/GetUser
@@ -1389,7 +1939,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded GetUserResponse
      */
-    public function get_user($request, ?UdbMetadata $metadata = null)
+    public function getUser($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GetUser',
@@ -1402,7 +1952,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / IntrospectToken (unary).
+     * udb.core.authn.services.v1.AuthnService / IntrospectToken (unary), public alias introspect_token.
      *
      * Forwards to {@see stubFor()}->IntrospectToken(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/IntrospectToken
@@ -1410,7 +1960,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded IntrospectTokenResponse
      */
-    public function introspect_token($request, ?UdbMetadata $metadata = null)
+    public function introspectToken($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'IntrospectToken',
@@ -1423,7 +1973,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / IssueMfaChallenge (unary).
+     * udb.core.authn.services.v1.AuthnService / IssueMfaChallenge (unary), public alias issue_mfa_challenge.
      *
      * Forwards to {@see stubFor()}->IssueMfaChallenge(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/IssueMfaChallenge
@@ -1431,7 +1981,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded IssueMfaChallengeResponse
      */
-    public function issue_mfa_challenge($request, ?UdbMetadata $metadata = null)
+    public function issueMfaChallenge($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'IssueMfaChallenge',
@@ -1444,7 +1994,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / ListDevices (unary).
+     * udb.core.authn.services.v1.AuthnService / ListDevices (unary), public alias list_devices.
      *
      * Forwards to {@see stubFor()}->ListDevices(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/ListDevices
@@ -1452,7 +2002,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ListDevicesResponse
      */
-    public function list_devices($request, ?UdbMetadata $metadata = null)
+    public function listDevices($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ListDevices',
@@ -1465,7 +2015,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / ListMfaFactors (unary).
+     * udb.core.authn.services.v1.AuthnService / ListMfaFactors (unary), public alias list_mfa_factors.
      *
      * Forwards to {@see stubFor()}->ListMfaFactors(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/ListMfaFactors
@@ -1473,7 +2023,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ListMfaFactorsResponse
      */
-    public function list_mfa_factors($request, ?UdbMetadata $metadata = null)
+    public function listMfaFactors($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ListMfaFactors',
@@ -1486,7 +2036,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / ListSessions (unary).
+     * udb.core.authn.services.v1.AuthnService / ListSessions (unary), public alias list_sessions.
      *
      * Forwards to {@see stubFor()}->ListSessions(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/ListSessions
@@ -1494,7 +2044,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ListSessionsResponse
      */
-    public function list_sessions($request, ?UdbMetadata $metadata = null)
+    public function listSessions($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ListSessions',
@@ -1507,7 +2057,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / ListUsers (unary).
+     * udb.core.authn.services.v1.AuthnService / ListUsers (unary), public alias list_users.
      *
      * Forwards to {@see stubFor()}->ListUsers(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/ListUsers
@@ -1515,7 +2065,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ListUsersResponse
      */
-    public function list_users($request, ?UdbMetadata $metadata = null)
+    public function listUsers($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ListUsers',
@@ -1528,7 +2078,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / ListWebAuthnCredentials (unary).
+     * udb.core.authn.services.v1.AuthnService / ListWebAuthnCredentials (unary), public alias list_web_authn_credentials.
      *
      * Forwards to {@see stubFor()}->ListWebAuthnCredentials(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/ListWebAuthnCredentials
@@ -1536,7 +2086,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ListWebAuthnCredentialsResponse
      */
-    public function list_web_authn_credentials($request, ?UdbMetadata $metadata = null)
+    public function listWebAuthnCredentials($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ListWebAuthnCredentials',
@@ -1549,7 +2099,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / Login (unary).
+     * udb.core.authn.services.v1.AuthnService / Login (unary), public alias login.
      *
      * Forwards to {@see stubFor()}->Login(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/Login
@@ -1570,7 +2120,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / Logout (unary).
+     * udb.core.authn.services.v1.AuthnService / Logout (unary), public alias logout.
      *
      * Forwards to {@see stubFor()}->Logout(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/Logout
@@ -1591,7 +2141,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / PutMfaPolicy (unary).
+     * udb.core.authn.services.v1.AuthnService / PutMfaPolicy (unary), public alias put_mfa_policy.
      *
      * Forwards to {@see stubFor()}->PutMfaPolicy(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/PutMfaPolicy
@@ -1599,7 +2149,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded PutMfaPolicyResponse
      */
-    public function put_mfa_policy($request, ?UdbMetadata $metadata = null)
+    public function putMfaPolicy($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'PutMfaPolicy',
@@ -1612,7 +2162,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / RefreshSession (unary).
+     * udb.core.authn.services.v1.AuthnService / RefreshSession (unary), public alias refresh_session.
      *
      * Forwards to {@see stubFor()}->RefreshSession(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/RefreshSession
@@ -1620,7 +2170,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded RefreshSessionResponse
      */
-    public function refresh_session($request, ?UdbMetadata $metadata = null)
+    public function refreshSession($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'RefreshSession',
@@ -1633,7 +2183,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / RefreshToken (unary).
+     * udb.core.authn.services.v1.AuthnService / RefreshToken (unary), public alias refresh_token.
      *
      * Forwards to {@see stubFor()}->RefreshToken(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/RefreshToken
@@ -1641,7 +2191,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded RefreshTokenResponse
      */
-    public function refresh_token($request, ?UdbMetadata $metadata = null)
+    public function refreshToken($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'RefreshToken',
@@ -1654,7 +2204,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / RenamePasskey (unary).
+     * udb.core.authn.services.v1.AuthnService / RenamePasskey (unary), public alias rename_passkey.
      *
      * Forwards to {@see stubFor()}->RenamePasskey(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/RenamePasskey
@@ -1662,7 +2212,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded RenamePasskeyResponse
      */
-    public function rename_passkey($request, ?UdbMetadata $metadata = null)
+    public function renamePasskey($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'RenamePasskey',
@@ -1675,7 +2225,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / ResendOTP (unary).
+     * udb.core.authn.services.v1.AuthnService / ResendOTP (unary), public alias resend_otp.
      *
      * Forwards to {@see stubFor()}->ResendOTP(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/ResendOTP
@@ -1683,7 +2233,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ResendOTPResponse
      */
-    public function resend_o_t_p($request, ?UdbMetadata $metadata = null)
+    public function resendOtp($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ResendOTP',
@@ -1696,7 +2246,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / ResetPassword (unary).
+     * udb.core.authn.services.v1.AuthnService / ResetPassword (unary), public alias reset_password.
      *
      * Forwards to {@see stubFor()}->ResetPassword(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/ResetPassword
@@ -1704,7 +2254,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ResetPasswordResponse
      */
-    public function reset_password($request, ?UdbMetadata $metadata = null)
+    public function resetPassword($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ResetPassword',
@@ -1717,7 +2267,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / RevokeDevice (unary).
+     * udb.core.authn.services.v1.AuthnService / RevokeDevice (unary), public alias revoke_device.
      *
      * Forwards to {@see stubFor()}->RevokeDevice(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/RevokeDevice
@@ -1725,7 +2275,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded RevokeDeviceResponse
      */
-    public function revoke_device($request, ?UdbMetadata $metadata = null)
+    public function revokeDevice($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'RevokeDevice',
@@ -1738,7 +2288,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / RevokeRecoveryCodes (unary).
+     * udb.core.authn.services.v1.AuthnService / RevokeRecoveryCodes (unary), public alias revoke_recovery_codes.
      *
      * Forwards to {@see stubFor()}->RevokeRecoveryCodes(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/RevokeRecoveryCodes
@@ -1746,7 +2296,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded RevokeRecoveryCodesResponse
      */
-    public function revoke_recovery_codes($request, ?UdbMetadata $metadata = null)
+    public function revokeRecoveryCodes($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'RevokeRecoveryCodes',
@@ -1759,7 +2309,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / RevokeSession (unary).
+     * udb.core.authn.services.v1.AuthnService / RevokeSession (unary), public alias revoke_session.
      *
      * Forwards to {@see stubFor()}->RevokeSession(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/RevokeSession
@@ -1767,7 +2317,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded RevokeSessionResponse
      */
-    public function revoke_session($request, ?UdbMetadata $metadata = null)
+    public function revokeSession($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'RevokeSession',
@@ -1780,7 +2330,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / SendOTP (unary).
+     * udb.core.authn.services.v1.AuthnService / SendOTP (unary), public alias send_otp.
      *
      * Forwards to {@see stubFor()}->SendOTP(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/SendOTP
@@ -1788,7 +2338,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded SendOTPResponse
      */
-    public function send_o_t_p($request, ?UdbMetadata $metadata = null)
+    public function sendOtp($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'SendOTP',
@@ -1801,7 +2351,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / SendPhoneVerification (unary).
+     * udb.core.authn.services.v1.AuthnService / SendPhoneVerification (unary), public alias send_phone_verification.
      *
      * Forwards to {@see stubFor()}->SendPhoneVerification(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/SendPhoneVerification
@@ -1809,7 +2359,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded SendPhoneVerificationResponse
      */
-    public function send_phone_verification($request, ?UdbMetadata $metadata = null)
+    public function sendPhoneVerification($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'SendPhoneVerification',
@@ -1822,7 +2372,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / StartWebAuthnAuthentication (unary).
+     * udb.core.authn.services.v1.AuthnService / StartWebAuthnAuthentication (unary), public alias start_web_authn_authentication.
      *
      * Forwards to {@see stubFor()}->StartWebAuthnAuthentication(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/StartWebAuthnAuthentication
@@ -1830,7 +2380,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded StartWebAuthnAuthenticationResponse
      */
-    public function start_web_authn_authentication($request, ?UdbMetadata $metadata = null)
+    public function startWebAuthnAuthentication($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'StartWebAuthnAuthentication',
@@ -1843,7 +2393,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / StartWebAuthnRegistration (unary).
+     * udb.core.authn.services.v1.AuthnService / StartWebAuthnRegistration (unary), public alias start_web_authn_registration.
      *
      * Forwards to {@see stubFor()}->StartWebAuthnRegistration(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/StartWebAuthnRegistration
@@ -1851,7 +2401,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded StartWebAuthnRegistrationResponse
      */
-    public function start_web_authn_registration($request, ?UdbMetadata $metadata = null)
+    public function startWebAuthnRegistration($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'StartWebAuthnRegistration',
@@ -1864,7 +2414,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / UpdateUser (unary).
+     * udb.core.authn.services.v1.AuthnService / UpdateUser (unary), public alias update_user.
      *
      * Forwards to {@see stubFor()}->UpdateUser(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/UpdateUser
@@ -1872,7 +2422,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded UpdateUserResponse
      */
-    public function update_user($request, ?UdbMetadata $metadata = null)
+    public function updateUser($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'UpdateUser',
@@ -1885,7 +2435,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / ValidateCSRF (unary).
+     * udb.core.authn.services.v1.AuthnService / ValidateCSRF (unary), public alias validate_csrf.
      *
      * Forwards to {@see stubFor()}->ValidateCSRF(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/ValidateCSRF
@@ -1893,7 +2443,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ValidateCSRFResponse
      */
-    public function validate_c_s_r_f($request, ?UdbMetadata $metadata = null)
+    public function validateCsrf($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ValidateCSRF',
@@ -1906,7 +2456,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / ValidateToken (unary).
+     * udb.core.authn.services.v1.AuthnService / ValidateToken (unary), public alias validate_token.
      *
      * Forwards to {@see stubFor()}->ValidateToken(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/ValidateToken
@@ -1914,7 +2464,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ValidateTokenResponse
      */
-    public function validate_token($request, ?UdbMetadata $metadata = null)
+    public function validateToken($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ValidateToken',
@@ -1927,7 +2477,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / VerifyMfaChallenge (unary).
+     * udb.core.authn.services.v1.AuthnService / VerifyMfaChallenge (unary), public alias verify_mfa_challenge.
      *
      * Forwards to {@see stubFor()}->VerifyMfaChallenge(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/VerifyMfaChallenge
@@ -1935,7 +2485,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded VerifyMfaChallengeResponse
      */
-    public function verify_mfa_challenge($request, ?UdbMetadata $metadata = null)
+    public function verifyMfaChallenge($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'VerifyMfaChallenge',
@@ -1948,7 +2498,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authn.services.v1.AuthnService / VerifyOTP (unary).
+     * udb.core.authn.services.v1.AuthnService / VerifyOTP (unary), public alias verify_otp.
      *
      * Forwards to {@see stubFor()}->VerifyOTP(); retries transient codes.
      * Path: /udb.core.authn.services.v1.AuthnService/VerifyOTP
@@ -1956,7 +2506,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded VerifyOTPResponse
      */
-    public function verify_o_t_p($request, ?UdbMetadata $metadata = null)
+    public function verifyOtp($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'VerifyOTP',
@@ -1969,7 +2519,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authz.services.v1.AuthzService / ActivateCanary (unary).
+     * udb.core.authz.services.v1.AuthzService / ActivateCanary (unary), public alias activate_canary.
      *
      * Forwards to {@see stubFor()}->ActivateCanary(); retries transient codes.
      * Path: /udb.core.authz.services.v1.AuthzService/ActivateCanary
@@ -1977,7 +2527,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded CanaryResponse
      */
-    public function activate_canary($request, ?UdbMetadata $metadata = null)
+    public function activateCanary($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ActivateCanary',
@@ -1990,7 +2540,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authz.services.v1.AuthzService / ActivatePolicyVersion (unary).
+     * udb.core.authz.services.v1.AuthzService / ActivatePolicyVersion (unary), public alias activate_policy_version.
      *
      * Forwards to {@see stubFor()}->ActivatePolicyVersion(); retries transient codes.
      * Path: /udb.core.authz.services.v1.AuthzService/ActivatePolicyVersion
@@ -1998,7 +2548,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ActivationResponse
      */
-    public function activate_policy_version($request, ?UdbMetadata $metadata = null)
+    public function activatePolicyVersion($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ActivatePolicyVersion',
@@ -2011,7 +2561,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authz.services.v1.AuthzService / ApprovePolicyDraft (unary).
+     * udb.core.authz.services.v1.AuthzService / ApprovePolicyDraft (unary), public alias approve_policy_draft.
      *
      * Forwards to {@see stubFor()}->ApprovePolicyDraft(); retries transient codes.
      * Path: /udb.core.authz.services.v1.AuthzService/ApprovePolicyDraft
@@ -2019,7 +2569,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded PolicyApprovalResponse
      */
-    public function approve_policy_draft($request, ?UdbMetadata $metadata = null)
+    public function approvePolicyDraft($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ApprovePolicyDraft',
@@ -2032,7 +2582,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authz.services.v1.AuthzService / AssignRole (unary).
+     * udb.core.authz.services.v1.AuthzService / AssignRole (unary), public alias assign_role.
      *
      * Forwards to {@see stubFor()}->AssignRole(); retries transient codes.
      * Path: /udb.core.authz.services.v1.AuthzService/AssignRole
@@ -2040,7 +2590,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded AssignRoleResponse
      */
-    public function assign_role($request, ?UdbMetadata $metadata = null)
+    public function assignRole($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'AssignRole',
@@ -2053,7 +2603,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authz.services.v1.AuthzService / Authorize (unary).
+     * udb.core.authz.services.v1.AuthzService / Authorize (unary), public alias authorize.
      *
      * Forwards to {@see stubFor()}->Authorize(); retries transient codes.
      * Path: /udb.core.authz.services.v1.AuthzService/Authorize
@@ -2074,7 +2624,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authz.services.v1.AuthzService / BatchCheckPermissions (unary).
+     * udb.core.authz.services.v1.AuthzService / BatchCheckPermissions (unary), public alias batch_check_permissions.
      *
      * Forwards to {@see stubFor()}->BatchCheckPermissions(); retries transient codes.
      * Path: /udb.core.authz.services.v1.AuthzService/BatchCheckPermissions
@@ -2082,7 +2632,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded BatchCheckPermissionsResponse
      */
-    public function batch_check_permissions($request, ?UdbMetadata $metadata = null)
+    public function batchCheckPermissions($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'BatchCheckPermissions',
@@ -2095,7 +2645,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authz.services.v1.AuthzService / CheckAccess (unary).
+     * udb.core.authz.services.v1.AuthzService / CheckAccess (unary), public alias check_access.
      *
      * Forwards to {@see stubFor()}->CheckAccess(); retries transient codes.
      * Path: /udb.core.authz.services.v1.AuthzService/CheckAccess
@@ -2103,7 +2653,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded CheckAccessResponse
      */
-    public function check_access($request, ?UdbMetadata $metadata = null)
+    public function checkAccess($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'CheckAccess',
@@ -2116,7 +2666,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authz.services.v1.AuthzService / CreatePolicyDraft (unary).
+     * udb.core.authz.services.v1.AuthzService / CreatePolicyDraft (unary), public alias create_policy_draft.
      *
      * Forwards to {@see stubFor()}->CreatePolicyDraft(); retries transient codes.
      * Path: /udb.core.authz.services.v1.AuthzService/CreatePolicyDraft
@@ -2124,7 +2674,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded PolicyDraftResponse
      */
-    public function create_policy_draft($request, ?UdbMetadata $metadata = null)
+    public function createPolicyDraft($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'CreatePolicyDraft',
@@ -2137,7 +2687,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authz.services.v1.AuthzService / CreatePolicyRule (unary).
+     * udb.core.authz.services.v1.AuthzService / CreatePolicyRule (unary), public alias create_policy_rule.
      *
      * Forwards to {@see stubFor()}->CreatePolicyRule(); retries transient codes.
      * Path: /udb.core.authz.services.v1.AuthzService/CreatePolicyRule
@@ -2145,7 +2695,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded CreatePolicyRuleResponse
      */
-    public function create_policy_rule($request, ?UdbMetadata $metadata = null)
+    public function createPolicyRule($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'CreatePolicyRule',
@@ -2158,7 +2708,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authz.services.v1.AuthzService / CreateRole (unary).
+     * udb.core.authz.services.v1.AuthzService / CreateRole (unary), public alias create_role.
      *
      * Forwards to {@see stubFor()}->CreateRole(); retries transient codes.
      * Path: /udb.core.authz.services.v1.AuthzService/CreateRole
@@ -2166,7 +2716,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded CreateRoleResponse
      */
-    public function create_role($request, ?UdbMetadata $metadata = null)
+    public function createRole($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'CreateRole',
@@ -2179,7 +2729,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authz.services.v1.AuthzService / DeletePolicyRule (unary).
+     * udb.core.authz.services.v1.AuthzService / DeletePolicyRule (unary), public alias delete_policy_rule.
      *
      * Forwards to {@see stubFor()}->DeletePolicyRule(); retries transient codes.
      * Path: /udb.core.authz.services.v1.AuthzService/DeletePolicyRule
@@ -2187,7 +2737,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded DeletePolicyRuleResponse
      */
-    public function delete_policy_rule($request, ?UdbMetadata $metadata = null)
+    public function deletePolicyRule($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'DeletePolicyRule',
@@ -2200,7 +2750,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authz.services.v1.AuthzService / DeleteRole (unary).
+     * udb.core.authz.services.v1.AuthzService / DeleteRole (unary), public alias delete_role.
      *
      * Forwards to {@see stubFor()}->DeleteRole(); retries transient codes.
      * Path: /udb.core.authz.services.v1.AuthzService/DeleteRole
@@ -2208,7 +2758,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded DeleteRoleResponse
      */
-    public function delete_role($request, ?UdbMetadata $metadata = null)
+    public function deleteRole($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'DeleteRole',
@@ -2221,7 +2771,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authz.services.v1.AuthzService / DiffPolicyDraft (unary).
+     * udb.core.authz.services.v1.AuthzService / DiffPolicyDraft (unary), public alias diff_policy_draft.
      *
      * Forwards to {@see stubFor()}->DiffPolicyDraft(); retries transient codes.
      * Path: /udb.core.authz.services.v1.AuthzService/DiffPolicyDraft
@@ -2229,7 +2779,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded DiffPolicyDraftResponse
      */
-    public function diff_policy_draft($request, ?UdbMetadata $metadata = null)
+    public function diffPolicyDraft($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'DiffPolicyDraft',
@@ -2242,7 +2792,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authz.services.v1.AuthzService / ExplainPolicy (unary).
+     * udb.core.authz.services.v1.AuthzService / ExplainPolicy (unary), public alias explain_policy.
      *
      * Forwards to {@see stubFor()}->ExplainPolicy(); retries transient codes.
      * Path: /udb.core.authz.services.v1.AuthzService/ExplainPolicy
@@ -2250,7 +2800,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ExplainPolicyResponse
      */
-    public function explain_policy($request, ?UdbMetadata $metadata = null)
+    public function explainPolicy($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ExplainPolicy',
@@ -2263,7 +2813,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authz.services.v1.AuthzService / GetAuthzRevision (unary).
+     * udb.core.authz.services.v1.AuthzService / GetAuthzRevision (unary), public alias get_authz_revision.
      *
      * Forwards to {@see stubFor()}->GetAuthzRevision(); retries transient codes.
      * Path: /udb.core.authz.services.v1.AuthzService/GetAuthzRevision
@@ -2271,7 +2821,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded GetAuthzRevisionResponse
      */
-    public function get_authz_revision($request, ?UdbMetadata $metadata = null)
+    public function getAuthzRevision($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GetAuthzRevision',
@@ -2284,7 +2834,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authz.services.v1.AuthzService / GetCanaryStatus (unary).
+     * udb.core.authz.services.v1.AuthzService / GetCanaryStatus (unary), public alias get_canary_status.
      *
      * Forwards to {@see stubFor()}->GetCanaryStatus(); retries transient codes.
      * Path: /udb.core.authz.services.v1.AuthzService/GetCanaryStatus
@@ -2292,7 +2842,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded GetCanaryStatusResponse
      */
-    public function get_canary_status($request, ?UdbMetadata $metadata = null)
+    public function getCanaryStatus($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GetCanaryStatus',
@@ -2305,7 +2855,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authz.services.v1.AuthzService / GetNativeAccess (unary).
+     * udb.core.authz.services.v1.AuthzService / GetNativeAccess (unary), public alias get_native_access.
      *
      * Forwards to {@see stubFor()}->GetNativeAccess(); retries transient codes.
      * Path: /udb.core.authz.services.v1.AuthzService/GetNativeAccess
@@ -2313,7 +2863,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded NativeAccessResponse
      */
-    public function get_native_access($request, ?UdbMetadata $metadata = null)
+    public function getNativeAccess($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GetNativeAccess',
@@ -2326,7 +2876,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authz.services.v1.AuthzService / GetPolicyBundle (unary).
+     * udb.core.authz.services.v1.AuthzService / GetPolicyBundle (unary), public alias get_policy_bundle.
      *
      * Forwards to {@see stubFor()}->GetPolicyBundle(); retries transient codes.
      * Path: /udb.core.authz.services.v1.AuthzService/GetPolicyBundle
@@ -2334,7 +2884,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded PolicyBundleResponse
      */
-    public function get_policy_bundle($request, ?UdbMetadata $metadata = null)
+    public function getPolicyBundle($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GetPolicyBundle',
@@ -2347,7 +2897,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authz.services.v1.AuthzService / GetPolicyRule (unary).
+     * udb.core.authz.services.v1.AuthzService / GetPolicyRule (unary), public alias get_policy_rule.
      *
      * Forwards to {@see stubFor()}->GetPolicyRule(); retries transient codes.
      * Path: /udb.core.authz.services.v1.AuthzService/GetPolicyRule
@@ -2355,7 +2905,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded GetPolicyRuleResponse
      */
-    public function get_policy_rule($request, ?UdbMetadata $metadata = null)
+    public function getPolicyRule($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GetPolicyRule',
@@ -2368,7 +2918,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authz.services.v1.AuthzService / GetRole (unary).
+     * udb.core.authz.services.v1.AuthzService / GetRole (unary), public alias get_role.
      *
      * Forwards to {@see stubFor()}->GetRole(); retries transient codes.
      * Path: /udb.core.authz.services.v1.AuthzService/GetRole
@@ -2376,7 +2926,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded GetRoleResponse
      */
-    public function get_role($request, ?UdbMetadata $metadata = null)
+    public function getRole($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GetRole',
@@ -2389,7 +2939,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authz.services.v1.AuthzService / InvalidatePolicyBundles (unary).
+     * udb.core.authz.services.v1.AuthzService / InvalidatePolicyBundles (unary), public alias invalidate_policy_bundles.
      *
      * Forwards to {@see stubFor()}->InvalidatePolicyBundles(); retries transient codes.
      * Path: /udb.core.authz.services.v1.AuthzService/InvalidatePolicyBundles
@@ -2397,7 +2947,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded InvalidatePolicyBundlesResponse
      */
-    public function invalidate_policy_bundles($request, ?UdbMetadata $metadata = null)
+    public function invalidatePolicyBundles($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'InvalidatePolicyBundles',
@@ -2410,7 +2960,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authz.services.v1.AuthzService / LintAuthzPolicies (unary).
+     * udb.core.authz.services.v1.AuthzService / LintAuthzPolicies (unary), public alias lint_authz_policies.
      *
      * Forwards to {@see stubFor()}->LintAuthzPolicies(); retries transient codes.
      * Path: /udb.core.authz.services.v1.AuthzService/LintAuthzPolicies
@@ -2418,7 +2968,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded LintAuthzPoliciesResponse
      */
-    public function lint_authz_policies($request, ?UdbMetadata $metadata = null)
+    public function lintAuthzPolicies($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'LintAuthzPolicies',
@@ -2431,7 +2981,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authz.services.v1.AuthzService / ListAccessDecisionAudits (unary).
+     * udb.core.authz.services.v1.AuthzService / ListAccessDecisionAudits (unary), public alias list_access_decision_audits.
      *
      * Forwards to {@see stubFor()}->ListAccessDecisionAudits(); retries transient codes.
      * Path: /udb.core.authz.services.v1.AuthzService/ListAccessDecisionAudits
@@ -2439,7 +2989,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ListAccessDecisionAuditsResponse
      */
-    public function list_access_decision_audits($request, ?UdbMetadata $metadata = null)
+    public function listAccessDecisionAudits($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ListAccessDecisionAudits',
@@ -2452,7 +3002,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authz.services.v1.AuthzService / ListPolicyRules (unary).
+     * udb.core.authz.services.v1.AuthzService / ListPolicyRules (unary), public alias list_policy_rules.
      *
      * Forwards to {@see stubFor()}->ListPolicyRules(); retries transient codes.
      * Path: /udb.core.authz.services.v1.AuthzService/ListPolicyRules
@@ -2460,7 +3010,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ListPolicyRulesResponse
      */
-    public function list_policy_rules($request, ?UdbMetadata $metadata = null)
+    public function listPolicyRules($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ListPolicyRules',
@@ -2473,7 +3023,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authz.services.v1.AuthzService / ListPolicyVersions (unary).
+     * udb.core.authz.services.v1.AuthzService / ListPolicyVersions (unary), public alias list_policy_versions.
      *
      * Forwards to {@see stubFor()}->ListPolicyVersions(); retries transient codes.
      * Path: /udb.core.authz.services.v1.AuthzService/ListPolicyVersions
@@ -2481,7 +3031,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ListPolicyVersionsResponse
      */
-    public function list_policy_versions($request, ?UdbMetadata $metadata = null)
+    public function listPolicyVersions($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ListPolicyVersions',
@@ -2494,7 +3044,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authz.services.v1.AuthzService / ListRoles (unary).
+     * udb.core.authz.services.v1.AuthzService / ListRoles (unary), public alias list_roles.
      *
      * Forwards to {@see stubFor()}->ListRoles(); retries transient codes.
      * Path: /udb.core.authz.services.v1.AuthzService/ListRoles
@@ -2502,7 +3052,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ListRolesResponse
      */
-    public function list_roles($request, ?UdbMetadata $metadata = null)
+    public function listRoles($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ListRoles',
@@ -2515,7 +3065,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authz.services.v1.AuthzService / ListUserPermissions (unary).
+     * udb.core.authz.services.v1.AuthzService / ListUserPermissions (unary), public alias list_user_permissions.
      *
      * Forwards to {@see stubFor()}->ListUserPermissions(); retries transient codes.
      * Path: /udb.core.authz.services.v1.AuthzService/ListUserPermissions
@@ -2523,7 +3073,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ListUserPermissionsResponse
      */
-    public function list_user_permissions($request, ?UdbMetadata $metadata = null)
+    public function listUserPermissions($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ListUserPermissions',
@@ -2536,7 +3086,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authz.services.v1.AuthzService / ListUserRoles (unary).
+     * udb.core.authz.services.v1.AuthzService / ListUserRoles (unary), public alias list_user_roles.
      *
      * Forwards to {@see stubFor()}->ListUserRoles(); retries transient codes.
      * Path: /udb.core.authz.services.v1.AuthzService/ListUserRoles
@@ -2544,7 +3094,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ListUserRolesResponse
      */
-    public function list_user_roles($request, ?UdbMetadata $metadata = null)
+    public function listUserRoles($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ListUserRoles',
@@ -2557,7 +3107,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authz.services.v1.AuthzService / MigrateLegacyPolicies (unary).
+     * udb.core.authz.services.v1.AuthzService / MigrateLegacyPolicies (unary), public alias migrate_legacy_policies.
      *
      * Forwards to {@see stubFor()}->MigrateLegacyPolicies(); retries transient codes.
      * Path: /udb.core.authz.services.v1.AuthzService/MigrateLegacyPolicies
@@ -2565,7 +3115,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded MigrateLegacyPoliciesResponse
      */
-    public function migrate_legacy_policies($request, ?UdbMetadata $metadata = null)
+    public function migrateLegacyPolicies($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'MigrateLegacyPolicies',
@@ -2578,7 +3128,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authz.services.v1.AuthzService / PromoteCanary (unary).
+     * udb.core.authz.services.v1.AuthzService / PromoteCanary (unary), public alias promote_canary.
      *
      * Forwards to {@see stubFor()}->PromoteCanary(); retries transient codes.
      * Path: /udb.core.authz.services.v1.AuthzService/PromoteCanary
@@ -2586,7 +3136,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded CanaryResponse
      */
-    public function promote_canary($request, ?UdbMetadata $metadata = null)
+    public function promoteCanary($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'PromoteCanary',
@@ -2599,7 +3149,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authz.services.v1.AuthzService / PutAuthzPolicy (unary).
+     * udb.core.authz.services.v1.AuthzService / PutAuthzPolicy (unary), public alias put_authz_policy.
      *
      * Forwards to {@see stubFor()}->PutAuthzPolicy(); retries transient codes.
      * Path: /udb.core.authz.services.v1.AuthzService/PutAuthzPolicy
@@ -2607,7 +3157,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded AuthMutationResponse
      */
-    public function put_authz_policy($request, ?UdbMetadata $metadata = null)
+    public function putAuthzPolicy($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'PutAuthzPolicy',
@@ -2620,7 +3170,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authz.services.v1.AuthzService / PutRelationship (unary).
+     * udb.core.authz.services.v1.AuthzService / PutRelationship (unary), public alias put_relationship.
      *
      * Forwards to {@see stubFor()}->PutRelationship(); retries transient codes.
      * Path: /udb.core.authz.services.v1.AuthzService/PutRelationship
@@ -2628,7 +3178,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded AuthMutationResponse
      */
-    public function put_relationship($request, ?UdbMetadata $metadata = null)
+    public function putRelationship($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'PutRelationship',
@@ -2641,7 +3191,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authz.services.v1.AuthzService / PutRoleBinding (unary).
+     * udb.core.authz.services.v1.AuthzService / PutRoleBinding (unary), public alias put_role_binding.
      *
      * Forwards to {@see stubFor()}->PutRoleBinding(); retries transient codes.
      * Path: /udb.core.authz.services.v1.AuthzService/PutRoleBinding
@@ -2649,7 +3199,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded AuthMutationResponse
      */
-    public function put_role_binding($request, ?UdbMetadata $metadata = null)
+    public function putRoleBinding($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'PutRoleBinding',
@@ -2662,7 +3212,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authz.services.v1.AuthzService / RejectPolicyDraft (unary).
+     * udb.core.authz.services.v1.AuthzService / RejectPolicyDraft (unary), public alias reject_policy_draft.
      *
      * Forwards to {@see stubFor()}->RejectPolicyDraft(); retries transient codes.
      * Path: /udb.core.authz.services.v1.AuthzService/RejectPolicyDraft
@@ -2670,7 +3220,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded PolicyApprovalResponse
      */
-    public function reject_policy_draft($request, ?UdbMetadata $metadata = null)
+    public function rejectPolicyDraft($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'RejectPolicyDraft',
@@ -2683,7 +3233,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authz.services.v1.AuthzService / RevokeRole (unary).
+     * udb.core.authz.services.v1.AuthzService / RevokeRole (unary), public alias revoke_role.
      *
      * Forwards to {@see stubFor()}->RevokeRole(); retries transient codes.
      * Path: /udb.core.authz.services.v1.AuthzService/RevokeRole
@@ -2691,7 +3241,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded RevokeRoleResponse
      */
-    public function revoke_role($request, ?UdbMetadata $metadata = null)
+    public function revokeRole($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'RevokeRole',
@@ -2704,7 +3254,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authz.services.v1.AuthzService / RollbackPolicyVersion (unary).
+     * udb.core.authz.services.v1.AuthzService / RollbackPolicyVersion (unary), public alias rollback_policy_version.
      *
      * Forwards to {@see stubFor()}->RollbackPolicyVersion(); retries transient codes.
      * Path: /udb.core.authz.services.v1.AuthzService/RollbackPolicyVersion
@@ -2712,7 +3262,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ActivationResponse
      */
-    public function rollback_policy_version($request, ?UdbMetadata $metadata = null)
+    public function rollbackPolicyVersion($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'RollbackPolicyVersion',
@@ -2725,7 +3275,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authz.services.v1.AuthzService / SeedBuiltinRoles (unary).
+     * udb.core.authz.services.v1.AuthzService / SeedBuiltinRoles (unary), public alias seed_builtin_roles.
      *
      * Forwards to {@see stubFor()}->SeedBuiltinRoles(); retries transient codes.
      * Path: /udb.core.authz.services.v1.AuthzService/SeedBuiltinRoles
@@ -2733,7 +3283,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded SeedBuiltinRolesResponse
      */
-    public function seed_builtin_roles($request, ?UdbMetadata $metadata = null)
+    public function seedBuiltinRoles($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'SeedBuiltinRoles',
@@ -2746,7 +3296,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authz.services.v1.AuthzService / SimulatePolicy (unary).
+     * udb.core.authz.services.v1.AuthzService / SimulatePolicy (unary), public alias simulate_policy.
      *
      * Forwards to {@see stubFor()}->SimulatePolicy(); retries transient codes.
      * Path: /udb.core.authz.services.v1.AuthzService/SimulatePolicy
@@ -2754,7 +3304,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded SimulatePolicyResponse
      */
-    public function simulate_policy($request, ?UdbMetadata $metadata = null)
+    public function simulatePolicy($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'SimulatePolicy',
@@ -2767,7 +3317,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authz.services.v1.AuthzService / SubmitPolicyDraft (unary).
+     * udb.core.authz.services.v1.AuthzService / SubmitPolicyDraft (unary), public alias submit_policy_draft.
      *
      * Forwards to {@see stubFor()}->SubmitPolicyDraft(); retries transient codes.
      * Path: /udb.core.authz.services.v1.AuthzService/SubmitPolicyDraft
@@ -2775,7 +3325,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded PolicyDraftResponse
      */
-    public function submit_policy_draft($request, ?UdbMetadata $metadata = null)
+    public function submitPolicyDraft($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'SubmitPolicyDraft',
@@ -2788,7 +3338,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authz.services.v1.AuthzService / UpdatePolicyDraft (unary).
+     * udb.core.authz.services.v1.AuthzService / UpdatePolicyDraft (unary), public alias update_policy_draft.
      *
      * Forwards to {@see stubFor()}->UpdatePolicyDraft(); retries transient codes.
      * Path: /udb.core.authz.services.v1.AuthzService/UpdatePolicyDraft
@@ -2796,7 +3346,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded PolicyDraftResponse
      */
-    public function update_policy_draft($request, ?UdbMetadata $metadata = null)
+    public function updatePolicyDraft($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'UpdatePolicyDraft',
@@ -2809,7 +3359,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.authz.services.v1.AuthzService / UpdateRole (unary).
+     * udb.core.authz.services.v1.AuthzService / UpdateRole (unary), public alias update_role.
      *
      * Forwards to {@see stubFor()}->UpdateRole(); retries transient codes.
      * Path: /udb.core.authz.services.v1.AuthzService/UpdateRole
@@ -2817,7 +3367,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded UpdateRoleResponse
      */
-    public function update_role($request, ?UdbMetadata $metadata = null)
+    public function updateRole($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'UpdateRole',
@@ -2830,7 +3380,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.control.services.v1.ControlPlaneService / AckStatus (unary).
+     * udb.core.control.services.v1.ControlPlaneService / AckStatus (unary), public alias ack_status.
      *
      * Forwards to {@see stubFor()}->AckStatus(); retries transient codes.
      * Path: /udb.core.control.services.v1.ControlPlaneService/AckStatus
@@ -2838,7 +3388,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded AckStatusResponse
      */
-    public function ack_status($request, ?UdbMetadata $metadata = null)
+    public function ackStatus($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'AckStatus',
@@ -2851,7 +3401,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.control.services.v1.ControlPlaneService / GetResources (unary).
+     * udb.core.control.services.v1.ControlPlaneService / GetResources (unary), public alias get_resources.
      *
      * Forwards to {@see stubFor()}->GetResources(); retries transient codes.
      * Path: /udb.core.control.services.v1.ControlPlaneService/GetResources
@@ -2859,7 +3409,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded GetResourcesResponse
      */
-    public function get_resources($request, ?UdbMetadata $metadata = null)
+    public function getResources($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GetResources',
@@ -2872,7 +3422,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.control.services.v1.ControlPlaneService / ListNodeStates (unary).
+     * udb.core.control.services.v1.ControlPlaneService / ListNodeStates (unary), public alias list_node_states.
      *
      * Forwards to {@see stubFor()}->ListNodeStates(); retries transient codes.
      * Path: /udb.core.control.services.v1.ControlPlaneService/ListNodeStates
@@ -2880,7 +3430,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ListNodeStatesResponse
      */
-    public function list_node_states($request, ?UdbMetadata $metadata = null)
+    public function listNodeStates($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ListNodeStates',
@@ -2893,7 +3443,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.idp.services.v1.IdentityProviderService / CreateProvider (unary).
+     * udb.core.idp.services.v1.IdentityProviderService / CreateProvider (unary), public alias create_provider.
      *
      * Forwards to {@see stubFor()}->CreateProvider(); retries transient codes.
      * Path: /udb.core.idp.services.v1.IdentityProviderService/CreateProvider
@@ -2901,7 +3451,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded CreateProviderResponse
      */
-    public function create_provider($request, ?UdbMetadata $metadata = null)
+    public function createProvider($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'CreateProvider',
@@ -2914,7 +3464,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.idp.services.v1.IdentityProviderService / DisableProvider (unary).
+     * udb.core.idp.services.v1.IdentityProviderService / DisableProvider (unary), public alias disable_provider.
      *
      * Forwards to {@see stubFor()}->DisableProvider(); retries transient codes.
      * Path: /udb.core.idp.services.v1.IdentityProviderService/DisableProvider
@@ -2922,7 +3472,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded DisableProviderResponse
      */
-    public function disable_provider($request, ?UdbMetadata $metadata = null)
+    public function disableProvider($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'DisableProvider',
@@ -2935,7 +3485,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.idp.services.v1.IdentityProviderService / ForceJwksRefresh (unary).
+     * udb.core.idp.services.v1.IdentityProviderService / ForceJwksRefresh (unary), public alias force_jwks_refresh.
      *
      * Forwards to {@see stubFor()}->ForceJwksRefresh(); retries transient codes.
      * Path: /udb.core.idp.services.v1.IdentityProviderService/ForceJwksRefresh
@@ -2943,7 +3493,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ForceJwksRefreshResponse
      */
-    public function force_jwks_refresh($request, ?UdbMetadata $metadata = null)
+    public function forceJwksRefresh($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ForceJwksRefresh',
@@ -2956,7 +3506,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.idp.services.v1.IdentityProviderService / GetProvider (unary).
+     * udb.core.idp.services.v1.IdentityProviderService / GetProvider (unary), public alias get_provider.
      *
      * Forwards to {@see stubFor()}->GetProvider(); retries transient codes.
      * Path: /udb.core.idp.services.v1.IdentityProviderService/GetProvider
@@ -2964,7 +3514,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded GetProviderResponse
      */
-    public function get_provider($request, ?UdbMetadata $metadata = null)
+    public function getProvider($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GetProvider',
@@ -2977,7 +3527,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.idp.services.v1.IdentityProviderService / ImportSamlMetadata (unary).
+     * udb.core.idp.services.v1.IdentityProviderService / ImportSamlMetadata (unary), public alias import_saml_metadata.
      *
      * Forwards to {@see stubFor()}->ImportSamlMetadata(); retries transient codes.
      * Path: /udb.core.idp.services.v1.IdentityProviderService/ImportSamlMetadata
@@ -2985,7 +3535,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ImportSamlMetadataResponse
      */
-    public function import_saml_metadata($request, ?UdbMetadata $metadata = null)
+    public function importSamlMetadata($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ImportSamlMetadata',
@@ -2998,7 +3548,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.idp.services.v1.IdentityProviderService / LinkIdentity (unary).
+     * udb.core.idp.services.v1.IdentityProviderService / LinkIdentity (unary), public alias link_identity.
      *
      * Forwards to {@see stubFor()}->LinkIdentity(); retries transient codes.
      * Path: /udb.core.idp.services.v1.IdentityProviderService/LinkIdentity
@@ -3006,7 +3556,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded LinkIdentityResponse
      */
-    public function link_identity($request, ?UdbMetadata $metadata = null)
+    public function linkIdentity($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'LinkIdentity',
@@ -3019,7 +3569,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.idp.services.v1.IdentityProviderService / ListExternalIdentities (unary).
+     * udb.core.idp.services.v1.IdentityProviderService / ListExternalIdentities (unary), public alias list_external_identities.
      *
      * Forwards to {@see stubFor()}->ListExternalIdentities(); retries transient codes.
      * Path: /udb.core.idp.services.v1.IdentityProviderService/ListExternalIdentities
@@ -3027,7 +3577,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ListExternalIdentitiesResponse
      */
-    public function list_external_identities($request, ?UdbMetadata $metadata = null)
+    public function listExternalIdentities($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ListExternalIdentities',
@@ -3040,7 +3590,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.idp.services.v1.IdentityProviderService / ListProviders (unary).
+     * udb.core.idp.services.v1.IdentityProviderService / ListProviders (unary), public alias list_providers.
      *
      * Forwards to {@see stubFor()}->ListProviders(); retries transient codes.
      * Path: /udb.core.idp.services.v1.IdentityProviderService/ListProviders
@@ -3048,7 +3598,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ListProvidersResponse
      */
-    public function list_providers($request, ?UdbMetadata $metadata = null)
+    public function listProviders($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ListProviders',
@@ -3061,7 +3611,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.idp.services.v1.IdentityProviderService / PreviewClaimMapping (unary).
+     * udb.core.idp.services.v1.IdentityProviderService / PreviewClaimMapping (unary), public alias preview_claim_mapping.
      *
      * Forwards to {@see stubFor()}->PreviewClaimMapping(); retries transient codes.
      * Path: /udb.core.idp.services.v1.IdentityProviderService/PreviewClaimMapping
@@ -3069,7 +3619,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded PreviewClaimMappingResponse
      */
-    public function preview_claim_mapping($request, ?UdbMetadata $metadata = null)
+    public function previewClaimMapping($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'PreviewClaimMapping',
@@ -3082,7 +3632,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.idp.services.v1.IdentityProviderService / PreviewGroupMapping (unary).
+     * udb.core.idp.services.v1.IdentityProviderService / PreviewGroupMapping (unary), public alias preview_group_mapping.
      *
      * Forwards to {@see stubFor()}->PreviewGroupMapping(); retries transient codes.
      * Path: /udb.core.idp.services.v1.IdentityProviderService/PreviewGroupMapping
@@ -3090,7 +3640,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded PreviewGroupMappingResponse
      */
-    public function preview_group_mapping($request, ?UdbMetadata $metadata = null)
+    public function previewGroupMapping($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'PreviewGroupMapping',
@@ -3103,7 +3653,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.idp.services.v1.IdentityProviderService / ResolveExternalIdentity (unary).
+     * udb.core.idp.services.v1.IdentityProviderService / ResolveExternalIdentity (unary), public alias resolve_external_identity.
      *
      * Forwards to {@see stubFor()}->ResolveExternalIdentity(); retries transient codes.
      * Path: /udb.core.idp.services.v1.IdentityProviderService/ResolveExternalIdentity
@@ -3111,7 +3661,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ResolveExternalIdentityResponse
      */
-    public function resolve_external_identity($request, ?UdbMetadata $metadata = null)
+    public function resolveExternalIdentity($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ResolveExternalIdentity',
@@ -3124,7 +3674,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.idp.services.v1.IdentityProviderService / SamlAcs (unary).
+     * udb.core.idp.services.v1.IdentityProviderService / SamlAcs (unary), public alias saml_acs.
      *
      * Forwards to {@see stubFor()}->SamlAcs(); retries transient codes.
      * Path: /udb.core.idp.services.v1.IdentityProviderService/SamlAcs
@@ -3132,7 +3682,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded SamlAcsResponse
      */
-    public function saml_acs($request, ?UdbMetadata $metadata = null)
+    public function samlAcs($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'SamlAcs',
@@ -3145,7 +3695,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.idp.services.v1.IdentityProviderService / ScimCreateGroup (unary).
+     * udb.core.idp.services.v1.IdentityProviderService / ScimCreateGroup (unary), public alias scim_create_group.
      *
      * Forwards to {@see stubFor()}->ScimCreateGroup(); retries transient codes.
      * Path: /udb.core.idp.services.v1.IdentityProviderService/ScimCreateGroup
@@ -3153,7 +3703,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ScimCreateGroupResponse
      */
-    public function scim_create_group($request, ?UdbMetadata $metadata = null)
+    public function scimCreateGroup($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ScimCreateGroup',
@@ -3166,7 +3716,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.idp.services.v1.IdentityProviderService / ScimCreateUser (unary).
+     * udb.core.idp.services.v1.IdentityProviderService / ScimCreateUser (unary), public alias scim_create_user.
      *
      * Forwards to {@see stubFor()}->ScimCreateUser(); retries transient codes.
      * Path: /udb.core.idp.services.v1.IdentityProviderService/ScimCreateUser
@@ -3174,7 +3724,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ScimCreateUserResponse
      */
-    public function scim_create_user($request, ?UdbMetadata $metadata = null)
+    public function scimCreateUser($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ScimCreateUser',
@@ -3187,7 +3737,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.idp.services.v1.IdentityProviderService / ScimDeleteGroup (unary).
+     * udb.core.idp.services.v1.IdentityProviderService / ScimDeleteGroup (unary), public alias scim_delete_group.
      *
      * Forwards to {@see stubFor()}->ScimDeleteGroup(); retries transient codes.
      * Path: /udb.core.idp.services.v1.IdentityProviderService/ScimDeleteGroup
@@ -3195,7 +3745,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ScimDeleteGroupResponse
      */
-    public function scim_delete_group($request, ?UdbMetadata $metadata = null)
+    public function scimDeleteGroup($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ScimDeleteGroup',
@@ -3208,7 +3758,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.idp.services.v1.IdentityProviderService / ScimDeleteUser (unary).
+     * udb.core.idp.services.v1.IdentityProviderService / ScimDeleteUser (unary), public alias scim_delete_user.
      *
      * Forwards to {@see stubFor()}->ScimDeleteUser(); retries transient codes.
      * Path: /udb.core.idp.services.v1.IdentityProviderService/ScimDeleteUser
@@ -3216,7 +3766,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ScimDeleteUserResponse
      */
-    public function scim_delete_user($request, ?UdbMetadata $metadata = null)
+    public function scimDeleteUser($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ScimDeleteUser',
@@ -3229,7 +3779,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.idp.services.v1.IdentityProviderService / ScimGetGroup (unary).
+     * udb.core.idp.services.v1.IdentityProviderService / ScimGetGroup (unary), public alias scim_get_group.
      *
      * Forwards to {@see stubFor()}->ScimGetGroup(); retries transient codes.
      * Path: /udb.core.idp.services.v1.IdentityProviderService/ScimGetGroup
@@ -3237,7 +3787,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ScimGetGroupResponse
      */
-    public function scim_get_group($request, ?UdbMetadata $metadata = null)
+    public function scimGetGroup($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ScimGetGroup',
@@ -3250,7 +3800,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.idp.services.v1.IdentityProviderService / ScimGetUser (unary).
+     * udb.core.idp.services.v1.IdentityProviderService / ScimGetUser (unary), public alias scim_get_user.
      *
      * Forwards to {@see stubFor()}->ScimGetUser(); retries transient codes.
      * Path: /udb.core.idp.services.v1.IdentityProviderService/ScimGetUser
@@ -3258,7 +3808,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ScimGetUserResponse
      */
-    public function scim_get_user($request, ?UdbMetadata $metadata = null)
+    public function scimGetUser($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ScimGetUser',
@@ -3271,7 +3821,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.idp.services.v1.IdentityProviderService / ScimListGroups (unary).
+     * udb.core.idp.services.v1.IdentityProviderService / ScimListGroups (unary), public alias scim_list_groups.
      *
      * Forwards to {@see stubFor()}->ScimListGroups(); retries transient codes.
      * Path: /udb.core.idp.services.v1.IdentityProviderService/ScimListGroups
@@ -3279,7 +3829,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ScimListGroupsResponse
      */
-    public function scim_list_groups($request, ?UdbMetadata $metadata = null)
+    public function scimListGroups($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ScimListGroups',
@@ -3292,7 +3842,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.idp.services.v1.IdentityProviderService / ScimListUsers (unary).
+     * udb.core.idp.services.v1.IdentityProviderService / ScimListUsers (unary), public alias scim_list_users.
      *
      * Forwards to {@see stubFor()}->ScimListUsers(); retries transient codes.
      * Path: /udb.core.idp.services.v1.IdentityProviderService/ScimListUsers
@@ -3300,7 +3850,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ScimListUsersResponse
      */
-    public function scim_list_users($request, ?UdbMetadata $metadata = null)
+    public function scimListUsers($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ScimListUsers',
@@ -3313,7 +3863,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.idp.services.v1.IdentityProviderService / ScimPatchGroup (unary).
+     * udb.core.idp.services.v1.IdentityProviderService / ScimPatchGroup (unary), public alias scim_patch_group.
      *
      * Forwards to {@see stubFor()}->ScimPatchGroup(); retries transient codes.
      * Path: /udb.core.idp.services.v1.IdentityProviderService/ScimPatchGroup
@@ -3321,7 +3871,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ScimPatchGroupResponse
      */
-    public function scim_patch_group($request, ?UdbMetadata $metadata = null)
+    public function scimPatchGroup($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ScimPatchGroup',
@@ -3334,7 +3884,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.idp.services.v1.IdentityProviderService / ScimPatchUser (unary).
+     * udb.core.idp.services.v1.IdentityProviderService / ScimPatchUser (unary), public alias scim_patch_user.
      *
      * Forwards to {@see stubFor()}->ScimPatchUser(); retries transient codes.
      * Path: /udb.core.idp.services.v1.IdentityProviderService/ScimPatchUser
@@ -3342,7 +3892,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ScimPatchUserResponse
      */
-    public function scim_patch_user($request, ?UdbMetadata $metadata = null)
+    public function scimPatchUser($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ScimPatchUser',
@@ -3355,7 +3905,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.idp.services.v1.IdentityProviderService / ScimReplaceUser (unary).
+     * udb.core.idp.services.v1.IdentityProviderService / ScimReplaceUser (unary), public alias scim_replace_user.
      *
      * Forwards to {@see stubFor()}->ScimReplaceUser(); retries transient codes.
      * Path: /udb.core.idp.services.v1.IdentityProviderService/ScimReplaceUser
@@ -3363,7 +3913,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ScimReplaceUserResponse
      */
-    public function scim_replace_user($request, ?UdbMetadata $metadata = null)
+    public function scimReplaceUser($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ScimReplaceUser',
@@ -3376,7 +3926,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.idp.services.v1.IdentityProviderService / StartSamlLogin (unary).
+     * udb.core.idp.services.v1.IdentityProviderService / StartSamlLogin (unary), public alias start_saml_login.
      *
      * Forwards to {@see stubFor()}->StartSamlLogin(); retries transient codes.
      * Path: /udb.core.idp.services.v1.IdentityProviderService/StartSamlLogin
@@ -3384,7 +3934,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded StartSamlLoginResponse
      */
-    public function start_saml_login($request, ?UdbMetadata $metadata = null)
+    public function startSamlLogin($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'StartSamlLogin',
@@ -3397,7 +3947,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.idp.services.v1.IdentityProviderService / TestProviderDiscovery (unary).
+     * udb.core.idp.services.v1.IdentityProviderService / TestProviderDiscovery (unary), public alias test_provider_discovery.
      *
      * Forwards to {@see stubFor()}->TestProviderDiscovery(); retries transient codes.
      * Path: /udb.core.idp.services.v1.IdentityProviderService/TestProviderDiscovery
@@ -3405,7 +3955,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded TestProviderDiscoveryResponse
      */
-    public function test_provider_discovery($request, ?UdbMetadata $metadata = null)
+    public function testProviderDiscovery($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'TestProviderDiscovery',
@@ -3418,7 +3968,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.idp.services.v1.IdentityProviderService / UnlinkIdentity (unary).
+     * udb.core.idp.services.v1.IdentityProviderService / UnlinkIdentity (unary), public alias unlink_identity.
      *
      * Forwards to {@see stubFor()}->UnlinkIdentity(); retries transient codes.
      * Path: /udb.core.idp.services.v1.IdentityProviderService/UnlinkIdentity
@@ -3426,7 +3976,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded UnlinkIdentityResponse
      */
-    public function unlink_identity($request, ?UdbMetadata $metadata = null)
+    public function unlinkIdentity($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'UnlinkIdentity',
@@ -3439,7 +3989,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.idp.services.v1.IdentityProviderService / UpdateProvider (unary).
+     * udb.core.idp.services.v1.IdentityProviderService / UpdateProvider (unary), public alias update_provider.
      *
      * Forwards to {@see stubFor()}->UpdateProvider(); retries transient codes.
      * Path: /udb.core.idp.services.v1.IdentityProviderService/UpdateProvider
@@ -3447,7 +3997,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded UpdateProviderResponse
      */
-    public function update_provider($request, ?UdbMetadata $metadata = null)
+    public function updateProvider($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'UpdateProvider',
@@ -3460,7 +4010,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.notification.services.v1.NotificationService / GetDeliveryStats (unary).
+     * udb.core.notification.services.v1.NotificationService / GetDeliveryStats (unary), public alias get_delivery_stats.
      *
      * Forwards to {@see stubFor()}->GetDeliveryStats(); retries transient codes.
      * Path: /udb.core.notification.services.v1.NotificationService/GetDeliveryStats
@@ -3468,7 +4018,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded GetDeliveryStatsResponse
      */
-    public function get_delivery_stats($request, ?UdbMetadata $metadata = null)
+    public function getDeliveryStats($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GetDeliveryStats',
@@ -3481,7 +4031,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.notification.services.v1.NotificationService / GetNotification (unary).
+     * udb.core.notification.services.v1.NotificationService / GetNotification (unary), public alias get_notification.
      *
      * Forwards to {@see stubFor()}->GetNotification(); retries transient codes.
      * Path: /udb.core.notification.services.v1.NotificationService/GetNotification
@@ -3489,7 +4039,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded GetNotificationResponse
      */
-    public function get_notification($request, ?UdbMetadata $metadata = null)
+    public function getNotification($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GetNotification',
@@ -3502,7 +4052,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.notification.services.v1.NotificationService / GetPreference (unary).
+     * udb.core.notification.services.v1.NotificationService / GetPreference (unary), public alias get_preference.
      *
      * Forwards to {@see stubFor()}->GetPreference(); retries transient codes.
      * Path: /udb.core.notification.services.v1.NotificationService/GetPreference
@@ -3510,7 +4060,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded GetPreferenceResponse
      */
-    public function get_preference($request, ?UdbMetadata $metadata = null)
+    public function getPreference($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GetPreference',
@@ -3523,7 +4073,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.notification.services.v1.NotificationService / GetTemplate (unary).
+     * udb.core.notification.services.v1.NotificationService / GetTemplate (unary), public alias get_template.
      *
      * Forwards to {@see stubFor()}->GetTemplate(); retries transient codes.
      * Path: /udb.core.notification.services.v1.NotificationService/GetTemplate
@@ -3531,7 +4081,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded GetTemplateResponse
      */
-    public function get_template($request, ?UdbMetadata $metadata = null)
+    public function getTemplate($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GetTemplate',
@@ -3544,7 +4094,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.notification.services.v1.NotificationService / ListNotifications (unary).
+     * udb.core.notification.services.v1.NotificationService / ListNotifications (unary), public alias list_notifications.
      *
      * Forwards to {@see stubFor()}->ListNotifications(); retries transient codes.
      * Path: /udb.core.notification.services.v1.NotificationService/ListNotifications
@@ -3552,7 +4102,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ListNotificationsResponse
      */
-    public function list_notifications($request, ?UdbMetadata $metadata = null)
+    public function listNotifications($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ListNotifications',
@@ -3565,7 +4115,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.notification.services.v1.NotificationService / ListPreferences (unary).
+     * udb.core.notification.services.v1.NotificationService / ListPreferences (unary), public alias list_preferences.
      *
      * Forwards to {@see stubFor()}->ListPreferences(); retries transient codes.
      * Path: /udb.core.notification.services.v1.NotificationService/ListPreferences
@@ -3573,7 +4123,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ListPreferencesResponse
      */
-    public function list_preferences($request, ?UdbMetadata $metadata = null)
+    public function listPreferences($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ListPreferences',
@@ -3586,7 +4136,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.notification.services.v1.NotificationService / ListTemplates (unary).
+     * udb.core.notification.services.v1.NotificationService / ListTemplates (unary), public alias list_templates.
      *
      * Forwards to {@see stubFor()}->ListTemplates(); retries transient codes.
      * Path: /udb.core.notification.services.v1.NotificationService/ListTemplates
@@ -3594,7 +4144,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ListTemplatesResponse
      */
-    public function list_templates($request, ?UdbMetadata $metadata = null)
+    public function listTemplates($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ListTemplates',
@@ -3607,7 +4157,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.notification.services.v1.NotificationService / RetryNotification (unary).
+     * udb.core.notification.services.v1.NotificationService / RetryNotification (unary), public alias retry_notification.
      *
      * Forwards to {@see stubFor()}->RetryNotification(); retries transient codes.
      * Path: /udb.core.notification.services.v1.NotificationService/RetryNotification
@@ -3615,7 +4165,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded RetryNotificationResponse
      */
-    public function retry_notification($request, ?UdbMetadata $metadata = null)
+    public function retryNotification($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'RetryNotification',
@@ -3628,7 +4178,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.notification.services.v1.NotificationService / SendNotification (unary).
+     * udb.core.notification.services.v1.NotificationService / SendNotification (unary), public alias send_notification.
      *
      * Forwards to {@see stubFor()}->SendNotification(); retries transient codes.
      * Path: /udb.core.notification.services.v1.NotificationService/SendNotification
@@ -3636,7 +4186,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded SendNotificationResponse
      */
-    public function send_notification($request, ?UdbMetadata $metadata = null)
+    public function sendNotification($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'SendNotification',
@@ -3649,7 +4199,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.notification.services.v1.NotificationService / SetPreference (unary).
+     * udb.core.notification.services.v1.NotificationService / SetPreference (unary), public alias set_preference.
      *
      * Forwards to {@see stubFor()}->SetPreference(); retries transient codes.
      * Path: /udb.core.notification.services.v1.NotificationService/SetPreference
@@ -3657,7 +4207,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded SetPreferenceResponse
      */
-    public function set_preference($request, ?UdbMetadata $metadata = null)
+    public function setPreference($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'SetPreference',
@@ -3670,7 +4220,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.notification.services.v1.NotificationService / UpsertTemplate (unary).
+     * udb.core.notification.services.v1.NotificationService / UpsertTemplate (unary), public alias upsert_template.
      *
      * Forwards to {@see stubFor()}->UpsertTemplate(); retries transient codes.
      * Path: /udb.core.notification.services.v1.NotificationService/UpsertTemplate
@@ -3678,7 +4228,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded UpsertTemplateResponse
      */
-    public function upsert_template($request, ?UdbMetadata $metadata = null)
+    public function upsertTemplate($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'UpsertTemplate',
@@ -3691,7 +4241,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.storage.services.v1.StorageService / DeleteFile (unary).
+     * udb.core.storage.services.v1.StorageService / DeleteFile (unary), public alias delete_file.
      *
      * Forwards to {@see stubFor()}->DeleteFile(); retries transient codes.
      * Path: /udb.core.storage.services.v1.StorageService/DeleteFile
@@ -3699,7 +4249,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded DeleteFileResponse
      */
-    public function delete_file($request, ?UdbMetadata $metadata = null)
+    public function deleteFile($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'DeleteFile',
@@ -3712,7 +4262,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.storage.services.v1.StorageService / FinalizeUpload (unary).
+     * udb.core.storage.services.v1.StorageService / FinalizeUpload (unary), public alias finalize_upload.
      *
      * Forwards to {@see stubFor()}->FinalizeUpload(); retries transient codes.
      * Path: /udb.core.storage.services.v1.StorageService/FinalizeUpload
@@ -3720,7 +4270,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded FinalizeUploadResponse
      */
-    public function finalize_upload($request, ?UdbMetadata $metadata = null)
+    public function finalizeUpload($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'FinalizeUpload',
@@ -3733,7 +4283,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.storage.services.v1.StorageService / GetDownloadUrl (unary).
+     * udb.core.storage.services.v1.StorageService / GetDownloadUrl (unary), public alias get_download_url.
      *
      * Forwards to {@see stubFor()}->GetDownloadUrl(); retries transient codes.
      * Path: /udb.core.storage.services.v1.StorageService/GetDownloadUrl
@@ -3741,7 +4291,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded GetDownloadUrlResponse
      */
-    public function get_download_url($request, ?UdbMetadata $metadata = null)
+    public function getDownloadUrl($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GetDownloadUrl',
@@ -3754,7 +4304,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.storage.services.v1.StorageService / GetFile (unary).
+     * udb.core.storage.services.v1.StorageService / GetFile (unary), public alias get_file.
      *
      * Forwards to {@see stubFor()}->GetFile(); retries transient codes.
      * Path: /udb.core.storage.services.v1.StorageService/GetFile
@@ -3762,7 +4312,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded GetFileResponse
      */
-    public function get_file($request, ?UdbMetadata $metadata = null)
+    public function getFile($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GetFile',
@@ -3775,7 +4325,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.storage.services.v1.StorageService / ListFiles (unary).
+     * udb.core.storage.services.v1.StorageService / ListFiles (unary), public alias list_files.
      *
      * Forwards to {@see stubFor()}->ListFiles(); retries transient codes.
      * Path: /udb.core.storage.services.v1.StorageService/ListFiles
@@ -3783,7 +4333,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ListFilesResponse
      */
-    public function list_files($request, ?UdbMetadata $metadata = null)
+    public function listFiles($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ListFiles',
@@ -3796,7 +4346,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.storage.services.v1.StorageService / RegisterUpload (unary).
+     * udb.core.storage.services.v1.StorageService / RegisterUpload (unary), public alias register_upload.
      *
      * Forwards to {@see stubFor()}->RegisterUpload(); retries transient codes.
      * Path: /udb.core.storage.services.v1.StorageService/RegisterUpload
@@ -3804,7 +4354,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded RegisterUploadResponse
      */
-    public function register_upload($request, ?UdbMetadata $metadata = null)
+    public function registerUpload($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'RegisterUpload',
@@ -3817,7 +4367,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.storage.services.v1.StorageService / UpdateFile (unary).
+     * udb.core.storage.services.v1.StorageService / UpdateFile (unary), public alias update_file.
      *
      * Forwards to {@see stubFor()}->UpdateFile(); retries transient codes.
      * Path: /udb.core.storage.services.v1.StorageService/UpdateFile
@@ -3825,7 +4375,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded UpdateFileResponse
      */
-    public function update_file($request, ?UdbMetadata $metadata = null)
+    public function updateFile($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'UpdateFile',
@@ -3838,7 +4388,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.tenant.services.v1.TenantService / CreateTenant (unary).
+     * udb.core.tenant.services.v1.TenantService / CreateTenant (unary), public alias create_tenant.
      *
      * Forwards to {@see stubFor()}->CreateTenant(); retries transient codes.
      * Path: /udb.core.tenant.services.v1.TenantService/CreateTenant
@@ -3846,7 +4396,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded CreateTenantResponse
      */
-    public function create_tenant($request, ?UdbMetadata $metadata = null)
+    public function createTenant($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'CreateTenant',
@@ -3859,7 +4409,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.tenant.services.v1.TenantService / GetTenant (unary).
+     * udb.core.tenant.services.v1.TenantService / GetTenant (unary), public alias get_tenant.
      *
      * Forwards to {@see stubFor()}->GetTenant(); retries transient codes.
      * Path: /udb.core.tenant.services.v1.TenantService/GetTenant
@@ -3867,7 +4417,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded GetTenantResponse
      */
-    public function get_tenant($request, ?UdbMetadata $metadata = null)
+    public function getTenant($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GetTenant',
@@ -3880,7 +4430,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.tenant.services.v1.TenantService / GetTenantConfig (unary).
+     * udb.core.tenant.services.v1.TenantService / GetTenantConfig (unary), public alias get_tenant_config.
      *
      * Forwards to {@see stubFor()}->GetTenantConfig(); retries transient codes.
      * Path: /udb.core.tenant.services.v1.TenantService/GetTenantConfig
@@ -3888,7 +4438,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded GetTenantConfigResponse
      */
-    public function get_tenant_config($request, ?UdbMetadata $metadata = null)
+    public function getTenantConfig($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GetTenantConfig',
@@ -3901,7 +4451,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.tenant.services.v1.TenantService / ListTenants (unary).
+     * udb.core.tenant.services.v1.TenantService / ListTenants (unary), public alias list_tenants.
      *
      * Forwards to {@see stubFor()}->ListTenants(); retries transient codes.
      * Path: /udb.core.tenant.services.v1.TenantService/ListTenants
@@ -3909,7 +4459,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ListTenantsResponse
      */
-    public function list_tenants($request, ?UdbMetadata $metadata = null)
+    public function listTenants($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ListTenants',
@@ -3922,7 +4472,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.tenant.services.v1.TenantService / UpdateTenant (unary).
+     * udb.core.tenant.services.v1.TenantService / UpdateTenant (unary), public alias update_tenant.
      *
      * Forwards to {@see stubFor()}->UpdateTenant(); retries transient codes.
      * Path: /udb.core.tenant.services.v1.TenantService/UpdateTenant
@@ -3930,7 +4480,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded UpdateTenantResponse
      */
-    public function update_tenant($request, ?UdbMetadata $metadata = null)
+    public function updateTenant($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'UpdateTenant',
@@ -3943,7 +4493,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.tenant.services.v1.TenantService / UpdateTenantConfig (unary).
+     * udb.core.tenant.services.v1.TenantService / UpdateTenantConfig (unary), public alias update_tenant_config.
      *
      * Forwards to {@see stubFor()}->UpdateTenantConfig(); retries transient codes.
      * Path: /udb.core.tenant.services.v1.TenantService/UpdateTenantConfig
@@ -3951,7 +4501,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded UpdateTenantConfigResponse
      */
-    public function update_tenant_config($request, ?UdbMetadata $metadata = null)
+    public function updateTenantConfig($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'UpdateTenantConfig',
@@ -3964,7 +4514,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.webrtc.services.v1.PeerService / GetPeer (unary).
+     * udb.core.webrtc.services.v1.PeerService / GetPeer (unary), public alias get_peer.
      *
      * Forwards to {@see stubFor()}->GetPeer(); retries transient codes.
      * Path: /udb.core.webrtc.services.v1.PeerService/GetPeer
@@ -3972,7 +4522,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded GetPeerResponse
      */
-    public function get_peer($request, ?UdbMetadata $metadata = null)
+    public function getPeer($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GetPeer',
@@ -3985,7 +4535,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.webrtc.services.v1.PeerService / JoinRoom (unary).
+     * udb.core.webrtc.services.v1.PeerService / JoinRoom (unary), public alias join_room.
      *
      * Forwards to {@see stubFor()}->JoinRoom(); retries transient codes.
      * Path: /udb.core.webrtc.services.v1.PeerService/JoinRoom
@@ -3993,7 +4543,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded JoinRoomResponse
      */
-    public function join_room($request, ?UdbMetadata $metadata = null)
+    public function joinRoom($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'JoinRoom',
@@ -4006,7 +4556,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.webrtc.services.v1.PeerService / JoinSession (unary).
+     * udb.core.webrtc.services.v1.PeerService / JoinSession (unary), public alias join_session.
      *
      * Forwards to {@see stubFor()}->JoinSession(); retries transient codes.
      * Path: /udb.core.webrtc.services.v1.PeerService/JoinSession
@@ -4014,7 +4564,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded JoinSessionResponse
      */
-    public function join_session($request, ?UdbMetadata $metadata = null)
+    public function joinSession($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'JoinSession',
@@ -4027,7 +4577,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.webrtc.services.v1.PeerService / LeaveRoom (unary).
+     * udb.core.webrtc.services.v1.PeerService / LeaveRoom (unary), public alias leave_room.
      *
      * Forwards to {@see stubFor()}->LeaveRoom(); retries transient codes.
      * Path: /udb.core.webrtc.services.v1.PeerService/LeaveRoom
@@ -4035,7 +4585,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded LeaveRoomResponse
      */
-    public function leave_room($request, ?UdbMetadata $metadata = null)
+    public function leaveRoom($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'LeaveRoom',
@@ -4048,7 +4598,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.webrtc.services.v1.PeerService / ListPeers (unary).
+     * udb.core.webrtc.services.v1.PeerService / ListPeers (unary), public alias list_peers.
      *
      * Forwards to {@see stubFor()}->ListPeers(); retries transient codes.
      * Path: /udb.core.webrtc.services.v1.PeerService/ListPeers
@@ -4056,7 +4606,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ListPeersResponse
      */
-    public function list_peers($request, ?UdbMetadata $metadata = null)
+    public function listPeers($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ListPeers',
@@ -4069,7 +4619,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.webrtc.services.v1.RoomService / CloseRoom (unary).
+     * udb.core.webrtc.services.v1.RoomService / CloseRoom (unary), public alias close_room.
      *
      * Forwards to {@see stubFor()}->CloseRoom(); retries transient codes.
      * Path: /udb.core.webrtc.services.v1.RoomService/CloseRoom
@@ -4077,7 +4627,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded CloseRoomResponse
      */
-    public function close_room($request, ?UdbMetadata $metadata = null)
+    public function closeRoom($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'CloseRoom',
@@ -4090,7 +4640,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.webrtc.services.v1.RoomService / CreateRoom (unary).
+     * udb.core.webrtc.services.v1.RoomService / CreateRoom (unary), public alias create_room.
      *
      * Forwards to {@see stubFor()}->CreateRoom(); retries transient codes.
      * Path: /udb.core.webrtc.services.v1.RoomService/CreateRoom
@@ -4098,7 +4648,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded CreateRoomResponse
      */
-    public function create_room($request, ?UdbMetadata $metadata = null)
+    public function createRoom($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'CreateRoom',
@@ -4111,7 +4661,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.webrtc.services.v1.RoomService / GetRoom (unary).
+     * udb.core.webrtc.services.v1.RoomService / GetRoom (unary), public alias get_room.
      *
      * Forwards to {@see stubFor()}->GetRoom(); retries transient codes.
      * Path: /udb.core.webrtc.services.v1.RoomService/GetRoom
@@ -4119,7 +4669,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded GetRoomResponse
      */
-    public function get_room($request, ?UdbMetadata $metadata = null)
+    public function getRoom($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GetRoom',
@@ -4132,7 +4682,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.webrtc.services.v1.RoomService / ListRooms (unary).
+     * udb.core.webrtc.services.v1.RoomService / ListRooms (unary), public alias list_rooms.
      *
      * Forwards to {@see stubFor()}->ListRooms(); retries transient codes.
      * Path: /udb.core.webrtc.services.v1.RoomService/ListRooms
@@ -4140,7 +4690,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ListRoomsResponse
      */
-    public function list_rooms($request, ?UdbMetadata $metadata = null)
+    public function listRooms($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ListRooms',
@@ -4153,7 +4703,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.webrtc.services.v1.RoomService / UpdateRoom (unary).
+     * udb.core.webrtc.services.v1.RoomService / UpdateRoom (unary), public alias update_room.
      *
      * Forwards to {@see stubFor()}->UpdateRoom(); retries transient codes.
      * Path: /udb.core.webrtc.services.v1.RoomService/UpdateRoom
@@ -4161,7 +4711,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded UpdateRoomResponse
      */
-    public function update_room($request, ?UdbMetadata $metadata = null)
+    public function updateRoom($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'UpdateRoom',
@@ -4174,7 +4724,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.webrtc.services.v1.TrackService / ListTracks (unary).
+     * udb.core.webrtc.services.v1.TrackService / ListTracks (unary), public alias list_tracks.
      *
      * Forwards to {@see stubFor()}->ListTracks(); retries transient codes.
      * Path: /udb.core.webrtc.services.v1.TrackService/ListTracks
@@ -4182,7 +4732,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ListTracksResponse
      */
-    public function list_tracks($request, ?UdbMetadata $metadata = null)
+    public function listTracks($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ListTracks',
@@ -4195,7 +4745,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.webrtc.services.v1.TrackService / MuteTrack (unary).
+     * udb.core.webrtc.services.v1.TrackService / MuteTrack (unary), public alias mute_track.
      *
      * Forwards to {@see stubFor()}->MuteTrack(); retries transient codes.
      * Path: /udb.core.webrtc.services.v1.TrackService/MuteTrack
@@ -4203,7 +4753,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded MuteTrackResponse
      */
-    public function mute_track($request, ?UdbMetadata $metadata = null)
+    public function muteTrack($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'MuteTrack',
@@ -4216,7 +4766,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.webrtc.services.v1.TrackService / PublishTrack (unary).
+     * udb.core.webrtc.services.v1.TrackService / PublishTrack (unary), public alias publish_track.
      *
      * Forwards to {@see stubFor()}->PublishTrack(); retries transient codes.
      * Path: /udb.core.webrtc.services.v1.TrackService/PublishTrack
@@ -4224,7 +4774,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded PublishTrackResponse
      */
-    public function publish_track($request, ?UdbMetadata $metadata = null)
+    public function publishTrack($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'PublishTrack',
@@ -4237,7 +4787,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.webrtc.services.v1.TrackService / UnpublishTrack (unary).
+     * udb.core.webrtc.services.v1.TrackService / UnpublishTrack (unary), public alias unpublish_track.
      *
      * Forwards to {@see stubFor()}->UnpublishTrack(); retries transient codes.
      * Path: /udb.core.webrtc.services.v1.TrackService/UnpublishTrack
@@ -4245,7 +4795,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded UnpublishTrackResponse
      */
-    public function unpublish_track($request, ?UdbMetadata $metadata = null)
+    public function unpublishTrack($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'UnpublishTrack',
@@ -4258,7 +4808,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.core.webrtc.services.v1.TurnService / IssueCredentials (unary).
+     * udb.core.webrtc.services.v1.TurnService / IssueCredentials (unary), public alias issue_credentials.
      *
      * Forwards to {@see stubFor()}->IssueCredentials(); retries transient codes.
      * Path: /udb.core.webrtc.services.v1.TurnService/IssueCredentials
@@ -4266,7 +4816,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded IssueCredentialsResponse
      */
-    public function issue_credentials($request, ?UdbMetadata $metadata = null)
+    public function issueCredentials($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'IssueCredentials',
@@ -4279,7 +4829,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / ActivateCatalog (unary).
+     * udb.services.v1.DataBroker / ActivateCatalog (unary), public alias activate_catalog.
      *
      * Forwards to {@see stubFor()}->ActivateCatalog(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/ActivateCatalog
@@ -4287,7 +4837,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded CatalogVersionResponse
      */
-    public function activate_catalog($request, ?UdbMetadata $metadata = null)
+    public function activateCatalog($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ActivateCatalog',
@@ -4300,7 +4850,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / AnalyticalQuery (unary).
+     * udb.services.v1.DataBroker / AnalyticalQuery (unary), public alias analytical_query.
      *
      * Forwards to {@see stubFor()}->AnalyticalQuery(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/AnalyticalQuery
@@ -4308,7 +4858,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded AnalyticalQueryResponse
      */
-    public function analytical_query($request, ?UdbMetadata $metadata = null)
+    public function analyticalQuery($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'AnalyticalQuery',
@@ -4321,7 +4871,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / ApplyMigration (unary).
+     * udb.services.v1.DataBroker / ApplyMigration (unary), public alias apply_migration.
      *
      * Forwards to {@see stubFor()}->ApplyMigration(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/ApplyMigration
@@ -4329,7 +4879,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded MigrationStatusResponse
      */
-    public function apply_migration($request, ?UdbMetadata $metadata = null)
+    public function applyMigration($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ApplyMigration',
@@ -4342,7 +4892,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / ApproveMigrationPlan (unary).
+     * udb.services.v1.DataBroker / ApproveMigrationPlan (unary), public alias approve_migration_plan.
      *
      * Forwards to {@see stubFor()}->ApproveMigrationPlan(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/ApproveMigrationPlan
@@ -4350,7 +4900,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded MigrationStatusResponse
      */
-    public function approve_migration_plan($request, ?UdbMetadata $metadata = null)
+    public function approveMigrationPlan($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ApproveMigrationPlan',
@@ -4363,7 +4913,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / CacheDelete (unary).
+     * udb.services.v1.DataBroker / CacheDelete (unary), public alias cache_delete.
      *
      * Forwards to {@see stubFor()}->CacheDelete(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/CacheDelete
@@ -4371,7 +4921,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded MutationResponse
      */
-    public function cache_delete($request, ?UdbMetadata $metadata = null)
+    public function cacheDelete($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'CacheDelete',
@@ -4384,7 +4934,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / CacheGet (unary).
+     * udb.services.v1.DataBroker / CacheGet (unary), public alias cache_get.
      *
      * Forwards to {@see stubFor()}->CacheGet(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/CacheGet
@@ -4392,7 +4942,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded CacheGetResponse
      */
-    public function cache_get($request, ?UdbMetadata $metadata = null)
+    public function cacheGet($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'CacheGet',
@@ -4405,7 +4955,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / CacheScan (unary).
+     * udb.services.v1.DataBroker / CacheScan (unary), public alias cache_scan.
      *
      * Forwards to {@see stubFor()}->CacheScan(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/CacheScan
@@ -4413,7 +4963,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded CacheScanResponse
      */
-    public function cache_scan($request, ?UdbMetadata $metadata = null)
+    public function cacheScan($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'CacheScan',
@@ -4426,7 +4976,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / CacheSet (unary).
+     * udb.services.v1.DataBroker / CacheSet (unary), public alias cache_set.
      *
      * Forwards to {@see stubFor()}->CacheSet(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/CacheSet
@@ -4434,7 +4984,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded MutationResponse
      */
-    public function cache_set($request, ?UdbMetadata $metadata = null)
+    public function cacheSet($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'CacheSet',
@@ -4447,7 +4997,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / CreateMaterializedView (unary).
+     * udb.services.v1.DataBroker / CreateMaterializedView (unary), public alias create_materialized_view.
      *
      * Forwards to {@see stubFor()}->CreateMaterializedView(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/CreateMaterializedView
@@ -4455,7 +5005,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded MutationResponse
      */
-    public function create_materialized_view($request, ?UdbMetadata $metadata = null)
+    public function createMaterializedView($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'CreateMaterializedView',
@@ -4468,7 +5018,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / Delete (unary).
+     * udb.services.v1.DataBroker / Delete (unary), public alias delete.
      *
      * Forwards to {@see stubFor()}->Delete(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/Delete
@@ -4489,7 +5039,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / DeletePolicy (unary).
+     * udb.services.v1.DataBroker / DeletePolicy (unary), public alias delete_policy.
      *
      * Forwards to {@see stubFor()}->DeletePolicy(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/DeletePolicy
@@ -4497,7 +5047,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded MutationResponse
      */
-    public function delete_policy($request, ?UdbMetadata $metadata = null)
+    public function deletePolicy($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'DeletePolicy',
@@ -4510,7 +5060,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / DismissDlqEvent (unary).
+     * udb.services.v1.DataBroker / DismissDlqEvent (unary), public alias dismiss_dlq_event.
      *
      * Forwards to {@see stubFor()}->DismissDlqEvent(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/DismissDlqEvent
@@ -4518,7 +5068,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded MutationResponse
      */
-    public function dismiss_dlq_event($request, ?UdbMetadata $metadata = null)
+    public function dismissDlqEvent($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'DismissDlqEvent',
@@ -4531,7 +5081,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / DocumentDelete (unary).
+     * udb.services.v1.DataBroker / DocumentDelete (unary), public alias document_delete.
      *
      * Forwards to {@see stubFor()}->DocumentDelete(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/DocumentDelete
@@ -4539,7 +5089,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded MutationResponse
      */
-    public function document_delete($request, ?UdbMetadata $metadata = null)
+    public function documentDelete($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'DocumentDelete',
@@ -4552,7 +5102,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / DocumentFind (unary).
+     * udb.services.v1.DataBroker / DocumentFind (unary), public alias document_find.
      *
      * Forwards to {@see stubFor()}->DocumentFind(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/DocumentFind
@@ -4560,7 +5110,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded DocumentSet
      */
-    public function document_find($request, ?UdbMetadata $metadata = null)
+    public function documentFind($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'DocumentFind',
@@ -4573,7 +5123,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / DocumentGet (unary).
+     * udb.services.v1.DataBroker / DocumentGet (unary), public alias document_get.
      *
      * Forwards to {@see stubFor()}->DocumentGet(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/DocumentGet
@@ -4581,7 +5131,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded DocumentSet
      */
-    public function document_get($request, ?UdbMetadata $metadata = null)
+    public function documentGet($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'DocumentGet',
@@ -4594,7 +5144,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / DocumentUpsert (unary).
+     * udb.services.v1.DataBroker / DocumentUpsert (unary), public alias document_upsert.
      *
      * Forwards to {@see stubFor()}->DocumentUpsert(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/DocumentUpsert
@@ -4602,7 +5152,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded MutationResponse
      */
-    public function document_upsert($request, ?UdbMetadata $metadata = null)
+    public function documentUpsert($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'DocumentUpsert',
@@ -4615,7 +5165,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / DropResource (unary).
+     * udb.services.v1.DataBroker / DropResource (unary), public alias drop_resource.
      *
      * Forwards to {@see stubFor()}->DropResource(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/DropResource
@@ -4623,7 +5173,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded MutationResponse
      */
-    public function drop_resource($request, ?UdbMetadata $metadata = null)
+    public function dropResource($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'DropResource',
@@ -4636,7 +5186,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / EnqueueOutboxEvent (unary).
+     * udb.services.v1.DataBroker / EnqueueOutboxEvent (unary), public alias enqueue_outbox_event.
      *
      * Forwards to {@see stubFor()}->EnqueueOutboxEvent(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/EnqueueOutboxEvent
@@ -4644,7 +5194,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded EnqueueOutboxEventResponse
      */
-    public function enqueue_outbox_event($request, ?UdbMetadata $metadata = null)
+    public function enqueueOutboxEvent($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'EnqueueOutboxEvent',
@@ -4657,7 +5207,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / EnsureBaseline (unary).
+     * udb.services.v1.DataBroker / EnsureBaseline (unary), public alias ensure_baseline.
      *
      * Forwards to {@see stubFor()}->EnsureBaseline(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/EnsureBaseline
@@ -4665,7 +5215,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded EnsureBaselineResponse
      */
-    public function ensure_baseline($request, ?UdbMetadata $metadata = null)
+    public function ensureBaseline($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'EnsureBaseline',
@@ -4678,7 +5228,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / EnsureProject (unary).
+     * udb.services.v1.DataBroker / EnsureProject (unary), public alias ensure_project.
      *
      * Forwards to {@see stubFor()}->EnsureProject(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/EnsureProject
@@ -4686,7 +5236,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded MutationResponse
      */
-    public function ensure_project($request, ?UdbMetadata $metadata = null)
+    public function ensureProject($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'EnsureProject',
@@ -4699,7 +5249,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / EnsureResource (unary).
+     * udb.services.v1.DataBroker / EnsureResource (unary), public alias ensure_resource.
      *
      * Forwards to {@see stubFor()}->EnsureResource(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/EnsureResource
@@ -4707,7 +5257,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded MutationResponse
      */
-    public function ensure_resource($request, ?UdbMetadata $metadata = null)
+    public function ensureResource($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'EnsureResource',
@@ -4720,7 +5270,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / GeneratePresignedUrl (unary).
+     * udb.services.v1.DataBroker / GeneratePresignedUrl (unary), public alias generate_presigned_url.
      *
      * Forwards to {@see stubFor()}->GeneratePresignedUrl(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/GeneratePresignedUrl
@@ -4728,7 +5278,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded UrlResponse
      */
-    public function generate_presigned_url($request, ?UdbMetadata $metadata = null)
+    public function generatePresignedUrl($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GeneratePresignedUrl',
@@ -4741,7 +5291,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / GenericDispatch (unary).
+     * udb.services.v1.DataBroker / GenericDispatch (unary), public alias generic_dispatch.
      *
      * Forwards to {@see stubFor()}->GenericDispatch(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/GenericDispatch
@@ -4749,7 +5299,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded GenericDispatchResponse
      */
-    public function generic_dispatch($request, ?UdbMetadata $metadata = null)
+    public function genericDispatch($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GenericDispatch',
@@ -4762,7 +5312,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / GetAdminSummary (unary).
+     * udb.services.v1.DataBroker / GetAdminSummary (unary), public alias get_admin_summary.
      *
      * Forwards to {@see stubFor()}->GetAdminSummary(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/GetAdminSummary
@@ -4770,7 +5320,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded AdminSummaryResponse
      */
-    public function get_admin_summary($request, ?UdbMetadata $metadata = null)
+    public function getAdminSummary($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GetAdminSummary',
@@ -4783,7 +5333,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / GetCapabilities (unary).
+     * udb.services.v1.DataBroker / GetCapabilities (unary), public alias get_capabilities.
      *
      * Forwards to {@see stubFor()}->GetCapabilities(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/GetCapabilities
@@ -4791,7 +5341,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded CapabilitiesResponse
      */
-    public function get_capabilities($request, ?UdbMetadata $metadata = null)
+    public function getCapabilities($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GetCapabilities',
@@ -4804,7 +5354,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / GetCatalogManifest (unary).
+     * udb.services.v1.DataBroker / GetCatalogManifest (unary), public alias get_catalog_manifest.
      *
      * Forwards to {@see stubFor()}->GetCatalogManifest(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/GetCatalogManifest
@@ -4812,7 +5362,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded CatalogManifestResponse
      */
-    public function get_catalog_manifest($request, ?UdbMetadata $metadata = null)
+    public function getCatalogManifest($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GetCatalogManifest',
@@ -4825,7 +5375,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / GetCatalogVersion (unary).
+     * udb.services.v1.DataBroker / GetCatalogVersion (unary), public alias get_catalog_version.
      *
      * Forwards to {@see stubFor()}->GetCatalogVersion(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/GetCatalogVersion
@@ -4833,7 +5383,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded CatalogVersionResponse
      */
-    public function get_catalog_version($request, ?UdbMetadata $metadata = null)
+    public function getCatalogVersion($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GetCatalogVersion',
@@ -4846,7 +5396,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / GetCatalogVersions (unary).
+     * udb.services.v1.DataBroker / GetCatalogVersions (unary), public alias get_catalog_versions.
      *
      * Forwards to {@see stubFor()}->GetCatalogVersions(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/GetCatalogVersions
@@ -4854,7 +5404,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded CatalogVersionListResponse
      */
-    public function get_catalog_versions($request, ?UdbMetadata $metadata = null)
+    public function getCatalogVersions($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GetCatalogVersions',
@@ -4867,7 +5417,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / GetCdcStatus (unary).
+     * udb.services.v1.DataBroker / GetCdcStatus (unary), public alias get_cdc_status.
      *
      * Forwards to {@see stubFor()}->GetCdcStatus(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/GetCdcStatus
@@ -4875,7 +5425,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded CdcStatusResponse
      */
-    public function get_cdc_status($request, ?UdbMetadata $metadata = null)
+    public function getCdcStatus($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GetCdcStatus',
@@ -4888,7 +5438,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / GetDlqEvent (unary).
+     * udb.services.v1.DataBroker / GetDlqEvent (unary), public alias get_dlq_event.
      *
      * Forwards to {@see stubFor()}->GetDlqEvent(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/GetDlqEvent
@@ -4896,7 +5446,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded DlqEventResponse
      */
-    public function get_dlq_event($request, ?UdbMetadata $metadata = null)
+    public function getDlqEvent($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GetDlqEvent',
@@ -4909,7 +5459,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / GetHealthReport (unary).
+     * udb.services.v1.DataBroker / GetHealthReport (unary), public alias get_health_report.
      *
      * Forwards to {@see stubFor()}->GetHealthReport(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/GetHealthReport
@@ -4917,7 +5467,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded HealthReportResponse
      */
-    public function get_health_report($request, ?UdbMetadata $metadata = null)
+    public function getHealthReport($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GetHealthReport',
@@ -4930,7 +5480,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / GetMigrationStatus (unary).
+     * udb.services.v1.DataBroker / GetMigrationStatus (unary), public alias get_migration_status.
      *
      * Forwards to {@see stubFor()}->GetMigrationStatus(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/GetMigrationStatus
@@ -4938,7 +5488,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded MigrationStatusResponse
      */
-    public function get_migration_status($request, ?UdbMetadata $metadata = null)
+    public function getMigrationStatus($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GetMigrationStatus',
@@ -4951,7 +5501,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / GetSaga (unary).
+     * udb.services.v1.DataBroker / GetSaga (unary), public alias get_saga.
      *
      * Forwards to {@see stubFor()}->GetSaga(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/GetSaga
@@ -4959,7 +5509,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded SagaResponse
      */
-    public function get_saga($request, ?UdbMetadata $metadata = null)
+    public function getSaga($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GetSaga',
@@ -4972,7 +5522,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / GraphMutate (unary).
+     * udb.services.v1.DataBroker / GraphMutate (unary), public alias graph_mutate.
      *
      * Forwards to {@see stubFor()}->GraphMutate(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/GraphMutate
@@ -4980,7 +5530,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded MutationResponse
      */
-    public function graph_mutate($request, ?UdbMetadata $metadata = null)
+    public function graphMutate($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GraphMutate',
@@ -4993,7 +5543,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / GraphQuery (unary).
+     * udb.services.v1.DataBroker / GraphQuery (unary), public alias graph_query.
      *
      * Forwards to {@see stubFor()}->GraphQuery(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/GraphQuery
@@ -5001,7 +5551,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded GraphResultSet
      */
-    public function graph_query($request, ?UdbMetadata $metadata = null)
+    public function graphQuery($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'GraphQuery',
@@ -5014,7 +5564,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / InitiateMultipartUpload (unary).
+     * udb.services.v1.DataBroker / InitiateMultipartUpload (unary), public alias initiate_multipart_upload.
      *
      * Forwards to {@see stubFor()}->InitiateMultipartUpload(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/InitiateMultipartUpload
@@ -5022,7 +5572,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded MultipartUploadResponse
      */
-    public function initiate_multipart_upload($request, ?UdbMetadata $metadata = null)
+    public function initiateMultipartUpload($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'InitiateMultipartUpload',
@@ -5035,7 +5585,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / LintPolicies (unary).
+     * udb.services.v1.DataBroker / LintPolicies (unary), public alias lint_policies.
      *
      * Forwards to {@see stubFor()}->LintPolicies(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/LintPolicies
@@ -5043,7 +5593,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded PolicyLintResponse
      */
-    public function lint_policies($request, ?UdbMetadata $metadata = null)
+    public function lintPolicies($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'LintPolicies',
@@ -5056,7 +5606,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / ListAdminAuditLogs (unary).
+     * udb.services.v1.DataBroker / ListAdminAuditLogs (unary), public alias list_admin_audit_logs.
      *
      * Forwards to {@see stubFor()}->ListAdminAuditLogs(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/ListAdminAuditLogs
@@ -5064,7 +5614,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded AdminAuditLogResponse
      */
-    public function list_admin_audit_logs($request, ?UdbMetadata $metadata = null)
+    public function listAdminAuditLogs($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ListAdminAuditLogs',
@@ -5077,7 +5627,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / ListDlqEvents (unary).
+     * udb.services.v1.DataBroker / ListDlqEvents (unary), public alias list_dlq_events.
      *
      * Forwards to {@see stubFor()}->ListDlqEvents(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/ListDlqEvents
@@ -5085,7 +5635,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded DlqListResponse
      */
-    public function list_dlq_events($request, ?UdbMetadata $metadata = null)
+    public function listDlqEvents($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ListDlqEvents',
@@ -5098,7 +5648,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / ListMessageSchemas (unary).
+     * udb.services.v1.DataBroker / ListMessageSchemas (unary), public alias list_message_schemas.
      *
      * Forwards to {@see stubFor()}->ListMessageSchemas(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/ListMessageSchemas
@@ -5106,7 +5656,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded MessageSchemaListResponse
      */
-    public function list_message_schemas($request, ?UdbMetadata $metadata = null)
+    public function listMessageSchemas($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ListMessageSchemas',
@@ -5119,7 +5669,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / ListMigrationRuns (unary).
+     * udb.services.v1.DataBroker / ListMigrationRuns (unary), public alias list_migration_runs.
      *
      * Forwards to {@see stubFor()}->ListMigrationRuns(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/ListMigrationRuns
@@ -5127,7 +5677,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded MigrationRunListResponse
      */
-    public function list_migration_runs($request, ?UdbMetadata $metadata = null)
+    public function listMigrationRuns($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ListMigrationRuns',
@@ -5140,7 +5690,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / ListPolicies (unary).
+     * udb.services.v1.DataBroker / ListPolicies (unary), public alias list_policies.
      *
      * Forwards to {@see stubFor()}->ListPolicies(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/ListPolicies
@@ -5148,7 +5698,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded PolicyListResponse
      */
-    public function list_policies($request, ?UdbMetadata $metadata = null)
+    public function listPolicies($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ListPolicies',
@@ -5161,7 +5711,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / ListProjects (unary).
+     * udb.services.v1.DataBroker / ListProjects (unary), public alias list_projects.
      *
      * Forwards to {@see stubFor()}->ListProjects(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/ListProjects
@@ -5169,7 +5719,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ProjectListResponse
      */
-    public function list_projects($request, ?UdbMetadata $metadata = null)
+    public function listProjects($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ListProjects',
@@ -5182,7 +5732,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / ListResources (unary).
+     * udb.services.v1.DataBroker / ListResources (unary), public alias list_resources.
      *
      * Forwards to {@see stubFor()}->ListResources(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/ListResources
@@ -5190,7 +5740,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ResourceListResponse
      */
-    public function list_resources($request, ?UdbMetadata $metadata = null)
+    public function listResources($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ListResources',
@@ -5203,7 +5753,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / ListSagas (unary).
+     * udb.services.v1.DataBroker / ListSagas (unary), public alias list_sagas.
      *
      * Forwards to {@see stubFor()}->ListSagas(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/ListSagas
@@ -5211,7 +5761,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded SagaListResponse
      */
-    public function list_sagas($request, ?UdbMetadata $metadata = null)
+    public function listSagas($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ListSagas',
@@ -5224,7 +5774,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / LookupMessageSchema (unary).
+     * udb.services.v1.DataBroker / LookupMessageSchema (unary), public alias lookup_message_schema.
      *
      * Forwards to {@see stubFor()}->LookupMessageSchema(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/LookupMessageSchema
@@ -5232,7 +5782,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded MessageSchemaLookupResponse
      */
-    public function lookup_message_schema($request, ?UdbMetadata $metadata = null)
+    public function lookupMessageSchema($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'LookupMessageSchema',
@@ -5245,7 +5795,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / MarkSagaReviewed (unary).
+     * udb.services.v1.DataBroker / MarkSagaReviewed (unary), public alias mark_saga_reviewed.
      *
      * Forwards to {@see stubFor()}->MarkSagaReviewed(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/MarkSagaReviewed
@@ -5253,7 +5803,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded SagaResponse
      */
-    public function mark_saga_reviewed($request, ?UdbMetadata $metadata = null)
+    public function markSagaReviewed($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'MarkSagaReviewed',
@@ -5266,7 +5816,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / PauseCdc (unary).
+     * udb.services.v1.DataBroker / PauseCdc (unary), public alias pause_cdc.
      *
      * Forwards to {@see stubFor()}->PauseCdc(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/PauseCdc
@@ -5274,7 +5824,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded CdcStatusResponse
      */
-    public function pause_cdc($request, ?UdbMetadata $metadata = null)
+    public function pauseCdc($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'PauseCdc',
@@ -5287,7 +5837,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / PlanMigration (unary).
+     * udb.services.v1.DataBroker / PlanMigration (unary), public alias plan_migration.
      *
      * Forwards to {@see stubFor()}->PlanMigration(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/PlanMigration
@@ -5295,7 +5845,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded MigrationPlanResponse
      */
-    public function plan_migration($request, ?UdbMetadata $metadata = null)
+    public function planMigration($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'PlanMigration',
@@ -5308,7 +5858,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / PreviewCdcRedaction (unary).
+     * udb.services.v1.DataBroker / PreviewCdcRedaction (unary), public alias preview_cdc_redaction.
      *
      * Forwards to {@see stubFor()}->PreviewCdcRedaction(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/PreviewCdcRedaction
@@ -5316,7 +5866,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded CdcRedactionPreviewResponse
      */
-    public function preview_cdc_redaction($request, ?UdbMetadata $metadata = null)
+    public function previewCdcRedaction($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'PreviewCdcRedaction',
@@ -5329,7 +5879,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / PutPolicy (unary).
+     * udb.services.v1.DataBroker / PutPolicy (unary), public alias put_policy.
      *
      * Forwards to {@see stubFor()}->PutPolicy(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/PutPolicy
@@ -5337,7 +5887,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded MutationResponse
      */
-    public function put_policy($request, ?UdbMetadata $metadata = null)
+    public function putPolicy($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'PutPolicy',
@@ -5350,7 +5900,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / QuarantineDlqEvent (unary).
+     * udb.services.v1.DataBroker / QuarantineDlqEvent (unary), public alias quarantine_dlq_event.
      *
      * Forwards to {@see stubFor()}->QuarantineDlqEvent(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/QuarantineDlqEvent
@@ -5358,7 +5908,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded MutationResponse
      */
-    public function quarantine_dlq_event($request, ?UdbMetadata $metadata = null)
+    public function quarantineDlqEvent($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'QuarantineDlqEvent',
@@ -5371,7 +5921,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / ReloadPolicies (unary).
+     * udb.services.v1.DataBroker / ReloadPolicies (unary), public alias reload_policies.
      *
      * Forwards to {@see stubFor()}->ReloadPolicies(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/ReloadPolicies
@@ -5379,7 +5929,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded MutationResponse
      */
-    public function reload_policies($request, ?UdbMetadata $metadata = null)
+    public function reloadPolicies($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ReloadPolicies',
@@ -5392,7 +5942,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / ReplayDlqEvent (unary).
+     * udb.services.v1.DataBroker / ReplayDlqEvent (unary), public alias replay_dlq_event.
      *
      * Forwards to {@see stubFor()}->ReplayDlqEvent(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/ReplayDlqEvent
@@ -5400,7 +5950,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded MutationResponse
      */
-    public function replay_dlq_event($request, ?UdbMetadata $metadata = null)
+    public function replayDlqEvent($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ReplayDlqEvent',
@@ -5413,7 +5963,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / ResumeCdc (unary).
+     * udb.services.v1.DataBroker / ResumeCdc (unary), public alias resume_cdc.
      *
      * Forwards to {@see stubFor()}->ResumeCdc(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/ResumeCdc
@@ -5421,7 +5971,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded CdcStatusResponse
      */
-    public function resume_cdc($request, ?UdbMetadata $metadata = null)
+    public function resumeCdc($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ResumeCdc',
@@ -5434,7 +5984,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / RetrySagaCompensation (unary).
+     * udb.services.v1.DataBroker / RetrySagaCompensation (unary), public alias retry_saga_compensation.
      *
      * Forwards to {@see stubFor()}->RetrySagaCompensation(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/RetrySagaCompensation
@@ -5442,7 +5992,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded SagaResponse
      */
-    public function retry_saga_compensation($request, ?UdbMetadata $metadata = null)
+    public function retrySagaCompensation($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'RetrySagaCompensation',
@@ -5455,7 +6005,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / RollbackCatalog (unary).
+     * udb.services.v1.DataBroker / RollbackCatalog (unary), public alias rollback_catalog.
      *
      * Forwards to {@see stubFor()}->RollbackCatalog(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/RollbackCatalog
@@ -5463,7 +6013,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded CatalogVersionResponse
      */
-    public function rollback_catalog($request, ?UdbMetadata $metadata = null)
+    public function rollbackCatalog($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'RollbackCatalog',
@@ -5476,7 +6026,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / ScanProjectionDrift (unary).
+     * udb.services.v1.DataBroker / ScanProjectionDrift (unary), public alias scan_projection_drift.
      *
      * Forwards to {@see stubFor()}->ScanProjectionDrift(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/ScanProjectionDrift
@@ -5484,7 +6034,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded ProjectionDriftScanResponse
      */
-    public function scan_projection_drift($request, ?UdbMetadata $metadata = null)
+    public function scanProjectionDrift($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ScanProjectionDrift',
@@ -5497,7 +6047,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / Select (unary).
+     * udb.services.v1.DataBroker / Select (unary), public alias select.
      *
      * Forwards to {@see stubFor()}->Select(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/Select
@@ -5518,7 +6068,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / StageCatalog (unary).
+     * udb.services.v1.DataBroker / StageCatalog (unary), public alias stage_catalog.
      *
      * Forwards to {@see stubFor()}->StageCatalog(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/StageCatalog
@@ -5526,7 +6076,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded CatalogVersionResponse
      */
-    public function stage_catalog($request, ?UdbMetadata $metadata = null)
+    public function stageCatalog($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'StageCatalog',
@@ -5539,7 +6089,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / StepDownCdcLeader (unary).
+     * udb.services.v1.DataBroker / StepDownCdcLeader (unary), public alias step_down_cdc_leader.
      *
      * Forwards to {@see stubFor()}->StepDownCdcLeader(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/StepDownCdcLeader
@@ -5547,7 +6097,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded CdcStatusResponse
      */
-    public function step_down_cdc_leader($request, ?UdbMetadata $metadata = null)
+    public function stepDownCdcLeader($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'StepDownCdcLeader',
@@ -5560,7 +6110,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / TimeSeriesQuery (unary).
+     * udb.services.v1.DataBroker / TimeSeriesQuery (unary), public alias time_series_query.
      *
      * Forwards to {@see stubFor()}->TimeSeriesQuery(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/TimeSeriesQuery
@@ -5568,7 +6118,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded TimeSeriesQueryResponse
      */
-    public function time_series_query($request, ?UdbMetadata $metadata = null)
+    public function timeSeriesQuery($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'TimeSeriesQuery',
@@ -5581,7 +6131,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / TimeSeriesWrite (unary).
+     * udb.services.v1.DataBroker / TimeSeriesWrite (unary), public alias time_series_write.
      *
      * Forwards to {@see stubFor()}->TimeSeriesWrite(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/TimeSeriesWrite
@@ -5589,7 +6139,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded MutationResponse
      */
-    public function time_series_write($request, ?UdbMetadata $metadata = null)
+    public function timeSeriesWrite($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'TimeSeriesWrite',
@@ -5602,7 +6152,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / Upsert (unary).
+     * udb.services.v1.DataBroker / Upsert (unary), public alias upsert.
      *
      * Forwards to {@see stubFor()}->Upsert(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/Upsert
@@ -5623,7 +6173,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / ValidateCatalog (unary).
+     * udb.services.v1.DataBroker / ValidateCatalog (unary), public alias validate_catalog.
      *
      * Forwards to {@see stubFor()}->ValidateCatalog(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/ValidateCatalog
@@ -5631,7 +6181,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded CatalogValidationResponse
      */
-    public function validate_catalog($request, ?UdbMetadata $metadata = null)
+    public function validateCatalog($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'ValidateCatalog',
@@ -5644,7 +6194,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / VectorHybridSearch (unary).
+     * udb.services.v1.DataBroker / VectorHybridSearch (unary), public alias vector_hybrid_search.
      *
      * Forwards to {@see stubFor()}->VectorHybridSearch(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/VectorHybridSearch
@@ -5652,7 +6202,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded VectorSet
      */
-    public function vector_hybrid_search($request, ?UdbMetadata $metadata = null)
+    public function vectorHybridSearch($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'VectorHybridSearch',
@@ -5665,7 +6215,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / VectorSearch (unary).
+     * udb.services.v1.DataBroker / VectorSearch (unary), public alias vector_search.
      *
      * Forwards to {@see stubFor()}->VectorSearch(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/VectorSearch
@@ -5673,7 +6223,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded VectorSet
      */
-    public function vector_search($request, ?UdbMetadata $metadata = null)
+    public function vectorSearch($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'VectorSearch',
@@ -5686,7 +6236,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / VectorUpsert (unary).
+     * udb.services.v1.DataBroker / VectorUpsert (unary), public alias vector_upsert.
      *
      * Forwards to {@see stubFor()}->VectorUpsert(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/VectorUpsert
@@ -5694,7 +6244,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded MutationResponse
      */
-    public function vector_upsert($request, ?UdbMetadata $metadata = null)
+    public function vectorUpsert($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'VectorUpsert',
@@ -5707,7 +6257,7 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / VerifyAdminAuditLog (unary).
+     * udb.services.v1.DataBroker / VerifyAdminAuditLog (unary), public alias verify_admin_audit_log.
      *
      * Forwards to {@see stubFor()}->VerifyAdminAuditLog(); retries transient codes.
      * Path: /udb.services.v1.DataBroker/VerifyAdminAuditLog
@@ -5715,7 +6265,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded AdminAuditVerifyResponse
      */
-    public function verify_admin_audit_log($request, ?UdbMetadata $metadata = null)
+    public function verifyAdminAuditLog($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             'VerifyAdminAuditLog',
@@ -5729,7 +6279,7 @@ final class GeneratedClient
     }
 
     /**
-     * udb.core.storage.services.v1.StorageService / DownloadFile (server_streaming).
+     * udb.core.storage.services.v1.StorageService / DownloadFile (server_streaming), public alias download_file.
      *
      * Returns the live {@see \Grpc\ServerStreamingCall}; iterate
      * `->responses()` then check `->getStatus()`. Path: /udb.core.storage.services.v1.StorageService/DownloadFile
@@ -5737,13 +6287,13 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Grpc\ServerStreamingCall
      */
-    public function download_file($request, ?UdbMetadata $metadata = null)
+    public function downloadFile($request, ?UdbMetadata $metadata = null)
     {
         $stub = $this->stubFor('StorageService', 'udb.core.storage.services.v1');
         return $stub->DownloadFile($request, $this->headers($metadata), $this->callOptions());
     }
     /**
-     * udb.services.v1.DataBroker / GetObject (server_streaming).
+     * udb.services.v1.DataBroker / GetObject (server_streaming), public alias get_object.
      *
      * Returns the live {@see \Grpc\ServerStreamingCall}; iterate
      * `->responses()` then check `->getStatus()`. Path: /udb.services.v1.DataBroker/GetObject
@@ -5751,13 +6301,13 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Grpc\ServerStreamingCall
      */
-    public function get_object($request, ?UdbMetadata $metadata = null)
+    public function getObject($request, ?UdbMetadata $metadata = null)
     {
         $stub = $this->stubFor('DataBroker', 'udb.services.v1');
         return $stub->GetObject($request, $this->headers($metadata), $this->callOptions());
     }
     /**
-     * udb.services.v1.DataBroker / PublishCDC (server_streaming).
+     * udb.services.v1.DataBroker / PublishCDC (server_streaming), public alias publish_cdc.
      *
      * Returns the live {@see \Grpc\ServerStreamingCall}; iterate
      * `->responses()` then check `->getStatus()`. Path: /udb.services.v1.DataBroker/PublishCDC
@@ -5765,13 +6315,13 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Grpc\ServerStreamingCall
      */
-    public function publish_c_d_c($request, ?UdbMetadata $metadata = null)
+    public function publishCdc($request, ?UdbMetadata $metadata = null)
     {
         $stub = $this->stubFor('DataBroker', 'udb.services.v1');
         return $stub->PublishCDC($request, $this->headers($metadata), $this->callOptions());
     }
     /**
-     * udb.services.v1.DataBroker / SelectV2 (server_streaming).
+     * udb.services.v1.DataBroker / SelectV2 (server_streaming), public alias select_v_2.
      *
      * Returns the live {@see \Grpc\ServerStreamingCall}; iterate
      * `->responses()` then check `->getStatus()`. Path: /udb.services.v1.DataBroker/SelectV2
@@ -5779,14 +6329,14 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Grpc\ServerStreamingCall
      */
-    public function select_v2($request, ?UdbMetadata $metadata = null)
+    public function selectV2($request, ?UdbMetadata $metadata = null)
     {
         $stub = $this->stubFor('DataBroker', 'udb.services.v1');
         return $stub->SelectV2($request, $this->headers($metadata), $this->callOptions());
     }
 
     /**
-     * udb.services.v1.DataBroker / PutObject (client_streaming).
+     * udb.services.v1.DataBroker / PutObject (client_streaming), public alias put_object.
      *
      * Returns the live {@see \Grpc\ClientStreamingCall}; `->write()` each
      * message then `->wait()`. Not retried — re-driving a partially-written
@@ -5794,40 +6344,40 @@ final class GeneratedClient
      *
      * @return \Grpc\ClientStreamingCall
      */
-    public function put_object(?UdbMetadata $metadata = null)
+    public function putObject(?UdbMetadata $metadata = null)
     {
         $stub = $this->stubFor('DataBroker', 'udb.services.v1');
         return $stub->PutObject($this->headers($metadata), $this->callOptions());
     }
 
     /**
-     * udb.core.control.services.v1.ControlPlaneService / DeltaResources (bidi).
+     * udb.core.control.services.v1.ControlPlaneService / DeltaResources (bidi), public alias delta_resources.
      *
      * Returns the live {@see \Grpc\BidiStreamingCall}; `->write()` /
      * `->read()` / `->writesDone()`. Not retried. Path: /udb.core.control.services.v1.ControlPlaneService/DeltaResources
      *
      * @return \Grpc\BidiStreamingCall
      */
-    public function delta_resources(?UdbMetadata $metadata = null)
+    public function deltaResources(?UdbMetadata $metadata = null)
     {
         $stub = $this->stubFor('ControlPlaneService', 'udb.core.control.services.v1');
         return $stub->DeltaResources($this->headers($metadata), $this->callOptions());
     }
     /**
-     * udb.core.control.services.v1.ControlPlaneService / StreamResources (bidi).
+     * udb.core.control.services.v1.ControlPlaneService / StreamResources (bidi), public alias stream_resources.
      *
      * Returns the live {@see \Grpc\BidiStreamingCall}; `->write()` /
      * `->read()` / `->writesDone()`. Not retried. Path: /udb.core.control.services.v1.ControlPlaneService/StreamResources
      *
      * @return \Grpc\BidiStreamingCall
      */
-    public function stream_resources(?UdbMetadata $metadata = null)
+    public function streamResources(?UdbMetadata $metadata = null)
     {
         $stub = $this->stubFor('ControlPlaneService', 'udb.core.control.services.v1');
         return $stub->StreamResources($this->headers($metadata), $this->callOptions());
     }
     /**
-     * udb.core.webrtc.services.v1.SignalingService / Signal (bidi).
+     * udb.core.webrtc.services.v1.SignalingService / Signal (bidi), public alias signal.
      *
      * Returns the live {@see \Grpc\BidiStreamingCall}; `->write()` /
      * `->read()` / `->writesDone()`. Not retried. Path: /udb.core.webrtc.services.v1.SignalingService/Signal
@@ -5840,53 +6390,53 @@ final class GeneratedClient
         return $stub->Signal($this->headers($metadata), $this->callOptions());
     }
     /**
-     * udb.services.v1.DataBroker / BatchSelect (bidi).
+     * udb.services.v1.DataBroker / BatchSelect (bidi), public alias batch_select.
      *
      * Returns the live {@see \Grpc\BidiStreamingCall}; `->write()` /
      * `->read()` / `->writesDone()`. Not retried. Path: /udb.services.v1.DataBroker/BatchSelect
      *
      * @return \Grpc\BidiStreamingCall
      */
-    public function batch_select(?UdbMetadata $metadata = null)
+    public function batchSelect(?UdbMetadata $metadata = null)
     {
         $stub = $this->stubFor('DataBroker', 'udb.services.v1');
         return $stub->BatchSelect($this->headers($metadata), $this->callOptions());
     }
     /**
-     * udb.services.v1.DataBroker / BatchUpsert (bidi).
+     * udb.services.v1.DataBroker / BatchUpsert (bidi), public alias batch_upsert.
      *
      * Returns the live {@see \Grpc\BidiStreamingCall}; `->write()` /
      * `->read()` / `->writesDone()`. Not retried. Path: /udb.services.v1.DataBroker/BatchUpsert
      *
      * @return \Grpc\BidiStreamingCall
      */
-    public function batch_upsert(?UdbMetadata $metadata = null)
+    public function batchUpsert(?UdbMetadata $metadata = null)
     {
         $stub = $this->stubFor('DataBroker', 'udb.services.v1');
         return $stub->BatchUpsert($this->headers($metadata), $this->callOptions());
     }
     /**
-     * udb.services.v1.DataBroker / BeginTx (bidi).
+     * udb.services.v1.DataBroker / BeginTx (bidi), public alias begin_tx.
      *
      * Returns the live {@see \Grpc\BidiStreamingCall}; `->write()` /
      * `->read()` / `->writesDone()`. Not retried. Path: /udb.services.v1.DataBroker/BeginTx
      *
      * @return \Grpc\BidiStreamingCall
      */
-    public function begin_tx(?UdbMetadata $metadata = null)
+    public function beginTx(?UdbMetadata $metadata = null)
     {
         $stub = $this->stubFor('DataBroker', 'udb.services.v1');
         return $stub->BeginTx($this->headers($metadata), $this->callOptions());
     }
     /**
-     * udb.services.v1.DataBroker / VectorBatchUpsert (bidi).
+     * udb.services.v1.DataBroker / VectorBatchUpsert (bidi), public alias vector_batch_upsert.
      *
      * Returns the live {@see \Grpc\BidiStreamingCall}; `->write()` /
      * `->read()` / `->writesDone()`. Not retried. Path: /udb.services.v1.DataBroker/VectorBatchUpsert
      *
      * @return \Grpc\BidiStreamingCall
      */
-    public function vector_batch_upsert(?UdbMetadata $metadata = null)
+    public function vectorBatchUpsert(?UdbMetadata $metadata = null)
     {
         $stub = $this->stubFor('DataBroker', 'udb.services.v1');
         return $stub->VectorBatchUpsert($this->headers($metadata), $this->callOptions());

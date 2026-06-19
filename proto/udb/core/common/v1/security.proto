@@ -229,6 +229,7 @@ message SdkSurfaceOptions {
   bool server_only = 8;
   repeated string boilerplate_recipe_tags = 9;
   bool generate_minimal_example = 10;
+  string rest_operation_id = 11;
 }
 
 message CliScaffoldOptions {

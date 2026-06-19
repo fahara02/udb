@@ -560,7 +560,7 @@ exports.RPC_REPLAY_SAFE = {
     "/udb.core.asset.services.v1.AssetService/GetPipelineDefinition": false,
     "/udb.core.asset.services.v1.AssetService/ListAssets": false,
     "/udb.core.asset.services.v1.AssetService/RegisterAsset": false,
-    "/udb.core.asset.services.v1.AssetService/StartPipeline": false,
+    "/udb.core.asset.services.v1.AssetService/StartPipeline": true,
     "/udb.core.authn.services.v1.AuthnService/AdminResetMfa": false,
     "/udb.core.authn.services.v1.AuthnService/AdminResetPassword": false,
     "/udb.core.authn.services.v1.AuthnService/AdminRevokeAllTenantSessions": false,
@@ -1537,1327 +1537,1857 @@ const SERVICE_METHOD_INSTALLERS = [];
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.analytics.services.v1.AnalyticsService")
         return;
-    api.get_executor_performance = (request, call) => core.unary("udb.core.analytics.services.v1.AnalyticsService", "GetExecutorPerformance", request, call);
+    const call = (request, call) => core.unary("udb.core.analytics.services.v1.AnalyticsService", "GetExecutorPerformance", request, call);
+    api.get_executor_performance = call;
+    api.getExecutorPerformance = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.analytics.services.v1.AnalyticsService")
         return;
-    api.get_pipeline_summary = (request, call) => core.unary("udb.core.analytics.services.v1.AnalyticsService", "GetPipelineSummary", request, call);
+    const call = (request, call) => core.unary("udb.core.analytics.services.v1.AnalyticsService", "GetPipelineSummary", request, call);
+    api.get_pipeline_summary = call;
+    api.getPipelineSummary = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.analytics.services.v1.AnalyticsService")
         return;
-    api.get_reconciliation_analytics = (request, call) => core.unary("udb.core.analytics.services.v1.AnalyticsService", "GetReconciliationAnalytics", request, call);
+    const call = (request, call) => core.unary("udb.core.analytics.services.v1.AnalyticsService", "GetReconciliationAnalytics", request, call);
+    api.get_reconciliation_analytics = call;
+    api.getReconciliationAnalytics = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.analytics.services.v1.AnalyticsService")
         return;
-    api.get_sla_compliance = (request, call) => core.unary("udb.core.analytics.services.v1.AnalyticsService", "GetSlaCompliance", request, call);
+    const call = (request, call) => core.unary("udb.core.analytics.services.v1.AnalyticsService", "GetSlaCompliance", request, call);
+    api.get_sla_compliance = call;
+    api.getSlaCompliance = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.analytics.services.v1.AnalyticsService")
         return;
-    api.get_throughput = (request, call) => core.unary("udb.core.analytics.services.v1.AnalyticsService", "GetThroughput", request, call);
+    const call = (request, call) => core.unary("udb.core.analytics.services.v1.AnalyticsService", "GetThroughput", request, call);
+    api.get_throughput = call;
+    api.getThroughput = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.analytics.services.v1.AnalyticsService")
         return;
-    api.record_pipeline_metric = (request, call) => core.unary("udb.core.analytics.services.v1.AnalyticsService", "RecordPipelineMetric", request, call);
+    const call = (request, call) => core.unary("udb.core.analytics.services.v1.AnalyticsService", "RecordPipelineMetric", request, call);
+    api.record_pipeline_metric = call;
+    api.recordPipelineMetric = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.analytics.services.v1.AnalyticsService")
         return;
-    api.trigger_snapshot = (request, call) => core.unary("udb.core.analytics.services.v1.AnalyticsService", "TriggerSnapshot", request, call);
+    const call = (request, call) => core.unary("udb.core.analytics.services.v1.AnalyticsService", "TriggerSnapshot", request, call);
+    api.trigger_snapshot = call;
+    api.triggerSnapshot = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.apikey.services.v1.ApiKeyService")
         return;
-    api.create_api_key = (request, call) => core.unary("udb.core.apikey.services.v1.ApiKeyService", "CreateApiKey", request, call);
+    const call = (request, call) => core.unary("udb.core.apikey.services.v1.ApiKeyService", "CreateApiKey", request, call);
+    api.create_api_key = call;
+    api.createApiKey = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.apikey.services.v1.ApiKeyService")
         return;
-    api.emergency_revoke_api_keys = (request, call) => core.unary("udb.core.apikey.services.v1.ApiKeyService", "EmergencyRevokeApiKeys", request, call);
+    const call = (request, call) => core.unary("udb.core.apikey.services.v1.ApiKeyService", "EmergencyRevokeApiKeys", request, call);
+    api.emergency_revoke_api_keys = call;
+    api.emergencyRevokeApiKeys = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.apikey.services.v1.ApiKeyService")
         return;
-    api.get_api_key = (request, call) => core.unary("udb.core.apikey.services.v1.ApiKeyService", "GetApiKey", request, call);
+    const call = (request, call) => core.unary("udb.core.apikey.services.v1.ApiKeyService", "GetApiKey", request, call);
+    api.get_api_key = call;
+    api.getApiKey = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.apikey.services.v1.ApiKeyService")
         return;
-    api.get_api_key_usage_stats = (request, call) => core.unary("udb.core.apikey.services.v1.ApiKeyService", "GetApiKeyUsageStats", request, call);
+    const call = (request, call) => core.unary("udb.core.apikey.services.v1.ApiKeyService", "GetApiKeyUsageStats", request, call);
+    api.get_api_key_usage_stats = call;
+    api.getApiKeyUsageStats = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.apikey.services.v1.ApiKeyService")
         return;
-    api.list_api_keys = (request, call) => core.unary("udb.core.apikey.services.v1.ApiKeyService", "ListApiKeys", request, call);
+    const call = (request, call) => core.unary("udb.core.apikey.services.v1.ApiKeyService", "ListApiKeys", request, call);
+    api.list_api_keys = call;
+    api.listApiKeys = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.apikey.services.v1.ApiKeyService")
         return;
-    api.revoke_api_key = (request, call) => core.unary("udb.core.apikey.services.v1.ApiKeyService", "RevokeApiKey", request, call);
+    const call = (request, call) => core.unary("udb.core.apikey.services.v1.ApiKeyService", "RevokeApiKey", request, call);
+    api.revoke_api_key = call;
+    api.revokeApiKey = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.apikey.services.v1.ApiKeyService")
         return;
-    api.rotate_api_key = (request, call) => core.unary("udb.core.apikey.services.v1.ApiKeyService", "RotateApiKey", request, call);
+    const call = (request, call) => core.unary("udb.core.apikey.services.v1.ApiKeyService", "RotateApiKey", request, call);
+    api.rotate_api_key = call;
+    api.rotateApiKey = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.apikey.services.v1.ApiKeyService")
         return;
-    api.update_api_key = (request, call) => core.unary("udb.core.apikey.services.v1.ApiKeyService", "UpdateApiKey", request, call);
+    const call = (request, call) => core.unary("udb.core.apikey.services.v1.ApiKeyService", "UpdateApiKey", request, call);
+    api.update_api_key = call;
+    api.updateApiKey = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.apikey.services.v1.ApiKeyService")
         return;
-    api.validate_api_key = (request, call) => core.unary("udb.core.apikey.services.v1.ApiKeyService", "ValidateApiKey", request, call);
+    const call = (request, call) => core.unary("udb.core.apikey.services.v1.ApiKeyService", "ValidateApiKey", request, call);
+    api.validate_api_key = call;
+    api.validateApiKey = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.asset.services.v1.AssetService")
         return;
-    api.complete_step = (request, call) => core.unary("udb.core.asset.services.v1.AssetService", "CompleteStep", request, call);
+    const call = (request, call) => core.unary("udb.core.asset.services.v1.AssetService", "CompleteStep", request, call);
+    api.complete_step = call;
+    api.completeStep = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.asset.services.v1.AssetService")
         return;
-    api.create_pipeline_definition = (request, call) => core.unary("udb.core.asset.services.v1.AssetService", "CreatePipelineDefinition", request, call);
+    const call = (request, call) => core.unary("udb.core.asset.services.v1.AssetService", "CreatePipelineDefinition", request, call);
+    api.create_pipeline_definition = call;
+    api.createPipelineDefinition = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.asset.services.v1.AssetService")
         return;
-    api.get_asset = (request, call) => core.unary("udb.core.asset.services.v1.AssetService", "GetAsset", request, call);
+    const call = (request, call) => core.unary("udb.core.asset.services.v1.AssetService", "GetAsset", request, call);
+    api.get_asset = call;
+    api.getAsset = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.asset.services.v1.AssetService")
         return;
-    api.get_pipeline = (request, call) => core.unary("udb.core.asset.services.v1.AssetService", "GetPipeline", request, call);
+    const call = (request, call) => core.unary("udb.core.asset.services.v1.AssetService", "GetPipeline", request, call);
+    api.get_pipeline = call;
+    api.getPipeline = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.asset.services.v1.AssetService")
         return;
-    api.get_pipeline_definition = (request, call) => core.unary("udb.core.asset.services.v1.AssetService", "GetPipelineDefinition", request, call);
+    const call = (request, call) => core.unary("udb.core.asset.services.v1.AssetService", "GetPipelineDefinition", request, call);
+    api.get_pipeline_definition = call;
+    api.getPipelineDefinition = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.asset.services.v1.AssetService")
         return;
-    api.list_assets = (request, call) => core.unary("udb.core.asset.services.v1.AssetService", "ListAssets", request, call);
+    const call = (request, call) => core.unary("udb.core.asset.services.v1.AssetService", "ListAssets", request, call);
+    api.list_assets = call;
+    api.listAssets = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.asset.services.v1.AssetService")
         return;
-    api.register_asset = (request, call) => core.unary("udb.core.asset.services.v1.AssetService", "RegisterAsset", request, call);
+    const call = (request, call) => core.unary("udb.core.asset.services.v1.AssetService", "RegisterAsset", request, call);
+    api.register_asset = call;
+    api.registerAsset = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.asset.services.v1.AssetService")
         return;
-    api.start_pipeline = (request, call) => core.unary("udb.core.asset.services.v1.AssetService", "StartPipeline", request, call);
+    const call = (request, call) => core.unary("udb.core.asset.services.v1.AssetService", "StartPipeline", request, call);
+    api.start_pipeline = call;
+    api.startPipeline = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.admin_reset_mfa = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "AdminResetMfa", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "AdminResetMfa", request, call);
+    api.admin_reset_mfa = call;
+    api.adminResetMfa = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.admin_reset_password = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "AdminResetPassword", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "AdminResetPassword", request, call);
+    api.admin_reset_password = call;
+    api.adminResetPassword = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.admin_revoke_all_tenant_sessions = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "AdminRevokeAllTenantSessions", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "AdminRevokeAllTenantSessions", request, call);
+    api.admin_revoke_all_tenant_sessions = call;
+    api.adminRevokeAllTenantSessions = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.admin_revoke_all_user_sessions = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "AdminRevokeAllUserSessions", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "AdminRevokeAllUserSessions", request, call);
+    api.admin_revoke_all_user_sessions = call;
+    api.adminRevokeAllUserSessions = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.admin_revoke_session = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "AdminRevokeSession", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "AdminRevokeSession", request, call);
+    api.admin_revoke_session = call;
+    api.adminRevokeSession = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.authenticate = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "Authenticate", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "Authenticate", request, call);
+    api.authenticate = call;
+    api.authenticate = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.change_password = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "ChangePassword", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "ChangePassword", request, call);
+    api.change_password = call;
+    api.changePassword = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.change_user_status = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "ChangeUserStatus", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "ChangeUserStatus", request, call);
+    api.change_user_status = call;
+    api.changeUserStatus = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.confirm_m_f_a_enrollment = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "ConfirmMFAEnrollment", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "ConfirmMFAEnrollment", request, call);
+    api.confirm_mfaenrollment = call;
+    api.confirmMfaenrollment = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.create_session = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "CreateSession", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "CreateSession", request, call);
+    api.create_session = call;
+    api.createSession = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.create_user = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "CreateUser", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "CreateUser", request, call);
+    api.create_user = call;
+    api.createUser = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.delete_web_authn_credential = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "DeleteWebAuthnCredential", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "DeleteWebAuthnCredential", request, call);
+    api.delete_web_authn_credential = call;
+    api.deleteWebAuthnCredential = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.disable_mfa_factor = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "DisableMfaFactor", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "DisableMfaFactor", request, call);
+    api.disable_mfa_factor = call;
+    api.disableMfaFactor = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.emergency_revoke = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "EmergencyRevoke", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "EmergencyRevoke", request, call);
+    api.emergency_revoke = call;
+    api.emergencyRevoke = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.enroll_m_f_a = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "EnrollMFA", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "EnrollMFA", request, call);
+    api.enroll_mfa = call;
+    api.enrollMfa = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.finish_web_authn_authentication = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "FinishWebAuthnAuthentication", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "FinishWebAuthnAuthentication", request, call);
+    api.finish_web_authn_authentication = call;
+    api.finishWebAuthnAuthentication = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.finish_web_authn_registration = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "FinishWebAuthnRegistration", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "FinishWebAuthnRegistration", request, call);
+    api.finish_web_authn_registration = call;
+    api.finishWebAuthnRegistration = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.forgot_password = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "ForgotPassword", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "ForgotPassword", request, call);
+    api.forgot_password = call;
+    api.forgotPassword = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.generate_recovery_codes = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "GenerateRecoveryCodes", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "GenerateRecoveryCodes", request, call);
+    api.generate_recovery_codes = call;
+    api.generateRecoveryCodes = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.get_jwks = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "GetJwks", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "GetJwks", request, call);
+    api.get_jwks = call;
+    api.getJwks = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.get_mfa_policy = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "GetMfaPolicy", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "GetMfaPolicy", request, call);
+    api.get_mfa_policy = call;
+    api.getMfaPolicy = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.get_session = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "GetSession", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "GetSession", request, call);
+    api.get_session = call;
+    api.getSession = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.get_user = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "GetUser", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "GetUser", request, call);
+    api.get_user = call;
+    api.getUser = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.introspect_token = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "IntrospectToken", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "IntrospectToken", request, call);
+    api.introspect_token = call;
+    api.introspectToken = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.issue_mfa_challenge = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "IssueMfaChallenge", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "IssueMfaChallenge", request, call);
+    api.issue_mfa_challenge = call;
+    api.issueMfaChallenge = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.list_devices = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "ListDevices", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "ListDevices", request, call);
+    api.list_devices = call;
+    api.listDevices = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.list_mfa_factors = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "ListMfaFactors", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "ListMfaFactors", request, call);
+    api.list_mfa_factors = call;
+    api.listMfaFactors = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.list_sessions = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "ListSessions", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "ListSessions", request, call);
+    api.list_sessions = call;
+    api.listSessions = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.list_users = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "ListUsers", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "ListUsers", request, call);
+    api.list_users = call;
+    api.listUsers = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.list_web_authn_credentials = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "ListWebAuthnCredentials", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "ListWebAuthnCredentials", request, call);
+    api.list_web_authn_credentials = call;
+    api.listWebAuthnCredentials = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.login = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "Login", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "Login", request, call);
+    api.login = call;
+    api.login = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.logout = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "Logout", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "Logout", request, call);
+    api.logout = call;
+    api.logout = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.put_mfa_policy = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "PutMfaPolicy", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "PutMfaPolicy", request, call);
+    api.put_mfa_policy = call;
+    api.putMfaPolicy = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.refresh_session = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "RefreshSession", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "RefreshSession", request, call);
+    api.refresh_session = call;
+    api.refreshSession = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.refresh_token = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "RefreshToken", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "RefreshToken", request, call);
+    api.refresh_token = call;
+    api.refreshToken = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.rename_passkey = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "RenamePasskey", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "RenamePasskey", request, call);
+    api.rename_passkey = call;
+    api.renamePasskey = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.resend_o_t_p = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "ResendOTP", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "ResendOTP", request, call);
+    api.resend_otp = call;
+    api.resendOtp = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.reset_password = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "ResetPassword", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "ResetPassword", request, call);
+    api.reset_password = call;
+    api.resetPassword = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.revoke_device = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "RevokeDevice", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "RevokeDevice", request, call);
+    api.revoke_device = call;
+    api.revokeDevice = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.revoke_recovery_codes = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "RevokeRecoveryCodes", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "RevokeRecoveryCodes", request, call);
+    api.revoke_recovery_codes = call;
+    api.revokeRecoveryCodes = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.revoke_session = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "RevokeSession", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "RevokeSession", request, call);
+    api.revoke_session = call;
+    api.revokeSession = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.send_o_t_p = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "SendOTP", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "SendOTP", request, call);
+    api.send_otp = call;
+    api.sendOtp = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.send_phone_verification = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "SendPhoneVerification", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "SendPhoneVerification", request, call);
+    api.send_phone_verification = call;
+    api.sendPhoneVerification = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.start_web_authn_authentication = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "StartWebAuthnAuthentication", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "StartWebAuthnAuthentication", request, call);
+    api.start_web_authn_authentication = call;
+    api.startWebAuthnAuthentication = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.start_web_authn_registration = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "StartWebAuthnRegistration", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "StartWebAuthnRegistration", request, call);
+    api.start_web_authn_registration = call;
+    api.startWebAuthnRegistration = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.update_user = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "UpdateUser", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "UpdateUser", request, call);
+    api.update_user = call;
+    api.updateUser = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.validate_c_s_r_f = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "ValidateCSRF", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "ValidateCSRF", request, call);
+    api.validate_csrf = call;
+    api.validateCsrf = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.validate_token = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "ValidateToken", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "ValidateToken", request, call);
+    api.validate_token = call;
+    api.validateToken = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.verify_mfa_challenge = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "VerifyMfaChallenge", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "VerifyMfaChallenge", request, call);
+    api.verify_mfa_challenge = call;
+    api.verifyMfaChallenge = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authn.services.v1.AuthnService")
         return;
-    api.verify_o_t_p = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "VerifyOTP", request, call);
+    const call = (request, call) => core.unary("udb.core.authn.services.v1.AuthnService", "VerifyOTP", request, call);
+    api.verify_otp = call;
+    api.verifyOtp = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService")
         return;
-    api.activate_canary = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "ActivateCanary", request, call);
+    const call = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "ActivateCanary", request, call);
+    api.activate_canary = call;
+    api.activateCanary = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService")
         return;
-    api.activate_policy_version = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "ActivatePolicyVersion", request, call);
+    const call = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "ActivatePolicyVersion", request, call);
+    api.activate_policy_version = call;
+    api.activatePolicyVersion = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService")
         return;
-    api.approve_policy_draft = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "ApprovePolicyDraft", request, call);
+    const call = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "ApprovePolicyDraft", request, call);
+    api.approve_policy_draft = call;
+    api.approvePolicyDraft = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService")
         return;
-    api.assign_role = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "AssignRole", request, call);
+    const call = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "AssignRole", request, call);
+    api.assign_role = call;
+    api.assignRole = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService")
         return;
-    api.authorize = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "Authorize", request, call);
+    const call = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "Authorize", request, call);
+    api.authorize = call;
+    api.authorize = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService")
         return;
-    api.batch_check_permissions = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "BatchCheckPermissions", request, call);
+    const call = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "BatchCheckPermissions", request, call);
+    api.batch_check_permissions = call;
+    api.batchCheckPermissions = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService")
         return;
-    api.check_access = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "CheckAccess", request, call);
+    const call = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "CheckAccess", request, call);
+    api.check_access = call;
+    api.checkAccess = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService")
         return;
-    api.create_policy_draft = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "CreatePolicyDraft", request, call);
+    const call = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "CreatePolicyDraft", request, call);
+    api.create_policy_draft = call;
+    api.createPolicyDraft = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService")
         return;
-    api.create_policy_rule = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "CreatePolicyRule", request, call);
+    const call = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "CreatePolicyRule", request, call);
+    api.create_policy_rule = call;
+    api.createPolicyRule = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService")
         return;
-    api.create_role = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "CreateRole", request, call);
+    const call = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "CreateRole", request, call);
+    api.create_role = call;
+    api.createRole = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService")
         return;
-    api.delete_policy_rule = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "DeletePolicyRule", request, call);
+    const call = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "DeletePolicyRule", request, call);
+    api.delete_policy_rule = call;
+    api.deletePolicyRule = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService")
         return;
-    api.delete_role = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "DeleteRole", request, call);
+    const call = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "DeleteRole", request, call);
+    api.delete_role = call;
+    api.deleteRole = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService")
         return;
-    api.diff_policy_draft = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "DiffPolicyDraft", request, call);
+    const call = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "DiffPolicyDraft", request, call);
+    api.diff_policy_draft = call;
+    api.diffPolicyDraft = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService")
         return;
-    api.explain_policy = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "ExplainPolicy", request, call);
+    const call = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "ExplainPolicy", request, call);
+    api.explain_policy = call;
+    api.explainPolicy = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService")
         return;
-    api.get_authz_revision = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "GetAuthzRevision", request, call);
+    const call = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "GetAuthzRevision", request, call);
+    api.get_authz_revision = call;
+    api.getAuthzRevision = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService")
         return;
-    api.get_canary_status = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "GetCanaryStatus", request, call);
+    const call = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "GetCanaryStatus", request, call);
+    api.get_canary_status = call;
+    api.getCanaryStatus = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService")
         return;
-    api.get_native_access = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "GetNativeAccess", request, call);
+    const call = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "GetNativeAccess", request, call);
+    api.get_native_access = call;
+    api.getNativeAccess = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService")
         return;
-    api.get_policy_bundle = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "GetPolicyBundle", request, call);
+    const call = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "GetPolicyBundle", request, call);
+    api.get_policy_bundle = call;
+    api.getPolicyBundle = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService")
         return;
-    api.get_policy_rule = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "GetPolicyRule", request, call);
+    const call = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "GetPolicyRule", request, call);
+    api.get_policy_rule = call;
+    api.getPolicyRule = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService")
         return;
-    api.get_role = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "GetRole", request, call);
+    const call = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "GetRole", request, call);
+    api.get_role = call;
+    api.getRole = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService")
         return;
-    api.invalidate_policy_bundles = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "InvalidatePolicyBundles", request, call);
+    const call = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "InvalidatePolicyBundles", request, call);
+    api.invalidate_policy_bundles = call;
+    api.invalidatePolicyBundles = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService")
         return;
-    api.lint_authz_policies = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "LintAuthzPolicies", request, call);
+    const call = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "LintAuthzPolicies", request, call);
+    api.lint_authz_policies = call;
+    api.lintAuthzPolicies = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService")
         return;
-    api.list_access_decision_audits = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "ListAccessDecisionAudits", request, call);
+    const call = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "ListAccessDecisionAudits", request, call);
+    api.list_access_decision_audits = call;
+    api.listAccessDecisionAudits = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService")
         return;
-    api.list_policy_rules = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "ListPolicyRules", request, call);
+    const call = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "ListPolicyRules", request, call);
+    api.list_policy_rules = call;
+    api.listPolicyRules = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService")
         return;
-    api.list_policy_versions = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "ListPolicyVersions", request, call);
+    const call = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "ListPolicyVersions", request, call);
+    api.list_policy_versions = call;
+    api.listPolicyVersions = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService")
         return;
-    api.list_roles = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "ListRoles", request, call);
+    const call = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "ListRoles", request, call);
+    api.list_roles = call;
+    api.listRoles = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService")
         return;
-    api.list_user_permissions = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "ListUserPermissions", request, call);
+    const call = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "ListUserPermissions", request, call);
+    api.list_user_permissions = call;
+    api.listUserPermissions = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService")
         return;
-    api.list_user_roles = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "ListUserRoles", request, call);
+    const call = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "ListUserRoles", request, call);
+    api.list_user_roles = call;
+    api.listUserRoles = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService")
         return;
-    api.migrate_legacy_policies = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "MigrateLegacyPolicies", request, call);
+    const call = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "MigrateLegacyPolicies", request, call);
+    api.migrate_legacy_policies = call;
+    api.migrateLegacyPolicies = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService")
         return;
-    api.promote_canary = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "PromoteCanary", request, call);
+    const call = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "PromoteCanary", request, call);
+    api.promote_canary = call;
+    api.promoteCanary = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService")
         return;
-    api.put_authz_policy = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "PutAuthzPolicy", request, call);
+    const call = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "PutAuthzPolicy", request, call);
+    api.put_authz_policy = call;
+    api.putAuthzPolicy = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService")
         return;
-    api.put_relationship = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "PutRelationship", request, call);
+    const call = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "PutRelationship", request, call);
+    api.put_relationship = call;
+    api.putRelationship = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService")
         return;
-    api.put_role_binding = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "PutRoleBinding", request, call);
+    const call = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "PutRoleBinding", request, call);
+    api.put_role_binding = call;
+    api.putRoleBinding = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService")
         return;
-    api.reject_policy_draft = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "RejectPolicyDraft", request, call);
+    const call = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "RejectPolicyDraft", request, call);
+    api.reject_policy_draft = call;
+    api.rejectPolicyDraft = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService")
         return;
-    api.revoke_role = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "RevokeRole", request, call);
+    const call = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "RevokeRole", request, call);
+    api.revoke_role = call;
+    api.revokeRole = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService")
         return;
-    api.rollback_policy_version = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "RollbackPolicyVersion", request, call);
+    const call = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "RollbackPolicyVersion", request, call);
+    api.rollback_policy_version = call;
+    api.rollbackPolicyVersion = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService")
         return;
-    api.seed_builtin_roles = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "SeedBuiltinRoles", request, call);
+    const call = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "SeedBuiltinRoles", request, call);
+    api.seed_builtin_roles = call;
+    api.seedBuiltinRoles = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService")
         return;
-    api.simulate_policy = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "SimulatePolicy", request, call);
+    const call = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "SimulatePolicy", request, call);
+    api.simulate_policy = call;
+    api.simulatePolicy = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService")
         return;
-    api.submit_policy_draft = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "SubmitPolicyDraft", request, call);
+    const call = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "SubmitPolicyDraft", request, call);
+    api.submit_policy_draft = call;
+    api.submitPolicyDraft = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService")
         return;
-    api.update_policy_draft = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "UpdatePolicyDraft", request, call);
+    const call = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "UpdatePolicyDraft", request, call);
+    api.update_policy_draft = call;
+    api.updatePolicyDraft = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.authz.services.v1.AuthzService")
         return;
-    api.update_role = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "UpdateRole", request, call);
+    const call = (request, call) => core.unary("udb.core.authz.services.v1.AuthzService", "UpdateRole", request, call);
+    api.update_role = call;
+    api.updateRole = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.control.services.v1.ControlPlaneService")
         return;
-    api.ack_status = (request, call) => core.unary("udb.core.control.services.v1.ControlPlaneService", "AckStatus", request, call);
+    const call = (request, call) => core.unary("udb.core.control.services.v1.ControlPlaneService", "AckStatus", request, call);
+    api.ack_status = call;
+    api.ackStatus = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.control.services.v1.ControlPlaneService")
         return;
-    api.get_resources = (request, call) => core.unary("udb.core.control.services.v1.ControlPlaneService", "GetResources", request, call);
+    const call = (request, call) => core.unary("udb.core.control.services.v1.ControlPlaneService", "GetResources", request, call);
+    api.get_resources = call;
+    api.getResources = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.control.services.v1.ControlPlaneService")
         return;
-    api.list_node_states = (request, call) => core.unary("udb.core.control.services.v1.ControlPlaneService", "ListNodeStates", request, call);
+    const call = (request, call) => core.unary("udb.core.control.services.v1.ControlPlaneService", "ListNodeStates", request, call);
+    api.list_node_states = call;
+    api.listNodeStates = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService")
         return;
-    api.create_provider = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "CreateProvider", request, call);
+    const call = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "CreateProvider", request, call);
+    api.create_provider = call;
+    api.createProvider = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService")
         return;
-    api.disable_provider = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "DisableProvider", request, call);
+    const call = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "DisableProvider", request, call);
+    api.disable_provider = call;
+    api.disableProvider = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService")
         return;
-    api.force_jwks_refresh = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "ForceJwksRefresh", request, call);
+    const call = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "ForceJwksRefresh", request, call);
+    api.force_jwks_refresh = call;
+    api.forceJwksRefresh = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService")
         return;
-    api.get_provider = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "GetProvider", request, call);
+    const call = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "GetProvider", request, call);
+    api.get_provider = call;
+    api.getProvider = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService")
         return;
-    api.import_saml_metadata = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "ImportSamlMetadata", request, call);
+    const call = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "ImportSamlMetadata", request, call);
+    api.import_saml_metadata = call;
+    api.importSamlMetadata = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService")
         return;
-    api.link_identity = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "LinkIdentity", request, call);
+    const call = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "LinkIdentity", request, call);
+    api.link_identity = call;
+    api.linkIdentity = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService")
         return;
-    api.list_external_identities = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "ListExternalIdentities", request, call);
+    const call = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "ListExternalIdentities", request, call);
+    api.list_external_identities = call;
+    api.listExternalIdentities = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService")
         return;
-    api.list_providers = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "ListProviders", request, call);
+    const call = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "ListProviders", request, call);
+    api.list_providers = call;
+    api.listProviders = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService")
         return;
-    api.preview_claim_mapping = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "PreviewClaimMapping", request, call);
+    const call = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "PreviewClaimMapping", request, call);
+    api.preview_claim_mapping = call;
+    api.previewClaimMapping = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService")
         return;
-    api.preview_group_mapping = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "PreviewGroupMapping", request, call);
+    const call = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "PreviewGroupMapping", request, call);
+    api.preview_group_mapping = call;
+    api.previewGroupMapping = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService")
         return;
-    api.resolve_external_identity = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "ResolveExternalIdentity", request, call);
+    const call = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "ResolveExternalIdentity", request, call);
+    api.resolve_external_identity = call;
+    api.resolveExternalIdentity = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService")
         return;
-    api.saml_acs = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "SamlAcs", request, call);
+    const call = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "SamlAcs", request, call);
+    api.saml_acs = call;
+    api.samlAcs = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService")
         return;
-    api.scim_create_group = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "ScimCreateGroup", request, call);
+    const call = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "ScimCreateGroup", request, call);
+    api.scim_create_group = call;
+    api.scimCreateGroup = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService")
         return;
-    api.scim_create_user = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "ScimCreateUser", request, call);
+    const call = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "ScimCreateUser", request, call);
+    api.scim_create_user = call;
+    api.scimCreateUser = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService")
         return;
-    api.scim_delete_group = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "ScimDeleteGroup", request, call);
+    const call = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "ScimDeleteGroup", request, call);
+    api.scim_delete_group = call;
+    api.scimDeleteGroup = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService")
         return;
-    api.scim_delete_user = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "ScimDeleteUser", request, call);
+    const call = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "ScimDeleteUser", request, call);
+    api.scim_delete_user = call;
+    api.scimDeleteUser = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService")
         return;
-    api.scim_get_group = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "ScimGetGroup", request, call);
+    const call = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "ScimGetGroup", request, call);
+    api.scim_get_group = call;
+    api.scimGetGroup = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService")
         return;
-    api.scim_get_user = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "ScimGetUser", request, call);
+    const call = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "ScimGetUser", request, call);
+    api.scim_get_user = call;
+    api.scimGetUser = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService")
         return;
-    api.scim_list_groups = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "ScimListGroups", request, call);
+    const call = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "ScimListGroups", request, call);
+    api.scim_list_groups = call;
+    api.scimListGroups = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService")
         return;
-    api.scim_list_users = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "ScimListUsers", request, call);
+    const call = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "ScimListUsers", request, call);
+    api.scim_list_users = call;
+    api.scimListUsers = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService")
         return;
-    api.scim_patch_group = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "ScimPatchGroup", request, call);
+    const call = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "ScimPatchGroup", request, call);
+    api.scim_patch_group = call;
+    api.scimPatchGroup = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService")
         return;
-    api.scim_patch_user = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "ScimPatchUser", request, call);
+    const call = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "ScimPatchUser", request, call);
+    api.scim_patch_user = call;
+    api.scimPatchUser = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService")
         return;
-    api.scim_replace_user = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "ScimReplaceUser", request, call);
+    const call = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "ScimReplaceUser", request, call);
+    api.scim_replace_user = call;
+    api.scimReplaceUser = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService")
         return;
-    api.start_saml_login = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "StartSamlLogin", request, call);
+    const call = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "StartSamlLogin", request, call);
+    api.start_saml_login = call;
+    api.startSamlLogin = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService")
         return;
-    api.test_provider_discovery = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "TestProviderDiscovery", request, call);
+    const call = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "TestProviderDiscovery", request, call);
+    api.test_provider_discovery = call;
+    api.testProviderDiscovery = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService")
         return;
-    api.unlink_identity = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "UnlinkIdentity", request, call);
+    const call = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "UnlinkIdentity", request, call);
+    api.unlink_identity = call;
+    api.unlinkIdentity = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.idp.services.v1.IdentityProviderService")
         return;
-    api.update_provider = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "UpdateProvider", request, call);
+    const call = (request, call) => core.unary("udb.core.idp.services.v1.IdentityProviderService", "UpdateProvider", request, call);
+    api.update_provider = call;
+    api.updateProvider = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.notification.services.v1.NotificationService")
         return;
-    api.get_delivery_stats = (request, call) => core.unary("udb.core.notification.services.v1.NotificationService", "GetDeliveryStats", request, call);
+    const call = (request, call) => core.unary("udb.core.notification.services.v1.NotificationService", "GetDeliveryStats", request, call);
+    api.get_delivery_stats = call;
+    api.getDeliveryStats = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.notification.services.v1.NotificationService")
         return;
-    api.get_notification = (request, call) => core.unary("udb.core.notification.services.v1.NotificationService", "GetNotification", request, call);
+    const call = (request, call) => core.unary("udb.core.notification.services.v1.NotificationService", "GetNotification", request, call);
+    api.get_notification = call;
+    api.getNotification = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.notification.services.v1.NotificationService")
         return;
-    api.get_preference = (request, call) => core.unary("udb.core.notification.services.v1.NotificationService", "GetPreference", request, call);
+    const call = (request, call) => core.unary("udb.core.notification.services.v1.NotificationService", "GetPreference", request, call);
+    api.get_preference = call;
+    api.getPreference = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.notification.services.v1.NotificationService")
         return;
-    api.get_template = (request, call) => core.unary("udb.core.notification.services.v1.NotificationService", "GetTemplate", request, call);
+    const call = (request, call) => core.unary("udb.core.notification.services.v1.NotificationService", "GetTemplate", request, call);
+    api.get_template = call;
+    api.getTemplate = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.notification.services.v1.NotificationService")
         return;
-    api.list_notifications = (request, call) => core.unary("udb.core.notification.services.v1.NotificationService", "ListNotifications", request, call);
+    const call = (request, call) => core.unary("udb.core.notification.services.v1.NotificationService", "ListNotifications", request, call);
+    api.list_notifications = call;
+    api.listNotifications = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.notification.services.v1.NotificationService")
         return;
-    api.list_preferences = (request, call) => core.unary("udb.core.notification.services.v1.NotificationService", "ListPreferences", request, call);
+    const call = (request, call) => core.unary("udb.core.notification.services.v1.NotificationService", "ListPreferences", request, call);
+    api.list_preferences = call;
+    api.listPreferences = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.notification.services.v1.NotificationService")
         return;
-    api.list_templates = (request, call) => core.unary("udb.core.notification.services.v1.NotificationService", "ListTemplates", request, call);
+    const call = (request, call) => core.unary("udb.core.notification.services.v1.NotificationService", "ListTemplates", request, call);
+    api.list_templates = call;
+    api.listTemplates = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.notification.services.v1.NotificationService")
         return;
-    api.retry_notification = (request, call) => core.unary("udb.core.notification.services.v1.NotificationService", "RetryNotification", request, call);
+    const call = (request, call) => core.unary("udb.core.notification.services.v1.NotificationService", "RetryNotification", request, call);
+    api.retry_notification = call;
+    api.retryNotification = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.notification.services.v1.NotificationService")
         return;
-    api.send_notification = (request, call) => core.unary("udb.core.notification.services.v1.NotificationService", "SendNotification", request, call);
+    const call = (request, call) => core.unary("udb.core.notification.services.v1.NotificationService", "SendNotification", request, call);
+    api.send_notification = call;
+    api.sendNotification = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.notification.services.v1.NotificationService")
         return;
-    api.set_preference = (request, call) => core.unary("udb.core.notification.services.v1.NotificationService", "SetPreference", request, call);
+    const call = (request, call) => core.unary("udb.core.notification.services.v1.NotificationService", "SetPreference", request, call);
+    api.set_preference = call;
+    api.setPreference = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.notification.services.v1.NotificationService")
         return;
-    api.upsert_template = (request, call) => core.unary("udb.core.notification.services.v1.NotificationService", "UpsertTemplate", request, call);
+    const call = (request, call) => core.unary("udb.core.notification.services.v1.NotificationService", "UpsertTemplate", request, call);
+    api.upsert_template = call;
+    api.upsertTemplate = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.storage.services.v1.StorageService")
         return;
-    api.delete_file = (request, call) => core.unary("udb.core.storage.services.v1.StorageService", "DeleteFile", request, call);
+    const call = (request, call) => core.unary("udb.core.storage.services.v1.StorageService", "DeleteFile", request, call);
+    api.delete_file = call;
+    api.deleteFile = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.storage.services.v1.StorageService")
         return;
-    api.finalize_upload = (request, call) => core.unary("udb.core.storage.services.v1.StorageService", "FinalizeUpload", request, call);
+    const call = (request, call) => core.unary("udb.core.storage.services.v1.StorageService", "FinalizeUpload", request, call);
+    api.finalize_upload = call;
+    api.finalizeUpload = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.storage.services.v1.StorageService")
         return;
-    api.get_download_url = (request, call) => core.unary("udb.core.storage.services.v1.StorageService", "GetDownloadUrl", request, call);
+    const call = (request, call) => core.unary("udb.core.storage.services.v1.StorageService", "GetDownloadUrl", request, call);
+    api.get_download_url = call;
+    api.getDownloadUrl = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.storage.services.v1.StorageService")
         return;
-    api.get_file = (request, call) => core.unary("udb.core.storage.services.v1.StorageService", "GetFile", request, call);
+    const call = (request, call) => core.unary("udb.core.storage.services.v1.StorageService", "GetFile", request, call);
+    api.get_file = call;
+    api.getFile = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.storage.services.v1.StorageService")
         return;
-    api.list_files = (request, call) => core.unary("udb.core.storage.services.v1.StorageService", "ListFiles", request, call);
+    const call = (request, call) => core.unary("udb.core.storage.services.v1.StorageService", "ListFiles", request, call);
+    api.list_files = call;
+    api.listFiles = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.storage.services.v1.StorageService")
         return;
-    api.register_upload = (request, call) => core.unary("udb.core.storage.services.v1.StorageService", "RegisterUpload", request, call);
+    const call = (request, call) => core.unary("udb.core.storage.services.v1.StorageService", "RegisterUpload", request, call);
+    api.register_upload = call;
+    api.registerUpload = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.storage.services.v1.StorageService")
         return;
-    api.update_file = (request, call) => core.unary("udb.core.storage.services.v1.StorageService", "UpdateFile", request, call);
+    const call = (request, call) => core.unary("udb.core.storage.services.v1.StorageService", "UpdateFile", request, call);
+    api.update_file = call;
+    api.updateFile = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.tenant.services.v1.TenantService")
         return;
-    api.create_tenant = (request, call) => core.unary("udb.core.tenant.services.v1.TenantService", "CreateTenant", request, call);
+    const call = (request, call) => core.unary("udb.core.tenant.services.v1.TenantService", "CreateTenant", request, call);
+    api.create_tenant = call;
+    api.createTenant = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.tenant.services.v1.TenantService")
         return;
-    api.get_tenant = (request, call) => core.unary("udb.core.tenant.services.v1.TenantService", "GetTenant", request, call);
+    const call = (request, call) => core.unary("udb.core.tenant.services.v1.TenantService", "GetTenant", request, call);
+    api.get_tenant = call;
+    api.getTenant = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.tenant.services.v1.TenantService")
         return;
-    api.get_tenant_config = (request, call) => core.unary("udb.core.tenant.services.v1.TenantService", "GetTenantConfig", request, call);
+    const call = (request, call) => core.unary("udb.core.tenant.services.v1.TenantService", "GetTenantConfig", request, call);
+    api.get_tenant_config = call;
+    api.getTenantConfig = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.tenant.services.v1.TenantService")
         return;
-    api.list_tenants = (request, call) => core.unary("udb.core.tenant.services.v1.TenantService", "ListTenants", request, call);
+    const call = (request, call) => core.unary("udb.core.tenant.services.v1.TenantService", "ListTenants", request, call);
+    api.list_tenants = call;
+    api.listTenants = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.tenant.services.v1.TenantService")
         return;
-    api.update_tenant = (request, call) => core.unary("udb.core.tenant.services.v1.TenantService", "UpdateTenant", request, call);
+    const call = (request, call) => core.unary("udb.core.tenant.services.v1.TenantService", "UpdateTenant", request, call);
+    api.update_tenant = call;
+    api.updateTenant = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.tenant.services.v1.TenantService")
         return;
-    api.update_tenant_config = (request, call) => core.unary("udb.core.tenant.services.v1.TenantService", "UpdateTenantConfig", request, call);
+    const call = (request, call) => core.unary("udb.core.tenant.services.v1.TenantService", "UpdateTenantConfig", request, call);
+    api.update_tenant_config = call;
+    api.updateTenantConfig = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.webrtc.services.v1.PeerService")
         return;
-    api.get_peer = (request, call) => core.unary("udb.core.webrtc.services.v1.PeerService", "GetPeer", request, call);
+    const call = (request, call) => core.unary("udb.core.webrtc.services.v1.PeerService", "GetPeer", request, call);
+    api.get_peer = call;
+    api.getPeer = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.webrtc.services.v1.PeerService")
         return;
-    api.join_room = (request, call) => core.unary("udb.core.webrtc.services.v1.PeerService", "JoinRoom", request, call);
+    const call = (request, call) => core.unary("udb.core.webrtc.services.v1.PeerService", "JoinRoom", request, call);
+    api.join_room = call;
+    api.joinRoom = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.webrtc.services.v1.PeerService")
         return;
-    api.join_session = (request, call) => core.unary("udb.core.webrtc.services.v1.PeerService", "JoinSession", request, call);
+    const call = (request, call) => core.unary("udb.core.webrtc.services.v1.PeerService", "JoinSession", request, call);
+    api.join_session = call;
+    api.joinSession = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.webrtc.services.v1.PeerService")
         return;
-    api.leave_room = (request, call) => core.unary("udb.core.webrtc.services.v1.PeerService", "LeaveRoom", request, call);
+    const call = (request, call) => core.unary("udb.core.webrtc.services.v1.PeerService", "LeaveRoom", request, call);
+    api.leave_room = call;
+    api.leaveRoom = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.webrtc.services.v1.PeerService")
         return;
-    api.list_peers = (request, call) => core.unary("udb.core.webrtc.services.v1.PeerService", "ListPeers", request, call);
+    const call = (request, call) => core.unary("udb.core.webrtc.services.v1.PeerService", "ListPeers", request, call);
+    api.list_peers = call;
+    api.listPeers = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.webrtc.services.v1.RoomService")
         return;
-    api.close_room = (request, call) => core.unary("udb.core.webrtc.services.v1.RoomService", "CloseRoom", request, call);
+    const call = (request, call) => core.unary("udb.core.webrtc.services.v1.RoomService", "CloseRoom", request, call);
+    api.close_room = call;
+    api.closeRoom = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.webrtc.services.v1.RoomService")
         return;
-    api.create_room = (request, call) => core.unary("udb.core.webrtc.services.v1.RoomService", "CreateRoom", request, call);
+    const call = (request, call) => core.unary("udb.core.webrtc.services.v1.RoomService", "CreateRoom", request, call);
+    api.create_room = call;
+    api.createRoom = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.webrtc.services.v1.RoomService")
         return;
-    api.get_room = (request, call) => core.unary("udb.core.webrtc.services.v1.RoomService", "GetRoom", request, call);
+    const call = (request, call) => core.unary("udb.core.webrtc.services.v1.RoomService", "GetRoom", request, call);
+    api.get_room = call;
+    api.getRoom = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.webrtc.services.v1.RoomService")
         return;
-    api.list_rooms = (request, call) => core.unary("udb.core.webrtc.services.v1.RoomService", "ListRooms", request, call);
+    const call = (request, call) => core.unary("udb.core.webrtc.services.v1.RoomService", "ListRooms", request, call);
+    api.list_rooms = call;
+    api.listRooms = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.webrtc.services.v1.RoomService")
         return;
-    api.update_room = (request, call) => core.unary("udb.core.webrtc.services.v1.RoomService", "UpdateRoom", request, call);
+    const call = (request, call) => core.unary("udb.core.webrtc.services.v1.RoomService", "UpdateRoom", request, call);
+    api.update_room = call;
+    api.updateRoom = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.webrtc.services.v1.TrackService")
         return;
-    api.list_tracks = (request, call) => core.unary("udb.core.webrtc.services.v1.TrackService", "ListTracks", request, call);
+    const call = (request, call) => core.unary("udb.core.webrtc.services.v1.TrackService", "ListTracks", request, call);
+    api.list_tracks = call;
+    api.listTracks = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.webrtc.services.v1.TrackService")
         return;
-    api.mute_track = (request, call) => core.unary("udb.core.webrtc.services.v1.TrackService", "MuteTrack", request, call);
+    const call = (request, call) => core.unary("udb.core.webrtc.services.v1.TrackService", "MuteTrack", request, call);
+    api.mute_track = call;
+    api.muteTrack = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.webrtc.services.v1.TrackService")
         return;
-    api.publish_track = (request, call) => core.unary("udb.core.webrtc.services.v1.TrackService", "PublishTrack", request, call);
+    const call = (request, call) => core.unary("udb.core.webrtc.services.v1.TrackService", "PublishTrack", request, call);
+    api.publish_track = call;
+    api.publishTrack = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.webrtc.services.v1.TrackService")
         return;
-    api.unpublish_track = (request, call) => core.unary("udb.core.webrtc.services.v1.TrackService", "UnpublishTrack", request, call);
+    const call = (request, call) => core.unary("udb.core.webrtc.services.v1.TrackService", "UnpublishTrack", request, call);
+    api.unpublish_track = call;
+    api.unpublishTrack = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.webrtc.services.v1.TurnService")
         return;
-    api.issue_credentials = (request, call) => core.unary("udb.core.webrtc.services.v1.TurnService", "IssueCredentials", request, call);
+    const call = (request, call) => core.unary("udb.core.webrtc.services.v1.TurnService", "IssueCredentials", request, call);
+    api.issue_credentials = call;
+    api.issueCredentials = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.activate_catalog = (request, call) => core.unary("udb.services.v1.DataBroker", "ActivateCatalog", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "ActivateCatalog", request, call);
+    api.activate_catalog = call;
+    api.activateCatalog = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.analytical_query = (request, call) => core.unary("udb.services.v1.DataBroker", "AnalyticalQuery", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "AnalyticalQuery", request, call);
+    api.analytical_query = call;
+    api.analyticalQuery = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.apply_migration = (request, call) => core.unary("udb.services.v1.DataBroker", "ApplyMigration", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "ApplyMigration", request, call);
+    api.apply_migration = call;
+    api.applyMigration = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.approve_migration_plan = (request, call) => core.unary("udb.services.v1.DataBroker", "ApproveMigrationPlan", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "ApproveMigrationPlan", request, call);
+    api.approve_migration_plan = call;
+    api.approveMigrationPlan = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.cache_delete = (request, call) => core.unary("udb.services.v1.DataBroker", "CacheDelete", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "CacheDelete", request, call);
+    api.cache_delete = call;
+    api.cacheDelete = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.cache_get = (request, call) => core.unary("udb.services.v1.DataBroker", "CacheGet", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "CacheGet", request, call);
+    api.cache_get = call;
+    api.cacheGet = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.cache_scan = (request, call) => core.unary("udb.services.v1.DataBroker", "CacheScan", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "CacheScan", request, call);
+    api.cache_scan = call;
+    api.cacheScan = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.cache_set = (request, call) => core.unary("udb.services.v1.DataBroker", "CacheSet", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "CacheSet", request, call);
+    api.cache_set = call;
+    api.cacheSet = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.create_materialized_view = (request, call) => core.unary("udb.services.v1.DataBroker", "CreateMaterializedView", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "CreateMaterializedView", request, call);
+    api.create_materialized_view = call;
+    api.createMaterializedView = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.delete = (request, call) => core.unary("udb.services.v1.DataBroker", "Delete", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "Delete", request, call);
+    api.delete = call;
+    api.delete = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.delete_policy = (request, call) => core.unary("udb.services.v1.DataBroker", "DeletePolicy", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "DeletePolicy", request, call);
+    api.delete_policy = call;
+    api.deletePolicy = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.dismiss_dlq_event = (request, call) => core.unary("udb.services.v1.DataBroker", "DismissDlqEvent", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "DismissDlqEvent", request, call);
+    api.dismiss_dlq_event = call;
+    api.dismissDlqEvent = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.document_delete = (request, call) => core.unary("udb.services.v1.DataBroker", "DocumentDelete", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "DocumentDelete", request, call);
+    api.document_delete = call;
+    api.documentDelete = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.document_find = (request, call) => core.unary("udb.services.v1.DataBroker", "DocumentFind", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "DocumentFind", request, call);
+    api.document_find = call;
+    api.documentFind = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.document_get = (request, call) => core.unary("udb.services.v1.DataBroker", "DocumentGet", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "DocumentGet", request, call);
+    api.document_get = call;
+    api.documentGet = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.document_upsert = (request, call) => core.unary("udb.services.v1.DataBroker", "DocumentUpsert", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "DocumentUpsert", request, call);
+    api.document_upsert = call;
+    api.documentUpsert = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.drop_resource = (request, call) => core.unary("udb.services.v1.DataBroker", "DropResource", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "DropResource", request, call);
+    api.drop_resource = call;
+    api.dropResource = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.enqueue_outbox_event = (request, call) => core.unary("udb.services.v1.DataBroker", "EnqueueOutboxEvent", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "EnqueueOutboxEvent", request, call);
+    api.enqueue_outbox_event = call;
+    api.enqueueOutboxEvent = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.ensure_baseline = (request, call) => core.unary("udb.services.v1.DataBroker", "EnsureBaseline", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "EnsureBaseline", request, call);
+    api.ensure_baseline = call;
+    api.ensureBaseline = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.ensure_project = (request, call) => core.unary("udb.services.v1.DataBroker", "EnsureProject", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "EnsureProject", request, call);
+    api.ensure_project = call;
+    api.ensureProject = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.ensure_resource = (request, call) => core.unary("udb.services.v1.DataBroker", "EnsureResource", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "EnsureResource", request, call);
+    api.ensure_resource = call;
+    api.ensureResource = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.generate_presigned_url = (request, call) => core.unary("udb.services.v1.DataBroker", "GeneratePresignedUrl", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "GeneratePresignedUrl", request, call);
+    api.generate_presigned_url = call;
+    api.generatePresignedUrl = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.generic_dispatch = (request, call) => core.unary("udb.services.v1.DataBroker", "GenericDispatch", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "GenericDispatch", request, call);
+    api.generic_dispatch = call;
+    api.genericDispatch = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.get_admin_summary = (request, call) => core.unary("udb.services.v1.DataBroker", "GetAdminSummary", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "GetAdminSummary", request, call);
+    api.get_admin_summary = call;
+    api.getAdminSummary = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.get_capabilities = (request, call) => core.unary("udb.services.v1.DataBroker", "GetCapabilities", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "GetCapabilities", request, call);
+    api.get_capabilities = call;
+    api.getCapabilities = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.get_catalog_manifest = (request, call) => core.unary("udb.services.v1.DataBroker", "GetCatalogManifest", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "GetCatalogManifest", request, call);
+    api.get_catalog_manifest = call;
+    api.getCatalogManifest = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.get_catalog_version = (request, call) => core.unary("udb.services.v1.DataBroker", "GetCatalogVersion", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "GetCatalogVersion", request, call);
+    api.get_catalog_version = call;
+    api.getCatalogVersion = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.get_catalog_versions = (request, call) => core.unary("udb.services.v1.DataBroker", "GetCatalogVersions", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "GetCatalogVersions", request, call);
+    api.get_catalog_versions = call;
+    api.getCatalogVersions = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.get_cdc_status = (request, call) => core.unary("udb.services.v1.DataBroker", "GetCdcStatus", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "GetCdcStatus", request, call);
+    api.get_cdc_status = call;
+    api.getCdcStatus = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.get_dlq_event = (request, call) => core.unary("udb.services.v1.DataBroker", "GetDlqEvent", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "GetDlqEvent", request, call);
+    api.get_dlq_event = call;
+    api.getDlqEvent = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.get_health_report = (request, call) => core.unary("udb.services.v1.DataBroker", "GetHealthReport", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "GetHealthReport", request, call);
+    api.get_health_report = call;
+    api.getHealthReport = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.get_migration_status = (request, call) => core.unary("udb.services.v1.DataBroker", "GetMigrationStatus", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "GetMigrationStatus", request, call);
+    api.get_migration_status = call;
+    api.getMigrationStatus = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.get_saga = (request, call) => core.unary("udb.services.v1.DataBroker", "GetSaga", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "GetSaga", request, call);
+    api.get_saga = call;
+    api.getSaga = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.graph_mutate = (request, call) => core.unary("udb.services.v1.DataBroker", "GraphMutate", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "GraphMutate", request, call);
+    api.graph_mutate = call;
+    api.graphMutate = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.graph_query = (request, call) => core.unary("udb.services.v1.DataBroker", "GraphQuery", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "GraphQuery", request, call);
+    api.graph_query = call;
+    api.graphQuery = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.initiate_multipart_upload = (request, call) => core.unary("udb.services.v1.DataBroker", "InitiateMultipartUpload", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "InitiateMultipartUpload", request, call);
+    api.initiate_multipart_upload = call;
+    api.initiateMultipartUpload = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.lint_policies = (request, call) => core.unary("udb.services.v1.DataBroker", "LintPolicies", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "LintPolicies", request, call);
+    api.lint_policies = call;
+    api.lintPolicies = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.list_admin_audit_logs = (request, call) => core.unary("udb.services.v1.DataBroker", "ListAdminAuditLogs", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "ListAdminAuditLogs", request, call);
+    api.list_admin_audit_logs = call;
+    api.listAdminAuditLogs = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.list_dlq_events = (request, call) => core.unary("udb.services.v1.DataBroker", "ListDlqEvents", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "ListDlqEvents", request, call);
+    api.list_dlq_events = call;
+    api.listDlqEvents = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.list_message_schemas = (request, call) => core.unary("udb.services.v1.DataBroker", "ListMessageSchemas", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "ListMessageSchemas", request, call);
+    api.list_message_schemas = call;
+    api.listMessageSchemas = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.list_migration_runs = (request, call) => core.unary("udb.services.v1.DataBroker", "ListMigrationRuns", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "ListMigrationRuns", request, call);
+    api.list_migration_runs = call;
+    api.listMigrationRuns = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.list_policies = (request, call) => core.unary("udb.services.v1.DataBroker", "ListPolicies", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "ListPolicies", request, call);
+    api.list_policies = call;
+    api.listPolicies = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.list_projects = (request, call) => core.unary("udb.services.v1.DataBroker", "ListProjects", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "ListProjects", request, call);
+    api.list_projects = call;
+    api.listProjects = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.list_resources = (request, call) => core.unary("udb.services.v1.DataBroker", "ListResources", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "ListResources", request, call);
+    api.list_resources = call;
+    api.listResources = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.list_sagas = (request, call) => core.unary("udb.services.v1.DataBroker", "ListSagas", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "ListSagas", request, call);
+    api.list_sagas = call;
+    api.listSagas = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.lookup_message_schema = (request, call) => core.unary("udb.services.v1.DataBroker", "LookupMessageSchema", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "LookupMessageSchema", request, call);
+    api.lookup_message_schema = call;
+    api.lookupMessageSchema = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.mark_saga_reviewed = (request, call) => core.unary("udb.services.v1.DataBroker", "MarkSagaReviewed", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "MarkSagaReviewed", request, call);
+    api.mark_saga_reviewed = call;
+    api.markSagaReviewed = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.pause_cdc = (request, call) => core.unary("udb.services.v1.DataBroker", "PauseCdc", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "PauseCdc", request, call);
+    api.pause_cdc = call;
+    api.pauseCdc = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.plan_migration = (request, call) => core.unary("udb.services.v1.DataBroker", "PlanMigration", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "PlanMigration", request, call);
+    api.plan_migration = call;
+    api.planMigration = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.preview_cdc_redaction = (request, call) => core.unary("udb.services.v1.DataBroker", "PreviewCdcRedaction", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "PreviewCdcRedaction", request, call);
+    api.preview_cdc_redaction = call;
+    api.previewCdcRedaction = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.put_policy = (request, call) => core.unary("udb.services.v1.DataBroker", "PutPolicy", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "PutPolicy", request, call);
+    api.put_policy = call;
+    api.putPolicy = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.quarantine_dlq_event = (request, call) => core.unary("udb.services.v1.DataBroker", "QuarantineDlqEvent", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "QuarantineDlqEvent", request, call);
+    api.quarantine_dlq_event = call;
+    api.quarantineDlqEvent = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.reload_policies = (request, call) => core.unary("udb.services.v1.DataBroker", "ReloadPolicies", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "ReloadPolicies", request, call);
+    api.reload_policies = call;
+    api.reloadPolicies = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.replay_dlq_event = (request, call) => core.unary("udb.services.v1.DataBroker", "ReplayDlqEvent", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "ReplayDlqEvent", request, call);
+    api.replay_dlq_event = call;
+    api.replayDlqEvent = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.resume_cdc = (request, call) => core.unary("udb.services.v1.DataBroker", "ResumeCdc", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "ResumeCdc", request, call);
+    api.resume_cdc = call;
+    api.resumeCdc = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.retry_saga_compensation = (request, call) => core.unary("udb.services.v1.DataBroker", "RetrySagaCompensation", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "RetrySagaCompensation", request, call);
+    api.retry_saga_compensation = call;
+    api.retrySagaCompensation = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.rollback_catalog = (request, call) => core.unary("udb.services.v1.DataBroker", "RollbackCatalog", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "RollbackCatalog", request, call);
+    api.rollback_catalog = call;
+    api.rollbackCatalog = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.scan_projection_drift = (request, call) => core.unary("udb.services.v1.DataBroker", "ScanProjectionDrift", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "ScanProjectionDrift", request, call);
+    api.scan_projection_drift = call;
+    api.scanProjectionDrift = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.select = (request, call) => core.unary("udb.services.v1.DataBroker", "Select", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "Select", request, call);
+    api.select = call;
+    api.select = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.stage_catalog = (request, call) => core.unary("udb.services.v1.DataBroker", "StageCatalog", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "StageCatalog", request, call);
+    api.stage_catalog = call;
+    api.stageCatalog = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.step_down_cdc_leader = (request, call) => core.unary("udb.services.v1.DataBroker", "StepDownCdcLeader", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "StepDownCdcLeader", request, call);
+    api.step_down_cdc_leader = call;
+    api.stepDownCdcLeader = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.time_series_query = (request, call) => core.unary("udb.services.v1.DataBroker", "TimeSeriesQuery", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "TimeSeriesQuery", request, call);
+    api.time_series_query = call;
+    api.timeSeriesQuery = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.time_series_write = (request, call) => core.unary("udb.services.v1.DataBroker", "TimeSeriesWrite", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "TimeSeriesWrite", request, call);
+    api.time_series_write = call;
+    api.timeSeriesWrite = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.upsert = (request, call) => core.unary("udb.services.v1.DataBroker", "Upsert", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "Upsert", request, call);
+    api.upsert = call;
+    api.upsert = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.validate_catalog = (request, call) => core.unary("udb.services.v1.DataBroker", "ValidateCatalog", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "ValidateCatalog", request, call);
+    api.validate_catalog = call;
+    api.validateCatalog = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.vector_hybrid_search = (request, call) => core.unary("udb.services.v1.DataBroker", "VectorHybridSearch", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "VectorHybridSearch", request, call);
+    api.vector_hybrid_search = call;
+    api.vectorHybridSearch = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.vector_search = (request, call) => core.unary("udb.services.v1.DataBroker", "VectorSearch", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "VectorSearch", request, call);
+    api.vector_search = call;
+    api.vectorSearch = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.vector_upsert = (request, call) => core.unary("udb.services.v1.DataBroker", "VectorUpsert", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "VectorUpsert", request, call);
+    api.vector_upsert = call;
+    api.vectorUpsert = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.verify_admin_audit_log = (request, call) => core.unary("udb.services.v1.DataBroker", "VerifyAdminAuditLog", request, call);
+    const call = (request, call) => core.unary("udb.services.v1.DataBroker", "VerifyAdminAuditLog", request, call);
+    api.verify_admin_audit_log = call;
+    api.verifyAdminAuditLog = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.storage.services.v1.StorageService")
         return;
-    api.download_file = (request, call) => core.serverStream("udb.core.storage.services.v1.StorageService", "DownloadFile", request, call);
+    const call = (request, call) => core.serverStream("udb.core.storage.services.v1.StorageService", "DownloadFile", request, call);
+    api.download_file = call;
+    api.downloadFile = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.get_object = (request, call) => core.serverStream("udb.services.v1.DataBroker", "GetObject", request, call);
+    const call = (request, call) => core.serverStream("udb.services.v1.DataBroker", "GetObject", request, call);
+    api.get_object = call;
+    api.getObject = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.publish_c_d_c = (request, call) => core.serverStream("udb.services.v1.DataBroker", "PublishCDC", request, call);
+    const call = (request, call) => core.serverStream("udb.services.v1.DataBroker", "PublishCDC", request, call);
+    api.publish_cdc = call;
+    api.publishCdc = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.select_v2 = (request, call) => core.serverStream("udb.services.v1.DataBroker", "SelectV2", request, call);
+    const call = (request, call) => core.serverStream("udb.services.v1.DataBroker", "SelectV2", request, call);
+    api.select_v_2 = call;
+    api.selectV2 = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.put_object = (call) => core.clientStream("udb.services.v1.DataBroker", "PutObject", call);
+    const call = (call) => core.clientStream("udb.services.v1.DataBroker", "PutObject", call);
+    api.put_object = call;
+    api.putObject = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.control.services.v1.ControlPlaneService")
         return;
-    api.delta_resources = (call) => core.bidiStream("udb.core.control.services.v1.ControlPlaneService", "DeltaResources", call);
+    const call = (call) => core.bidiStream("udb.core.control.services.v1.ControlPlaneService", "DeltaResources", call);
+    api.delta_resources = call;
+    api.deltaResources = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.control.services.v1.ControlPlaneService")
         return;
-    api.stream_resources = (call) => core.bidiStream("udb.core.control.services.v1.ControlPlaneService", "StreamResources", call);
+    const call = (call) => core.bidiStream("udb.core.control.services.v1.ControlPlaneService", "StreamResources", call);
+    api.stream_resources = call;
+    api.streamResources = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.core.webrtc.services.v1.SignalingService")
         return;
-    api.signal = (call) => core.bidiStream("udb.core.webrtc.services.v1.SignalingService", "Signal", call);
+    const call = (call) => core.bidiStream("udb.core.webrtc.services.v1.SignalingService", "Signal", call);
+    api.signal = call;
+    api.signal = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.batch_select = (call) => core.bidiStream("udb.services.v1.DataBroker", "BatchSelect", call);
+    const call = (call) => core.bidiStream("udb.services.v1.DataBroker", "BatchSelect", call);
+    api.batch_select = call;
+    api.batchSelect = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.batch_upsert = (call) => core.bidiStream("udb.services.v1.DataBroker", "BatchUpsert", call);
+    const call = (call) => core.bidiStream("udb.services.v1.DataBroker", "BatchUpsert", call);
+    api.batch_upsert = call;
+    api.batchUpsert = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.begin_tx = (call) => core.bidiStream("udb.services.v1.DataBroker", "BeginTx", call);
+    const call = (call) => core.bidiStream("udb.services.v1.DataBroker", "BeginTx", call);
+    api.begin_tx = call;
+    api.beginTx = call;
 });
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
     if (api.serviceFull !== "udb.services.v1.DataBroker")
         return;
-    api.vector_batch_upsert = (call) => core.bidiStream("udb.services.v1.DataBroker", "VectorBatchUpsert", call);
+    const call = (call) => core.bidiStream("udb.services.v1.DataBroker", "VectorBatchUpsert", call);
+    api.vector_batch_upsert = call;
+    api.vectorBatchUpsert = call;
 });
 function installMethods(core, api) {
     for (const install of SERVICE_METHOD_INSTALLERS)

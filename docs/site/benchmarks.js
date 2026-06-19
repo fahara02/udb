@@ -111,7 +111,10 @@
           sdk: s.name,
           service: r.service || "",
           rpc: r.rpc || "",
-          api: r.api || ((r.service || "") + "/" + (r.rpc || "")),
+          api: r.api || r.operation_id || r.api_alias || r.wire_api || ((r.service || "") + "/" + (r.rpc || "")),
+          api_alias: r.api_alias || "",
+          operation_id: r.operation_id || "",
+          wire_api: r.wire_api || ((r.service || "") + "/" + (r.rpc || "")),
           kind: r.kind || "",
           err_code: r.err_code || "",
           p50_ms: r.p50_ms,
@@ -133,15 +136,19 @@
       var seen = {};
       // Failed RPCs first — a non-OK gRPC status is a FAILURE, never a latency sample.
       (s.failed_rpcs || []).forEach(function (r) {
-        seen[r.rpc] = true;
+        seen[r.api || r.rpc] = true;
+        seen[r.wire_api || r.rpc] = true;
         slowRows.push({ sdk: s.name, row: r, failed: true });
       });
       var source = (s.full_rpcs && s.full_rpcs.length) ? s.full_rpcs : (s.slowest || []);
       source.forEach(function (r) {
-        var api = r.api || r.rpc;
+        var api = r.api || r.operation_id || r.api_alias || r.wire_api || r.rpc;
         if (seen[api] || seen[r.rpc]) return;
         slowRows.push({ sdk: s.name, row: {
           rpc: api || r.rpc,
+          wire_api: r.wire_api || r.rpc || "",
+          api_alias: r.api_alias || "",
+          operation_id: r.operation_id || "",
           kind: r.kind,
           err_code: r.err_code,
           p50_ms: r.p50_ms,
@@ -164,7 +171,8 @@
       var p99Cell = x.failed
         ? '<td><span class="bench-status fail">FAILED (' + esc(r.err_code || "ERR") + ')</span></td>'
         : '<td class="n">' + ms(r.p99_ms) + '</td>';
-      return '<tr><td>' + esc(x.sdk) + '</td><td><code>' + esc(r.rpc) + '</code></td><td>' + esc(r.kind) + '</td>' +
+      var detail = r.wire_api && r.wire_api !== r.rpc ? '<br><small>' + esc(r.wire_api) + '</small>' : '';
+      return '<tr><td>' + esc(x.sdk) + '</td><td><code>' + esc(r.rpc) + '</code>' + detail + '</td><td>' + esc(r.kind) + '</td>' +
         '<td class="n">' + ms(r.p50_ms) + '</td>' + p99Cell + '<td class="n">' + ms(r.mean_ms) + '</td></tr>';
     }).join("");
   }
@@ -189,7 +197,7 @@
     function draw() {
       if (!rows.length) {
         meta.textContent = "No full per-RPC table is published yet.";
-        body.innerHTML = '<tr><td colspan="11" class="empty-cell">No full per-RPC rows are published yet.</td></tr>';
+        body.innerHTML = '<tr><td colspan="12" class="empty-cell">No full per-RPC rows are published yet.</td></tr>';
         return;
       }
       var sdkSelected = selectedValues("bench-sdk-filter");
@@ -199,19 +207,19 @@
         if (sdkSelected.length && sdkSelected.indexOf(r.sdkId) < 0) return false;
         if (apiSelected.length && apiSelected.indexOf(r.api) < 0) return false;
         if (!q) return true;
-        return [r.sdk, r.api, r.kind, r.err_code, r.note].join(" ").toLowerCase().indexOf(q) >= 0;
+        return [r.sdk, r.api, r.api_alias, r.operation_id, r.wire_api, r.kind, r.err_code, r.note].join(" ").toLowerCase().indexOf(q) >= 0;
       }).sort(function (a, b) {
         return a.api.localeCompare(b.api) || a.sdk.localeCompare(b.sdk);
       });
 
       meta.textContent = "Showing " + filtered.length + " of " + rows.length + " full per-RPC rows.";
       if (!filtered.length) {
-        body.innerHTML = '<tr><td colspan="11" class="empty-cell">No rows match the current filters.</td></tr>';
+        body.innerHTML = '<tr><td colspan="12" class="empty-cell">No rows match the current filters.</td></tr>';
         return;
       }
       body.innerHTML = filtered.map(function (r) {
         var failed = !!r.err_code;
-        return '<tr><td>' + esc(r.sdk) + '</td><td><code>' + esc(r.api) + '</code></td><td>' + esc(r.kind) + '</td>' +
+        return '<tr><td>' + esc(r.sdk) + '</td><td><code>' + esc(r.api) + '</code></td><td><code>' + esc(r.wire_api) + '</code></td><td>' + esc(r.kind) + '</td>' +
           '<td>' + (failed ? '<span class="bench-status fail">' + esc(r.err_code) + '</span>' : '<span class="bench-status ok">OK</span>') + '</td>' +
           '<td class="n">' + ms(r.p50_ms) + '</td><td class="n">' + ms(r.p99_ms) + '</td><td class="n">' + ms(r.mean_ms) + '</td>' +
           '<td class="n">' + ms(r.min_ms) + '</td><td class="n">' + ms(r.max_ms) + '</td><td class="n">' + count(r.iters) + '</td>' +
@@ -229,7 +237,12 @@
     var hasSdkRows = Array.isArray(data.sdks) && data.sdks.length > 0;
     var hasMeasurements = !!(data.summary && data.summary.measured_rpc_count);
     if (hasSdkRows || hasMeasurements) {
-      $("bench-status").style.display = "none";
+      var failedRpcCount = data.summary && typeof data.summary.failed_rpc_count === "number" ? data.summary.failed_rpc_count : 0;
+      $("bench-status").style.display = "block";
+      $("bench-status").className = failedRpcCount ? "callout" : "callout cool";
+      $("bench-status").textContent = failedRpcCount
+        ? "Benchmark JSON loaded, but " + failedRpcCount + " RPC measurement" + (failedRpcCount === 1 ? "" : "s") + " returned non-OK status. See 'Failures and slowest RPCs' below."
+        : "Benchmark JSON loaded. All measured RPC rows completed without non-OK statuses.";
     } else {
       $("bench-status").className = "callout cool";
       $("bench-status").style.display = "block";
@@ -300,7 +313,7 @@
       $("bench-summary-rows").innerHTML = '<tr><td colspan="6" class="empty-cell">No SDK summary has been published yet.</td></tr>';
       $("bench-slowest-rows").innerHTML = '<tr><td colspan="6" class="empty-cell">No per-RPC latency rows are published yet.</td></tr>';
       $("bench-full-meta").textContent = "No full per-RPC table is published yet.";
-      $("bench-full-rows").innerHTML = '<tr><td colspan="11" class="empty-cell">No full per-RPC rows are published yet.</td></tr>';
+      $("bench-full-rows").innerHTML = '<tr><td colspan="12" class="empty-cell">No full per-RPC rows are published yet.</td></tr>';
       renderCurve({ history: [], sdks: [] });
     });
 })();

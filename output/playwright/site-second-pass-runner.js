@@ -3,6 +3,22 @@ const fs = require("fs");
 
 const base = "http://localhost:8000";
 const pages = ["/", "/sdks.html", "/benchmarks.html", "/playground.html", "/api.html"];
+const playgroundProtoA = `syntax = "proto3";
+package myapp.v1;
+message Alpha {
+  option (myapp.v1.table) = { table_name: "alpha_items" schema_name: "audit" is_table: true enable_rls: true };
+  string alpha_id = 1 [(myapp.v1.column) = { column_name: "alpha_id" sql_type: "UUID" primary_key: true not_null: true }];
+  string tenant_id = 2 [(myapp.v1.column) = { column_name: "tenant_id" tenant_column: true not_null: true }];
+  string alpha_note = 3 [(myapp.v1.column) = { column_name: "alpha_note" sql_type: "TEXT" }];
+}`;
+const playgroundProtoB = `syntax = "proto3";
+package myapp.v1;
+message Beta {
+  option (myapp.v1.table) = { table_name: "beta_items" schema_name: "audit" is_table: true enable_rls: false };
+  string beta_id = 1 [(myapp.v1.column) = { column_name: "beta_id" sql_type: "UUID" primary_key: true not_null: true }];
+  string tenant_id = 2 [(myapp.v1.column) = { column_name: "tenant_id" tenant_column: true not_null: true }];
+  int64 beta_score = 3 [(myapp.v1.column) = { column_name: "beta_score" sql_type: "BIGINT" not_null: true }];
+}`;
 const viewports = [
   { name: "narrow320", width: 320, height: 700 },
   { name: "mobile390", width: 390, height: 844 },
@@ -98,6 +114,10 @@ async function main() {
           if (columns !== 1) fail(failures, label, `benchmark controls not single-column: ${metrics.benchColumns}`);
           if (metrics.benchScrollDelta > 2) fail(failures, label, `benchmark controls overflow ${metrics.benchScrollDelta}px`);
         }
+        const statusText = await page.textContent("#bench-status");
+        if (/Loading benchmark results/i.test(statusText || "")) {
+          fail(failures, label, "benchmark status stayed on loading after render");
+        }
         const searchOk = await page.evaluate(() => {
           const input = document.querySelector("#bench-search");
           if (!input) return false;
@@ -122,6 +142,37 @@ async function main() {
         if (playground.hasWasmError) fail(failures, label, "playground shows WASM load error");
         if (playground.outDisplay === "none") fail(failures, label, "playground output stayed hidden");
         if (!playground.parsed) fail(failures, label, "playground did not show parsed output");
+
+        await page.fill("#proto", playgroundProtoA);
+        await page.waitForFunction(() => {
+          const out = document.querySelector("#out")?.textContent || "";
+          const state = document.querySelector("#parse-state")?.textContent || "";
+          return out.includes("alpha_items") && state.includes("current input parsed");
+        }, null, { timeout: 10000 });
+        const alphaText = await page.textContent("#out");
+        await page.fill("#proto", playgroundProtoB);
+        await page.waitForFunction(() => {
+          const out = document.querySelector("#out")?.textContent || "";
+          const state = document.querySelector("#parse-state")?.textContent || "";
+          return out.includes("beta_items") && state.includes("current input parsed");
+        }, null, { timeout: 10000 });
+        const betaText = await page.textContent("#out");
+        if (!alphaText || !/Alpha|alpha_items|alpha_note/.test(alphaText)) {
+          fail(failures, label, "playground did not render Alpha input");
+        }
+        if (!betaText || !/Beta|beta_items|beta_score/.test(betaText)) {
+          fail(failures, label, "playground did not render Beta input");
+        }
+        if (betaText && /Alpha|alpha_items|alpha_note/.test(betaText)) {
+          fail(failures, label, "playground kept stale Alpha output after Beta input");
+        }
+        if (alphaText === betaText) fail(failures, label, "playground output did not change after input changed");
+        if (betaText && !/source fingerprint \(sha-256 of textarea\)/.test(betaText)) {
+          fail(failures, label, "playground did not show current-input source fingerprint");
+        }
+        if (betaText && !/semantic manifest checksum/.test(betaText)) {
+          fail(failures, label, "playground did not label semantic manifest checksum");
+        }
       }
 
       if (path === "/api.html") {

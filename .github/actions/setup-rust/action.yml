@@ -1,0 +1,66 @@
+name: Setup Rust
+description: >-
+  ONE source for the Rust toolchain + Swatinem cache + per-platform native build
+  deps. Replaces the ~15 inline toolchain/cache/deps blocks across ci.yml,
+  feature-matrix.yml, release-binaries.yml, release-crates.yml, and pages.yml.
+  Native deps mirror release-binaries.yml exactly (aws-lc-sys/s3 needs cmake +
+  NASM; WebAuthn pulls vendored OpenSSL and needs a platform-native Perl plus
+  compiler tools).
+
+inputs:
+  components:
+    description: Comma/space-separated rustup components (e.g. "clippy, rustfmt").
+    required: false
+    default: ""
+  target:
+    description: Rust target triple to install (e.g. x86_64-unknown-linux-gnu).
+    required: false
+    default: ""
+  cache-key:
+    description: Distinct Swatinem/rust-cache key so each tier/target gets its own scope.
+    required: false
+    default: ""
+  install-build-deps:
+    description: Whether to install the platform native build deps. Set "false" to skip.
+    required: false
+    default: "true"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: ${{ inputs.components }}
+        targets: ${{ inputs.target }}
+
+    - name: Rust cache
+      uses: Swatinem/rust-cache@v2
+      with:
+        key: ${{ inputs.cache-key }}
+
+    # Native build deps. aws-lc-sys (s3) needs cmake + NASM; WebAuthn pulls
+    # vendored OpenSSL and requires a platform-native Perl plus compiler tools.
+    - name: Install build deps (Linux)
+      if: runner.os == 'Linux' && inputs.install-build-deps == 'true'
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends build-essential cmake clang perl nasm ninja-build pkg-config libssl-dev
+
+    - name: Install build deps (macOS)
+      if: runner.os == 'macOS' && inputs.install-build-deps == 'true'
+      shell: bash
+      run: brew install cmake nasm ninja
+
+    - name: Install build deps (Windows)
+      if: runner.os == 'Windows' && inputs.install-build-deps == 'true'
+      shell: pwsh
+      run: |
+        choco install strawberryperl nasm --no-progress -y
+        "C:\Strawberry\perl\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        "C:\Program Files\NASM" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+    - name: Configure MSVC build tools (Windows)
+      if: runner.os == 'Windows' && inputs.install-build-deps == 'true'
+      uses: ilammy/msvc-dev-cmd@v1

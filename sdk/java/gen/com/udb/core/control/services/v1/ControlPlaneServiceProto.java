@@ -39,7 +39,7 @@ public final class ControlPlaneServiceProto {
       "lane_service.proto\022\034udb.core.control.ser" +
       "vices.v1\032\034google/api/annotations.proto\032\'" +
       "udb/core/control/services/v1/core.proto\032" +
-      "!udb/core/common/v1/security.proto2\245\n\n\023C" +
+      "!udb/core/common/v1/security.proto2\335\n\n\023C" +
       "ontrolPlaneService\022\300\001\n\017StreamResources\022." +
       ".udb.core.control.services.v1.DiscoveryR" +
       "equest\032/.udb.core.control.services.v1.Di" +
@@ -50,37 +50,38 @@ public final class ControlPlaneServiceProto {
       "quest\0324.udb.core.control.services.v1.Del" +
       "taDiscoveryResponse\"F\312\363\030>\010\002\032\033udb:control" +
       ":delta-resourcesJ\002\001\004j\026control.DeltaResou" +
-      "rces\220\001\001\370\363\030\002(\0010\001\022\326\001\n\014GetResources\0221.udb.c" +
+      "rces\220\001\001\370\363\030\002(\0010\001\022\350\001\n\014GetResources\0221.udb.c" +
       "ore.control.services.v1.GetResourcesRequ" +
       "est\0322.udb.core.control.services.v1.GetRe" +
-      "sourcesResponse\"_\312\363\030:\010\002\032\031udb:control:get" +
-      "-resourcesJ\002\001\004j\024control.GetResources\220\001\001\370" +
-      "\363\030\001\202\323\344\223\002\027\022\025/v1/control/resources\022\343\001\n\016Lis" +
-      "tNodeStates\0223.udb.core.control.services." +
-      "v1.ListNodeStatesRequest\0324.udb.core.cont" +
-      "rol.services.v1.ListNodeStatesResponse\"f" +
-      "\312\363\030?\010\002\032\034udb:control:list-node-statesJ\002\001\002" +
-      "j\026control.ListNodeStates\220\001\001\370\363\030\001\202\323\344\223\002\031\022\027/" +
-      "v1/control/node-states\022\336\001\n\tAckStatus\022..u" +
-      "db.core.control.services.v1.AckStatusReq" +
-      "uest\032/.udb.core.control.services.v1.AckS" +
-      "tatusResponse\"p\312\363\0304\010\002\032\026udb:control:ack-s" +
-      "tatusJ\002\001\002j\021control.AckStatus\220\001\001\370\363\030\002\202\323\344\223\002" +
-      ".\022,/v1/control/node-states/{node_id}:ack" +
-      "-status\032\340\001\312\360\031y\n\007control\022\007control\032\007contro" +
-      "l\"\032Control Plane Distribution*\007control0\001" +
-      "8\001h\001z\014controlPlane\202\001\007control\212\001\007control\222\001" +
-      "\016native.control\322\360\031\032\010\001\032\003udb(\340\324\0030\003@\001J\007cont" +
-      "rolP\001\342\360\031A\n\007control\032\010postgres2\033UDB_NATIVE" +
-      "_SERVICES_ENABLED2\017UDB_GRPC_TARGETB\235\002\n c" +
-      "om.udb.core.control.services.v1B\030Control" +
-      "PlaneServiceProtoP\001ZJgithub.com/fahara02" +
-      "/udb/sdk/go/gen/udb/core/control/service" +
-      "s/v1;servicesv1\242\002\004UCCS\252\002\034udb.core.Contro" +
-      "l.Services.V1\312\002\034Udb\\Core\\Control\\Service" +
-      "s\\V1\342\002(Udb\\GPBMetadata\\Core\\Control\\Serv" +
-      "ices\\V1\352\002 Udb::Core::Control::Services::" +
-      "V1b\006proto3"
+      "sourcesResponse\"q\312\363\030:\010\002\032\031udb:control:get" +
+      "-resourcesJ\002\001\004j\024control.GetResources\220\001\001\332" +
+      "\363\030\016Z\014getResources\370\363\030\001\202\323\344\223\002\027\022\025/v1/control" +
+      "/resources\022\367\001\n\016ListNodeStates\0223.udb.core" +
+      ".control.services.v1.ListNodeStatesReque" +
+      "st\0324.udb.core.control.services.v1.ListNo" +
+      "deStatesResponse\"z\312\363\030?\010\002\032\034udb:control:li" +
+      "st-node-statesJ\002\001\002j\026control.ListNodeStat" +
+      "es\220\001\001\332\363\030\020Z\016listNodeStates\370\363\030\001\202\323\344\223\002\031\022\027/v1" +
+      "/control/node-states\022\360\001\n\tAckStatus\022..udb" +
+      ".core.control.services.v1.AckStatusReque" +
+      "st\032/.udb.core.control.services.v1.AckSta" +
+      "tusResponse\"\201\001\312\363\0304\010\002\032\026udb:control:ack-st" +
+      "atusJ\002\001\002j\021control.AckStatus\220\001\001\332\363\030\013Z\tackS" +
+      "tatus\370\363\030\002\202\323\344\223\0020\"+/v1/control/node-states" +
+      "/{node_id}:ackStatus:\001*\032\340\001\312\360\031y\n\007control\022" +
+      "\007control\032\007control\"\032Control Plane Distrib" +
+      "ution*\007control0\0018\001h\001z\014controlPlane\202\001\007con" +
+      "trol\212\001\007control\222\001\016native.control\322\360\031\032\010\001\032\003u" +
+      "db(\340\324\0030\003@\001J\007controlP\001\342\360\031A\n\007control\032\010post" +
+      "gres2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_G" +
+      "RPC_TARGETB\235\002\n com.udb.core.control.serv" +
+      "ices.v1B\030ControlPlaneServiceProtoP\001ZJgit" +
+      "hub.com/fahara02/udb/sdk/go/gen/udb/core" +
+      "/control/services/v1;servicesv1\242\002\004UCCS\252\002" +
+      "\034udb.core.Control.Services.V1\312\002\034Udb\\Core" +
+      "\\Control\\Services\\V1\342\002(Udb\\GPBMetadata\\C" +
+      "ore\\Control\\Services\\V1\352\002 Udb::Core::Con" +
+      "trol::Services::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -99,6 +100,7 @@ public final class ControlPlaneServiceProto {
     registry.add(com.udb.core.common.v1.SecurityProto.endpointSecurity);
     registry.add(com.udb.core.common.v1.SecurityProto.nativeService);
     registry.add(com.udb.core.common.v1.SecurityProto.operationKind);
+    registry.add(com.udb.core.common.v1.SecurityProto.sdkSurface);
     registry.add(com.udb.core.common.v1.SecurityProto.serviceDependencyContract);
     registry.add(com.udb.core.common.v1.SecurityProto.serviceSdkSurface);
     com.google.protobuf.Descriptors.FileDescriptor

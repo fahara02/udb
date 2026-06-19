@@ -81,7 +81,7 @@ service RoomService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "create_room"
+      method_alias: "create_room" rest_operation_id: "createRoom"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -141,7 +141,7 @@ service RoomService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "get_room"
+      method_alias: "get_room" rest_operation_id: "getRoom"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -197,7 +197,7 @@ service RoomService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "update_room"
+      method_alias: "update_room" rest_operation_id: "updateRoom"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -265,7 +265,7 @@ service RoomService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "close_room"
+      method_alias: "close_room" rest_operation_id: "closeRoom"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -308,7 +308,7 @@ service RoomService {
       explicit_nulls: true
     };
     option (google.api.http) = {
-      post: "/v1/webrtc/rooms/{room_id}/close"
+      post: "/v1/webrtc/rooms/{room_id}:close"
       body: "*"
     };
   }
@@ -327,7 +327,7 @@ service RoomService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "list_rooms"
+      method_alias: "list_rooms" rest_operation_id: "listRooms"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -440,7 +440,7 @@ service PeerService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "join_room"
+      method_alias: "join_room" rest_operation_id: "joinRoom"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -514,7 +514,7 @@ service PeerService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "join_session"
+      method_alias: "join_session" rest_operation_id: "joinSession"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -538,7 +538,7 @@ service PeerService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "leave_room"
+      method_alias: "leave_room" rest_operation_id: "leaveRoom"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -579,7 +579,7 @@ service PeerService {
       explicit_nulls: true
     };
     option (google.api.http) = {
-      post: "/v1/webrtc/rooms/{room_id}/peers/{peer_id}/leave"
+      post: "/v1/webrtc/rooms/{room_id}/peers/{peer_id}:leave"
       body: "*"
     };
   }
@@ -598,7 +598,7 @@ service PeerService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "get_peer"
+      method_alias: "get_peer" rest_operation_id: "getPeer"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -654,7 +654,7 @@ service PeerService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "list_peers"
+      method_alias: "list_peers" rest_operation_id: "listPeers"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -753,7 +753,7 @@ service TrackService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "publish_track"
+      method_alias: "publish_track" rest_operation_id: "publishTrack"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -813,7 +813,7 @@ service TrackService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "unpublish_track"
+      method_alias: "unpublish_track" rest_operation_id: "unpublishTrack"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -853,7 +853,7 @@ service TrackService {
       explicit_nulls: true
     };
     option (google.api.http) = {
-      post: "/v1/webrtc/tracks/{track_id}/unpublish"
+      post: "/v1/webrtc/tracks/{track_id}:unpublish"
       body: "*"
     };
   }
@@ -872,7 +872,7 @@ service TrackService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "mute_track"
+      method_alias: "mute_track" rest_operation_id: "muteTrack"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -912,7 +912,7 @@ service TrackService {
       explicit_nulls: true
     };
     option (google.api.http) = {
-      post: "/v1/webrtc/tracks/{track_id}/mute"
+      post: "/v1/webrtc/tracks/{track_id}:mute"
       body: "*"
     };
   }
@@ -931,7 +931,7 @@ service TrackService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "list_tracks"
+      method_alias: "list_tracks" rest_operation_id: "listTracks"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -1031,7 +1031,7 @@ service TurnService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "issue_credentials"
+      method_alias: "issue_credentials" rest_operation_id: "issueCredentials"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -1138,7 +1138,7 @@ service SignalingService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "signal"
+      method_alias: "signal" rest_operation_id: "signal"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3

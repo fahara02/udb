@@ -1,14 +1,19 @@
 name: Release TypeScript SDK
 
+# Reusable publisher invoked by `release.yml` after the release binaries are
+# built. Builds and publishes @udb_plus/sdk to npm.
+
 on:
+  workflow_call:
+    secrets:
+      NPM_TOKEN:
+        description: npm automation token used by `npm publish`.
+        required: false
   workflow_dispatch:
     inputs:
       version:
         description: "Expected UDB release version, for example 0.2.0"
         required: true
-  push:
-    tags:
-      - "v*"
 
 permissions:
   contents: read
@@ -18,38 +23,24 @@ jobs:
     name: Build and publish @udb_plus/sdk
     runs-on: ubuntu-latest
     environment: production
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Node
-        uses: actions/setup-node@v4
+      # Node toolchain (with the npm registry wired for publishing) via the
+      # single-source setup-sdk-toolchains composite. version-guard needs Node.
+      - uses: ./.github/actions/setup-sdk-toolchains
         with:
-          node-version: "20"
-          # Wires NODE_AUTH_TOKEN into a temp .npmrc for `npm publish`.
-          registry-url: "https://registry.npmjs.org"
+          node: 'true'
+          node-registry-url: "https://registry.npmjs.org"
 
-      - name: Versions consistent with versions.json
-        run: node scripts/check-versions.mjs
-
-      - name: Check version
-        shell: bash
-        env:
-          INPUT_VERSION: ${{ github.event.inputs.version }}
-        run: |
-          version="$(node -p "require('./sdk/typescript/package.json').version")"
-          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
-            tag="${GITHUB_REF_NAME#v}"
-            if [[ "${tag}" != "${version}" ]]; then
-              echo "Tag ${GITHUB_REF_NAME} does not match sdk/typescript version ${version}" >&2
-              exit 1
-            fi
-          fi
-          if [[ -n "${INPUT_VERSION}" && "${INPUT_VERSION}" != "${version}" ]]; then
-            echo "Input version ${INPUT_VERSION} does not match sdk/typescript version ${version}" >&2
-            exit 1
-          fi
+      - uses: ./.github/actions/version-guard
+        with:
+          component: sdk-typescript
+          dispatch-version: ${{ github.event.inputs.version }}
 
       - name: Install dependencies
         working-directory: sdk/typescript
@@ -60,6 +51,7 @@ jobs:
         working-directory: sdk/typescript
         shell: bash
         run: |
+          set -euo pipefail
           version="$(node -p "require('./package.json').version")"
           if npm view "@udb_plus/sdk@${version}" version --silent >/dev/null 2>&1; then
             echo "@udb_plus/sdk ${version} is already published; publish steps will be skipped."
@@ -69,13 +61,15 @@ jobs:
           fi
 
       - name: Type check
+        if: github.event_name == 'workflow_dispatch'
         working-directory: sdk/typescript
         run: npm run typecheck
 
       # `build` bundles the runtime proto assets into the package (bundle-proto)
       # and emits dist/*.js + *.d.ts. The committed `gen/` tree is hard-verified
       # against `buf generate --include-imports` by the CI `buf` job, so no
-      # codegen runs here. `prepublishOnly` re-runs build during publish too.
+      # codegen runs here. The publish commands below use --ignore-scripts so
+      # npm's prepublishOnly hook does not rebuild the exact same package.
       - name: Build package
         working-directory: sdk/typescript
         run: npm run build
@@ -83,11 +77,11 @@ jobs:
       - name: Publish dry run
         if: steps.npm_version.outputs.exists != 'true'
         working-directory: sdk/typescript
-        run: npm publish --dry-run --access public
+        run: npm publish --dry-run --ignore-scripts --access public
 
       - name: Publish to npm
         if: steps.npm_version.outputs.exists != 'true'
         working-directory: sdk/typescript
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --access public
+        run: npm publish --ignore-scripts --access public

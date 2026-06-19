@@ -69,7 +69,7 @@ service AuthzService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "authorize"
+      method_alias: "authorize" rest_operation_id: "authorize"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -127,7 +127,7 @@ service AuthzService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "check_access"
+      method_alias: "check_access" rest_operation_id: "checkAccess"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -185,7 +185,7 @@ service AuthzService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "create_role"
+      method_alias: "create_role" rest_operation_id: "createRole"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -243,7 +243,7 @@ service AuthzService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "assign_role"
+      method_alias: "assign_role" rest_operation_id: "assignRole"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -301,7 +301,7 @@ service AuthzService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "create_policy_rule"
+      method_alias: "create_policy_rule" rest_operation_id: "createPolicyRule"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -359,7 +359,7 @@ service AuthzService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "list_user_permissions"
+      method_alias: "list_user_permissions" rest_operation_id: "listUserPermissions"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -414,7 +414,7 @@ service AuthzService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "list_access_decision_audits"
+      method_alias: "list_access_decision_audits" rest_operation_id: "listAccessDecisionAudits"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -470,7 +470,7 @@ service AuthzService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "revoke_role"
+      method_alias: "revoke_role" rest_operation_id: "revokeRole"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -529,7 +529,7 @@ service AuthzService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "list_user_roles"
+      method_alias: "list_user_roles" rest_operation_id: "listUserRoles"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -585,7 +585,7 @@ service AuthzService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "get_role"
+      method_alias: "get_role" rest_operation_id: "getRole"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -641,7 +641,7 @@ service AuthzService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "list_roles"
+      method_alias: "list_roles" rest_operation_id: "listRoles"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -697,7 +697,7 @@ service AuthzService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "batch_check_permissions"
+      method_alias: "batch_check_permissions" rest_operation_id: "batchCheckPermissions"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -756,7 +756,7 @@ service AuthzService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "update_role"
+      method_alias: "update_role" rest_operation_id: "updateRole"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -815,7 +815,7 @@ service AuthzService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "delete_role"
+      method_alias: "delete_role" rest_operation_id: "deleteRole"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -871,7 +871,7 @@ service AuthzService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "get_policy_rule"
+      method_alias: "get_policy_rule" rest_operation_id: "getPolicyRule"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -927,7 +927,7 @@ service AuthzService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "list_policy_rules"
+      method_alias: "list_policy_rules" rest_operation_id: "listPolicyRules"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -983,7 +983,7 @@ service AuthzService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "delete_policy_rule"
+      method_alias: "delete_policy_rule" rest_operation_id: "deletePolicyRule"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -1038,7 +1038,7 @@ service AuthzService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "put_role_binding"
+      method_alias: "put_role_binding" rest_operation_id: "putRoleBinding"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -1096,7 +1096,7 @@ service AuthzService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "put_relationship"
+      method_alias: "put_relationship" rest_operation_id: "putRelationship"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -1154,7 +1154,7 @@ service AuthzService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "put_authz_policy"
+      method_alias: "put_authz_policy" rest_operation_id: "putAuthzPolicy"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -1212,7 +1212,7 @@ service AuthzService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "lint_authz_policies"
+      method_alias: "lint_authz_policies" rest_operation_id: "lintAuthzPolicies"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -1272,7 +1272,7 @@ service AuthzService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "get_native_access"
+      method_alias: "get_native_access" rest_operation_id: "getNativeAccess"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -1331,7 +1331,7 @@ service AuthzService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "get_policy_bundle"
+      method_alias: "get_policy_bundle" rest_operation_id: "getPolicyBundle"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -1396,7 +1396,7 @@ service AuthzService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "create_policy_draft"
+      method_alias: "create_policy_draft" rest_operation_id: "createPolicyDraft"
       required_credential_provider: "udb"
       server_only: true
       boilerplate_recipe_tags: "authz"
@@ -1417,7 +1417,7 @@ service AuthzService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "update_policy_draft"
+      method_alias: "update_policy_draft" rest_operation_id: "updatePolicyDraft"
       required_credential_provider: "udb"
       server_only: true
       boilerplate_recipe_tags: "authz"
@@ -1438,7 +1438,7 @@ service AuthzService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "diff_policy_draft"
+      method_alias: "diff_policy_draft" rest_operation_id: "diffPolicyDraft"
       required_credential_provider: "udb"
       server_only: true
       boilerplate_recipe_tags: "authz"
@@ -1459,7 +1459,7 @@ service AuthzService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "submit_policy_draft"
+      method_alias: "submit_policy_draft" rest_operation_id: "submitPolicyDraft"
       required_credential_provider: "udb"
       server_only: true
       boilerplate_recipe_tags: "authz"
@@ -1480,7 +1480,7 @@ service AuthzService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "approve_policy_draft"
+      method_alias: "approve_policy_draft" rest_operation_id: "approvePolicyDraft"
       required_credential_provider: "udb"
       server_only: true
       boilerplate_recipe_tags: "authz"
@@ -1501,7 +1501,7 @@ service AuthzService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "reject_policy_draft"
+      method_alias: "reject_policy_draft" rest_operation_id: "rejectPolicyDraft"
       required_credential_provider: "udb"
       server_only: true
       boilerplate_recipe_tags: "authz"
@@ -1522,7 +1522,7 @@ service AuthzService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "activate_policy_version"
+      method_alias: "activate_policy_version" rest_operation_id: "activatePolicyVersion"
       required_credential_provider: "udb"
       server_only: true
       boilerplate_recipe_tags: "authz"
@@ -1543,7 +1543,7 @@ service AuthzService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "rollback_policy_version"
+      method_alias: "rollback_policy_version" rest_operation_id: "rollbackPolicyVersion"
       required_credential_provider: "udb"
       server_only: true
       boilerplate_recipe_tags: "authz"
@@ -1566,7 +1566,7 @@ service AuthzService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "activate_canary"
+      method_alias: "activate_canary" rest_operation_id: "activateCanary"
       required_credential_provider: "udb"
       server_only: true
       boilerplate_recipe_tags: "authz"
@@ -1588,7 +1588,7 @@ service AuthzService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "promote_canary"
+      method_alias: "promote_canary" rest_operation_id: "promoteCanary"
       required_credential_provider: "udb"
       server_only: true
       boilerplate_recipe_tags: "authz"
@@ -1610,12 +1610,12 @@ service AuthzService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "get_canary_status"
+      method_alias: "get_canary_status" rest_operation_id: "getCanaryStatus"
       required_credential_provider: "udb"
       server_only: true
       boilerplate_recipe_tags: "authz"
     };
-    option (google.api.http) = { post: "/v1/authz/governance/canaries:status" body: "*" };
+    option (google.api.http) = { get: "/v1/authz/governance/canaries/{canary_id}" };
   }
 
   rpc ListPolicyVersions(ListPolicyVersionsRequest) returns (ListPolicyVersionsResponse) {
@@ -1631,12 +1631,12 @@ service AuthzService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "list_policy_versions"
+      method_alias: "list_policy_versions" rest_operation_id: "listPolicyVersions"
       required_credential_provider: "udb"
       server_only: true
       boilerplate_recipe_tags: "authz"
     };
-    option (google.api.http) = { post: "/v1/authz/governance/versions:list" body: "*" };
+    option (google.api.http) = { get: "/v1/authz/governance/versions" };
   }
 
   rpc SimulatePolicy(SimulatePolicyRequest) returns (SimulatePolicyResponse) {
@@ -1652,12 +1652,12 @@ service AuthzService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "simulate_policy"
+      method_alias: "simulate_policy" rest_operation_id: "simulatePolicy"
       required_credential_provider: "udb"
       server_only: true
       boilerplate_recipe_tags: "authz"
     };
-    option (google.api.http) = { post: "/v1/authz/governance/simulate" body: "*" };
+    option (google.api.http) = { post: "/v1/authz/governance/policy-simulations" body: "*" };
   }
 
   rpc ExplainPolicy(ExplainPolicyRequest) returns (ExplainPolicyResponse) {
@@ -1673,12 +1673,12 @@ service AuthzService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "explain_policy"
+      method_alias: "explain_policy" rest_operation_id: "explainPolicy"
       required_credential_provider: "udb"
       server_only: true
       boilerplate_recipe_tags: "authz"
     };
-    option (google.api.http) = { post: "/v1/authz/governance/explain" body: "*" };
+    option (google.api.http) = { post: "/v1/authz/governance/policy-explanations" body: "*" };
   }
 
   rpc GetAuthzRevision(GetAuthzRevisionRequest) returns (GetAuthzRevisionResponse) {
@@ -1694,12 +1694,12 @@ service AuthzService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "get_authz_revision"
+      method_alias: "get_authz_revision" rest_operation_id: "getAuthzRevision"
       required_credential_provider: "udb"
       server_only: true
       boilerplate_recipe_tags: "authz"
     };
-    option (google.api.http) = { post: "/v1/authz/governance/revision" body: "*" };
+    option (google.api.http) = { get: "/v1/authz/governance/revisions/current" };
   }
 
   rpc InvalidatePolicyBundles(InvalidatePolicyBundlesRequest) returns (InvalidatePolicyBundlesResponse) {
@@ -1715,7 +1715,7 @@ service AuthzService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "invalidate_policy_bundles"
+      method_alias: "invalidate_policy_bundles" rest_operation_id: "invalidatePolicyBundles"
       required_credential_provider: "udb"
       server_only: true
       boilerplate_recipe_tags: "authz"
@@ -1736,7 +1736,7 @@ service AuthzService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "seed_builtin_roles"
+      method_alias: "seed_builtin_roles" rest_operation_id: "seedBuiltinRoles"
       required_credential_provider: "udb"
       server_only: true
       boilerplate_recipe_tags: "authz"
@@ -1757,7 +1757,7 @@ service AuthzService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "migrate_legacy_policies"
+      method_alias: "migrate_legacy_policies" rest_operation_id: "migrateLegacyPolicies"
       required_credential_provider: "udb"
       server_only: true
       boilerplate_recipe_tags: "authz"

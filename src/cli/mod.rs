@@ -1140,6 +1140,8 @@ fn native_manifest_json(
                     let security = rpc.endpoint_security.as_ref();
                     serde_json::json!({
                         "method": rpc.method,
+                        "method_alias": rpc.sdk_surface.as_ref().map(|s| s.method_alias.clone()).unwrap_or_default(),
+                        "rest_operation_id": rpc.sdk_surface.as_ref().map(|s| s.rest_operation_id.clone()).unwrap_or_default(),
                         "path": rpc.grpc_path(),
                         "kind": rpc.kind(),
                         "operation_kind": udb::runtime::descriptor_manifest::operation_kind_name(rpc.operation_kind),
@@ -1438,6 +1440,7 @@ fn sdk_surface_json(
     serde_json::json!({
         "include_in_facade": surface.include_in_facade,
         "method_alias": surface.method_alias,
+        "rest_operation_id": surface.rest_operation_id,
         "required_credential_provider": surface.required_credential_provider,
         "streaming_helper_type": surface.streaming_helper_type,
         "default_deadline_ms": surface.default_deadline_ms,

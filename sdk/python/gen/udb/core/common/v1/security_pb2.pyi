@@ -449,7 +449,7 @@ class DbColumnSecurityOptions(_message.Message):
     def __init__(self, secret_classification: _Optional[_Union[SecretClassification, str]] = ..., output_view: _Optional[_Union[OutputView, str]] = ..., redaction_strategy: _Optional[_Union[RedactionStrategy, str]] = ..., tokenization_strategy: _Optional[str] = ..., hashing_strategy: _Optional[str] = ..., hashing_algorithm: _Optional[str] = ..., encryption_key_class: _Optional[str] = ..., searchable_encrypted: bool = ..., uniqueness_scope: _Optional[str] = ..., owner_field: bool = ..., tenant_field: bool = ..., project_field: bool = ...) -> None: ...
 
 class SdkSurfaceOptions(_message.Message):
-    __slots__ = ("include_in_facade", "method_alias", "required_credential_provider", "streaming_helper_type", "default_deadline_ms", "default_max_attempts", "browser_safe", "server_only", "boilerplate_recipe_tags", "generate_minimal_example")
+    __slots__ = ("include_in_facade", "method_alias", "required_credential_provider", "streaming_helper_type", "default_deadline_ms", "default_max_attempts", "browser_safe", "server_only", "boilerplate_recipe_tags", "generate_minimal_example", "rest_operation_id")
     INCLUDE_IN_FACADE_FIELD_NUMBER: _ClassVar[int]
     METHOD_ALIAS_FIELD_NUMBER: _ClassVar[int]
     REQUIRED_CREDENTIAL_PROVIDER_FIELD_NUMBER: _ClassVar[int]
@@ -460,6 +460,7 @@ class SdkSurfaceOptions(_message.Message):
     SERVER_ONLY_FIELD_NUMBER: _ClassVar[int]
     BOILERPLATE_RECIPE_TAGS_FIELD_NUMBER: _ClassVar[int]
     GENERATE_MINIMAL_EXAMPLE_FIELD_NUMBER: _ClassVar[int]
+    REST_OPERATION_ID_FIELD_NUMBER: _ClassVar[int]
     include_in_facade: bool
     method_alias: str
     required_credential_provider: str
@@ -470,7 +471,8 @@ class SdkSurfaceOptions(_message.Message):
     server_only: bool
     boilerplate_recipe_tags: _containers.RepeatedScalarFieldContainer[str]
     generate_minimal_example: bool
-    def __init__(self, include_in_facade: bool = ..., method_alias: _Optional[str] = ..., required_credential_provider: _Optional[str] = ..., streaming_helper_type: _Optional[str] = ..., default_deadline_ms: _Optional[int] = ..., default_max_attempts: _Optional[int] = ..., browser_safe: bool = ..., server_only: bool = ..., boilerplate_recipe_tags: _Optional[_Iterable[str]] = ..., generate_minimal_example: bool = ...) -> None: ...
+    rest_operation_id: str
+    def __init__(self, include_in_facade: bool = ..., method_alias: _Optional[str] = ..., required_credential_provider: _Optional[str] = ..., streaming_helper_type: _Optional[str] = ..., default_deadline_ms: _Optional[int] = ..., default_max_attempts: _Optional[int] = ..., browser_safe: bool = ..., server_only: bool = ..., boilerplate_recipe_tags: _Optional[_Iterable[str]] = ..., generate_minimal_example: bool = ..., rest_operation_id: _Optional[str] = ...) -> None: ...
 
 class CliScaffoldOptions(_message.Message):
     __slots__ = ("scaffold_package", "import_path", "required_env", "generated_files", "route_name", "middleware_name", "required_native_services", "optional_native_services", "secret_placeholders", "post_generation_commands", "smoke_test_command")

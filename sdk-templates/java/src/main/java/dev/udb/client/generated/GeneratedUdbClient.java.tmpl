@@ -87,18 +87,18 @@ public final class GeneratedUdbClient implements AutoCloseable {
   // overrides the tuning default.
   // @@UDB_RPC_BEGIN kind=unary
 
-  /** {@code {{RPC_PATH}}} — unary call on {{SERVICE_FULL}}. */
-  public com.{{RPC_OUTPUT_PKG}}.{{RPC_OUTPUT}} {{RPC_NAME}}(
+  /** {@code {{RPC_PATH}}} — unary call on {{SERVICE_FULL}}; public alias {@code {{RPC_ALIAS_SNAKE}}}. */
+  public com.{{RPC_OUTPUT_PKG}}.{{RPC_OUTPUT}} {{RPC_ALIAS_PASCAL}}(
       com.{{RPC_INPUT_PKG}}.{{RPC_INPUT}} request) {
-    return {{RPC_NAME}}(request, null);
+    return {{RPC_ALIAS_PASCAL}}(request, null);
   }
 
   /** {@code {{RPC_PATH}}} — unary call with an explicit per-call deadline. */
-  public com.{{RPC_OUTPUT_PKG}}.{{RPC_OUTPUT}} {{RPC_NAME}}(
+  public com.{{RPC_OUTPUT_PKG}}.{{RPC_OUTPUT}} {{RPC_ALIAS_PASCAL}}(
       com.{{RPC_INPUT_PKG}}.{{RPC_INPUT}} request, Duration deadline) {
     return GeneratedClientSupport.unary(
         channel,
-        com.{{SERVICE_PKG}}.{{SERVICE_NAME}}Grpc.get{{RPC_NAME}}Method(),
+        com.{{SERVICE_PKG}}.{{SERVICE_NAME}}Grpc.get{{RPC_WIRE_NAME}}Method(),
         request,
         tuning,
         deadline,
@@ -112,18 +112,18 @@ public final class GeneratedUdbClient implements AutoCloseable {
   // UdbRpcException by the returned iterator.
   // @@UDB_RPC_BEGIN kind=server_streaming
 
-  /** {@code {{RPC_PATH}}} — server-streaming call on {{SERVICE_FULL}}. */
-  public Iterator<com.{{RPC_OUTPUT_PKG}}.{{RPC_OUTPUT}}> {{RPC_NAME}}(
+  /** {@code {{RPC_PATH}}} — server-streaming call on {{SERVICE_FULL}}; public alias {@code {{RPC_ALIAS_SNAKE}}}. */
+  public Iterator<com.{{RPC_OUTPUT_PKG}}.{{RPC_OUTPUT}}> {{RPC_ALIAS_PASCAL}}(
       com.{{RPC_INPUT_PKG}}.{{RPC_INPUT}} request) {
-    return {{RPC_NAME}}(request, null);
+    return {{RPC_ALIAS_PASCAL}}(request, null);
   }
 
   /** {@code {{RPC_PATH}}} — server-streaming call with an explicit deadline. */
-  public Iterator<com.{{RPC_OUTPUT_PKG}}.{{RPC_OUTPUT}}> {{RPC_NAME}}(
+  public Iterator<com.{{RPC_OUTPUT_PKG}}.{{RPC_OUTPUT}}> {{RPC_ALIAS_PASCAL}}(
       com.{{RPC_INPUT_PKG}}.{{RPC_INPUT}} request, Duration deadline) {
     return GeneratedClientSupport.serverStreaming(
         channel,
-        com.{{SERVICE_PKG}}.{{SERVICE_NAME}}Grpc.get{{RPC_NAME}}Method(),
+        com.{{SERVICE_PKG}}.{{SERVICE_NAME}}Grpc.get{{RPC_WIRE_NAME}}Method(),
         request,
         tuning,
         deadline,
@@ -136,12 +136,12 @@ public final class GeneratedUdbClient implements AutoCloseable {
   // observer; the supplied responseObserver receives the single response.
   // @@UDB_RPC_BEGIN kind=client_streaming
 
-  /** {@code {{RPC_PATH}}} — client-streaming call on {{SERVICE_FULL}}. */
-  public StreamObserver<com.{{RPC_INPUT_PKG}}.{{RPC_INPUT}}> {{RPC_NAME}}(
+  /** {@code {{RPC_PATH}}} — client-streaming call on {{SERVICE_FULL}}; public alias {@code {{RPC_ALIAS_SNAKE}}}. */
+  public StreamObserver<com.{{RPC_INPUT_PKG}}.{{RPC_INPUT}}> {{RPC_ALIAS_PASCAL}}(
       StreamObserver<com.{{RPC_OUTPUT_PKG}}.{{RPC_OUTPUT}}> responseObserver) {
     return GeneratedClientSupport.clientStreaming(
         channel,
-        com.{{SERVICE_PKG}}.{{SERVICE_NAME}}Grpc.get{{RPC_NAME}}Method(),
+        com.{{SERVICE_PKG}}.{{SERVICE_NAME}}Grpc.get{{RPC_WIRE_NAME}}Method(),
         tuning,
         null,
         headers,
@@ -154,12 +154,12 @@ public final class GeneratedUdbClient implements AutoCloseable {
   // receives the response stream.
   // @@UDB_RPC_BEGIN kind=bidi
 
-  /** {@code {{RPC_PATH}}} — bidi-streaming call on {{SERVICE_FULL}}. */
-  public StreamObserver<com.{{RPC_INPUT_PKG}}.{{RPC_INPUT}}> {{RPC_NAME}}(
+  /** {@code {{RPC_PATH}}} — bidi-streaming call on {{SERVICE_FULL}}; public alias {@code {{RPC_ALIAS_SNAKE}}}. */
+  public StreamObserver<com.{{RPC_INPUT_PKG}}.{{RPC_INPUT}}> {{RPC_ALIAS_PASCAL}}(
       StreamObserver<com.{{RPC_OUTPUT_PKG}}.{{RPC_OUTPUT}}> responseObserver) {
     return GeneratedClientSupport.bidiStreaming(
         channel,
-        com.{{SERVICE_PKG}}.{{SERVICE_NAME}}Grpc.get{{RPC_NAME}}Method(),
+        com.{{SERVICE_PKG}}.{{SERVICE_NAME}}Grpc.get{{RPC_WIRE_NAME}}Method(),
         tuning,
         null,
         headers,

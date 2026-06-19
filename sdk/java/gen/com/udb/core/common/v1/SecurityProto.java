@@ -623,7 +623,7 @@ public final class SecurityProto {
       "\020uniqueness_scope\030\t \001(\tR\017uniquenessScope" +
       "\022\037\n\013owner_field\030\n \001(\010R\nownerField\022!\n\014ten" +
       "ant_field\030\013 \001(\010R\013tenantField\022#\n\rproject_" +
-      "field\030\014 \001(\010R\014projectField\"\360\003\n\021SdkSurface" +
+      "field\030\014 \001(\010R\014projectField\"\234\004\n\021SdkSurface" +
       "Options\022*\n\021include_in_facade\030\001 \001(\010R\017incl" +
       "udeInFacade\022!\n\014method_alias\030\002 \001(\tR\013metho" +
       "dAlias\022@\n\034required_credential_provider\030\003" +
@@ -636,187 +636,188 @@ public final class SecurityProto {
       "serverOnly\0226\n\027boilerplate_recipe_tags\030\t " +
       "\003(\tR\025boilerplateRecipeTags\0228\n\030generate_m" +
       "inimal_example\030\n \001(\010R\026generateMinimalExa" +
-      "mple\"\201\004\n\022CliScaffoldOptions\022)\n\020scaffold_" +
-      "package\030\001 \001(\tR\017scaffoldPackage\022\037\n\013import" +
-      "_path\030\002 \001(\tR\nimportPath\022!\n\014required_env\030" +
-      "\003 \003(\tR\013requiredEnv\022\'\n\017generated_files\030\004 " +
-      "\003(\tR\016generatedFiles\022\035\n\nroute_name\030\005 \001(\tR" +
-      "\trouteName\022\'\n\017middleware_name\030\006 \001(\tR\016mid" +
-      "dlewareName\0228\n\030required_native_services\030" +
-      "\007 \003(\tR\026requiredNativeServices\0228\n\030optiona" +
-      "l_native_services\030\010 \003(\tR\026optionalNativeS" +
-      "ervices\022/\n\023secret_placeholders\030\t \003(\tR\022se" +
-      "cretPlaceholders\0228\n\030post_generation_comm" +
-      "ands\030\n \003(\tR\026postGenerationCommands\022,\n\022sm" +
-      "oke_test_command\030\013 \001(\tR\020smokeTestCommand" +
-      "\"\327\004\n\024EventContractOptions\022\035\n\nevent_type\030" +
-      "\001 \001(\tR\teventType\022!\n\014outbox_topic\030\002 \001(\tR\013" +
-      "outboxTopic\022.\n\023partition_key_field\030\003 \001(\t" +
-      "R\021partitionKeyField\022:\n\031payload_redaction" +
-      "_profile\030\004 \001(\tR\027payloadRedactionProfile\022" +
-      "-\n\022delivery_guarantee\030\005 \001(\tR\021deliveryGua" +
-      "rantee\0221\n\024replay_compatibility\030\006 \001(\tR\023re" +
-      "playCompatibility\022K\n\005emits\030\007 \003(\01325.udb.c" +
-      "ore.common.v1.EventContractOptions.Emitt" +
-      "edEventR\005emits\032\341\001\n\014EmittedEvent\022\024\n\005topic" +
-      "\030\001 \001(\tR\005topic\022.\n\023partition_key_field\030\002 \001" +
-      "(\tR\021partitionKeyField\022-\n\022delivery_guaran" +
-      "tee\030\003 \001(\tR\021deliveryGuarantee\022:\n\031payload_" +
-      "redaction_profile\030\004 \001(\tR\027payloadRedactio" +
-      "nProfile\022 \n\013conditional\030\005 \001(\010R\013condition" +
-      "al\"\355\002\n\031DependencyContractOptions\0228\n\030requ" +
-      "ired_native_services\030\001 \003(\tR\026requiredNati" +
-      "veServices\0228\n\030optional_native_services\030\002" +
-      " \003(\tR\026optionalNativeServices\022+\n\021required" +
-      "_backends\030\003 \003(\tR\020requiredBackends\022+\n\021opt" +
-      "ional_backends\030\004 \003(\tR\020optionalBackends\022+" +
-      "\n\021required_features\030\005 \003(\tR\020requiredFeatu" +
-      "res\022!\n\014required_env\030\006 \003(\tR\013requiredEnv\0222" +
-      "\n\025degraded_when_missing\030\007 \003(\tR\023degradedW" +
-      "henMissing*\212\001\n\rOperationKind\022\036\n\032OPERATIO" +
-      "N_KIND_UNSPECIFIED\020\000\022\034\n\030OPERATION_KIND_R" +
-      "EAD_ONLY\020\001\022\033\n\027OPERATION_KIND_MUTATION\020\002\022" +
-      "\036\n\032OPERATION_KIND_DESTRUCTIVE\020\003*\207\001\n\010Auth" +
-      "Mode\022\031\n\025AUTH_MODE_UNSPECIFIED\020\000\022\024\n\020AUTH_" +
-      "MODE_PUBLIC\020\001\022\024\n\020AUTH_MODE_BEARER\020\002\022\025\n\021A" +
-      "UTH_MODE_API_KEY\020\003\022\035\n\031AUTH_MODE_SERVICE_" +
-      "ACCOUNT\020\004*\276\002\n\016CredentialType\022\037\n\033CREDENTI" +
-      "AL_TYPE_UNSPECIFIED\020\000\022\036\n\032CREDENTIAL_TYPE" +
-      "_BEARER_JWT\020\001\022\033\n\027CREDENTIAL_TYPE_SESSION" +
-      "\020\002\022\033\n\027CREDENTIAL_TYPE_API_KEY\020\003\022#\n\037CREDE" +
-      "NTIAL_TYPE_SERVICE_ACCOUNT\020\004\022\030\n\024CREDENTI" +
-      "AL_TYPE_MTLS\020\005\022\030\n\024CREDENTIAL_TYPE_OIDC\020\006" +
-      "\022\030\n\024CREDENTIAL_TYPE_SAML\020\007\022\034\n\030CREDENTIAL" +
-      "_TYPE_WEBAUTHN\020\010\022 \n\034CREDENTIAL_TYPE_EXTE" +
-      "RNAL_JWT\020\t*\203\001\n\tAuditMode\022\032\n\026AUDIT_MODE_U" +
-      "NSPECIFIED\020\000\022\023\n\017AUDIT_MODE_NONE\020\001\022\027\n\023AUD" +
-      "IT_MODE_MUTATION\020\002\022\027\n\023AUDIT_MODE_DECISIO" +
-      "N\020\003\022\023\n\017AUDIT_MODE_FULL\020\004*\237\003\n\024SecretClass" +
-      "ification\022%\n!SECRET_CLASSIFICATION_UNSPE" +
-      "CIFIED\020\000\022 \n\034SECRET_CLASSIFICATION_PUBLIC" +
-      "\020\001\022\"\n\036SECRET_CLASSIFICATION_INTERNAL\020\002\022$" +
-      "\n SECRET_CLASSIFICATION_CREDENTIAL\020\003\022\037\n\033" +
-      "SECRET_CLASSIFICATION_TOKEN\020\004\022\035\n\031SECRET_" +
-      "CLASSIFICATION_KEY\020\005\022#\n\037SECRET_CLASSIFIC" +
-      "ATION_BIOMETRIC\020\006\022\"\n\036SECRET_CLASSIFICATI" +
-      "ON_IDENTITY\020\007\022\035\n\031SECRET_CLASSIFICATION_P" +
-      "II\020\010\022%\n!SECRET_CLASSIFICATION_OPERATIONA" +
-      "L\020\t\022%\n!SECRET_CLASSIFICATION_PRIVATE_KEY" +
-      "\020\n*\272\001\n\nOutputView\022\033\n\027OUTPUT_VIEW_UNSPECI" +
-      "FIED\020\000\022\034\n\030OUTPUT_VIEW_STORAGE_ONLY\020\001\022\026\n\022" +
-      "OUTPUT_VIEW_PUBLIC\020\002\022\024\n\020OUTPUT_VIEW_SELF" +
-      "\020\003\022\025\n\021OUTPUT_VIEW_ADMIN\020\004\022\025\n\021OUTPUT_VIEW" +
-      "_AUDIT\020\005\022\025\n\021OUTPUT_VIEW_NEVER\020\006*\320\001\n\021Reda" +
-      "ctionStrategy\022\"\n\036REDACTION_STRATEGY_UNSP" +
-      "ECIFIED\020\000\022\033\n\027REDACTION_STRATEGY_NONE\020\001\022\033" +
-      "\n\027REDACTION_STRATEGY_MASK\020\002\022\035\n\031REDACTION" +
-      "_STRATEGY_REDACT\020\003\022 \n\034REDACTION_STRATEGY" +
-      "_HASH_ONLY\020\004\022\034\n\030REDACTION_STRATEGY_LAST4" +
-      "\020\005*\335\001\n\026SecurityClassification\022\'\n#SECURIT" +
-      "Y_CLASSIFICATION_UNSPECIFIED\020\000\022\"\n\036SECURI" +
-      "TY_CLASSIFICATION_PUBLIC\020\001\022$\n SECURITY_C" +
-      "LASSIFICATION_INTERNAL\020\002\022(\n$SECURITY_CLA" +
-      "SSIFICATION_CONFIDENTIAL\020\003\022&\n\"SECURITY_C" +
-      "LASSIFICATION_RESTRICTED\020\004*\330\001\n\014DataCateg" +
-      "ory\022\035\n\031DATA_CATEGORY_UNSPECIFIED\020\000\022\032\n\026DA" +
-      "TA_CATEGORY_PERSONAL\020\001\022\033\n\027DATA_CATEGORY_" +
-      "FINANCIAL\020\002\022\033\n\027DATA_CATEGORY_BIOMETRIC\020\003" +
-      "\022\032\n\026DATA_CATEGORY_IDENTITY\020\004\022\035\n\031DATA_CAT" +
-      "EGORY_OPERATIONAL\020\005\022\030\n\024DATA_CATEGORY_SYS" +
-      "TEM\020\006:1\n\003pii\022\035.google.protobuf.FieldOpti" +
-      "ons\030\332\206\003 \001(\010R\003pii:N\n\022encrypted_security\022\035" +
-      ".google.protobuf.FieldOptions\030\333\206\003 \001(\010R\021e" +
-      "ncryptedSecurity:>\n\nlog_masked\022\035.google." +
-      "protobuf.FieldOptions\030\334\206\003 \001(\010R\tlogMasked" +
-      ":B\n\014log_redacted\022\035.google.protobuf.Field" +
-      "Options\030\335\206\003 \001(\010R\013logRedacted:=\n\tsensitiv" +
-      "e\022\035.google.protobuf.FieldOptions\030\336\206\003 \001(\010" +
-      "R\tsensitive:J\n\020requires_consent\022\035.google" +
-      ".protobuf.FieldOptions\030\337\206\003 \001(\010R\017requires" +
-      "Consent:B\n\014data_purpose\022\035.google.protobu" +
-      "f.FieldOptions\030\340\206\003 \001(\tR\013dataPurpose:F\n\016r" +
-      "etention_days\022\035.google.protobuf.FieldOpt" +
-      "ions\030\341\206\003 \001(\005R\rretentionDays:=\n\ttokenized" +
-      "\022\035.google.protobuf.FieldOptions\030\342\206\003 \001(\010R" +
-      "\ttokenized:\204\001\n\027security_classification\022\035" +
-      ".google.protobuf.FieldOptions\030\343\206\003 \001(\0162*." +
-      "udb.core.common.v1.SecurityClassificatio" +
-      "nR\026securityClassification:f\n\rdata_catego" +
-      "ry\022\035.google.protobuf.FieldOptions\030\344\206\003 \001(" +
-      "\0162 .udb.core.common.v1.DataCategoryR\014dat" +
-      "aCategory:z\n\022db_column_security\022\035.google" +
-      ".protobuf.FieldOptions\030\361\206\003 \001(\0132+.udb.cor" +
-      "e.common.v1.DbColumnSecurityOptionsR\020dbC" +
-      "olumnSecurity:s\n\021endpoint_security\022\036.goo" +
-      "gle.protobuf.MethodOptions\030\271\216\003 \001(\0132$.udb" +
-      ".core.common.v1.EndpointSecurityR\020endpoi" +
-      "ntSecurity:g\n\rrest_contract\022\036.google.pro" +
-      "tobuf.MethodOptions\030\272\216\003 \001(\0132 .udb.core.c" +
-      "ommon.v1.RestContractR\014restContract:h\n\013s" +
-      "dk_surface\022\036.google.protobuf.MethodOptio" +
-      "ns\030\273\216\003 \001(\0132%.udb.core.common.v1.SdkSurfa" +
-      "ceOptionsR\nsdkSurface:x\n\023method_cli_scaf" +
-      "fold\022\036.google.protobuf.MethodOptions\030\274\216\003" +
-      " \001(\0132&.udb.core.common.v1.CliScaffoldOpt" +
-      "ionsR\021methodCliScaffold:~\n\025method_event_" +
-      "contract\022\036.google.protobuf.MethodOptions" +
-      "\030\275\216\003 \001(\0132(.udb.core.common.v1.EventContr" +
-      "actOptionsR\023methodEventContract:\215\001\n\032meth" +
-      "od_dependency_contract\022\036.google.protobuf" +
-      ".MethodOptions\030\276\216\003 \001(\0132-.udb.core.common" +
-      ".v1.DependencyContractOptionsR\030methodDep" +
-      "endencyContract:j\n\016operation_kind\022\036.goog" +
-      "le.protobuf.MethodOptions\030\277\216\003 \001(\0162!.udb." +
-      "core.common.v1.OperationKindR\roperationK" +
-      "ind:\222\001\n\034method_precondition_contract\022\036.g" +
-      "oogle.protobuf.MethodOptions\030\300\216\003 \001(\0132..u" +
-      "db.core.common.v1.MethodPreconditionCont" +
-      "ractR\032methodPreconditionContract:\206\001\n\030met" +
-      "hod_readback_contract\022\036.google.protobuf." +
-      "MethodOptions\030\301\216\003 \001(\0132*.udb.core.common." +
-      "v1.ReadAfterWriteContractR\026methodReadbac" +
-      "kContract:\203\001\n\031method_lifecycle_contract\022" +
-      "\036.google.protobuf.MethodOptions\030\302\216\003 \001(\0132" +
-      "%.udb.core.common.v1.LifecycleContractR\027" +
-      "methodLifecycleContract:\211\001\n\033method_idemp" +
-      "otency_contract\022\036.google.protobuf.Method" +
-      "Options\030\303\216\003 \001(\0132\'.udb.core.common.v1.Ide" +
-      "mpotencyContractR\031methodIdempotencyContr" +
-      "act:w\n\025method_error_contract\022\036.google.pr" +
-      "otobuf.MethodOptions\030\304\216\003 \001(\0132!.udb.core." +
-      "common.v1.ErrorContractR\023methodErrorCont" +
-      "ract:y\n\021db_table_security\022\037.google.proto" +
-      "buf.MessageOptions\030\241\226\003 \001(\0132*.udb.core.co" +
-      "mmon.v1.DbTableSecurityOptionsR\017dbTableS" +
-      "ecurity:\201\001\n\026message_event_contract\022\037.goo" +
-      "gle.protobuf.MessageOptions\030\242\226\003 \001(\0132(.ud" +
-      "b.core.common.v1.EventContractOptionsR\024m" +
-      "essageEventContract:x\n\023message_sdk_surfa" +
-      "ce\022\037.google.protobuf.MessageOptions\030\243\226\003 " +
-      "\001(\0132%.udb.core.common.v1.SdkSurfaceOptio" +
-      "nsR\021messageSdkSurface:\220\001\n\033message_depend" +
-      "ency_contract\022\037.google.protobuf.MessageO" +
-      "ptions\030\244\226\003 \001(\0132-.udb.core.common.v1.Depe" +
-      "ndencyContractOptionsR\031messageDependency" +
-      "Contract:r\n\016native_service\022\037.google.prot" +
-      "obuf.ServiceOptions\030\211\236\003 \001(\0132(.udb.core.c" +
-      "ommon.v1.NativeServiceOptionsR\rnativeSer" +
-      "vice:x\n\023service_sdk_surface\022\037.google.pro" +
-      "tobuf.ServiceOptions\030\212\236\003 \001(\0132%.udb.core." +
-      "common.v1.SdkSurfaceOptionsR\021serviceSdkS" +
-      "urface:{\n\024service_cli_scaffold\022\037.google." +
-      "protobuf.ServiceOptions\030\213\236\003 \001(\0132&.udb.co" +
-      "re.common.v1.CliScaffoldOptionsR\022service" +
-      "CliScaffold:\220\001\n\033service_dependency_contr" +
-      "act\022\037.google.protobuf.ServiceOptions\030\214\236\003" +
-      " \001(\0132-.udb.core.common.v1.DependencyCont" +
-      "ractOptionsR\031serviceDependencyContractB\322" +
-      "\001\n\026com.udb.core.common.v1B\rSecurityProto" +
-      "P\001Z>github.com/fahara02/udb/sdk/go/gen/u" +
-      "db/core/common/v1;commonv1\242\002\003UCC\252\002\022udb.c" +
-      "ore.Common.V1\312\002\022Udb\\Core\\Common\\V1\342\002\036Udb" +
-      "\\GPBMetadata\\Core\\Common\\V1\352\002\025Udb::Core:" +
-      ":Common::V1b\006proto3"
+      "mple\022*\n\021rest_operation_id\030\013 \001(\tR\017restOpe" +
+      "rationId\"\201\004\n\022CliScaffoldOptions\022)\n\020scaff" +
+      "old_package\030\001 \001(\tR\017scaffoldPackage\022\037\n\013im" +
+      "port_path\030\002 \001(\tR\nimportPath\022!\n\014required_" +
+      "env\030\003 \003(\tR\013requiredEnv\022\'\n\017generated_file" +
+      "s\030\004 \003(\tR\016generatedFiles\022\035\n\nroute_name\030\005 " +
+      "\001(\tR\trouteName\022\'\n\017middleware_name\030\006 \001(\tR" +
+      "\016middlewareName\0228\n\030required_native_servi" +
+      "ces\030\007 \003(\tR\026requiredNativeServices\0228\n\030opt" +
+      "ional_native_services\030\010 \003(\tR\026optionalNat" +
+      "iveServices\022/\n\023secret_placeholders\030\t \003(\t" +
+      "R\022secretPlaceholders\0228\n\030post_generation_" +
+      "commands\030\n \003(\tR\026postGenerationCommands\022," +
+      "\n\022smoke_test_command\030\013 \001(\tR\020smokeTestCom" +
+      "mand\"\327\004\n\024EventContractOptions\022\035\n\nevent_t" +
+      "ype\030\001 \001(\tR\teventType\022!\n\014outbox_topic\030\002 \001" +
+      "(\tR\013outboxTopic\022.\n\023partition_key_field\030\003" +
+      " \001(\tR\021partitionKeyField\022:\n\031payload_redac" +
+      "tion_profile\030\004 \001(\tR\027payloadRedactionProf" +
+      "ile\022-\n\022delivery_guarantee\030\005 \001(\tR\021deliver" +
+      "yGuarantee\0221\n\024replay_compatibility\030\006 \001(\t" +
+      "R\023replayCompatibility\022K\n\005emits\030\007 \003(\01325.u" +
+      "db.core.common.v1.EventContractOptions.E" +
+      "mittedEventR\005emits\032\341\001\n\014EmittedEvent\022\024\n\005t" +
+      "opic\030\001 \001(\tR\005topic\022.\n\023partition_key_field" +
+      "\030\002 \001(\tR\021partitionKeyField\022-\n\022delivery_gu" +
+      "arantee\030\003 \001(\tR\021deliveryGuarantee\022:\n\031payl" +
+      "oad_redaction_profile\030\004 \001(\tR\027payloadReda" +
+      "ctionProfile\022 \n\013conditional\030\005 \001(\010R\013condi" +
+      "tional\"\355\002\n\031DependencyContractOptions\0228\n\030" +
+      "required_native_services\030\001 \003(\tR\026required" +
+      "NativeServices\0228\n\030optional_native_servic" +
+      "es\030\002 \003(\tR\026optionalNativeServices\022+\n\021requ" +
+      "ired_backends\030\003 \003(\tR\020requiredBackends\022+\n" +
+      "\021optional_backends\030\004 \003(\tR\020optionalBacken" +
+      "ds\022+\n\021required_features\030\005 \003(\tR\020requiredF" +
+      "eatures\022!\n\014required_env\030\006 \003(\tR\013requiredE" +
+      "nv\0222\n\025degraded_when_missing\030\007 \003(\tR\023degra" +
+      "dedWhenMissing*\212\001\n\rOperationKind\022\036\n\032OPER" +
+      "ATION_KIND_UNSPECIFIED\020\000\022\034\n\030OPERATION_KI" +
+      "ND_READ_ONLY\020\001\022\033\n\027OPERATION_KIND_MUTATIO" +
+      "N\020\002\022\036\n\032OPERATION_KIND_DESTRUCTIVE\020\003*\207\001\n\010" +
+      "AuthMode\022\031\n\025AUTH_MODE_UNSPECIFIED\020\000\022\024\n\020A" +
+      "UTH_MODE_PUBLIC\020\001\022\024\n\020AUTH_MODE_BEARER\020\002\022" +
+      "\025\n\021AUTH_MODE_API_KEY\020\003\022\035\n\031AUTH_MODE_SERV" +
+      "ICE_ACCOUNT\020\004*\276\002\n\016CredentialType\022\037\n\033CRED" +
+      "ENTIAL_TYPE_UNSPECIFIED\020\000\022\036\n\032CREDENTIAL_" +
+      "TYPE_BEARER_JWT\020\001\022\033\n\027CREDENTIAL_TYPE_SES" +
+      "SION\020\002\022\033\n\027CREDENTIAL_TYPE_API_KEY\020\003\022#\n\037C" +
+      "REDENTIAL_TYPE_SERVICE_ACCOUNT\020\004\022\030\n\024CRED" +
+      "ENTIAL_TYPE_MTLS\020\005\022\030\n\024CREDENTIAL_TYPE_OI" +
+      "DC\020\006\022\030\n\024CREDENTIAL_TYPE_SAML\020\007\022\034\n\030CREDEN" +
+      "TIAL_TYPE_WEBAUTHN\020\010\022 \n\034CREDENTIAL_TYPE_" +
+      "EXTERNAL_JWT\020\t*\203\001\n\tAuditMode\022\032\n\026AUDIT_MO" +
+      "DE_UNSPECIFIED\020\000\022\023\n\017AUDIT_MODE_NONE\020\001\022\027\n" +
+      "\023AUDIT_MODE_MUTATION\020\002\022\027\n\023AUDIT_MODE_DEC" +
+      "ISION\020\003\022\023\n\017AUDIT_MODE_FULL\020\004*\237\003\n\024SecretC" +
+      "lassification\022%\n!SECRET_CLASSIFICATION_U" +
+      "NSPECIFIED\020\000\022 \n\034SECRET_CLASSIFICATION_PU" +
+      "BLIC\020\001\022\"\n\036SECRET_CLASSIFICATION_INTERNAL" +
+      "\020\002\022$\n SECRET_CLASSIFICATION_CREDENTIAL\020\003" +
+      "\022\037\n\033SECRET_CLASSIFICATION_TOKEN\020\004\022\035\n\031SEC" +
+      "RET_CLASSIFICATION_KEY\020\005\022#\n\037SECRET_CLASS" +
+      "IFICATION_BIOMETRIC\020\006\022\"\n\036SECRET_CLASSIFI" +
+      "CATION_IDENTITY\020\007\022\035\n\031SECRET_CLASSIFICATI" +
+      "ON_PII\020\010\022%\n!SECRET_CLASSIFICATION_OPERAT" +
+      "IONAL\020\t\022%\n!SECRET_CLASSIFICATION_PRIVATE" +
+      "_KEY\020\n*\272\001\n\nOutputView\022\033\n\027OUTPUT_VIEW_UNS" +
+      "PECIFIED\020\000\022\034\n\030OUTPUT_VIEW_STORAGE_ONLY\020\001" +
+      "\022\026\n\022OUTPUT_VIEW_PUBLIC\020\002\022\024\n\020OUTPUT_VIEW_" +
+      "SELF\020\003\022\025\n\021OUTPUT_VIEW_ADMIN\020\004\022\025\n\021OUTPUT_" +
+      "VIEW_AUDIT\020\005\022\025\n\021OUTPUT_VIEW_NEVER\020\006*\320\001\n\021" +
+      "RedactionStrategy\022\"\n\036REDACTION_STRATEGY_" +
+      "UNSPECIFIED\020\000\022\033\n\027REDACTION_STRATEGY_NONE" +
+      "\020\001\022\033\n\027REDACTION_STRATEGY_MASK\020\002\022\035\n\031REDAC" +
+      "TION_STRATEGY_REDACT\020\003\022 \n\034REDACTION_STRA" +
+      "TEGY_HASH_ONLY\020\004\022\034\n\030REDACTION_STRATEGY_L" +
+      "AST4\020\005*\335\001\n\026SecurityClassification\022\'\n#SEC" +
+      "URITY_CLASSIFICATION_UNSPECIFIED\020\000\022\"\n\036SE" +
+      "CURITY_CLASSIFICATION_PUBLIC\020\001\022$\n SECURI" +
+      "TY_CLASSIFICATION_INTERNAL\020\002\022(\n$SECURITY" +
+      "_CLASSIFICATION_CONFIDENTIAL\020\003\022&\n\"SECURI" +
+      "TY_CLASSIFICATION_RESTRICTED\020\004*\330\001\n\014DataC" +
+      "ategory\022\035\n\031DATA_CATEGORY_UNSPECIFIED\020\000\022\032" +
+      "\n\026DATA_CATEGORY_PERSONAL\020\001\022\033\n\027DATA_CATEG" +
+      "ORY_FINANCIAL\020\002\022\033\n\027DATA_CATEGORY_BIOMETR" +
+      "IC\020\003\022\032\n\026DATA_CATEGORY_IDENTITY\020\004\022\035\n\031DATA" +
+      "_CATEGORY_OPERATIONAL\020\005\022\030\n\024DATA_CATEGORY" +
+      "_SYSTEM\020\006:1\n\003pii\022\035.google.protobuf.Field" +
+      "Options\030\332\206\003 \001(\010R\003pii:N\n\022encrypted_securi" +
+      "ty\022\035.google.protobuf.FieldOptions\030\333\206\003 \001(" +
+      "\010R\021encryptedSecurity:>\n\nlog_masked\022\035.goo" +
+      "gle.protobuf.FieldOptions\030\334\206\003 \001(\010R\tlogMa" +
+      "sked:B\n\014log_redacted\022\035.google.protobuf.F" +
+      "ieldOptions\030\335\206\003 \001(\010R\013logRedacted:=\n\tsens" +
+      "itive\022\035.google.protobuf.FieldOptions\030\336\206\003" +
+      " \001(\010R\tsensitive:J\n\020requires_consent\022\035.go" +
+      "ogle.protobuf.FieldOptions\030\337\206\003 \001(\010R\017requ" +
+      "iresConsent:B\n\014data_purpose\022\035.google.pro" +
+      "tobuf.FieldOptions\030\340\206\003 \001(\tR\013dataPurpose:" +
+      "F\n\016retention_days\022\035.google.protobuf.Fiel" +
+      "dOptions\030\341\206\003 \001(\005R\rretentionDays:=\n\ttoken" +
+      "ized\022\035.google.protobuf.FieldOptions\030\342\206\003 " +
+      "\001(\010R\ttokenized:\204\001\n\027security_classificati" +
+      "on\022\035.google.protobuf.FieldOptions\030\343\206\003 \001(" +
+      "\0162*.udb.core.common.v1.SecurityClassific" +
+      "ationR\026securityClassification:f\n\rdata_ca" +
+      "tegory\022\035.google.protobuf.FieldOptions\030\344\206" +
+      "\003 \001(\0162 .udb.core.common.v1.DataCategoryR" +
+      "\014dataCategory:z\n\022db_column_security\022\035.go" +
+      "ogle.protobuf.FieldOptions\030\361\206\003 \001(\0132+.udb" +
+      ".core.common.v1.DbColumnSecurityOptionsR" +
+      "\020dbColumnSecurity:s\n\021endpoint_security\022\036" +
+      ".google.protobuf.MethodOptions\030\271\216\003 \001(\0132$" +
+      ".udb.core.common.v1.EndpointSecurityR\020en" +
+      "dpointSecurity:g\n\rrest_contract\022\036.google" +
+      ".protobuf.MethodOptions\030\272\216\003 \001(\0132 .udb.co" +
+      "re.common.v1.RestContractR\014restContract:" +
+      "h\n\013sdk_surface\022\036.google.protobuf.MethodO" +
+      "ptions\030\273\216\003 \001(\0132%.udb.core.common.v1.SdkS" +
+      "urfaceOptionsR\nsdkSurface:x\n\023method_cli_" +
+      "scaffold\022\036.google.protobuf.MethodOptions" +
+      "\030\274\216\003 \001(\0132&.udb.core.common.v1.CliScaffol" +
+      "dOptionsR\021methodCliScaffold:~\n\025method_ev" +
+      "ent_contract\022\036.google.protobuf.MethodOpt" +
+      "ions\030\275\216\003 \001(\0132(.udb.core.common.v1.EventC" +
+      "ontractOptionsR\023methodEventContract:\215\001\n\032" +
+      "method_dependency_contract\022\036.google.prot" +
+      "obuf.MethodOptions\030\276\216\003 \001(\0132-.udb.core.co" +
+      "mmon.v1.DependencyContractOptionsR\030metho" +
+      "dDependencyContract:j\n\016operation_kind\022\036." +
+      "google.protobuf.MethodOptions\030\277\216\003 \001(\0162!." +
+      "udb.core.common.v1.OperationKindR\roperat" +
+      "ionKind:\222\001\n\034method_precondition_contract" +
+      "\022\036.google.protobuf.MethodOptions\030\300\216\003 \001(\013" +
+      "2..udb.core.common.v1.MethodPrecondition" +
+      "ContractR\032methodPreconditionContract:\206\001\n" +
+      "\030method_readback_contract\022\036.google.proto" +
+      "buf.MethodOptions\030\301\216\003 \001(\0132*.udb.core.com" +
+      "mon.v1.ReadAfterWriteContractR\026methodRea" +
+      "dbackContract:\203\001\n\031method_lifecycle_contr" +
+      "act\022\036.google.protobuf.MethodOptions\030\302\216\003 " +
+      "\001(\0132%.udb.core.common.v1.LifecycleContra" +
+      "ctR\027methodLifecycleContract:\211\001\n\033method_i" +
+      "dempotency_contract\022\036.google.protobuf.Me" +
+      "thodOptions\030\303\216\003 \001(\0132\'.udb.core.common.v1" +
+      ".IdempotencyContractR\031methodIdempotencyC" +
+      "ontract:w\n\025method_error_contract\022\036.googl" +
+      "e.protobuf.MethodOptions\030\304\216\003 \001(\0132!.udb.c" +
+      "ore.common.v1.ErrorContractR\023methodError" +
+      "Contract:y\n\021db_table_security\022\037.google.p" +
+      "rotobuf.MessageOptions\030\241\226\003 \001(\0132*.udb.cor" +
+      "e.common.v1.DbTableSecurityOptionsR\017dbTa" +
+      "bleSecurity:\201\001\n\026message_event_contract\022\037" +
+      ".google.protobuf.MessageOptions\030\242\226\003 \001(\0132" +
+      "(.udb.core.common.v1.EventContractOption" +
+      "sR\024messageEventContract:x\n\023message_sdk_s" +
+      "urface\022\037.google.protobuf.MessageOptions\030" +
+      "\243\226\003 \001(\0132%.udb.core.common.v1.SdkSurfaceO" +
+      "ptionsR\021messageSdkSurface:\220\001\n\033message_de" +
+      "pendency_contract\022\037.google.protobuf.Mess" +
+      "ageOptions\030\244\226\003 \001(\0132-.udb.core.common.v1." +
+      "DependencyContractOptionsR\031messageDepend" +
+      "encyContract:r\n\016native_service\022\037.google." +
+      "protobuf.ServiceOptions\030\211\236\003 \001(\0132(.udb.co" +
+      "re.common.v1.NativeServiceOptionsR\rnativ" +
+      "eService:x\n\023service_sdk_surface\022\037.google" +
+      ".protobuf.ServiceOptions\030\212\236\003 \001(\0132%.udb.c" +
+      "ore.common.v1.SdkSurfaceOptionsR\021service" +
+      "SdkSurface:{\n\024service_cli_scaffold\022\037.goo" +
+      "gle.protobuf.ServiceOptions\030\213\236\003 \001(\0132&.ud" +
+      "b.core.common.v1.CliScaffoldOptionsR\022ser" +
+      "viceCliScaffold:\220\001\n\033service_dependency_c" +
+      "ontract\022\037.google.protobuf.ServiceOptions" +
+      "\030\214\236\003 \001(\0132-.udb.core.common.v1.Dependency" +
+      "ContractOptionsR\031serviceDependencyContra" +
+      "ctB\322\001\n\026com.udb.core.common.v1B\rSecurityP" +
+      "rotoP\001Z>github.com/fahara02/udb/sdk/go/g" +
+      "en/udb/core/common/v1;commonv1\242\002\003UCC\252\002\022u" +
+      "db.core.Common.V1\312\002\022Udb\\Core\\Common\\V1\342\002" +
+      "\036Udb\\GPBMetadata\\Core\\Common\\V1\352\002\025Udb::C" +
+      "ore::Common::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -894,7 +895,7 @@ public final class SecurityProto {
     internal_static_udb_core_common_v1_SdkSurfaceOptions_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_common_v1_SdkSurfaceOptions_descriptor,
-        new java.lang.String[] { "IncludeInFacade", "MethodAlias", "RequiredCredentialProvider", "StreamingHelperType", "DefaultDeadlineMs", "DefaultMaxAttempts", "BrowserSafe", "ServerOnly", "BoilerplateRecipeTags", "GenerateMinimalExample", });
+        new java.lang.String[] { "IncludeInFacade", "MethodAlias", "RequiredCredentialProvider", "StreamingHelperType", "DefaultDeadlineMs", "DefaultMaxAttempts", "BrowserSafe", "ServerOnly", "BoilerplateRecipeTags", "GenerateMinimalExample", "RestOperationId", });
     internal_static_udb_core_common_v1_CliScaffoldOptions_descriptor =
       getDescriptor().getMessageTypes().get(11);
     internal_static_udb_core_common_v1_CliScaffoldOptions_fieldAccessorTable = new

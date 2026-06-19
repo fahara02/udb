@@ -83,7 +83,7 @@ service StorageService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "register_upload"
+      method_alias: "register_upload" rest_operation_id: "registerUpload"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -174,7 +174,7 @@ service StorageService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "finalize_upload"
+      method_alias: "finalize_upload" rest_operation_id: "finalizeUpload"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -216,7 +216,7 @@ service StorageService {
       explicit_nulls: true
     };
     option (google.api.http) = {
-      post: "/v1/storage/uploads/{file_id}/finalize"
+      post: "/v1/storage/uploads/{file_id}:finalize"
       body: "*"
     };
   }
@@ -235,7 +235,7 @@ service StorageService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "get_download_url"
+      method_alias: "get_download_url" rest_operation_id: "getDownloadUrl"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -295,7 +295,7 @@ service StorageService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "download_file"
+      method_alias: "download_file" rest_operation_id: "downloadFile"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -352,7 +352,7 @@ service StorageService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "get_file"
+      method_alias: "get_file" rest_operation_id: "getFile"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -409,7 +409,7 @@ service StorageService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "update_file"
+      method_alias: "update_file" rest_operation_id: "updateFile"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -470,7 +470,7 @@ service StorageService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "delete_file"
+      method_alias: "delete_file" rest_operation_id: "deleteFile"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -528,7 +528,7 @@ service StorageService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "list_files"
+      method_alias: "list_files" rest_operation_id: "listFiles"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3

@@ -61,6 +61,7 @@ service IdentityProviderService {
       request_context_required: true
       tenant_required: true
     };
+    option (udb.core.common.v1.sdk_surface) = { rest_operation_id: "createProvider" };
     option (google.api.http) = {
       post: "/v1/idp/providers"
       body: "*"
@@ -78,6 +79,7 @@ service IdentityProviderService {
       request_context_required: true
       tenant_required: true
     };
+    option (udb.core.common.v1.sdk_surface) = { rest_operation_id: "updateProvider" };
     option (google.api.http) = {
       patch: "/v1/idp/providers/{provider_id}"
       body: "*"
@@ -95,6 +97,7 @@ service IdentityProviderService {
       request_context_required: true
       tenant_required: true
     };
+    option (udb.core.common.v1.sdk_surface) = { rest_operation_id: "disableProvider" };
     option (google.api.http) = {
       post: "/v1/idp/providers/{provider_id}:disable"
       body: "*"
@@ -112,6 +115,7 @@ service IdentityProviderService {
       request_context_required: true
       tenant_required: true
     };
+    option (udb.core.common.v1.sdk_surface) = { rest_operation_id: "getProvider" };
     option (google.api.http) = {get: "/v1/idp/providers/{provider_id}"};
   }
 
@@ -126,6 +130,7 @@ service IdentityProviderService {
       request_context_required: true
       tenant_required: true
     };
+    option (udb.core.common.v1.sdk_surface) = { rest_operation_id: "listProviders" };
     option (google.api.http) = {get: "/v1/idp/providers"};
   }
 
@@ -140,8 +145,9 @@ service IdentityProviderService {
       request_context_required: true
       tenant_required: true
     };
+    option (udb.core.common.v1.sdk_surface) = { rest_operation_id: "testProviderDiscovery" };
     option (google.api.http) = {
-      post: "/v1/idp/providers/{provider_id}:test-discovery"
+      post: "/v1/idp/providers/{provider_id}:testDiscovery"
       body: "*"
     };
   }
@@ -157,8 +163,9 @@ service IdentityProviderService {
       request_context_required: true
       tenant_required: true
     };
+    option (udb.core.common.v1.sdk_surface) = { rest_operation_id: "forceJwksRefresh" };
     option (google.api.http) = {
-      post: "/v1/idp/providers/{provider_id}:refresh-jwks"
+      post: "/v1/idp/providers/{provider_id}:refreshJwks"
       body: "*"
     };
   }
@@ -174,8 +181,9 @@ service IdentityProviderService {
       request_context_required: true
       tenant_required: true
     };
+    option (udb.core.common.v1.sdk_surface) = { rest_operation_id: "previewClaimMapping" };
     option (google.api.http) = {
-      post: "/v1/idp/providers/{provider_id}:preview-claim-mapping"
+      post: "/v1/idp/providers/{provider_id}:previewClaimMapping"
       body: "*"
     };
   }
@@ -191,8 +199,9 @@ service IdentityProviderService {
       request_context_required: true
       tenant_required: true
     };
+    option (udb.core.common.v1.sdk_surface) = { rest_operation_id: "previewGroupMapping" };
     option (google.api.http) = {
-      post: "/v1/idp/providers/{provider_id}:preview-group-mapping"
+      post: "/v1/idp/providers/{provider_id}:previewGroupMapping"
       body: "*"
     };
   }
@@ -208,6 +217,7 @@ service IdentityProviderService {
       request_context_required: true
       tenant_required: true
     };
+    option (udb.core.common.v1.sdk_surface) = { rest_operation_id: "listExternalIdentities" };
     option (google.api.http) = {get: "/v1/idp/external-identities"};
   }
 
@@ -222,6 +232,7 @@ service IdentityProviderService {
       request_context_required: true
       tenant_required: true
     };
+    option (udb.core.common.v1.sdk_surface) = { rest_operation_id: "linkIdentity" };
     option (google.api.http) = {
       post: "/v1/idp/external-identities:link"
       body: "*"
@@ -239,6 +250,7 @@ service IdentityProviderService {
       request_context_required: true
       tenant_required: true
     };
+    option (udb.core.common.v1.sdk_surface) = { rest_operation_id: "unlinkIdentity" };
     option (google.api.http) = {
       post: "/v1/idp/external-identities/{external_identity_id}:unlink"
       body: "*"
@@ -257,8 +269,9 @@ service IdentityProviderService {
       request_context_required: true
       tenant_required: true
     };
+    option (udb.core.common.v1.sdk_surface) = { rest_operation_id: "importSamlMetadata" };
     option (google.api.http) = {
-      post: "/v1/idp/providers/{provider_id}:import-saml-metadata"
+      post: "/v1/idp/providers/{provider_id}:importSamlMetadata"
       body: "*"
     };
   }
@@ -274,8 +287,9 @@ service IdentityProviderService {
       request_context_required: true
       tenant_required: true
     };
+    option (udb.core.common.v1.sdk_surface) = { rest_operation_id: "startSamlLogin" };
     option (google.api.http) = {
-      post: "/v1/idp/providers/{provider_id}:start-saml-login"
+      post: "/v1/idp/providers/{provider_id}:startSamlLogin"
       body: "*"
     };
   }
@@ -291,8 +305,9 @@ service IdentityProviderService {
       request_context_required: true
       tenant_required: true
     };
+    option (udb.core.common.v1.sdk_surface) = { rest_operation_id: "samlAcs" };
     option (google.api.http) = {
-      post: "/v1/idp/providers/{provider_id}:saml-acs"
+      post: "/v1/idp/providers/{provider_id}:samlAcs"
       body: "*"
     };
   }
@@ -309,8 +324,9 @@ service IdentityProviderService {
       request_context_required: true
       tenant_required: true
     };
+    option (udb.core.common.v1.sdk_surface) = { rest_operation_id: "resolveExternalIdentity" };
     option (google.api.http) = {
-      post: "/v1/idp/providers/{provider_id}:resolve-identity"
+      post: "/v1/idp/providers/{provider_id}:resolveIdentity"
       body: "*"
     };
   }
@@ -327,6 +343,7 @@ service IdentityProviderService {
       request_context_required: true
       tenant_required: true
     };
+    option (udb.core.common.v1.sdk_surface) = { rest_operation_id: "scimCreateUser" };
     option (google.api.http) = {
       post: "/v1/idp/scim/{provider_id}/Users"
       body: "*"
@@ -344,6 +361,7 @@ service IdentityProviderService {
       request_context_required: true
       tenant_required: true
     };
+    option (udb.core.common.v1.sdk_surface) = { rest_operation_id: "scimGetUser" };
     option (google.api.http) = {get: "/v1/idp/scim/{provider_id}/Users/{scim_user_id}"};
   }
 
@@ -358,6 +376,7 @@ service IdentityProviderService {
       request_context_required: true
       tenant_required: true
     };
+    option (udb.core.common.v1.sdk_surface) = { rest_operation_id: "scimListUsers" };
     option (google.api.http) = {get: "/v1/idp/scim/{provider_id}/Users"};
   }
 
@@ -372,6 +391,7 @@ service IdentityProviderService {
       request_context_required: true
       tenant_required: true
     };
+    option (udb.core.common.v1.sdk_surface) = { rest_operation_id: "scimReplaceUser" };
     option (google.api.http) = {
       put: "/v1/idp/scim/{provider_id}/Users/{scim_user_id}"
       body: "*"
@@ -389,6 +409,7 @@ service IdentityProviderService {
       request_context_required: true
       tenant_required: true
     };
+    option (udb.core.common.v1.sdk_surface) = { rest_operation_id: "scimPatchUser" };
     option (google.api.http) = {
       patch: "/v1/idp/scim/{provider_id}/Users/{scim_user_id}"
       body: "*"
@@ -406,6 +427,7 @@ service IdentityProviderService {
       request_context_required: true
       tenant_required: true
     };
+    option (udb.core.common.v1.sdk_surface) = { rest_operation_id: "scimDeleteUser" };
     option (google.api.http) = {delete: "/v1/idp/scim/{provider_id}/Users/{scim_user_id}"};
   }
 
@@ -420,6 +442,7 @@ service IdentityProviderService {
       request_context_required: true
       tenant_required: true
     };
+    option (udb.core.common.v1.sdk_surface) = { rest_operation_id: "scimCreateGroup" };
     option (google.api.http) = {
       post: "/v1/idp/scim/{provider_id}/Groups"
       body: "*"
@@ -437,6 +460,7 @@ service IdentityProviderService {
       request_context_required: true
       tenant_required: true
     };
+    option (udb.core.common.v1.sdk_surface) = { rest_operation_id: "scimGetGroup" };
     option (google.api.http) = {get: "/v1/idp/scim/{provider_id}/Groups/{scim_group_id}"};
   }
 
@@ -451,6 +475,7 @@ service IdentityProviderService {
       request_context_required: true
       tenant_required: true
     };
+    option (udb.core.common.v1.sdk_surface) = { rest_operation_id: "scimListGroups" };
     option (google.api.http) = {get: "/v1/idp/scim/{provider_id}/Groups"};
   }
 
@@ -465,6 +490,7 @@ service IdentityProviderService {
       request_context_required: true
       tenant_required: true
     };
+    option (udb.core.common.v1.sdk_surface) = { rest_operation_id: "scimPatchGroup" };
     option (google.api.http) = {
       patch: "/v1/idp/scim/{provider_id}/Groups/{scim_group_id}"
       body: "*"
@@ -482,6 +508,7 @@ service IdentityProviderService {
       request_context_required: true
       tenant_required: true
     };
+    option (udb.core.common.v1.sdk_surface) = { rest_operation_id: "scimDeleteGroup" };
     option (google.api.http) = {delete: "/v1/idp/scim/{provider_id}/Groups/{scim_group_id}"};
   }
 }

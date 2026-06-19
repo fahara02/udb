@@ -1511,6 +1511,13 @@ mod merge_context_scope_authority_tests {
         }
     }
 
+    fn can_unmask_pii(context: &RequestContext) -> bool {
+        context
+            .scopes
+            .iter()
+            .any(|scope| scope == "udb:pii:read" || scope == "udb:*" || scope == "*")
+    }
+
     #[test]
     fn body_scopes_never_override_metadata_scopes() {
         // Caller smuggles privileged scopes in the per-op proto body; the verified
@@ -1524,13 +1531,21 @@ mod merge_context_scope_authority_tests {
         );
         // The PII-unmask predicate (rows_to_record_set) and the MV admin gate both
         // read exactly this vector, so neither can be satisfied by the body.
-        assert!(
-            !merged
-                .scopes
-                .iter()
-                .any(|s| s == "udb:pii:read" || s == "udb:*" || s == "*")
-        );
+        assert!(!can_unmask_pii(&merged));
         assert!(!merged.scopes.iter().any(|s| s == "udb:admin" || s == "*"));
+    }
+
+    #[test]
+    fn body_scopes_cannot_elevate_or_unmask_when_metadata_has_no_scopes() {
+        let proto = proto_ctx(&["udb:pii:read", "udb:admin", "*"]);
+        let merged = merge_context(Some(&proto), metadata_ctx(&[]));
+
+        assert!(
+            merged.scopes.is_empty(),
+            "metadata scopes are authoritative even when empty"
+        );
+        assert!(!can_unmask_pii(&merged));
+        assert!(!merged.scopes.iter().any(|scope| scope == "udb:admin"));
     }
 
     #[test]

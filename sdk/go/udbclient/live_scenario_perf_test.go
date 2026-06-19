@@ -15,7 +15,7 @@ import (
 )
 
 // TestScenarioPerf measures the latency of the WORKFLOW HELPERS a real
-// simple-client caller actually invokes — NOT the full 265-RPC surface. It is the
+// simple-client caller actually invokes — NOT the full AllRPCs surface. It is the
 // SCENARIO counterpart to TestLivePerf (the full-surface coverage sweep, which is
 // kept untouched as the coverage artifact). Where TestLivePerf answers "is every
 // RPC reachable and how fast", this answers "how fast is the user-facing facade
@@ -289,7 +289,7 @@ func TestScenarioPerf(t *testing.T) {
 	out.WriteString("This is the SCENARIO bench: it times the user-facing WORKFLOW HELPERS the " +
 		"simple-client docs tell callers to use (uploadFile, downloadFile, bound entity " +
 		"upsert/select/delete, loginAndAdoptTenant, events subscribe-ready/publish-and-wait, " +
-		"webrtc joinSession) — measured as end-to-end facade calls, NOT the raw 265-RPC " +
+		"webrtc joinSession) — measured as end-to-end facade calls, NOT the raw AllRPCs " +
 		"surface. The full-surface coverage sweep stays in perf_report_go.md (TestLivePerf). " +
 		"Each row's `seq` is the documented RPC sequence the helper emits " +
 		"(docs/bench-bodies/workflow-sequences.md); the timed cost is the WHOLE facade call.\n\n")

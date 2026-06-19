@@ -54,6 +54,10 @@ class SdkSurfaceOptions extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>bool generate_minimal_example = 10 [json_name = "generateMinimalExample"];</code>
      */
     protected $generate_minimal_example = false;
+    /**
+     * Generated from protobuf field <code>string rest_operation_id = 11 [json_name = "restOperationId"];</code>
+     */
+    protected $rest_operation_id = '';
 
     /**
      * Constructor.
@@ -71,6 +75,7 @@ class SdkSurfaceOptions extends \Google\Protobuf\Internal\Message
      *     @type bool $server_only
      *     @type string[] $boilerplate_recipe_tags
      *     @type bool $generate_minimal_example
+     *     @type string $rest_operation_id
      * }
      */
     public function __construct($data = NULL) {
@@ -294,6 +299,28 @@ class SdkSurfaceOptions extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkBool($var);
         $this->generate_minimal_example = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>string rest_operation_id = 11 [json_name = "restOperationId"];</code>
+     * @return string
+     */
+    public function getRestOperationId()
+    {
+        return $this->rest_operation_id;
+    }
+
+    /**
+     * Generated from protobuf field <code>string rest_operation_id = 11 [json_name = "restOperationId"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setRestOperationId($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->rest_operation_id = $var;
 
         return $this;
     }

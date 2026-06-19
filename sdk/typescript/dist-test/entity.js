@@ -49,9 +49,8 @@ class EntityHandle {
     messageType;
     opts;
     context;
-    constructor(core, messageType, opts,
-    /** Shared request context (tenant_id/project_id/…) merged into each call. */
-    context = {}) {
+    /** `context` is merged into each request body, for example tenant_id/project_id. */
+    constructor(core, messageType, opts, context = {}) {
         this.core = core;
         this.messageType = messageType;
         this.opts = opts;

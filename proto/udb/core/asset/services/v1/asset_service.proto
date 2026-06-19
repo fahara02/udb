@@ -74,7 +74,7 @@ service AssetService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "create_pipeline_definition"
+      method_alias: "create_pipeline_definition" rest_operation_id: "createPipelineDefinition"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -115,7 +115,7 @@ service AssetService {
       explicit_nulls: true
     };
     option (google.api.http) = {
-      post: "/v1/asset/pipeline-definitions"
+      post: "/v1/assets/pipeline-definitions"
       body: "*"
     };
   }
@@ -134,7 +134,7 @@ service AssetService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "get_pipeline_definition"
+      method_alias: "get_pipeline_definition" rest_operation_id: "getPipelineDefinition"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -174,7 +174,7 @@ service AssetService {
       api_error: true
       explicit_nulls: true
     };
-    option (google.api.http) = {get: "/v1/asset/pipeline-definitions/{definition_id}"};
+    option (google.api.http) = {get: "/v1/assets/pipeline-definitions/{definition_id}"};
   }
 
   // Register a managed asset wrapping a storage file
@@ -201,7 +201,7 @@ service AssetService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "register_asset"
+      method_alias: "register_asset" rest_operation_id: "registerAsset"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -243,7 +243,7 @@ service AssetService {
       explicit_nulls: true
     };
     option (google.api.http) = {
-      post: "/v1/asset/assets"
+      post: "/v1/assets"
       body: "*"
     };
   }
@@ -300,7 +300,7 @@ service AssetService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "start_pipeline"
+      method_alias: "start_pipeline" rest_operation_id: "startPipeline"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -342,7 +342,7 @@ service AssetService {
       explicit_nulls: true
     };
     option (google.api.http) = {
-      post: "/v1/asset/pipelines"
+      post: "/v1/assets/pipelines"
       body: "*"
     };
   }
@@ -361,7 +361,7 @@ service AssetService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "get_pipeline"
+      method_alias: "get_pipeline" rest_operation_id: "getPipeline"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -401,7 +401,7 @@ service AssetService {
       api_error: true
       explicit_nulls: true
     };
-    option (google.api.http) = {get: "/v1/asset/pipelines/{instance_id}"};
+    option (google.api.http) = {get: "/v1/assets/pipelines/{instance_id}"};
   }
 
   // Complete (or skip/fail) a pipeline step
@@ -418,7 +418,7 @@ service AssetService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "complete_step"
+      method_alias: "complete_step" rest_operation_id: "completeStep"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -462,7 +462,7 @@ service AssetService {
       explicit_nulls: true
     };
     option (google.api.http) = {
-      post: "/v1/asset/steps/{step_id}/complete"
+      post: "/v1/assets/steps/{step_id}:complete"
       body: "*"
     };
   }
@@ -481,7 +481,7 @@ service AssetService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "list_assets"
+      method_alias: "list_assets" rest_operation_id: "listAssets"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -521,7 +521,7 @@ service AssetService {
       api_error: true
       explicit_nulls: true
     };
-    option (google.api.http) = {get: "/v1/asset/assets"};
+    option (google.api.http) = {get: "/v1/assets"};
   }
 
   // Get an asset
@@ -538,7 +538,7 @@ service AssetService {
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "get_asset"
+      method_alias: "get_asset" rest_operation_id: "getAsset"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -578,7 +578,7 @@ service AssetService {
       api_error: true
       explicit_nulls: true
     };
-    option (google.api.http) = {get: "/v1/asset/assets/{asset_id}"};
+    option (google.api.http) = {get: "/v1/assets/{asset_id}"};
   }
 }
 

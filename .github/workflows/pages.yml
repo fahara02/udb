@@ -28,11 +28,21 @@ on:
       - "Cargo.lock"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
+  # Re-publish the site (and refresh the benchmark dashboard) after a benchmark
+  # run completes. pages.yml is the SOLE Pages deployer (Chapter 15.8.2); the
+  # benchmark workflow only produces the `sdk-benchmark-results` artifact, which
+  # the build job below pulls into docs/site/ before upload.
+  workflow_run:
+    workflows: ["Benchmark · SDKs"]
+    types: [completed]
 
 permissions:
   contents: read
   pages: write
   id-token: write
+  # Needed for `gh run download` to fetch the benchmark workflow's artifact
+  # (the fresh bench-results.json) when this run is triggered by a benchmark.
+  actions: read
 
 # Allow one concurrent deployment; don't cancel an in-progress publish.
 concurrency:
@@ -52,10 +62,33 @@ jobs:
         run: |
           mkdir -p docs/site/api
           cp -v api/*.json docs/site/api/
-      - name: Preserve published benchmark results
+      - name: Pull latest benchmark results into the site
+        # Prefer the FRESH artifact from the benchmark run that triggered this
+        # deploy (on: workflow_run); the benchmark workflow uploads it as
+        # `sdk-benchmark-results` containing docs/site/bench-results.json. Falls
+        # back to the currently-published dashboard JSON so a docs-only / wasm
+        # push (no triggering benchmark) still ships the last good results.
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TRIGGER_RUN_ID: ${{ github.event.workflow_run.id }}
         run: |
-          curl -fsSL "https://${GITHUB_REPOSITORY_OWNER}.github.io/udb/bench-results.json" \
-            -o docs/site/bench-results.json || true
+          set -uo pipefail
+          mkdir -p docs/site
+          got_fresh=0
+          if [ -n "${TRIGGER_RUN_ID:-}" ]; then
+            if gh run download "${TRIGGER_RUN_ID}" \
+                 --repo "${GITHUB_REPOSITORY}" \
+                 --name sdk-benchmark-results \
+                 --dir bench-artifact 2>/dev/null \
+               && [ -s bench-artifact/docs/site/bench-results.json ]; then
+              cp -v bench-artifact/docs/site/bench-results.json docs/site/bench-results.json
+              got_fresh=1
+            fi
+          fi
+          if [ "$got_fresh" != 1 ]; then
+            curl -fsSL "https://${GITHUB_REPOSITORY_OWNER}.github.io/udb/bench-results.json" \
+              -o docs/site/bench-results.json || true
+          fi
       - name: Build UDB's parser to WebAssembly (real udb-portable, not a mock)
         run: |
           rustup target add wasm32-unknown-unknown
