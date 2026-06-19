@@ -1244,12 +1244,13 @@ fn substitute_rpc(body: &str, rpc: &RpcDescriptor) -> String {
     let alias_snake = rpc_alias_snake(rpc);
     let alias_camel = rpc_alias_camel(rpc);
     let alias_pascal = rpc_alias_pascal(rpc);
+    let php_method_alias_entries = php_method_alias_entries(rpc, &alias_snake, &alias_camel);
     let rest_operation_id = if rpc.rest_operation_id.trim().is_empty() {
         alias_camel.clone()
     } else {
         rpc.rest_operation_id.clone()
     };
-    let pairs: [(&str, String); 32] = [
+    let pairs: [(&str, String); 33] = [
         ("{{RPC_NAME}}", rpc.method.clone()),
         ("{{RPC_WIRE_NAME}}", rpc.method.clone()),
         ("{{RPC_SNAKE}}", rpc.method_snake.clone()),
@@ -1295,6 +1296,7 @@ fn substitute_rpc(body: &str, rpc: &RpcDescriptor) -> String {
         ("{{RPC_READ_ONLY}}", rpc.read_only.to_string()),
         ("{{RPC_OPERATION_KIND}}", rpc.operation_kind.clone()),
         ("{{RPC_REPLAY_SAFE}}", rpc.replay_safe.to_string()),
+        ("{{PHP_METHOD_ALIAS_ENTRIES}}", php_method_alias_entries),
     ];
     let mut text = body.to_string();
     for (key, value) in &pairs {
@@ -1333,6 +1335,17 @@ fn rpc_alias_pascal(rpc: &RpcDescriptor) -> String {
     } else {
         rpc.method_alias_pascal.clone()
     }
+}
+
+fn php_method_alias_entries(rpc: &RpcDescriptor, alias_snake: &str, alias_camel: &str) -> String {
+    let mut seen = BTreeSet::new();
+    [alias_snake, rpc.method_snake.as_str()]
+        .into_iter()
+        .filter(|alias| !alias.trim().is_empty())
+        .filter(|alias| seen.insert((*alias).to_string()))
+        .map(|alias| format!("        \"{alias}\" => \"{alias_camel}\","))
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 fn alias_words(value: &str) -> Vec<String> {
@@ -1708,6 +1721,33 @@ mod tests {
                     # @@UDB_RPC_END\n";
         let out = render_text(tmpl, &manifest, &[], &[]);
         assert!(out.contains("GetJWKS GetJWKS get_j_w_k_s get_jwks getJwks GetJwks authn.getJwks"));
+    }
+
+    #[test]
+    fn php_method_alias_entries_do_not_duplicate_identical_wire_and_alias_names() {
+        let manifest = sample_manifest();
+        let tmpl = "# @@UDB_RPC_BEGIN kind=unary\n{{PHP_METHOD_ALIAS_ENTRIES}}\n# @@UDB_RPC_END\n";
+        let out = render_text(tmpl, &manifest[..1], &[], &[]);
+        assert_eq!(
+            out.lines()
+                .filter(|line| line.contains("\"select\" => \"select\","))
+                .count(),
+            1
+        );
+    }
+
+    #[test]
+    fn php_method_alias_entries_keep_distinct_wire_and_alias_names() {
+        let mut manifest = sample_manifest();
+        manifest[0].method = "GetJWKS".to_string();
+        manifest[0].method_snake = "get_j_w_k_s".to_string();
+        manifest[0].method_alias = "get_jwks".to_string();
+        manifest[0].method_alias_snake = "get_jwks".to_string();
+        manifest[0].method_alias_camel = "getJwks".to_string();
+        let tmpl = "# @@UDB_RPC_BEGIN kind=unary\n{{PHP_METHOD_ALIAS_ENTRIES}}\n# @@UDB_RPC_END\n";
+        let out = render_text(tmpl, &manifest[..1], &[], &[]);
+        assert!(out.contains("\"get_jwks\" => \"getJwks\","));
+        assert!(out.contains("\"get_j_w_k_s\" => \"getJwks\","));
     }
 
     #[test]
