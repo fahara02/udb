@@ -39,6 +39,13 @@ runs:
       with:
         key: ${{ inputs.cache-key }}
 
+    - name: Configure Cargo network resilience
+      shell: pwsh
+      run: |
+        "CARGO_NET_RETRY=10" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        "CARGO_HTTP_MULTIPLEXING=false" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        "CARGO_HTTP_TIMEOUT=120" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
     # Native build deps. aws-lc-sys (s3) needs cmake + NASM; WebAuthn pulls
     # vendored OpenSSL and requires a platform-native Perl plus compiler tools.
     - name: Install build deps (Linux)
