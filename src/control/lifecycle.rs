@@ -358,7 +358,7 @@ async fn run_startup_lifecycle_core(
             .warnings
             .extend(runtime.init_report().warnings.iter().cloned());
         report.errors.push(message.clone());
-        return Err(serde_json::to_string(&report).unwrap_or(message));
+        return Err(report_failure_json(&report, message));
     }
     // GAP 33: Acquire a PostgreSQL advisory lock before any schema modification
     // to prevent concurrent UDB instances racing during startup.
@@ -386,6 +386,32 @@ async fn run_startup_lifecycle_core(
         );
     } else if let Some(pool) = runtime.pg_pool_clone() {
         use crate::engine::PG_ADVISORY_LOCK_KEY;
+        // UDB_FRICTION §6: the startup lock below is a PostgreSQL *session-level*
+        // advisory lock. Over a transaction pooler (PgBouncer / Neon `-pooler`)
+        // a "session" is not pinned to one server backend, so a crashed instance
+        // can strand the lock on a pooled backend → every subsequent start sees
+        // "another UDB instance holds the startup advisory lock" and crash-loops
+        // forever. Warn loudly when the DSN looks pooled; point at the direct
+        // endpoint + the `udb admin release-lock` recovery command.
+        {
+            let primary = &runtime.config().primary;
+            let dsn = if !primary.direct_dsn.trim().is_empty() {
+                primary.direct_dsn.clone()
+            } else {
+                primary.pooler_dsn.clone()
+            };
+            if looks_like_pooled_dsn(&dsn, primary.port) {
+                let warning = "PostgreSQL DSN looks like a transaction-pooled endpoint \
+                     (pgbouncer / Neon `-pooler` / port 6432). The startup advisory \
+                     SESSION-lock is unsafe over a transaction pooler: a crashed instance \
+                     can strand the lock and cause a permanent startup crash-loop. Point \
+                     the broker at a direct/session endpoint, or clear a stale lock with \
+                     `udb admin release-lock` (run it against the DIRECT DSN)."
+                    .to_string();
+                tracing::warn!("{warning}");
+                report.warnings.push(warning);
+            }
+        }
         let mut conn = pool
             .acquire()
             .await
@@ -448,7 +474,7 @@ async fn run_startup_lifecycle_core(
                             PG_ADVISORY_LOCK_KEY
                         );
                         report.errors.push(message.clone());
-                        return Err(serde_json::to_string(&report).unwrap_or(message));
+                        return Err(report_failure_json(&report, message));
                     }
                 }
             }
@@ -460,7 +486,7 @@ async fn run_startup_lifecycle_core(
                     PG_ADVISORY_LOCK_KEY
                 );
                 report.errors.push(message.clone());
-                return Err(serde_json::to_string(&report).unwrap_or(message));
+                return Err(report_failure_json(&report, message));
             }
             acquired
         } else {
@@ -477,7 +503,7 @@ async fn run_startup_lifecycle_core(
                         PG_ADVISORY_LOCK_KEY
                     );
                     report.errors.push(message.clone());
-                    return Err(serde_json::to_string(&report).unwrap_or(message));
+                    return Err(report_failure_json(&report, message));
                 }
             }
         };
@@ -488,7 +514,7 @@ async fn run_startup_lifecycle_core(
                 PG_ADVISORY_LOCK_KEY
             );
             report.errors.push(message.clone());
-            return Err(serde_json::to_string(&report).unwrap_or(message));
+            return Err(report_failure_json(&report, message));
         }
         report.step(
             FsmState::Initialising,
@@ -588,7 +614,7 @@ async fn run_startup_lifecycle_core(
         );
         runtime.emit_drift_metric("catalog_lint_failed");
         report.errors.push(message.clone());
-        return Err(serde_json::to_string(&report).unwrap_or(message));
+        return Err(report_failure_json(&report, message));
     }
     // GAP 34: When force_sync bypasses lint errors, record each bypassed error
     // as a warning in the lifecycle report so there is a forensic audit trail.
@@ -622,6 +648,66 @@ async fn run_startup_lifecycle_core(
         .map_err(|err| fail(runtime, &mut report, "dsn_catalog", err.to_string()))?;
     let provisioning_plan = try_build_provisioning_plan(manifest, &dsn_catalog.entries)
         .map_err(|err| fail(runtime, &mut report, "provisioning_plan", err))?;
+
+    // ── §4 fast start (opt-in: UDB_STARTUP_SKIP_IF_UNCHANGED) ──────────────────
+    // When the persisted manifest checksum already equals the current one, skip
+    // the ENTIRE expensive generate/apply/provision/verify suite — otherwise the
+    // broker re-runs hundreds of idempotent "… already exists, skipping" steps
+    // plus live drift introspection on EVERY restart (~2 min over a remote DB).
+    // The cheap advisory-lock + tracker-DDL + system-catalog bootstrap above
+    // already ran. Reads ONLY the checksum (no multi-MB manifest_json fetch).
+    // Overrides always take the full path. Tradeoff (same as skip_unchanged_verify):
+    // external schema/store drift is not re-verified — `udb admin force-sync` is
+    // the escape hatch.
+    if runtime.config().migration.skip_if_unchanged
+        && !force_sync
+        && !dry_run
+        && !runtime.config().migration.force_reseed
+        && !runtime.config().migration.emergency_auto_alter
+    {
+        match runtime.load_last_manifest_checksum_if_exists().await {
+            Ok(Some(stored)) if stored == manifest.checksum_sha256 => {
+                // Drive the FSM through its legal terminal path with skip notes.
+                for (state, note) in [
+                    (
+                        FsmState::GenerateSql,
+                        "fast start: schema checksum unchanged — skipping SQL generation",
+                    ),
+                    (FsmState::ChecksumLint, "fast start: skipping checksum lint"),
+                    (
+                        FsmState::Applying,
+                        "fast start: skipping apply + backend provisioning",
+                    ),
+                    (
+                        FsmState::Verifying,
+                        "fast start: skipping live drift verification",
+                    ),
+                    (
+                        FsmState::Completed,
+                        "startup lifecycle completed (fast start; manifest checksum unchanged)",
+                    ),
+                ] {
+                    transition(&mut engine, &mut report, state, note)?;
+                }
+                report.verified_tables = manifest.tables.len();
+                report.completed = true;
+                tracing::info!(
+                    schema_checksum = %stored,
+                    "UDB fast start: proto manifest checksum unchanged — skipped \
+                     generate/apply/provision/verify (UDB_STARTUP_SKIP_IF_UNCHANGED)"
+                );
+                return Ok(report);
+            }
+            // Changed checksum or no prior ledger row → full startup path.
+            Ok(_) => {}
+            Err(err) => {
+                report.warnings.push(format!(
+                    "fast-start checksum probe failed ({}); running full startup lifecycle",
+                    err.message()
+                ));
+            }
+        }
+    }
 
     // Load the prior manifest here — before SQL generation — so we can skip the
     // bootstrap apply entirely when the proto checksum is unchanged.  Previously
@@ -1704,7 +1790,35 @@ fn fail(
 ) -> String {
     runtime.emit_drift_metric(reason);
     report.errors.push(message.clone());
-    serde_json::to_string(report).unwrap_or(message)
+    report_failure_json(report, message)
+}
+
+/// Serialize the lifecycle report to its machine-parseable single-line JSON (kept
+/// for callers that parse it), but ALSO emit each accumulated error as its own
+/// `tracing::error!` line. The compact JSON blob `{"run_id":…,"steps":[…],"errors":[…]}`
+/// is unreadable in `docker logs`; the per-error lines make a failed startup
+/// diagnosable at a glance (UDB_FRICTION §3).
+fn report_failure_json(report: &StartupLifecycleReport, fallback: String) -> String {
+    for err in &report.errors {
+        tracing::error!(
+            run_id = %report.run_id,
+            "udb startup lifecycle error: {err}"
+        );
+    }
+    serde_json::to_string(report).unwrap_or(fallback)
+}
+
+/// Heuristic: does this PostgreSQL DSN (plus its parsed port) look like a
+/// transaction-pooled endpoint, where a session-level advisory lock is unsafe?
+/// Matches the common poolers: PgBouncer (`pgbouncer`, default port 6432),
+/// Neon pooled (`-pooler`), and Supabase pooled (`pooler.`).
+fn looks_like_pooled_dsn(dsn: &str, port: u16) -> bool {
+    let lowered = dsn.to_ascii_lowercase();
+    port == 6432
+        || lowered.contains(":6432")
+        || lowered.contains("-pooler")
+        || lowered.contains("pooler.")
+        || lowered.contains("pgbouncer")
 }
 
 fn resolve_db_ops_root(runtime: &DataBrokerRuntime) -> PathBuf {

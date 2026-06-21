@@ -171,7 +171,12 @@ impl AuthzSnapshot {
                 deny_reason: if allowed {
                     String::new()
                 } else {
-                    "no authz policy (default deny)".to_string()
+                    // Actionable hint: the live decision engine reads the ABAC
+                    // snapshot (not the `udb_authz.policy_rules` governance table),
+                    // so seed ABAC policies or flip the coarse dev escape hatch.
+                    "no authz policy (default deny); seed ABAC policies or set \
+                     UDB_ABAC_DEFAULT_ALLOW=true"
+                        .to_string()
                 },
                 policy_version: self.version.clone(),
                 relationship_version: self.relationship_version.clone(),

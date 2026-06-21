@@ -917,8 +917,16 @@ pub(crate) fn validate_identifier(value: &str, label: &str) -> Result<(), tonic:
 // ── Environment helpers ───────────────────────────────────────────────────────
 
 pub(crate) fn env_first(keys: &[&str]) -> Option<String> {
-    keys.iter()
-        .find_map(|key| env::var(key).ok().filter(|value| !value.trim().is_empty()))
+    // Trim the returned value (not just the emptiness check): a trailing CRLF `\r`
+    // from a CRLF-encoded `.env` survives `env::var` and, e.g., poisons an HTTP
+    // header value (Qdrant `api-key`) as an opaque reqwest "builder error". Trim
+    // once here so every backend DSN/key/token consumer is clean.
+    keys.iter().find_map(|key| {
+        env::var(key)
+            .ok()
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty())
+    })
 }
 
 pub(crate) fn env_identifier(key: &str, fallback: &str) -> String {

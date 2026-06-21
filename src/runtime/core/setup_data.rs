@@ -178,6 +178,21 @@ impl DataBrokerRuntime {
                 runtime: &mut runtime,
                 report: &mut report,
             };
+            // Startup probe budget: a configured-but-unreachable / pathologically
+            // slow driver connect (e.g. MongoDB's 30s server-selection, a SQL pool
+            // acquire-timeout) must not SERIALIZE the whole startup. Bound each
+            // backend's registration; on timeout the backend degrades to
+            // "unavailable" and the broker keeps going (same fail-open posture as
+            // the panic guard below). Override with UDB_BACKEND_STARTUP_PROBE_SECS
+            // (0/unset → default). This is why a multi-backend deploy with one slow
+            // backend no longer pays that backend's full driver timeout at boot.
+            let probe_budget = std::time::Duration::from_secs(
+                std::env::var("UDB_BACKEND_STARTUP_PROBE_SECS")
+                    .ok()
+                    .and_then(|v| v.trim().parse::<u64>().ok())
+                    .filter(|s| *s > 0)
+                    .unwrap_or(8),
+            );
             for plugin in crate::backend::all_plugins() {
                 // C4 (bug_report.md): a backend's startup registration — driver
                 // connect / metadata fetch to a configured-but-UNREACHABLE server
@@ -191,15 +206,41 @@ impl DataBrokerRuntime {
                 // fix; this closes the panic vector.)
                 use futures::FutureExt as _;
                 let kind = plugin.kind();
-                if std::panic::AssertUnwindSafe(plugin.register(&mut ctx))
-                    .catch_unwind()
-                    .await
-                    .is_err()
+                match tokio::time::timeout(
+                    probe_budget,
+                    std::panic::AssertUnwindSafe(plugin.register(&mut ctx)).catch_unwind(),
+                )
+                .await
                 {
-                    ctx.report.warnings.push(format!(
-                        "backend {kind:?} registration panicked at startup; backend marked \
-                         unavailable (broker continues)"
-                    ));
+                    Ok(Ok(())) => {}
+                    Ok(Err(_)) => {
+                        tracing::warn!(
+                            backend = ?kind,
+                            "backend registration panicked at startup; backend marked unavailable (broker continues)"
+                        );
+                        ctx.report.warnings.push(format!(
+                            "backend {kind:?} registration panicked at startup; backend marked \
+                             unavailable (broker continues)"
+                        ));
+                    }
+                    Err(_elapsed) => {
+                        // The slow driver future was just cancelled, so it never
+                        // logged its own "unavailable" line — announce the bound
+                        // here so a degraded backend is never silent.
+                        tracing::warn!(
+                            backend = ?kind,
+                            probe_budget_secs = probe_budget.as_secs(),
+                            "backend registration exceeded the startup probe budget; backend marked \
+                             unavailable (broker continues — fix connectivity or raise \
+                             UDB_BACKEND_STARTUP_PROBE_SECS)"
+                        );
+                        ctx.report.warnings.push(format!(
+                            "backend {kind:?} registration exceeded the {}s startup probe budget; \
+                             backend marked unavailable (broker continues — fix connectivity or raise \
+                             UDB_BACKEND_STARTUP_PROBE_SECS)",
+                            probe_budget.as_secs()
+                        ));
+                    }
                 }
             }
         }
@@ -3329,9 +3370,13 @@ pub(crate) async fn register_qdrant(ctx: &mut RegisterCtx<'_>) {
         report.qdrant_configured = true;
         let client = QdrantHttpClient {
             base_url: url.trim_end_matches('/').to_string(),
-            api_key: (!qdrant_config.api_key.trim().is_empty())
-                .then(|| qdrant_config.api_key.clone())
-                .filter(|value| !value.trim().is_empty()),
+            // Store the TRIMMED key: an untrimmed value (e.g. a trailing CRLF
+            // `\r` from a Windows `.env`) becomes an invalid HTTP header value and
+            // surfaces only as an opaque reqwest "builder error" (UDB_FRICTION §3).
+            api_key: {
+                let trimmed = qdrant_config.api_key.trim();
+                (!trimmed.is_empty()).then(|| trimmed.to_string())
+            },
             http: qdrant_http,
         };
         runtime

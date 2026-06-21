@@ -207,3 +207,7 @@ Thumbs.db
 # runtime artifacts are ignored (logs already covered by *.log above).
 .bench-local/*.pid
 .bench-local/audit.jsonl
+
+# HL7v2 parser websuite downloads are regenerated from the tracked manifest.
+/tests/fixtures/hl7v2/websuite/generated/
+/tests/fixtures/hl7v2/websuite/report.json

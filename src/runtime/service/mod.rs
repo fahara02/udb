@@ -1379,6 +1379,14 @@ pub async fn serve(
     })?;
     let runtime_config = runtime.config().clone();
     native_registry::install_native_service_runtime_config(&runtime_config);
+    // UDB_FRICTION §2: evaluate ALL enterprise prerequisites once, up front, and
+    // emit a single consolidated report — instead of the operator discovering
+    // them one-restart-at-a-time. Advisory only here (the per-capability guards
+    // still enforce at use); `udb doctor --enterprise` runs the identical set.
+    crate::runtime::preflight::log_findings(&crate::runtime::preflight::evaluate(
+        &runtime_config,
+        addr,
+    ));
     // Secure-transport gate (always fatal when the operator has explicitly
     // enabled UDB_REQUIRE_SECURE_TRANSPORT / UDB_MTLS_REQUIRED but left certs
     // unconfigured).

@@ -118,6 +118,21 @@ fn install_serve_panic_hook() {
     });
 }
 
+/// Install the process-level rustls `CryptoProvider` before any TLS config is
+/// built. rustls 0.23 refuses to auto-select a provider when more than one
+/// backend is linked, and UDB's graph pulls BOTH aws-lc-rs and ring transitively
+/// (tonic tls, sqlx, reqwest, tiberius, google-cloud-storage). Without this, the
+/// first `ServerTlsConfig`/rustls client on the serve path panics
+/// ("Could not automatically determine the process-level CryptoProvider"),
+/// making mandatory-TLS production mode unbootable. `install_default` returns
+/// `Err` if a provider is already installed — that is benign, so we ignore it.
+fn install_default_crypto_provider() {
+    static INSTALL: Once = Once::new();
+    INSTALL.call_once(|| {
+        let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
+    });
+}
+
 fn admin_reset_sql(ledger_schema: &str) -> String {
     let ledger_schema = if ledger_schema.trim().is_empty() {
         DEFAULT_LEDGER_SCHEMA
@@ -178,6 +193,10 @@ pub fn run() {
     // the fmt subscriber so spans export when `otel` is compiled + enabled.
     udb::runtime::otel::init_otel();
     init_observability();
+    // Install the rustls CryptoProvider before ANY TLS config is built (serve
+    // TLS, PG client TLS, OIDC, object-store clients). rustls 0.23 cannot
+    // auto-select when both aws-lc-rs and ring are linked. See bug_report.md.
+    install_default_crypto_provider();
     let (command, proto_root, namespace, serve_addr) = parse_args(&args);
     if let Command::InvalidUsage { message } = &command {
         eprintln!("{message}");
@@ -230,12 +249,13 @@ pub fn run() {
         Command::Doctor {
             output_mode,
             with_probes,
+            enterprise,
         } => {
             let runtime = tokio::runtime::Runtime::new().unwrap_or_else(|err| {
                 eprintln!("failed to create tokio runtime: {err}");
                 process::exit(1);
             });
-            let report = runtime.block_on(run_doctor(with_probes));
+            let report = runtime.block_on(run_doctor(with_probes, enterprise));
             let exit_code = doctor_status(&report).exit_code();
             match output_mode {
                 DoctorOutputMode::Json => output_json(&report, "doctor report"),
@@ -628,7 +648,12 @@ pub fn run() {
                 eprintln!("invalid serve address '{serve_addr}': {err}");
                 process::exit(1);
             });
-            eprintln!("udb DataBroker listening on {addr}");
+            // NOT "listening" yet: the gRPC socket binds only at the END of
+            // serve() (after the full startup lifecycle, ~minutes against a remote
+            // DB). Claiming "listening" here made port probes + clients treat the
+            // broker as up ~2 min early and crash-loop (UDB_FRICTION §3). The
+            // truthful "ready" line is logged by serve() once bootstrap completes.
+            eprintln!("udb DataBroker starting (bootstrapping; gRPC {addr} not yet accepting)");
             let stack_size = serve_thread_stack_size();
             let serve_thread = std::thread::Builder::new()
                 .name("udb-serve".to_string())

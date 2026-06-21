@@ -335,8 +335,31 @@ impl Default for ServiceSettings {
 }
 
 impl ServiceSettings {
-    fn apply_security_posture(&mut self, production_env: bool) {
+    fn apply_security_posture(
+        &mut self,
+        production_env: bool,
+        explicit_secure: Option<bool>,
+        explicit_mtls: Option<bool>,
+    ) {
         if production_env {
+            // UDB_FRICTION §1: production mandates TLS + mTLS. If the operator
+            // explicitly asked to turn either OFF, that request is being
+            // overridden — say so loudly instead of silently re-forcing it (the
+            // silent re-force previously cost real debugging time).
+            if explicit_secure == Some(false) {
+                tracing::warn!(
+                    "UDB_ENV=production overrides UDB_TLS_REQUIRED/UDB_REQUIRE_SECURE_TRANSPORT=false: \
+                     secure transport is FORCED ON in production (provide UDB_TLS_CERT_PATH + \
+                     UDB_TLS_KEY_PATH, or unset UDB_ENV=production to opt out)"
+                );
+            }
+            if explicit_mtls == Some(false) {
+                tracing::warn!(
+                    "UDB_ENV=production overrides UDB_MTLS_REQUIRED=false: mTLS is FORCED ON in \
+                     production (provide UDB_MTLS_CLIENT_CA_PEM or _PATH, or unset \
+                     UDB_ENV=production to opt out)"
+                );
+            }
             self.require_secure_transport = true;
             self.mtls_required = true;
             self.broker_to_broker_mtls_required = true;
@@ -401,12 +424,13 @@ impl ServiceSettings {
         if let Some(value) = env_u32("UDB_RATE_LIMIT_MAX_PER_WINDOW") {
             self.rate_limit_max_per_window = value;
         }
-        if let Some(value) =
-            bool_env("UDB_REQUIRE_SECURE_TRANSPORT").or_else(|| bool_env("UDB_TLS_REQUIRED"))
-        {
+        let explicit_secure =
+            bool_env("UDB_REQUIRE_SECURE_TRANSPORT").or_else(|| bool_env("UDB_TLS_REQUIRED"));
+        if let Some(value) = explicit_secure {
             self.require_secure_transport = value;
         }
-        if let Some(value) = bool_env("UDB_MTLS_REQUIRED") {
+        let explicit_mtls = bool_env("UDB_MTLS_REQUIRED");
+        if let Some(value) = explicit_mtls {
             self.mtls_required = value;
         }
         if let Some(value) = bool_env("UDB_BROKER_MTLS_REQUIRED")
@@ -420,7 +444,7 @@ impl ServiceSettings {
             self.internal_control_mtls_required = value;
         }
         self.tls.merge_env();
-        self.apply_security_posture(production_env);
+        self.apply_security_posture(production_env, explicit_secure, explicit_mtls);
     }
 }
 
@@ -659,7 +683,7 @@ impl EncryptionSettings {
             if let Ok(value) = std::env::var(key)
                 && !value.trim().is_empty()
             {
-                self.keys.insert(version, value);
+                self.keys.insert(version, value.trim().to_string());
             }
         }
         if let Ok(value) = std::env::var("UDB_ENCRYPTION_ACTIVE_VERSION")
@@ -761,6 +785,13 @@ pub struct MigrationOptions {
     pub force_reseed: bool,
     /// Explicitly skip live PostgreSQL verification when the manifest checksum is unchanged.
     pub skip_unchanged_verify: bool,
+    /// UDB_FRICTION §4: when the persisted manifest checksum equals the current
+    /// one, skip the ENTIRE expensive generate/apply/provision/verify suite and
+    /// go straight to serve (a ~2-min remote-DB re-bootstrap on every restart
+    /// otherwise). Opt-in; `force_sync`/`force_reseed`/`dry_run` bypass it. The
+    /// tradeoff is the same as `skip_unchanged_verify`: external drift is not
+    /// re-checked on a fast start (`udb admin force-sync` is the escape hatch).
+    pub skip_if_unchanged: bool,
 
     // ── Timeouts ──────────────────────────────────────────────────────────────
     /// PostgreSQL `lock_timeout` SET at the head of every generated SQL file.
@@ -816,6 +847,7 @@ impl Default for MigrationOptions {
             log_queries: false,
             force_reseed: false,
             skip_unchanged_verify: false,
+            skip_if_unchanged: false,
             lock_timeout: "5s".to_string(),
             statement_timeout: "120s".to_string(),
             exec_timeout_secs: 300,
@@ -872,6 +904,9 @@ impl MigrationOptions {
         }
         if let Some(value) = bool_env("UDB_SKIP_UNCHANGED_VERIFY") {
             self.skip_unchanged_verify = value;
+        }
+        if let Some(value) = bool_env("UDB_STARTUP_SKIP_IF_UNCHANGED") {
+            self.skip_if_unchanged = value;
         }
     }
 

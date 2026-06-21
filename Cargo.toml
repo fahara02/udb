@@ -214,6 +214,12 @@ sha1 = "0.10"
 # Argon2id password KDF for native password storage (replaces keyed-HMAC).
 argon2 = "0.5"
 sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio-rustls", "postgres", "json", "uuid", "chrono"] }
+# rustls 0.23 needs a process-level CryptoProvider installed before the first
+# TLS config is built. The dep graph links BOTH aws-lc-rs and ring transitively
+# (tonic tls, sqlx, reqwest, tiberius, google-cloud-storage), so rustls cannot
+# auto-select and panics on the serve path. We standardise on aws-lc-rs and
+# install it explicitly at startup (see install_default_crypto_provider).
+rustls = { version = "0.23", features = ["aws_lc_rs"] }
 futures = { version = "0.3", default-features = false, features = ["std"] }
 tokio = { version = "1", features = ["full"] }
 tokio-postgres = { version = "0.7", features = ["with-chrono-0_4", "with-uuid-1", "with-serde_json-1", "runtime"] }

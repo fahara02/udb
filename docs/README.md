@@ -31,6 +31,7 @@ native services, operations, security, testing, and SDKs.
 | Application integration | [integration.md](integration.md) |
 | Native auth, authz, IdP, storage, assets, WebRTC, and SDK facades | [native-services.md](native-services.md) |
 | Production readiness, config, runbooks, SLOs, and validation | [operations.md](operations.md) |
+| From-scratch hardened/enterprise bring-up: minimal env set, TLS/mTLS, auth-plane exposure, ABAC vs policy_rules, pooler-safe DSN, SDK mTLS | [enterprise-deployment.md](enterprise-deployment.md) |
 | Request context, identity, authorization, sensitive data, and compliance profiles | [security.md](security.md) |
 | Testing | [testing.md](testing.md) |
 | SDKs | [../sdk/README.md](../sdk/README.md) |

@@ -34,6 +34,10 @@ table.
    DEADLINE_EXCEEDED) — recommend `conflict_fields` idempotency on Upsert.
 5. **Every mutation emits an event** (`udb.<svc>.<entity>.<verb>.v1`);
    CDC subscription streams are tenant-scoped with `since_event_id` replay.
+6. **TWO authz surfaces, different engines.** Data RPCs are gated by a **data-plane
+   ABAC snapshot** (default-DENY); `udb.authz.can/require` query a SEPARATE
+   control-plane **Casbin** engine (roles/`policy_rules`). They can disagree — the
+   data-plane ABAC is what actually protects your data. (UDB_FRICTION §7.)
 
 ## Before giving code, establish
 - **Language** (TS / Python / Go / Java / C# / PHP) → that SDK's snippet from
@@ -50,16 +54,40 @@ table.
 `Upsert {record, conflict_fields, return_record}` · `Delete {filter}` · typed
 cache/document/graph/timeseries RPCs per `GetCapabilities`.
 
+**TS ergonomics:** `udb.data.table("pkg.v1.Entity",{key:[…]})` packs/decodes
+`record_json` itself — your own entities need **no per-entity codegen**. For a
+typed row, generate a plain snake_case interface with **ts-proto** (`onlyTypes=true,
+snakeToCamel=false`) — protobuf-es (the repo's own SDK codegen) is camelCase and
+won't match `record_json`. Serving a custom proto needs neither `udb proto export`
+nor `buf` (the broker embeds the annotation contract).
+
 **Storage upload:** `RegisterUpload` → presigned PUT → `FinalizeUpload`
 (`is_public` is `optional` — omit to preserve) → presigned GET. **Authz:**
 `can(resource, action)`; server `cache_ttl_seconds=0` = never cache.
 
-**Bootstrap a fresh broker:**
-```bash
-UDB_PG_DSN=… UDB_PASSWORD_HASH_SECRET=… \
-udb auth bootstrap user --username admin --email admin@x.com \
-    --password '<strong>' --tenant acme --project default
-```
+**Real enterprise authn + authz flow** (worked end-to-end in `examples/ts_enterprise/`):
+1. **Bootstrap the admin OFFLINE** (Postgres-direct; also binds `organization_owner`
+   → `udb:*` at login):
+   ```bash
+   UDB_PG_DSN=… UDB_PASSWORD_HASH_SECRET=… \
+   udb auth bootstrap user --username admin --email admin@x.com \
+       --password '<strong>' --tenant acme --project default   # prints canonical tenant_id (UUID)
+   ```
+2. **Login → adopt the canonical tenant UUID** (the JWT tenant claim is the UUID,
+   NOT the code "acme"): `login()` → `auth.authenticateBearer(token)` →
+   `setTenant(principal.tenant_id)` (or `loginAndAdoptTenant()`).
+3. **SEED ABAC or every data RPC is `PERMISSION_DENIED`** — the org-owner role +
+   `udb:*` scopes are NOT enough; the data-plane reads an ABAC policy snapshot.
+   Set `UDB_ABAC_POLICIES_JSON` (or rows in `udb_system.udb_abac_policies`):
+   `{effect,service_identity,tenant_id,purpose,message_type,operation,required_scope}`
+   (`*`/empty = wildcard). Dev shortcut: `UDB_ABAC_DEFAULT_ALLOW=true`.
+4. The broker needs JWT keys (`UDB_JWT_PRIVATE_KEY`/`_PUBLIC_KEY`, RS256), sessions
+   (`UDB_SESSION_ENABLED=true` + `UDB_SESSION_HASH_SECRET`), and the auth plane
+   exposed (`UDB_AUTH_GRPC_ADDR=0.0.0.0:<port+10>`). `udb doctor --enterprise`
+   lists every unmet prereq at once.
+
+**mTLS from an SDK:** `UdbProject.connect({ tls: { rootCerts, privateKey, certChain } })`
+(`secure:true` alone = system roots + no client cert; can't reach a private-CA/mTLS broker).
 
 **CLI:** `udb proto export --out proto` · `udb serve proto "" 0.0.0.0:50051` ·
 `udb sdk generate --lang <l>` · `udb sdk manifest` · `udb doctor` ·
@@ -69,9 +97,13 @@ udb auth bootstrap user --username admin --email admin@x.com \
 `UNIMPLEMENTED`→wrong target (set authTarget) · `PERMISSION_DENIED`→scope or
 tenant mismatch · `FAILED_PRECONDITION`→service disabled / wrong state /
 missing config · `RESOURCE_EXHAUSTED`→rate limit or backpressure (back off) ·
-`INVALID_ARGUMENT`→unknown message_type (use the FQN; `udb sdk manifest`) ·
+`INVALID_ARGUMENT`→unknown message_type (use the FQN; `udb sdk manifest`), OR
+"tenant isolation requires filter on tenant_id" → a tenant-scoped read/delete MUST
+put `tenant_id` IN THE FILTER (`select({where:{…, tenant_id}})`) ·
 `ABORTED`→version/CAS conflict (re-read, retry) · `NOT_FOUND` can mean
-"exists, but not your tenant" — by design.
+"exists, but not your tenant" — by design ·
+`PERMISSION_DENIED` on a data RPC with valid scopes → no ABAC policy seeded
+(default-deny); seed `UDB_ABAC_POLICIES_JSON` or set `UDB_ABAC_DEFAULT_ALLOW=true`.
 
 ## Guardrails
 - Always include metadata (tenant/project/scopes) AND a credential in examples;

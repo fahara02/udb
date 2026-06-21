@@ -116,8 +116,14 @@ impl ClickHouseConfig {
             return None;
         };
 
-        let username = env::var("UDB_COLUMN_USER").unwrap_or_else(|_| "default".to_string());
-        let password = env::var("UDB_COLUMN_PASSWORD").unwrap_or_default();
+        // Trim: these become HTTP Basic-auth header values; a CRLF `\r` from a
+        // CRLF `.env` would poison the header (invalid header value).
+        let username = env::var("UDB_COLUMN_USER")
+            .map(|v| v.trim().to_string())
+            .unwrap_or_else(|_| "default".to_string());
+        let password = env::var("UDB_COLUMN_PASSWORD")
+            .map(|v| v.trim().to_string())
+            .unwrap_or_default();
         let database = env::var("UDB_COLUMN_DATABASE")
             .ok()
             .or_else(|| dsn.as_deref().and_then(Self::db_from_dsn))

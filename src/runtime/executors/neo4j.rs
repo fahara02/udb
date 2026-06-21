@@ -105,9 +105,17 @@ impl Neo4jConfig {
             return None;
         };
 
-        let username = env::var("UDB_GRAPH_USER").unwrap_or_else(|_| "neo4j".to_string());
-        let password = env::var("UDB_GRAPH_PASSWORD").unwrap_or_default();
-        let database = env::var("UDB_GRAPH_DATABASE").unwrap_or_else(|_| "neo4j".to_string());
+        // Trim: username/password become HTTP Basic-auth header values; a CRLF
+        // `\r` from a CRLF `.env` would poison the header (invalid header value).
+        let username = env::var("UDB_GRAPH_USER")
+            .map(|v| v.trim().to_string())
+            .unwrap_or_else(|_| "neo4j".to_string());
+        let password = env::var("UDB_GRAPH_PASSWORD")
+            .map(|v| v.trim().to_string())
+            .unwrap_or_default();
+        let database = env::var("UDB_GRAPH_DATABASE")
+            .map(|v| v.trim().to_string())
+            .unwrap_or_else(|_| "neo4j".to_string());
         let is_cloud =
             super::http::is_cloud("UDB_NEO4J_DEPLOY_MODE", &http_base, ".databases.neo4j.io");
         let dev_mode = std::env::var("UDB_DEV_MODE")

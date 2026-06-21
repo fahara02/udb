@@ -960,6 +960,10 @@ mod tests {
             // at startup to decide whether to install the OTLP exporter — same
             // startup-config category as `observability.rs`.
             "src/runtime/otel.rs",
+            // Enterprise preflight reads UDB_* prereqs (session/password/encryption
+            // secrets, header-scopes) ONCE at startup + in `udb doctor --enterprise`
+            // to report the whole unmet set — same startup-config category.
+            "src/runtime/preflight.rs",
             "src/runtime/projection/mod.rs",
             "src/runtime/replica.rs",
             "src/runtime/security.rs",

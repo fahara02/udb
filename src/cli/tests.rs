@@ -12,6 +12,22 @@ fn parse_args_recognizes_doctor_without_proto_root() {
 }
 
 #[test]
+fn crypto_provider_is_installed_for_tls_serving() {
+    // Regression for bug_report.md: rustls 0.23 panics ("Could not automatically
+    // determine the process-level CryptoProvider") when building any ServerConfig
+    // while both aws-lc-rs and ring are linked and no provider is installed —
+    // making mandatory-TLS production mode unbootable. install_default_crypto_provider()
+    // must select one up front.
+    install_default_crypto_provider();
+    assert!(
+        rustls::crypto::CryptoProvider::get_default().is_some(),
+        "a default CryptoProvider must be installed before any TLS config is built"
+    );
+    // Building a ServerConfig must not panic now that a provider is selected.
+    let _ = rustls::ServerConfig::builder().with_no_client_auth();
+}
+
+#[test]
 fn parse_args_recognizes_health_check() {
     let args = vec!["health-check".to_string()];
     let (command, _, _, _) = parse_args(&args);
@@ -39,6 +55,19 @@ fn parse_args_recognizes_doctor_probe() {
         command,
         Command::Doctor {
             with_probes: true,
+            ..
+        }
+    ));
+}
+
+#[test]
+fn parse_args_recognizes_doctor_enterprise() {
+    let args = vec!["doctor".to_string(), "--enterprise".to_string()];
+    let (command, _, _, _) = parse_args(&args);
+    assert!(matches!(
+        command,
+        Command::Doctor {
+            enterprise: true,
             ..
         }
     ));

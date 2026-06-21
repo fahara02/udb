@@ -15,6 +15,10 @@ pub(crate) enum Command {
     Doctor {
         output_mode: DoctorOutputMode,
         with_probes: bool,
+        /// `--enterprise`: also run the enterprise prerequisite preflight
+        /// (encryption key, auth secrets, sessions, auth-plane exposure, redis,
+        /// authz default-deny) — UDB_FRICTION §2.
+        enterprise: bool,
     },
     /// Lightweight Docker HEALTHCHECK — exit 0 if healthy, 1 otherwise.
     HealthCheck,
@@ -554,6 +558,7 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
         DoctorOutputMode::Json
     };
     let with_probes = has_flag("--probe");
+    let doctor_enterprise = has_flag("--enterprise");
     // --prior <path> : load a prior CatalogManifest JSON for drift/plan diffs.
     let prior_manifest_path: Option<String> = flag_value("--prior");
     let _ = prior_manifest_path; // used by Drift/Plan handlers via env fallback below
@@ -588,6 +593,7 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
             Command::Doctor {
                 output_mode: doctor_output_mode,
                 with_probes,
+                enterprise: doctor_enterprise,
             }
         }
         Some("health-check") | Some("healthcheck") => {

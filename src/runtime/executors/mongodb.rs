@@ -99,7 +99,10 @@ impl MongoDbConfig {
             .or_else(|| dsn.as_deref().and_then(Self::db_from_dsn))
             .unwrap_or_else(|| "udb".to_string());
 
-        let api_key = env::var("UDB_NOSQL_API_KEY").ok();
+        let api_key = env::var("UDB_NOSQL_API_KEY")
+            .ok()
+            .map(|v| v.trim().to_string())
+            .filter(|v| !v.is_empty());
         let is_cloud = super::http::is_cloud("UDB_MONGO_DEPLOY_MODE", &api_base, ".mongodb.net");
         let dev_mode = std::env::var("UDB_DEV_MODE")
             .map(|v| matches!(v.as_str(), "1" | "true" | "yes"))

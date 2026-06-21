@@ -18,6 +18,7 @@ pub mod otel; // Phase 10: W3C trace-context extract/scope/inject + feature-gate
 pub mod pipeline;
 pub mod pipeline_coverage; // U7: per-RPC pipeline-adoption tracker
 pub(crate) mod postgres_helpers;
+pub mod preflight; // UDB_FRICTION §2: one-shot enterprise prerequisite report (startup + doctor)
 
 pub mod authn; // Stage 1 auth: UDB-owned authn primitives (sessions, API keys, identities, hashing)
 pub mod authz; // Stage 1 auth: UDB-owned authz engine (Decision/Principal/ResourceRef, RBAC/ABAC/ReBAC)

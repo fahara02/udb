@@ -47,6 +47,29 @@ generic Rust/SQL/engine knowledge for everything else.
 5. **Every background job:** leader-elected (`singleton.rs` `WORKER_*` consts,
    `run_while_leader`) — never a bare interval loop on every replica.
 
+## Startup path & enterprise config (read before touching `serve()`/config)
+- **Backend init is SERIAL and order-dependent.** The `all_plugins()` register loop
+  (`runtime/core/setup_data.rs`) registers each backend in order; "first registered
+  wins" picks the default SystemStores — so **do NOT parallelize it** (correctness
+  bug). Each `register()` is wrapped in `tokio::time::timeout(UDB_BACKEND_STARTUP_PROBE_SECS,
+  …)` (default 8) so a configured-but-unreachable backend (e.g. MongoDB's ~30s
+  server-selection) degrades to "unavailable" instead of stalling boot. A backend
+  only registers if it has an explicit DSN — but the binary **`load_project_dotenv()`
+  walks UP from CWD** (`cli/mod.rs`), so a stray repo `.env` silently injects
+  backend DSNs and slows startup; don't add default-localhost DSNs.
+- **Fast restart:** `UDB_STARTUP_SKIP_IF_UNCHANGED=true` (`control/lifecycle.rs`)
+  skips generate/apply/provision/verify when the persisted manifest checksum is
+  unchanged — addresses the remote-DB (~2 min) re-bootstrap, NOT backend probing.
+- **One-shot preflight:** `runtime/preflight.rs` `evaluate(&config, addr)` reports
+  ALL unmet enterprise prereqs at once (encryption/password/session/auth-plane/
+  redis/authz); wired into `serve()` startup AND `udb doctor --enterprise`.
+- **TWO authz engines:** the data-plane `authorize()` reads an ABAC snapshot
+  (`from_abac_policies`, `UDB_ABAC_POLICIES_JSON`/`udb_abac_policies`, default-DENY);
+  the control-plane `AuthzService.Check` is Casbin over roles/`policy_rules`. Don't
+  conflate them. Production force-sets TLS+mTLS in `ServiceSettings::apply_security_posture`
+  (warns when it overrides an explicit `=false`); TLS env = `UDB_TLS_CERT_PEM|PATH`,
+  `UDB_TLS_KEY_PEM|PATH`, `UDB_MTLS_CLIENT_CA_PEM|PATH`.
+
 ## The ten directives (audit-derived)
 1. Proto is the source of truth (+ regen protocol after proto changes).
 2. Reuse before you write — grep `native_helpers.rs`, `singleton.rs`,

@@ -59,11 +59,40 @@ fn capability_matrix_for_configured_backends(
     udb::backend::capability_matrix_configured(configured_backend_tokens)
 }
 
-pub(crate) async fn run_doctor(with_probes: bool) -> DoctorReport {
+pub(crate) async fn run_doctor(with_probes: bool, enterprise: bool) -> DoctorReport {
     let runtime = DataBrokerRuntime::from_env().await;
     let init = runtime.init_report();
     let mut errors = Vec::new();
     let mut warnings = init.warnings.clone();
+
+    // --enterprise: run the same one-shot prerequisite preflight as startup
+    // (UDB_FRICTION §2). Assume a PUBLIC bind for the auth-plane-exposure check
+    // (the common enterprise case); Fail findings fail the report, Warn advise.
+    if enterprise {
+        use udb::runtime::preflight::PreflightSeverity;
+        let public_addr = "0.0.0.0:50051".parse().expect("static addr parses");
+        for finding in udb::runtime::preflight::evaluate(runtime.config(), public_addr) {
+            let line = format!(
+                "enterprise[{}] {}: {} → {}",
+                finding.severity.label(),
+                finding.name,
+                finding.detail,
+                finding.fix
+            );
+            match finding.severity {
+                PreflightSeverity::Fail => {
+                    if !errors.contains(&line) {
+                        errors.push(line);
+                    }
+                }
+                PreflightSeverity::Warn => {
+                    if !warnings.contains(&line) {
+                        warnings.push(line);
+                    }
+                }
+            }
+        }
+    }
     let mut system_catalog = None;
     let mut postgres_privileges = None;
     let mut backend_probes = Vec::new();

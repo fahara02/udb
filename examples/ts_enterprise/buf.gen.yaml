@@ -1,0 +1,13 @@
+# Generate a plain TypeScript type from your billing proto (ts-proto, types-only,
+# snake_case) so the example imports a generated `Invoice` instead of hand-writing
+# the shape. snake_case + forceLong=number make it match the JSON the UDB SDK's
+# data.table sends/receives.
+version: v2
+plugins:
+  - remote: buf.build/community/stephenh-ts-proto:v2.6.1
+    out: gen
+    opt:
+      - onlyTypes=true
+      - snakeToCamel=false
+      - forceLong=number
+      - esModuleInterop=true

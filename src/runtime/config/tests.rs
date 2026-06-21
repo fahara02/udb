@@ -50,6 +50,21 @@ fn migration_options_skip_unchanged_verify_is_explicit_opt_out() {
 }
 
 #[test]
+fn migration_options_skip_if_unchanged_is_explicit_opt_in() {
+    let prior = std::env::var("UDB_STARTUP_SKIP_IF_UNCHANGED").ok();
+    assert!(!MigrationOptions::default().skip_if_unchanged);
+
+    #[allow(unused_unsafe)]
+    unsafe {
+        std::env::set_var("UDB_STARTUP_SKIP_IF_UNCHANGED", "true");
+    }
+    let opts = MigrationOptions::from_env();
+    assert!(opts.skip_if_unchanged);
+
+    restore_env("UDB_STARTUP_SKIP_IF_UNCHANGED", prior);
+}
+
+#[test]
 fn saga_settings_merge_env_overrides_file_values() {
     let prior_enabled = std::env::var("UDB_SAGA_RECOVERY_ENABLED").ok();
     let prior_interval = std::env::var("UDB_SAGA_RECOVERY_INTERVAL_SECONDS").ok();
@@ -277,7 +292,7 @@ fn compliance_hardened_yaml_matches_secure_runtime_posture() {
     let mut config: UdbConfig =
         serde_yaml::from_str(&yaml).expect("compliance-hardened.yaml must parse as UdbConfig");
 
-    config.service.apply_security_posture(false);
+    config.service.apply_security_posture(false, None, None);
 
     assert!(
         config.security.validate_production().is_ok(),

@@ -481,10 +481,22 @@ impl QdrantHttpClient {
     }
 
     pub(crate) fn auth(&self, builder: reqwest::RequestBuilder) -> reqwest::RequestBuilder {
-        if let Some(api_key) = &self.api_key {
-            builder.header("api-key", api_key)
-        } else {
-            builder
+        let Some(api_key) = &self.api_key else {
+            return builder;
+        };
+        // Validate the value up front so an invalid key fails with a message that
+        // NAMES the header and the likely cause, instead of an opaque reqwest
+        // "builder error" surfaced later at send() (UDB_FRICTION §3).
+        match reqwest::header::HeaderValue::from_str(api_key) {
+            Ok(value) => builder.header("api-key", value),
+            Err(err) => {
+                tracing::error!(
+                    "Qdrant 'api-key' header value is invalid ({err}); it likely contains \
+                     whitespace/control characters (e.g. a trailing CRLF from a Windows .env). \
+                     The request will fail — set UDB_QDRANT_API_KEY to a clean value"
+                );
+                builder.header("api-key", api_key)
+            }
         }
     }
 }
