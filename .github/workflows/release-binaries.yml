@@ -77,7 +77,7 @@ jobs:
     name: build (${{ matrix.asset }})
     needs: version-guard
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 60
+    timeout-minutes: 120
     permissions:
       contents: write
     strategy:
