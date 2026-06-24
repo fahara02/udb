@@ -272,9 +272,11 @@ fn normalize_rls_policy_template(template: &str, security: &ManifestTableSecurit
 }
 
 pub(crate) fn table_from_schema(schema: &ProtoSchema) -> ManifestTable {
+    let table_security = manifest_table_security(schema);
+    let audit_fields_enabled = schema.audit_fields || security_audit_enabled(&table_security);
     let mut columns: Vec<_> = schema.columns.iter().map(column_from_proto).collect();
     columns.sort_by_key(|col| col.field_number);
-    if schema.audit_fields {
+    if audit_fields_enabled {
         append_missing_audit_columns(&mut columns);
     }
 
@@ -403,7 +405,6 @@ pub(crate) fn table_from_schema(schema: &ProtoSchema) -> ManifestTable {
     }
     checks.sort_by(|a, b| a.expression.cmp(&b.expression));
 
-    let table_security = manifest_table_security(schema);
     let mut rls_policies = schema
         .rls_policies
         .iter()
@@ -444,7 +445,7 @@ pub(crate) fn table_from_schema(schema: &ProtoSchema) -> ManifestTable {
         &schema.table_name,
         &columns,
     ));
-    if schema.audit_fields || security_audit_enabled(&table_security) {
+    if audit_fields_enabled {
         warnings.extend(validate_audit_fields(
             &schema.schema_name,
             &schema.table_name,
@@ -517,7 +518,7 @@ pub(crate) fn table_from_schema(schema: &ProtoSchema) -> ManifestTable {
         soft_delete_column: defaulted(&normalize_ident(&schema.soft_delete_column), "deleted_at"),
         // db_table_security.audit_mode is authoritative; pg_table.audit_fields is a
         // legacy fallback. Either requesting audit columns enables them.
-        audit_fields: schema.audit_fields || security_audit_enabled(&table_security),
+        audit_fields: audit_fields_enabled,
         security: ManifestSecurity {
             classification_level: schema.security.classification_level.clone(),
             audit_writes: schema.security.audit_writes,

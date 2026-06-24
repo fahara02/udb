@@ -58,7 +58,7 @@ message OTP {
   OTPType otp_type = 3 [(udb.core.common.v1.pg_column) = { column_name: "otp_type" sql_type: "VARCHAR(30)" not_null: true }];
 
   // Keyed digest of the OTP code; never stored in plaintext.
-  string code_hash = 4 [(udb.core.common.v1.pg_column) = { column_name: "code_hash" sql_type: "VARCHAR(128)" not_null: true comment: "Keyed HMAC digest of the OTP code" }, (udb.core.common.v1.sensitive) = true, (udb.core.common.v1.log_redacted) = true, (udb.core.common.v1.db_column_security) = { secret_classification: SECRET_CLASSIFICATION_TOKEN output_view: OUTPUT_VIEW_STORAGE_ONLY redaction_strategy: REDACTION_STRATEGY_REDACT hashing_algorithm: "hmac-sha256" uniqueness_scope: "tenant" }];
+  string code_hash = 4 [(udb.core.common.v1.pg_column) = { column_name: "code_hash" sql_type: "VARCHAR(128)" not_null: true comment: "Keyed HMAC digest of the OTP code" }, (udb.core.common.v1.sensitive) = true, (udb.core.common.v1.log_redacted) = true, (udb.core.common.v1.db_column_security) = { secret_classification: SECRET_CLASSIFICATION_TOKEN output_view: OUTPUT_VIEW_STORAGE_ONLY redaction_strategy: REDACTION_STRATEGY_REDACT hashing_algorithm: "hmac-sha256" encryption_key_class: "authn-token" uniqueness_scope: "tenant" }];
 
   string delivery_channel = 5 [(udb.core.common.v1.pg_column) = { column_name: "delivery_channel" sql_type: "VARCHAR(10)" not_null: true default_value: "'email'" comment: "Delivery channel such as email, sms, push, or voice" }];
 

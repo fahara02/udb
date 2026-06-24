@@ -96,5 +96,5 @@ message AccessDecisionAudit {
   // Hashed user-agent (never raw) from the request context.
   string user_agent_hash = 25 [(udb.core.common.v1.pg_column) = { column_name: "user_agent_hash" sql_type: "VARCHAR(80)" }];
   // Redacted decision-input attributes (JSON; credential-shaped keys scrubbed).
-  string decision_input = 26 [(udb.core.common.v1.pg_column) = { column_name: "decision_input" sql_type: "JSONB" }];
+  string decision_input = 26 [(udb.core.common.v1.pg_column) = { column_name: "decision_input" sql_type: "JSONB" is_json: true is_jsonb: true }];
 }

@@ -55,7 +55,7 @@ message RecoveryCode {
   string user_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "user_id" sql_type: "UUID" not_null: true comment: "FK to udb_authn.users.user_id" foreign_key: { references_table: "users" references_schema: "udb_authn" references_column: "user_id" on_delete: REFERENTIAL_ACTION_CASCADE constraint_name: "fk_recovery_codes_user_id" } index: { index_name: "idx_recovery_codes_user" index_type: "BTREE" columns: "user_id" } }];
 
   // Keyed digest of the recovery code; never stored in plaintext.
-  string code_hash = 3 [(udb.core.common.v1.pg_column) = { column_name: "code_hash" sql_type: "VARCHAR(128)" not_null: true comment: "Keyed HMAC digest of the recovery code" }, (udb.core.common.v1.sensitive) = true, (udb.core.common.v1.log_redacted) = true, (udb.core.common.v1.db_column_security) = { secret_classification: SECRET_CLASSIFICATION_TOKEN output_view: OUTPUT_VIEW_STORAGE_ONLY redaction_strategy: REDACTION_STRATEGY_REDACT hashing_algorithm: "hmac-sha256" uniqueness_scope: "tenant" }];
+  string code_hash = 3 [(udb.core.common.v1.pg_column) = { column_name: "code_hash" sql_type: "VARCHAR(128)" not_null: true comment: "Keyed HMAC digest of the recovery code" }, (udb.core.common.v1.sensitive) = true, (udb.core.common.v1.log_redacted) = true, (udb.core.common.v1.db_column_security) = { secret_classification: SECRET_CLASSIFICATION_TOKEN output_view: OUTPUT_VIEW_STORAGE_ONLY redaction_strategy: REDACTION_STRATEGY_REDACT hashing_algorithm: "hmac-sha256" encryption_key_class: "authn-token" uniqueness_scope: "tenant" }];
 
   google.protobuf.Timestamp used_at = 4 [(udb.core.common.v1.pg_column) = { column_name: "used_at" sql_type: "TIMESTAMPTZ" comment: "Timestamp the code was consumed; NULL while unused" }];
 
