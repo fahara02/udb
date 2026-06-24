@@ -265,7 +265,7 @@ enum IndexType {
 
 message StorageFieldOptions {
   StorageBackendType backend = 1; // Which backend owns this key
-  string bucket_env_key = 2; // Env var that resolves the bucket name
+  string bucket_env_key = 2; // Bucket name. If the value names a SET env var, it resolves through it; otherwise it is used as a literal bucket name (lowercased; must be S3/MinIO-valid).
   string key_prefix = 3; // Fixed path prefix, e.g. "udb-docs/{tenant_id}"
   bool presigned_read = 4; // Generate pre-signed download URLs
   bool presigned_write = 5; // Generate pre-signed upload URLs

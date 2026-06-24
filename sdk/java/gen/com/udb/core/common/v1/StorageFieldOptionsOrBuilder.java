@@ -31,7 +31,7 @@ public interface StorageFieldOptionsOrBuilder extends
 
   /**
    * <pre>
-   * Env var that resolves the bucket name
+   * Bucket name. If the value names a SET env var, it resolves through it; otherwise it is used as a literal bucket name (lowercased; must be S3/MinIO-valid).
    * </pre>
    *
    * <code>string bucket_env_key = 2 [json_name = "bucketEnvKey"];</code>
@@ -40,7 +40,7 @@ public interface StorageFieldOptionsOrBuilder extends
   java.lang.String getBucketEnvKey();
   /**
    * <pre>
-   * Env var that resolves the bucket name
+   * Bucket name. If the value names a SET env var, it resolves through it; otherwise it is used as a literal bucket name (lowercased; must be S3/MinIO-valid).
    * </pre>
    *
    * <code>string bucket_env_key = 2 [json_name = "bucketEnvKey"];</code>

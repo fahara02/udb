@@ -78,11 +78,24 @@ func TestStorageFacadeRegisterUploadBuildsRequest(t *testing.T) {
 		t.Fatalf("response not threaded through: %q", resp.FileId)
 	}
 	got := fake.lastRegister
-	if got.TenantId != "t-1" || got.ProjectId != "p-1" {
+	if got.TenantId != "t-1" || got.ProjectId != "" {
 		t.Fatalf("tenant/project not defaulted from meta: %+v", got)
 	}
 	if got.Filename != "a.png" || got.ContentType != "image/png" || got.FileType != "image" || got.SizeBytes != 4096 {
 		t.Fatalf("fields not mapped: %+v", got)
+	}
+}
+
+func TestStorageFacadeRegisterUploadKeepsCanonicalProjectUUID(t *testing.T) {
+	fake := &fakeStorageClient{}
+	projectID := "123e4567-e89b-12d3-a456-426614174000"
+	f := &StorageFacade{Raw: fake, meta: Metadata{TenantID: "t-1", ProjectID: projectID}}
+
+	if _, err := f.RegisterUpload(context.Background(), "a.png", "image/png", "image", 4096); err != nil {
+		t.Fatalf("RegisterUpload: %v", err)
+	}
+	if got := fake.lastRegister.GetProjectId(); got != projectID {
+		t.Fatalf("project UUID not mapped: got %q want %q", got, projectID)
 	}
 }
 

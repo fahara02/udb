@@ -20,6 +20,12 @@ pub(crate) enum Command {
         /// authz default-deny) — UDB_FRICTION §2.
         enterprise: bool,
     },
+    /// Emit the resolved runtime backend contract for the current project's
+    /// manifest (required backends, env vars, current status) so application
+    /// teams can satisfy it BEFORE the first startup attempt.
+    Requirements {
+        json: bool,
+    },
     /// Lightweight Docker HEALTHCHECK — exit 0 if healthy, 1 otherwise.
     HealthCheck,
     /// Start the tonic DataBroker skeleton.
@@ -308,7 +314,8 @@ impl DevAction {
             "reset" => Ok(Self::Reset),
             "smoke" | "test" => Ok(Self::Smoke),
             other => Err(format!(
-                "unknown dev action '{other}'; known: {}",
+                "unknown dev action '{other}'{}; known: {}",
+                did_you_mean(other, DEV_ACTIONS),
                 DEV_ACTIONS.join(", ")
             )),
         }
@@ -387,6 +394,45 @@ const NATIVE_ACTIONS: &[&str] = &[
 fn invalid_usage(message: impl Into<String>) -> Command {
     Command::InvalidUsage {
         message: message.into(),
+    }
+}
+
+/// Levenshtein edit distance over chars. Inputs are CLI tokens (a few chars),
+/// so the simple two-row DP is more than fast enough.
+fn edit_distance(a: &str, b: &str) -> usize {
+    let a: Vec<char> = a.chars().collect();
+    let b: Vec<char> = b.chars().collect();
+    let mut prev: Vec<usize> = (0..=b.len()).collect();
+    let mut curr = vec![0usize; b.len() + 1];
+    for (i, ca) in a.iter().enumerate() {
+        curr[0] = i + 1;
+        for (j, cb) in b.iter().enumerate() {
+            let cost = usize::from(ca != cb);
+            curr[j + 1] = (prev[j + 1] + 1).min(curr[j] + 1).min(prev[j] + cost);
+        }
+        std::mem::swap(&mut prev, &mut curr);
+    }
+    prev[b.len()]
+}
+
+/// Append a `; did you mean '<token>'?` hint when `input` is a near-miss of a
+/// known token. `candidates` are the display forms used in the `known:` list
+/// (e.g. `"remove/rm"`, `"proto export"`); they are split on `/` and spaces into
+/// atomic tokens so the suggestion is a single word. Only suggests when the best
+/// match is within edit distance 1..=2 (so an exact match — the auth fall-through
+/// case where `input` already equals a known token — yields no spurious hint).
+fn did_you_mean(input: &str, candidates: &[&str]) -> String {
+    let best = candidates
+        .iter()
+        .flat_map(|c| c.split(['/', ' ']))
+        .filter(|atom| !atom.is_empty())
+        .map(|atom| (atom, edit_distance(input, atom)))
+        .filter(|(_, d)| (1..=2).contains(d))
+        .min_by_key(|(_, d)| *d)
+        .map(|(atom, _)| atom);
+    match best {
+        Some(atom) => format!("; did you mean '{atom}'?"),
+        None => String::new(),
     }
 }
 
@@ -596,6 +642,12 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
                 enterprise: doctor_enterprise,
             }
         }
+        Some("requirements") | Some("requires") => {
+            offset = 1;
+            Command::Requirements {
+                json: has_flag("--json"),
+            }
+        }
         Some("health-check") | Some("healthcheck") => {
             offset = 1;
             Command::HealthCheck
@@ -741,7 +793,8 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
                 Some(other) => {
                     return (
                         invalid_usage(format!(
-                            "unknown sdk action '{other}'; known: {}",
+                            "unknown sdk action '{other}'{}; known: {}",
+                            did_you_mean(other, SDK_ACTIONS),
                             SDK_ACTIONS.join(", ")
                         )),
                         "proto".to_string(),
@@ -789,7 +842,8 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
                 Some(other) => {
                     return (
                         invalid_usage(format!(
-                            "unknown native action '{other}'; known: {}",
+                            "unknown native action '{other}'{}; known: {}",
+                            did_you_mean(other, NATIVE_ACTIONS),
                             NATIVE_ACTIONS.join(", ")
                         )),
                         "proto".to_string(),
@@ -885,7 +939,8 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
             Command::ConfigSkeleton
         }
         Some(other) => invalid_usage(format!(
-            "unknown command '{other}'; known: {}",
+            "unknown command '{other}'{}; known: {}",
+            did_you_mean(other, KNOWN_COMMANDS),
             KNOWN_COMMANDS.join(", ")
         )),
         None => Command::Catalog,

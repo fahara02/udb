@@ -1596,63 +1596,73 @@ pub async fn serve(
         startup_dry_run,
         "running UDB startup lifecycle"
     );
-    match run_startup_lifecycle(
-        &runtime,
-        &manifest,
-        &schemas,
-        startup_force_sync,
-        startup_dry_run,
-    )
-    .await
-    {
-        Ok(report) => {
-            let elapsed = lifecycle_started.elapsed().as_secs_f64();
-            metrics.inc_runs_total("completed");
-            metrics.observe_run_duration("completed", elapsed);
-            metrics.set_pending_files(report.pending_migration_files);
-            for op in &report.migration_metric_operations {
-                metrics.inc_operations_total(&op.kind, &op.schema, &op.safety);
-                if op.safety == "blocked" || op.safety == "requires_review" {
-                    metrics.set_blocked_operations(&op.schema, &op.kind, 1);
-                }
-            }
-            // Surface lint warnings the run accumulated (kind label is the
-            // recorder's coarse "startup" bucket — detailed kinds are emitted by
-            // the lint pass itself once instrumented).
-            for _ in &report.warnings {
-                metrics.inc_lint_warnings("startup");
-            }
-            tracing::info!(
-                run_id = report.run_id,
-                applied_sql_artifacts = report.applied_sql_artifacts,
-                verified_tables = report.verified_tables,
-                "UDB startup lifecycle completed"
-            );
-            if let Ok(mut state) = lifecycle_state.write() {
-                *state = FsmState::Completed;
-            }
-            // Block 1 (auth_fix.md, change-point 1): seed the system authz
-            // defaults the bootstrap admin path depends on — the global
-            // `organization_owner` role + the `org_owner ⇒ allow(*, *)` policy.
-            // Post-DDL so the tables exist, idempotent, every startup; skipped on
-            // dry-run (it must not write). Non-fatal.
-            if !startup_dry_run {
-                if let Ok(pool) = runtime.pg_pool() {
-                    if let Err(err) = auth_service::seed_system_authz_defaults(pool).await {
-                        tracing::warn!(error = %err, "seed system authz defaults failed (non-fatal)");
+    // Carry the startup-report counts forward to the single "UDB DataBroker is
+    // ready" line so success is as legible as failure. The match yields the
+    // counts (Err diverges) so there is no unread placeholder assignment.
+    let (ready_sql_artifacts, ready_vector_collections, ready_object_buckets) =
+        match run_startup_lifecycle(
+            &runtime,
+            &manifest,
+            &schemas,
+            startup_force_sync,
+            startup_dry_run,
+        )
+        .await
+        {
+            Ok(report) => {
+                let elapsed = lifecycle_started.elapsed().as_secs_f64();
+                metrics.inc_runs_total("completed");
+                metrics.observe_run_duration("completed", elapsed);
+                metrics.set_pending_files(report.pending_migration_files);
+                for op in &report.migration_metric_operations {
+                    metrics.inc_operations_total(&op.kind, &op.schema, &op.safety);
+                    if op.safety == "blocked" || op.safety == "requires_review" {
+                        metrics.set_blocked_operations(&op.schema, &op.kind, 1);
                     }
                 }
+                // Surface lint warnings the run accumulated (kind label is the
+                // recorder's coarse "startup" bucket — detailed kinds are emitted by
+                // the lint pass itself once instrumented).
+                for _ in &report.warnings {
+                    metrics.inc_lint_warnings("startup");
+                }
+                tracing::info!(
+                    run_id = report.run_id,
+                    applied_sql_artifacts = report.applied_sql_artifacts,
+                    verified_tables = report.verified_tables,
+                    "UDB startup lifecycle completed"
+                );
+                if let Ok(mut state) = lifecycle_state.write() {
+                    *state = FsmState::Completed;
+                }
+                let counts = (
+                    report.applied_sql_artifacts,
+                    report.verified_vector_collections,
+                    report.verified_object_buckets,
+                );
+                // Block 1 (auth_fix.md, change-point 1): seed the system authz
+                // defaults the bootstrap admin path depends on — the global
+                // `organization_owner` role + the `org_owner ⇒ allow(*, *)` policy.
+                // Post-DDL so the tables exist, idempotent, every startup; skipped on
+                // dry-run (it must not write). Non-fatal.
+                if !startup_dry_run {
+                    if let Ok(pool) = runtime.pg_pool() {
+                        if let Err(err) = auth_service::seed_system_authz_defaults(pool).await {
+                            tracing::warn!(error = %err, "seed system authz defaults failed (non-fatal)");
+                        }
+                    }
+                }
+                counts
             }
-        }
-        Err(err) => {
-            metrics.inc_runs_total("error");
-            metrics.observe_run_duration("error", lifecycle_started.elapsed().as_secs_f64());
-            if let Ok(mut state) = lifecycle_state.write() {
-                *state = FsmState::Error;
+            Err(err) => {
+                metrics.inc_runs_total("error");
+                metrics.observe_run_duration("error", lifecycle_started.elapsed().as_secs_f64());
+                if let Ok(mut state) = lifecycle_state.write() {
+                    *state = FsmState::Error;
+                }
+                return Err(err.into());
             }
-            return Err(err.into());
-        }
-    }
+        };
     runtime.mark_indeterminate_sagas().await;
     // Items 3/5/23/24: XA recovery — drive in-doubt ledger rows terminal and
     // run the ledger-aware presumed-abort sweep over aged `udb-%` prepared
@@ -1961,16 +1971,36 @@ pub async fn serve(
         let mut enabled_backends = service.runtime_snapshot().enabled_backend_names();
         enabled_backends.sort();
         enabled_backends.dedup();
+        // The control plane binds a separate listener at
+        // control_plane_addr (defaults to loopback public_port+10). Surface the
+        // resolved auth address in the ready line so operators don't reverse-
+        // engineer it from UNIMPLEMENTED errors.
+        let auth_addr = {
+            let cp = runtime_config.native_services.control_plane_addr.trim();
+            if cp.is_empty() {
+                format!("127.0.0.1:{}", addr.port().saturating_add(10))
+            } else {
+                cp.to_string()
+            }
+        };
+        let table_count = service.catalog.active().manifest.tables.len();
         tracing::info!(
-            addr = %addr,
+            data_addr = %addr,
+            auth_addr = %auth_addr,
             schema_checksum = %checksum,
-            table_count = service.catalog.active().manifest.tables.len(),
+            schemas = table_count,
+            table_count,
             store_count = service.catalog.active().manifest.stores.len(),
+            sql_artifacts = ready_sql_artifacts,
+            vector_collections = ready_vector_collections,
+            object_buckets = ready_object_buckets,
             enabled_backends = ?enabled_backends,
             protocol_version = UDB_PROTOCOL_VERSION,
             cdc_enabled = service.cdc_engine.is_some(),
             supported_rpcs = SUPPORTED_RPC_NAMES.len(),
-            "UDB DataBroker is ready"
+            "UDB DataBroker is ready: data={addr} auth={auth_addr} schemas={table_count} \
+             sql_artifacts={ready_sql_artifacts} vector_collections={ready_vector_collections} \
+             object_buckets={ready_object_buckets}"
         );
     }
 

@@ -90,7 +90,9 @@ nor `buf` (the broker embeds the annotation contract).
 (`secure:true` alone = system roots + no client cert; can't reach a private-CA/mTLS broker).
 
 **CLI:** `udb proto export --out proto` · `udb serve proto "" 0.0.0.0:50051` ·
-`udb sdk generate --lang <l>` · `udb sdk manifest` · `udb doctor` ·
+`udb sdk generate --lang <l>` · `udb sdk manifest` · `udb requirements` (backend
+contract; run BEFORE first start) · `udb doctor --enterprise` (manifest-aware
+preflight — lists every unmet prereq + missing required backend at once) ·
 `udb native list/docs` · `udb compat-matrix` (authoritative annotations).
 
 ## Error decode (first response to any failure)

@@ -1089,11 +1089,8 @@ pub(crate) fn stores_from_schema(schema: &ProtoSchema) -> Vec<ManifestStore> {
 
     for column in &schema.columns {
         if let Some(storage) = &column.storage {
-            let bucket = if storage.bucket_env_key.trim().is_empty() {
-                format!("{}_{}", owner_table, column.column_name)
-            } else {
-                storage.bucket_env_key.to_ascii_lowercase()
-            };
+            let bucket =
+                resolve_storage_bucket(&storage.bucket_env_key, &owner_table, &column.column_name);
             stores.push(ManifestStore {
                 store_kind: "object".to_string(),
                 backend: normalize_backend(&storage.backend),
@@ -1187,6 +1184,47 @@ pub(crate) fn generic_store_from_proto(
             })
             .collect(),
     }
+}
+
+/// Resolve a storage `bucket_env_key` annotation to a physical bucket name.
+///
+/// The option historically accepted a LITERAL bucket name, while the proto
+/// comment described an env-var indirection — integrators wired env vars per the
+/// docs and hit late provisioning failures. Support BOTH, compatibly:
+///   1. empty            → generated `<table>_<column>` (unchanged fallback);
+///   2. names a SET env var → resolve through it (the documented indirection);
+///   3. otherwise        → treat as a literal bucket name.
+/// S3/MinIO bucket names must be lowercase, so a literal/env-resolved name is
+/// lowercased. When a literal looks like an unresolved env-var key (UPPER /
+/// underscores) we warn, because that lowercases to an invalid bucket name
+/// (underscores are illegal) — the exact MedPAC failure.
+fn resolve_storage_bucket(bucket_env_key: &str, owner_table: &str, column_name: &str) -> String {
+    let raw = bucket_env_key.trim();
+    if raw.is_empty() {
+        return format!("{owner_table}_{column_name}");
+    }
+    // (2) Env-var indirection: a variable with this exact name, if set, wins.
+    if let Ok(value) = std::env::var(raw) {
+        let value = value.trim();
+        if !value.is_empty() {
+            return value.to_ascii_lowercase();
+        }
+    }
+    // (3) Literal. Warn when it looks like an env-var key that wasn't resolved.
+    let looks_like_env_key = raw.chars().any(|c| c.is_ascii_uppercase())
+        && raw
+            .chars()
+            .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_');
+    if looks_like_env_key {
+        tracing::warn!(
+            bucket_env_key = raw,
+            "storage bucket_env_key '{raw}' looks like an env-var name but no such variable is \
+             set; using it as a LITERAL bucket name. S3/MinIO bucket names cannot contain \
+             uppercase letters or underscores — set an env var named '{raw}' to the real bucket \
+             name, or use a literal lowercase hyphenated name."
+        );
+    }
+    raw.to_ascii_lowercase()
 }
 
 pub(crate) fn present_options<const N: usize>(

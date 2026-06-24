@@ -265,6 +265,41 @@ fn parse_args_unknown_sdk_and_native_actions_are_invalid_usage() {
 }
 
 #[test]
+fn parse_args_unknown_command_suggests_nearest_match() {
+    // A near-miss top-level command appends a "did you mean …?" hint while still
+    // listing the known commands (so discoverability is preserved).
+    let (command, _, _, _) = parse_args(&["sevre".to_string()]);
+    assert!(matches!(
+        command,
+        Command::InvalidUsage { ref message }
+            if message.contains("unknown command 'sevre'")
+                && message.contains("did you mean 'serve'?")
+                && message.contains("known:")
+    ));
+
+    // A near-miss dev action suggests the closest action keyword.
+    let (command, _, _, _) = parse_args(&["dev".to_string(), "rest".to_string()]);
+    assert!(matches!(
+        command,
+        Command::InvalidUsage { ref message }
+            if message.contains("unknown dev action 'rest'")
+                && message.contains("did you mean 'reset'?")
+    ));
+}
+
+#[test]
+fn parse_args_unknown_command_with_no_close_match_omits_suggestion() {
+    // A token with no near match must NOT fabricate a misleading suggestion.
+    let (command, _, _, _) = parse_args(&["zzzzzzzz".to_string()]);
+    assert!(matches!(
+        command,
+        Command::InvalidUsage { ref message }
+            if message.contains("unknown command 'zzzzzzzz'")
+                && !message.contains("did you mean")
+    ));
+}
+
+#[test]
 fn project_file_lookup_walks_current_dir_parents() {
     let root = std::env::temp_dir().join(format!("udb-cli-project-file-{}", uuid::Uuid::new_v4()));
     let nested = root.join("apps").join("demo");

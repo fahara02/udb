@@ -331,10 +331,36 @@ async fn run_startup_lifecycle_core(
     // created/altered exactly like user tables. Proto is the single source of
     // truth — there is no separate hand-written DDL path. No-op when native
     // services are disabled or the merge fails.
+    // Capture the project (custom) schema count BEFORE the native
+    // merge so we can report the custom-vs-native split and warn when a project
+    // loaded zero custom schemas (e.g. an over-eager UDB_PROTO_NAMESPACE filter
+    // silently produced a UDB-only broker).
+    let custom_schema_count = schemas.len();
     let (merged_manifest, merged_schemas) =
         crate::runtime::native_catalog::merge_native(manifest, schemas);
     let manifest: &CatalogManifest = &merged_manifest;
     let schemas: &[ProtoSchema] = &merged_schemas;
+
+    // The progress-log prefix MUST reflect the actual run mode.
+    // Only an explicit force-sync may print "udb force-sync:" — a normal serve
+    // bootstrap prints "udb migrate:" so operators don't think the destructive
+    // command is running.
+    let mode_label = if force_sync { "force-sync" } else { "migrate" };
+
+    let native_schema_count = merged_schemas.len().saturating_sub(custom_schema_count);
+    tracing::info!(
+        custom_schemas = custom_schema_count,
+        native_schemas = native_schema_count,
+        total_schemas = merged_schemas.len(),
+        "UDB manifest loaded: {custom_schema_count} custom schema(s) + {native_schema_count} UDB-native schema(s)"
+    );
+    if custom_schema_count == 0 {
+        tracing::warn!(
+            "no custom (project) schemas were loaded — the broker will serve only \
+             UDB-native tables. If you expected your project schemas, check the proto \
+             root and remove/relax UDB_PROTO_NAMESPACE."
+        );
+    }
 
     let mut engine = Engine::new_auto_id();
     let mut report = StartupLifecycleReport {
@@ -709,6 +735,43 @@ async fn run_startup_lifecycle_core(
         }
     }
 
+    // ── Manifest-derived backend preflight (BEFORE SQL apply) ──────────────────
+    // The manifest knows which non-Postgres backends it requires (vector
+    // collections → Qdrant, object buckets → S3/MinIO). Previously a missing
+    // backend was only discovered AFTER the full SQL migration pass (minutes
+    // against a remote DB), and surfaced as ambiguous "drift". Check the whole
+    // required set up front and fail fast with ONE consolidated error so the
+    // operator fixes infra before paying the slow SQL cost.
+    {
+        let mut missing: Vec<String> = Vec::new();
+        for action in &provisioning_plan.actions {
+            match action.resource_kind.as_str() {
+                "vector_collection" if !runtime.qdrant_configured() => missing.push(format!(
+                    "vector collection '{}' requires Qdrant — set UDB_QDRANT_URL (or QDRANT_URL)",
+                    action.resource_name
+                )),
+                "bucket" if !runtime.s3_configured() => missing.push(format!(
+                    "object bucket '{}' requires S3/MinIO — set UDB_MINIO_ENDPOINT (or S3_ENDPOINT)",
+                    action.resource_name
+                )),
+                _ => {}
+            }
+        }
+        if !missing.is_empty() {
+            let summary = format!(
+                "manifest requires {} backend resource(s) that are not configured:\n  - {}",
+                missing.len(),
+                missing.join("\n  - ")
+            );
+            if dry_run || allow_degraded_backend_startup(runtime) {
+                report.warnings.push(summary);
+            } else {
+                // category=backend_missing (NOT schema drift).
+                return Err(fail(runtime, &mut report, "backend_missing", summary));
+            }
+        }
+    }
+
     // Load the prior manifest here — before SQL generation — so we can skip the
     // bootstrap apply entirely when the proto checksum is unchanged.  Previously
     // this was loaded a second time after the apply block, which meant every run
@@ -893,7 +956,7 @@ async fn run_startup_lifecycle_core(
                 }
             }
             runtime
-                .execute_sql_artifacts(&sql_artifacts)
+                .execute_sql_artifacts(&sql_artifacts, mode_label)
                 .await
                 .map_err(|err| fail(runtime, &mut report, "apply_sql", err.to_string()))?;
         }
@@ -1206,9 +1269,12 @@ async fn run_startup_lifecycle_core(
                 // artifact-marker gate fail-closed with one source of truth.
                 reject_review_required_sql_artifacts(runtime, &mut report, &delta)?;
                 // Apply the delta (ALTER TABLE, ADD COLUMN, …) against the live DB.
-                runtime.execute_sql_artifacts(&delta).await.map_err(|err| {
-                    fail(runtime, &mut report, "apply_delta_sql", err.to_string())
-                })?;
+                runtime
+                    .execute_sql_artifacts(&delta, mode_label)
+                    .await
+                    .map_err(|err| {
+                        fail(runtime, &mut report, "apply_delta_sql", err.to_string())
+                    })?;
                 report.applied_sql_artifacts += delta.len();
 
                 // Write the delta artifacts to db_ops/postgres/bootstrap/ so operators
@@ -1303,7 +1369,7 @@ async fn run_startup_lifecycle_core(
         }
     } else {
         runtime
-            .execute_sql_artifacts_serial(&seed_artifacts)
+            .execute_sql_artifacts_serial(&seed_artifacts, mode_label)
             .await
             .map_err(|err| fail(runtime, &mut report, "apply_seed_sql", err.to_string()))?;
         report.step(
@@ -1602,7 +1668,7 @@ async fn run_startup_lifecycle_core(
                 .collect();
             if !artifacts.is_empty() {
                 runtime
-                    .execute_sql_artifacts(&artifacts)
+                    .execute_sql_artifacts(&artifacts, mode_label)
                     .await
                     .map_err(|err| {
                         fail(runtime, &mut report, "auto_alter_apply", err.to_string())

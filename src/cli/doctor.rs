@@ -59,7 +59,40 @@ fn capability_matrix_for_configured_backends(
     udb::backend::capability_matrix_configured(configured_backend_tokens)
 }
 
-pub(crate) async fn run_doctor(with_probes: bool, enterprise: bool) -> DoctorReport {
+/// Best-effort load of the project manifest for manifest-aware doctor checks.
+/// Returns `None` (not an error) when no parseable proto root is present, so
+/// `udb doctor` still runs the generic checks outside a project directory.
+fn load_manifest_best_effort(
+    proto_root: &std::path::Path,
+    namespace: &str,
+) -> Option<udb::CatalogManifest> {
+    let config = udb::ParserConfig::new(namespace);
+    let report = udb::parse_directory_report(proto_root, &config).ok()?;
+    udb::CatalogManifest::from_schemas(&report.schemas).ok()
+}
+
+/// Whether a manifest-required backend is configured, reflecting the runtime's
+/// ACTUAL view for the key backends (so a file-configured Qdrant/S3/Redis is
+/// recognised, not just an env var) and falling back to env presence otherwise.
+fn backend_configured(runtime: &DataBrokerRuntime, req: &udb::BackendRequirement) -> bool {
+    match req.backend.as_str() {
+        "qdrant" => runtime.qdrant_configured(),
+        "s3" | "minio" => runtime.s3_configured(),
+        "redis" => runtime.config().has_redis(),
+        _ => req.env_keys.iter().any(|k| {
+            std::env::var(k)
+                .map(|v| !v.trim().is_empty())
+                .unwrap_or(false)
+        }),
+    }
+}
+
+pub(crate) async fn run_doctor(
+    with_probes: bool,
+    enterprise: bool,
+    proto_root: &std::path::Path,
+    namespace: &str,
+) -> DoctorReport {
     let runtime = DataBrokerRuntime::from_env().await;
     let init = runtime.init_report();
     let mut errors = Vec::new();
@@ -91,6 +124,48 @@ pub(crate) async fn run_doctor(with_probes: bool, enterprise: bool) -> DoctorRep
                     }
                 }
             }
+        }
+
+        // Manifest-aware backend checks: the true prerequisites of a
+        // proto-driven broker depend on the manifest (vector/object/cache
+        // backends), not just the generic enterprise subset. Load the same
+        // manifest `serve` will load (best-effort, from the project dir) and
+        // report any required backend that is not configured — the SAME
+        // condition that would later stop `udb serve`.
+        match load_manifest_best_effort(proto_root, namespace) {
+            Some(manifest) => {
+                for req in udb::required_backends(&manifest) {
+                    if backend_configured(&runtime, &req) {
+                        continue;
+                    }
+                    let line = format!(
+                        "enterprise[{}] backend-{}: manifest requires {} '{}' (owner {}) but {} is not configured → set {}",
+                        if req.fatal { "FAIL" } else { "WARN" },
+                        req.backend,
+                        req.resource_kind,
+                        req.resource_name,
+                        req.owner,
+                        req.backend,
+                        if req.env_keys.is_empty() {
+                            "its backend config".to_string()
+                        } else {
+                            req.env_keys.join(" (or ")
+                        },
+                    );
+                    if req.fatal {
+                        if !errors.contains(&line) {
+                            errors.push(line);
+                        }
+                    } else if !warnings.contains(&line) {
+                        warnings.push(line);
+                    }
+                }
+            }
+            None => warnings.push(
+                "enterprise: could not load a proto manifest from the current directory — \
+                 run `udb requirements` from the project root for manifest-aware backend checks"
+                    .to_string(),
+            ),
         }
     }
     let mut system_catalog = None;

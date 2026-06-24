@@ -121,12 +121,13 @@ graph LR
 - **src/backend/plugins/sqlite.rs** — NW3-2 — SQLite plugin. Same shape as the MySQL plugin. The runtime register function detects `sqlite::memory:` / `:memory:` in the DSN and clamps to `max_connections = 1` so the in-memory schema and data survive acros… · types: `SqlitePlugin` · consts: `PLUGIN`
 - **src/backend/plugins/weaviate.rs** — C9 — Weaviate backend plugin. REST + GraphQL via reqwest. Same shape as the Qdrant plugin. · types: `WeaviatePlugin` · consts: `PLUGIN`
 
-### cli  (14 files)
+### cli  (15 files)
 
 - **src/cli/args.rs** — main.rs split — args (Phase H). · types: `Command`, `InitArgs`, `SdkSelector`, `SdkAction`, `NativeAction`, `AuthCommand`, `DevAction` · fns: `parse`, `split_csv`, `parse_args`
 - **src/cli/auth.rs** — Native auth CLI commands. These commands call the generated UDB authn/authz/apikey clients. The CLI is a control-plane convenience layer only; CRUD still flows through the native service protos and their server implem… · fns: `run_auth_command`
 - **src/cli/doctor.rs** — main.rs split — doctor (Phase H). · types: `DoctorReport`, `DoctorStatus`, `CompatEntry` · fns: `exit_code`, `doctor_status`, `run_doctor`, `build_compat_matrix`, `print_doctor_human`, `bool_icon`
 - **src/cli/env_setup.rs** — main.rs split — env_setup (Phase H). · types: `DoctorOutputMode` · fns: `run_force_sync_for_instance`, `run_dry_run_for_instance`, `load_project_dotenv`, `resolve_existing_project_path`, `load_udb_config_overlay`, `parse_config_overlay_value`, `cli_config_path`, `set_env_from_yaml`, `yaml_string`, `expand_env_template`, `set_env_if_absent`, `set_env` · consts: `DEFAULT_GRPC_BIND_HOST`, `DEFAULT_GRPC_TARGET_HOST`, `DEFAULT_GRPC_PORT`, `DEFAULT_GRPC_BIND_ADDR`, `DEFAULT_GRPC_TARGET_ADDR`
+- **src/cli/help.rs** — CLI discoverability layer (stopgap pending the full clap migration in `CLI_UPGRADE_PLAN.md`). The hand-rolled `parse_args` has no `--help`/`-h`/ `--version`; this module answers them from a static registry so `udb` is… · fns: `handle_help_or_version`
 - **src/cli/init.rs** — `udb init` command runner. · types: `InitRunError` · fns: `run`
 - **src/cli/init_prompt.rs** — Line-mode prompt fallback for `udb init`. This module is deliberately narrow: it collects choices and returns them to the init core. Planning, validation, and disk writes stay outside prompts. · types: `InitPromptResult`, `InitPromptError`, `InitPromptCatalog`, `InitPromptSelection` · fns: `run_init_prompts`, `run_init_prompts`
 - **src/cli/mod.rs** — CLI entry point internals (Phase H split of main.rs).
@@ -252,7 +253,7 @@ graph LR
 - **src/planning/broker/helpers.rs** — broker.rs split — helpers (Phase I). · fns: `sql_operator`, `validate_write_context`, `validate_stream_context`, `allowed_columns`, `column_resolver`, `resolve_column`, `normalize_record_keys`, `normalize_filter_keys`, `is_server_owned_column`, `is_update_excluded_column`, `conflict_target_is_unique`, `sorted_columns`, `store_option`, `store_option_i32`, `store_option_bool`, `collect_payload_fields`, `normalize_store_kind`, `quote_list`
 - **src/planning/broker/mod.rs** — types: `RequestContext`, `SelectPlanRequest`, `UpsertPlanRequest`, `DeletePlanRequest`, `CachePolicyRequest`, `VectorSearchPlanRequest`, `VectorUpsertPlanRequest`, `VectorQueryPlan`, `VectorUpsertPlan`, `ObjectAccessRequest`, `ObjectStreamPlanRequest`, `ObjectAccessDecision`, `ObjectStreamPlan`, `AuditEvent`, `CachePolicyPlan`, `SqlOperationPlan`, `TransactionMutation`, `TransactionPlanRequest`, `TransactionPlan`, `GenericDispatchRequest`, `GenericDispatchPlan`, `SortSpec`, `QueryPlan` · fns: `requires_primary_read`, `replica_lag_override`, `passed`, `passed`, `passed`, `passed`, `passed`, `passed`, `passed`, `build_select_query_plan`, `build_upsert_plan`, `build_delete_plan`, `build_transaction_plan`, `build_cache_policy_plan`, `build_vector_search_plan`, `build_vector_upsert_plan`, `evaluate_object_access`, `build_object_stream_plan`, `build_audit_event`, `build_generic_dispatch_plan`
 - **src/planning/mod.rs** — (no public items)
-- **src/planning/provisioning.rs** — types: `ProvisioningPlan`, `ProvisioningAction`, `ProvisioningParameter` · fns: `build_provisioning_plan`, `try_build_provisioning_plan` · consts: `ACTION_ENSURE`
+- **src/planning/provisioning.rs** — types: `ProvisioningPlan`, `ProvisioningAction`, `ProvisioningParameter`, `BackendRequirement` · fns: `build_provisioning_plan`, `try_build_provisioning_plan`, `required_backends` · consts: `ACTION_ENSURE`
 
 ### protocol  (1 files)
 

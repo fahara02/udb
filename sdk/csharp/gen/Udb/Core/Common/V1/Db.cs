@@ -6720,7 +6720,7 @@ namespace udb.core.Common.V1 {
     public const int BucketEnvKeyFieldNumber = 2;
     private string bucketEnvKey_ = "";
     /// <summary>
-    /// Env var that resolves the bucket name
+    /// Bucket name. If the value names a SET env var, it resolves through it; otherwise it is used as a literal bucket name (lowercased; must be S3/MinIO-valid).
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]

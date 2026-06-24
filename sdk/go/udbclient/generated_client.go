@@ -26,7 +26,7 @@ package udbclient
 // hatches for RPCs that don't yet have a typed helper.
 //
 // Covers 265 RPCs across 16 services
-// (UDB v0.3.6, wire protocol 1.0.0).
+// (UDB v0.3.7, wire protocol 1.0.0).
 
 import (
 	"context"
@@ -56,7 +56,7 @@ const (
 // SDKVersion is the UDB release this generated layer was rendered from. It is
 // baked at generation time and is the version the bundled `udb` CLI launcher
 // (cmd/udb) will resolve.
-const SDKVersion = "0.3.6"
+const SDKVersion = "0.3.7"
 
 // GeneratedProtocolVersion mirrors the wire protocol this layer targets. It is
 // the generated companion to the hand-written udbclient.ProtocolVersion and is
@@ -273,20 +273,46 @@ func (g *GeneratedClient) Conn() grpc.ClientConnInterface { return g.conn }
 // Meta returns the configured caller Metadata.
 func (g *GeneratedClient) Meta() Metadata { return g.options().Meta }
 
+// newRequestID returns a unique-enough per-call request id. Not security
+// sensitive — it satisfies the broker's request-context requirement and aids
+// tracing; uses the auto-seeded global math/rand to avoid a new dependency.
+func newRequestID() string {
+	return fmt.Sprintf("req-%016x%016x", rand.Uint64(), rand.Uint64())
+}
+
 // outgoingContext attaches the 8 UDB headers plus optional auth / api-key /
 // request-id, reusing joinScopes from the hand-written client.go.
 func (g *GeneratedClient) outgoingContext(ctx context.Context) context.Context {
 	// Single atomic snapshot so meta + auth + api-key are read all-or-nothing.
 	o := g.options()
 	m := o.Meta
+	// critic.md §13: native RPCs require a request context (x-request-id /
+	// x-correlation-id / traceparent) and fail closed ("request context
+	// required") without one. Guarantee a NON-EMPTY request id — explicit
+	// RequestID, else the correlation id, else a freshly generated one — and a
+	// non-empty correlation id (reuse the request id), so a caller that set
+	// neither still satisfies the requirement instead of getting a surprise
+	// INVALID_ARGUMENT on a basic happy-path RPC.
+	requestID := o.RequestID
+	if requestID == "" {
+		requestID = m.CorrelationID
+	}
+	if requestID == "" {
+		requestID = newRequestID()
+	}
+	correlationID := m.CorrelationID
+	if correlationID == "" {
+		correlationID = requestID
+	}
 	pairs := []string{
 		"x-tenant-id", m.TenantID,
 		"x-user-id", m.UserID,
 		"x-purpose", m.Purpose,
-		"x-correlation-id", m.CorrelationID,
+		"x-correlation-id", correlationID,
 		"x-service-identity", m.ServiceIdentity,
 		"x-udb-project-id", m.ProjectID,
 		"x-udb-client-catalog-version", m.ClientCatalogVersion,
+		"x-request-id", requestID,
 	}
 	if len(m.Scopes) > 0 {
 		pairs = append(pairs, "x-scopes", joinScopes(m.Scopes))
@@ -296,11 +322,6 @@ func (g *GeneratedClient) outgoingContext(ctx context.Context) context.Context {
 	}
 	if o.APIKey != "" {
 		pairs = append(pairs, "x-api-key", o.APIKey)
-	}
-	if rid := o.RequestID; rid != "" {
-		pairs = append(pairs, "x-request-id", rid)
-	} else if m.CorrelationID != "" {
-		pairs = append(pairs, "x-request-id", m.CorrelationID)
 	}
 	return metadata.AppendToOutgoingContext(ctx, pairs...)
 }

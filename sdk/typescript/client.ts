@@ -1,6 +1,7 @@
 import * as grpc from "@grpc/grpc-js";
 import * as protoLoader from "@grpc/proto-loader";
 import path from "path";
+import { randomUUID } from "node:crypto";
 
 import "./wkt"; // registers the google.protobuf.Struct serializer (must precede any loadSync)
 import { defaultProtoRoot } from "./protoRoot";
@@ -22,10 +23,16 @@ export interface UdbMetadata {
 
 export function metadata(meta: UdbMetadata): grpc.Metadata {
   const headers = new grpc.Metadata();
+  // §13: native RPCs require a request context (x-request-id / x-correlation-id /
+  // traceparent) and fail closed without one. Always send a request id, and fall
+  // back to it for the correlation id when the caller set none.
+  const requestId = randomUUID();
+  const correlationId = meta.correlationId || requestId;
   headers.set("x-tenant-id", meta.tenantId);
   headers.set("x-user-id", meta.userId ?? "");
   headers.set("x-purpose", meta.purpose);
-  headers.set("x-correlation-id", meta.correlationId);
+  headers.set("x-correlation-id", correlationId);
+  headers.set("x-request-id", requestId);
   headers.set("x-scopes", (meta.scopes ?? []).join(","));
   headers.set("x-service-identity", meta.serviceIdentity ?? "example.service");
   headers.set("x-udb-project-id", meta.projectId ?? "default");

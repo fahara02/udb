@@ -121,15 +121,20 @@ publish). Root-level `.claude-plugin/` is intentionally ignored; keep Claude
 metadata inside `udb-skill/`.
 
 ## Keeping wrappers in sync
-`shared/<skill>.md` is canonical. After editing one, regenerate its wrappers
-(the publish workflow's validate job **warns** if a Claude reference drifts from
-its shared file):
+`shared/<skill>.md` is canonical. After editing it, **regenerate the wrappers
+with the sync script** (each wrapper = its fixed preamble + the canonical body;
+the Claude reference is a verbatim copy; Ollama re-closes its `SYSTEM """` block):
+```bash
+python sync_skills.py            # rewrite the using-udb wrappers from shared/using-udb.md
+python sync_skills.py --check    # CI gate: exit 1 if any wrapper drifted
+```
+The script is scoped to **`using-udb`**. The `udb-coding` OpenAI/Ollama wrappers
+inline the companion files (`backends`, `rust-stack`), so regenerate those with
+their own flow:
 ```powershell
-foreach ($s in 'using-udb','udb-coding') {
-  $body = Get-Content "shared/$s.md" -Raw
-  Set-Content "plugins/udb/skills/$s/references/$s.md" $body -Encoding utf8 -NoNewline
-  # (re-embed $body under the headers in the matching openai/ and ollama/ wrappers)
-}
+$body = Get-Content "shared/udb-coding.md" -Raw
+Set-Content "plugins/udb/skills/udb-coding/references/udb-coding.md" $body -Encoding utf8 -NoNewline
+# then re-embed body (+ companions) under the headers in openai/ and ollama/ udb-coding wrappers
 ```
 
 ## License

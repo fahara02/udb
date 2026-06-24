@@ -129,8 +129,8 @@ pub use plan_approval::{
     plan_matches_current_diff,
 };
 pub use provisioning::{
-    ProvisioningAction, ProvisioningParameter, ProvisioningPlan, build_provisioning_plan,
-    try_build_provisioning_plan,
+    BackendRequirement, ProvisioningAction, ProvisioningParameter, ProvisioningPlan,
+    build_provisioning_plan, required_backends, try_build_provisioning_plan,
 };
 pub use runtime::core::{BackendProbeResult, EnqueueOutboxEventResult, PostgresPrivilegeReport};
 pub use runtime::{DataBrokerRuntime, RuntimeInitReport};

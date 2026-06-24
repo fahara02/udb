@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	assetentityv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/asset/entity/v1"
@@ -132,14 +133,37 @@ func (f *StorageFacade) UploadFile(ctx context.Context, filename string, data []
 // pre-upload tenant quota check against sizeBytes. tenant/project default to the
 // caller Metadata.
 func (f *StorageFacade) RegisterUpload(ctx context.Context, filename, contentType, fileType string, sizeBytes int64) (*storagev1.RegisterUploadResponse, error) {
-	return f.Raw.RegisterUpload(ctx, &storagev1.RegisterUploadRequest{
+	req := &storagev1.RegisterUploadRequest{
 		TenantId:    f.meta.TenantID,
-		ProjectId:   f.meta.ProjectID,
 		Filename:    filename,
 		ContentType: contentType,
 		FileType:    fileType,
 		SizeBytes:   sizeBytes,
-	})
+	}
+	if isUUIDString(f.meta.ProjectID) {
+		req.ProjectId = f.meta.ProjectID
+	}
+	return f.Raw.RegisterUpload(ctx, req)
+}
+
+func isUUIDString(value string) bool {
+	value = strings.TrimSpace(value)
+	if len(value) != 36 {
+		return false
+	}
+	for i, r := range value {
+		switch i {
+		case 8, 13, 18, 23:
+			if r != '-' {
+				return false
+			}
+		default:
+			if !((r >= '0' && r <= '9') || (r >= 'a' && r <= 'f') || (r >= 'A' && r <= 'F')) {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 // FinalizeUpload marks a registered file as uploaded, persisting its actual
@@ -332,14 +356,21 @@ func (f *AssetFacade) GetPipelineDefinition(ctx context.Context, definitionID st
 // RegisterAsset records an asset backed by a stored fileID. metadataJSON is an
 // optional JSON blob. tenant/project default to the caller Metadata.
 func (f *AssetFacade) RegisterAsset(ctx context.Context, fileID, name, mediaType, metadataJSON string) (*assetv1.RegisterAssetResponse, error) {
-	return f.Raw.RegisterAsset(ctx, &assetv1.RegisterAssetRequest{
+	req := &assetv1.RegisterAssetRequest{
 		TenantId:  f.meta.TenantID,
-		ProjectId: f.meta.ProjectID,
 		FileId:    fileID,
 		Name:      name,
 		MediaType: mediaType,
 		Metadata:  metadataJSON,
-	})
+	}
+	// Same UUID-column contract as RegisterUpload: the server persists
+	// project_id through logical_uuid_or_null, so a human project code (e.g.
+	// "private") yields InvalidArgument. Only send it when it's a canonical UUID;
+	// otherwise omit it (project is optional server-side).
+	if isUUIDString(f.meta.ProjectID) {
+		req.ProjectId = f.meta.ProjectID
+	}
+	return f.Raw.RegisterAsset(ctx, req)
 }
 
 // StartPipeline launches a pipeline definition against an asset. contextJSON is

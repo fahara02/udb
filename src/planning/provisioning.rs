@@ -234,6 +234,87 @@ fn store_action(
     })
 }
 
+/// A non-Postgres backend a loaded manifest requires, with the env vars that
+/// configure it and whether its absence is fatal to startup. Drives the
+/// manifest-aware preflight surfaced by `udb requirements` and
+/// `udb doctor --enterprise`, so an operator can see the full backend contract
+/// BEFORE the first (slow) startup attempt instead of discovering it from a
+/// late runtime failure.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct BackendRequirement {
+    /// Canonical backend token, e.g. `"qdrant"`, `"s3"`, `"redis"`.
+    pub backend: String,
+    /// Canonical resource kind, e.g. `"vector_collection"`, `"bucket"`.
+    pub resource_kind: String,
+    /// The collection/bucket/keyspace name the manifest declares.
+    pub resource_name: String,
+    /// `schema.table` that owns the store (for diagnostics).
+    pub owner: String,
+    /// Accepted env var names that configure this backend (first = canonical).
+    pub env_keys: Vec<&'static str>,
+    /// `true` when a missing config aborts startup; `false` = degraded/no-op.
+    pub fatal: bool,
+}
+
+/// Env vars (and aliases) that configure a given backend token, plus whether a
+/// manifest requirement on it is fatal when unset. Centralised so the preflight,
+/// doctor, and `udb requirements` all report the SAME names the runtime reads.
+fn backend_env_contract(backend: &str) -> (Vec<&'static str>, bool) {
+    match backend {
+        "qdrant" => (vec!["UDB_QDRANT_URL", "QDRANT_URL"], true),
+        "s3" | "minio" => (vec!["UDB_MINIO_ENDPOINT", "S3_ENDPOINT"], true),
+        "redis" => (vec!["UDB_REDIS_DSN", "REDIS_URL"], false),
+        "mongodb" => (vec!["UDB_MONGODB_DSN", "MONGODB_URI"], false),
+        "neo4j" => (vec!["UDB_NEO4J_URI", "NEO4J_URI"], false),
+        "clickhouse" => (vec!["UDB_CLICKHOUSE_URL", "CLICKHOUSE_URL"], false),
+        "cassandra" => (vec!["UDB_CASSANDRA_CONTACT_POINTS"], false),
+        _ => (Vec::new(), false),
+    }
+}
+
+/// Enumerate the non-Postgres backends a manifest requires. Postgres-tier tables
+/// are excluded (Postgres is the mandatory base). Stable order: fatal first,
+/// then by backend/resource for deterministic output.
+pub fn required_backends(manifest: &CatalogManifest) -> Vec<BackendRequirement> {
+    let mut out: Vec<BackendRequirement> = manifest
+        .stores
+        .iter()
+        .filter_map(|store| {
+            let backend = BackendKind::from_store_kind(&store.store_kind, &store.backend)
+                .map(|kind| kind.as_str().to_string())
+                .unwrap_or_else(|| store.backend.trim().to_ascii_lowercase());
+            // Postgres-backed stores need no extra backend config.
+            if backend.is_empty() || backend == "postgres" || backend == "sql" {
+                return None;
+            }
+            let (env_keys, fatal) = backend_env_contract(&backend);
+            Some(BackendRequirement {
+                backend,
+                resource_kind: resource_kind(store),
+                resource_name: store.resource_name.clone(),
+                owner: format!("{}.{}", store.owner_schema, store.owner_table),
+                env_keys,
+                fatal,
+            })
+        })
+        .collect();
+    out.sort_by(|a, b| {
+        (
+            !a.fatal,
+            a.backend.as_str(),
+            a.resource_kind.as_str(),
+            a.resource_name.as_str(),
+        )
+            .cmp(&(
+                !b.fatal,
+                b.backend.as_str(),
+                b.resource_kind.as_str(),
+                b.resource_name.as_str(),
+            ))
+    });
+    out
+}
+
 fn rollback_action(store: &ManifestStore) -> String {
     match store.store_kind.as_str() {
         "cache" | "kv" | "key_value" | "key-value" => "delete_keyspace_requires_review",

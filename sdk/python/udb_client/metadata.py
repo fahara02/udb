@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field, replace
 import json
 import os
+import uuid
 from typing import Any, Iterable, Sequence
 
 from udb.entity.v1 import types_pb2
@@ -186,11 +187,18 @@ class Metadata:
         )
 
     def to_grpc_metadata(self) -> tuple[tuple[str, str], ...]:
+        # §13: native RPCs require a request context (x-request-id /
+        # x-correlation-id / traceparent) and fail closed without one. Always
+        # send a request id, and fall back to it for the correlation id when the
+        # caller set none.
+        request_id = uuid.uuid4().hex
+        correlation_id = self.correlation_id or request_id
         headers: list[tuple[str, str]] = [
             ("x-tenant-id", self.tenant_id),
             ("x-user-id", self.user_id),
             ("x-purpose", self.purpose),
-            ("x-correlation-id", self.correlation_id),
+            ("x-correlation-id", correlation_id),
+            ("x-request-id", request_id),
             ("x-scopes", ",".join(self.scopes)),
             ("x-service-identity", self.service_identity),
             ("x-udb-project-id", self.project_id),

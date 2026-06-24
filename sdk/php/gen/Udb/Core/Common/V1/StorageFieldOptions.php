@@ -21,7 +21,7 @@ class StorageFieldOptions extends \Google\Protobuf\Internal\Message
      */
     protected $backend = 0;
     /**
-     * Env var that resolves the bucket name
+     * Bucket name. If the value names a SET env var, it resolves through it; otherwise it is used as a literal bucket name (lowercased; must be S3/MinIO-valid).
      *
      * Generated from protobuf field <code>string bucket_env_key = 2 [json_name = "bucketEnvKey"];</code>
      */
@@ -78,7 +78,7 @@ class StorageFieldOptions extends \Google\Protobuf\Internal\Message
      *     @type int $backend
      *           Which backend owns this key
      *     @type string $bucket_env_key
-     *           Env var that resolves the bucket name
+     *           Bucket name. If the value names a SET env var, it resolves through it; otherwise it is used as a literal bucket name (lowercased; must be S3/MinIO-valid).
      *     @type string $key_prefix
      *           Fixed path prefix, e.g. "udb-docs/{tenant_id}"
      *     @type bool $presigned_read
@@ -127,7 +127,7 @@ class StorageFieldOptions extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Env var that resolves the bucket name
+     * Bucket name. If the value names a SET env var, it resolves through it; otherwise it is used as a literal bucket name (lowercased; must be S3/MinIO-valid).
      *
      * Generated from protobuf field <code>string bucket_env_key = 2 [json_name = "bucketEnvKey"];</code>
      * @return string
@@ -138,7 +138,7 @@ class StorageFieldOptions extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Env var that resolves the bucket name
+     * Bucket name. If the value names a SET env var, it resolves through it; otherwise it is used as a literal bucket name (lowercased; must be S3/MinIO-valid).
      *
      * Generated from protobuf field <code>string bucket_env_key = 2 [json_name = "bucketEnvKey"];</code>
      * @param string $var

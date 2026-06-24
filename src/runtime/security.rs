@@ -1208,7 +1208,22 @@ pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext,
         // key from JWKS when no static PEM is present.
         let auth_header = header("authorization");
         let token = auth_header.strip_prefix("Bearer ").ok_or_else(|| {
-            Status::unauthenticated("missing or invalid authorization header (JWT required)")
+            // §12: the DataBroker data plane authenticates a JWT bearer (or mTLS),
+            // NOT an opaque API key — the headers-only security layer cannot do a
+            // per-request key lookup. An app that set only `x-api-key` otherwise
+            // gets a confusing "JWT required"; name the supported path instead.
+            if !header("x-api-key").trim().is_empty() {
+                Status::unauthenticated(
+                    "API key is not accepted on the DataBroker data plane (it authenticates a \
+                     JWT bearer or mTLS only). Log in (username/password -> access_token) and \
+                     send it as 'authorization: Bearer <jwt>'.",
+                )
+            } else {
+                Status::unauthenticated(
+                    "missing or invalid authorization header: send 'authorization: Bearer <jwt>' \
+                     (obtain the JWT via login).",
+                )
+            }
         })?;
 
         // Single JWT validation path: reuse the CACHED validator (the data plane

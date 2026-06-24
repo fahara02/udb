@@ -37,24 +37,34 @@ impl DataBrokerRuntime {
     /// Set to 1 to force fully-serial DDL (safest for serverless / shared PG).
     /// The single cross-schema FK artifact ("zzz_foreign_keys.sql") always runs
     /// last, serially, after all per-schema work has completed.
+    /// `mode_label` is the migration-mode prefix used in progress logs:
+    /// pass `"migrate"` for a normal `udb serve` startup and
+    /// `"force-sync"` ONLY when an explicit force-sync is active — never
+    /// hard-code "force-sync" here or a normal serve looks like the destructive
+    /// command is running.
     pub async fn execute_sql_artifacts(
         &self,
         artifacts: &[GeneratedArtifact],
+        mode_label: &str,
     ) -> Result<(), tonic::Status> {
-        self.execute_sql_artifacts_internal(artifacts, true).await
+        self.execute_sql_artifacts_internal(artifacts, true, mode_label)
+            .await
     }
 
     pub async fn execute_sql_artifacts_serial(
         &self,
         artifacts: &[GeneratedArtifact],
+        mode_label: &str,
     ) -> Result<(), tonic::Status> {
-        self.execute_sql_artifacts_internal(artifacts, false).await
+        self.execute_sql_artifacts_internal(artifacts, false, mode_label)
+            .await
     }
 
     pub(crate) async fn execute_sql_artifacts_internal(
         &self,
         artifacts: &[GeneratedArtifact],
         allow_parallel: bool,
+        mode_label: &str,
     ) -> Result<(), tonic::Status> {
         let pool = self.pg_pool()?;
         let ledger_schema = self.config.migration.ledger_schema.as_str();
@@ -97,7 +107,7 @@ impl DataBrokerRuntime {
                     applied_set.contains(&(artifact.rel_path.clone(), checksum.clone()));
                 if force_reseed_seed {
                     eprintln!(
-                        "udb force-sync: force-reseed seed {} | computed={}",
+                        "udb {mode_label}: force-reseed seed {} | computed={}",
                         artifact.rel_path,
                         &checksum[..16.min(checksum.len())],
                     );
@@ -110,7 +120,7 @@ impl DataBrokerRuntime {
                         .map(|(_, c)| c.as_str())
                         .unwrap_or("(not in applied_set)");
                     eprintln!(
-                        "udb force-sync: pending {} | computed={} | db={}",
+                        "udb {mode_label}: pending {} | computed={} | db={}",
                         artifact.rel_path,
                         &checksum[..16.min(checksum.len())],
                         &db_checksum[..16.min(db_checksum.len())]
@@ -119,11 +129,23 @@ impl DataBrokerRuntime {
                 force_reseed_seed || !is_applied
             })
             .collect::<Vec<_>>();
-        eprintln!("udb force-sync: {} pending SQL artifact(s)", pending.len());
+        eprintln!(
+            "udb {mode_label}: {} pending SQL artifact(s)",
+            pending.len()
+        );
+
+        // Emit a throttled progress heartbeat during apply so a
+        // long bootstrap against a remote DB does not look hung, and mirror
+        // progress into the queryable `migration_runtime_state` singleton row.
+        let total = pending.len();
+        let started = std::time::Instant::now();
+        let applied = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let step = (total / 20).max(1);
+        let mode = mode_label.to_string();
 
         if !allow_parallel {
             for artifact in &pending {
-                eprintln!("udb force-sync: applying {}", artifact.rel_path);
+                tracing::debug!(mode = %mode, artifact = %artifact.rel_path, "applying artifact");
                 Self::apply_sql_artifact(
                     pool,
                     artifact,
@@ -131,7 +153,19 @@ impl DataBrokerRuntime {
                     ledger_schema,
                 )
                 .await?;
-                eprintln!("udb force-sync: applied {}", artifact.rel_path);
+                let n = applied.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
+                if n == total || n % step == 0 {
+                    migration_heartbeat(
+                        pool,
+                        ledger_schema,
+                        &mode,
+                        &artifact.rel_path,
+                        n,
+                        total,
+                        started,
+                    )
+                    .await;
+                }
             }
             return Ok(());
         }
@@ -147,7 +181,7 @@ impl DataBrokerRuntime {
             .partition(|a| a.rel_path.starts_with("zzz_") || a.schema.is_empty());
 
         for artifact in &serial_first {
-            eprintln!("udb force-sync: applying {}", artifact.rel_path);
+            tracing::debug!(mode = %mode, artifact = %artifact.rel_path, "applying artifact");
             Self::apply_sql_artifact(
                 pool,
                 artifact,
@@ -155,7 +189,19 @@ impl DataBrokerRuntime {
                 ledger_schema,
             )
             .await?;
-            eprintln!("udb force-sync: applied {}", artifact.rel_path);
+            let n = applied.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
+            if n == total || n % step == 0 {
+                migration_heartbeat(
+                    pool,
+                    ledger_schema,
+                    &mode,
+                    &artifact.rel_path,
+                    n,
+                    total,
+                    started,
+                )
+                .await;
+            }
         }
 
         // Run per-schema artifacts with bounded concurrency using a semaphore to
@@ -172,6 +218,13 @@ impl DataBrokerRuntime {
                 let sem = sem.clone();
                 let force_reseed = self.config.migration.force_reseed;
                 let ledger_schema = ledger_schema.to_string();
+                let mode = mode.clone();
+                let applied = applied.clone();
+                // `started`/`total`/`step` are Copy — bind owned locals so the
+                // `async move` block captures copies, not borrows of the loop env.
+                let started = started;
+                let total = total;
+                let step = step;
                 async move {
                     // Hold the semaphore permit for the full duration of this DDL.
                     let _permit = sem
@@ -179,12 +232,25 @@ impl DataBrokerRuntime {
                         .await
                         .expect("DDL semaphore unexpectedly closed");
 
-                    eprintln!("udb force-sync: applying {}", artifact.rel_path);
+                    tracing::debug!(mode = %mode, artifact = %artifact.rel_path, "applying artifact");
                     let result =
                         Self::apply_sql_artifact(&pool, artifact, force_reseed, &ledger_schema)
                             .await;
                     if result.is_ok() {
-                        eprintln!("udb force-sync: applied {}", artifact.rel_path);
+                        let n =
+                            applied.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
+                        if n == total || n % step == 0 {
+                            migration_heartbeat(
+                                &pool,
+                                &ledger_schema,
+                                &mode,
+                                &artifact.rel_path,
+                                n,
+                                total,
+                                started,
+                            )
+                            .await;
+                        }
                     }
                     result
                 }
@@ -197,7 +263,7 @@ impl DataBrokerRuntime {
 
         // Serial pass: cross-schema FK constraints and other final artifacts.
         for artifact in &serial_last {
-            eprintln!("udb force-sync: applying {}", artifact.rel_path);
+            tracing::debug!(mode = %mode, artifact = %artifact.rel_path, "applying artifact");
             Self::apply_sql_artifact(
                 pool,
                 artifact,
@@ -205,7 +271,19 @@ impl DataBrokerRuntime {
                 ledger_schema,
             )
             .await?;
-            eprintln!("udb force-sync: applied {}", artifact.rel_path);
+            let n = applied.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
+            if n == total || n % step == 0 {
+                migration_heartbeat(
+                    pool,
+                    ledger_schema,
+                    &mode,
+                    &artifact.rel_path,
+                    n,
+                    total,
+                    started,
+                )
+                .await;
+            }
         }
         Ok(())
     }
@@ -218,6 +296,46 @@ impl DataBrokerRuntime {
     ) -> Result<(), tonic::Status> {
         let checksum = artifact_content_checksum(&artifact.content);
         let schema_migrations = ledger_relation(ledger_schema, "schema_migrations");
+        const CHUNK_THRESHOLD: usize = 1024 * 1024; // 1 MiB
+        let is_seed = artifact.kind == "seed";
+        let is_large = artifact.content.len() > CHUNK_THRESHOLD;
+
+        // FAST PATH: a small, BEGIN/COMMIT-wrapped DDL artifact folds its ledger
+        // 'applied' record INTO its own transaction, so the DDL and the ledger
+        // commit atomically in ONE round-trip — instead of three (a separate
+        // 'in_progress' write before + 'applied' write after). On a large remote
+        // manifest (hundreds of artifacts) those two extra round-trips per
+        // artifact dominate; folding removes them. On any failure the whole
+        // transaction rolls back and nothing is recorded, so the artifact
+        // correctly re-applies on the next run (the content checksum is computed
+        // on the UNFOLDED `artifact.content`, so the skip ledger is unaffected).
+        let trimmed = artifact.content.trim_end();
+        if !is_seed && !is_large && trimmed.ends_with("COMMIT;") {
+            let body = trimmed.strip_suffix("COMMIT;").unwrap_or(trimmed);
+            let folded = format!(
+                "{body}\n{ledger}\nCOMMIT;\n",
+                ledger = applied_ledger_upsert_sql(&schema_migrations, artifact, &checksum)
+            );
+            return pool
+                .execute(folded.as_str())
+                .await
+                .map(|_| ())
+                .map_err(|err| {
+                    tracing::error!(
+                        artifact = %artifact.rel_path,
+                        schema = %artifact.schema,
+                        table = %artifact.table,
+                        kind = %artifact.kind,
+                        error = %err,
+                        "SQL artifact apply failed"
+                    );
+                    tonic::Status::internal(format!(
+                        "failed to apply SQL artifact {}: {err}",
+                        artifact.rel_path
+                    ))
+                });
+        }
+
         // Use INSERT ... ON CONFLICT DO UPDATE only when the checksum has
         // changed (i.e. the artifact content differs from the previously
         // recorded version).  When the checksum is identical, DO NOTHING
@@ -271,12 +389,10 @@ impl DataBrokerRuntime {
         // (OS error 10053 / WSAECONNABORTED) drops the idle-seeming connection
         // before the schema_migrations ledger entry can be written.  Chunked
         // execution keeps each round-trip short and the TCP connection alive.
-        const CHUNK_THRESHOLD: usize = 1024 * 1024; // 1 MiB
         // Seeds are always executed statement-by-statement so that individual
         // rows with integrity constraint violations (FK, NOT NULL, etc.) from
         // the MySQL source can be skipped without aborting the whole artifact.
-        let is_seed = artifact.kind == "seed";
-        if artifact.content.len() > CHUNK_THRESHOLD || is_seed {
+        if is_large || is_seed {
             let stmts = Self::split_sql_statements(&artifact.content);
             tracing::info!(
                 artifact = %artifact.rel_path,
@@ -1684,11 +1800,125 @@ SELECT kind, schema_name, table_name, extra FROM (
     }
 
     pub fn emit_drift_metric(&self, reason: &str) {
+        // Do NOT label every startup failure "drift". The word
+        // "drift" tells an operator the relational schema diverged from the
+        // manifest — sending them to inspect tables/partitions/migrations. But
+        // the same path also fires for a backend that simply has no config
+        // (qdrant/s3 not set) or a configured backend that rejected
+        // provisioning/verification — none of which are schema drift. Classify
+        // the reason into a coarse category and emit a category-accurate
+        // headline so the audit trail and dashboards can tell them apart.
+        let (category, headline) = startup_failure_category(reason);
         tracing::error!(
             metric = "udb.migration.drift_detected",
             reason = reason,
-            "UDB startup drift detected"
+            category = category,
+            "UDB startup {category}: {headline}"
         );
+    }
+}
+
+/// Classify a startup-failure `reason` into a coarse, operator-meaningful
+/// category + headline.
+///
+/// - `schema_drift` — the live relational schema differs from the manifest.
+/// - `backend_missing` — a required non-Postgres backend has no configuration.
+/// - `backend_provision_failed` — a configured backend rejected provisioning.
+/// - `backend_verify_failed` — a configured resource exists but failed checks.
+/// - `startup_error` — anything else (lint/approval/hook), so we never imply
+///   schema drift for an unrelated failure.
+fn startup_failure_category(reason: &str) -> (&'static str, &'static str) {
+    match reason {
+        "postgres_manifest_mismatch" | "schema_drift" => (
+            "schema_drift",
+            "live relational schema differs from the proto manifest",
+        ),
+        "postgres_unavailable" | "qdrant_required" | "s3_required" | "backend_missing" => {
+            ("backend_missing", "a required backend is not configured")
+        }
+        "qdrant_apply" | "s3_apply" | "backend_apply" | "backend_provision_failed" => (
+            "backend_provision_failed",
+            "a configured backend rejected provisioning",
+        ),
+        "qdrant_verify" | "s3_verify" | "backend_verify" | "backend_verify_failed" => (
+            "backend_verify_failed",
+            "a configured backend resource failed verification",
+        ),
+        _ => ("startup_error", "startup step failed"),
+    }
+}
+
+/// Build the `schema_migrations` 'applied' upsert as a literal SQL statement
+/// (inlined, single-quote-escaped values) so it can be appended INSIDE an
+/// artifact's own `BEGIN/COMMIT` batch — letting the DDL and its ledger record
+/// commit atomically in one round-trip. Mirrors the bound-parameter upsert used
+/// on the slow path; `proto_manifest_checksum` is stored as text ('' when the
+/// header carries none, matching the legacy bound-param behaviour).
+fn applied_ledger_upsert_sql(
+    schema_migrations: &str,
+    artifact: &GeneratedArtifact,
+    checksum: &str,
+) -> String {
+    fn lit(value: &str) -> String {
+        format!("'{}'", value.replace('\'', "''"))
+    }
+    format!(
+        "INSERT INTO {sm} \
+         (filename, checksum, state, migration_kind, proto_manifest_checksum, source_schema, source_table, operation_kind) \
+         VALUES ({f}, {c}, 'applied', {k}, {pmc}, {ss}, {st}, {k}) \
+         ON CONFLICT (filename) DO UPDATE SET \
+            checksum = EXCLUDED.checksum, \
+            state = 'applied', \
+            applied_at = NOW(), \
+            migration_kind = EXCLUDED.migration_kind, \
+            proto_manifest_checksum = EXCLUDED.proto_manifest_checksum, \
+            source_schema = EXCLUDED.source_schema, \
+            source_table = EXCLUDED.source_table, \
+            operation_kind = EXCLUDED.operation_kind;",
+        sm = schema_migrations,
+        f = lit(&artifact.rel_path),
+        c = lit(checksum),
+        k = lit(&artifact.kind),
+        pmc = lit(&extract_manifest_checksum(&artifact.content)),
+        ss = lit(&artifact.schema),
+        st = lit(&artifact.table),
+    )
+}
+
+/// Emit one throttled migration-progress heartbeat: a structured
+/// `tracing::info!` line AND a best-effort update of the queryable
+/// `migration_runtime_state` singleton row, so an operator can tell the broker
+/// is doing useful work even when a single SQL statement is slow. The DB write
+/// is best-effort — a failure here must never abort the migration.
+async fn migration_heartbeat(
+    pool: &PgPool,
+    ledger_schema: &str,
+    mode: &str,
+    current: &str,
+    applied: usize,
+    total: usize,
+    started: std::time::Instant,
+) {
+    let elapsed = started.elapsed().as_secs_f64();
+    tracing::info!(
+        applied,
+        total,
+        current,
+        elapsed_secs = elapsed,
+        "udb {mode} progress: {applied}/{total} artifacts applied, current={current}, elapsed={elapsed:.1}s"
+    );
+    let rel = ledger_relation(ledger_schema, "migration_runtime_state");
+    let note = format!("{mode}: applied {applied}/{total} (current={current})");
+    let sql = format!(
+        "UPDATE {rel} SET active_file = $1, last_note = $2, updated_at = NOW() WHERE singleton = TRUE"
+    );
+    if let Err(err) = sqlx::query(&sql)
+        .bind(current)
+        .bind(&note)
+        .execute(pool)
+        .await
+    {
+        tracing::debug!(error = %err, "migration progress heartbeat DB update failed (best-effort)");
     }
 }
 

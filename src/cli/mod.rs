@@ -26,6 +26,7 @@ mod args;
 mod auth;
 mod doctor;
 mod env_setup;
+mod help;
 mod init;
 mod init_prompt;
 mod native_app;
@@ -177,6 +178,40 @@ $$;
     )
 }
 
+/// Raw-source scan for dense one-line field annotations that pack two or more
+/// aggregate options (`(…) = { … }`) on a single physical line. UDB + buf
+/// accept them, but editor protobuf language servers frequently misparse them
+/// and then report spurious errors on later valid tokens. Emits `file:line`
+/// formatting hints; recurses over `*.proto` files under `dir`.
+fn scan_dense_aggregate_annotations(dir: &std::path::Path, out: &mut Vec<String>) {
+    let entries = match std::fs::read_dir(dir) {
+        Ok(entries) => entries,
+        Err(_) => return,
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            scan_dense_aggregate_annotations(&path, out);
+        } else if path.extension().and_then(|ext| ext.to_str()) == Some("proto") {
+            if let Ok(content) = std::fs::read_to_string(&path) {
+                for (idx, line) in content.lines().enumerate() {
+                    let aggregates = line.matches("= {").count();
+                    if aggregates >= 2 {
+                        out.push(format!(
+                            "{}:{}: field annotation packs {} aggregate options on one line; \
+                             expand each `(udb…) = {{ … }}` onto its own line so protobuf \
+                             language servers parse it correctly",
+                            path.display(),
+                            idx + 1,
+                            aggregates
+                        ));
+                    }
+                }
+            }
+        }
+    }
+}
+
 pub fn run() {
     // Load project root env file.
     //
@@ -186,6 +221,10 @@ pub fn run() {
     //   3. .env.prod
     //   4. .env             (dotenvy default — fallback)
     let args: Vec<String> = env::args().skip(1).collect();
+    // Discoverability layer (stopgap before the full clap migration): answer
+    // --help / -h / help [cmd] / no-args and --version BEFORE any heavy startup
+    // side effects, so `udb` is explorable without reading source.
+    help::handle_help_or_version(&args);
     load_project_dotenv();
     load_udb_config_overlay(&args);
     ensure_cli_correlation_id();
@@ -255,7 +294,8 @@ pub fn run() {
                 eprintln!("failed to create tokio runtime: {err}");
                 process::exit(1);
             });
-            let report = runtime.block_on(run_doctor(with_probes, enterprise));
+            let report =
+                runtime.block_on(run_doctor(with_probes, enterprise, &proto_root, &namespace));
             let exit_code = doctor_status(&report).exit_code();
             match output_mode {
                 DoctorOutputMode::Json => output_json(&report, "doctor report"),
@@ -542,7 +582,7 @@ pub fn run() {
         _ => {}
     }
 
-    let config = ParserConfig::new(namespace);
+    let config = ParserConfig::new(namespace.as_str());
     let parse_report = match parse_directory_report(&proto_root, &config) {
         Ok(report) => report,
         Err(err) => {
@@ -562,6 +602,26 @@ pub fn run() {
         }
     };
 
+    // Echo the manifest input decision in a high-signal line so a
+    // wrong invocation (e.g. an over-eager UDB_PROTO_NAMESPACE that filters out
+    // every project proto) is obvious instead of silently producing a UDB-only
+    // broker. The native schemas are merged later, at serve startup.
+    eprintln!(
+        "manifest input: proto root {} | namespace filter: {} | custom schemas discovered: {}",
+        proto_root.display(),
+        if namespace.trim().is_empty() {
+            "none".to_string()
+        } else {
+            namespace.clone()
+        },
+        schemas.len(),
+    );
+    if !namespace.trim().is_empty() && schemas.is_empty() {
+        eprintln!(
+            "WARNING: namespace filter '{namespace}' produced 0 non-UDB schemas; \
+             remove UDB_PROTO_NAMESPACE or check that your proto packages match it"
+        );
+    }
     eprintln!("schemas: {}", schemas.len());
     eprintln!("checksum_sha256: {checksum}");
 
@@ -592,6 +652,17 @@ pub fn run() {
                 .unwrap_or_else(|err| fatal_json("failed to build catalog manifest", err));
             let report = lint_catalog(&manifest);
             let exit_code = if report.passed { 0 } else { 1 };
+            // Style hint (raw-source pass): the manifest lint runs on the
+            // compiled descriptor and cannot see physical line layout. Dense
+            // field annotations that pack multiple aggregate options (e.g.
+            // (…column) and (…storage)) on a single line are accepted by UDB +
+            // buf but commonly misparsed by editor protobuf language servers.
+            // Surface a non-fatal formatting hint with file:line.
+            let mut dense_hints = Vec::new();
+            scan_dense_aggregate_annotations(&proto_root, &mut dense_hints);
+            for hint in &dense_hints {
+                eprintln!("lint[style] {hint}");
+            }
             let use_human = args.iter().any(|a| a == "--human")
                 || env::var("UDB_LINT_HUMAN")
                     .map(|v| v == "1" || v == "true")
@@ -742,6 +813,112 @@ pub fn run() {
             if !all_ok {
                 process::exit(1);
             }
+        }
+        Command::Requirements { json } => {
+            let manifest = CatalogManifest::from_schemas(&schemas)
+                .unwrap_or_else(|err| fatal_json("failed to build catalog manifest", err));
+            let env_set = |keys: &[&'static str]| {
+                keys.iter()
+                    .any(|k| env::var(k).map(|v| !v.trim().is_empty()).unwrap_or(false))
+            };
+
+            #[derive(Serialize)]
+            struct RequirementStatus {
+                backend: String,
+                resource_kind: String,
+                resource_name: String,
+                owner: String,
+                env_keys: Vec<String>,
+                configured: bool,
+                fatal: bool,
+                suggested_fix: String,
+            }
+
+            let mut rows: Vec<RequirementStatus> = Vec::new();
+            // Postgres is the mandatory base for every UDB broker.
+            let pg_keys = ["UDB_PG_DSN", "DATABASE_URL"];
+            let pg_configured = env_set(&pg_keys);
+            rows.push(RequirementStatus {
+                backend: "postgres".to_string(),
+                resource_kind: "primary".to_string(),
+                resource_name: "(all relational tables)".to_string(),
+                owner: "*".to_string(),
+                env_keys: pg_keys.iter().map(|s| s.to_string()).collect(),
+                configured: pg_configured,
+                fatal: true,
+                suggested_fix: if pg_configured {
+                    String::new()
+                } else {
+                    "set UDB_PG_DSN (or DATABASE_URL) to a direct/session Postgres endpoint"
+                        .to_string()
+                },
+            });
+
+            let mut unmet_fatal = if pg_configured { 0 } else { 1 };
+            for r in udb::required_backends(&manifest) {
+                let configured = env_set(&r.env_keys);
+                if r.fatal && !configured {
+                    unmet_fatal += 1;
+                }
+                let suggested_fix = if configured {
+                    String::new()
+                } else if r.env_keys.is_empty() {
+                    format!("configure the {} backend", r.backend)
+                } else {
+                    format!("set {}", r.env_keys.join(" (or "))
+                };
+                rows.push(RequirementStatus {
+                    backend: r.backend,
+                    resource_kind: r.resource_kind,
+                    resource_name: r.resource_name,
+                    owner: r.owner,
+                    env_keys: r.env_keys.iter().map(|s| s.to_string()).collect(),
+                    configured,
+                    fatal: r.fatal,
+                    suggested_fix,
+                });
+            }
+
+            if json {
+                output_json(&rows, "requirements");
+            } else {
+                eprintln!(
+                    "UDB runtime backend contract ({} requirement(s)):",
+                    rows.len()
+                );
+                for row in &rows {
+                    let status = if row.configured {
+                        "OK"
+                    } else if row.fatal {
+                        "MISSING (fatal)"
+                    } else {
+                        "missing (degraded)"
+                    };
+                    eprintln!(
+                        "  [{status}] {backend} {kind} '{name}' (owner {owner}) — env: {env}{fix}",
+                        backend = row.backend,
+                        kind = row.resource_kind,
+                        name = row.resource_name,
+                        owner = row.owner,
+                        env = if row.env_keys.is_empty() {
+                            "(none)".to_string()
+                        } else {
+                            row.env_keys.join(", ")
+                        },
+                        fix = if row.suggested_fix.is_empty() {
+                            String::new()
+                        } else {
+                            format!(" — fix: {}", row.suggested_fix)
+                        },
+                    );
+                }
+                if unmet_fatal > 0 {
+                    eprintln!(
+                        "{unmet_fatal} required backend(s) are not configured — `udb serve` will fail until they are set"
+                    );
+                }
+            }
+            process::exit(if unmet_fatal > 0 { 1 } else { 0 });
         }
         Command::TrackerDdl
         | Command::InvalidUsage { .. }

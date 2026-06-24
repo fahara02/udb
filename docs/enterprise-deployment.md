@@ -4,8 +4,11 @@ This is the one-page, from-scratch reference for bringing up a hardened UDB
 broker for real clients (gRPC broker + app + Postgres + optional Qdrant/Redis,
 behind an edge TLS proxy). It exists because an enterprise bring-up otherwise
 means discovering ~8 hard requirements one-at-a-time, each behind a ~2-minute
-restart cycle. Run `udb doctor --enterprise` first — it lists every unmet
-prerequisite below at once.
+restart cycle. Run **`udb requirements`** (the backend contract your protos
+declare — Postgres/Qdrant/object-store/Redis, with the env var for each) and
+**`udb doctor --enterprise`** (manifest-aware preflight) FIRST — together they
+list every unmet prerequisite and missing required backend at once, before you
+pay a single slow startup.
 
 > Source of truth: the broker now runs a **one-shot enterprise preflight** at
 > startup (and in `udb doctor --enterprise`) that reports the entire unmet set in

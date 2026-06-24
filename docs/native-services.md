@@ -13,7 +13,7 @@
 │    UNIVERSAL DATA BROKER                                                   │
 │    gRPC data plane | native control plane | tenant/project scope guard     │
 │                                                                            │
-│    crate v0.3.6 | protocol v1.0.0                                          │
+│    crate v0.3.7 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 UDB includes a native control plane for identity, access, storage metadata,
@@ -70,7 +70,7 @@ code should never hand-build a raw RPC request body.
 
 ## Service Table
 
-UDB 0.3.6 exposes 15 native services with 188 native RPCs.
+UDB 0.3.7 exposes 15 native services with 188 native RPCs.
 
 | Service | RPCs | Purpose |
 |---|---:|---|

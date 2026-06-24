@@ -2104,7 +2104,7 @@ func (x *IndexOptions) GetColumns() []string {
 type StorageFieldOptions struct {
 	state                protoimpl.MessageState `protogen:"open.v1"`
 	Backend              StorageBackendType     `protobuf:"varint,1,opt,name=backend,proto3,enum=udb.core.common.v1.StorageBackendType" json:"backend,omitempty"`              // Which backend owns this key
-	BucketEnvKey         string                 `protobuf:"bytes,2,opt,name=bucket_env_key,json=bucketEnvKey,proto3" json:"bucket_env_key,omitempty"`                          // Env var that resolves the bucket name
+	BucketEnvKey         string                 `protobuf:"bytes,2,opt,name=bucket_env_key,json=bucketEnvKey,proto3" json:"bucket_env_key,omitempty"`                          // Bucket name. If the value names a SET env var, it resolves through it; otherwise it is used as a literal bucket name (lowercased; must be S3/MinIO-valid).
 	KeyPrefix            string                 `protobuf:"bytes,3,opt,name=key_prefix,json=keyPrefix,proto3" json:"key_prefix,omitempty"`                                     // Fixed path prefix, e.g. "udb-docs/{tenant_id}"
 	PresignedRead        bool                   `protobuf:"varint,4,opt,name=presigned_read,json=presignedRead,proto3" json:"presigned_read,omitempty"`                        // Generate pre-signed download URLs
 	PresignedWrite       bool                   `protobuf:"varint,5,opt,name=presigned_write,json=presignedWrite,proto3" json:"presigned_write,omitempty"`                     // Generate pre-signed upload URLs

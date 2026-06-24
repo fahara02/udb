@@ -63,6 +63,21 @@ the source of truth; the SDK is a thin typed client.
 6. **Every mutation emits an event** on a versioned dot topic
    (`udb.<service>.<entity>.<verb>.v1`) through a durable outbox→Kafka pipeline;
    clients can subscribe to tenant-scoped CDC streams.
+7. **TWO authz surfaces, different engines — the #1 bootstrap trap.** Data RPCs
+   (`Select`/`Upsert`/`Delete`) are gated by a **data-plane ABAC snapshot** that
+   is **default-DENY**: with no policy seeded, even an `organization_owner` admin
+   gets `PERMISSION_DENIED` on every CRUD call. Separately, `udb.authz.can/require`
+   query a control-plane **Casbin** engine (roles + `policy_rules`). They are
+   independent — seeding `policy_rules` does **nothing** for data CRUD. The ABAC
+   snapshot (from `UDB_ABAC_POLICIES_JSON` or the `udb_abac_policies` table) is
+   what actually protects your data; you MUST seed it (or set
+   `UDB_ABAC_DEFAULT_ALLOW=true` for dev) before any CRUD works.
+8. **Tenant is a canonical UUID, not the human code.** `udb auth bootstrap user
+   --tenant acme` prints a canonical **tenant UUID** (e.g.
+   `00000000-0000-0000-0000-0000000d0001`); the login JWT carries that UUID, not
+   `"acme"`. Adopt `principal.tenant_id` (the UUID) and put it in every
+   tenant-scoped filter — a tenant-scoped read with no `tenant_id` in the filter
+   is rejected (`tenant isolation requires filter on tenant_id`).
 
 ---
 
@@ -231,12 +246,21 @@ storage-only/redacted (password hashes, key material) are blanked server-side.
   udb auth bootstrap user --username admin --email admin@x.com \
       --password '<strong-pass>' --tenant acme --project default
   ```
+  Bootstrapping the admin is only step 2 of 5 — it prints a canonical tenant
+  UUID you must capture, and CRUD stays `PERMISSION_DENIED` until you ALSO seed
+  ABAC and bring up the login env. Follow the full **New-project bootstrap
+  runbook** below; don't stop here.
 - **Scopes** gate operations: `udb:read`/`udb:write` for data, per-service
   scopes for native RPCs (`udb:authn:get-user`, `udb:storage:write`, …). The
   error for a missing scope is `PERMISSION_DENIED`.
 - **API keys:** created via `udb auth api-key-create` or the ApiKeyService;
   sent as `x-api-key`; tenant-scoped; per-key rate limits are enforced from
-  real usage records.
+  real usage records. **Caveat (current behavior):** the **DataBroker data plane
+  authenticates with a JWT bearer** (or mTLS), not `x-api-key` — an API key alone
+  will get `Unauthenticated: missing or invalid authorization header (JWT
+  required)` on `Select`/`Upsert`/`Delete`. For a service credential to the data
+  plane, **log in for a bearer** (username/password → JWT) and send that. (A
+  one-call API-key→bearer exchange is tracked work, not yet available.)
 - **Credential hot-swap:** rotate a token/key without rebuilding the channel —
   `set_credentials()` (Python/TS/Go/Java/C#/PHP all support it).
 - **Authz checks:** `UdbAuthClient.can(resource, action)` asks the broker.
@@ -268,7 +292,12 @@ PUT URL) → client PUTs bytes directly to object storage → `FinalizeUpload`
 (file_id; `is_public` is `optional` — omit to keep the default/stored value) →
 `GetFile`/`DownloadFile`/presigned GET. `UpdateFile` is a partial update —
 only send fields you mean to change. Finalizing can auto-start an asset
-pipeline.
+pipeline. **`project_id` on native storage/asset RPCs (RegisterUpload,
+RegisterAsset) is OPTIONAL and UUID-only** — the server persists it through a
+`logical_uuid_or_null` column, so a human project code (e.g. `"private"`) yields
+`INVALID_ARGUMENT: uuid params must be UUID strings`. The SDK helpers omit
+`project_id` automatically unless it's a canonical UUID; pass the canonical
+project UUID (not the code) if you need project scoping.
 
 **WebRTC flow:** `CreateRoom` → `JoinRoom` (capacity-checked) → bidirectional
 `Signal` stream relays SDP/ICE within the room (membership is re-validated
@@ -339,13 +368,18 @@ review gates for destructive/raw-SQL changes.
 
 ## CLI — the `udb` binary
 
+**Discover it:** `udb --help` / `udb help` (grouped command list), `udb <cmd> --help`
+or `udb help <cmd>` (per-command usage + flags + example), `udb --version`. An
+unknown command or sub-action prints a "did you mean …?" suggestion.
+
 | Command | Purpose |
 |---|---|
 | `udb proto export --out proto` | Vendor UDB's annotation protos so app protos can `import "udb/core/common/v1/db.proto"`. |
 | `udb serve proto "" 0.0.0.0:50051` | Start the broker (syncs schema from protos on boot; control-plane listener comes up on port+10). |
 | `udb sdk generate --lang <lang>` / `udb sdk list-langs` / `udb sdk manifest` | Generate/refresh SDK clients; dump the full RPC manifest (the authoritative service/RPC list). |
-| `udb doctor [--with-probes]` | Env + backend readiness, honestly (configured flags match GetCapabilities). |
-| `udb auth bootstrap user …` / `udb auth api-key-create …` | First offline admin / mint API keys. |
+| `udb doctor [--with-probes] [--enterprise]` | Env + backend readiness. `--enterprise` runs the one-shot preflight (encryption/password/session/auth-plane/redis/ABAC) AND is **manifest-aware** — it reports any required backend (Qdrant/object store) your protos declare but you haven't configured, i.e. the same condition that would later stop `udb serve`. |
+| `udb requirements [--json]` | Print the resolved backend contract for the current project's manifest (each required backend, its env vars, configured?, fatal/degraded, suggested fix). Exits non-zero if a fatal backend is unset — run it BEFORE the first startup. |
+| `udb auth bootstrap user …` / `udb auth api-key-create …` | First offline admin / mint API keys. `bootstrap user` prints the canonical tenant UUID — capture it. |
 | `udb native list / manifest / docs / contract-diff` | Inspect the native service contract; diff it between versions. |
 | `udb dev up / down / smoke` | Local sandbox via the bundled compose (run from a repo checkout). |
 | `udb init-project` | Scaffold a project — mind the namespace note above. |
@@ -358,7 +392,8 @@ review gates for destructive/raw-SQL changes.
 | gRPC status | Most likely cause |
 |---|---|
 | `UNIMPLEMENTED` | Native-service call sent to the **data target** — set `authTarget`/control-plane address. |
-| `PERMISSION_DENIED` | Missing scope, tenant mismatch (metadata/body vs credential), revoked credential, or per-action policy deny. |
+| `PERMISSION_DENIED` | Missing scope, tenant mismatch (metadata/body vs credential), revoked credential, or per-action policy deny. **On a data RPC with otherwise-valid scopes → no ABAC policy seeded** (default-deny snapshot, mental model #7): seed `UDB_ABAC_POLICIES_JSON` / the `udb_abac_policies` table, or `UDB_ABAC_DEFAULT_ALLOW=true` for dev. Seeding `policy_rules` does NOT fix this. |
+| `INVALID_ARGUMENT` "tenant isolation requires filter on tenant_id" | A tenant-scoped read/delete MUST include `tenant_id` (the canonical UUID, not the code) in the filter. |
 | `FAILED_PRECONDITION` | Service disabled/not mounted, wrong lifecycle state (e.g. apply before approve), feature requires config (TURN secret, media profile). |
 | `RESOURCE_EXHAUSTED` | Public-auth rate limit, per-key rate limit, quota, or per-tenant fairness backpressure — back off and retry. |
 | `INVALID_ARGUMENT` | Unknown `message_type` (use the proto FQN; check `udb sdk manifest`), malformed filter, invalid cron/enum/value. |
@@ -368,20 +403,80 @@ review gates for destructive/raw-SQL changes.
 
 ---
 
-## End-to-end quickstart (what to tell a developer)
+## New-project bootstrap — the runbook (do these in order)
 
-1. **Define** app protos with `table`/`column` annotations (+ a tenant column);
-   `import "udb/core/common/v1/db.proto"`.
-2. **Vendor annotations:** `udb proto export --out proto`.
-3. **Bring up backends** — `docker compose up -d` (or `udb dev up` in a checkout).
-4. **Serve:** `udb serve proto "" 0.0.0.0:50051`.
-5. **Bootstrap** the first user (`udb auth bootstrap user …`).
-6. **Install the SDK**; construct the client with metadata + credential AND both
-   targets (data + authTarget).
-7. **CRUD** by `message_type`; use native services (storage/notification/…) via
-   the project facade; subscribe to `udb.*.v1` events if event-driven.
+This is the exact path a brand-new project follows to go from "nothing" to a
+first authenticated, authorized CRUD. It is the part agents get wrong most
+often. The friction is real; each step below removes one failure.
 
-A working example lives in the UDB repo at `examples/php_quickstart/`.
+**1. Define** the entity proto(s) with `table`/`column` annotations and a tenant
+column; `import "udb/core/common/v1/db.proto"`. (Serving needs no `udb proto
+export` or `buf` — the broker embeds the annotation contract; you only export/gen
+if you want vendored protos or a typed row.)
+
+**2. Mint the first admin OFFLINE** (the DB has no principal yet). This also binds
+`organization_owner` → `udb:*` at login and **prints the canonical tenant UUID —
+capture it**:
+```bash
+UDB_PG_DSN="postgres://udb:udb@host:5432/udb?sslmode=disable" \
+UDB_PASSWORD_HASH_SECRET="<hmac-secret>" \
+udb auth bootstrap user --username admin --email admin@x.com \
+    --password '<strong-pass>' --tenant acme --project default
+# → prints tenant_id, e.g. 00000000-0000-0000-0000-0000000d0001  (the UUID, NOT "acme")
+```
+
+**3. SEED ABAC, or every data RPC is `PERMISSION_DENIED`** (default-deny snapshot —
+the org-owner role is NOT enough; see mental model #7). Set
+`UDB_ABAC_POLICIES_JSON` to a policy granting this tenant's principals data ops
+(shape verified against the live example — `operation` ∈ `data.select`/
+`data.upsert`/`data.delete`, `*`/empty = wildcard, `required_scope` reflects
+read/write and the org owner's `udb:*` satisfies both):
+```json
+[{"effect":"allow","service_identity":"*","tenant_id":"<TENANT_UUID>","purpose":"*","message_type":"*","operation":"data.select","required_scope":"udb:read"},
+ {"effect":"allow","service_identity":"*","tenant_id":"<TENANT_UUID>","purpose":"*","message_type":"*","operation":"data.upsert","required_scope":"udb:write"},
+ {"effect":"allow","service_identity":"*","tenant_id":"<TENANT_UUID>","purpose":"*","message_type":"*","operation":"data.delete","required_scope":"udb:write"}]
+```
+Alternatives: `UDB_ABAC_POLICY_FILE=<path>`, rows in the `udb_abac_policies`
+table, or the dev-only shortcut `UDB_ABAC_DEFAULT_ALLOW=true`.
+
+**4. Set the enterprise env the broker needs to boot + accept login**, then serve:
+```bash
+UDB_JWT_PRIVATE_KEY=<pem|path>  UDB_JWT_PUBLIC_KEY=<pem|path>   # RS256, signs/verifies login JWTs
+UDB_SESSION_ENABLED=true  UDB_SESSION_HASH_SECRET=<hmac>        # else Authenticate → FAILED_PRECONDITION "sessions disabled"
+UDB_PASSWORD_HASH_SECRET=<hmac>                                # SAME value used at bootstrap (step 2) so login verifies
+UDB_AUTH_GRPC_ADDR=0.0.0.0:50061                               # expose the auth plane; default is loopback-only
+UDB_ABAC_POLICIES_JSON='[…step 3…]'
+udb serve proto "" 0.0.0.0:50051     # wait for the "UDB DataBroker is ready: data=… auth=…" line
+```
+Run **`udb doctor --enterprise`** (manifest-aware) and **`udb requirements`** FIRST
+— they list every unmet prerequisite/backend at once instead of one-restart-at-a-time.
+
+**5. Login → adopt the canonical tenant UUID → CRUD.** Connect the SDK with BOTH
+`target` (data `:50051`) and `authTarget` (control plane `:50061`). `login()` →
+verify the bearer → `setTenant(principal.tenant_id)` (the UUID) →
+`Select`/`Upsert`/`Delete` by `message_type`, **with `tenant_id` (the UUID) in
+every filter**. Use `conflict_fields` on writes for idempotency.
+
+> The live, end-to-end-verified version of this exact runbook (RS256 login,
+> default-deny ABAC, tenant-scoped CRUD of a generated `Invoice`, cross-tenant
+> isolation check) is `examples/ts_enterprise/` in the UDB repo — read its
+> `README.md`, `scripts/bootstrap.sh`, and `src/main.ts`. The Go counterpart is
+> `examples/go_enterprise/`. Broker-side hardening (TLS/mTLS, pooler-safe DSN) is
+> in `docs/enterprise-deployment.md`.
+
+**Per-language ergonomics for steps 4–5.** The SDKs package login→verify→adopt so
+you don't stitch it together:
+- **Go:** `udbclient.ConnectEnterprise(ctx, EnterpriseConfig{Target, AuthTarget,
+  Username, Password, TenantCode, …})` returns an `EnterpriseSession` that has
+  logged in, adopted the canonical tenant UUID, and carries the bearer on every
+  call — use `session.DataContext(ctx)` / `session.NativeContext(ctx)` and
+  `session.CanonicalTenantID` in filters; `session.ValidateTenant(id)` fails fast
+  on a tenant-code-vs-UUID mismatch.
+- **TS:** `UdbProject` with `loginAndAdoptTenant()` / `authenticateBearer` +
+  `setTenant(principal.tenant_id)`.
+- All SDKs now **auto-attach `x-request-id`/`x-correlation-id`**, so native RPCs
+  no longer fail `INVALID_ARGUMENT: request context required` when you didn't set
+  a correlation id yourself.
 
 ---
 
