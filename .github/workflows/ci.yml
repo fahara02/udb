@@ -560,7 +560,16 @@ jobs:
         # The committed stubs MUST match this output exactly — drift is a
         # hard failure: regenerate locally with the same command and commit.
         run: |
-          buf generate --include-imports
+          for attempt in 1 2 3; do
+            if buf generate --include-imports; then
+              break
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              exit 1
+            fi
+            echo "::warning::buf generate failed, retrying remote plugin generation (attempt $attempt/3)"
+            sleep $((attempt * 20))
+          done
           # Deterministic OpenAPI metadata fixup (title/version/scope) so the
           # committed swagger matches generation output (TODO_PASS2 #144/#145).
           node scripts/openapi-postprocess.mjs
