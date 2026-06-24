@@ -90,11 +90,14 @@ jobs:
           # `x86-64-v3` (Haswell/2013+: AVX2/FMA/BMI2) ONLY for a known-modern fleet.
           # apple-m1 is 100% safe for Apple Silicon (every arm64 Mac is >= M1).
           # Pin ubuntu-22.04 (glibc 2.35), NOT ubuntu-latest. GitHub flipped
-          # `ubuntu-latest` to 24.04 (glibc 2.39), which (1) bumped the binary's
-          # glibc floor so it no longer runs on Debian bookworm / Ubuntu 22.04,
-          # and (2) rebuilt sqlx-postgres's ring TLS with 24.04's newer toolchain,
-          # breaking the handshake to Neon serverless / SNI-routed managed PG.
-          # 22.04 is the env that built the last-known-good 0.3.6 binary.
+          # `ubuntu-latest` to 24.04 (glibc 2.39), which bumped the binary's glibc
+          # floor (to GLIBC_2.38/2.39) so it no longer runs on Debian bookworm
+          # (glibc 2.36) / Ubuntu 22.04 — the container then dies at exec with a
+          # `version GLIBC_2.x not found` loader error. 22.04 keeps the floor at
+          # glibc 2.34 (verified) and is the env that built the last-known-good
+          # 0.3.6 binary. (TLS is unaffected: a 24.04-built binary still completes
+          # the Neon/SNI handshake — confirmed by build-probe — so this pin is
+          # purely about the glibc floor, not Postgres connectivity.)
           - os: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
             asset: udb-linux-amd64

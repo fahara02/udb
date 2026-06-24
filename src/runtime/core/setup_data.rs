@@ -193,6 +193,23 @@ impl DataBrokerRuntime {
                     .filter(|s| *s > 0)
                     .unwrap_or(8),
             );
+            // The MANDATORY primary Postgres gets its own, larger floor: it is not
+            // an optional backend that may silently degrade — the startup health
+            // gate hard-exits (container crash-loop) when its pool is missing. A
+            // reachable managed PG (Neon/Supabase serverless cold start + eager
+            // min_connections) measured ~16s to register, well over the 8s
+            // optional-backend probe, so the short cap would strand it. Floor the
+            // primary's budget at DEFAULT_PG_STARTUP_PROBE_SECS; override with
+            // UDB_PG_STARTUP_PROBE_SECS, and never go below the general probe.
+            const DEFAULT_PG_STARTUP_PROBE_SECS: u64 = 120;
+            let pg_probe_budget = std::time::Duration::from_secs(
+                std::env::var("UDB_PG_STARTUP_PROBE_SECS")
+                    .ok()
+                    .and_then(|v| v.trim().parse::<u64>().ok())
+                    .filter(|s| *s > 0)
+                    .unwrap_or(DEFAULT_PG_STARTUP_PROBE_SECS),
+            )
+            .max(probe_budget);
             for plugin in crate::backend::all_plugins() {
                 // C4 (bug_report.md): a backend's startup registration — driver
                 // connect / metadata fetch to a configured-but-UNREACHABLE server
@@ -206,8 +223,16 @@ impl DataBrokerRuntime {
                 // fix; this closes the panic vector.)
                 use futures::FutureExt as _;
                 let kind = plugin.kind();
+                // Postgres is the mandatory primary the health gate depends on, so
+                // it uses the larger pg_probe_budget (see above); the optional
+                // backends keep the short probe_budget they were meant for.
+                let budget = if kind == crate::backend::BackendKind::Postgres {
+                    pg_probe_budget
+                } else {
+                    probe_budget
+                };
                 match tokio::time::timeout(
-                    probe_budget,
+                    budget,
                     std::panic::AssertUnwindSafe(plugin.register(&mut ctx)).catch_unwind(),
                 )
                 .await
@@ -229,7 +254,7 @@ impl DataBrokerRuntime {
                         // here so a degraded backend is never silent.
                         tracing::warn!(
                             backend = ?kind,
-                            probe_budget_secs = probe_budget.as_secs(),
+                            probe_budget_secs = budget.as_secs(),
                             "backend registration exceeded the startup probe budget; backend marked \
                              unavailable (broker continues — fix connectivity or raise \
                              UDB_BACKEND_STARTUP_PROBE_SECS)"
@@ -238,7 +263,7 @@ impl DataBrokerRuntime {
                             "backend {kind:?} registration exceeded the {}s startup probe budget; \
                              backend marked unavailable (broker continues — fix connectivity or raise \
                              UDB_BACKEND_STARTUP_PROBE_SECS)",
-                            probe_budget.as_secs()
+                            budget.as_secs()
                         ));
                     }
                 }

@@ -220,8 +220,9 @@ sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio-r
 # auto-select and panics on the serve path. We standardise on aws-lc-rs and
 # install it explicitly at startup (see install_default_crypto_provider). NOTE:
 # sqlx-postgres TLS does NOT use this process-default — it builds its own config
-# with builder_with_provider(ring) (runtime-tokio-rustls -> tls-rustls-ring), so
-# the Neon-TLS regression is the BUILD toolchain, not this provider choice.
+# with builder_with_provider(ring) (runtime-tokio-rustls -> tls-rustls-ring).
+# (A build-probe confirmed the Neon/SNI handshake succeeds on both the 22.04 and
+# 24.04 toolchains, so this provider choice is NOT a Postgres-connectivity risk.)
 rustls = { version = "0.23", features = ["aws_lc_rs"] }
 futures = { version = "0.3", default-features = false, features = ["std"] }
 tokio = { version = "1", features = ["full"] }
