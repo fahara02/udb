@@ -239,7 +239,7 @@ async fn staging_slots_are_per_project() {
         .stage_catalog(
             pending_billing,
             "billing".into(),
-            "3.0.0".into(),
+            "4.0.0".into(),
             "backward".into(),
         )
         .await

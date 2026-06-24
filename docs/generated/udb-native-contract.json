@@ -1,7 +1,7 @@
 {
   "schema_version": "1",
   "descriptor_sha256": "110bd5b0d2d1e0cf49c66da9b2cdc3ebb19ca27b3c40952a1e7fb13ba08108ae",
-  "contract_version": "3.0.0",
+  "contract_version": "4.0.0",
   "udb_version": "0.3.6",
   "protocol_version": "1.0.0",
   "service_count": 16,
