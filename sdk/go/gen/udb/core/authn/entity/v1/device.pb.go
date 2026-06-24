@@ -179,7 +179,7 @@ var File_udb_core_authn_entity_v1_device_proto protoreflect.FileDescriptor
 
 const file_udb_core_authn_entity_v1_device_proto_rawDesc = "" +
 	"\n" +
-	"%udb/core/authn/entity/v1/device.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xff\f\n" +
+	"%udb/core/authn/entity/v1/device.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\x8c\r\n" +
 	"\x06Device\x12I\n" +
 	"\tdevice_id\x18\x01 \x01(\tB,\x82\xb7\x18(\n" +
 	"\tdevice_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\bdeviceId\x126\n" +
@@ -196,9 +196,9 @@ const file_udb_core_authn_entity_v1_device_proto_rawDesc = "" +
 	"deviceName\x12n\n" +
 	"\vdevice_type\x18\x06 \x01(\x0e2$.udb.core.authn.entity.v1.DeviceTypeB'\x82\xb7\x18#\n" +
 	"\vdevice_type\x12\vVARCHAR(20)\x18\x01:\x05'WEB'R\n" +
-	"deviceType\x12\x96\x01\n" +
-	"\x10fingerprint_hash\x18\a \x01(\tBk\xe8\xb5\x18\x01\xf0\xb5\x18\x01\x82\xb7\x18H\n" +
-	"\x10fingerprint_hash\x12\fVARCHAR(128)Z&Keyed digest of the device fingerprint\x8a\xb7\x18\x13\b\x04\x10\x01\x18\x032\vhmac-sha256R\x0ffingerprintHash\x12h\n" +
+	"deviceType\x12\xa3\x01\n" +
+	"\x10fingerprint_hash\x18\a \x01(\tBx\xe8\xb5\x18\x01\xf0\xb5\x18\x01\x82\xb7\x18H\n" +
+	"\x10fingerprint_hash\x12\fVARCHAR(128)Z&Keyed digest of the device fingerprint\x8a\xb7\x18 \b\x04\x10\x01\x18\x032\vhmac-sha256:\vauthn-tokenR\x0ffingerprintHash\x12h\n" +
 	"\x0elast_ip_masked\x18\b \x01(\tBBе\x18\x01\xe0\xb5\x18\x01\x82\xb7\x186\n" +
 	"\x0elast_ip_masked\x12\vVARCHAR(64)Z\x17Masked source IP prefixR\flastIpMasked\x12{\n" +
 	"\x14last_user_agent_hash\x18\t \x01(\tBJ\x82\xb7\x18F\n" +

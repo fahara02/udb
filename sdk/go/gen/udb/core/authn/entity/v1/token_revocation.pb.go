@@ -132,10 +132,10 @@ var File_udb_core_authn_entity_v1_token_revocation_proto protoreflect.FileDescri
 
 const file_udb_core_authn_entity_v1_token_revocation_proto_rawDesc = "" +
 	"\n" +
-	"/udb/core/authn/entity/v1/token_revocation.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xed\a\n" +
-	"\x0fTokenRevocation\x12{\n" +
-	"\bjti_hash\x18\x01 \x01(\tB`\xe8\xb5\x18\x01\xf0\xb5\x18\x01\x82\xb7\x18=\n" +
-	"\bjti_hash\x12\fVARCHAR(128)\x18\x01(\x01Z\x1fKeyed digest of the revoked jti\x8a\xb7\x18\x13\b\x04\x10\x01\x18\x032\vhmac-sha256R\ajtiHash\x12}\n" +
+	"/udb/core/authn/entity/v1/token_revocation.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xfb\a\n" +
+	"\x0fTokenRevocation\x12\x88\x01\n" +
+	"\bjti_hash\x18\x01 \x01(\tBm\xe8\xb5\x18\x01\xf0\xb5\x18\x01\x82\xb7\x18=\n" +
+	"\bjti_hash\x12\fVARCHAR(128)\x18\x01(\x01Z\x1fKeyed digest of the revoked jti\x8a\xb7\x18 \b\x04\x10\x01\x18\x032\vhmac-sha256:\vauthn-tokenR\ajtiHash\x12}\n" +
 	"\n" +
 	"token_type\x18\x02 \x01(\x0e2#.udb.core.authn.entity.v1.TokenTypeB9\x82\xb7\x185\n" +
 	"\n" +

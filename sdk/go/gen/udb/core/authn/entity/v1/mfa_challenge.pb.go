@@ -173,7 +173,7 @@ var File_udb_core_authn_entity_v1_mfa_challenge_proto protoreflect.FileDescripto
 
 const file_udb_core_authn_entity_v1_mfa_challenge_proto_rawDesc = "" +
 	"\n" +
-	",udb/core/authn/entity/v1/mfa_challenge.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\x91\r\n" +
+	",udb/core/authn/entity/v1/mfa_challenge.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\x9e\r\n" +
 	"\fMfaChallenge\x12R\n" +
 	"\fchallenge_id\x18\x01 \x01(\tB/\x82\xb7\x18+\n" +
 	"\fchallenge_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\vchallengeId\x126\n" +
@@ -189,9 +189,9 @@ const file_udb_core_authn_entity_v1_mfa_challenge_proto_rawDesc = "" +
 	"\vfactor_kind\x12\vVARCHAR(30)\x18\x01:\x1e'AUTH_FACTOR_KIND_UNSPECIFIED'R\n" +
 	"factorKind\x12\x8c\x01\n" +
 	"\apurpose\x18\x06 \x01(\x0e2-.udb.core.authn.entity.v1.MfaChallengePurposeBC\x82\xb7\x18?\n" +
-	"\apurpose\x12\vVARCHAR(64)\x18\x01:%'MFA_CHALLENGE_PURPOSE_LOGIN_STEP_UP'R\apurpose\x12\xa3\x01\n" +
-	"\x17device_fingerprint_hash\x18\a \x01(\tBk\xe8\xb5\x18\x01\xf0\xb5\x18\x01\x82\xb7\x18H\n" +
-	"\x17device_fingerprint_hash\x12\fVARCHAR(128)Z\x1fBound device fingerprint digest\x8a\xb7\x18\x13\b\x04\x10\x01\x18\x032\vhmac-sha256R\x15deviceFingerprintHash\x12q\n" +
+	"\apurpose\x12\vVARCHAR(64)\x18\x01:%'MFA_CHALLENGE_PURPOSE_LOGIN_STEP_UP'R\apurpose\x12\xb0\x01\n" +
+	"\x17device_fingerprint_hash\x18\a \x01(\tBx\xe8\xb5\x18\x01\xf0\xb5\x18\x01\x82\xb7\x18H\n" +
+	"\x17device_fingerprint_hash\x12\fVARCHAR(128)Z\x1fBound device fingerprint digest\x8a\xb7\x18 \b\x04\x10\x01\x18\x032\vhmac-sha256:\vauthn-tokenR\x15deviceFingerprintHash\x12q\n" +
 	"\x11ip_address_masked\x18\b \x01(\tBEе\x18\x01\xe0\xb5\x18\x01\x82\xb7\x189\n" +
 	"\x11ip_address_masked\x12\vVARCHAR(64)Z\x17Masked source IP prefixR\x0fipAddressMasked\x12F\n" +
 	"\rattempt_count\x18\t \x01(\x05B!\x82\xb7\x18\x1d\n" +

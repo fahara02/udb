@@ -45,7 +45,7 @@ public final class AccessDecisionAuditProto {
       "\032\037google/protobuf/timestamp.proto\032$udb/c" +
       "ore/authz/entity/v1/enums.proto\032\033udb/cor" +
       "e/common/v1/db.proto\032!udb/core/common/v1" +
-      "/security.proto\"\274\022\n\023AccessDecisionAudit\022" +
+      "/security.proto\"\301\022\n\023AccessDecisionAudit\022" +
       "`\n\021decision_audit_id\030\001 \001(\tB4\202\267\0300\n\021decisi" +
       "on_audit_id\022\004UUID\030\001(\001:\021gen_random_uuid()" +
       "R\017decisionAuditId\022[\n\007user_id\030\002 \001(\tBB\202\267\030>" +
@@ -93,25 +93,25 @@ public final class AccessDecisionAuditProto {
       "d\022\013VARCHAR(64)R\007traceId\0223\n\007span_id\030\030 \001(\t" +
       "B\032\202\267\030\026\n\007span_id\022\013VARCHAR(64)R\006spanId\022J\n\017" +
       "user_agent_hash\030\031 \001(\tB\"\202\267\030\036\n\017user_agent_" +
-      "hash\022\013VARCHAR(80)R\ruserAgentHash\022B\n\016deci" +
-      "sion_input\030\032 \001(\tB\033\202\267\030\027\n\016decision_input\022\005" +
-      "JSONBR\rdecisionInput:\347\002\372\266\030\315\001\n\026access_dec" +
-      "ision_audits\022\tudb_authz\030\005 \001*1Decision tr" +
-      "ail for sensitive authorization checks@\001" +
-      "H\003R\ndecided_atX\373\023b^\n\020tenant_isolation\032H(" +
-      "tenant_id::text = current_setting(\'app.c" +
-      "urrent_tenant_id\', true)::text)(\001\212\262\031\220\001\n\006" +
-      "tenant\032\ttenant_id*4tenant_id = current_s" +
-      "etting(\'app.current_tenant_id\')2\004none:\021a" +
-      "uthz.operational@\373\023H\002R\006tenantZ\010standardr" +
-      "\025tenant.data_residencyB\203\002\n\034com.udb.core." +
-      "authz.entity.v1B\030AccessDecisionAuditProt" +
-      "oP\001ZDgithub.com/fahara02/udb/sdk/go/gen/" +
-      "udb/core/authz/entity/v1;entityv1\242\002\004UCAE" +
-      "\252\002\030udb.core.Authz.Entity.V1\312\002\030Udb\\Core\\A" +
-      "uthz\\Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\Au" +
-      "thz\\Entity\\V1\352\002\034Udb::Core::Authz::Entity" +
-      "::V1b\006proto3"
+      "hash\022\013VARCHAR(80)R\ruserAgentHash\022G\n\016deci" +
+      "sion_input\030\032 \001(\tB \202\267\030\034\n\016decision_input\022\005" +
+      "JSONBx\001\200\001\001R\rdecisionInput:\347\002\372\266\030\315\001\n\026acces" +
+      "s_decision_audits\022\tudb_authz\030\005 \001*1Decisi" +
+      "on trail for sensitive authorization che" +
+      "cks@\001H\003R\ndecided_atX\373\023b^\n\020tenant_isolati" +
+      "on\032H(tenant_id::text = current_setting(\'" +
+      "app.current_tenant_id\', true)::text)(\001\212\262" +
+      "\031\220\001\n\006tenant\032\ttenant_id*4tenant_id = curr" +
+      "ent_setting(\'app.current_tenant_id\')2\004no" +
+      "ne:\021authz.operational@\373\023H\002R\006tenantZ\010stan" +
+      "dardr\025tenant.data_residencyB\203\002\n\034com.udb." +
+      "core.authz.entity.v1B\030AccessDecisionAudi" +
+      "tProtoP\001ZDgithub.com/fahara02/udb/sdk/go" +
+      "/gen/udb/core/authz/entity/v1;entityv1\242\002" +
+      "\004UCAE\252\002\030udb.core.Authz.Entity.V1\312\002\030Udb\\C" +
+      "ore\\Authz\\Entity\\V1\342\002$Udb\\GPBMetadata\\Co" +
+      "re\\Authz\\Entity\\V1\352\002\034Udb::Core::Authz::E" +
+      "ntity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

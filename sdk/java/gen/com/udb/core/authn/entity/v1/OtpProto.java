@@ -44,7 +44,7 @@ public final class OtpProto {
       "b.core.authn.entity.v1\032\037google/protobuf/" +
       "timestamp.proto\032$udb/core/authn/entity/v" +
       "1/enums.proto\032\033udb/core/common/v1/db.pro" +
-      "to\032!udb/core/common/v1/security.proto\"\275\021" +
+      "to\032!udb/core/common/v1/security.proto\"\312\021" +
       "\n\003OTP\022@\n\006otp_id\030\001 \001(\tB)\202\267\030%\n\006otp_id\022\004UUI" +
       "D\030\001(\001:\021gen_random_uuid()R\005otpId\022\252\001\n\007user" +
       "_id\030\002 \001(\tB\220\001\202\267\030\213\001\n\007user_id\022\004UUID\030\001J.\n\005us" +
@@ -53,61 +53,61 @@ public final class OtpProto {
       "_typeZ\035FK to udb_authn.users.user_idR\006us" +
       "erId\022[\n\010otp_type\030\003 \001(\0162!.udb.core.authn." +
       "entity.v1.OTPTypeB\035\202\267\030\031\n\010otp_type\022\013VARCH" +
-      "AR(30)\030\001R\007otpType\022\206\001\n\tcode_hash\030\004 \001(\tBi\350" +
+      "AR(30)\030\001R\007otpType\022\223\001\n\tcode_hash\030\004 \001(\tBv\350" +
       "\265\030\001\360\265\030\001\202\267\030>\n\tcode_hash\022\014VARCHAR(128)\030\001Z!" +
-      "Keyed HMAC digest of the OTP code\212\267\030\033\010\004\020" +
-      "\001\030\0032\013hmac-sha256J\006tenantR\010codeHash\022\216\001\n\020d" +
-      "elivery_channel\030\005 \001(\tBc\202\267\030_\n\020delivery_ch" +
-      "annel\022\013VARCHAR(10)\030\001:\007\'email\'Z3Delivery " +
-      "channel such as email, sms, push, or voi" +
-      "ceR\017deliveryChannel\022\207\001\n\020delivery_address" +
-      "\030\006 \001(\tB\\\202\267\030X\n\020delivery_address\022\014VARCHAR(" +
-      "255)Z6Redacted email address used for de" +
-      "livery (audit trail)R\017deliveryAddress\022\221\001" +
-      "\n\006status\030\007 \001(\0162#.udb.core.authn.entity.v" +
-      "1.OTPStatusBT\202\267\030P\n\006status\022\013VARCHAR(15)\030\001" +
-      ":\t\'PENDING\'R,\n\027idx_otps_status_expires\022\005" +
-      "BTREEZ\nexpires_atR\006status\022F\n\rattempt_cou" +
-      "nt\030\010 \001(\005B!\202\267\030\035\n\rattempt_count\022\007INTEGER\030\001" +
-      ":\0010R\014attemptCount\022\344\001\n\020superseded_by_id\030\t" +
-      " \001(\tB\271\001\202\267\030\264\001\n\020superseded_by_id\022\004UUIDJ5\n\004" +
-      "otps\022\006otp_id\032\tudb_authn \0042\030fk_otps_super" +
-      "seded_by_idR\"\n\031idx_otps_superseded_by_id" +
-      "\022\005BTREEZ?FK to otps.otp_id; set when thi" +
-      "s OTP is invalidated by a resendR\016supers" +
-      "ededById\022Z\n\nexpires_at\030\n \001(\0132\032.google.pr" +
-      "otobuf.TimestampB\037\202\267\030\033\n\nexpires_at\022\013TIME" +
-      "STAMPTZ\030\001R\texpiresAt\022u\n\007used_at\030\013 \001(\0132\032." +
-      "google.protobuf.TimestampB@\202\267\030<\n\007used_at" +
-      "\022\013TIMESTAMPTZZ$Timestamp of successful v" +
-      "erificationR\006usedAt\022q\n\ncreated_at\030\014 \001(\0132" +
-      "\032.google.protobuf.TimestampB6\202\267\0302\n\ncreat" +
-      "ed_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIMESTAMP`" +
-      "\001h\001R\tcreatedAt\022\244\001\n\016correlation_id\030\r \001(\tB" +
-      "}\202\267\030y\n\016correlation_id\022\014VARCHAR(120)R \n\027i" +
-      "dx_otps_correlation_id\022\005BTREEZ7Request o" +
-      "r workflow correlation id that issued th" +
-      "is OTPR\rcorrelationId\022\217\001\n\ttenant_id\030\016 \001(" +
-      "\tBr\202\267\030n\n\ttenant_id\022\014VARCHAR(120)R\033\n\022idx_" +
-      "otps_tenant_id\022\005BTREEZ3Tenant boundary (" +
-      "denormalized from the owning user)\230\002\001R\010t" +
-      "enantId:\203\003\372\266\030\351\001\n\004otps\022\tudb_authn\030\003 \001*QEm" +
-      "ail OTP records for 2FA, verification, p" +
-      "assword reset, and sensitive operations@" +
-      "\001bs\n\020tenant_isolation\032](tenant_id IS NUL" +
-      "L OR tenant_id::text = current_setting(\'" +
-      "app.current_tenant_id\', true)::text)(\001\352\001" +
-      "\007primary\212\262\031\220\001\n\006tenant\032\ttenant_id*4tenant" +
-      "_id = current_setting(\'app.current_tenan" +
-      "t_id\')2\004none:\021authn.operational@\373\023H\002R\006te" +
-      "nantZ\010standardr\025tenant.data_residencyB\363\001" +
-      "\n\034com.udb.core.authn.entity.v1B\010OtpProto" +
-      "P\001ZDgithub.com/fahara02/udb/sdk/go/gen/u" +
-      "db/core/authn/entity/v1;entityv1\242\002\004UCAE\252" +
-      "\002\030udb.core.Authn.Entity.V1\312\002\030Udb\\Core\\Au" +
-      "thn\\Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\Aut" +
-      "hn\\Entity\\V1\352\002\034Udb::Core::Authn::Entity:" +
-      ":V1b\006proto3"
+      "Keyed HMAC digest of the OTP code\212\267\030(\010\004\020" +
+      "\001\030\0032\013hmac-sha256:\013authn-tokenJ\006tenantR\010c" +
+      "odeHash\022\216\001\n\020delivery_channel\030\005 \001(\tBc\202\267\030_" +
+      "\n\020delivery_channel\022\013VARCHAR(10)\030\001:\007\'emai" +
+      "l\'Z3Delivery channel such as email, sms," +
+      " push, or voiceR\017deliveryChannel\022\207\001\n\020del" +
+      "ivery_address\030\006 \001(\tB\\\202\267\030X\n\020delivery_addr" +
+      "ess\022\014VARCHAR(255)Z6Redacted email addres" +
+      "s used for delivery (audit trail)R\017deliv" +
+      "eryAddress\022\221\001\n\006status\030\007 \001(\0162#.udb.core.a" +
+      "uthn.entity.v1.OTPStatusBT\202\267\030P\n\006status\022\013" +
+      "VARCHAR(15)\030\001:\t\'PENDING\'R,\n\027idx_otps_sta" +
+      "tus_expires\022\005BTREEZ\nexpires_atR\006status\022F" +
+      "\n\rattempt_count\030\010 \001(\005B!\202\267\030\035\n\rattempt_cou" +
+      "nt\022\007INTEGER\030\001:\0010R\014attemptCount\022\344\001\n\020super" +
+      "seded_by_id\030\t \001(\tB\271\001\202\267\030\264\001\n\020superseded_by" +
+      "_id\022\004UUIDJ5\n\004otps\022\006otp_id\032\tudb_authn \0042\030" +
+      "fk_otps_superseded_by_idR\"\n\031idx_otps_sup" +
+      "erseded_by_id\022\005BTREEZ?FK to otps.otp_id;" +
+      " set when this OTP is invalidated by a r" +
+      "esendR\016supersededById\022Z\n\nexpires_at\030\n \001(" +
+      "\0132\032.google.protobuf.TimestampB\037\202\267\030\033\n\nexp" +
+      "ires_at\022\013TIMESTAMPTZ\030\001R\texpiresAt\022u\n\007use" +
+      "d_at\030\013 \001(\0132\032.google.protobuf.TimestampB@" +
+      "\202\267\030<\n\007used_at\022\013TIMESTAMPTZZ$Timestamp of" +
+      " successful verificationR\006usedAt\022q\n\ncrea" +
+      "ted_at\030\014 \001(\0132\032.google.protobuf.Timestamp" +
+      "B6\202\267\0302\n\ncreated_at\022\013TIMESTAMPTZ\030\001:\021CURRE" +
+      "NT_TIMESTAMP`\001h\001R\tcreatedAt\022\244\001\n\016correlat" +
+      "ion_id\030\r \001(\tB}\202\267\030y\n\016correlation_id\022\014VARC" +
+      "HAR(120)R \n\027idx_otps_correlation_id\022\005BTR" +
+      "EEZ7Request or workflow correlation id t" +
+      "hat issued this OTPR\rcorrelationId\022\217\001\n\tt" +
+      "enant_id\030\016 \001(\tBr\202\267\030n\n\ttenant_id\022\014VARCHAR" +
+      "(120)R\033\n\022idx_otps_tenant_id\022\005BTREEZ3Tena" +
+      "nt boundary (denormalized from the ownin" +
+      "g user)\230\002\001R\010tenantId:\203\003\372\266\030\351\001\n\004otps\022\tudb_" +
+      "authn\030\003 \001*QEmail OTP records for 2FA, ve" +
+      "rification, password reset, and sensitiv" +
+      "e operations@\001bs\n\020tenant_isolation\032](ten" +
+      "ant_id IS NULL OR tenant_id::text = curr" +
+      "ent_setting(\'app.current_tenant_id\', tru" +
+      "e)::text)(\001\352\001\007primary\212\262\031\220\001\n\006tenant\032\ttena" +
+      "nt_id*4tenant_id = current_setting(\'app." +
+      "current_tenant_id\')2\004none:\021authn.operati" +
+      "onal@\373\023H\002R\006tenantZ\010standardr\025tenant.data" +
+      "_residencyB\363\001\n\034com.udb.core.authn.entity" +
+      ".v1B\010OtpProtoP\001ZDgithub.com/fahara02/udb" +
+      "/sdk/go/gen/udb/core/authn/entity/v1;ent" +
+      "ityv1\242\002\004UCAE\252\002\030udb.core.Authn.Entity.V1\312" +
+      "\002\030Udb\\Core\\Authn\\Entity\\V1\342\002$Udb\\GPBMeta" +
+      "data\\Core\\Authn\\Entity\\V1\352\002\034Udb::Core::A" +
+      "uthn::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

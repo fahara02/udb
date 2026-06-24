@@ -44,7 +44,7 @@ public final class TokenFamilyProto {
       "proto\022\030udb.core.authn.entity.v1\032\037google/" +
       "protobuf/timestamp.proto\032\033udb/core/commo" +
       "n/v1/db.proto\032!udb/core/common/v1/securi" +
-      "ty.proto\"\234\017\n\013TokenFamily\022I\n\tfamily_id\030\001 " +
+      "ty.proto\"\267\017\n\013TokenFamily\022I\n\tfamily_id\030\001 " +
       "\001(\tB,\202\267\030(\n\tfamily_id\022\004UUID\030\001(\001:\021gen_rand" +
       "om_uuid()R\010familyId\022^\n\nsession_id\030\002 \001(\tB" +
       "?\202\267\030;\n\nsession_id\022\014VARCHAR(128)Z\037Issuing" +
@@ -57,49 +57,50 @@ public final class TokenFamilyProto {
       " \001(\tB\036\202\267\030\032\n\nproject_id\022\014VARCHAR(120)R\tpr" +
       "ojectId\022^\n\tdevice_id\030\007 \001(\tBA\202\267\030=\n\tdevice" +
       "_id\022\013VARCHAR(64)Z#Bound device id (devic" +
-      "es.device_id)R\010deviceId\022\255\001\n\030current_refr" +
-      "esh_jti_hash\030\010 \001(\tBt\350\265\030\001\360\265\030\001\202\267\030Q\n\030curren" +
-      "t_refresh_jti_hash\022\014VARCHAR(128)Z\'Keyed " +
-      "digest of the current refresh jti\212\267\030\023\010\004\020" +
-      "\001\030\0032\013hmac-sha256R\025currentRefreshJtiHash\022" +
-      "\301\001\n\031previous_refresh_jti_hash\030\t \001(\tB\205\001\350\265" +
-      "\030\001\360\265\030\001\202\267\030b\n\031previous_refresh_jti_hash\022\014V" +
-      "ARCHAR(128)Z7Keyed digest of the prior r" +
-      "efresh jti (reuse detection)\212\267\030\023\010\004\020\001\030\0032\013" +
-      "hmac-sha256R\026previousRefreshJtiHash\022l\n\021r" +
-      "euse_detected_at\030\n \001(\0132\032.google.protobuf" +
-      ".TimestampB$\202\267\030 \n\021reuse_detected_at\022\013TIM" +
-      "ESTAMPTZR\017reuseDetectedAt\022X\n\nrevoked_at\030" +
-      "\013 \001(\0132\032.google.protobuf.TimestampB\035\202\267\030\031\n" +
-      "\nrevoked_at\022\013TIMESTAMPTZR\trevokedAt\022R\n\021r" +
-      "evocation_reason\030\014 \001(\tB%\202\267\030!\n\021revocation" +
-      "_reason\022\014VARCHAR(120)R\020revocationReason\022" +
-      "q\n\ncreated_at\030\r \001(\0132\032.google.protobuf.Ti" +
-      "mestampB6\202\267\0302\n\ncreated_at\022\013TIMESTAMPTZ\030\001" +
-      ":\021CURRENT_TIMESTAMP`\001h\001R\tcreatedAt\022o\n\nup" +
-      "dated_at\030\016 \001(\0132\032.google.protobuf.Timesta" +
-      "mpB4\202\267\0300\n\nupdated_at\022\013TIMESTAMPTZ\030\001:\021CUR" +
-      "RENT_TIMESTAMP`\001R\tupdatedAt:\221\004\372\266\030\217\003\n\016tok" +
-      "en_families\022\tudb_authn\030\025 \001*;Refresh-toke" +
-      "n family lineage for rotation + reuse de" +
-      "tection@\001b^\n\020tenant_isolation\032H(tenant_i" +
-      "d::text = current_setting(\'app.current_t" +
-      "enant_id\', true)::text)(\001\212\001/\n\032idx_token_" +
-      "families_session\022\005BTREEZ\nsession_id\212\0013\n\034" +
-      "idx_token_families_principal\022\005BTREEZ\014pri" +
-      "ncipal_id\212\001@\n\036idx_token_families_current" +
-      "_jti\022\004HASHZ\030current_refresh_jti_hash\352\001\007p" +
-      "rimary\372\001\031authn:token-families:read\212\262\031y\n\006" +
-      "tenant\032\ttenant_id*4tenant_id = current_s" +
-      "etting(\'app.current_tenant_id\')2\004none:\021a" +
-      "uthn.operational@\264\001H\002R\006tenantZ\010standardB" +
-      "\373\001\n\034com.udb.core.authn.entity.v1B\020TokenF" +
-      "amilyProtoP\001ZDgithub.com/fahara02/udb/sd" +
-      "k/go/gen/udb/core/authn/entity/v1;entity" +
-      "v1\242\002\004UCAE\252\002\030udb.core.Authn.Entity.V1\312\002\030U" +
-      "db\\Core\\Authn\\Entity\\V1\342\002$Udb\\GPBMetadat" +
-      "a\\Core\\Authn\\Entity\\V1\352\002\034Udb::Core::Auth" +
-      "n::Entity::V1b\006proto3"
+      "es.device_id)R\010deviceId\022\273\001\n\030current_refr" +
+      "esh_jti_hash\030\010 \001(\tB\201\001\350\265\030\001\360\265\030\001\202\267\030Q\n\030curre" +
+      "nt_refresh_jti_hash\022\014VARCHAR(128)Z\'Keyed" +
+      " digest of the current refresh jti\212\267\030 \010\004" +
+      "\020\001\030\0032\013hmac-sha256:\013authn-tokenR\025currentR" +
+      "efreshJtiHash\022\316\001\n\031previous_refresh_jti_h" +
+      "ash\030\t \001(\tB\222\001\350\265\030\001\360\265\030\001\202\267\030b\n\031previous_refre" +
+      "sh_jti_hash\022\014VARCHAR(128)Z7Keyed digest " +
+      "of the prior refresh jti (reuse detectio" +
+      "n)\212\267\030 \010\004\020\001\030\0032\013hmac-sha256:\013authn-tokenR\026" +
+      "previousRefreshJtiHash\022l\n\021reuse_detected" +
+      "_at\030\n \001(\0132\032.google.protobuf.TimestampB$\202" +
+      "\267\030 \n\021reuse_detected_at\022\013TIMESTAMPTZR\017reu" +
+      "seDetectedAt\022X\n\nrevoked_at\030\013 \001(\0132\032.googl" +
+      "e.protobuf.TimestampB\035\202\267\030\031\n\nrevoked_at\022\013" +
+      "TIMESTAMPTZR\trevokedAt\022R\n\021revocation_rea" +
+      "son\030\014 \001(\tB%\202\267\030!\n\021revocation_reason\022\014VARC" +
+      "HAR(120)R\020revocationReason\022q\n\ncreated_at" +
+      "\030\r \001(\0132\032.google.protobuf.TimestampB6\202\267\0302" +
+      "\n\ncreated_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIM" +
+      "ESTAMP`\001h\001R\tcreatedAt\022o\n\nupdated_at\030\016 \001(" +
+      "\0132\032.google.protobuf.TimestampB4\202\267\0300\n\nupd" +
+      "ated_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIMESTAM" +
+      "P`\001R\tupdatedAt:\221\004\372\266\030\217\003\n\016token_families\022\t" +
+      "udb_authn\030\025 \001*;Refresh-token family line" +
+      "age for rotation + reuse detection@\001b^\n\020" +
+      "tenant_isolation\032H(tenant_id::text = cur" +
+      "rent_setting(\'app.current_tenant_id\', tr" +
+      "ue)::text)(\001\212\001/\n\032idx_token_families_sess" +
+      "ion\022\005BTREEZ\nsession_id\212\0013\n\034idx_token_fam" +
+      "ilies_principal\022\005BTREEZ\014principal_id\212\001@\n" +
+      "\036idx_token_families_current_jti\022\004HASHZ\030c" +
+      "urrent_refresh_jti_hash\352\001\007primary\372\001\031auth" +
+      "n:token-families:read\212\262\031y\n\006tenant\032\ttenan" +
+      "t_id*4tenant_id = current_setting(\'app.c" +
+      "urrent_tenant_id\')2\004none:\021authn.operatio" +
+      "nal@\264\001H\002R\006tenantZ\010standardB\373\001\n\034com.udb.c" +
+      "ore.authn.entity.v1B\020TokenFamilyProtoP\001Z" +
+      "Dgithub.com/fahara02/udb/sdk/go/gen/udb/" +
+      "core/authn/entity/v1;entityv1\242\002\004UCAE\252\002\030u" +
+      "db.core.Authn.Entity.V1\312\002\030Udb\\Core\\Authn" +
+      "\\Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\Authn\\" +
+      "Entity\\V1\352\002\034Udb::Core::Authn::Entity::V1" +
+      "b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

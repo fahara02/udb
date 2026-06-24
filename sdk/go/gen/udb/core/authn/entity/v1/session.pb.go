@@ -281,7 +281,7 @@ var File_udb_core_authn_entity_v1_session_proto protoreflect.FileDescriptor
 
 const file_udb_core_authn_entity_v1_session_proto_rawDesc = "" +
 	"\n" +
-	"&udb/core/authn/entity/v1/session.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xb8 \n" +
+	"&udb/core/authn/entity/v1/session.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xe0 \n" +
 	"\aSession\x12L\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tB-\x82\xb7\x18)\n" +
@@ -293,14 +293,14 @@ const file_udb_core_authn_entity_v1_session_proto_rawDesc = "" +
 	"\x14idx_sessions_user_id\x12\x05BTREEZ\x1dFK to udb_authn.users.user_idR\x06userId\x12\x87\x01\n" +
 	"\fsession_type\x18\x03 \x01(\x0e2%.udb.core.authn.entity.v1.SessionTypeB=\x82\xb7\x189\n" +
 	"\fsession_type\x12\vVARCHAR(20)\x18\x01R\x1a\n" +
-	"\x11idx_sessions_type\x12\x05BTREER\vsessionType\x12\xf9\x01\n" +
-	"\x14session_token_lookup\x18\x04 \x01(\tB\xc6\x01\xe8\xb5\x18\x01\xf0\xb5\x18\x01\x82\xb7\x18\x9a\x01\n" +
+	"\x11idx_sessions_type\x12\x05BTREER\vsessionType\x12\x86\x02\n" +
+	"\x14session_token_lookup\x18\x04 \x01(\tB\xd3\x01\xe8\xb5\x18\x01\xf0\xb5\x18\x01\x82\xb7\x18\x9a\x01\n" +
 	"\x14session_token_lookup\x12\fVARCHAR(128)R?\n" +
-	"\x19idx_sessions_token_lookup\x12\x04HASH:\x1csession_type = 'SERVER_SIDE'Z3Keyed HMAC lookup digest of the plain session token\x8a\xb7\x18\x1b\b\x04\x10\x01\x18\x032\vhmac-sha256J\x06tenantR\x12sessionTokenLookup\x12\xbc\x01\n" +
-	"\x12session_token_hash\x18\x05 \x01(\tB\x8d\x01\xe8\xb5\x18\x01\xf0\xb5\x18\x01\x82\xb7\x18b\n" +
-	"\x12session_token_hash\x12\fVARCHAR(128)Z>Keyed HMAC digest of session token (server-side sessions only)\x8a\xb7\x18\x1b\b\x04\x10\x01\x18\x032\vhmac-sha256J\x06tenantR\x10sessionTokenHash\x12\x9e\x01\n" +
-	"\x0fcsrf_token_hash\x18\x06 \x01(\tBv\xe8\xb5\x18\x01\xf0\xb5\x18\x01\x82\xb7\x18O\n" +
-	"\x0fcsrf_token_hash\x12\fVARCHAR(128)Z.Digest of CSRF token; rotated on each mutation\x8a\xb7\x18\x17\b\x04\x10\x01\x18\x032\x06sha256J\asessionR\rcsrfTokenHash\x12\xbf\x01\n" +
+	"\x19idx_sessions_token_lookup\x12\x04HASH:\x1csession_type = 'SERVER_SIDE'Z3Keyed HMAC lookup digest of the plain session token\x8a\xb7\x18(\b\x04\x10\x01\x18\x032\vhmac-sha256:\vauthn-tokenJ\x06tenantR\x12sessionTokenLookup\x12\xc9\x01\n" +
+	"\x12session_token_hash\x18\x05 \x01(\tB\x9a\x01\xe8\xb5\x18\x01\xf0\xb5\x18\x01\x82\xb7\x18b\n" +
+	"\x12session_token_hash\x12\fVARCHAR(128)Z>Keyed HMAC digest of session token (server-side sessions only)\x8a\xb7\x18(\b\x04\x10\x01\x18\x032\vhmac-sha256:\vauthn-tokenJ\x06tenantR\x10sessionTokenHash\x12\xac\x01\n" +
+	"\x0fcsrf_token_hash\x18\x06 \x01(\tB\x83\x01\xe8\xb5\x18\x01\xf0\xb5\x18\x01\x82\xb7\x18O\n" +
+	"\x0fcsrf_token_hash\x12\fVARCHAR(128)Z.Digest of CSRF token; rotated on each mutation\x8a\xb7\x18$\b\x04\x10\x01\x18\x032\x06sha256:\vauthn-tokenJ\asessionR\rcsrfTokenHash\x12\xbf\x01\n" +
 	"\x10access_token_jti\x18\a \x01(\tB\x94\x01\x82\xb7\x18\x8f\x01\n" +
 	"\x10access_token_jti\x12\vVARCHAR(36)R5\n" +
 	"\x17idx_sessions_access_jti\x12\x04HASH:\x14session_type = 'JWT'Z7JWT jti for access token revocation (JWT sessions only)R\x0eaccessTokenJti\x12\xaf\x01\n" +

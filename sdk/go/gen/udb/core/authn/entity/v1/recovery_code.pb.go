@@ -120,16 +120,16 @@ var File_udb_core_authn_entity_v1_recovery_code_proto protoreflect.FileDescripto
 
 const file_udb_core_authn_entity_v1_recovery_code_proto_rawDesc = "" +
 	"\n" +
-	",udb/core/authn/entity/v1/recovery_code.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xb1\t\n" +
+	",udb/core/authn/entity/v1/recovery_code.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xbe\t\n" +
 	"\fRecoveryCode\x12]\n" +
 	"\x10recovery_code_id\x18\x01 \x01(\tB3\x82\xb7\x18/\n" +
 	"\x10recovery_code_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x0erecoveryCodeId\x12\xb4\x01\n" +
 	"\auser_id\x18\x02 \x01(\tB\x9a\x01\x82\xb7\x18\x95\x01\n" +
 	"\auser_id\x12\x04UUID\x18\x01J8\n" +
 	"\x05users\x12\auser_id\x1a\tudb_authn \x032\x19fk_recovery_codes_user_idR)\n" +
-	"\x17idx_recovery_codes_user\x12\x05BTREEZ\auser_idZ\x1dFK to udb_authn.users.user_idR\x06userId\x12\x8b\x01\n" +
-	"\tcode_hash\x18\x03 \x01(\tBn\xe8\xb5\x18\x01\xf0\xb5\x18\x01\x82\xb7\x18C\n" +
-	"\tcode_hash\x12\fVARCHAR(128)\x18\x01Z&Keyed HMAC digest of the recovery code\x8a\xb7\x18\x1b\b\x04\x10\x01\x18\x032\vhmac-sha256J\x06tenantR\bcodeHash\x12\x83\x01\n" +
+	"\x17idx_recovery_codes_user\x12\x05BTREEZ\auser_idZ\x1dFK to udb_authn.users.user_idR\x06userId\x12\x98\x01\n" +
+	"\tcode_hash\x18\x03 \x01(\tB{\xe8\xb5\x18\x01\xf0\xb5\x18\x01\x82\xb7\x18C\n" +
+	"\tcode_hash\x12\fVARCHAR(128)\x18\x01Z&Keyed HMAC digest of the recovery code\x8a\xb7\x18(\b\x04\x10\x01\x18\x032\vhmac-sha256:\vauthn-tokenJ\x06tenantR\bcodeHash\x12\x83\x01\n" +
 	"\aused_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampBN\x82\xb7\x18J\n" +
 	"\aused_at\x12\vTIMESTAMPTZZ2Timestamp the code was consumed; NULL while unusedR\x06usedAt\x12q\n" +
 	"\n" +

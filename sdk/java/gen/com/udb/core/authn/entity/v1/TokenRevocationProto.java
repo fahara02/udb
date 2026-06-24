@@ -45,39 +45,39 @@ public final class TokenRevocationProto {
       "gle/protobuf/timestamp.proto\032$udb/core/a" +
       "uthn/entity/v1/enums.proto\032\033udb/core/com" +
       "mon/v1/db.proto\032!udb/core/common/v1/secu" +
-      "rity.proto\"\355\007\n\017TokenRevocation\022{\n\010jti_ha" +
-      "sh\030\001 \001(\tB`\350\265\030\001\360\265\030\001\202\267\030=\n\010jti_hash\022\014VARCHA" +
-      "R(128)\030\001(\001Z\037Keyed digest of the revoked " +
-      "jti\212\267\030\023\010\004\020\001\030\0032\013hmac-sha256R\007jtiHash\022}\n\nt" +
-      "oken_type\030\002 \001(\0162#.udb.core.authn.entity." +
-      "v1.TokenTypeB9\202\267\0305\n\ntoken_type\022\013VARCHAR(" +
-      "20)\030\001:\030\'TOKEN_TYPE_UNSPECIFIED\'R\ttokenTy" +
-      "pe\022<\n\ttenant_id\030\003 \001(\tB\037\202\267\030\033\n\ttenant_id\022\013" +
-      "VARCHAR(64)\230\002\001R\010tenantId\022X\n\nexpires_at\030\004" +
-      " \001(\0132\032.google.protobuf.TimestampB\035\202\267\030\031\n\n" +
-      "expires_at\022\013TIMESTAMPTZR\texpiresAt\022q\n\nre" +
-      "voked_at\030\005 \001(\0132\032.google.protobuf.Timesta" +
-      "mpB6\202\267\0302\n\nrevoked_at\022\013TIMESTAMPTZ\030\001:\021CUR" +
-      "RENT_TIMESTAMP`\001h\001R\trevokedAt\022=\n\nrevoked" +
-      "_by\030\006 \001(\tB\036\202\267\030\032\n\nrevoked_by\022\014VARCHAR(160" +
-      ")R\trevokedBy\0222\n\006reason\030\007 \001(\tB\032\202\267\030\026\n\006reas" +
-      "on\022\014VARCHAR(120)R\006reason:\337\002\372\266\030\227\002\n\021token_" +
-      "revocations\022\tudb_authn\030\026 \001*:Durable clus" +
-      "ter-wide token revocation list (jti deny" +
-      " list)\212\001+\n\031idx_token_revocations_jti\022\004HA" +
-      "SHZ\010jti_hash\212\0012\n\035idx_token_revocations_e" +
-      "xpires\022\005BTREEZ\nexpires_at\212\0010\n\034idx_token_" +
-      "revocations_tenant\022\005BTREEZ\ttenant_id\352\001\007p" +
-      "rimary\372\001\026authn:revocations:read\212\262\031?\n\006ten" +
-      "ant\032\ttenant_id2\004none:\016authn.security@ZH\002" +
-      "R\006tenantZ\010standardB\377\001\n\034com.udb.core.auth" +
-      "n.entity.v1B\024TokenRevocationProtoP\001ZDgit" +
-      "hub.com/fahara02/udb/sdk/go/gen/udb/core" +
-      "/authn/entity/v1;entityv1\242\002\004UCAE\252\002\030udb.c" +
-      "ore.Authn.Entity.V1\312\002\030Udb\\Core\\Authn\\Ent" +
-      "ity\\V1\342\002$Udb\\GPBMetadata\\Core\\Authn\\Enti" +
-      "ty\\V1\352\002\034Udb::Core::Authn::Entity::V1b\006pr" +
-      "oto3"
+      "rity.proto\"\373\007\n\017TokenRevocation\022\210\001\n\010jti_h" +
+      "ash\030\001 \001(\tBm\350\265\030\001\360\265\030\001\202\267\030=\n\010jti_hash\022\014VARCH" +
+      "AR(128)\030\001(\001Z\037Keyed digest of the revoked" +
+      " jti\212\267\030 \010\004\020\001\030\0032\013hmac-sha256:\013authn-token" +
+      "R\007jtiHash\022}\n\ntoken_type\030\002 \001(\0162#.udb.core" +
+      ".authn.entity.v1.TokenTypeB9\202\267\0305\n\ntoken_" +
+      "type\022\013VARCHAR(20)\030\001:\030\'TOKEN_TYPE_UNSPECI" +
+      "FIED\'R\ttokenType\022<\n\ttenant_id\030\003 \001(\tB\037\202\267\030" +
+      "\033\n\ttenant_id\022\013VARCHAR(64)\230\002\001R\010tenantId\022X" +
+      "\n\nexpires_at\030\004 \001(\0132\032.google.protobuf.Tim" +
+      "estampB\035\202\267\030\031\n\nexpires_at\022\013TIMESTAMPTZR\te" +
+      "xpiresAt\022q\n\nrevoked_at\030\005 \001(\0132\032.google.pr" +
+      "otobuf.TimestampB6\202\267\0302\n\nrevoked_at\022\013TIME" +
+      "STAMPTZ\030\001:\021CURRENT_TIMESTAMP`\001h\001R\trevoke" +
+      "dAt\022=\n\nrevoked_by\030\006 \001(\tB\036\202\267\030\032\n\nrevoked_b" +
+      "y\022\014VARCHAR(160)R\trevokedBy\0222\n\006reason\030\007 \001" +
+      "(\tB\032\202\267\030\026\n\006reason\022\014VARCHAR(120)R\006reason:\337" +
+      "\002\372\266\030\227\002\n\021token_revocations\022\tudb_authn\030\026 \001" +
+      "*:Durable cluster-wide token revocation " +
+      "list (jti deny list)\212\001+\n\031idx_token_revoc" +
+      "ations_jti\022\004HASHZ\010jti_hash\212\0012\n\035idx_token" +
+      "_revocations_expires\022\005BTREEZ\nexpires_at\212" +
+      "\0010\n\034idx_token_revocations_tenant\022\005BTREEZ" +
+      "\ttenant_id\352\001\007primary\372\001\026authn:revocations" +
+      ":read\212\262\031?\n\006tenant\032\ttenant_id2\004none:\016auth" +
+      "n.security@ZH\002R\006tenantZ\010standardB\377\001\n\034com" +
+      ".udb.core.authn.entity.v1B\024TokenRevocati" +
+      "onProtoP\001ZDgithub.com/fahara02/udb/sdk/g" +
+      "o/gen/udb/core/authn/entity/v1;entityv1\242" +
+      "\002\004UCAE\252\002\030udb.core.Authn.Entity.V1\312\002\030Udb\\" +
+      "Core\\Authn\\Entity\\V1\342\002$Udb\\GPBMetadata\\C" +
+      "ore\\Authn\\Entity\\V1\352\002\034Udb::Core::Authn::" +
+      "Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

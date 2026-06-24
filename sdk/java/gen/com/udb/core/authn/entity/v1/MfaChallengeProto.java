@@ -45,7 +45,7 @@ public final class MfaChallengeProto {
       "/protobuf/timestamp.proto\032$udb/core/auth" +
       "n/entity/v1/enums.proto\032\033udb/core/common" +
       "/v1/db.proto\032!udb/core/common/v1/securit" +
-      "y.proto\"\221\r\n\014MfaChallenge\022R\n\014challenge_id" +
+      "y.proto\"\236\r\n\014MfaChallenge\022R\n\014challenge_id" +
       "\030\001 \001(\tB/\202\267\030+\n\014challenge_id\022\004UUID\030\001(\001:\021ge" +
       "n_random_uuid()R\013challengeId\0226\n\007user_id\030" +
       "\002 \001(\tB\035\202\267\030\031\n\007user_id\022\014VARCHAR(160)\030\001R\006us" +
@@ -59,41 +59,42 @@ public final class MfaChallengeProto {
       "rpose\030\006 \001(\0162-.udb.core.authn.entity.v1.M" +
       "faChallengePurposeBC\202\267\030?\n\007purpose\022\013VARCH" +
       "AR(64)\030\001:%\'MFA_CHALLENGE_PURPOSE_LOGIN_S" +
-      "TEP_UP\'R\007purpose\022\243\001\n\027device_fingerprint_" +
-      "hash\030\007 \001(\tBk\350\265\030\001\360\265\030\001\202\267\030H\n\027device_fingerp" +
+      "TEP_UP\'R\007purpose\022\260\001\n\027device_fingerprint_" +
+      "hash\030\007 \001(\tBx\350\265\030\001\360\265\030\001\202\267\030H\n\027device_fingerp" +
       "rint_hash\022\014VARCHAR(128)Z\037Bound device fi" +
-      "ngerprint digest\212\267\030\023\010\004\020\001\030\0032\013hmac-sha256R" +
-      "\025deviceFingerprintHash\022q\n\021ip_address_mas" +
-      "ked\030\010 \001(\tBE\320\265\030\001\340\265\030\001\202\267\0309\n\021ip_address_mask" +
-      "ed\022\013VARCHAR(64)Z\027Masked source IP prefix" +
-      "R\017ipAddressMasked\022F\n\rattempt_count\030\t \001(\005" +
-      "B!\202\267\030\035\n\rattempt_count\022\007INTEGER\030\001:\0010R\014att" +
-      "emptCount\022Z\n\nexpires_at\030\n \001(\0132\032.google.p" +
-      "rotobuf.TimestampB\037\202\267\030\033\n\nexpires_at\022\013TIM" +
-      "ESTAMPTZ\030\001R\texpiresAt\022[\n\013consumed_at\030\013 \001" +
-      "(\0132\032.google.protobuf.TimestampB\036\202\267\030\032\n\013co" +
-      "nsumed_at\022\013TIMESTAMPTZR\nconsumedAt\022q\n\ncr" +
-      "eated_at\030\014 \001(\0132\032.google.protobuf.Timesta" +
-      "mpB6\202\267\0302\n\ncreated_at\022\013TIMESTAMPTZ\030\001:\021CUR" +
-      "RENT_TIMESTAMP`\001h\001R\tcreatedAt:\313\003\372\266\030\315\002\n\016m" +
-      "fa_challenges\022\tudb_authn\030\030 \001*FFirst-clas" +
-      "s step-up MFA challenge records (single-" +
-      "use, atomic consume)@\001b^\n\020tenant_isolati" +
-      "on\032H(tenant_id::text = current_setting(\'" +
-      "app.current_tenant_id\', true)::text)(\001\212\001" +
-      ")\n\027idx_mfa_challenges_user\022\005BTREEZ\007user_" +
-      "id\212\001/\n\032idx_mfa_challenges_expires\022\005BTREE" +
-      "Z\nexpires_at\352\001\007primary\372\001\031authn:mfa-chall" +
-      "enges:read\212\262\031u\n\006tenant\032\ttenant_id*4tenan" +
-      "t_id = current_setting(\'app.current_tena" +
-      "nt_id\')2\004none:\016authn.security@\036H\002R\006tenan" +
-      "tZ\010standardB\374\001\n\034com.udb.core.authn.entit" +
-      "y.v1B\021MfaChallengeProtoP\001ZDgithub.com/fa" +
-      "hara02/udb/sdk/go/gen/udb/core/authn/ent" +
-      "ity/v1;entityv1\242\002\004UCAE\252\002\030udb.core.Authn." +
-      "Entity.V1\312\002\030Udb\\Core\\Authn\\Entity\\V1\342\002$U" +
-      "db\\GPBMetadata\\Core\\Authn\\Entity\\V1\352\002\034Ud" +
-      "b::Core::Authn::Entity::V1b\006proto3"
+      "ngerprint digest\212\267\030 \010\004\020\001\030\0032\013hmac-sha256:" +
+      "\013authn-tokenR\025deviceFingerprintHash\022q\n\021i" +
+      "p_address_masked\030\010 \001(\tBE\320\265\030\001\340\265\030\001\202\267\0309\n\021ip" +
+      "_address_masked\022\013VARCHAR(64)Z\027Masked sou" +
+      "rce IP prefixR\017ipAddressMasked\022F\n\rattemp" +
+      "t_count\030\t \001(\005B!\202\267\030\035\n\rattempt_count\022\007INTE" +
+      "GER\030\001:\0010R\014attemptCount\022Z\n\nexpires_at\030\n \001" +
+      "(\0132\032.google.protobuf.TimestampB\037\202\267\030\033\n\nex" +
+      "pires_at\022\013TIMESTAMPTZ\030\001R\texpiresAt\022[\n\013co" +
+      "nsumed_at\030\013 \001(\0132\032.google.protobuf.Timest" +
+      "ampB\036\202\267\030\032\n\013consumed_at\022\013TIMESTAMPTZR\ncon" +
+      "sumedAt\022q\n\ncreated_at\030\014 \001(\0132\032.google.pro" +
+      "tobuf.TimestampB6\202\267\0302\n\ncreated_at\022\013TIMES" +
+      "TAMPTZ\030\001:\021CURRENT_TIMESTAMP`\001h\001R\tcreated" +
+      "At:\313\003\372\266\030\315\002\n\016mfa_challenges\022\tudb_authn\030\030 " +
+      "\001*FFirst-class step-up MFA challenge rec" +
+      "ords (single-use, atomic consume)@\001b^\n\020t" +
+      "enant_isolation\032H(tenant_id::text = curr" +
+      "ent_setting(\'app.current_tenant_id\', tru" +
+      "e)::text)(\001\212\001)\n\027idx_mfa_challenges_user\022" +
+      "\005BTREEZ\007user_id\212\001/\n\032idx_mfa_challenges_e" +
+      "xpires\022\005BTREEZ\nexpires_at\352\001\007primary\372\001\031au" +
+      "thn:mfa-challenges:read\212\262\031u\n\006tenant\032\tten" +
+      "ant_id*4tenant_id = current_setting(\'app" +
+      ".current_tenant_id\')2\004none:\016authn.securi" +
+      "ty@\036H\002R\006tenantZ\010standardB\374\001\n\034com.udb.cor" +
+      "e.authn.entity.v1B\021MfaChallengeProtoP\001ZD" +
+      "github.com/fahara02/udb/sdk/go/gen/udb/c" +
+      "ore/authn/entity/v1;entityv1\242\002\004UCAE\252\002\030ud" +
+      "b.core.Authn.Entity.V1\312\002\030Udb\\Core\\Authn\\" +
+      "Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\Authn\\E" +
+      "ntity\\V1\352\002\034Udb::Core::Authn::Entity::V1b" +
+      "\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

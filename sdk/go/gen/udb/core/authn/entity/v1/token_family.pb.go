@@ -188,7 +188,7 @@ var File_udb_core_authn_entity_v1_token_family_proto protoreflect.FileDescriptor
 
 const file_udb_core_authn_entity_v1_token_family_proto_rawDesc = "" +
 	"\n" +
-	"+udb/core/authn/entity/v1/token_family.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\x9c\x0f\n" +
+	"+udb/core/authn/entity/v1/token_family.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xb7\x0f\n" +
 	"\vTokenFamily\x12I\n" +
 	"\tfamily_id\x18\x01 \x01(\tB,\x82\xb7\x18(\n" +
 	"\tfamily_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\bfamilyId\x12^\n" +
@@ -207,11 +207,11 @@ const file_udb_core_authn_entity_v1_token_family_proto_rawDesc = "" +
 	"\n" +
 	"project_id\x12\fVARCHAR(120)R\tprojectId\x12^\n" +
 	"\tdevice_id\x18\a \x01(\tBA\x82\xb7\x18=\n" +
-	"\tdevice_id\x12\vVARCHAR(64)Z#Bound device id (devices.device_id)R\bdeviceId\x12\xad\x01\n" +
-	"\x18current_refresh_jti_hash\x18\b \x01(\tBt\xe8\xb5\x18\x01\xf0\xb5\x18\x01\x82\xb7\x18Q\n" +
-	"\x18current_refresh_jti_hash\x12\fVARCHAR(128)Z'Keyed digest of the current refresh jti\x8a\xb7\x18\x13\b\x04\x10\x01\x18\x032\vhmac-sha256R\x15currentRefreshJtiHash\x12\xc1\x01\n" +
-	"\x19previous_refresh_jti_hash\x18\t \x01(\tB\x85\x01\xe8\xb5\x18\x01\xf0\xb5\x18\x01\x82\xb7\x18b\n" +
-	"\x19previous_refresh_jti_hash\x12\fVARCHAR(128)Z7Keyed digest of the prior refresh jti (reuse detection)\x8a\xb7\x18\x13\b\x04\x10\x01\x18\x032\vhmac-sha256R\x16previousRefreshJtiHash\x12l\n" +
+	"\tdevice_id\x12\vVARCHAR(64)Z#Bound device id (devices.device_id)R\bdeviceId\x12\xbb\x01\n" +
+	"\x18current_refresh_jti_hash\x18\b \x01(\tB\x81\x01\xe8\xb5\x18\x01\xf0\xb5\x18\x01\x82\xb7\x18Q\n" +
+	"\x18current_refresh_jti_hash\x12\fVARCHAR(128)Z'Keyed digest of the current refresh jti\x8a\xb7\x18 \b\x04\x10\x01\x18\x032\vhmac-sha256:\vauthn-tokenR\x15currentRefreshJtiHash\x12\xce\x01\n" +
+	"\x19previous_refresh_jti_hash\x18\t \x01(\tB\x92\x01\xe8\xb5\x18\x01\xf0\xb5\x18\x01\x82\xb7\x18b\n" +
+	"\x19previous_refresh_jti_hash\x12\fVARCHAR(128)Z7Keyed digest of the prior refresh jti (reuse detection)\x8a\xb7\x18 \b\x04\x10\x01\x18\x032\vhmac-sha256:\vauthn-tokenR\x16previousRefreshJtiHash\x12l\n" +
 	"\x11reuse_detected_at\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampB$\x82\xb7\x18 \n" +
 	"\x11reuse_detected_at\x12\vTIMESTAMPTZR\x0freuseDetectedAt\x12X\n" +

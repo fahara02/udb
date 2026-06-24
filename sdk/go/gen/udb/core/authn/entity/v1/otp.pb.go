@@ -186,7 +186,7 @@ var File_udb_core_authn_entity_v1_otp_proto protoreflect.FileDescriptor
 
 const file_udb_core_authn_entity_v1_otp_proto_rawDesc = "" +
 	"\n" +
-	"\"udb/core/authn/entity/v1/otp.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xbd\x11\n" +
+	"\"udb/core/authn/entity/v1/otp.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xca\x11\n" +
 	"\x03OTP\x12@\n" +
 	"\x06otp_id\x18\x01 \x01(\tB)\x82\xb7\x18%\n" +
 	"\x06otp_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x05otpId\x12\xaa\x01\n" +
@@ -195,9 +195,9 @@ const file_udb_core_authn_entity_v1_otp_proto_rawDesc = "" +
 	"\x05users\x12\auser_id\x1a\tudb_authn \x032\x0ffk_otps_user_idR)\n" +
 	"\x16idx_otps_user_otp_type\x12\x05BTREEZ\botp_typeZ\x1dFK to udb_authn.users.user_idR\x06userId\x12[\n" +
 	"\botp_type\x18\x03 \x01(\x0e2!.udb.core.authn.entity.v1.OTPTypeB\x1d\x82\xb7\x18\x19\n" +
-	"\botp_type\x12\vVARCHAR(30)\x18\x01R\aotpType\x12\x86\x01\n" +
-	"\tcode_hash\x18\x04 \x01(\tBi\xe8\xb5\x18\x01\xf0\xb5\x18\x01\x82\xb7\x18>\n" +
-	"\tcode_hash\x12\fVARCHAR(128)\x18\x01Z!Keyed HMAC digest of the OTP code\x8a\xb7\x18\x1b\b\x04\x10\x01\x18\x032\vhmac-sha256J\x06tenantR\bcodeHash\x12\x8e\x01\n" +
+	"\botp_type\x12\vVARCHAR(30)\x18\x01R\aotpType\x12\x93\x01\n" +
+	"\tcode_hash\x18\x04 \x01(\tBv\xe8\xb5\x18\x01\xf0\xb5\x18\x01\x82\xb7\x18>\n" +
+	"\tcode_hash\x12\fVARCHAR(128)\x18\x01Z!Keyed HMAC digest of the OTP code\x8a\xb7\x18(\b\x04\x10\x01\x18\x032\vhmac-sha256:\vauthn-tokenJ\x06tenantR\bcodeHash\x12\x8e\x01\n" +
 	"\x10delivery_channel\x18\x05 \x01(\tBc\x82\xb7\x18_\n" +
 	"\x10delivery_channel\x12\vVARCHAR(10)\x18\x01:\a'email'Z3Delivery channel such as email, sms, push, or voiceR\x0fdeliveryChannel\x12\x87\x01\n" +
 	"\x10delivery_address\x18\x06 \x01(\tB\\\x82\xb7\x18X\n" +

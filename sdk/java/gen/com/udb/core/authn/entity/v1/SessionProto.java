@@ -45,7 +45,7 @@ public final class SessionProto {
       "buf/timestamp.proto\032$udb/core/authn/enti" +
       "ty/v1/enums.proto\032\033udb/core/common/v1/db" +
       ".proto\032!udb/core/common/v1/security.prot" +
-      "o\"\270 \n\007Session\022L\n\nsession_id\030\001 \001(\tB-\202\267\030)\n" +
+      "o\"\340 \n\007Session\022L\n\nsession_id\030\001 \001(\tB-\202\267\030)\n" +
       "\nsession_id\022\004UUID\030\001(\001:\021gen_random_uuid()" +
       "R\tsessionId\022\213\001\n\007user_id\030\002 \001(\tBr\202\267\030n\n\007use" +
       "r_id\022\004UUID\030\001J\035\n\005users\022\007user_id\032\tudb_auth" +
@@ -54,21 +54,22 @@ public final class SessionProto {
       "ssion_type\030\003 \001(\0162%.udb.core.authn.entity" +
       ".v1.SessionTypeB=\202\267\0309\n\014session_type\022\013VAR" +
       "CHAR(20)\030\001R\032\n\021idx_sessions_type\022\005BTREER\013" +
-      "sessionType\022\371\001\n\024session_token_lookup\030\004 \001" +
-      "(\tB\306\001\350\265\030\001\360\265\030\001\202\267\030\232\001\n\024session_token_lookup" +
+      "sessionType\022\206\002\n\024session_token_lookup\030\004 \001" +
+      "(\tB\323\001\350\265\030\001\360\265\030\001\202\267\030\232\001\n\024session_token_lookup" +
       "\022\014VARCHAR(128)R?\n\031idx_sessions_token_loo" +
       "kup\022\004HASH:\034session_type = \'SERVER_SIDE\'Z" +
       "3Keyed HMAC lookup digest of the plain s" +
-      "ession token\212\267\030\033\010\004\020\001\030\0032\013hmac-sha256J\006ten" +
-      "antR\022sessionTokenLookup\022\274\001\n\022session_toke" +
-      "n_hash\030\005 \001(\tB\215\001\350\265\030\001\360\265\030\001\202\267\030b\n\022session_tok" +
-      "en_hash\022\014VARCHAR(128)Z>Keyed HMAC digest" +
-      " of session token (server-side sessions " +
-      "only)\212\267\030\033\010\004\020\001\030\0032\013hmac-sha256J\006tenantR\020se" +
-      "ssionTokenHash\022\236\001\n\017csrf_token_hash\030\006 \001(\t" +
-      "Bv\350\265\030\001\360\265\030\001\202\267\030O\n\017csrf_token_hash\022\014VARCHAR" +
-      "(128)Z.Digest of CSRF token; rotated on " +
-      "each mutation\212\267\030\027\010\004\020\001\030\0032\006sha256J\007session" +
+      "ession token\212\267\030(\010\004\020\001\030\0032\013hmac-sha256:\013aut" +
+      "hn-tokenJ\006tenantR\022sessionTokenLookup\022\311\001\n" +
+      "\022session_token_hash\030\005 \001(\tB\232\001\350\265\030\001\360\265\030\001\202\267\030b" +
+      "\n\022session_token_hash\022\014VARCHAR(128)Z>Keye" +
+      "d HMAC digest of session token (server-s" +
+      "ide sessions only)\212\267\030(\010\004\020\001\030\0032\013hmac-sha25" +
+      "6:\013authn-tokenJ\006tenantR\020sessionTokenHash" +
+      "\022\254\001\n\017csrf_token_hash\030\006 \001(\tB\203\001\350\265\030\001\360\265\030\001\202\267\030" +
+      "O\n\017csrf_token_hash\022\014VARCHAR(128)Z.Digest" +
+      " of CSRF token; rotated on each mutation" +
+      "\212\267\030$\010\004\020\001\030\0032\006sha256:\013authn-tokenJ\007session" +
       "R\rcsrfTokenHash\022\277\001\n\020access_token_jti\030\007 \001" +
       "(\tB\224\001\202\267\030\217\001\n\020access_token_jti\022\013VARCHAR(36" +
       ")R5\n\027idx_sessions_access_jti\022\004HASH:\024sess" +
