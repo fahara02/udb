@@ -46,9 +46,24 @@ table.
 - **Credential** — bearer/API key in hand, or bootstrap needed?
 
 ## Quick reference
-**SDK packages:** TS `@udb_plus/sdk` · Python `udb-client` · Go
-`github.com/fahara02/udb/sdk/go` · Java `dev.udb:udb-java-client` · C#
-`Udb.Client` · PHP `fahara02/udb-laravel`.
+**Current baseline:** UDB `0.3.7`, wire protocol `1.0.0` (release tag
+`v0.3.7`). Pin SDKs to the same product version unless intentionally testing a
+mixed-client upgrade: TS `@udb_plus/sdk@0.3.7` · Python `udb-client==0.3.7` · Go
+`github.com/fahara02/udb/sdk/go@v0.3.7` · Java `dev.udb:udb-java-client`
+`0.3.7` · C# `Udb.Client` `0.3.7` · PHP `fahara02/udb-laravel:^0.3.7`.
+
+**Go SDK 0.3.7+ enterprise path:** for long-running services, use the SDK's
+native session helpers instead of hand-rolled bearer refresh. Dial with
+`udbclient.NewUdb`, then authenticate with
+`u.Auth.LoginSession(store).LoginWithDevice(ctx, loginReq)`; call
+`u.Auth.AuthenticateBearer(ctx, token.AccessToken)` and adopt the verified
+principal's canonical tenant/project before any tenant-scoped CRUD. Keep the
+returned `TokenManager` and call `Token(ctx)` before each DataBroker/native
+operation, appending `authorization: Bearer <access_token>` to the SDK
+metadata context. `LoginAndAdoptTenant` is valid for one-shot login/adopt and
+updates generated-client authorization, but do not freeze its initial access
+token inside a long-running server. If an API key is configured, authenticate it
+once and let the SDK connection carry `x-api-key`.
 
 **CRUD** (by `message_type` = proto FQN): `Select {filter, limit ≤ ~500/page}` ·
 `Upsert {record, conflict_fields, return_record}` · `Delete {filter}` · typed
@@ -61,9 +76,12 @@ snakeToCamel=false`) — protobuf-es (the repo's own SDK codegen) is camelCase a
 won't match `record_json`. Serving a custom proto needs neither `udb proto export`
 nor `buf` (the broker embeds the annotation contract).
 
-**Storage upload:** `RegisterUpload` → presigned PUT → `FinalizeUpload`
-(`is_public` is `optional` — omit to preserve) → presigned GET. **Authz:**
-`can(resource, action)`; server `cache_ttl_seconds=0` = never cache.
+**Storage upload:** prefer SDK helpers (`Storage.UploadFile` / `RegisterUpload`
+→ presigned PUT → `FinalizeUpload`) over direct DB/object-store access.
+`project_id` is a UUID column; Go SDK 0.3.7+ only sends it when metadata holds a
+canonical UUID, so human project codes like `private` are safe. `is_public` is
+`optional` — omit to preserve. **Authz:** `can(resource, action)`; server
+`cache_ttl_seconds=0` = never cache.
 
 **Real enterprise authn + authz flow** (worked end-to-end in `examples/ts_enterprise/`):
 1. **Bootstrap the admin OFFLINE** (Postgres-direct; also binds `organization_owner`
@@ -93,12 +111,16 @@ nor `buf` (the broker embeds the annotation contract).
 `udb sdk generate --lang <l>` · `udb sdk manifest` · `udb requirements` (backend
 contract; run BEFORE first start) · `udb doctor --enterprise` (manifest-aware
 preflight — lists every unmet prereq + missing required backend at once) ·
-`udb native list/docs` · `udb compat-matrix` (authoritative annotations).
+`udb native list/docs` · `udb compat-matrix` (authoritative annotations). Since
+0.3.7, `udb --help`, `udb help <cmd>`, command `--help`, `udb --version`, and
+near-miss "did you mean" suggestions are supported.
 
 ## Error decode (first response to any failure)
 `UNIMPLEMENTED`→wrong target (set authTarget) · `PERMISSION_DENIED`→scope or
 tenant mismatch · `FAILED_PRECONDITION`→service disabled / wrong state /
 missing config · `RESOURCE_EXHAUSTED`→rate limit or backpressure (back off) ·
+`UNAUTHENTICATED` with only `x-api-key`→DataBroker data plane requires Bearer
+JWT or mTLS; log in for an access token and send `authorization: Bearer <jwt>` ·
 `INVALID_ARGUMENT`→unknown message_type (use the FQN; `udb sdk manifest`), OR
 "tenant isolation requires filter on tenant_id" → a tenant-scoped read/delete MUST
 put `tenant_id` IN THE FILTER (`select({where:{…, tenant_id}})`) ·
@@ -111,6 +133,9 @@ put `tenant_id` IN THE FILTER (`select({where:{…, tenant_id}})`) ·
 - Always include metadata (tenant/project/scopes) AND a credential in examples;
   route native-service clients to authTarget. Use `message_type` FQNs, never
   table names.
+- Do not bypass UDB SDK/native services for storage or auth because a helper is
+  awkward; fix/wrap the SDK path locally and report any missing helper back to
+  UDB. No raw `udb_storage` writes from apps.
 - Tenant-scoped entity protos need a recognizable tenant column (`tenant_id`,
   `_tenant_id`, or `is_tenant_column: true`); custom proto packages need
   `UDB_PROTO_NAMESPACE` or annotations are silently ignored.

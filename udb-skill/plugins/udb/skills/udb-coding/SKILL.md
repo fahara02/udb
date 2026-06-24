@@ -10,6 +10,7 @@ UDB is a **proto-driven multi-database broker** (Rust, tonic/prost, sqlx): one
 annotated proto contract derives DB schema, per-RPC security enforcement, ~17
 native services / 260+ RPCs across 18 backends, six SDKs, CLI and docs. This
 skill carries the codebase map AND the house doctrine for changing it safely.
+Current code/SDK baseline is **0.3.7** (wire protocol `1.0.0`).
 
 **Full guide (read on demand): [references/udb-coding.md](references/udb-coding.md)** —
 the proto→runtime pipeline, both request lifecycles file-by-file, the CDC/
@@ -48,6 +49,12 @@ generic Rust/SQL/engine knowledge for everything else.
    `run_while_leader`) — never a bare interval loop on every replica.
 
 ## Startup path & enterprise config (read before touching `serve()`/config)
+- **0.3.7 CLI/preflight surface:** `cli/help.rs` handles `udb --help`,
+  `udb help <cmd>`, per-command `--help`, `udb --version`, and near-miss
+  suggestions before heavy startup side effects. `Command::Requirements` emits
+  the manifest-derived backend contract and exits non-zero for missing fatal
+  requirements. `doctor --enterprise` is manifest-aware and reports required
+  backend gaps before `serve()` hits them.
 - **Backend init is SERIAL and order-dependent.** The `all_plugins()` register loop
   (`runtime/core/setup_data.rs`) registers each backend in order; "first registered
   wins" picks the default SystemStores — so **do NOT parallelize it** (correctness
@@ -69,6 +76,11 @@ generic Rust/SQL/engine knowledge for everything else.
   conflate them. Production force-sets TLS+mTLS in `ServiceSettings::apply_security_posture`
   (warns when it overrides an explicit `=false`); TLS env = `UDB_TLS_CERT_PEM|PATH`,
   `UDB_TLS_KEY_PEM|PATH`, `UDB_MTLS_CLIENT_CA_PEM|PATH`.
+- **0.3.7 auth/crypto fixes:** DataBroker bearer auth now returns a clearer
+  `UNAUTHENTICATED` when a caller sends only `x-api-key`; the data plane still
+  requires JWT bearer or mTLS. `runtime/encryption.rs` accepts 32-byte base64,
+  64-char hex/`0x` hex, or raw 32-byte keys and names the configured key source
+  in decode errors; reuse that decoder rather than adding a parallel one.
 
 ## The ten directives (audit-derived)
 1. Proto is the source of truth (+ regen protocol after proto changes).

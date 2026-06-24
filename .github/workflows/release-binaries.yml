@@ -89,7 +89,13 @@ jobs:
           # CPU — a real uplift over the generic baseline with ZERO SIGILL risk. Bump to
           # `x86-64-v3` (Haswell/2013+: AVX2/FMA/BMI2) ONLY for a known-modern fleet.
           # apple-m1 is 100% safe for Apple Silicon (every arm64 Mac is >= M1).
-          - os: ubuntu-latest
+          # Pin ubuntu-22.04 (glibc 2.35), NOT ubuntu-latest. GitHub flipped
+          # `ubuntu-latest` to 24.04 (glibc 2.39), which (1) bumped the binary's
+          # glibc floor so it no longer runs on Debian bookworm / Ubuntu 22.04,
+          # and (2) rebuilt sqlx-postgres's ring TLS with 24.04's newer toolchain,
+          # breaking the handshake to Neon serverless / SNI-routed managed PG.
+          # 22.04 is the env that built the last-known-good 0.3.6 binary.
+          - os: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
             asset: udb-linux-amd64
             ext: ''
@@ -118,7 +124,7 @@ jobs:
           # Full-feature Linux build. This intentionally stays Linux-only for now:
           # the native-C backend set is what makes full Windows/macOS release
           # binaries brittle, while Docker already covers full Linux deployments.
-          - os: ubuntu-latest
+          - os: ubuntu-22.04   # glibc 2.35 floor + known-good toolchain (see portable note above)
             target: x86_64-unknown-linux-gnu
             asset: udb-linux-amd64-full
             ext: ''

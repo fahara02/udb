@@ -38,6 +38,9 @@ UDB is a **proto-driven multi-database broker** in Rust (tonic/prost gRPC, sqlx)
 Developers declare entities as annotated protobuf messages; from that ONE
 contract UDB derives DB schema (DDL), runtime security enforcement, ~17 native
 services / 260+ RPCs, six language SDKs, CLI scaffolds and docs. Three planes:
+Current product/SDK baseline is **0.3.7** with wire protocol **1.0.0**; version
+strings must continue to derive from manifests/`env!("CARGO_PKG_VERSION")`, not
+hand-coded literals.
 
 1. **Data plane** — the `DataBroker` gRPC service (`Select`/`Upsert`/`Delete`,
    typed cache/document/graph/timeseries RPCs, batch streams, GenericDispatch)
@@ -149,6 +152,22 @@ Rust array, you are probably violating the pipeline (derive it instead).
    `outbox_max_seq`; read fences use per-backend durability tokens
    (`wait_for_token`) for bounded staleness.
 
+**0.3.7 operator-facing guardrails:** `src/cli/help.rs` answers `udb --help`,
+`udb help <cmd>`, command `--help`, and `udb --version` before expensive startup
+side effects. `src/cli/args.rs::Command::Requirements` plus the `mod.rs`
+handler prints the manifest-derived backend contract and exits non-zero when a
+fatal backend is missing. `doctor --enterprise` calls the same project manifest
+loading path and reports missing Qdrant/object-store/Redis style requirements
+before `serve()` would fail. Keep these paths aligned with runtime prerequisite
+logic; do not add a separate, weaker readiness story.
+
+**0.3.7 auth/crypto behavior:** `security_from_request` still requires a JWT
+bearer or mTLS on the DataBroker data plane; if only `x-api-key` is present it
+returns an explicit `UNAUTHENTICATED` explaining that API keys are not accepted
+there. `runtime/encryption.rs::decode_encryption_key` accepts 32-byte base64,
+64-character hex/`0x` hex, or raw 32-byte keys, and decode errors name the key
+source (`UDB_ENCRYPTION_KEY`, versioned env, or Vault key). Reuse this path.
+
 ## 4. Native control-plane lifecycle + service inventory
 
 Handler pattern (every native service follows it — deviations are bugs):
@@ -236,6 +255,9 @@ every replica.
   `UDB_PROTO_NAMESPACE`); numeric values parse fallibly with
   `ParserDiagnostic`s (Warn/Strict); facade types in `facade.rs` (shared with
   udb-portable via `#[path]`). The CLI compat-matrix derives from these tables.
+  The 0.3.7 CLI also performs a raw-source lint hint for dense one-line field
+  annotations packing multiple aggregate options on one physical line; this is
+  a non-fatal editor/language-server formatting warning, not a descriptor rule.
 - **IR compilers** (`src/ir/compile/`): `Compiler` per backend ×18;
   `compile_for_backend` is THE feature matrix (plugin conformance reads it —
   one source). Tenant/project predicate injection (`util::resolve_tenant_column`

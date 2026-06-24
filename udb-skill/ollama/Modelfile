@@ -87,10 +87,12 @@ the source of truth; the SDK is a thin typed client.
 
 Pick the developer's language. Default data target `localhost:50051` (plaintext
 in dev). **Set `authTarget` too whenever the app uses auth/native services.**
+Current release baseline is **UDB 0.3.7** with wire protocol **1.0.0**; keep the
+broker and SDK package on `0.3.7` unless deliberately testing compatibility.
 
 ### TypeScript / Node — `@udb_plus/sdk`
 ```bash
-npm i @udb_plus/sdk
+npm i @udb_plus/sdk@0.3.7
 ```
 ```ts
 import { dataBrokerClient, metadata, UdbMetadata } from "@udb_plus/sdk/client";
@@ -111,7 +113,7 @@ Adapters for Express / Fastify / Next.js under `adapters/`.
 
 ### Python — `udb-client`
 ```bash
-pip install udb-client        # or: pip install "udb-client[pydantic]"
+pip install udb-client==0.3.7        # or: pip install "udb-client[pydantic]==0.3.7"
 ```
 ```python
 from udb_client import Metadata, UdbClient, decode_records
@@ -133,7 +135,7 @@ control-plane channel automatically.
 
 ### Go — `github.com/fahara02/udb/sdk/go`
 ```bash
-go get github.com/fahara02/udb/sdk/go
+go get github.com/fahara02/udb/sdk/go@v0.3.7
 ```
 ```go
 cfg := udbclient.Config{Target: "localhost:50051", AuthTarget: "localhost:50061",
@@ -159,7 +161,7 @@ hot-swap.
 
 ### C# — `Udb.Client`
 ```bash
-dotnet add package Udb.Client
+dotnet add package Udb.Client --version 0.3.7
 ```
 ```csharp
 var meta = new UdbMetadata(TenantId:"acme", Purpose:"web.request",
@@ -171,7 +173,7 @@ var rows = await udb.SelectAsync(new SelectRequest { MessageType="shop.v1.Custom
 
 ### PHP / Laravel — `fahara02/udb-laravel`
 ```bash
-composer require fahara02/udb-laravel   # needs PHP 8.1+, grpc PECL ext
+composer require fahara02/udb-laravel:^0.3.7   # needs PHP 8.1+, grpc PECL ext
 ```
 ```php
 $client = new UdbClient(['endpoint' => '127.0.0.1:50051', 'tls' => ['enabled' => false]]);
@@ -394,6 +396,7 @@ unknown command or sub-action prints a "did you mean …?" suggestion.
 | gRPC status | Most likely cause |
 |---|---|
 | `UNIMPLEMENTED` | Native-service call sent to the **data target** — set `authTarget`/control-plane address. |
+| `UNAUTHENTICATED` | Missing/invalid bearer. On the DataBroker data plane, `x-api-key` alone is not accepted; log in for a JWT and send `authorization: Bearer <jwt>` or use mTLS. UDB 0.3.7 names this case explicitly. |
 | `PERMISSION_DENIED` | Missing scope, tenant mismatch (metadata/body vs credential), revoked credential, or per-action policy deny. **On a data RPC with otherwise-valid scopes → no ABAC policy seeded** (default-deny snapshot, mental model #7): seed `UDB_ABAC_POLICIES_JSON` / the `udb_abac_policies` table, or `UDB_ABAC_DEFAULT_ALLOW=true` for dev. Seeding `policy_rules` does NOT fix this. |
 | `INVALID_ARGUMENT` "tenant isolation requires filter on tenant_id" | A tenant-scoped read/delete MUST include `tenant_id` (the canonical UUID, not the code) in the filter. |
 | `FAILED_PRECONDITION` | Service disabled/not mounted, wrong lifecycle state (e.g. apply before approve), feature requires config (TURN secret, media profile). |
