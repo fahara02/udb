@@ -67,7 +67,9 @@ impl EncryptionRuntime {
             .map(|(version, value)| {
                 Ok(EncryptionKey {
                     version: *version,
-                    key: decode_encryption_key(value)?,
+                    key: decode_encryption_key(value).map_err(|err| {
+                        format!("{} failed to decode: {err}", key_label(*version))
+                    })?,
                 })
             })
             .collect::<Result<Vec<_>, String>>()?;
@@ -163,7 +165,9 @@ impl EncryptionRuntime {
                     .ok_or_else(|| format!("Vault key version {version} is not a string"))?;
                 keys.push(EncryptionKey {
                     version,
-                    key: decode_encryption_key(encoded)?,
+                    key: decode_encryption_key(encoded).map_err(|err| {
+                        format!("Vault key version {version} failed to decode: {err}")
+                    })?,
                 });
             }
             if keys.is_empty() {
@@ -257,15 +261,57 @@ fn parse_ciphertext(value: &str) -> Option<(u8, &str)> {
     Some((version.parse().ok()?, encoded))
 }
 
+fn key_label(version: u8) -> String {
+    if version == 1 {
+        "UDB_ENCRYPTION_KEY/UDB_ENCRYPTION_KEY_V1".to_string()
+    } else {
+        format!("UDB_ENCRYPTION_KEY_V{version}")
+    }
+}
+
 fn decode_encryption_key(value: &str) -> Result<[u8; 32], String> {
     let trimmed = value.trim();
-    let decoded = BASE64_STANDARD
-        .decode(trimmed)
-        .or_else(|_| decode_hex(trimmed))
-        .unwrap_or_else(|_| trimmed.as_bytes().to_vec());
-    decoded
-        .try_into()
-        .map_err(|bytes: Vec<u8>| format!("encryption key must be 32 bytes, got {}", bytes.len()))
+    let base64_len = BASE64_STANDARD.decode(trimmed).ok().map(|bytes| {
+        let len = bytes.len();
+        if len == 32 {
+            return Ok(bytes.try_into().expect("length checked"));
+        }
+        Err(len)
+    });
+    if let Some(Ok(key)) = base64_len {
+        return Ok(key);
+    }
+
+    let hex_len = decode_hex(trimmed).ok().map(|bytes| {
+        let len = bytes.len();
+        if len == 32 {
+            return Ok(bytes.try_into().expect("length checked"));
+        }
+        Err(len)
+    });
+    if let Some(Ok(key)) = hex_len {
+        return Ok(key);
+    }
+
+    let raw = trimmed.as_bytes();
+    if raw.len() == 32 {
+        let mut key = [0u8; 32];
+        key.copy_from_slice(raw);
+        return Ok(key);
+    }
+
+    let mut attempts = Vec::new();
+    if let Some(Err(len)) = base64_len {
+        attempts.push(format!("base64 decoded to {len} bytes"));
+    }
+    if let Some(Err(len)) = hex_len {
+        attempts.push(format!("hex decoded to {len} bytes"));
+    }
+    attempts.push(format!("raw value is {} bytes", raw.len()));
+    Err(format!(
+        "encryption key must be 32 bytes ({})",
+        attempts.join("; ")
+    ))
 }
 
 fn decode_hex(value: &str) -> Result<Vec<u8>, base64::DecodeError> {
@@ -344,6 +390,55 @@ mod tests {
             rotated_runtime.decrypt_json_value(&ciphertext).unwrap(),
             value
         );
+    }
+
+    #[test]
+    fn decode_encryption_key_accepts_base64_hex_and_raw_32_byte_keys() {
+        let bytes = [0xabu8; 32];
+        let base64 = BASE64_STANDARD.encode(bytes);
+        assert_eq!(decode_encryption_key(&base64).unwrap(), bytes);
+
+        // A 64-character hex key is also syntactically valid base64; the decoder
+        // must reject the 48-byte base64 interpretation and fall through to hex.
+        let hex = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+        let expected_hex = [
+            0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef, 0x01, 0x23, 0x45, 0x67, 0x89, 0xab,
+            0xcd, 0xef, 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef, 0x01, 0x23, 0x45, 0x67,
+            0x89, 0xab, 0xcd, 0xef,
+        ];
+        assert_eq!(decode_encryption_key(hex).unwrap(), expected_hex);
+        assert_eq!(
+            decode_encryption_key(&format!("0x{hex}")).unwrap(),
+            expected_hex
+        );
+
+        let raw = "0123456789abcdef0123456789abcdef";
+        assert_eq!(decode_encryption_key(raw).unwrap(), *raw.as_bytes());
+    }
+
+    #[test]
+    fn decode_encryption_key_reports_attempted_lengths() {
+        let err = decode_encryption_key(
+            "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0000",
+        )
+        .unwrap_err();
+
+        assert!(err.contains("base64 decoded to"));
+        assert!(err.contains("hex decoded to 34 bytes"));
+        assert!(err.contains("raw value is 68 bytes"));
+    }
+
+    #[tokio::test]
+    async fn inline_key_decode_error_names_configured_key_source() {
+        let mut settings = EncryptionSettings::default();
+        settings.keys.insert(1, "short".to_string());
+
+        let err = EncryptionRuntime::from_settings(&settings)
+            .await
+            .unwrap_err();
+
+        assert!(err.contains("UDB_ENCRYPTION_KEY/UDB_ENCRYPTION_KEY_V1 failed to decode"));
+        assert!(err.contains("encryption key must be 32 bytes"));
     }
 
     #[test]
