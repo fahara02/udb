@@ -104,7 +104,34 @@ pub(crate) const DEFAULT_CDC_POLL_INTERVAL_MS: u64 = 250;
 pub(crate) const DEFAULT_CDC_POLL_BATCH: i64 = 200;
 pub(crate) const DEFAULT_CDC_PRODUCER_LINGER_MS: u64 = 20;
 pub(crate) const DEFAULT_CDC_PRODUCER_BATCH_MESSAGES: u64 = 10_000;
+/// Cooldown for the "failed to publish to kafka" ERROR log. When Kafka is
+/// unreachable the tailer hits this on every event of every 250ms poll; collapse
+/// it to one line per this window (carrying the suppressed count) so the log
+/// stays usable. Override with `UDB_CDC_PUBLISH_FAIL_LOG_COOLDOWN_SECS`.
+#[cfg(feature = "kafka")]
+pub(crate) const DEFAULT_CDC_PUBLISH_FAIL_LOG_COOLDOWN_SECS: u64 = 30;
 pub(crate) const DEFAULT_CDC_IDEMPOTENCY_KEY_PREFIX: &str = "idempotency:udb";
+
+/// Whether CDC change-event delivery is enabled. This gates BOTH the
+/// transactional outbox WRITE (in each mutation's tx) AND the Kafka tailer /
+/// storage-finalized consumer that drain it — so `UDB_CDC_ENABLED=false` is a
+/// true full-stop: a deployment with no Kafka neither writes undrained outbox
+/// rows (no unbounded `outbox_events` growth) nor opens any broker connection
+/// (no resolve-failure log flood). Default = enabled. Resolved once: the env is
+/// fixed for the process lifetime, and this is read on the mutation hot path.
+pub(crate) fn cdc_delivery_enabled() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ENABLED.get_or_init(|| {
+        std::env::var("UDB_CDC_ENABLED")
+            .map(|value| {
+                let value = value.trim();
+                !(value == "0"
+                    || value.eq_ignore_ascii_case("false")
+                    || value.eq_ignore_ascii_case("no"))
+            })
+            .unwrap_or(true)
+    })
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]

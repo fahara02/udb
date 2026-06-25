@@ -5,7 +5,13 @@
 
 #[cfg(feature = "s3")]
 use std::time::{SystemTime, UNIX_EPOCH};
-use std::{env, future::Future, time::Duration};
+use std::{
+    env,
+    future::Future,
+    sync::Mutex,
+    sync::atomic::{AtomicU64, Ordering},
+    time::{Duration, Instant},
+};
 
 use prost_types::{ListValue, Struct, Value as ProstValue, value::Kind};
 use serde_json::Value as JsonValue;
@@ -33,6 +39,51 @@ pub(crate) fn executor_timeout_duration() -> Duration {
         .unwrap_or(30_000)
         .max(1);
     Duration::from_millis(millis)
+}
+
+// ── Log rate-limiting ─────────────────────────────────────────────────────────
+
+/// Collapses a repeating log line so a persistent failure — e.g. an unreachable
+/// Kafka broker hit on every CDC poll (200 events × ~4 polls/sec) — logs once,
+/// then at most once per `cooldown` carrying the count of occurrences suppressed
+/// in between, instead of flooding the log many times per second and burying
+/// real errors. Cheap and `&self`: the lock/atomic are touched only on the
+/// (cold) error path, so it can live behind a shared/`static` reference.
+pub(crate) struct LogRateGate {
+    cooldown: Duration,
+    last_logged: Mutex<Option<Instant>>,
+    suppressed: AtomicU64,
+}
+
+impl LogRateGate {
+    /// `const` so a gate can be stored in a `static` without a lazy init.
+    pub(crate) const fn new(cooldown: Duration) -> Self {
+        Self {
+            cooldown,
+            last_logged: Mutex::new(None),
+            suppressed: AtomicU64::new(0),
+        }
+    }
+
+    /// Decide whether the caller should emit its log line now. Returns
+    /// `Some(suppressed)` when it should — where `suppressed` is how many
+    /// occurrences were collapsed since the last emit (0 on the first). Returns
+    /// `None` while inside the cooldown; the caller stays silent and the
+    /// occurrence is counted toward the next emit's suppressed total.
+    pub(crate) fn check(&self) -> Option<u64> {
+        let now = Instant::now();
+        let mut last = self.last_logged.lock().unwrap_or_else(|e| e.into_inner());
+        match *last {
+            Some(prev) if now.duration_since(prev) < self.cooldown => {
+                self.suppressed.fetch_add(1, Ordering::Relaxed);
+                None
+            }
+            _ => {
+                *last = Some(now);
+                Some(self.suppressed.swap(0, Ordering::Relaxed))
+            }
+        }
+    }
 }
 
 pub(crate) async fn with_executor_timeout<T, F>(
@@ -189,9 +240,66 @@ pub(crate) fn sqlx_error_to_status(context: &str, err: &sqlx::Error) -> tonic::S
                 _ => {}
             }
         }
+        // Unrecognised (or code-less) DATABASE error. Unlike the classes above —
+        // which are normal application outcomes (already-exists / bad-arg) and
+        // are deliberately quiet — this is a genuinely UNEXPECTED DB failure the
+        // operator must be able to diagnose. The broker's own log is an
+        // operator-only channel, so emit the FULL detail (SQLSTATE + driver
+        // message + constraint + relation) at ERROR; without this an opaque
+        // `INTERNAL` reaches the client with nothing in the logs to explain it.
+        let sqlstate = db.code().map(|c| c.into_owned()).unwrap_or_default();
+        let constraint = db.constraint().unwrap_or_default().to_string();
+        let relation = db.table().unwrap_or_default().to_string();
+        tracing::error!(
+            context = %context,
+            sqlstate = %sqlstate,
+            constraint = %constraint,
+            relation = %relation,
+            db_message = %db.message(),
+            "database operation failed with an unhandled error"
+        );
+        // Surface the schema-level metadata (SQLSTATE / constraint / relation —
+        // never raw row VALUES) to the client so the error is no longer a dead
+        // end. Opt in to ALSO echo the driver message with
+        // UDB_VERBOSE_DB_ERRORS=true (off by default to preserve the no-leak
+        // posture, since a few PG messages can quote row values).
+        let mut detail = String::new();
+        if !sqlstate.is_empty() {
+            detail.push_str(&format!(" [SQLSTATE {sqlstate}]"));
+        }
+        if !constraint.is_empty() {
+            detail.push_str(&format!(" (constraint: {constraint})"));
+        } else if !relation.is_empty() {
+            detail.push_str(&format!(" (relation: {relation})"));
+        }
+        if verbose_db_errors() {
+            detail.push_str(&format!(": {}", db.message()));
+        }
+        return tonic::Status::internal(format!("{context}{detail}"));
     }
-    // Unrecognised: keep Internal but do not echo the raw DB string.
+    // Not a database error at all (pool acquire / IO / protocol). Still log it —
+    // these were equally invisible before — and keep the generic Internal.
+    tracing::error!(context = %context, error = %err, "database call failed (non-database error)");
     tonic::Status::internal(context.to_string())
+}
+
+/// Whether to ALSO echo the raw driver message in client-facing `Internal` DB
+/// errors (the server-side ERROR log in [`sqlx_error_to_status`] always carries
+/// it). Off by default so row values a driver message might quote never leave
+/// the server; set `UDB_VERBOSE_DB_ERRORS=true` to opt in. Resolved once.
+fn verbose_db_errors() -> bool {
+    static VERBOSE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *VERBOSE.get_or_init(|| {
+        env::var("UDB_VERBOSE_DB_ERRORS")
+            .ok()
+            .map(|value| {
+                let value = value.trim();
+                value == "1"
+                    || value.eq_ignore_ascii_case("true")
+                    || value.eq_ignore_ascii_case("yes")
+            })
+            .unwrap_or(false)
+    })
 }
 
 /// Re-contextualise a downstream `tonic::Status` by prefixing its message with

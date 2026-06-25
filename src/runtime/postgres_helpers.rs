@@ -329,26 +329,13 @@ pub(crate) fn bind_one<'q>(
     let sql_type = column
         .map(|column| column.sql_type.to_ascii_uppercase())
         .unwrap_or_default();
-    if value.is_null() {
-        return Ok(query.bind(Option::<String>::None));
-    }
-    if sql_type.contains("JSON") {
-        return Ok(query.bind(sqlx::types::Json(strip_nul_json(value))));
-    }
-    if sql_type == "UUID" {
-        let parsed = value
-            .as_str()
-            .ok_or_else(|| tonic::Status::invalid_argument("UUID value must be a string"))?
-            .parse::<Uuid>()
-            .map_err(|err| tonic::Status::invalid_argument(format!("invalid UUID: {err}")))?;
-        return Ok(query.bind(parsed));
-    }
     // Array value — used for `$in` / `col = ANY($N)` filters. (#121)
     // Bind a *typed* array matching the column type: PostgreSQL does NOT
     // implicitly cast a `text[]` element to the column type inside `= ANY`, so a
     // `uuid`/`int`/`numeric` column compared against a text array fails at
     // execution. Typed arrays keep the predicate index-usable (no `::type` cast
-    // on the column needed).
+    // on the column needed). Checked before the scalar branches below so a
+    // `uuid`/temporal array isn't misrouted into the scalar (single-value) path.
     if let JsonValue::Array(items) = value {
         if sql_type == "UUID" {
             let mut arr: Vec<Uuid> = Vec::with_capacity(items.len());
@@ -398,6 +385,109 @@ pub(crate) fn bind_one<'q>(
             .collect();
         return Ok(query.bind(arr));
     }
+
+    // JSON columns store any JSON value (including SQL NULL) verbatim.
+    if sql_type.contains("JSON") {
+        return Ok(query.bind(sqlx::types::Json(strip_nul_json(value))));
+    }
+
+    // Typed scalar binds for the column types that have NO implicit/assignment
+    // cast from `text` in PostgreSQL: uuid, timestamptz, timestamp, date.
+    // Binding one of these as text — or as a *text-typed* NULL, which the old
+    // fallback did — makes an INSERT/upsert that supplies the column fail to
+    // PLAN with SQLSTATE 42804 (datatype_mismatch), which surfaced only as an
+    // opaque INTERNAL. A fresh INSERT omits the server-defaulted audit columns
+    // (created_at/updated_at fill from CURRENT_TIMESTAMP) so never hit this; a
+    // read-modify-write (Select → edit one field → Upsert) re-supplies those
+    // columns as the RFC-3339 strings the SELECT serializer emits, and did.
+    // Bind the real Rust type, mirroring the compiler bind path in
+    // `core/helpers.rs`.
+    if sql_type == "UUID" {
+        return match value {
+            JsonValue::Null => Ok(query.bind(Option::<Uuid>::None)),
+            JsonValue::String(raw) if raw.trim().is_empty() => Ok(query.bind(Option::<Uuid>::None)),
+            JsonValue::String(raw) => raw
+                .parse::<Uuid>()
+                .map(|uuid| query.bind(uuid))
+                .map_err(|err| tonic::Status::invalid_argument(format!("invalid UUID: {err}"))),
+            _ => Err(tonic::Status::invalid_argument(
+                "UUID value must be a string",
+            )),
+        };
+    }
+    if sql_type.contains("TIMESTAMPTZ") || sql_type.contains("TIMESTAMP WITH TIME ZONE") {
+        return match value {
+            JsonValue::Null => Ok(query.bind(Option::<chrono::DateTime<chrono::Utc>>::None)),
+            JsonValue::String(raw) if raw.trim().is_empty() => {
+                Ok(query.bind(Option::<chrono::DateTime<chrono::Utc>>::None))
+            }
+            JsonValue::String(raw) => chrono::DateTime::parse_from_rfc3339(raw)
+                .map(|dt| query.bind(dt.with_timezone(&chrono::Utc)))
+                .map_err(|err| {
+                    tonic::Status::invalid_argument(format!(
+                        "timestamptz value must be an RFC3339 string: {err}"
+                    ))
+                }),
+            _ => Err(tonic::Status::invalid_argument(
+                "timestamptz value must be a string or null",
+            )),
+        };
+    }
+    if sql_type.contains("TIMESTAMP") {
+        return match value {
+            JsonValue::Null => Ok(query.bind(Option::<chrono::NaiveDateTime>::None)),
+            JsonValue::String(raw) if raw.trim().is_empty() => {
+                Ok(query.bind(Option::<chrono::NaiveDateTime>::None))
+            }
+            JsonValue::String(raw) => parse_naive_datetime(raw)
+                .map(|dt| query.bind(dt))
+                .ok_or_else(|| {
+                    tonic::Status::invalid_argument(
+                        "timestamp value must be an ISO-8601 string or null",
+                    )
+                }),
+            _ => Err(tonic::Status::invalid_argument(
+                "timestamp value must be a string or null",
+            )),
+        };
+    }
+    if sql_type.contains("DATE") {
+        return match value {
+            JsonValue::Null => Ok(query.bind(Option::<chrono::NaiveDate>::None)),
+            JsonValue::String(raw) if raw.trim().is_empty() => {
+                Ok(query.bind(Option::<chrono::NaiveDate>::None))
+            }
+            JsonValue::String(raw) => raw
+                .parse::<chrono::NaiveDate>()
+                .map(|date| query.bind(date))
+                .map_err(|err| tonic::Status::invalid_argument(format!("invalid date: {err}"))),
+            _ => Err(tonic::Status::invalid_argument(
+                "date value must be a string or null",
+            )),
+        };
+    }
+
+    // Remaining scalar types. A NULL binds as the matching nullable Rust type so
+    // the parameter's Postgres type is unambiguous (bool/int/float each get a
+    // typed NULL; text/varchar/enum accept a plain text NULL).
+    if value.is_null() {
+        if sql_type.contains("BOOL") {
+            return Ok(query.bind(Option::<bool>::None));
+        }
+        if sql_type.contains("INT") || sql_type.contains("BIGSERIAL") || sql_type.contains("SERIAL")
+        {
+            return Ok(query.bind(Option::<i64>::None));
+        }
+        if sql_type.contains("REAL")
+            || sql_type.contains("DOUBLE")
+            || sql_type.contains("FLOAT")
+            || sql_type.contains("NUMERIC")
+            || sql_type.contains("DECIMAL")
+        {
+            return Ok(query.bind(Option::<f64>::None));
+        }
+        return Ok(query.bind(Option::<String>::None));
+    }
     if sql_type.contains("BOOL") {
         return Ok(query.bind(value.as_bool().unwrap_or(false)));
     }
@@ -413,6 +503,22 @@ pub(crate) fn bind_one<'q>(
         return Ok(query.bind(json_f64(value)?));
     }
     Ok(query.bind(strip_nul(&json_scalar_to_string(value))))
+}
+
+/// Parse the datetime string forms the SELECT serializer can emit for a
+/// `TIMESTAMP` (no time zone) column back into a `NaiveDateTime`. `row_value_to_json`
+/// renders these via `NaiveDateTime::to_string()` (space-separated), but accept the
+/// ISO `T` form too so a client-built payload round-trips as well.
+fn parse_naive_datetime(raw: &str) -> Option<chrono::NaiveDateTime> {
+    const FORMATS: &[&str] = &[
+        "%Y-%m-%d %H:%M:%S%.f",
+        "%Y-%m-%dT%H:%M:%S%.f",
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%dT%H:%M:%S",
+    ];
+    FORMATS
+        .iter()
+        .find_map(|fmt| chrono::NaiveDateTime::parse_from_str(raw, fmt).ok())
 }
 
 /// A NUL (`0x00`) byte cannot be stored in a Postgres `text`/`varchar`/`json(b)`

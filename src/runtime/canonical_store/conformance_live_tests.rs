@@ -93,6 +93,210 @@ async fn postgres_canonical_store_satisfies_all_contracts_live() {
         .await;
 }
 
+/// Bug 1 (DigitalRM) regression — the **read-modify-write** upsert round-trip.
+///
+/// Soft-delete / edit does: `Select` a row → set one field → `Upsert` it back
+/// (conflict on the `id` PK). On an `audit_fields` table the read-back payload
+/// re-supplies `created_at`/`updated_at`/`deleted_at` as the RFC-3339 strings
+/// the SELECT serializer emits. The data-plane bind path (`bind_one`) used to
+/// bind those into `timestamptz` columns as **text**, and PostgreSQL has no
+/// implicit cast `text`→`timestamptz`, so the `INSERT … ON CONFLICT DO UPDATE`
+/// failed to plan with SQLSTATE 42804 — surfacing only as the opaque
+/// `PostgreSQL upsert failed (INTERNAL)`. A *fresh* INSERT omits those
+/// server-defaulted columns, so it succeeded — exactly the reported asymmetry.
+///
+/// This drives the real `bind_one` against a live Postgres table shaped like
+/// `integrations.stored_files` and asserts the round-trip now succeeds (both a
+/// `deleted_at`-set soft-delete and a `deleted_at`-null edit, exercising the
+/// typed-value and typed-NULL temporal binds).
+#[cfg(feature = "postgres")]
+#[tokio::test]
+async fn postgres_upsert_read_modify_write_round_trips_live() {
+    let Ok(dsn) = std::env::var("UDB_PG_DSN") else {
+        eprintln!("UDB_PG_DSN unset — skipping live upsert read-modify-write regression");
+        return;
+    };
+    use crate::generation::ManifestColumn;
+    use crate::runtime::postgres_helpers::bind_one;
+    use serde_json::json;
+    use sqlx::Row;
+    use sqlx::postgres::PgPoolOptions;
+
+    // Throwaway-SCHEMA isolation (not CREATE DATABASE): needs no elevated
+    // privilege and behaves identically on local Postgres, a Neon pooler
+    // endpoint, and any managed Postgres — the point of this regression. Connect
+    // straight to the DSN's database and namespace everything under one
+    // uniquely-named schema, dropped CASCADE at the end.
+    let pool = PgPoolOptions::new()
+        .max_connections(2)
+        .connect(&dsn)
+        .await
+        .expect("connect to live Postgres (UDB_PG_DSN)");
+    let schema = format!("udb_rmw_{}", uuid::Uuid::new_v4().simple());
+    sqlx::query(&format!("CREATE SCHEMA \"{schema}\""))
+        .execute(&pool)
+        .await
+        .expect("create throwaway schema");
+
+    // Table mirrors digitalrm.v1.StoredFile → integrations.stored_files:
+    // audit_fields (created_at/updated_at NOT NULL DEFAULT now()) + soft_delete.
+    sqlx::query(&format!(
+        "CREATE TABLE \"{schema}\".stored_files (\
+            id uuid PRIMARY KEY, tenant_id uuid NOT NULL, name text NOT NULL, \
+            size_bytes bigint, has_text bool NOT NULL, \
+            created_at timestamptz NOT NULL DEFAULT now(), \
+            updated_at timestamptz NOT NULL DEFAULT now(), \
+            deleted_at timestamptz, created_by varchar(120))"
+    ))
+    .execute(&pool)
+    .await
+    .expect("create stored_files");
+
+    let column = |name: &str, sql_type: &str| ManifestColumn {
+        column_name: name.to_string(),
+        sql_type: sql_type.to_string(),
+        ..ManifestColumn::default()
+    };
+    let id = uuid::Uuid::new_v4().to_string();
+    let id_uuid = id.parse::<uuid::Uuid>().unwrap();
+    let tenant = uuid::Uuid::new_v4().to_string();
+
+    // 1) Fresh upload — omit the server-defaulted audit timestamps (DB fills
+    //    them); this is the path the reporter said WORKED. Binds id/tenant as
+    //    `uuid` too, proving the typed-uuid bind.
+    let insert_cols = [
+        column("id", "UUID"),
+        column("tenant_id", "UUID"),
+        column("name", "TEXT"),
+        column("size_bytes", "BIGINT"),
+        column("has_text", "BOOL"),
+        column("created_by", "VARCHAR(120)"),
+    ];
+    let insert_vals = [
+        json!(id),
+        json!(tenant),
+        json!("demo.json"),
+        json!(1234),
+        json!(true),
+        json!("admin"),
+    ];
+    let insert_sql = format!(
+        "INSERT INTO \"{schema}\".stored_files \
+         (id, tenant_id, name, size_bytes, has_text, created_by) \
+         VALUES ($1, $2, $3, $4, $5, $6)"
+    );
+    let mut q = sqlx::query(&insert_sql);
+    for (c, v) in insert_cols.iter().zip(insert_vals.iter()) {
+        q = bind_one(q, Some(c), v).expect("bind fresh-insert value");
+    }
+    q.execute(&pool)
+        .await
+        .expect("fresh insert (audit timestamps omitted) succeeds");
+
+    // 2) Read the row back exactly as the data plane serializes it: a
+    //    `timestamptz` column becomes an RFC-3339 string.
+    let select_audit_sql =
+        format!("SELECT created_at, updated_at FROM \"{schema}\".stored_files WHERE id = $1");
+    let row = sqlx::query(&select_audit_sql)
+        .bind(id_uuid)
+        .fetch_one(&pool)
+        .await
+        .expect("select the row back");
+    let created_at: chrono::DateTime<chrono::Utc> = row.try_get("created_at").unwrap();
+    let updated_at: chrono::DateTime<chrono::Utc> = row.try_get("updated_at").unwrap();
+
+    // The full generated upsert: PK excluded from the SET list; the audit
+    // timestamps are NOT exclude_from_update, so they appear in both the INSERT
+    // column list and the DO UPDATE SET.
+    let upsert_sql = format!(
+        "INSERT INTO \"{schema}\".stored_files \
+        (id, tenant_id, name, size_bytes, has_text, created_at, updated_at, deleted_at, created_by) \
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) \
+        ON CONFLICT (id) DO UPDATE SET \
+        tenant_id = EXCLUDED.tenant_id, name = EXCLUDED.name, size_bytes = EXCLUDED.size_bytes, \
+        has_text = EXCLUDED.has_text, created_at = EXCLUDED.created_at, \
+        updated_at = EXCLUDED.updated_at, deleted_at = EXCLUDED.deleted_at, \
+        created_by = EXCLUDED.created_by"
+    );
+    let upsert_cols = [
+        column("id", "UUID"),
+        column("tenant_id", "UUID"),
+        column("name", "TEXT"),
+        column("size_bytes", "BIGINT"),
+        column("has_text", "BOOL"),
+        column("created_at", "TIMESTAMPTZ"),
+        column("updated_at", "TIMESTAMPTZ"),
+        column("deleted_at", "TIMESTAMPTZ"),
+        column("created_by", "VARCHAR(120)"),
+    ];
+
+    // 3) Soft-delete: re-Upsert the read-back record with deleted_at set. This
+    //    is the path that failed pre-fix (timestamptz read-back bound as text).
+    let soft_delete_vals = [
+        json!(id),
+        json!(tenant),
+        json!("demo.json"),
+        json!(1234),
+        json!(true),
+        json!(created_at.to_rfc3339()),
+        json!(updated_at.to_rfc3339()),
+        json!(updated_at.to_rfc3339()), // deleted_at = a real timestamptz
+        json!("admin"),
+    ];
+    let mut q = sqlx::query(&upsert_sql);
+    for (c, v) in upsert_cols.iter().zip(soft_delete_vals.iter()) {
+        q = bind_one(q, Some(c), v).expect("bind soft-delete value");
+    }
+    let result = q
+        .execute(&pool)
+        .await
+        .expect("read-modify-write upsert must round-trip (pre-fix: SQLSTATE 42804)");
+    assert_eq!(result.rows_affected(), 1, "conflict-update affects the row");
+    let select_deleted_sql =
+        format!("SELECT deleted_at FROM \"{schema}\".stored_files WHERE id = $1");
+    let deleted: Option<chrono::DateTime<chrono::Utc>> = sqlx::query(&select_deleted_sql)
+        .bind(id_uuid)
+        .fetch_one(&pool)
+        .await
+        .unwrap()
+        .try_get("deleted_at")
+        .unwrap();
+    assert!(deleted.is_some(), "soft-delete deleted_at must persist");
+
+    // 4) Plain edit: re-Upsert with deleted_at = null (typed-NULL temporal bind).
+    let edit_vals = [
+        json!(id),
+        json!(tenant),
+        json!("demo-renamed.json"),
+        json!(4321),
+        json!(false),
+        json!(created_at.to_rfc3339()),
+        json!(updated_at.to_rfc3339()),
+        json!(null),
+        json!("admin"),
+    ];
+    let mut q = sqlx::query(&upsert_sql);
+    for (c, v) in upsert_cols.iter().zip(edit_vals.iter()) {
+        q = bind_one(q, Some(c), v).expect("bind edit value");
+    }
+    q.execute(&pool)
+        .await
+        .expect("read-modify-write upsert with null deleted_at must round-trip");
+    let deleted: Option<chrono::DateTime<chrono::Utc>> = sqlx::query(&select_deleted_sql)
+        .bind(id_uuid)
+        .fetch_one(&pool)
+        .await
+        .unwrap()
+        .try_get("deleted_at")
+        .unwrap();
+    assert!(deleted.is_none(), "edit must clear deleted_at back to NULL");
+
+    let _ = sqlx::query(&format!("DROP SCHEMA IF EXISTS \"{schema}\" CASCADE"))
+        .execute(&pool)
+        .await;
+    pool.close().await;
+}
+
 #[cfg(feature = "mysql")]
 #[tokio::test]
 async fn mysql_canonical_store_satisfies_all_contracts_live() {

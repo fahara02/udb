@@ -17,6 +17,26 @@ fn scope_text(value: Option<String>) -> String {
     value.unwrap_or_default().trim().to_string()
 }
 
+/// Process-global rate gate for the CDC "failed to publish to kafka" log. The
+/// tailer is leader-elected (one active publisher), so a single shared gate
+/// correctly collapses the flood. Cooldown from
+/// `UDB_CDC_PUBLISH_FAIL_LOG_COOLDOWN_SECS` (default
+/// [`DEFAULT_CDC_PUBLISH_FAIL_LOG_COOLDOWN_SECS`]).
+#[cfg(feature = "kafka")]
+fn publish_fail_log_gate() -> &'static crate::runtime::executor_utils::LogRateGate {
+    use crate::runtime::executor_utils::LogRateGate;
+    use std::sync::OnceLock;
+    static GATE: OnceLock<LogRateGate> = OnceLock::new();
+    GATE.get_or_init(|| {
+        let secs = std::env::var("UDB_CDC_PUBLISH_FAIL_LOG_COOLDOWN_SECS")
+            .ok()
+            .and_then(|v| v.trim().parse::<u64>().ok())
+            .filter(|s| *s > 0)
+            .unwrap_or(DEFAULT_CDC_PUBLISH_FAIL_LOG_COOLDOWN_SECS);
+        LogRateGate::new(std::time::Duration::from_secs(secs))
+    })
+}
+
 fn source_cdc_event_id(label: &str, evt: &super::source::CdcEvent) -> Uuid {
     use sha2::{Digest, Sha256};
 
@@ -1970,7 +1990,26 @@ impl CdcEngine {
         reason: &str,
         mut redis_conn: Option<&mut redis::aio::MultiplexedConnection>,
     ) {
-        error!("[cdc] failed to publish to kafka: {}", reason);
+        // Rate-limit the log (NOT the metric or the per-event pending mark): an
+        // unreachable broker would otherwise emit this for every event of every
+        // 250ms poll. Collapse to one line per cooldown with the suppressed count
+        // and an actionable hint, so the real error (e.g. Bug 1's upsert failure)
+        // is no longer buried.
+        if let Some(suppressed) = publish_fail_log_gate().check() {
+            if suppressed > 0 {
+                error!(
+                    suppressed = suppressed,
+                    "[cdc] failed to publish to kafka: {reason} ({suppressed} more suppressed \
+                     since last log; is the broker reachable? set UDB_CDC_ENABLED=false on \
+                     deployments with no Kafka)"
+                );
+            } else {
+                error!(
+                    "[cdc] failed to publish to kafka: {reason} (set UDB_CDC_ENABLED=false on \
+                     deployments with no Kafka)"
+                );
+            }
+        }
         self.metrics.inc_cdc_errors_total("transient");
         self.mark_cdc_delivery_state(prepared.event_id, "pending", None, None, Some(reason))
             .await;

@@ -2181,6 +2181,16 @@ impl DataBrokerService {
 #[cfg(feature = "kafka")]
 const STORAGE_FINALIZED_TOPIC: &str = "udb.storage.file.finalized.v1";
 
+/// Backoff after a consumer recv error so an unreachable broker (no Kafka in the
+/// deployment) can't spin this loop. Matches the topic-not-visible sleep below.
+#[cfg(feature = "kafka")]
+const STORAGE_FINALIZED_RECV_ERROR_BACKOFF_SECS: u64 = 2;
+
+/// Cooldown for the recv-error WARN log, so a persistently unreachable broker
+/// collapses to one line per window (with a suppressed count) instead of a flood.
+#[cfg(feature = "kafka")]
+const STORAGE_FINALIZED_RECV_ERROR_LOG_COOLDOWN_SECS: u64 = 30;
+
 #[cfg(feature = "kafka")]
 fn storage_finalized_consumer_config(brokers: &str) -> rdkafka::ClientConfig {
     let mut config = rdkafka::ClientConfig::new();
@@ -2330,6 +2340,11 @@ impl AssetServiceImpl {
                 topic = STORAGE_FINALIZED_TOPIC,
                 "storage→asset auto-trigger consumer started"
             );
+            // Collapse the recv-error WARN so an unreachable broker can't flood
+            // the log; the per-error backoff below prevents a tight spin.
+            let recv_error_gate = crate::runtime::executor_utils::LogRateGate::new(
+                std::time::Duration::from_secs(STORAGE_FINALIZED_RECV_ERROR_LOG_COOLDOWN_SECS),
+            );
             loop {
                 match consumer.recv().await {
                     Ok(msg) => {
@@ -2397,7 +2412,24 @@ impl AssetServiceImpl {
                             tokio::time::sleep(std::time::Duration::from_secs(2)).await;
                             continue;
                         }
-                        tracing::warn!(error = %err, "asset storage-finalized consumer recv error");
+                        if let Some(suppressed) = recv_error_gate.check() {
+                            if suppressed > 0 {
+                                tracing::warn!(
+                                    error = %err,
+                                    suppressed,
+                                    "asset storage-finalized consumer recv error ({suppressed} more \
+                                     suppressed since last log; is Kafka reachable?)"
+                                );
+                            } else {
+                                tracing::warn!(error = %err, "asset storage-finalized consumer recv error");
+                            }
+                        }
+                        // Back off so a persistently unreachable broker can't spin
+                        // this loop at full speed.
+                        tokio::time::sleep(std::time::Duration::from_secs(
+                            STORAGE_FINALIZED_RECV_ERROR_BACKOFF_SECS,
+                        ))
+                        .await;
                     }
                 }
             }

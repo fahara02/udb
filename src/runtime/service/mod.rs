@@ -2178,11 +2178,17 @@ pub async fn serve(
 
     // storage→asset auto-trigger: a detached Kafka consumer that turns finalized
     // storage files (`udb.storage.file.finalized.v1`) into asset pipelines. Only
-    // when the kafka feature is built and brokers are configured.
+    // when the kafka feature is built, brokers are configured, AND CDC delivery
+    // is enabled — so UDB_CDC_ENABLED=false silences this consumer too (a no-Kafka
+    // deployment would otherwise still spawn it and log resolve failures).
     #[cfg(feature = "kafka")]
-    if let Some(brokers) = runtime_config.kafka_brokers.clone() {
-        std::sync::Arc::new(service.build_asset_service())
-            .spawn_storage_finalized_consumer(brokers);
+    if crate::runtime::cdc::cdc_delivery_enabled() {
+        if let Some(brokers) = runtime_config.kafka_brokers.clone() {
+            std::sync::Arc::new(service.build_asset_service())
+                .spawn_storage_finalized_consumer(brokers);
+        }
+    } else {
+        tracing::info!("storage→asset auto-trigger consumer disabled: UDB_CDC_ENABLED=false");
     }
 
     // Network-isolate the native auth control plane. `AuthnService` /
@@ -2447,15 +2453,9 @@ async fn start_cdc_engine(
     runtime: &DataBrokerRuntime,
     metrics: Arc<dyn MetricsRecorder>,
 ) -> Option<Arc<CdcEngine>> {
-    // P4 (bug_report.md): honor UDB_CDC_ENABLED=false — don't start the tailer at
-    // all (the documented load-test mitigation). Default = enabled when unset.
-    let cdc_enabled = std::env::var("UDB_CDC_ENABLED")
-        .map(|v| {
-            let v = v.trim();
-            !(v == "0" || v.eq_ignore_ascii_case("false") || v.eq_ignore_ascii_case("no"))
-        })
-        .unwrap_or(true);
-    if !cdc_enabled {
+    // Honor UDB_CDC_ENABLED=false — don't start the tailer at all (the documented
+    // single-node / load-test mitigation). Default = enabled when unset.
+    if !crate::runtime::cdc::cdc_delivery_enabled() {
         tracing::info!("CDC tailer disabled: UDB_CDC_ENABLED=false");
         return None;
     }

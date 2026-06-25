@@ -669,6 +669,12 @@ impl DataBrokerRuntime {
 
         let (affected_rows, record_json) = if request.return_record {
             let row = query.fetch_optional(&mut *tx).await.map_err(|err| {
+                tracing::error!(
+                    sql = %plan.sql,
+                    message_type = %request.message_type,
+                    tenant_id = %context.tenant_id,
+                    "PostgreSQL upsert statement failed"
+                );
                 crate::runtime::executor_utils::sqlx_error_to_status(
                     "PostgreSQL upsert failed",
                     &err,
@@ -693,6 +699,12 @@ impl DataBrokerRuntime {
             }
         } else {
             let result = query.execute(&mut *tx).await.map_err(|err| {
+                tracing::error!(
+                    sql = %plan.sql,
+                    message_type = %request.message_type,
+                    tenant_id = %context.tenant_id,
+                    "PostgreSQL upsert statement failed"
+                );
                 crate::runtime::executor_utils::sqlx_error_to_status(
                     "PostgreSQL upsert failed",
                     &err,
@@ -803,6 +815,14 @@ impl DataBrokerRuntime {
         };
         let topic = table.cdc_topic.trim();
         if topic.is_empty() {
+            return Ok(());
+        }
+        // When CDC delivery is disabled (UDB_CDC_ENABLED=false) nothing drains the
+        // outbox — neither the Kafka tailer nor the in-process stream both live on
+        // the tailer-fed broadcast — so writing the row would only accumulate
+        // unbounded `outbox_events` with no consumer. Skip the write entirely; the
+        // operator has opted out of change-event delivery.
+        if !crate::runtime::cdc::cdc_delivery_enabled() {
             return Ok(());
         }
         // Tenant-scoped topics can't reach a subscriber without a tenant; skip.
