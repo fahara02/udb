@@ -206,14 +206,15 @@ def test_invoke_replay_safe_mutation_with_blank_key_not_retried() -> None:
 
 def test_invoke_replay_safe_mutation_with_context_only_key_not_retried() -> None:
     # The broker's replay contract is the top-level request idempotency_key.
-    # RequestContext has no idempotency-key field; setting other context values
-    # must not unlock mutation auto-retry.
+    # RequestContext has no idempotency-key field; a context-only key must not
+    # exist or unlock mutation auto-retry.
     client = _fast_client()
     try:
         fake = _FakeUnary(None, raise_codes=[grpc.StatusCode.UNAVAILABLE])
         client._stub.Upsert = fake
         req = _relational.UpsertRequest(message_type="Order")
-        req.context.purpose = "ctx-only"
+        with pytest.raises(AttributeError):
+            req.context.idempotency_key = "ctx-key"
         assert not _request_has_idempotency_key(req)
         with pytest.raises(UdbRpcError):
             client.upsert(req)
