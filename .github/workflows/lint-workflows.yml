@@ -197,7 +197,7 @@ jobs:
   actionlint:
     name: actionlint
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - name: Install actionlint
@@ -217,6 +217,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          python3 -m pip install -e sdk/python
           node --check scripts/ci-inventory.mjs
           node scripts/ci-inventory.mjs --selftest
           node scripts/ci-inventory.mjs
