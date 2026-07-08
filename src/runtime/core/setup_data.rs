@@ -3125,6 +3125,19 @@ fn validate_idempotency_replay_write_receipt_object(
     Ok(())
 }
 
+fn idempotency_replay_write_receipt_from_raw(
+    raw: &str,
+) -> Result<crate::runtime::consistency::WriteReceipt, tonic::Status> {
+    validate_idempotency_json_no_duplicate_keys("write_receipt_json", raw.as_bytes())?;
+    validate_idempotency_replay_write_receipt_object(raw)?;
+    let write_receipt = serde_json::from_str::<crate::runtime::consistency::WriteReceipt>(raw)
+        .map_err(|err| {
+            idempotency_replay_response_status(format!("invalid write_receipt_json: {err}"))
+        })?;
+    validate_idempotency_replay_write_receipt(&write_receipt)?;
+    Ok(write_receipt)
+}
+
 fn idempotency_replay_write_receipt(
     prior: &JsonValue,
 ) -> Result<(String, crate::runtime::consistency::WriteReceipt), tonic::Status> {
@@ -3134,17 +3147,7 @@ fn idempotency_replay_write_receipt(
             "write_receipt_json must not include surrounding whitespace",
         ));
     }
-    validate_idempotency_json_no_duplicate_keys(
-        "write_receipt_json",
-        write_receipt_json.as_bytes(),
-    )?;
-    validate_idempotency_replay_write_receipt_object(&write_receipt_json)?;
-    let write_receipt =
-        serde_json::from_str::<crate::runtime::consistency::WriteReceipt>(&write_receipt_json)
-            .map_err(|err| {
-                idempotency_replay_response_status(format!("invalid write_receipt_json: {err}"))
-            })?;
-    validate_idempotency_replay_write_receipt(&write_receipt)?;
+    let write_receipt = idempotency_replay_write_receipt_from_raw(&write_receipt_json)?;
     Ok((write_receipt_json, write_receipt))
 }
 
