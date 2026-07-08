@@ -24,35 +24,38 @@ namespace Udb.Entity.V1 {
     static ContextReflection() {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
-            "Cht1ZGIvZW50aXR5L3YxL2NvbnRleHQucHJvdG8SDXVkYi5lbnRpdHkudjEi",
-            "0AYKDlJlcXVlc3RDb250ZXh0EhsKCXRlbmFudF9pZBgBIAEoCVIIdGVuYW50",
-            "SWQSFwoHdXNlcl9pZBgCIAEoCVIGdXNlcklkEiUKDmNvcnJlbGF0aW9uX2lk",
-            "GAMgASgJUg1jb3JyZWxhdGlvbklkEhgKB3B1cnBvc2UYBCABKAlSB3B1cnBv",
-            "c2USFgoGc2NvcGVzGAUgAygJUgZzY29wZXMSKQoQc2VydmljZV9pZGVudGl0",
-            "eRgGIAEoCVIPc2VydmljZUlkZW50aXR5EhkKCHRyYWNlX2lkGAcgASgJUgd0",
-            "cmFjZUlkEiUKDnRhcmdldF9iYWNrZW5kGAggASgJUg10YXJnZXRCYWNrZW5k",
-            "EicKD3RhcmdldF9pbnN0YW5jZRgJIAEoCVIOdGFyZ2V0SW5zdGFuY2USJQoO",
-            "cm91dGluZ19wb2xpY3kYCiABKAlSDXJvdXRpbmdQb2xpY3kSIQoMcHJpbWFy",
-            "eV9yZWFkGAsgASgIUgtwcmltYXJ5UmVhZBIrChJtYXhfcmVwbGljYV9sYWdf",
-            "bXMYDCABKARSD21heFJlcGxpY2FMYWdNcxJAChxldmVudHVhbF9jb25zaXN0",
-            "ZW5jeV9hbGxvd2VkGA0gASgIUhpldmVudHVhbENvbnNpc3RlbmN5QWxsb3dl",
-            "ZBImCg9yZWFkX2ZlbmNlX2pzb24YDiABKAlSDXJlYWRGZW5jZUpzb24SHQoK",
-            "cHJvamVjdF9pZBgPIAEoCVIJcHJvamVjdElkEjQKFmNsaWVudF9jYXRhbG9n",
-            "X3ZlcnNpb24YECABKAlSFGNsaWVudENhdGFsb2dWZXJzaW9uEhsKCWNsaWVu",
-            "dF9pZBgRIAEoCVIIY2xpZW50SWQSIAoLY29uc2lzdGVuY3kYEiABKAlSC2Nv",
-            "bnNpc3RlbmN5EhYKBnJlZ2lvbhgTIAEoCVIGcmVnaW9uEk0KCmF0dHJpYnV0",
-            "ZXMYFCADKAsyLS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0LkF0dHJp",
-            "YnV0ZXNFbnRyeVIKYXR0cmlidXRlcxo9Cg9BdHRyaWJ1dGVzRW50cnkSEAoD",
-            "a2V5GAEgASgJUgNrZXkSFAoFdmFsdWUYAiABKAlSBXZhbHVlOgI4AUKyAQoR",
-            "Y29tLnVkYi5lbnRpdHkudjFCDENvbnRleHRQcm90b1ABWjlnaXRodWIuY29t",
-            "L2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9lbnRpdHkvdjE7ZW50aXR5",
-            "djGiAgNVRViqAg1VZGIuRW50aXR5LlYxygINVWRiXEVudGl0eVxWMeICGVVk",
-            "YlxHUEJNZXRhZGF0YVxFbnRpdHlcVjHqAg9VZGI6OkVudGl0eTo6VjFiBnBy",
-            "b3RvMw=="));
+            "Cht1ZGIvZW50aXR5L3YxL2NvbnRleHQucHJvdG8SDXVkYi5lbnRpdHkudjEa",
+            "H3VkYi9lbnRpdHkvdjEvY29uc2lzdGVuY3kucHJvdG8i1AcKDlJlcXVlc3RD",
+            "b250ZXh0EhsKCXRlbmFudF9pZBgBIAEoCVIIdGVuYW50SWQSFwoHdXNlcl9p",
+            "ZBgCIAEoCVIGdXNlcklkEiUKDmNvcnJlbGF0aW9uX2lkGAMgASgJUg1jb3Jy",
+            "ZWxhdGlvbklkEhgKB3B1cnBvc2UYBCABKAlSB3B1cnBvc2USFgoGc2NvcGVz",
+            "GAUgAygJUgZzY29wZXMSKQoQc2VydmljZV9pZGVudGl0eRgGIAEoCVIPc2Vy",
+            "dmljZUlkZW50aXR5EhkKCHRyYWNlX2lkGAcgASgJUgd0cmFjZUlkEiUKDnRh",
+            "cmdldF9iYWNrZW5kGAggASgJUg10YXJnZXRCYWNrZW5kEicKD3RhcmdldF9p",
+            "bnN0YW5jZRgJIAEoCVIOdGFyZ2V0SW5zdGFuY2USJQoOcm91dGluZ19wb2xp",
+            "Y3kYCiABKAlSDXJvdXRpbmdQb2xpY3kSIQoMcHJpbWFyeV9yZWFkGAsgASgI",
+            "UgtwcmltYXJ5UmVhZBIrChJtYXhfcmVwbGljYV9sYWdfbXMYDCABKARSD21h",
+            "eFJlcGxpY2FMYWdNcxJAChxldmVudHVhbF9jb25zaXN0ZW5jeV9hbGxvd2Vk",
+            "GA0gASgIUhpldmVudHVhbENvbnNpc3RlbmN5QWxsb3dlZBImCg9yZWFkX2Zl",
+            "bmNlX2pzb24YDiABKAlSDXJlYWRGZW5jZUpzb24SHQoKcHJvamVjdF9pZBgP",
+            "IAEoCVIJcHJvamVjdElkEjQKFmNsaWVudF9jYXRhbG9nX3ZlcnNpb24YECAB",
+            "KAlSFGNsaWVudENhdGFsb2dWZXJzaW9uEhsKCWNsaWVudF9pZBgRIAEoCVII",
+            "Y2xpZW50SWQSIAoLY29uc2lzdGVuY3kYEiABKAlSC2NvbnNpc3RlbmN5EhYK",
+            "BnJlZ2lvbhgTIAEoCVIGcmVnaW9uEk0KCmF0dHJpYnV0ZXMYFCADKAsyLS51",
+            "ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0LkF0dHJpYnV0ZXNFbnRyeVIK",
+            "YXR0cmlidXRlcxI3CgpyZWFkX2ZlbmNlGBUgASgLMhgudWRiLmVudGl0eS52",
+            "MS5SZWFkRmVuY2VSCXJlYWRGZW5jZRJJChBjb25zaXN0ZW5jeV9tb2RlGBYg",
+            "ASgOMh4udWRiLmVudGl0eS52MS5Db25zaXN0ZW5jeU1vZGVSD2NvbnNpc3Rl",
+            "bmN5TW9kZRo9Cg9BdHRyaWJ1dGVzRW50cnkSEAoDa2V5GAEgASgJUgNrZXkS",
+            "FAoFdmFsdWUYAiABKAlSBXZhbHVlOgI4AUKyAQoRY29tLnVkYi5lbnRpdHku",
+            "djFCDENvbnRleHRQcm90b1ABWjlnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9z",
+            "ZGsvZ28vZ2VuL3VkYi9lbnRpdHkvdjE7ZW50aXR5djGiAgNVRViqAg1VZGIu",
+            "RW50aXR5LlYxygINVWRiXEVudGl0eVxWMeICGVVkYlxHUEJNZXRhZGF0YVxF",
+            "bnRpdHlcVjHqAg9VZGI6OkVudGl0eTo6VjFiBnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
-          new pbr::FileDescriptor[] { },
+          new pbr::FileDescriptor[] { global::Udb.Entity.V1.ConsistencyReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.RequestContext), global::Udb.Entity.V1.RequestContext.Parser, new[]{ "TenantId", "UserId", "CorrelationId", "Purpose", "Scopes", "ServiceIdentity", "TraceId", "TargetBackend", "TargetInstance", "RoutingPolicy", "PrimaryRead", "MaxReplicaLagMs", "EventualConsistencyAllowed", "ReadFenceJson", "ProjectId", "ClientCatalogVersion", "ClientId", "Consistency", "Region", "Attributes" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, })
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.RequestContext), global::Udb.Entity.V1.RequestContext.Parser, new[]{ "TenantId", "UserId", "CorrelationId", "Purpose", "Scopes", "ServiceIdentity", "TraceId", "TargetBackend", "TargetInstance", "RoutingPolicy", "PrimaryRead", "MaxReplicaLagMs", "EventualConsistencyAllowed", "ReadFenceJson", "ProjectId", "ClientCatalogVersion", "ClientId", "Consistency", "Region", "Attributes", "ReadFence", "ConsistencyMode" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, })
           }));
     }
     #endregion
@@ -114,6 +117,8 @@ namespace Udb.Entity.V1 {
       consistency_ = other.consistency_;
       region_ = other.region_;
       attributes_ = other.attributes_.Clone();
+      readFence_ = other.readFence_ != null ? other.readFence_.Clone() : null;
+      consistencyMode_ = other.consistencyMode_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -400,6 +405,39 @@ namespace Udb.Entity.V1 {
       get { return attributes_; }
     }
 
+    /// <summary>Field number for the "read_fence" field.</summary>
+    public const int ReadFenceFieldNumber = 21;
+    private global::Udb.Entity.V1.ReadFence readFence_;
+    /// <summary>
+    /// Typed read fence. Kept in lockstep with read_fence_json for clients that can
+    /// consume protobuf messages directly. Metadata/header values still win when
+    /// both are supplied.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Udb.Entity.V1.ReadFence ReadFence {
+      get { return readFence_; }
+      set {
+        readFence_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "consistency_mode" field.</summary>
+    public const int ConsistencyModeFieldNumber = 22;
+    private global::Udb.Entity.V1.ConsistencyMode consistencyMode_ = global::Udb.Entity.V1.ConsistencyMode.Unspecified;
+    /// <summary>
+    /// Typed consistency mode. Mirrors the legacy consistency string/header token;
+    /// the x-udb-consistency metadata header still wins when both are supplied.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Udb.Entity.V1.ConsistencyMode ConsistencyMode {
+      get { return consistencyMode_; }
+      set {
+        consistencyMode_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -435,6 +473,8 @@ namespace Udb.Entity.V1 {
       if (Consistency != other.Consistency) return false;
       if (Region != other.Region) return false;
       if (!Attributes.Equals(other.Attributes)) return false;
+      if (!object.Equals(ReadFence, other.ReadFence)) return false;
+      if (ConsistencyMode != other.ConsistencyMode) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -462,6 +502,8 @@ namespace Udb.Entity.V1 {
       if (Consistency.Length != 0) hash ^= Consistency.GetHashCode();
       if (Region.Length != 0) hash ^= Region.GetHashCode();
       hash ^= Attributes.GetHashCode();
+      if (readFence_ != null) hash ^= ReadFence.GetHashCode();
+      if (ConsistencyMode != global::Udb.Entity.V1.ConsistencyMode.Unspecified) hash ^= ConsistencyMode.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -554,6 +596,14 @@ namespace Udb.Entity.V1 {
         output.WriteString(Region);
       }
       attributes_.WriteTo(output, _map_attributes_codec);
+      if (readFence_ != null) {
+        output.WriteRawTag(170, 1);
+        output.WriteMessage(ReadFence);
+      }
+      if (ConsistencyMode != global::Udb.Entity.V1.ConsistencyMode.Unspecified) {
+        output.WriteRawTag(176, 1);
+        output.WriteEnum((int) ConsistencyMode);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -638,6 +688,14 @@ namespace Udb.Entity.V1 {
         output.WriteString(Region);
       }
       attributes_.WriteTo(ref output, _map_attributes_codec);
+      if (readFence_ != null) {
+        output.WriteRawTag(170, 1);
+        output.WriteMessage(ReadFence);
+      }
+      if (ConsistencyMode != global::Udb.Entity.V1.ConsistencyMode.Unspecified) {
+        output.WriteRawTag(176, 1);
+        output.WriteEnum((int) ConsistencyMode);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -704,6 +762,12 @@ namespace Udb.Entity.V1 {
         size += 2 + pb::CodedOutputStream.ComputeStringSize(Region);
       }
       size += attributes_.CalculateSize(_map_attributes_codec);
+      if (readFence_ != null) {
+        size += 2 + pb::CodedOutputStream.ComputeMessageSize(ReadFence);
+      }
+      if (ConsistencyMode != global::Udb.Entity.V1.ConsistencyMode.Unspecified) {
+        size += 2 + pb::CodedOutputStream.ComputeEnumSize((int) ConsistencyMode);
+      }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
       }
@@ -772,6 +836,15 @@ namespace Udb.Entity.V1 {
         Region = other.Region;
       }
       attributes_.MergeFrom(other.attributes_);
+      if (other.readFence_ != null) {
+        if (readFence_ == null) {
+          ReadFence = new global::Udb.Entity.V1.ReadFence();
+        }
+        ReadFence.MergeFrom(other.ReadFence);
+      }
+      if (other.ConsistencyMode != global::Udb.Entity.V1.ConsistencyMode.Unspecified) {
+        ConsistencyMode = other.ConsistencyMode;
+      }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
 
@@ -871,6 +944,17 @@ namespace Udb.Entity.V1 {
             attributes_.AddEntriesFrom(input, _map_attributes_codec);
             break;
           }
+          case 170: {
+            if (readFence_ == null) {
+              ReadFence = new global::Udb.Entity.V1.ReadFence();
+            }
+            input.ReadMessage(ReadFence);
+            break;
+          }
+          case 176: {
+            ConsistencyMode = (global::Udb.Entity.V1.ConsistencyMode) input.ReadEnum();
+            break;
+          }
         }
       }
     #endif
@@ -968,6 +1052,17 @@ namespace Udb.Entity.V1 {
           }
           case 162: {
             attributes_.AddEntriesFrom(ref input, _map_attributes_codec);
+            break;
+          }
+          case 170: {
+            if (readFence_ == null) {
+              ReadFence = new global::Udb.Entity.V1.ReadFence();
+            }
+            input.ReadMessage(ReadFence);
+            break;
+          }
+          case 176: {
+            ConsistencyMode = (global::Udb.Entity.V1.ConsistencyMode) input.ReadEnum();
             break;
           }
         }

@@ -15,6 +15,9 @@ use Google\Protobuf\RepeatedField;
 class EffectivePermission extends \Google\Protobuf\Internal\Message
 {
     /**
+     * Canonical public permission object. Combined with action/domain/resource_type
+     * it forms the stable permission identity returned by ListUserPermissions.
+     *
      * Generated from protobuf field <code>string object = 1 [json_name = "object"];</code>
      */
     protected $object = '';
@@ -42,6 +45,8 @@ class EffectivePermission extends \Google\Protobuf\Internal\Message
      *     Optional. Data for populating the Message object.
      *
      *     @type string $object
+     *           Canonical public permission object. Combined with action/domain/resource_type
+     *           it forms the stable permission identity returned by ListUserPermissions.
      *     @type string $action
      *     @type string $via_role
      *     @type string $resource_type
@@ -54,6 +59,9 @@ class EffectivePermission extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * Canonical public permission object. Combined with action/domain/resource_type
+     * it forms the stable permission identity returned by ListUserPermissions.
+     *
      * Generated from protobuf field <code>string object = 1 [json_name = "object"];</code>
      * @return string
      */
@@ -63,6 +71,9 @@ class EffectivePermission extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * Canonical public permission object. Combined with action/domain/resource_type
+     * it forms the stable permission identity returned by ListUserPermissions.
+     *
      * Generated from protobuf field <code>string object = 1 [json_name = "object"];</code>
      * @param string $var
      * @return $this

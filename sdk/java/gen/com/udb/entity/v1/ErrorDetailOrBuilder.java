@@ -160,4 +160,53 @@ public interface ErrorDetailOrBuilder extends
    * @return The kind.
    */
   com.udb.entity.v1.ErrorKind getKind();
+
+  /**
+   * <pre>
+   * Structured invalid-field details for INVALID_ARGUMENT responses. Empty for
+   * non-validation errors.
+   * </pre>
+   *
+   * <code>repeated .udb.entity.v1.ErrorFieldViolation field_violations = 9 [json_name = "fieldViolations"];</code>
+   */
+  java.util.List<com.udb.entity.v1.ErrorFieldViolation>
+      getFieldViolationsList();
+  /**
+   * <pre>
+   * Structured invalid-field details for INVALID_ARGUMENT responses. Empty for
+   * non-validation errors.
+   * </pre>
+   *
+   * <code>repeated .udb.entity.v1.ErrorFieldViolation field_violations = 9 [json_name = "fieldViolations"];</code>
+   */
+  com.udb.entity.v1.ErrorFieldViolation getFieldViolations(int index);
+  /**
+   * <pre>
+   * Structured invalid-field details for INVALID_ARGUMENT responses. Empty for
+   * non-validation errors.
+   * </pre>
+   *
+   * <code>repeated .udb.entity.v1.ErrorFieldViolation field_violations = 9 [json_name = "fieldViolations"];</code>
+   */
+  int getFieldViolationsCount();
+  /**
+   * <pre>
+   * Structured invalid-field details for INVALID_ARGUMENT responses. Empty for
+   * non-validation errors.
+   * </pre>
+   *
+   * <code>repeated .udb.entity.v1.ErrorFieldViolation field_violations = 9 [json_name = "fieldViolations"];</code>
+   */
+  java.util.List<? extends com.udb.entity.v1.ErrorFieldViolationOrBuilder>
+      getFieldViolationsOrBuilderList();
+  /**
+   * <pre>
+   * Structured invalid-field details for INVALID_ARGUMENT responses. Empty for
+   * non-validation errors.
+   * </pre>
+   *
+   * <code>repeated .udb.entity.v1.ErrorFieldViolation field_violations = 9 [json_name = "fieldViolations"];</code>
+   */
+  com.udb.entity.v1.ErrorFieldViolationOrBuilder getFieldViolationsOrBuilder(
+      int index);
 }

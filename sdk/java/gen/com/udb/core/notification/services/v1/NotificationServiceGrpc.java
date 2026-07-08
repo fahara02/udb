@@ -136,6 +136,37 @@ public final class NotificationServiceGrpc {
     return getRetryNotificationMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.notification.services.v1.ReportDeliveryRequest,
+      com.udb.core.notification.services.v1.ReportDeliveryResponse> getReportDeliveryMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "ReportDelivery",
+      requestType = com.udb.core.notification.services.v1.ReportDeliveryRequest.class,
+      responseType = com.udb.core.notification.services.v1.ReportDeliveryResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.notification.services.v1.ReportDeliveryRequest,
+      com.udb.core.notification.services.v1.ReportDeliveryResponse> getReportDeliveryMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.notification.services.v1.ReportDeliveryRequest, com.udb.core.notification.services.v1.ReportDeliveryResponse> getReportDeliveryMethod;
+    if ((getReportDeliveryMethod = NotificationServiceGrpc.getReportDeliveryMethod) == null) {
+      synchronized (NotificationServiceGrpc.class) {
+        if ((getReportDeliveryMethod = NotificationServiceGrpc.getReportDeliveryMethod) == null) {
+          NotificationServiceGrpc.getReportDeliveryMethod = getReportDeliveryMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.notification.services.v1.ReportDeliveryRequest, com.udb.core.notification.services.v1.ReportDeliveryResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ReportDelivery"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.notification.services.v1.ReportDeliveryRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.notification.services.v1.ReportDeliveryResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new NotificationServiceMethodDescriptorSupplier("ReportDelivery"))
+              .build();
+        }
+      }
+    }
+    return getReportDeliveryMethod;
+  }
+
   private static volatile io.grpc.MethodDescriptor<com.udb.core.notification.services.v1.UpsertTemplateRequest,
       com.udb.core.notification.services.v1.UpsertTemplateResponse> getUpsertTemplateMethod;
 
@@ -458,6 +489,19 @@ public final class NotificationServiceGrpc {
 
     /**
      * <pre>
+     * Report the terminal per-channel delivery outcome for a sent notification.
+     * Internal seam: the leader-elected delivery worker — or a provider webhook
+     * bridge — reports queued/sent/delivered/failed; the handler upserts the
+     * NotificationDeliveryAttempt row and emits `udb.notification.delivery.&lt;status&gt;.v1`.
+     * </pre>
+     */
+    default void reportDelivery(com.udb.core.notification.services.v1.ReportDeliveryRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.notification.services.v1.ReportDeliveryResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getReportDeliveryMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
      * Upsert a notification template.
      * </pre>
      */
@@ -600,6 +644,20 @@ public final class NotificationServiceGrpc {
 
     /**
      * <pre>
+     * Report the terminal per-channel delivery outcome for a sent notification.
+     * Internal seam: the leader-elected delivery worker — or a provider webhook
+     * bridge — reports queued/sent/delivered/failed; the handler upserts the
+     * NotificationDeliveryAttempt row and emits `udb.notification.delivery.&lt;status&gt;.v1`.
+     * </pre>
+     */
+    public void reportDelivery(com.udb.core.notification.services.v1.ReportDeliveryRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.notification.services.v1.ReportDeliveryResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getReportDeliveryMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
      * Upsert a notification template.
      * </pre>
      */
@@ -734,6 +792,19 @@ public final class NotificationServiceGrpc {
 
     /**
      * <pre>
+     * Report the terminal per-channel delivery outcome for a sent notification.
+     * Internal seam: the leader-elected delivery worker — or a provider webhook
+     * bridge — reports queued/sent/delivered/failed; the handler upserts the
+     * NotificationDeliveryAttempt row and emits `udb.notification.delivery.&lt;status&gt;.v1`.
+     * </pre>
+     */
+    public com.udb.core.notification.services.v1.ReportDeliveryResponse reportDelivery(com.udb.core.notification.services.v1.ReportDeliveryRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getReportDeliveryMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
      * Upsert a notification template.
      * </pre>
      */
@@ -857,6 +928,19 @@ public final class NotificationServiceGrpc {
     public com.udb.core.notification.services.v1.RetryNotificationResponse retryNotification(com.udb.core.notification.services.v1.RetryNotificationRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getRetryNotificationMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Report the terminal per-channel delivery outcome for a sent notification.
+     * Internal seam: the leader-elected delivery worker — or a provider webhook
+     * bridge — reports queued/sent/delivered/failed; the handler upserts the
+     * NotificationDeliveryAttempt row and emits `udb.notification.delivery.&lt;status&gt;.v1`.
+     * </pre>
+     */
+    public com.udb.core.notification.services.v1.ReportDeliveryResponse reportDelivery(com.udb.core.notification.services.v1.ReportDeliveryRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getReportDeliveryMethod(), getCallOptions(), request);
     }
 
     /**
@@ -992,6 +1076,20 @@ public final class NotificationServiceGrpc {
 
     /**
      * <pre>
+     * Report the terminal per-channel delivery outcome for a sent notification.
+     * Internal seam: the leader-elected delivery worker — or a provider webhook
+     * bridge — reports queued/sent/delivered/failed; the handler upserts the
+     * NotificationDeliveryAttempt row and emits `udb.notification.delivery.&lt;status&gt;.v1`.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.notification.services.v1.ReportDeliveryResponse> reportDelivery(
+        com.udb.core.notification.services.v1.ReportDeliveryRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getReportDeliveryMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
      * Upsert a notification template.
      * </pre>
      */
@@ -1072,13 +1170,14 @@ public final class NotificationServiceGrpc {
   private static final int METHODID_GET_NOTIFICATION = 1;
   private static final int METHODID_LIST_NOTIFICATIONS = 2;
   private static final int METHODID_RETRY_NOTIFICATION = 3;
-  private static final int METHODID_UPSERT_TEMPLATE = 4;
-  private static final int METHODID_GET_TEMPLATE = 5;
-  private static final int METHODID_LIST_TEMPLATES = 6;
-  private static final int METHODID_GET_DELIVERY_STATS = 7;
-  private static final int METHODID_SET_PREFERENCE = 8;
-  private static final int METHODID_GET_PREFERENCE = 9;
-  private static final int METHODID_LIST_PREFERENCES = 10;
+  private static final int METHODID_REPORT_DELIVERY = 4;
+  private static final int METHODID_UPSERT_TEMPLATE = 5;
+  private static final int METHODID_GET_TEMPLATE = 6;
+  private static final int METHODID_LIST_TEMPLATES = 7;
+  private static final int METHODID_GET_DELIVERY_STATS = 8;
+  private static final int METHODID_SET_PREFERENCE = 9;
+  private static final int METHODID_GET_PREFERENCE = 10;
+  private static final int METHODID_LIST_PREFERENCES = 11;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -1112,6 +1211,10 @@ public final class NotificationServiceGrpc {
         case METHODID_RETRY_NOTIFICATION:
           serviceImpl.retryNotification((com.udb.core.notification.services.v1.RetryNotificationRequest) request,
               (io.grpc.stub.StreamObserver<com.udb.core.notification.services.v1.RetryNotificationResponse>) responseObserver);
+          break;
+        case METHODID_REPORT_DELIVERY:
+          serviceImpl.reportDelivery((com.udb.core.notification.services.v1.ReportDeliveryRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.notification.services.v1.ReportDeliveryResponse>) responseObserver);
           break;
         case METHODID_UPSERT_TEMPLATE:
           serviceImpl.upsertTemplate((com.udb.core.notification.services.v1.UpsertTemplateRequest) request,
@@ -1187,6 +1290,13 @@ public final class NotificationServiceGrpc {
               com.udb.core.notification.services.v1.RetryNotificationRequest,
               com.udb.core.notification.services.v1.RetryNotificationResponse>(
                 service, METHODID_RETRY_NOTIFICATION)))
+        .addMethod(
+          getReportDeliveryMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.notification.services.v1.ReportDeliveryRequest,
+              com.udb.core.notification.services.v1.ReportDeliveryResponse>(
+                service, METHODID_REPORT_DELIVERY)))
         .addMethod(
           getUpsertTemplateMethod(),
           io.grpc.stub.ServerCalls.asyncUnaryCall(
@@ -1288,6 +1398,7 @@ public final class NotificationServiceGrpc {
               .addMethod(getGetNotificationMethod())
               .addMethod(getListNotificationsMethod())
               .addMethod(getRetryNotificationMethod())
+              .addMethod(getReportDeliveryMethod())
               .addMethod(getUpsertTemplateMethod())
               .addMethod(getGetTemplateMethod())
               .addMethod(getListTemplatesMethod())

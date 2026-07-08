@@ -46,44 +46,49 @@ public final class ContextProto {
   static {
     java.lang.String[] descriptorData = {
       "\n\033udb/entity/v1/context.proto\022\rudb.entit" +
-      "y.v1\"\320\006\n\016RequestContext\022\033\n\ttenant_id\030\001 \001" +
-      "(\tR\010tenantId\022\027\n\007user_id\030\002 \001(\tR\006userId\022%\n" +
-      "\016correlation_id\030\003 \001(\tR\rcorrelationId\022\030\n\007" +
-      "purpose\030\004 \001(\tR\007purpose\022\026\n\006scopes\030\005 \003(\tR\006" +
-      "scopes\022)\n\020service_identity\030\006 \001(\tR\017servic" +
-      "eIdentity\022\031\n\010trace_id\030\007 \001(\tR\007traceId\022%\n\016" +
-      "target_backend\030\010 \001(\tR\rtargetBackend\022\'\n\017t" +
-      "arget_instance\030\t \001(\tR\016targetInstance\022%\n\016" +
-      "routing_policy\030\n \001(\tR\rroutingPolicy\022!\n\014p" +
-      "rimary_read\030\013 \001(\010R\013primaryRead\022+\n\022max_re" +
-      "plica_lag_ms\030\014 \001(\004R\017maxReplicaLagMs\022@\n\034e" +
-      "ventual_consistency_allowed\030\r \001(\010R\032event" +
-      "ualConsistencyAllowed\022&\n\017read_fence_json" +
-      "\030\016 \001(\tR\rreadFenceJson\022\035\n\nproject_id\030\017 \001(" +
-      "\tR\tprojectId\0224\n\026client_catalog_version\030\020" +
-      " \001(\tR\024clientCatalogVersion\022\033\n\tclient_id\030" +
-      "\021 \001(\tR\010clientId\022 \n\013consistency\030\022 \001(\tR\013co" +
-      "nsistency\022\026\n\006region\030\023 \001(\tR\006region\022M\n\natt" +
-      "ributes\030\024 \003(\0132-.udb.entity.v1.RequestCon" +
-      "text.AttributesEntryR\nattributes\032=\n\017Attr" +
-      "ibutesEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002" +
-      " \001(\tR\005value:\0028\001B\262\001\n\021com.udb.entity.v1B\014C" +
-      "ontextProtoP\001Z9github.com/fahara02/udb/s" +
-      "dk/go/gen/udb/entity/v1;entityv1\242\002\003UEX\252\002" +
-      "\rUdb.Entity.V1\312\002\rUdb\\Entity\\V1\342\002\031Udb\\GPB" +
-      "Metadata\\Entity\\V1\352\002\017Udb::Entity::V1b\006pr" +
-      "oto3"
+      "y.v1\032\037udb/entity/v1/consistency.proto\"\324\007" +
+      "\n\016RequestContext\022\033\n\ttenant_id\030\001 \001(\tR\010ten" +
+      "antId\022\027\n\007user_id\030\002 \001(\tR\006userId\022%\n\016correl" +
+      "ation_id\030\003 \001(\tR\rcorrelationId\022\030\n\007purpose" +
+      "\030\004 \001(\tR\007purpose\022\026\n\006scopes\030\005 \003(\tR\006scopes\022" +
+      ")\n\020service_identity\030\006 \001(\tR\017serviceIdenti" +
+      "ty\022\031\n\010trace_id\030\007 \001(\tR\007traceId\022%\n\016target_" +
+      "backend\030\010 \001(\tR\rtargetBackend\022\'\n\017target_i" +
+      "nstance\030\t \001(\tR\016targetInstance\022%\n\016routing" +
+      "_policy\030\n \001(\tR\rroutingPolicy\022!\n\014primary_" +
+      "read\030\013 \001(\010R\013primaryRead\022+\n\022max_replica_l" +
+      "ag_ms\030\014 \001(\004R\017maxReplicaLagMs\022@\n\034eventual" +
+      "_consistency_allowed\030\r \001(\010R\032eventualCons" +
+      "istencyAllowed\022&\n\017read_fence_json\030\016 \001(\tR" +
+      "\rreadFenceJson\022\035\n\nproject_id\030\017 \001(\tR\tproj" +
+      "ectId\0224\n\026client_catalog_version\030\020 \001(\tR\024c" +
+      "lientCatalogVersion\022\033\n\tclient_id\030\021 \001(\tR\010" +
+      "clientId\022 \n\013consistency\030\022 \001(\tR\013consisten" +
+      "cy\022\026\n\006region\030\023 \001(\tR\006region\022M\n\nattributes" +
+      "\030\024 \003(\0132-.udb.entity.v1.RequestContext.At" +
+      "tributesEntryR\nattributes\0227\n\nread_fence\030" +
+      "\025 \001(\0132\030.udb.entity.v1.ReadFenceR\treadFen" +
+      "ce\022I\n\020consistency_mode\030\026 \001(\0162\036.udb.entit" +
+      "y.v1.ConsistencyModeR\017consistencyMode\032=\n" +
+      "\017AttributesEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005va" +
+      "lue\030\002 \001(\tR\005value:\0028\001B\262\001\n\021com.udb.entity." +
+      "v1B\014ContextProtoP\001Z9github.com/fahara02/" +
+      "udb/sdk/go/gen/udb/entity/v1;entityv1\242\002\003" +
+      "UEX\252\002\rUdb.Entity.V1\312\002\rUdb\\Entity\\V1\342\002\031Ud" +
+      "b\\GPBMetadata\\Entity\\V1\352\002\017Udb::Entity::V" +
+      "1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
+          com.udb.entity.v1.ConsistencyProto.getDescriptor(),
         });
     internal_static_udb_entity_v1_RequestContext_descriptor =
       getDescriptor().getMessageTypes().get(0);
     internal_static_udb_entity_v1_RequestContext_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_RequestContext_descriptor,
-        new java.lang.String[] { "TenantId", "UserId", "CorrelationId", "Purpose", "Scopes", "ServiceIdentity", "TraceId", "TargetBackend", "TargetInstance", "RoutingPolicy", "PrimaryRead", "MaxReplicaLagMs", "EventualConsistencyAllowed", "ReadFenceJson", "ProjectId", "ClientCatalogVersion", "ClientId", "Consistency", "Region", "Attributes", });
+        new java.lang.String[] { "TenantId", "UserId", "CorrelationId", "Purpose", "Scopes", "ServiceIdentity", "TraceId", "TargetBackend", "TargetInstance", "RoutingPolicy", "PrimaryRead", "MaxReplicaLagMs", "EventualConsistencyAllowed", "ReadFenceJson", "ProjectId", "ClientCatalogVersion", "ClientId", "Consistency", "Region", "Attributes", "ReadFence", "ConsistencyMode", });
     internal_static_udb_entity_v1_RequestContext_AttributesEntry_descriptor =
       internal_static_udb_entity_v1_RequestContext_descriptor.getNestedTypes().get(0);
     internal_static_udb_entity_v1_RequestContext_AttributesEntry_fieldAccessorTable = new
@@ -91,6 +96,7 @@ public final class ContextProto {
         internal_static_udb_entity_v1_RequestContext_AttributesEntry_descriptor,
         new java.lang.String[] { "Key", "Value", });
     descriptor.resolveAllFeaturesImmutable();
+    com.udb.entity.v1.ConsistencyProto.getDescriptor();
   }
 
   // @@protoc_insertion_point(outer_class_scope)

@@ -42,6 +42,7 @@ private static final long serialVersionUID = 0L;
     backendCapabilities_ = java.util.Collections.emptyList();
     backendProtocolSupport_ = java.util.Collections.emptyList();
     nativeServices_ = java.util.Collections.emptyList();
+    deploymentTier_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -645,6 +646,59 @@ private static final long serialVersionUID = 0L;
     return nativeServices_.get(index);
   }
 
+  public static final int DEPLOYMENT_TIER_FIELD_NUMBER = 12;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object deploymentTier_ = "";
+  /**
+   * <pre>
+   * Operator-declared deployment tier (UDB_DEPLOYMENT_TIER), resolved once at
+   * startup (master-plan 3.5). One of "dev_single_node" / "system_store_capable"
+   * / "ha_canonical". Empty string means no tier was declared (the permissive
+   * dev default — the startup tier floor is not enforced). Additive (field 12).
+   * </pre>
+   *
+   * <code>string deployment_tier = 12 [json_name = "deploymentTier"];</code>
+   * @return The deploymentTier.
+   */
+  @java.lang.Override
+  public java.lang.String getDeploymentTier() {
+    java.lang.Object ref = deploymentTier_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      deploymentTier_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Operator-declared deployment tier (UDB_DEPLOYMENT_TIER), resolved once at
+   * startup (master-plan 3.5). One of "dev_single_node" / "system_store_capable"
+   * / "ha_canonical". Empty string means no tier was declared (the permissive
+   * dev default — the startup tier floor is not enforced). Additive (field 12).
+   * </pre>
+   *
+   * <code>string deployment_tier = 12 [json_name = "deploymentTier"];</code>
+   * @return The bytes for deploymentTier.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getDeploymentTierBytes() {
+    java.lang.Object ref = deploymentTier_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      deploymentTier_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -691,6 +745,9 @@ private static final long serialVersionUID = 0L;
     }
     for (int i = 0; i < nativeServices_.size(); i++) {
       output.writeMessage(11, nativeServices_.get(i));
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(deploymentTier_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 12, deploymentTier_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -759,6 +816,9 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(11, nativeServices_.get(i));
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(deploymentTier_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(12, deploymentTier_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -799,6 +859,8 @@ private static final long serialVersionUID = 0L;
         .equals(other.getBackendProtocolSupportList())) return false;
     if (!getNativeServicesList()
         .equals(other.getNativeServicesList())) return false;
+    if (!getDeploymentTier()
+        .equals(other.getDeploymentTier())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -850,6 +912,8 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + NATIVE_SERVICES_FIELD_NUMBER;
       hash = (53 * hash) + getNativeServicesList().hashCode();
     }
+    hash = (37 * hash) + DEPLOYMENT_TIER_FIELD_NUMBER;
+    hash = (53 * hash) + getDeploymentTier().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -1034,6 +1098,7 @@ private static final long serialVersionUID = 0L;
         nativeServicesBuilder_.clear();
       }
       bitField0_ = (bitField0_ & ~0x00000400);
+      deploymentTier_ = "";
       return this;
     }
 
@@ -1135,6 +1200,9 @@ private static final long serialVersionUID = 0L;
             ? protocolSupport_
             : protocolSupportBuilder_.build();
         to_bitField0_ |= 0x00000001;
+      }
+      if (((from_bitField0_ & 0x00000800) != 0)) {
+        result.deploymentTier_ = deploymentTier_;
       }
       result.bitField0_ |= to_bitField0_;
     }
@@ -1308,6 +1376,11 @@ private static final long serialVersionUID = 0L;
           }
         }
       }
+      if (!other.getDeploymentTier().isEmpty()) {
+        deploymentTier_ = other.deploymentTier_;
+        bitField0_ |= 0x00000800;
+        onChanged();
+      }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
@@ -1427,6 +1500,11 @@ private static final long serialVersionUID = 0L;
               }
               break;
             } // case 90
+            case 98: {
+              deploymentTier_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000800;
+              break;
+            } // case 98
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -3610,6 +3688,113 @@ private static final long serialVersionUID = 0L;
         nativeServices_ = null;
       }
       return nativeServicesBuilder_;
+    }
+
+    private java.lang.Object deploymentTier_ = "";
+    /**
+     * <pre>
+     * Operator-declared deployment tier (UDB_DEPLOYMENT_TIER), resolved once at
+     * startup (master-plan 3.5). One of "dev_single_node" / "system_store_capable"
+     * / "ha_canonical". Empty string means no tier was declared (the permissive
+     * dev default — the startup tier floor is not enforced). Additive (field 12).
+     * </pre>
+     *
+     * <code>string deployment_tier = 12 [json_name = "deploymentTier"];</code>
+     * @return The deploymentTier.
+     */
+    public java.lang.String getDeploymentTier() {
+      java.lang.Object ref = deploymentTier_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        deploymentTier_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Operator-declared deployment tier (UDB_DEPLOYMENT_TIER), resolved once at
+     * startup (master-plan 3.5). One of "dev_single_node" / "system_store_capable"
+     * / "ha_canonical". Empty string means no tier was declared (the permissive
+     * dev default — the startup tier floor is not enforced). Additive (field 12).
+     * </pre>
+     *
+     * <code>string deployment_tier = 12 [json_name = "deploymentTier"];</code>
+     * @return The bytes for deploymentTier.
+     */
+    public com.google.protobuf.ByteString
+        getDeploymentTierBytes() {
+      java.lang.Object ref = deploymentTier_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        deploymentTier_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Operator-declared deployment tier (UDB_DEPLOYMENT_TIER), resolved once at
+     * startup (master-plan 3.5). One of "dev_single_node" / "system_store_capable"
+     * / "ha_canonical". Empty string means no tier was declared (the permissive
+     * dev default — the startup tier floor is not enforced). Additive (field 12).
+     * </pre>
+     *
+     * <code>string deployment_tier = 12 [json_name = "deploymentTier"];</code>
+     * @param value The deploymentTier to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDeploymentTier(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      deploymentTier_ = value;
+      bitField0_ |= 0x00000800;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Operator-declared deployment tier (UDB_DEPLOYMENT_TIER), resolved once at
+     * startup (master-plan 3.5). One of "dev_single_node" / "system_store_capable"
+     * / "ha_canonical". Empty string means no tier was declared (the permissive
+     * dev default — the startup tier floor is not enforced). Additive (field 12).
+     * </pre>
+     *
+     * <code>string deployment_tier = 12 [json_name = "deploymentTier"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearDeploymentTier() {
+      deploymentTier_ = getDefaultInstance().getDeploymentTier();
+      bitField0_ = (bitField0_ & ~0x00000800);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Operator-declared deployment tier (UDB_DEPLOYMENT_TIER), resolved once at
+     * startup (master-plan 3.5). One of "dev_single_node" / "system_store_capable"
+     * / "ha_canonical". Empty string means no tier was declared (the permissive
+     * dev default — the startup tier floor is not enforced). Additive (field 12).
+     * </pre>
+     *
+     * <code>string deployment_tier = 12 [json_name = "deploymentTier"];</code>
+     * @param value The bytes for deploymentTier to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDeploymentTierBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      deploymentTier_ = value;
+      bitField0_ |= 0x00000800;
+      onChanged();
+      return this;
     }
 
     // @@protoc_insertion_point(builder_scope:udb.entity.v1.CapabilitiesResponse)

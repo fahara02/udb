@@ -27,7 +27,7 @@ namespace udb.core.Asset.Entity.V1 {
             "CjJ1ZGIvY29yZS9hc3NldC9lbnRpdHkvdjEvcGlwZWxpbmVfZGVmaW5pdGlv",
             "bi5wcm90bxIYdWRiLmNvcmUuYXNzZXQuZW50aXR5LnYxGht1ZGIvY29yZS9j",
             "b21tb24vdjEvZGIucHJvdG8aIXVkYi9jb3JlL2NvbW1vbi92MS9zZWN1cml0",
-            "eS5wcm90bxoedWRiL2NvcmUvY29tbW9uL3YxL3R5cGVzLnByb3RvIrwJChJQ",
+            "eS5wcm90bxoedWRiL2NvcmUvY29tbW9uL3YxL3R5cGVzLnByb3RvIsoKChJQ",
             "aXBlbGluZURlZmluaXRpb24SVQoNZGVmaW5pdGlvbl9pZBgBIAEoCUIwgrcY",
             "LAoNZGVmaW5pdGlvbl9pZBIEVVVJRBgBKAE6EWdlbl9yYW5kb21fdXVpZCgp",
             "UgxkZWZpbml0aW9uSWQSNwoJdGVuYW50X2lkGAIgASgJQhqCtxgWCgl0ZW5h",
@@ -43,28 +43,31 @@ namespace udb.core.Asset.Entity.V1 {
             "BnN0YXR1cxKCAQoKYXVkaXRfaW5mbxgJIAEoCzIdLnVkYi5jb3JlLmNvbW1v",
             "bi52MS5BdWRpdEluZm9CRIK3GEAKCmF1ZGl0X2luZm8SBUpTT05CGAE6Cyd7",
             "fSc6Ompzb25iWhpBdWRpdCB0cmFpbCBzdG9yZWQgYXMgSlNPTngBUglhdWRp",
-            "dEluZm86jgT6thj0AgoUcGlwZWxpbmVfZGVmaW5pdGlvbnMSCXVkYl9hc3Nl",
-            "dBgCIAEqMlJldXNhYmxlIHZlcnNpb25lZCBwcm9jZXNzaW5nLXBpcGVsaW5l",
-            "IGRlZmluaXRpb25zOAFAAWKlAQolcGlwZWxpbmVfZGVmaW5pdGlvbnNfdGVu",
-            "YW50X2lzb2xhdGlvbhp6KHRlbmFudF9pZDo6dGV4dCA9IGN1cnJlbnRfc2V0",
-            "dGluZygnYXBwLmN1cnJlbnRfdGVuYW50X2lkJywgdHJ1ZSkgT1IgY3VycmVu",
-            "dF9zZXR0aW5nKCdhcHAucGxhdGZvcm1fYWRtaW4nLCB0cnVlKSA9ICd0cnVl",
-            "JykoAWgBigE4ChxpZHhfcGlwZWxpbmVfZGVmX25hbWVfdW5pcXVlEgVCVFJF",
-            "RRgBWgl0ZW5hbnRfaWRaBG5hbWXyASJ1ZGIuYXNzZXQucGlwZWxpbmVfZGVm",
-            "aW5pdGlvbnMuY2Rj+gEKYXNzZXQ6cmVhZIqyGZABCgZ0ZW5hbnQaCXRlbmFu",
-            "dF9pZCo0dGVuYW50X2lkID0gY3VycmVudF9zZXR0aW5nKCdhcHAuY3VycmVu",
-            "dF90ZW5hbnRfaWQnKTIEbm9uZToRYXNzZXQub3BlcmF0aW9uYWxA+xNIAlIG",
-            "dGVuYW50WghzdGFuZGFyZHIVdGVuYW50LmRhdGFfcmVzaWRlbmN5QoICChxj",
-            "b20udWRiLmNvcmUuYXNzZXQuZW50aXR5LnYxQhdQaXBlbGluZURlZmluaXRp",
-            "b25Qcm90b1ABWkRnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2Vu",
-            "L3VkYi9jb3JlL2Fzc2V0L2VudGl0eS92MTtlbnRpdHl2MaICBFVDQUWqAhh1",
-            "ZGIuY29yZS5Bc3NldC5FbnRpdHkuVjHKAhhVZGJcQ29yZVxBc3NldFxFbnRp",
-            "dHlcVjHiAiRVZGJcR1BCTWV0YWRhdGFcQ29yZVxBc3NldFxFbnRpdHlcVjHq",
-            "AhxVZGI6OkNvcmU6OkFzc2V0OjpFbnRpdHk6OlYxYgZwcm90bzM="));
+            "dEluZm8SiwEKDXRyaWdnZXJfdG9waWMYCiABKAlCZoK3GGIKDXRyaWdnZXJf",
+            "dG9waWMSDFZBUkNIQVIoMjU1KVpDS2Fma2EgdG9waWMgdGhhdCB0cmlnZ2Vy",
+            "cyB0aGlzIHBpcGVsaW5lOyBOVUxMID0gbm90IHRvcGljLXRyaWdnZXJlZFIM",
+            "dHJpZ2dlclRvcGljOo4E+rYY9AIKFHBpcGVsaW5lX2RlZmluaXRpb25zEgl1",
+            "ZGJfYXNzZXQYAiABKjJSZXVzYWJsZSB2ZXJzaW9uZWQgcHJvY2Vzc2luZy1w",
+            "aXBlbGluZSBkZWZpbml0aW9uczgBQAFipQEKJXBpcGVsaW5lX2RlZmluaXRp",
+            "b25zX3RlbmFudF9pc29sYXRpb24aeih0ZW5hbnRfaWQ6OnRleHQgPSBjdXJy",
+            "ZW50X3NldHRpbmcoJ2FwcC5jdXJyZW50X3RlbmFudF9pZCcsIHRydWUpIE9S",
+            "IGN1cnJlbnRfc2V0dGluZygnYXBwLnBsYXRmb3JtX2FkbWluJywgdHJ1ZSkg",
+            "PSAndHJ1ZScpKAFoAYoBOAocaWR4X3BpcGVsaW5lX2RlZl9uYW1lX3VuaXF1",
+            "ZRIFQlRSRUUYAVoJdGVuYW50X2lkWgRuYW1l8gEidWRiLmFzc2V0LnBpcGVs",
+            "aW5lX2RlZmluaXRpb25zLmNkY/oBCmFzc2V0OnJlYWSKshmQAQoGdGVuYW50",
+            "Ggl0ZW5hbnRfaWQqNHRlbmFudF9pZCA9IGN1cnJlbnRfc2V0dGluZygnYXBw",
+            "LmN1cnJlbnRfdGVuYW50X2lkJykyBG5vbmU6EWFzc2V0Lm9wZXJhdGlvbmFs",
+            "QPsTSAJSBnRlbmFudFoIc3RhbmRhcmRyFXRlbmFudC5kYXRhX3Jlc2lkZW5j",
+            "eUKCAgocY29tLnVkYi5jb3JlLmFzc2V0LmVudGl0eS52MUIXUGlwZWxpbmVE",
+            "ZWZpbml0aW9uUHJvdG9QAVpEZ2l0aHViLmNvbS9mYWhhcmEwMi91ZGIvc2Rr",
+            "L2dvL2dlbi91ZGIvY29yZS9hc3NldC9lbnRpdHkvdjE7ZW50aXR5djGiAgRV",
+            "Q0FFqgIYdWRiLmNvcmUuQXNzZXQuRW50aXR5LlYxygIYVWRiXENvcmVcQXNz",
+            "ZXRcRW50aXR5XFYx4gIkVWRiXEdQQk1ldGFkYXRhXENvcmVcQXNzZXRcRW50",
+            "aXR5XFYx6gIcVWRiOjpDb3JlOjpBc3NldDo6RW50aXR5OjpWMWIGcHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::udb.core.Common.V1.DbReflection.Descriptor, global::udb.core.Common.V1.SecurityReflection.Descriptor, global::udb.core.Common.V1.TypesReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Asset.Entity.V1.PipelineDefinition), global::udb.core.Asset.Entity.V1.PipelineDefinition.Parser, new[]{ "DefinitionId", "TenantId", "Name", "Description", "MediaType", "Steps", "Version", "Status", "AuditInfo" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Asset.Entity.V1.PipelineDefinition), global::udb.core.Asset.Entity.V1.PipelineDefinition.Parser, new[]{ "DefinitionId", "TenantId", "Name", "Description", "MediaType", "Steps", "Version", "Status", "AuditInfo", "TriggerTopic" }, null, null, null, null)
           }));
     }
     #endregion
@@ -118,6 +121,7 @@ namespace udb.core.Asset.Entity.V1 {
       version_ = other.version_;
       status_ = other.status_;
       auditInfo_ = other.auditInfo_ != null ? other.auditInfo_.Clone() : null;
+      triggerTopic_ = other.triggerTopic_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -262,6 +266,25 @@ namespace udb.core.Asset.Entity.V1 {
       }
     }
 
+    /// <summary>Field number for the "trigger_topic" field.</summary>
+    public const int TriggerTopicFieldNumber = 10;
+    private string triggerTopic_ = "";
+    /// <summary>
+    /// Optional Kafka topic that fires this pipeline (master-plan 5.2). When set, the
+    /// leader-elected trigger manager runs exactly one consumer per distinct
+    /// trigger_topic cluster-wide and starts this pipeline for each inbound event.
+    /// Additive; NULL/empty = not Kafka-triggered (the static storage-finalized
+    /// auto-trigger still applies, matched by media_type).
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string TriggerTopic {
+      get { return triggerTopic_; }
+      set {
+        triggerTopic_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -286,6 +309,7 @@ namespace udb.core.Asset.Entity.V1 {
       if (Version != other.Version) return false;
       if (Status != other.Status) return false;
       if (!object.Equals(AuditInfo, other.AuditInfo)) return false;
+      if (TriggerTopic != other.TriggerTopic) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -302,6 +326,7 @@ namespace udb.core.Asset.Entity.V1 {
       if (Version != 0) hash ^= Version.GetHashCode();
       if (Status.Length != 0) hash ^= Status.GetHashCode();
       if (auditInfo_ != null) hash ^= AuditInfo.GetHashCode();
+      if (TriggerTopic.Length != 0) hash ^= TriggerTopic.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -356,6 +381,10 @@ namespace udb.core.Asset.Entity.V1 {
         output.WriteRawTag(74);
         output.WriteMessage(AuditInfo);
       }
+      if (TriggerTopic.Length != 0) {
+        output.WriteRawTag(82);
+        output.WriteString(TriggerTopic);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -402,6 +431,10 @@ namespace udb.core.Asset.Entity.V1 {
         output.WriteRawTag(74);
         output.WriteMessage(AuditInfo);
       }
+      if (TriggerTopic.Length != 0) {
+        output.WriteRawTag(82);
+        output.WriteString(TriggerTopic);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -438,6 +471,9 @@ namespace udb.core.Asset.Entity.V1 {
       }
       if (auditInfo_ != null) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(AuditInfo);
+      }
+      if (TriggerTopic.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(TriggerTopic);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -480,6 +516,9 @@ namespace udb.core.Asset.Entity.V1 {
           AuditInfo = new global::udb.core.Common.V1.AuditInfo();
         }
         AuditInfo.MergeFrom(other.AuditInfo);
+      }
+      if (other.TriggerTopic.Length != 0) {
+        TriggerTopic = other.TriggerTopic;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -539,6 +578,10 @@ namespace udb.core.Asset.Entity.V1 {
             input.ReadMessage(AuditInfo);
             break;
           }
+          case 82: {
+            TriggerTopic = input.ReadString();
+            break;
+          }
         }
       }
     #endif
@@ -595,6 +638,10 @@ namespace udb.core.Asset.Entity.V1 {
               AuditInfo = new global::udb.core.Common.V1.AuditInfo();
             }
             input.ReadMessage(AuditInfo);
+            break;
+          }
+          case 82: {
+            TriggerTopic = input.ReadString();
             break;
           }
         }

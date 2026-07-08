@@ -31,6 +31,9 @@ class CreateProviderRequest extends \Google\Protobuf\Internal\Message
      */
     protected $issuer = '';
     /**
+     * Stable public SAML entityID. Caller-chosen format follows the SAML entityID
+     * URI/string rules and is scoped by tenant/provider kind.
+     *
      * Generated from protobuf field <code>string entity_id = 5 [json_name = "entityId"];</code>
      */
     protected $entity_id = '';
@@ -104,6 +107,8 @@ class CreateProviderRequest extends \Google\Protobuf\Internal\Message
      *     @type string $display_name
      *     @type string $issuer
      *     @type string $entity_id
+     *           Stable public SAML entityID. Caller-chosen format follows the SAML entityID
+     *           URI/string rules and is scoped by tenant/provider kind.
      *     @type string $jwks_url
      *     @type string $saml_metadata_url
      *     @type string[] $client_ids
@@ -216,6 +221,9 @@ class CreateProviderRequest extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * Stable public SAML entityID. Caller-chosen format follows the SAML entityID
+     * URI/string rules and is scoped by tenant/provider kind.
+     *
      * Generated from protobuf field <code>string entity_id = 5 [json_name = "entityId"];</code>
      * @return string
      */
@@ -225,6 +233,9 @@ class CreateProviderRequest extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * Stable public SAML entityID. Caller-chosen format follows the SAML entityID
+     * URI/string rules and is scoped by tenant/provider kind.
+     *
      * Generated from protobuf field <code>string entity_id = 5 [json_name = "entityId"];</code>
      * @param string $var
      * @return $this

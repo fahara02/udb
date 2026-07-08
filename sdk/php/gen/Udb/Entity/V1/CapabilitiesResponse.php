@@ -83,6 +83,15 @@ class CapabilitiesResponse extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
      */
     private $native_services;
+    /**
+     * Operator-declared deployment tier (UDB_DEPLOYMENT_TIER), resolved once at
+     * startup (master-plan 3.5). One of "dev_single_node" / "system_store_capable"
+     * / "ha_canonical". Empty string means no tier was declared (the permissive
+     * dev default — the startup tier floor is not enforced). Additive (field 12).
+     *
+     * Generated from protobuf field <code>string deployment_tier = 12 [json_name = "deploymentTier"];</code>
+     */
+    protected $deployment_tier = '';
 
     /**
      * Constructor.
@@ -116,6 +125,11 @@ class CapabilitiesResponse extends \Google\Protobuf\Internal\Message
      *           for a specific backend, whether server-streaming reads / object streaming
      *           are available and which wire encodings that backend can emit.
      *     @type \Udb\Entity\V1\NativeServiceStatus[] $native_services
+     *     @type string $deployment_tier
+     *           Operator-declared deployment tier (UDB_DEPLOYMENT_TIER), resolved once at
+     *           startup (master-plan 3.5). One of "dev_single_node" / "system_store_capable"
+     *           / "ha_canonical". Empty string means no tier was declared (the permissive
+     *           dev default — the startup tier floor is not enforced). Additive (field 12).
      * }
      */
     public function __construct($data = NULL) {
@@ -421,6 +435,38 @@ class CapabilitiesResponse extends \Google\Protobuf\Internal\Message
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Entity\V1\NativeServiceStatus::class);
         $this->native_services = $arr;
+
+        return $this;
+    }
+
+    /**
+     * Operator-declared deployment tier (UDB_DEPLOYMENT_TIER), resolved once at
+     * startup (master-plan 3.5). One of "dev_single_node" / "system_store_capable"
+     * / "ha_canonical". Empty string means no tier was declared (the permissive
+     * dev default — the startup tier floor is not enforced). Additive (field 12).
+     *
+     * Generated from protobuf field <code>string deployment_tier = 12 [json_name = "deploymentTier"];</code>
+     * @return string
+     */
+    public function getDeploymentTier()
+    {
+        return $this->deployment_tier;
+    }
+
+    /**
+     * Operator-declared deployment tier (UDB_DEPLOYMENT_TIER), resolved once at
+     * startup (master-plan 3.5). One of "dev_single_node" / "system_store_capable"
+     * / "ha_canonical". Empty string means no tier was declared (the permissive
+     * dev default — the startup tier floor is not enforced). Additive (field 12).
+     *
+     * Generated from protobuf field <code>string deployment_tier = 12 [json_name = "deploymentTier"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setDeploymentTier($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->deployment_tier = $var;
 
         return $this;
     }

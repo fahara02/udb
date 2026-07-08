@@ -29,7 +29,7 @@ namespace udb.core.Control.Entity.V1 {
             "b29nbGUvcHJvdG9idWYvdGltZXN0YW1wLnByb3RvGiZ1ZGIvY29yZS9jb250",
             "cm9sL2VudGl0eS92MS9lbnVtcy5wcm90bxobdWRiL2NvcmUvY29tbW9uL3Yx",
             "L2RiLnByb3RvGiF1ZGIvY29yZS9jb21tb24vdjEvc2VjdXJpdHkucHJvdG8i",
-            "7wwKFUNvbnRyb2xQbGFuZU5vZGVTdGF0ZRJUCg1ub2RlX3N0YXRlX2lkGAEg",
+            "iQ4KFUNvbnRyb2xQbGFuZU5vZGVTdGF0ZRJUCg1ub2RlX3N0YXRlX2lkGAEg",
             "ASgJQjCCtxgsCg1ub2RlX3N0YXRlX2lkEgRVVUlEGAEoAToRZ2VuX3JhbmRv",
             "bV91dWlkKClSC25vZGVTdGF0ZUlkEjYKB25vZGVfaWQYAiABKAlCHYK3GBkK",
             "B25vZGVfaWQSDFZBUkNIQVIoMjAwKRgBUgZub2RlSWQScQoNcmVzb3VyY2Vf",
@@ -57,25 +57,29 @@ namespace udb.core.Control.Entity.V1 {
             "VFoYAToRQ1VSUkVOVF9USU1FU1RBTVBgAWgBUgljcmVhdGVkQXQSbQoKdXBk",
             "YXRlZF9hdBgLIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCMoK3",
             "GC4KCnVwZGF0ZWRfYXQSC1RJTUVTVEFNUFRaGAE6EUNVUlJFTlRfVElNRVNU",
-            "QU1QUgl1cGRhdGVkQXQ69AL6thi3AgoZY29udHJvbF9wbGFuZV9ub2RlX3N0",
-            "YXRlcxILdWRiX2NvbnRyb2wYPSABKkFQZXItbm9kZSBBQ0svTkFDSy9sYXN0",
-            "LWdvb2QgbGVkZ2VyIGZvciBjb250cm9sLXBsYW5lIGRpc3RyaWJ1dGlvbooB",
-            "QwogdXFfY29udHJvbF9ub2RlX3N0YXRlc19ub2RlX3R5cGUSBUJUUkVFGAFa",
-            "B25vZGVfaWRaDXJlc291cmNlX3R5cGWKAS4KHGlkeF9jb250cm9sX25vZGVf",
-            "c3RhdGVzX25vZGUSBUJUUkVFWgdub2RlX2lk6gEHcHJpbWFyefIBKXVkYi5j",
-            "b250cm9sLmNvbnRyb2xfcGxhbmVfbm9kZV9zdGF0ZXMuY2Rj+gEYY29udHJv",
-            "bDpub2RlLXN0YXRlczpyZWFkirIZNAoGZ2xvYmFsMgRub25lOhNjb250cm9s",
-            "Lm9wZXJhdGlvbmFsQO0CSAJSBG5vbmVaBG5vbmVCkQIKHmNvbS51ZGIuY29y",
-            "ZS5jb250cm9sLmVudGl0eS52MUIaQ29udHJvbFBsYW5lTm9kZVN0YXRlUHJv",
-            "dG9QAVpGZ2l0aHViLmNvbS9mYWhhcmEwMi91ZGIvc2RrL2dvL2dlbi91ZGIv",
-            "Y29yZS9jb250cm9sL2VudGl0eS92MTtlbnRpdHl2MaICBFVDQ0WqAhp1ZGIu",
-            "Y29yZS5Db250cm9sLkVudGl0eS5WMcoCGlVkYlxDb3JlXENvbnRyb2xcRW50",
-            "aXR5XFYx4gImVWRiXEdQQk1ldGFkYXRhXENvcmVcQ29udHJvbFxFbnRpdHlc",
-            "VjHqAh5VZGI6OkNvcmU6OkNvbnRyb2w6OkVudGl0eTo6VjFiBnByb3RvMw=="));
+            "QU1QUgl1cGRhdGVkQXQSlwEKEHNlcnZlZF9zbmFwc2hvdHMYDCABKAlCbIK3",
+            "GGgKEHNlcnZlZF9zbmFwc2hvdHMSBUpTT05CGAE6CydbXSc6Ompzb25iWjxC",
+            "b3VuZGVkIHJpbmcgb2YgcmVjZW50bHktc2VydmVkIHNuYXBzaG90cyAocm9s",
+            "bGJhY2sgdGFyZ2V0cyl4AVIPc2VydmVkU25hcHNob3RzOvQC+rYYtwIKGWNv",
+            "bnRyb2xfcGxhbmVfbm9kZV9zdGF0ZXMSC3VkYl9jb250cm9sGD0gASpBUGVy",
+            "LW5vZGUgQUNLL05BQ0svbGFzdC1nb29kIGxlZGdlciBmb3IgY29udHJvbC1w",
+            "bGFuZSBkaXN0cmlidXRpb26KAUMKIHVxX2NvbnRyb2xfbm9kZV9zdGF0ZXNf",
+            "bm9kZV90eXBlEgVCVFJFRRgBWgdub2RlX2lkWg1yZXNvdXJjZV90eXBligEu",
+            "ChxpZHhfY29udHJvbF9ub2RlX3N0YXRlc19ub2RlEgVCVFJFRVoHbm9kZV9p",
+            "ZOoBB3ByaW1hcnnyASl1ZGIuY29udHJvbC5jb250cm9sX3BsYW5lX25vZGVf",
+            "c3RhdGVzLmNkY/oBGGNvbnRyb2w6bm9kZS1zdGF0ZXM6cmVhZIqyGTQKBmds",
+            "b2JhbDIEbm9uZToTY29udHJvbC5vcGVyYXRpb25hbEDtAkgCUgRub25lWgRu",
+            "b25lQpECCh5jb20udWRiLmNvcmUuY29udHJvbC5lbnRpdHkudjFCGkNvbnRy",
+            "b2xQbGFuZU5vZGVTdGF0ZVByb3RvUAFaRmdpdGh1Yi5jb20vZmFoYXJhMDIv",
+            "dWRiL3Nkay9nby9nZW4vdWRiL2NvcmUvY29udHJvbC9lbnRpdHkvdjE7ZW50",
+            "aXR5djGiAgRVQ0NFqgIadWRiLmNvcmUuQ29udHJvbC5FbnRpdHkuVjHKAhpV",
+            "ZGJcQ29yZVxDb250cm9sXEVudGl0eVxWMeICJlVkYlxHUEJNZXRhZGF0YVxD",
+            "b3JlXENvbnRyb2xcRW50aXR5XFYx6gIeVWRiOjpDb3JlOjpDb250cm9sOjpF",
+            "bnRpdHk6OlYxYgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.TimestampReflection.Descriptor, global::udb.core.Control.Entity.V1.EnumsReflection.Descriptor, global::udb.core.Common.V1.DbReflection.Descriptor, global::udb.core.Common.V1.SecurityReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Control.Entity.V1.ControlPlaneNodeState), global::udb.core.Control.Entity.V1.ControlPlaneNodeState.Parser, new[]{ "NodeStateId", "NodeId", "ResourceType", "SubscribedNames", "AcceptedVersion", "LastGoodVersion", "LastResponseNonce", "NackErrorDetail", "NonceCounter", "CreatedAt", "UpdatedAt" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Control.Entity.V1.ControlPlaneNodeState), global::udb.core.Control.Entity.V1.ControlPlaneNodeState.Parser, new[]{ "NodeStateId", "NodeId", "ResourceType", "SubscribedNames", "AcceptedVersion", "LastGoodVersion", "LastResponseNonce", "NackErrorDetail", "NonceCounter", "CreatedAt", "UpdatedAt", "ServedSnapshots" }, null, null, null, null)
           }));
     }
     #endregion
@@ -151,6 +155,7 @@ namespace udb.core.Control.Entity.V1 {
       nonceCounter_ = other.nonceCounter_;
       createdAt_ = other.createdAt_ != null ? other.createdAt_.Clone() : null;
       updatedAt_ = other.updatedAt_ != null ? other.updatedAt_.Clone() : null;
+      servedSnapshots_ = other.servedSnapshots_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -315,6 +320,26 @@ namespace udb.core.Control.Entity.V1 {
       }
     }
 
+    /// <summary>Field number for the "served_snapshots" field.</summary>
+    public const int ServedSnapshotsFieldNumber = 12;
+    private string servedSnapshots_ = "";
+    /// <summary>
+    /// Bounded ring (newest LAST) of the most recently SERVED snapshots for this
+    /// (node, resource_type), capped at the control-plane retention depth. Each
+    /// entry is {version, served_at_unix, resources:[{name, tenant_id, project_id,
+    /// payload_json}]} — exactly what the push path served — so RollbackResources
+    /// has a durable, known-good target to re-publish. Append-and-trim only; NOT
+    /// part of the ACK/NACK state machine (a rollback re-serves a retained set).
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ServedSnapshots {
+      get { return servedSnapshots_; }
+      set {
+        servedSnapshots_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -341,6 +366,7 @@ namespace udb.core.Control.Entity.V1 {
       if (NonceCounter != other.NonceCounter) return false;
       if (!object.Equals(CreatedAt, other.CreatedAt)) return false;
       if (!object.Equals(UpdatedAt, other.UpdatedAt)) return false;
+      if (ServedSnapshots != other.ServedSnapshots) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -359,6 +385,7 @@ namespace udb.core.Control.Entity.V1 {
       if (NonceCounter != 0L) hash ^= NonceCounter.GetHashCode();
       if (createdAt_ != null) hash ^= CreatedAt.GetHashCode();
       if (updatedAt_ != null) hash ^= UpdatedAt.GetHashCode();
+      if (ServedSnapshots.Length != 0) hash ^= ServedSnapshots.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -421,6 +448,10 @@ namespace udb.core.Control.Entity.V1 {
         output.WriteRawTag(90);
         output.WriteMessage(UpdatedAt);
       }
+      if (ServedSnapshots.Length != 0) {
+        output.WriteRawTag(98);
+        output.WriteString(ServedSnapshots);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -475,6 +506,10 @@ namespace udb.core.Control.Entity.V1 {
         output.WriteRawTag(90);
         output.WriteMessage(UpdatedAt);
       }
+      if (ServedSnapshots.Length != 0) {
+        output.WriteRawTag(98);
+        output.WriteString(ServedSnapshots);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -517,6 +552,9 @@ namespace udb.core.Control.Entity.V1 {
       }
       if (updatedAt_ != null) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(UpdatedAt);
+      }
+      if (ServedSnapshots.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ServedSnapshots);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -568,6 +606,9 @@ namespace udb.core.Control.Entity.V1 {
           UpdatedAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
         }
         UpdatedAt.MergeFrom(other.UpdatedAt);
+      }
+      if (other.ServedSnapshots.Length != 0) {
+        ServedSnapshots = other.ServedSnapshots;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -638,6 +679,10 @@ namespace udb.core.Control.Entity.V1 {
             input.ReadMessage(UpdatedAt);
             break;
           }
+          case 98: {
+            ServedSnapshots = input.ReadString();
+            break;
+          }
         }
       }
     #endif
@@ -705,6 +750,10 @@ namespace udb.core.Control.Entity.V1 {
               UpdatedAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
             }
             input.ReadMessage(UpdatedAt);
+            break;
+          }
+          case 98: {
+            ServedSnapshots = input.ReadString();
             break;
           }
         }

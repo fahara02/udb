@@ -39,6 +39,7 @@ private static final long serialVersionUID = 0L;
     mediaType_ = "";
     steps_ = "";
     status_ = "";
+    triggerTopic_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -437,6 +438,61 @@ private static final long serialVersionUID = 0L;
     return auditInfo_ == null ? com.udb.core.common.v1.AuditInfo.getDefaultInstance() : auditInfo_;
   }
 
+  public static final int TRIGGER_TOPIC_FIELD_NUMBER = 10;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object triggerTopic_ = "";
+  /**
+   * <pre>
+   * Optional Kafka topic that fires this pipeline (master-plan 5.2). When set, the
+   * leader-elected trigger manager runs exactly one consumer per distinct
+   * trigger_topic cluster-wide and starts this pipeline for each inbound event.
+   * Additive; NULL/empty = not Kafka-triggered (the static storage-finalized
+   * auto-trigger still applies, matched by media_type).
+   * </pre>
+   *
+   * <code>string trigger_topic = 10 [json_name = "triggerTopic", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The triggerTopic.
+   */
+  @java.lang.Override
+  public java.lang.String getTriggerTopic() {
+    java.lang.Object ref = triggerTopic_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      triggerTopic_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Optional Kafka topic that fires this pipeline (master-plan 5.2). When set, the
+   * leader-elected trigger manager runs exactly one consumer per distinct
+   * trigger_topic cluster-wide and starts this pipeline for each inbound event.
+   * Additive; NULL/empty = not Kafka-triggered (the static storage-finalized
+   * auto-trigger still applies, matched by media_type).
+   * </pre>
+   *
+   * <code>string trigger_topic = 10 [json_name = "triggerTopic", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for triggerTopic.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getTriggerTopicBytes() {
+    java.lang.Object ref = triggerTopic_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      triggerTopic_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -478,6 +534,9 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000001) != 0)) {
       output.writeMessage(9, getAuditInfo());
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(triggerTopic_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 10, triggerTopic_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -516,6 +575,9 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(9, getAuditInfo());
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(triggerTopic_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(10, triggerTopic_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -552,6 +614,8 @@ private static final long serialVersionUID = 0L;
       if (!getAuditInfo()
           .equals(other.getAuditInfo())) return false;
     }
+    if (!getTriggerTopic()
+        .equals(other.getTriggerTopic())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -583,6 +647,8 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + AUDIT_INFO_FIELD_NUMBER;
       hash = (53 * hash) + getAuditInfo().hashCode();
     }
+    hash = (37 * hash) + TRIGGER_TOPIC_FIELD_NUMBER;
+    hash = (53 * hash) + getTriggerTopic().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -737,6 +803,7 @@ private static final long serialVersionUID = 0L;
         auditInfoBuilder_.dispose();
         auditInfoBuilder_ = null;
       }
+      triggerTopic_ = "";
       return this;
     }
 
@@ -801,6 +868,9 @@ private static final long serialVersionUID = 0L;
             : auditInfoBuilder_.build();
         to_bitField0_ |= 0x00000001;
       }
+      if (((from_bitField0_ & 0x00000200) != 0)) {
+        result.triggerTopic_ = triggerTopic_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -856,6 +926,11 @@ private static final long serialVersionUID = 0L;
       }
       if (other.hasAuditInfo()) {
         mergeAuditInfo(other.getAuditInfo());
+      }
+      if (!other.getTriggerTopic().isEmpty()) {
+        triggerTopic_ = other.triggerTopic_;
+        bitField0_ |= 0x00000200;
+        onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -930,6 +1005,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000100;
               break;
             } // case 74
+            case 82: {
+              triggerTopic_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000200;
+              break;
+            } // case 82
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1790,6 +1870,118 @@ private static final long serialVersionUID = 0L;
         auditInfo_ = null;
       }
       return auditInfoBuilder_;
+    }
+
+    private java.lang.Object triggerTopic_ = "";
+    /**
+     * <pre>
+     * Optional Kafka topic that fires this pipeline (master-plan 5.2). When set, the
+     * leader-elected trigger manager runs exactly one consumer per distinct
+     * trigger_topic cluster-wide and starts this pipeline for each inbound event.
+     * Additive; NULL/empty = not Kafka-triggered (the static storage-finalized
+     * auto-trigger still applies, matched by media_type).
+     * </pre>
+     *
+     * <code>string trigger_topic = 10 [json_name = "triggerTopic", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The triggerTopic.
+     */
+    public java.lang.String getTriggerTopic() {
+      java.lang.Object ref = triggerTopic_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        triggerTopic_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Optional Kafka topic that fires this pipeline (master-plan 5.2). When set, the
+     * leader-elected trigger manager runs exactly one consumer per distinct
+     * trigger_topic cluster-wide and starts this pipeline for each inbound event.
+     * Additive; NULL/empty = not Kafka-triggered (the static storage-finalized
+     * auto-trigger still applies, matched by media_type).
+     * </pre>
+     *
+     * <code>string trigger_topic = 10 [json_name = "triggerTopic", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The bytes for triggerTopic.
+     */
+    public com.google.protobuf.ByteString
+        getTriggerTopicBytes() {
+      java.lang.Object ref = triggerTopic_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        triggerTopic_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Optional Kafka topic that fires this pipeline (master-plan 5.2). When set, the
+     * leader-elected trigger manager runs exactly one consumer per distinct
+     * trigger_topic cluster-wide and starts this pipeline for each inbound event.
+     * Additive; NULL/empty = not Kafka-triggered (the static storage-finalized
+     * auto-trigger still applies, matched by media_type).
+     * </pre>
+     *
+     * <code>string trigger_topic = 10 [json_name = "triggerTopic", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The triggerTopic to set.
+     * @return This builder for chaining.
+     */
+    public Builder setTriggerTopic(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      triggerTopic_ = value;
+      bitField0_ |= 0x00000200;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Optional Kafka topic that fires this pipeline (master-plan 5.2). When set, the
+     * leader-elected trigger manager runs exactly one consumer per distinct
+     * trigger_topic cluster-wide and starts this pipeline for each inbound event.
+     * Additive; NULL/empty = not Kafka-triggered (the static storage-finalized
+     * auto-trigger still applies, matched by media_type).
+     * </pre>
+     *
+     * <code>string trigger_topic = 10 [json_name = "triggerTopic", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearTriggerTopic() {
+      triggerTopic_ = getDefaultInstance().getTriggerTopic();
+      bitField0_ = (bitField0_ & ~0x00000200);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Optional Kafka topic that fires this pipeline (master-plan 5.2). When set, the
+     * leader-elected trigger manager runs exactly one consumer per distinct
+     * trigger_topic cluster-wide and starts this pipeline for each inbound event.
+     * Additive; NULL/empty = not Kafka-triggered (the static storage-finalized
+     * auto-trigger still applies, matched by media_type).
+     * </pre>
+     *
+     * <code>string trigger_topic = 10 [json_name = "triggerTopic", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The bytes for triggerTopic to set.
+     * @return This builder for chaining.
+     */
+    public Builder setTriggerTopicBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      triggerTopic_ = value;
+      bitField0_ |= 0x00000200;
+      onChanged();
+      return this;
     }
 
     // @@protoc_insertion_point(builder_scope:udb.core.asset.entity.v1.PipelineDefinition)

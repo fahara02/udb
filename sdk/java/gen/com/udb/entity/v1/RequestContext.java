@@ -45,6 +45,7 @@ private static final long serialVersionUID = 0L;
     clientId_ = "";
     consistency_ = "";
     region_ = "";
+    consistencyMode_ = 0;
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -72,6 +73,7 @@ private static final long serialVersionUID = 0L;
             com.udb.entity.v1.RequestContext.class, com.udb.entity.v1.RequestContext.Builder.class);
   }
 
+  private int bitField0_;
   public static final int TENANT_ID_FIELD_NUMBER = 1;
   @SuppressWarnings("serial")
   private volatile java.lang.Object tenantId_ = "";
@@ -904,6 +906,78 @@ java.lang.String defaultValue) {
     return map.get(key);
   }
 
+  public static final int READ_FENCE_FIELD_NUMBER = 21;
+  private com.udb.entity.v1.ReadFence readFence_;
+  /**
+   * <pre>
+   * Typed read fence. Kept in lockstep with read_fence_json for clients that can
+   * consume protobuf messages directly. Metadata/header values still win when
+   * both are supplied.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.ReadFence read_fence = 21 [json_name = "readFence"];</code>
+   * @return Whether the readFence field is set.
+   */
+  @java.lang.Override
+  public boolean hasReadFence() {
+    return ((bitField0_ & 0x00000001) != 0);
+  }
+  /**
+   * <pre>
+   * Typed read fence. Kept in lockstep with read_fence_json for clients that can
+   * consume protobuf messages directly. Metadata/header values still win when
+   * both are supplied.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.ReadFence read_fence = 21 [json_name = "readFence"];</code>
+   * @return The readFence.
+   */
+  @java.lang.Override
+  public com.udb.entity.v1.ReadFence getReadFence() {
+    return readFence_ == null ? com.udb.entity.v1.ReadFence.getDefaultInstance() : readFence_;
+  }
+  /**
+   * <pre>
+   * Typed read fence. Kept in lockstep with read_fence_json for clients that can
+   * consume protobuf messages directly. Metadata/header values still win when
+   * both are supplied.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.ReadFence read_fence = 21 [json_name = "readFence"];</code>
+   */
+  @java.lang.Override
+  public com.udb.entity.v1.ReadFenceOrBuilder getReadFenceOrBuilder() {
+    return readFence_ == null ? com.udb.entity.v1.ReadFence.getDefaultInstance() : readFence_;
+  }
+
+  public static final int CONSISTENCY_MODE_FIELD_NUMBER = 22;
+  private int consistencyMode_ = 0;
+  /**
+   * <pre>
+   * Typed consistency mode. Mirrors the legacy consistency string/header token;
+   * the x-udb-consistency metadata header still wins when both are supplied.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.ConsistencyMode consistency_mode = 22 [json_name = "consistencyMode"];</code>
+   * @return The enum numeric value on the wire for consistencyMode.
+   */
+  @java.lang.Override public int getConsistencyModeValue() {
+    return consistencyMode_;
+  }
+  /**
+   * <pre>
+   * Typed consistency mode. Mirrors the legacy consistency string/header token;
+   * the x-udb-consistency metadata header still wins when both are supplied.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.ConsistencyMode consistency_mode = 22 [json_name = "consistencyMode"];</code>
+   * @return The consistencyMode.
+   */
+  @java.lang.Override public com.udb.entity.v1.ConsistencyMode getConsistencyMode() {
+    com.udb.entity.v1.ConsistencyMode result = com.udb.entity.v1.ConsistencyMode.forNumber(consistencyMode_);
+    return result == null ? com.udb.entity.v1.ConsistencyMode.UNRECOGNIZED : result;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -981,6 +1055,12 @@ java.lang.String defaultValue) {
         internalGetAttributes(),
         AttributesDefaultEntryHolder.defaultEntry,
         20);
+    if (((bitField0_ & 0x00000001) != 0)) {
+      output.writeMessage(21, getReadFence());
+    }
+    if (consistencyMode_ != com.udb.entity.v1.ConsistencyMode.CONSISTENCY_MODE_UNSPECIFIED.getNumber()) {
+      output.writeEnum(22, consistencyMode_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -1065,6 +1145,14 @@ java.lang.String defaultValue) {
       size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(20, attributes__);
     }
+    if (((bitField0_ & 0x00000001) != 0)) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(21, getReadFence());
+    }
+    if (consistencyMode_ != com.udb.entity.v1.ConsistencyMode.CONSISTENCY_MODE_UNSPECIFIED.getNumber()) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeEnumSize(22, consistencyMode_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -1120,6 +1208,12 @@ java.lang.String defaultValue) {
         .equals(other.getRegion())) return false;
     if (!internalGetAttributes().equals(
         other.internalGetAttributes())) return false;
+    if (hasReadFence() != other.hasReadFence()) return false;
+    if (hasReadFence()) {
+      if (!getReadFence()
+          .equals(other.getReadFence())) return false;
+    }
+    if (consistencyMode_ != other.consistencyMode_) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -1178,6 +1272,12 @@ java.lang.String defaultValue) {
       hash = (37 * hash) + ATTRIBUTES_FIELD_NUMBER;
       hash = (53 * hash) + internalGetAttributes().hashCode();
     }
+    if (hasReadFence()) {
+      hash = (37 * hash) + READ_FENCE_FIELD_NUMBER;
+      hash = (53 * hash) + getReadFence().hashCode();
+    }
+    hash = (37 * hash) + CONSISTENCY_MODE_FIELD_NUMBER;
+    hash = (53 * hash) + consistencyMode_;
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -1319,13 +1419,19 @@ java.lang.String defaultValue) {
 
     // Construct using com.udb.entity.v1.RequestContext.newBuilder()
     private Builder() {
-
+      maybeForceBuilderInitialization();
     }
 
     private Builder(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       super(parent);
-
+      maybeForceBuilderInitialization();
+    }
+    private void maybeForceBuilderInitialization() {
+      if (com.google.protobuf.GeneratedMessage
+              .alwaysUseFieldBuilders) {
+        internalGetReadFenceFieldBuilder();
+      }
     }
     @java.lang.Override
     public Builder clear() {
@@ -1352,6 +1458,12 @@ java.lang.String defaultValue) {
       consistency_ = "";
       region_ = "";
       internalGetMutableAttributes().clear();
+      readFence_ = null;
+      if (readFenceBuilder_ != null) {
+        readFenceBuilder_.dispose();
+        readFenceBuilder_ = null;
+      }
+      consistencyMode_ = 0;
       return this;
     }
 
@@ -1447,6 +1559,17 @@ java.lang.String defaultValue) {
         result.attributes_ = internalGetAttributes();
         result.attributes_.makeImmutable();
       }
+      int to_bitField0_ = 0;
+      if (((from_bitField0_ & 0x00100000) != 0)) {
+        result.readFence_ = readFenceBuilder_ == null
+            ? readFence_
+            : readFenceBuilder_.build();
+        to_bitField0_ |= 0x00000001;
+      }
+      if (((from_bitField0_ & 0x00200000) != 0)) {
+        result.consistencyMode_ = consistencyMode_;
+      }
+      result.bitField0_ |= to_bitField0_;
     }
 
     @java.lang.Override
@@ -1558,6 +1681,12 @@ java.lang.String defaultValue) {
       internalGetMutableAttributes().mergeFrom(
           other.internalGetAttributes());
       bitField0_ |= 0x00080000;
+      if (other.hasReadFence()) {
+        mergeReadFence(other.getReadFence());
+      }
+      if (other.consistencyMode_ != 0) {
+        setConsistencyModeValue(other.getConsistencyModeValue());
+      }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
@@ -1689,6 +1818,18 @@ java.lang.String defaultValue) {
               bitField0_ |= 0x00080000;
               break;
             } // case 162
+            case 170: {
+              input.readMessage(
+                  internalGetReadFenceFieldBuilder().getBuilder(),
+                  extensionRegistry);
+              bitField0_ |= 0x00100000;
+              break;
+            } // case 170
+            case 176: {
+              consistencyMode_ = input.readEnum();
+              bitField0_ |= 0x00200000;
+              break;
+            } // case 176
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -3356,6 +3497,257 @@ java.lang.String defaultValue) {
       internalGetMutableAttributes().getMutableMap()
           .putAll(values);
       bitField0_ |= 0x00080000;
+      return this;
+    }
+
+    private com.udb.entity.v1.ReadFence readFence_;
+    private com.google.protobuf.SingleFieldBuilder<
+        com.udb.entity.v1.ReadFence, com.udb.entity.v1.ReadFence.Builder, com.udb.entity.v1.ReadFenceOrBuilder> readFenceBuilder_;
+    /**
+     * <pre>
+     * Typed read fence. Kept in lockstep with read_fence_json for clients that can
+     * consume protobuf messages directly. Metadata/header values still win when
+     * both are supplied.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.ReadFence read_fence = 21 [json_name = "readFence"];</code>
+     * @return Whether the readFence field is set.
+     */
+    public boolean hasReadFence() {
+      return ((bitField0_ & 0x00100000) != 0);
+    }
+    /**
+     * <pre>
+     * Typed read fence. Kept in lockstep with read_fence_json for clients that can
+     * consume protobuf messages directly. Metadata/header values still win when
+     * both are supplied.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.ReadFence read_fence = 21 [json_name = "readFence"];</code>
+     * @return The readFence.
+     */
+    public com.udb.entity.v1.ReadFence getReadFence() {
+      if (readFenceBuilder_ == null) {
+        return readFence_ == null ? com.udb.entity.v1.ReadFence.getDefaultInstance() : readFence_;
+      } else {
+        return readFenceBuilder_.getMessage();
+      }
+    }
+    /**
+     * <pre>
+     * Typed read fence. Kept in lockstep with read_fence_json for clients that can
+     * consume protobuf messages directly. Metadata/header values still win when
+     * both are supplied.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.ReadFence read_fence = 21 [json_name = "readFence"];</code>
+     */
+    public Builder setReadFence(com.udb.entity.v1.ReadFence value) {
+      if (readFenceBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        readFence_ = value;
+      } else {
+        readFenceBuilder_.setMessage(value);
+      }
+      bitField0_ |= 0x00100000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Typed read fence. Kept in lockstep with read_fence_json for clients that can
+     * consume protobuf messages directly. Metadata/header values still win when
+     * both are supplied.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.ReadFence read_fence = 21 [json_name = "readFence"];</code>
+     */
+    public Builder setReadFence(
+        com.udb.entity.v1.ReadFence.Builder builderForValue) {
+      if (readFenceBuilder_ == null) {
+        readFence_ = builderForValue.build();
+      } else {
+        readFenceBuilder_.setMessage(builderForValue.build());
+      }
+      bitField0_ |= 0x00100000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Typed read fence. Kept in lockstep with read_fence_json for clients that can
+     * consume protobuf messages directly. Metadata/header values still win when
+     * both are supplied.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.ReadFence read_fence = 21 [json_name = "readFence"];</code>
+     */
+    public Builder mergeReadFence(com.udb.entity.v1.ReadFence value) {
+      if (readFenceBuilder_ == null) {
+        if (((bitField0_ & 0x00100000) != 0) &&
+          readFence_ != null &&
+          readFence_ != com.udb.entity.v1.ReadFence.getDefaultInstance()) {
+          getReadFenceBuilder().mergeFrom(value);
+        } else {
+          readFence_ = value;
+        }
+      } else {
+        readFenceBuilder_.mergeFrom(value);
+      }
+      if (readFence_ != null) {
+        bitField0_ |= 0x00100000;
+        onChanged();
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Typed read fence. Kept in lockstep with read_fence_json for clients that can
+     * consume protobuf messages directly. Metadata/header values still win when
+     * both are supplied.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.ReadFence read_fence = 21 [json_name = "readFence"];</code>
+     */
+    public Builder clearReadFence() {
+      bitField0_ = (bitField0_ & ~0x00100000);
+      readFence_ = null;
+      if (readFenceBuilder_ != null) {
+        readFenceBuilder_.dispose();
+        readFenceBuilder_ = null;
+      }
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Typed read fence. Kept in lockstep with read_fence_json for clients that can
+     * consume protobuf messages directly. Metadata/header values still win when
+     * both are supplied.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.ReadFence read_fence = 21 [json_name = "readFence"];</code>
+     */
+    public com.udb.entity.v1.ReadFence.Builder getReadFenceBuilder() {
+      bitField0_ |= 0x00100000;
+      onChanged();
+      return internalGetReadFenceFieldBuilder().getBuilder();
+    }
+    /**
+     * <pre>
+     * Typed read fence. Kept in lockstep with read_fence_json for clients that can
+     * consume protobuf messages directly. Metadata/header values still win when
+     * both are supplied.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.ReadFence read_fence = 21 [json_name = "readFence"];</code>
+     */
+    public com.udb.entity.v1.ReadFenceOrBuilder getReadFenceOrBuilder() {
+      if (readFenceBuilder_ != null) {
+        return readFenceBuilder_.getMessageOrBuilder();
+      } else {
+        return readFence_ == null ?
+            com.udb.entity.v1.ReadFence.getDefaultInstance() : readFence_;
+      }
+    }
+    /**
+     * <pre>
+     * Typed read fence. Kept in lockstep with read_fence_json for clients that can
+     * consume protobuf messages directly. Metadata/header values still win when
+     * both are supplied.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.ReadFence read_fence = 21 [json_name = "readFence"];</code>
+     */
+    private com.google.protobuf.SingleFieldBuilder<
+        com.udb.entity.v1.ReadFence, com.udb.entity.v1.ReadFence.Builder, com.udb.entity.v1.ReadFenceOrBuilder>
+        internalGetReadFenceFieldBuilder() {
+      if (readFenceBuilder_ == null) {
+        readFenceBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+            com.udb.entity.v1.ReadFence, com.udb.entity.v1.ReadFence.Builder, com.udb.entity.v1.ReadFenceOrBuilder>(
+                getReadFence(),
+                getParentForChildren(),
+                isClean());
+        readFence_ = null;
+      }
+      return readFenceBuilder_;
+    }
+
+    private int consistencyMode_ = 0;
+    /**
+     * <pre>
+     * Typed consistency mode. Mirrors the legacy consistency string/header token;
+     * the x-udb-consistency metadata header still wins when both are supplied.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.ConsistencyMode consistency_mode = 22 [json_name = "consistencyMode"];</code>
+     * @return The enum numeric value on the wire for consistencyMode.
+     */
+    @java.lang.Override public int getConsistencyModeValue() {
+      return consistencyMode_;
+    }
+    /**
+     * <pre>
+     * Typed consistency mode. Mirrors the legacy consistency string/header token;
+     * the x-udb-consistency metadata header still wins when both are supplied.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.ConsistencyMode consistency_mode = 22 [json_name = "consistencyMode"];</code>
+     * @param value The enum numeric value on the wire for consistencyMode to set.
+     * @return This builder for chaining.
+     */
+    public Builder setConsistencyModeValue(int value) {
+      consistencyMode_ = value;
+      bitField0_ |= 0x00200000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Typed consistency mode. Mirrors the legacy consistency string/header token;
+     * the x-udb-consistency metadata header still wins when both are supplied.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.ConsistencyMode consistency_mode = 22 [json_name = "consistencyMode"];</code>
+     * @return The consistencyMode.
+     */
+    @java.lang.Override
+    public com.udb.entity.v1.ConsistencyMode getConsistencyMode() {
+      com.udb.entity.v1.ConsistencyMode result = com.udb.entity.v1.ConsistencyMode.forNumber(consistencyMode_);
+      return result == null ? com.udb.entity.v1.ConsistencyMode.UNRECOGNIZED : result;
+    }
+    /**
+     * <pre>
+     * Typed consistency mode. Mirrors the legacy consistency string/header token;
+     * the x-udb-consistency metadata header still wins when both are supplied.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.ConsistencyMode consistency_mode = 22 [json_name = "consistencyMode"];</code>
+     * @param value The consistencyMode to set.
+     * @return This builder for chaining.
+     */
+    public Builder setConsistencyMode(com.udb.entity.v1.ConsistencyMode value) {
+      if (value == null) { throw new NullPointerException(); }
+      bitField0_ |= 0x00200000;
+      consistencyMode_ = value.getNumber();
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Typed consistency mode. Mirrors the legacy consistency string/header token;
+     * the x-udb-consistency metadata header still wins when both are supplied.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.ConsistencyMode consistency_mode = 22 [json_name = "consistencyMode"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearConsistencyMode() {
+      bitField0_ = (bitField0_ & ~0x00200000);
+      consistencyMode_ = 0;
+      onChanged();
       return this;
     }
 

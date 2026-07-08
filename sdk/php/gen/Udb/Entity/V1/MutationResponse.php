@@ -56,6 +56,13 @@ class MutationResponse extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>repeated .udb.entity.v1.OperationWarning warnings = 10 [json_name = "warnings"];</code>
      */
     private $warnings;
+    /**
+     * Typed write receipt. Kept in lockstep with write_receipt_json for clients
+     * that can consume protobuf messages directly.
+     *
+     * Generated from protobuf field <code>.udb.entity.v1.WriteReceipt write_receipt = 11 [json_name = "writeReceipt"];</code>
+     */
+    protected $write_receipt = null;
 
     /**
      * Constructor.
@@ -74,6 +81,9 @@ class MutationResponse extends \Google\Protobuf\Internal\Message
      *     @type string $resource_version
      *     @type array|\Google\Protobuf\Internal\MapField $metadata
      *     @type \Udb\Entity\V1\OperationWarning[] $warnings
+     *     @type \Udb\Entity\V1\WriteReceipt $write_receipt
+     *           Typed write receipt. Kept in lockstep with write_receipt_json for clients
+     *           that can consume protobuf messages directly.
      * }
      */
     public function __construct($data = NULL) {
@@ -301,6 +311,44 @@ class MutationResponse extends \Google\Protobuf\Internal\Message
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Entity\V1\OperationWarning::class);
         $this->warnings = $arr;
+
+        return $this;
+    }
+
+    /**
+     * Typed write receipt. Kept in lockstep with write_receipt_json for clients
+     * that can consume protobuf messages directly.
+     *
+     * Generated from protobuf field <code>.udb.entity.v1.WriteReceipt write_receipt = 11 [json_name = "writeReceipt"];</code>
+     * @return \Udb\Entity\V1\WriteReceipt|null
+     */
+    public function getWriteReceipt()
+    {
+        return $this->write_receipt;
+    }
+
+    public function hasWriteReceipt()
+    {
+        return isset($this->write_receipt);
+    }
+
+    public function clearWriteReceipt()
+    {
+        unset($this->write_receipt);
+    }
+
+    /**
+     * Typed write receipt. Kept in lockstep with write_receipt_json for clients
+     * that can consume protobuf messages directly.
+     *
+     * Generated from protobuf field <code>.udb.entity.v1.WriteReceipt write_receipt = 11 [json_name = "writeReceipt"];</code>
+     * @param \Udb\Entity\V1\WriteReceipt $var
+     * @return $this
+     */
+    public function setWriteReceipt($var)
+    {
+        GPBUtil::checkMessage($var, \Udb\Entity\V1\WriteReceipt::class);
+        $this->write_receipt = $var;
 
         return $this;
     }

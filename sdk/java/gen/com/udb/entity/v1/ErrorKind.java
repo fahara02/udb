@@ -75,6 +75,15 @@ public enum ErrorKind
    * <code>ERROR_KIND_INTERNAL = 6;</code>
    */
   ERROR_KIND_INTERNAL(6),
+  /**
+   * <pre>
+   * Malformed or semantically invalid request fields. Maps to gRPC
+   * InvalidArgument and carries `field_violations`.
+   * </pre>
+   *
+   * <code>ERROR_KIND_VALIDATION = 7;</code>
+   */
+  ERROR_KIND_VALIDATION(7),
   UNRECOGNIZED(-1),
   ;
 
@@ -146,6 +155,15 @@ public enum ErrorKind
    * <code>ERROR_KIND_INTERNAL = 6;</code>
    */
   public static final int ERROR_KIND_INTERNAL_VALUE = 6;
+  /**
+   * <pre>
+   * Malformed or semantically invalid request fields. Maps to gRPC
+   * InvalidArgument and carries `field_violations`.
+   * </pre>
+   *
+   * <code>ERROR_KIND_VALIDATION = 7;</code>
+   */
+  public static final int ERROR_KIND_VALIDATION_VALUE = 7;
 
 
   public final int getNumber() {
@@ -179,6 +197,7 @@ public enum ErrorKind
       case 4: return ERROR_KIND_SCHEMA;
       case 5: return ERROR_KIND_RETRYABLE;
       case 6: return ERROR_KIND_INTERNAL;
+      case 7: return ERROR_KIND_VALIDATION;
       default: return null;
     }
   }

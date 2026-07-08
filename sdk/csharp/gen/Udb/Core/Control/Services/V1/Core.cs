@@ -106,7 +106,16 @@ namespace udb.core.Control.Services.V1 {
             "IAEoCzIqLnVkYi5jb3JlLmNvbnRyb2wuc2VydmljZXMudjEuTm9kZUFja1N0",
             "YXRlUglub2RlU3RhdGUSJwoPY3VycmVudF92ZXJzaW9uGAIgASgJUg5jdXJy",
             "ZW50VmVyc2lvbhIiCgxhY2tub3dsZWRnZWQYAyABKAhSDGFja25vd2xlZGdl",
-            "ZBIWCgZuYWNrZWQYBCABKAhSBm5hY2tlZEKOAgogY29tLnVkYi5jb3JlLmNv",
+            "ZBIWCgZuYWNrZWQYBCABKAhSBm5hY2tlZCLnAQoYUm9sbGJhY2tSZXNvdXJj",
+            "ZXNSZXF1ZXN0EhcKB25vZGVfaWQYASABKAlSBm5vZGVJZBJNCg1yZXNvdXJj",
+            "ZV90eXBlGAIgASgOMigudWRiLmNvcmUuY29udHJvbC5lbnRpdHkudjEuUmVz",
+            "b3VyY2VUeXBlUgxyZXNvdXJjZVR5cGUSJQoOdGFyZ2V0X3ZlcnNpb24YAyAB",
+            "KAlSDXRhcmdldFZlcnNpb24SPAoHY29udGV4dBgEIAEoCzIiLnVkYi5jb3Jl",
+            "LmNvbW1vbi52MS5SZXF1ZXN0Q29udGV4dFIHY29udGV4dCKoAQoZUm9sbGJh",
+            "Y2tSZXNvdXJjZXNSZXNwb25zZRIzChZyb2xsZWRfYmFja190b192ZXJzaW9u",
+            "GAEgASgJUhNyb2xsZWRCYWNrVG9WZXJzaW9uEicKD2N1cnJlbnRfdmVyc2lv",
+            "bhgCIAEoCVIOY3VycmVudFZlcnNpb24SLQoScmVzb3VyY2VzX3Jlc3RvcmVk",
+            "GAMgASgFUhFyZXNvdXJjZXNSZXN0b3JlZEKOAgogY29tLnVkYi5jb3JlLmNv",
             "bnRyb2wuc2VydmljZXMudjFCCUNvcmVQcm90b1ABWkpnaXRodWIuY29tL2Zh",
             "aGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9jb3JlL2NvbnRyb2wvc2Vydmlj",
             "ZXMvdjE7c2VydmljZXN2MaICBFVDQ1OqAhx1ZGIuY29yZS5Db250cm9sLlNl",
@@ -128,7 +137,9 @@ namespace udb.core.Control.Services.V1 {
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Control.Services.V1.NodeAckState), global::udb.core.Control.Services.V1.NodeAckState.Parser, new[]{ "NodeId", "ResourceType", "SubscribedNames", "AcceptedVersion", "LastGoodVersion", "LastResponseNonce", "NackErrorDetail", "InSync", "UpdatedAt" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Control.Services.V1.ListNodeStatesResponse), global::udb.core.Control.Services.V1.ListNodeStatesResponse.Parser, new[]{ "NodeStates", "Page" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Control.Services.V1.AckStatusRequest), global::udb.core.Control.Services.V1.AckStatusRequest.Parser, new[]{ "NodeId", "ResourceType", "Context" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Control.Services.V1.AckStatusResponse), global::udb.core.Control.Services.V1.AckStatusResponse.Parser, new[]{ "NodeState", "CurrentVersion", "Acknowledged", "Nacked" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Control.Services.V1.AckStatusResponse), global::udb.core.Control.Services.V1.AckStatusResponse.Parser, new[]{ "NodeState", "CurrentVersion", "Acknowledged", "Nacked" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Control.Services.V1.RollbackResourcesRequest), global::udb.core.Control.Services.V1.RollbackResourcesRequest.Parser, new[]{ "NodeId", "ResourceType", "TargetVersion", "Context" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Control.Services.V1.RollbackResourcesResponse), global::udb.core.Control.Services.V1.RollbackResourcesResponse.Parser, new[]{ "RolledBackToVersion", "CurrentVersion", "ResourcesRestored" }, null, null, null, null)
           }));
     }
     #endregion
@@ -4554,6 +4565,621 @@ namespace udb.core.Control.Services.V1 {
           }
           case 32: {
             Nacked = input.ReadBool();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  /// <summary>
+  /// Roll a (node, resource_type) back to a retained prior snapshot. The named
+  /// node's bounded `served_snapshots` ring supplies the target payloads; the
+  /// server re-publishes them through the SAME content-addressed registry the push
+  /// path serves from, so every subscribing node converges back onto the retained
+  /// version. Fails closed (FAILED_PRECONDITION) when no matching snapshot is
+  /// retained — a rollback never silently no-ops.
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class RollbackResourcesRequest : pb::IMessage<RollbackResourcesRequest>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<RollbackResourcesRequest> _parser = new pb::MessageParser<RollbackResourcesRequest>(() => new RollbackResourcesRequest());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<RollbackResourcesRequest> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::udb.core.Control.Services.V1.CoreReflection.Descriptor.MessageTypes[13]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public RollbackResourcesRequest() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public RollbackResourcesRequest(RollbackResourcesRequest other) : this() {
+      nodeId_ = other.nodeId_;
+      resourceType_ = other.resourceType_;
+      targetVersion_ = other.targetVersion_;
+      context_ = other.context_ != null ? other.context_.Clone() : null;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public RollbackResourcesRequest Clone() {
+      return new RollbackResourcesRequest(this);
+    }
+
+    /// <summary>Field number for the "node_id" field.</summary>
+    public const int NodeIdFieldNumber = 1;
+    private string nodeId_ = "";
+    /// <summary>
+    /// The node whose retained served snapshots provide the rollback target set.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string NodeId {
+      get { return nodeId_; }
+      set {
+        nodeId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "resource_type" field.</summary>
+    public const int ResourceTypeFieldNumber = 2;
+    private global::udb.core.Control.Entity.V1.ResourceType resourceType_ = global::udb.core.Control.Entity.V1.ResourceType.Unspecified;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::udb.core.Control.Entity.V1.ResourceType ResourceType {
+      get { return resourceType_; }
+      set {
+        resourceType_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "target_version" field.</summary>
+    public const int TargetVersionFieldNumber = 3;
+    private string targetVersion_ = "";
+    /// <summary>
+    /// Optional explicit retained version to roll back to. Empty == the most recent
+    /// retained snapshot whose version differs from the current world (prior good).
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string TargetVersion {
+      get { return targetVersion_; }
+      set {
+        targetVersion_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "context" field.</summary>
+    public const int ContextFieldNumber = 4;
+    private global::udb.core.Common.V1.RequestContext context_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::udb.core.Common.V1.RequestContext Context {
+      get { return context_; }
+      set {
+        context_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as RollbackResourcesRequest);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(RollbackResourcesRequest other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (NodeId != other.NodeId) return false;
+      if (ResourceType != other.ResourceType) return false;
+      if (TargetVersion != other.TargetVersion) return false;
+      if (!object.Equals(Context, other.Context)) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (NodeId.Length != 0) hash ^= NodeId.GetHashCode();
+      if (ResourceType != global::udb.core.Control.Entity.V1.ResourceType.Unspecified) hash ^= ResourceType.GetHashCode();
+      if (TargetVersion.Length != 0) hash ^= TargetVersion.GetHashCode();
+      if (context_ != null) hash ^= Context.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (NodeId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(NodeId);
+      }
+      if (ResourceType != global::udb.core.Control.Entity.V1.ResourceType.Unspecified) {
+        output.WriteRawTag(16);
+        output.WriteEnum((int) ResourceType);
+      }
+      if (TargetVersion.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(TargetVersion);
+      }
+      if (context_ != null) {
+        output.WriteRawTag(34);
+        output.WriteMessage(Context);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (NodeId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(NodeId);
+      }
+      if (ResourceType != global::udb.core.Control.Entity.V1.ResourceType.Unspecified) {
+        output.WriteRawTag(16);
+        output.WriteEnum((int) ResourceType);
+      }
+      if (TargetVersion.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(TargetVersion);
+      }
+      if (context_ != null) {
+        output.WriteRawTag(34);
+        output.WriteMessage(Context);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (NodeId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(NodeId);
+      }
+      if (ResourceType != global::udb.core.Control.Entity.V1.ResourceType.Unspecified) {
+        size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) ResourceType);
+      }
+      if (TargetVersion.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(TargetVersion);
+      }
+      if (context_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Context);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(RollbackResourcesRequest other) {
+      if (other == null) {
+        return;
+      }
+      if (other.NodeId.Length != 0) {
+        NodeId = other.NodeId;
+      }
+      if (other.ResourceType != global::udb.core.Control.Entity.V1.ResourceType.Unspecified) {
+        ResourceType = other.ResourceType;
+      }
+      if (other.TargetVersion.Length != 0) {
+        TargetVersion = other.TargetVersion;
+      }
+      if (other.context_ != null) {
+        if (context_ == null) {
+          Context = new global::udb.core.Common.V1.RequestContext();
+        }
+        Context.MergeFrom(other.Context);
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            NodeId = input.ReadString();
+            break;
+          }
+          case 16: {
+            ResourceType = (global::udb.core.Control.Entity.V1.ResourceType) input.ReadEnum();
+            break;
+          }
+          case 26: {
+            TargetVersion = input.ReadString();
+            break;
+          }
+          case 34: {
+            if (context_ == null) {
+              Context = new global::udb.core.Common.V1.RequestContext();
+            }
+            input.ReadMessage(Context);
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            NodeId = input.ReadString();
+            break;
+          }
+          case 16: {
+            ResourceType = (global::udb.core.Control.Entity.V1.ResourceType) input.ReadEnum();
+            break;
+          }
+          case 26: {
+            TargetVersion = input.ReadString();
+            break;
+          }
+          case 34: {
+            if (context_ == null) {
+              Context = new global::udb.core.Common.V1.RequestContext();
+            }
+            input.ReadMessage(Context);
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class RollbackResourcesResponse : pb::IMessage<RollbackResourcesResponse>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<RollbackResourcesResponse> _parser = new pb::MessageParser<RollbackResourcesResponse>(() => new RollbackResourcesResponse());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<RollbackResourcesResponse> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::udb.core.Control.Services.V1.CoreReflection.Descriptor.MessageTypes[14]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public RollbackResourcesResponse() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public RollbackResourcesResponse(RollbackResourcesResponse other) : this() {
+      rolledBackToVersion_ = other.rolledBackToVersion_;
+      currentVersion_ = other.currentVersion_;
+      resourcesRestored_ = other.resourcesRestored_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public RollbackResourcesResponse Clone() {
+      return new RollbackResourcesResponse(this);
+    }
+
+    /// <summary>Field number for the "rolled_back_to_version" field.</summary>
+    public const int RolledBackToVersionFieldNumber = 1;
+    private string rolledBackToVersion_ = "";
+    /// <summary>
+    /// The retained version the resources were rolled back to (re-published).
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string RolledBackToVersion {
+      get { return rolledBackToVersion_; }
+      set {
+        rolledBackToVersion_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "current_version" field.</summary>
+    public const int CurrentVersionFieldNumber = 2;
+    private string currentVersion_ = "";
+    /// <summary>
+    /// The aggregate world version after re-publishing (content-addressed, so it
+    /// equals `rolled_back_to_version` once the retained payloads are restored).
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string CurrentVersion {
+      get { return currentVersion_; }
+      set {
+        currentVersion_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "resources_restored" field.</summary>
+    public const int ResourcesRestoredFieldNumber = 3;
+    private int resourcesRestored_;
+    /// <summary>
+    /// Number of resources re-published from the retained snapshot.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int ResourcesRestored {
+      get { return resourcesRestored_; }
+      set {
+        resourcesRestored_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as RollbackResourcesResponse);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(RollbackResourcesResponse other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (RolledBackToVersion != other.RolledBackToVersion) return false;
+      if (CurrentVersion != other.CurrentVersion) return false;
+      if (ResourcesRestored != other.ResourcesRestored) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (RolledBackToVersion.Length != 0) hash ^= RolledBackToVersion.GetHashCode();
+      if (CurrentVersion.Length != 0) hash ^= CurrentVersion.GetHashCode();
+      if (ResourcesRestored != 0) hash ^= ResourcesRestored.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (RolledBackToVersion.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(RolledBackToVersion);
+      }
+      if (CurrentVersion.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(CurrentVersion);
+      }
+      if (ResourcesRestored != 0) {
+        output.WriteRawTag(24);
+        output.WriteInt32(ResourcesRestored);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (RolledBackToVersion.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(RolledBackToVersion);
+      }
+      if (CurrentVersion.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(CurrentVersion);
+      }
+      if (ResourcesRestored != 0) {
+        output.WriteRawTag(24);
+        output.WriteInt32(ResourcesRestored);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (RolledBackToVersion.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(RolledBackToVersion);
+      }
+      if (CurrentVersion.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(CurrentVersion);
+      }
+      if (ResourcesRestored != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(ResourcesRestored);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(RollbackResourcesResponse other) {
+      if (other == null) {
+        return;
+      }
+      if (other.RolledBackToVersion.Length != 0) {
+        RolledBackToVersion = other.RolledBackToVersion;
+      }
+      if (other.CurrentVersion.Length != 0) {
+        CurrentVersion = other.CurrentVersion;
+      }
+      if (other.ResourcesRestored != 0) {
+        ResourcesRestored = other.ResourcesRestored;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            RolledBackToVersion = input.ReadString();
+            break;
+          }
+          case 18: {
+            CurrentVersion = input.ReadString();
+            break;
+          }
+          case 24: {
+            ResourcesRestored = input.ReadInt32();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            RolledBackToVersion = input.ReadString();
+            break;
+          }
+          case 18: {
+            CurrentVersion = input.ReadString();
+            break;
+          }
+          case 24: {
+            ResourcesRestored = input.ReadInt32();
             break;
           }
         }

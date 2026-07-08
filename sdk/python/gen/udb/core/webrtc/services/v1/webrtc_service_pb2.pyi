@@ -1,12 +1,14 @@
 import datetime
 
 from google.api import annotations_pb2 as _annotations_pb2
+from google.protobuf import field_mask_pb2 as _field_mask_pb2
 from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from udb.core.common.v1 import dto_pb2 as _dto_pb2
 from udb.core.common.v1 import security_pb2 as _security_pb2
 from udb.core.webrtc.entity.v1 import room_pb2 as _room_pb2
 from udb.core.webrtc.entity.v1 import peer_pb2 as _peer_pb2
 from udb.core.webrtc.entity.v1 import track_pb2 as _track_pb2
+from udb.core.webrtc.services.v1 import egress_pb2 as _egress_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
@@ -56,18 +58,20 @@ class GetRoomResponse(_message.Message):
     def __init__(self, room: _Optional[_Union[_room_pb2.Room, _Mapping]] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
 
 class UpdateRoomRequest(_message.Message):
-    __slots__ = ("tenant_id", "room_id", "name", "state", "config")
+    __slots__ = ("tenant_id", "room_id", "name", "state", "config", "update_mask")
     TENANT_ID_FIELD_NUMBER: _ClassVar[int]
     ROOM_ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
     STATE_FIELD_NUMBER: _ClassVar[int]
     CONFIG_FIELD_NUMBER: _ClassVar[int]
+    UPDATE_MASK_FIELD_NUMBER: _ClassVar[int]
     tenant_id: str
     room_id: str
     name: str
     state: str
     config: str
-    def __init__(self, tenant_id: _Optional[str] = ..., room_id: _Optional[str] = ..., name: _Optional[str] = ..., state: _Optional[str] = ..., config: _Optional[str] = ...) -> None: ...
+    update_mask: _field_mask_pb2.FieldMask
+    def __init__(self, tenant_id: _Optional[str] = ..., room_id: _Optional[str] = ..., name: _Optional[str] = ..., state: _Optional[str] = ..., config: _Optional[str] = ..., update_mask: _Optional[_Union[_field_mask_pb2.FieldMask, _Mapping]] = ...) -> None: ...
 
 class UpdateRoomResponse(_message.Message):
     __slots__ = ("message", "error")
@@ -94,26 +98,30 @@ class CloseRoomResponse(_message.Message):
     def __init__(self, message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
 
 class ListRoomsRequest(_message.Message):
-    __slots__ = ("tenant_id", "state", "page", "page_size")
+    __slots__ = ("tenant_id", "state", "page", "page_size", "page_token")
     TENANT_ID_FIELD_NUMBER: _ClassVar[int]
     STATE_FIELD_NUMBER: _ClassVar[int]
     PAGE_FIELD_NUMBER: _ClassVar[int]
     PAGE_SIZE_FIELD_NUMBER: _ClassVar[int]
+    PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
     tenant_id: str
     state: str
     page: int
     page_size: int
-    def __init__(self, tenant_id: _Optional[str] = ..., state: _Optional[str] = ..., page: _Optional[int] = ..., page_size: _Optional[int] = ...) -> None: ...
+    page_token: str
+    def __init__(self, tenant_id: _Optional[str] = ..., state: _Optional[str] = ..., page: _Optional[int] = ..., page_size: _Optional[int] = ..., page_token: _Optional[str] = ...) -> None: ...
 
 class ListRoomsResponse(_message.Message):
-    __slots__ = ("rooms", "total_count", "error")
+    __slots__ = ("rooms", "total_count", "error", "next_page_token")
     ROOMS_FIELD_NUMBER: _ClassVar[int]
     TOTAL_COUNT_FIELD_NUMBER: _ClassVar[int]
     ERROR_FIELD_NUMBER: _ClassVar[int]
+    NEXT_PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
     rooms: _containers.RepeatedCompositeFieldContainer[_room_pb2.Room]
     total_count: int
     error: _dto_pb2.ApiError
-    def __init__(self, rooms: _Optional[_Iterable[_Union[_room_pb2.Room, _Mapping]]] = ..., total_count: _Optional[int] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
+    next_page_token: str
+    def __init__(self, rooms: _Optional[_Iterable[_Union[_room_pb2.Room, _Mapping]]] = ..., total_count: _Optional[int] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ..., next_page_token: _Optional[str] = ...) -> None: ...
 
 class JoinRoomRequest(_message.Message):
     __slots__ = ("tenant_id", "room_id", "display_name", "metadata", "user_agent")
@@ -204,22 +212,28 @@ class GetPeerResponse(_message.Message):
     def __init__(self, peer: _Optional[_Union[_peer_pb2.Peer, _Mapping]] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
 
 class ListPeersRequest(_message.Message):
-    __slots__ = ("tenant_id", "room_id", "state")
+    __slots__ = ("tenant_id", "room_id", "state", "page_size", "page_token")
     TENANT_ID_FIELD_NUMBER: _ClassVar[int]
     ROOM_ID_FIELD_NUMBER: _ClassVar[int]
     STATE_FIELD_NUMBER: _ClassVar[int]
+    PAGE_SIZE_FIELD_NUMBER: _ClassVar[int]
+    PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
     tenant_id: str
     room_id: str
     state: str
-    def __init__(self, tenant_id: _Optional[str] = ..., room_id: _Optional[str] = ..., state: _Optional[str] = ...) -> None: ...
+    page_size: int
+    page_token: str
+    def __init__(self, tenant_id: _Optional[str] = ..., room_id: _Optional[str] = ..., state: _Optional[str] = ..., page_size: _Optional[int] = ..., page_token: _Optional[str] = ...) -> None: ...
 
 class ListPeersResponse(_message.Message):
-    __slots__ = ("peers", "error")
+    __slots__ = ("peers", "error", "next_page_token")
     PEERS_FIELD_NUMBER: _ClassVar[int]
     ERROR_FIELD_NUMBER: _ClassVar[int]
+    NEXT_PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
     peers: _containers.RepeatedCompositeFieldContainer[_peer_pb2.Peer]
     error: _dto_pb2.ApiError
-    def __init__(self, peers: _Optional[_Iterable[_Union[_peer_pb2.Peer, _Mapping]]] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
+    next_page_token: str
+    def __init__(self, peers: _Optional[_Iterable[_Union[_peer_pb2.Peer, _Mapping]]] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ..., next_page_token: _Optional[str] = ...) -> None: ...
 
 class PublishTrackRequest(_message.Message):
     __slots__ = ("tenant_id", "room_id", "peer_id", "kind", "label", "settings", "metadata")
@@ -284,24 +298,30 @@ class MuteTrackResponse(_message.Message):
     def __init__(self, message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
 
 class ListTracksRequest(_message.Message):
-    __slots__ = ("tenant_id", "room_id", "peer_id", "kind")
+    __slots__ = ("tenant_id", "room_id", "peer_id", "kind", "page_size", "page_token")
     TENANT_ID_FIELD_NUMBER: _ClassVar[int]
     ROOM_ID_FIELD_NUMBER: _ClassVar[int]
     PEER_ID_FIELD_NUMBER: _ClassVar[int]
     KIND_FIELD_NUMBER: _ClassVar[int]
+    PAGE_SIZE_FIELD_NUMBER: _ClassVar[int]
+    PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
     tenant_id: str
     room_id: str
     peer_id: str
     kind: str
-    def __init__(self, tenant_id: _Optional[str] = ..., room_id: _Optional[str] = ..., peer_id: _Optional[str] = ..., kind: _Optional[str] = ...) -> None: ...
+    page_size: int
+    page_token: str
+    def __init__(self, tenant_id: _Optional[str] = ..., room_id: _Optional[str] = ..., peer_id: _Optional[str] = ..., kind: _Optional[str] = ..., page_size: _Optional[int] = ..., page_token: _Optional[str] = ...) -> None: ...
 
 class ListTracksResponse(_message.Message):
-    __slots__ = ("tracks", "error")
+    __slots__ = ("tracks", "error", "next_page_token")
     TRACKS_FIELD_NUMBER: _ClassVar[int]
     ERROR_FIELD_NUMBER: _ClassVar[int]
+    NEXT_PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
     tracks: _containers.RepeatedCompositeFieldContainer[_track_pb2.Track]
     error: _dto_pb2.ApiError
-    def __init__(self, tracks: _Optional[_Iterable[_Union[_track_pb2.Track, _Mapping]]] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
+    next_page_token: str
+    def __init__(self, tracks: _Optional[_Iterable[_Union[_track_pb2.Track, _Mapping]]] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ..., next_page_token: _Optional[str] = ...) -> None: ...
 
 class IceServer(_message.Message):
     __slots__ = ("urls", "username", "credential")

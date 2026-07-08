@@ -148,28 +148,32 @@ class CompleteStepResponse(_message.Message):
     def __init__(self, message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
 
 class ListAssetsRequest(_message.Message):
-    __slots__ = ("tenant_id", "media_type", "status", "page", "page_size")
+    __slots__ = ("tenant_id", "media_type", "status", "page", "page_size", "page_token")
     TENANT_ID_FIELD_NUMBER: _ClassVar[int]
     MEDIA_TYPE_FIELD_NUMBER: _ClassVar[int]
     STATUS_FIELD_NUMBER: _ClassVar[int]
     PAGE_FIELD_NUMBER: _ClassVar[int]
     PAGE_SIZE_FIELD_NUMBER: _ClassVar[int]
+    PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
     tenant_id: str
     media_type: str
     status: str
     page: int
     page_size: int
-    def __init__(self, tenant_id: _Optional[str] = ..., media_type: _Optional[str] = ..., status: _Optional[str] = ..., page: _Optional[int] = ..., page_size: _Optional[int] = ...) -> None: ...
+    page_token: str
+    def __init__(self, tenant_id: _Optional[str] = ..., media_type: _Optional[str] = ..., status: _Optional[str] = ..., page: _Optional[int] = ..., page_size: _Optional[int] = ..., page_token: _Optional[str] = ...) -> None: ...
 
 class ListAssetsResponse(_message.Message):
-    __slots__ = ("assets", "total_count", "error")
+    __slots__ = ("assets", "total_count", "error", "next_page_token")
     ASSETS_FIELD_NUMBER: _ClassVar[int]
     TOTAL_COUNT_FIELD_NUMBER: _ClassVar[int]
     ERROR_FIELD_NUMBER: _ClassVar[int]
+    NEXT_PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
     assets: _containers.RepeatedCompositeFieldContainer[_asset_pb2.Asset]
     total_count: int
     error: _dto_pb2.ApiError
-    def __init__(self, assets: _Optional[_Iterable[_Union[_asset_pb2.Asset, _Mapping]]] = ..., total_count: _Optional[int] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
+    next_page_token: str
+    def __init__(self, assets: _Optional[_Iterable[_Union[_asset_pb2.Asset, _Mapping]]] = ..., total_count: _Optional[int] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ..., next_page_token: _Optional[str] = ...) -> None: ...
 
 class GetAssetRequest(_message.Message):
     __slots__ = ("tenant_id", "asset_id")

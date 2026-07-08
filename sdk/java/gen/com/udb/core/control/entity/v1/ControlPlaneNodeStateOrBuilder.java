@@ -196,4 +196,34 @@ public interface ControlPlaneNodeStateOrBuilder extends
    * <code>.google.protobuf.Timestamp updated_at = 11 [json_name = "updatedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
    */
   com.google.protobuf.TimestampOrBuilder getUpdatedAtOrBuilder();
+
+  /**
+   * <pre>
+   * Bounded ring (newest LAST) of the most recently SERVED snapshots for this
+   * (node, resource_type), capped at the control-plane retention depth. Each
+   * entry is {version, served_at_unix, resources:[{name, tenant_id, project_id,
+   * payload_json}]} — exactly what the push path served — so RollbackResources
+   * has a durable, known-good target to re-publish. Append-and-trim only; NOT
+   * part of the ACK/NACK state machine (a rollback re-serves a retained set).
+   * </pre>
+   *
+   * <code>string served_snapshots = 12 [json_name = "servedSnapshots", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The servedSnapshots.
+   */
+  java.lang.String getServedSnapshots();
+  /**
+   * <pre>
+   * Bounded ring (newest LAST) of the most recently SERVED snapshots for this
+   * (node, resource_type), capped at the control-plane retention depth. Each
+   * entry is {version, served_at_unix, resources:[{name, tenant_id, project_id,
+   * payload_json}]} — exactly what the push path served — so RollbackResources
+   * has a durable, known-good target to re-publish. Append-and-trim only; NOT
+   * part of the ACK/NACK state machine (a rollback re-serves a retained set).
+   * </pre>
+   *
+   * <code>string served_snapshots = 12 [json_name = "servedSnapshots", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for servedSnapshots.
+   */
+  com.google.protobuf.ByteString
+      getServedSnapshotsBytes();
 }

@@ -152,6 +152,34 @@ public interface PipelineStepOrBuilder extends
 
   /**
    * <pre>
+   * Transform parameters applied to a byte/image step, as a JSON object, e.g.
+   * {"width":800,"height":600,"format":"jpeg"}. RESIZE reads width/height;
+   * CONVERT (format-only RESIZE) reads format. Empty `{}` for steps that take no
+   * parameters. Additive: lets RESIZE/CONVERT be parameterized instead of a
+   * hardcoded 256x256/png, and surfaces the applied params on read.
+   * </pre>
+   *
+   * <code>string params = 13 [json_name = "params", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The params.
+   */
+  java.lang.String getParams();
+  /**
+   * <pre>
+   * Transform parameters applied to a byte/image step, as a JSON object, e.g.
+   * {"width":800,"height":600,"format":"jpeg"}. RESIZE reads width/height;
+   * CONVERT (format-only RESIZE) reads format. Empty `{}` for steps that take no
+   * parameters. Additive: lets RESIZE/CONVERT be parameterized instead of a
+   * hardcoded 256x256/png, and surfaces the applied params on read.
+   * </pre>
+   *
+   * <code>string params = 13 [json_name = "params", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for params.
+   */
+  com.google.protobuf.ByteString
+      getParamsBytes();
+
+  /**
+   * <pre>
    * &#64;inject_tag: gorm:"column:error"
    * </pre>
    *

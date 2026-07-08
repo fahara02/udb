@@ -46,37 +46,41 @@ public final class MutationProto {
   static {
     java.lang.String[] descriptorData = {
       "\n\034udb/entity/v1/mutation.proto\022\rudb.enti" +
-      "ty.v1\032\035udb/entity/v1/operation.proto\"\210\004\n" +
-      "\020MutationResponse\022\037\n\013mutation_id\030\001 \001(\tR\n" +
-      "mutationId\022!\n\014resource_uri\030\002 \001(\tR\013resour" +
-      "ceUri\022\'\n\017checksum_sha256\030\003 \001(\tR\016checksum" +
-      "Sha256\022\037\n\013record_json\030\004 \001(\014R\nrecordJson\022" +
-      "#\n\raffected_rows\030\005 \001(\003R\014affectedRows\022#\n\r" +
-      "was_duplicate\030\006 \001(\010R\014wasDuplicate\022,\n\022wri" +
-      "te_receipt_json\030\007 \001(\tR\020writeReceiptJson\022" +
-      ")\n\020resource_version\030\010 \001(\tR\017resourceVersi" +
-      "on\022I\n\010metadata\030\t \003(\0132-.udb.entity.v1.Mut" +
-      "ationResponse.MetadataEntryR\010metadata\022;\n" +
-      "\010warnings\030\n \003(\0132\037.udb.entity.v1.Operatio" +
-      "nWarningR\010warnings\032;\n\rMetadataEntry\022\020\n\003k" +
-      "ey\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005value:\0028\001B" +
-      "\263\001\n\021com.udb.entity.v1B\rMutationProtoP\001Z9" +
-      "github.com/fahara02/udb/sdk/go/gen/udb/e" +
-      "ntity/v1;entityv1\242\002\003UEX\252\002\rUdb.Entity.V1\312" +
-      "\002\rUdb\\Entity\\V1\342\002\031Udb\\GPBMetadata\\Entity" +
-      "\\V1\352\002\017Udb::Entity::V1b\006proto3"
+      "ty.v1\032\035udb/entity/v1/operation.proto\032\037ud" +
+      "b/entity/v1/consistency.proto\"\312\004\n\020Mutati" +
+      "onResponse\022\037\n\013mutation_id\030\001 \001(\tR\nmutatio" +
+      "nId\022!\n\014resource_uri\030\002 \001(\tR\013resourceUri\022\'" +
+      "\n\017checksum_sha256\030\003 \001(\tR\016checksumSha256\022" +
+      "\037\n\013record_json\030\004 \001(\014R\nrecordJson\022#\n\raffe" +
+      "cted_rows\030\005 \001(\003R\014affectedRows\022#\n\rwas_dup" +
+      "licate\030\006 \001(\010R\014wasDuplicate\022,\n\022write_rece" +
+      "ipt_json\030\007 \001(\tR\020writeReceiptJson\022)\n\020reso" +
+      "urce_version\030\010 \001(\tR\017resourceVersion\022I\n\010m" +
+      "etadata\030\t \003(\0132-.udb.entity.v1.MutationRe" +
+      "sponse.MetadataEntryR\010metadata\022;\n\010warnin" +
+      "gs\030\n \003(\0132\037.udb.entity.v1.OperationWarnin" +
+      "gR\010warnings\022@\n\rwrite_receipt\030\013 \001(\0132\033.udb" +
+      ".entity.v1.WriteReceiptR\014writeReceipt\032;\n" +
+      "\rMetadataEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005valu" +
+      "e\030\002 \001(\tR\005value:\0028\001B\263\001\n\021com.udb.entity.v1" +
+      "B\rMutationProtoP\001Z9github.com/fahara02/u" +
+      "db/sdk/go/gen/udb/entity/v1;entityv1\242\002\003U" +
+      "EX\252\002\rUdb.Entity.V1\312\002\rUdb\\Entity\\V1\342\002\031Udb" +
+      "\\GPBMetadata\\Entity\\V1\352\002\017Udb::Entity::V1" +
+      "b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
           com.udb.entity.v1.OperationProto.getDescriptor(),
+          com.udb.entity.v1.ConsistencyProto.getDescriptor(),
         });
     internal_static_udb_entity_v1_MutationResponse_descriptor =
       getDescriptor().getMessageTypes().get(0);
     internal_static_udb_entity_v1_MutationResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_MutationResponse_descriptor,
-        new java.lang.String[] { "MutationId", "ResourceUri", "ChecksumSha256", "RecordJson", "AffectedRows", "WasDuplicate", "WriteReceiptJson", "ResourceVersion", "Metadata", "Warnings", });
+        new java.lang.String[] { "MutationId", "ResourceUri", "ChecksumSha256", "RecordJson", "AffectedRows", "WasDuplicate", "WriteReceiptJson", "ResourceVersion", "Metadata", "Warnings", "WriteReceipt", });
     internal_static_udb_entity_v1_MutationResponse_MetadataEntry_descriptor =
       internal_static_udb_entity_v1_MutationResponse_descriptor.getNestedTypes().get(0);
     internal_static_udb_entity_v1_MutationResponse_MetadataEntry_fieldAccessorTable = new
@@ -85,6 +89,7 @@ public final class MutationProto {
         new java.lang.String[] { "Key", "Value", });
     descriptor.resolveAllFeaturesImmutable();
     com.udb.entity.v1.OperationProto.getDescriptor();
+    com.udb.entity.v1.ConsistencyProto.getDescriptor();
   }
 
   // @@protoc_insertion_point(outer_class_scope)

@@ -5,7 +5,7 @@
 import type { GenFile, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import { file_google_api_annotations } from "../../../../../google/api/annotations_pb";
-import type { AckStatusRequestSchema, AckStatusResponseSchema, DeltaDiscoveryRequestSchema, DeltaDiscoveryResponseSchema, DiscoveryRequestSchema, DiscoveryResponseSchema, GetResourcesRequestSchema, GetResourcesResponseSchema, ListNodeStatesRequestSchema, ListNodeStatesResponseSchema } from "./core_pb";
+import type { AckStatusRequestSchema, AckStatusResponseSchema, DeltaDiscoveryRequestSchema, DeltaDiscoveryResponseSchema, DiscoveryRequestSchema, DiscoveryResponseSchema, GetResourcesRequestSchema, GetResourcesResponseSchema, ListNodeStatesRequestSchema, ListNodeStatesResponseSchema, RollbackResourcesRequestSchema, RollbackResourcesResponseSchema } from "./core_pb";
 import { file_udb_core_control_services_v1_core } from "./core_pb";
 import { file_udb_core_common_v1_security } from "../../../common/v1/security_pb";
 
@@ -13,7 +13,7 @@ import { file_udb_core_common_v1_security } from "../../../common/v1/security_pb
  * Describes the file udb/core/control/services/v1/control_plane_service.proto.
  */
 export const file_udb_core_control_services_v1_control_plane_service: GenFile = /*@__PURE__*/
-  fileDesc("Cjh1ZGIvY29yZS9jb250cm9sL3NlcnZpY2VzL3YxL2NvbnRyb2xfcGxhbmVfc2VydmljZS5wcm90bxIcdWRiLmNvcmUuY29udHJvbC5zZXJ2aWNlcy52MTLdCgoTQ29udHJvbFBsYW5lU2VydmljZRLAAQoPU3RyZWFtUmVzb3VyY2VzEi4udWRiLmNvcmUuY29udHJvbC5zZXJ2aWNlcy52MS5EaXNjb3ZlcnlSZXF1ZXN0Gi8udWRiLmNvcmUuY29udHJvbC5zZXJ2aWNlcy52MS5EaXNjb3ZlcnlSZXNwb25zZSJIyvMYQAgCGhx1ZGI6Y29udHJvbDpzdHJlYW0tcmVzb3VyY2VzSgIBBGoXY29udHJvbC5TdHJlYW1SZXNvdXJjZXOQAQH48xgCKAEwARLHAQoORGVsdGFSZXNvdXJjZXMSMy51ZGIuY29yZS5jb250cm9sLnNlcnZpY2VzLnYxLkRlbHRhRGlzY292ZXJ5UmVxdWVzdBo0LnVkYi5jb3JlLmNvbnRyb2wuc2VydmljZXMudjEuRGVsdGFEaXNjb3ZlcnlSZXNwb25zZSJGyvMYPggCGht1ZGI6Y29udHJvbDpkZWx0YS1yZXNvdXJjZXNKAgEEahZjb250cm9sLkRlbHRhUmVzb3VyY2VzkAEB+PMYAigBMAES6AEKDEdldFJlc291cmNlcxIxLnVkYi5jb3JlLmNvbnRyb2wuc2VydmljZXMudjEuR2V0UmVzb3VyY2VzUmVxdWVzdBoyLnVkYi5jb3JlLmNvbnRyb2wuc2VydmljZXMudjEuR2V0UmVzb3VyY2VzUmVzcG9uc2UiccrzGDoIAhoZdWRiOmNvbnRyb2w6Z2V0LXJlc291cmNlc0oCAQRqFGNvbnRyb2wuR2V0UmVzb3VyY2VzkAEB2vMYDloMZ2V0UmVzb3VyY2Vz+PMYAYLT5JMCFxIVL3YxL2NvbnRyb2wvcmVzb3VyY2VzEvcBCg5MaXN0Tm9kZVN0YXRlcxIzLnVkYi5jb3JlLmNvbnRyb2wuc2VydmljZXMudjEuTGlzdE5vZGVTdGF0ZXNSZXF1ZXN0GjQudWRiLmNvcmUuY29udHJvbC5zZXJ2aWNlcy52MS5MaXN0Tm9kZVN0YXRlc1Jlc3BvbnNlInrK8xg/CAIaHHVkYjpjb250cm9sOmxpc3Qtbm9kZS1zdGF0ZXNKAgECahZjb250cm9sLkxpc3ROb2RlU3RhdGVzkAEB2vMYEFoObGlzdE5vZGVTdGF0ZXP48xgBgtPkkwIZEhcvdjEvY29udHJvbC9ub2RlLXN0YXRlcxLwAQoJQWNrU3RhdHVzEi4udWRiLmNvcmUuY29udHJvbC5zZXJ2aWNlcy52MS5BY2tTdGF0dXNSZXF1ZXN0Gi8udWRiLmNvcmUuY29udHJvbC5zZXJ2aWNlcy52MS5BY2tTdGF0dXNSZXNwb25zZSKBAcrzGDQIAhoWdWRiOmNvbnRyb2w6YWNrLXN0YXR1c0oCAQJqEWNvbnRyb2wuQWNrU3RhdHVzkAEB2vMYC1oJYWNrU3RhdHVz+PMYAoLT5JMCMDoBKiIrL3YxL2NvbnRyb2wvbm9kZS1zdGF0ZXMve25vZGVfaWR9OmFja1N0YXR1cxrgAcrwGXkKB2NvbnRyb2wSB2NvbnRyb2waB2NvbnRyb2wiGkNvbnRyb2wgUGxhbmUgRGlzdHJpYnV0aW9uKgdjb250cm9sMAE4AWgBegxjb250cm9sUGxhbmWCAQdjb250cm9sigEHY29udHJvbJIBDm5hdGl2ZS5jb250cm9s0vAZGggBGgN1ZGIo4NQDMANAAUoHY29udHJvbFAB4vAZQQoHY29udHJvbBoIcG9zdGdyZXMyG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VUQp0CCiBjb20udWRiLmNvcmUuY29udHJvbC5zZXJ2aWNlcy52MUIYQ29udHJvbFBsYW5lU2VydmljZVByb3RvUAFaSmdpdGh1Yi5jb20vZmFoYXJhMDIvdWRiL3Nkay9nby9nZW4vdWRiL2NvcmUvY29udHJvbC9zZXJ2aWNlcy92MTtzZXJ2aWNlc3YxogIEVUNDU6oCHHVkYi5jb3JlLkNvbnRyb2wuU2VydmljZXMuVjHKAhxVZGJcQ29yZVxDb250cm9sXFNlcnZpY2VzXFYx4gIoVWRiXEdQQk1ldGFkYXRhXENvcmVcQ29udHJvbFxTZXJ2aWNlc1xWMeoCIFVkYjo6Q29yZTo6Q29udHJvbDo6U2VydmljZXM6OlYxYgZwcm90bzM", [file_google_api_annotations, file_udb_core_control_services_v1_core, file_udb_core_common_v1_security]);
+  fileDesc("Cjh1ZGIvY29yZS9jb250cm9sL3NlcnZpY2VzL3YxL2NvbnRyb2xfcGxhbmVfc2VydmljZS5wcm90bxIcdWRiLmNvcmUuY29udHJvbC5zZXJ2aWNlcy52MTLPDQoTQ29udHJvbFBsYW5lU2VydmljZRLCAQoPU3RyZWFtUmVzb3VyY2VzEi4udWRiLmNvcmUuY29udHJvbC5zZXJ2aWNlcy52MS5EaXNjb3ZlcnlSZXF1ZXN0Gi8udWRiLmNvcmUuY29udHJvbC5zZXJ2aWNlcy52MS5EaXNjb3ZlcnlSZXNwb25zZSJKyvMYQggCGhx1ZGI6Y29udHJvbDpzdHJlYW0tcmVzb3VyY2VzOAFKAgEEahdjb250cm9sLlN0cmVhbVJlc291cmNlc5ABAfjzGAIoATABEskBCg5EZWx0YVJlc291cmNlcxIzLnVkYi5jb3JlLmNvbnRyb2wuc2VydmljZXMudjEuRGVsdGFEaXNjb3ZlcnlSZXF1ZXN0GjQudWRiLmNvcmUuY29udHJvbC5zZXJ2aWNlcy52MS5EZWx0YURpc2NvdmVyeVJlc3BvbnNlIkjK8xhACAIaG3VkYjpjb250cm9sOmRlbHRhLXJlc291cmNlczgBSgIBBGoWY29udHJvbC5EZWx0YVJlc291cmNlc5ABAfjzGAIoATABEvgBCgxHZXRSZXNvdXJjZXMSMS51ZGIuY29yZS5jb250cm9sLnNlcnZpY2VzLnYxLkdldFJlc291cmNlc1JlcXVlc3QaMi51ZGIuY29yZS5jb250cm9sLnNlcnZpY2VzLnYxLkdldFJlc291cmNlc1Jlc3BvbnNlIoAByvMYOggCGhl1ZGI6Y29udHJvbDpnZXQtcmVzb3VyY2VzSgIBBGoUY29udHJvbC5HZXRSZXNvdXJjZXOQAQHa8xgdEg1nZXRfcmVzb3VyY2VzWgxnZXRSZXNvdXJjZXP48xgBgtPkkwIXEhUvdjEvY29udHJvbC9yZXNvdXJjZXMSigIKDkxpc3ROb2RlU3RhdGVzEjMudWRiLmNvcmUuY29udHJvbC5zZXJ2aWNlcy52MS5MaXN0Tm9kZVN0YXRlc1JlcXVlc3QaNC51ZGIuY29yZS5jb250cm9sLnNlcnZpY2VzLnYxLkxpc3ROb2RlU3RhdGVzUmVzcG9uc2UijAHK8xg/CAIaHHVkYjpjb250cm9sOmxpc3Qtbm9kZS1zdGF0ZXNKAgECahZjb250cm9sLkxpc3ROb2RlU3RhdGVzkAEB2vMYIhIQbGlzdF9ub2RlX3N0YXRlc1oObGlzdE5vZGVTdGF0ZXP48xgBgtPkkwIZEhcvdjEvY29udHJvbC9ub2RlLXN0YXRlcxL8AQoJQWNrU3RhdHVzEi4udWRiLmNvcmUuY29udHJvbC5zZXJ2aWNlcy52MS5BY2tTdGF0dXNSZXF1ZXN0Gi8udWRiLmNvcmUuY29udHJvbC5zZXJ2aWNlcy52MS5BY2tTdGF0dXNSZXNwb25zZSKNAcrzGDQIAhoWdWRiOmNvbnRyb2w6YWNrLXN0YXR1c0oCAQJqEWNvbnRyb2wuQWNrU3RhdHVzkAEB2vMYFxIKYWNrX3N0YXR1c1oJYWNrU3RhdHVz+PMYAoLT5JMCMDoBKiIrL3YxL2NvbnRyb2wvbm9kZS1zdGF0ZXMve25vZGVfaWR9OmFja1N0YXR1cxK8AgoRUm9sbGJhY2tSZXNvdXJjZXMSNi51ZGIuY29yZS5jb250cm9sLnNlcnZpY2VzLnYxLlJvbGxiYWNrUmVzb3VyY2VzUmVxdWVzdBo3LnVkYi5jb3JlLmNvbnRyb2wuc2VydmljZXMudjEuUm9sbGJhY2tSZXNvdXJjZXNSZXNwb25zZSK1AcrzGEQIAhoedWRiOmNvbnRyb2w6cm9sbGJhY2stcmVzb3VyY2VzSgIBBGoZY29udHJvbC5Sb2xsYmFja1Jlc291cmNlc5ABAdrzGCcSEnJvbGxiYWNrX3Jlc291cmNlc1oRcm9sbGJhY2tSZXNvdXJjZXP48xgCgtPkkwI4OgEqIjMvdjEvY29udHJvbC9ub2RlLXN0YXRlcy97bm9kZV9pZH06cm9sbGJhY2tSZXNvdXJjZXMa4AHK8Bl5Cgdjb250cm9sEgdjb250cm9sGgdjb250cm9sIhpDb250cm9sIFBsYW5lIERpc3RyaWJ1dGlvbioHY29udHJvbDABOAFoAXoMY29udHJvbFBsYW5lggEHY29udHJvbIoBB2NvbnRyb2ySAQ5uYXRpdmUuY29udHJvbNLwGRoIARoDdWRiKODUAzADQAFKB2NvbnRyb2xQAeLwGUEKB2NvbnRyb2waCHBvc3RncmVzMhtVREJfTkFUSVZFX1NFUlZJQ0VTX0VOQUJMRUQyD1VEQl9HUlBDX1RBUkdFVEKdAgogY29tLnVkYi5jb3JlLmNvbnRyb2wuc2VydmljZXMudjFCGENvbnRyb2xQbGFuZVNlcnZpY2VQcm90b1ABWkpnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9jb3JlL2NvbnRyb2wvc2VydmljZXMvdjE7c2VydmljZXN2MaICBFVDQ1OqAhx1ZGIuY29yZS5Db250cm9sLlNlcnZpY2VzLlYxygIcVWRiXENvcmVcQ29udHJvbFxTZXJ2aWNlc1xWMeICKFVkYlxHUEJNZXRhZGF0YVxDb3JlXENvbnRyb2xcU2VydmljZXNcVjHqAiBVZGI6OkNvcmU6OkNvbnRyb2w6OlNlcnZpY2VzOjpWMWIGcHJvdG8z", [file_google_api_annotations, file_udb_core_control_services_v1_core, file_udb_core_common_v1_security]);
 
 /**
  * ---------------------------------------------------------------------------
@@ -35,6 +35,11 @@ export const file_udb_core_control_services_v1_control_plane_service: GenFile = 
 export const ControlPlaneService: GenService<{
   /**
    * ── Aggregated state-of-the-world (ADS) ───────────────────────────────────
+   * Node↔broker push channel only: a data-plane PEP node opens this bidirectional
+   * stream to receive versioned resources and echo ACK/NACK nonces. It carries no
+   * human/session credential, no REST surface, and is never part of an application
+   * CRUD facade — so it is gated to internal callers (a loopback node or a node
+   * presenting a verified mTLS identity); an untrusted remote caller is rejected.
    *
    * @generated from rpc udb.core.control.services.v1.ControlPlaneService.StreamResources
    */
@@ -45,6 +50,9 @@ export const ControlPlaneService: GenService<{
   },
   /**
    * ── Incremental / delta discovery ─────────────────────────────────────────
+   * Same node↔broker push semantics as StreamResources (incremental form). Only a
+   * data-plane node should open it; restricted to internal callers for the same
+   * reasons (no session credential, no REST surface, not an application facade RPC).
    *
    * @generated from rpc udb.core.control.services.v1.ControlPlaneService.DeltaResources
    */
@@ -80,6 +88,16 @@ export const ControlPlaneService: GenService<{
     methodKind: "unary";
     input: typeof AckStatusRequestSchema;
     output: typeof AckStatusResponseSchema;
+  },
+  /**
+   * ── Rollback a node/resource-type to a retained served snapshot ────────────
+   *
+   * @generated from rpc udb.core.control.services.v1.ControlPlaneService.RollbackResources
+   */
+  rollbackResources: {
+    methodKind: "unary";
+    input: typeof RollbackResourcesRequestSchema;
+    output: typeof RollbackResourcesResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_udb_core_control_services_v1_control_plane_service, 0);

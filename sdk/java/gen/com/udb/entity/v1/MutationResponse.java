@@ -62,6 +62,7 @@ private static final long serialVersionUID = 0L;
             com.udb.entity.v1.MutationResponse.class, com.udb.entity.v1.MutationResponse.Builder.class);
   }
 
+  private int bitField0_;
   public static final int MUTATION_ID_FIELD_NUMBER = 1;
   @SuppressWarnings("serial")
   private volatile java.lang.Object mutationId_ = "";
@@ -418,6 +419,47 @@ java.lang.String defaultValue) {
     return warnings_.get(index);
   }
 
+  public static final int WRITE_RECEIPT_FIELD_NUMBER = 11;
+  private com.udb.entity.v1.WriteReceipt writeReceipt_;
+  /**
+   * <pre>
+   * Typed write receipt. Kept in lockstep with write_receipt_json for clients
+   * that can consume protobuf messages directly.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.WriteReceipt write_receipt = 11 [json_name = "writeReceipt"];</code>
+   * @return Whether the writeReceipt field is set.
+   */
+  @java.lang.Override
+  public boolean hasWriteReceipt() {
+    return ((bitField0_ & 0x00000001) != 0);
+  }
+  /**
+   * <pre>
+   * Typed write receipt. Kept in lockstep with write_receipt_json for clients
+   * that can consume protobuf messages directly.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.WriteReceipt write_receipt = 11 [json_name = "writeReceipt"];</code>
+   * @return The writeReceipt.
+   */
+  @java.lang.Override
+  public com.udb.entity.v1.WriteReceipt getWriteReceipt() {
+    return writeReceipt_ == null ? com.udb.entity.v1.WriteReceipt.getDefaultInstance() : writeReceipt_;
+  }
+  /**
+   * <pre>
+   * Typed write receipt. Kept in lockstep with write_receipt_json for clients
+   * that can consume protobuf messages directly.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.WriteReceipt write_receipt = 11 [json_name = "writeReceipt"];</code>
+   */
+  @java.lang.Override
+  public com.udb.entity.v1.WriteReceiptOrBuilder getWriteReceiptOrBuilder() {
+    return writeReceipt_ == null ? com.udb.entity.v1.WriteReceipt.getDefaultInstance() : writeReceipt_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -464,6 +506,9 @@ java.lang.String defaultValue) {
         9);
     for (int i = 0; i < warnings_.size(); i++) {
       output.writeMessage(10, warnings_.get(i));
+    }
+    if (((bitField0_ & 0x00000001) != 0)) {
+      output.writeMessage(11, getWriteReceipt());
     }
     getUnknownFields().writeTo(output);
   }
@@ -515,6 +560,10 @@ java.lang.String defaultValue) {
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(10, warnings_.get(i));
     }
+    if (((bitField0_ & 0x00000001) != 0)) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(11, getWriteReceipt());
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -550,6 +599,11 @@ java.lang.String defaultValue) {
         other.internalGetMetadata())) return false;
     if (!getWarningsList()
         .equals(other.getWarningsList())) return false;
+    if (hasWriteReceipt() != other.hasWriteReceipt()) return false;
+    if (hasWriteReceipt()) {
+      if (!getWriteReceipt()
+          .equals(other.getWriteReceipt())) return false;
+    }
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -586,6 +640,10 @@ java.lang.String defaultValue) {
     if (getWarningsCount() > 0) {
       hash = (37 * hash) + WARNINGS_FIELD_NUMBER;
       hash = (53 * hash) + getWarningsList().hashCode();
+    }
+    if (hasWriteReceipt()) {
+      hash = (37 * hash) + WRITE_RECEIPT_FIELD_NUMBER;
+      hash = (53 * hash) + getWriteReceipt().hashCode();
     }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
@@ -728,13 +786,20 @@ java.lang.String defaultValue) {
 
     // Construct using com.udb.entity.v1.MutationResponse.newBuilder()
     private Builder() {
-
+      maybeForceBuilderInitialization();
     }
 
     private Builder(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       super(parent);
-
+      maybeForceBuilderInitialization();
+    }
+    private void maybeForceBuilderInitialization() {
+      if (com.google.protobuf.GeneratedMessage
+              .alwaysUseFieldBuilders) {
+        internalGetWarningsFieldBuilder();
+        internalGetWriteReceiptFieldBuilder();
+      }
     }
     @java.lang.Override
     public Builder clear() {
@@ -756,6 +821,11 @@ java.lang.String defaultValue) {
         warningsBuilder_.clear();
       }
       bitField0_ = (bitField0_ & ~0x00000200);
+      writeReceipt_ = null;
+      if (writeReceiptBuilder_ != null) {
+        writeReceiptBuilder_.dispose();
+        writeReceiptBuilder_ = null;
+      }
       return this;
     }
 
@@ -830,6 +900,14 @@ java.lang.String defaultValue) {
         result.metadata_ = internalGetMetadata();
         result.metadata_.makeImmutable();
       }
+      int to_bitField0_ = 0;
+      if (((from_bitField0_ & 0x00000400) != 0)) {
+        result.writeReceipt_ = writeReceiptBuilder_ == null
+            ? writeReceipt_
+            : writeReceiptBuilder_.build();
+        to_bitField0_ |= 0x00000001;
+      }
+      result.bitField0_ |= to_bitField0_;
     }
 
     @java.lang.Override
@@ -906,6 +984,9 @@ java.lang.String defaultValue) {
             warningsBuilder_.addAllMessages(other.warnings_);
           }
         }
+      }
+      if (other.hasWriteReceipt()) {
+        mergeWriteReceipt(other.getWriteReceipt());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -995,6 +1076,13 @@ java.lang.String defaultValue) {
               }
               break;
             } // case 82
+            case 90: {
+              input.readMessage(
+                  internalGetWriteReceiptFieldBuilder().getBuilder(),
+                  extensionRegistry);
+              bitField0_ |= 0x00000400;
+              break;
+            } // case 90
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1853,6 +1941,172 @@ java.lang.String defaultValue) {
         warnings_ = null;
       }
       return warningsBuilder_;
+    }
+
+    private com.udb.entity.v1.WriteReceipt writeReceipt_;
+    private com.google.protobuf.SingleFieldBuilder<
+        com.udb.entity.v1.WriteReceipt, com.udb.entity.v1.WriteReceipt.Builder, com.udb.entity.v1.WriteReceiptOrBuilder> writeReceiptBuilder_;
+    /**
+     * <pre>
+     * Typed write receipt. Kept in lockstep with write_receipt_json for clients
+     * that can consume protobuf messages directly.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.WriteReceipt write_receipt = 11 [json_name = "writeReceipt"];</code>
+     * @return Whether the writeReceipt field is set.
+     */
+    public boolean hasWriteReceipt() {
+      return ((bitField0_ & 0x00000400) != 0);
+    }
+    /**
+     * <pre>
+     * Typed write receipt. Kept in lockstep with write_receipt_json for clients
+     * that can consume protobuf messages directly.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.WriteReceipt write_receipt = 11 [json_name = "writeReceipt"];</code>
+     * @return The writeReceipt.
+     */
+    public com.udb.entity.v1.WriteReceipt getWriteReceipt() {
+      if (writeReceiptBuilder_ == null) {
+        return writeReceipt_ == null ? com.udb.entity.v1.WriteReceipt.getDefaultInstance() : writeReceipt_;
+      } else {
+        return writeReceiptBuilder_.getMessage();
+      }
+    }
+    /**
+     * <pre>
+     * Typed write receipt. Kept in lockstep with write_receipt_json for clients
+     * that can consume protobuf messages directly.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.WriteReceipt write_receipt = 11 [json_name = "writeReceipt"];</code>
+     */
+    public Builder setWriteReceipt(com.udb.entity.v1.WriteReceipt value) {
+      if (writeReceiptBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        writeReceipt_ = value;
+      } else {
+        writeReceiptBuilder_.setMessage(value);
+      }
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Typed write receipt. Kept in lockstep with write_receipt_json for clients
+     * that can consume protobuf messages directly.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.WriteReceipt write_receipt = 11 [json_name = "writeReceipt"];</code>
+     */
+    public Builder setWriteReceipt(
+        com.udb.entity.v1.WriteReceipt.Builder builderForValue) {
+      if (writeReceiptBuilder_ == null) {
+        writeReceipt_ = builderForValue.build();
+      } else {
+        writeReceiptBuilder_.setMessage(builderForValue.build());
+      }
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Typed write receipt. Kept in lockstep with write_receipt_json for clients
+     * that can consume protobuf messages directly.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.WriteReceipt write_receipt = 11 [json_name = "writeReceipt"];</code>
+     */
+    public Builder mergeWriteReceipt(com.udb.entity.v1.WriteReceipt value) {
+      if (writeReceiptBuilder_ == null) {
+        if (((bitField0_ & 0x00000400) != 0) &&
+          writeReceipt_ != null &&
+          writeReceipt_ != com.udb.entity.v1.WriteReceipt.getDefaultInstance()) {
+          getWriteReceiptBuilder().mergeFrom(value);
+        } else {
+          writeReceipt_ = value;
+        }
+      } else {
+        writeReceiptBuilder_.mergeFrom(value);
+      }
+      if (writeReceipt_ != null) {
+        bitField0_ |= 0x00000400;
+        onChanged();
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Typed write receipt. Kept in lockstep with write_receipt_json for clients
+     * that can consume protobuf messages directly.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.WriteReceipt write_receipt = 11 [json_name = "writeReceipt"];</code>
+     */
+    public Builder clearWriteReceipt() {
+      bitField0_ = (bitField0_ & ~0x00000400);
+      writeReceipt_ = null;
+      if (writeReceiptBuilder_ != null) {
+        writeReceiptBuilder_.dispose();
+        writeReceiptBuilder_ = null;
+      }
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Typed write receipt. Kept in lockstep with write_receipt_json for clients
+     * that can consume protobuf messages directly.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.WriteReceipt write_receipt = 11 [json_name = "writeReceipt"];</code>
+     */
+    public com.udb.entity.v1.WriteReceipt.Builder getWriteReceiptBuilder() {
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return internalGetWriteReceiptFieldBuilder().getBuilder();
+    }
+    /**
+     * <pre>
+     * Typed write receipt. Kept in lockstep with write_receipt_json for clients
+     * that can consume protobuf messages directly.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.WriteReceipt write_receipt = 11 [json_name = "writeReceipt"];</code>
+     */
+    public com.udb.entity.v1.WriteReceiptOrBuilder getWriteReceiptOrBuilder() {
+      if (writeReceiptBuilder_ != null) {
+        return writeReceiptBuilder_.getMessageOrBuilder();
+      } else {
+        return writeReceipt_ == null ?
+            com.udb.entity.v1.WriteReceipt.getDefaultInstance() : writeReceipt_;
+      }
+    }
+    /**
+     * <pre>
+     * Typed write receipt. Kept in lockstep with write_receipt_json for clients
+     * that can consume protobuf messages directly.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.WriteReceipt write_receipt = 11 [json_name = "writeReceipt"];</code>
+     */
+    private com.google.protobuf.SingleFieldBuilder<
+        com.udb.entity.v1.WriteReceipt, com.udb.entity.v1.WriteReceipt.Builder, com.udb.entity.v1.WriteReceiptOrBuilder>
+        internalGetWriteReceiptFieldBuilder() {
+      if (writeReceiptBuilder_ == null) {
+        writeReceiptBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+            com.udb.entity.v1.WriteReceipt, com.udb.entity.v1.WriteReceipt.Builder, com.udb.entity.v1.WriteReceiptOrBuilder>(
+                getWriteReceipt(),
+                getParentForChildren(),
+                isClean());
+        writeReceipt_ = null;
+      }
+      return writeReceiptBuilder_;
     }
 
     // @@protoc_insertion_point(builder_scope:udb.entity.v1.MutationResponse)

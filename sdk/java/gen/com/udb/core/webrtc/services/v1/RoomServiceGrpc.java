@@ -167,6 +167,130 @@ public final class RoomServiceGrpc {
     return getListRoomsMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.webrtc.services.v1.StartRoomCompositeRequest,
+      com.udb.core.webrtc.services.v1.StartRoomCompositeResponse> getStartRoomCompositeMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "StartRoomComposite",
+      requestType = com.udb.core.webrtc.services.v1.StartRoomCompositeRequest.class,
+      responseType = com.udb.core.webrtc.services.v1.StartRoomCompositeResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.webrtc.services.v1.StartRoomCompositeRequest,
+      com.udb.core.webrtc.services.v1.StartRoomCompositeResponse> getStartRoomCompositeMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.webrtc.services.v1.StartRoomCompositeRequest, com.udb.core.webrtc.services.v1.StartRoomCompositeResponse> getStartRoomCompositeMethod;
+    if ((getStartRoomCompositeMethod = RoomServiceGrpc.getStartRoomCompositeMethod) == null) {
+      synchronized (RoomServiceGrpc.class) {
+        if ((getStartRoomCompositeMethod = RoomServiceGrpc.getStartRoomCompositeMethod) == null) {
+          RoomServiceGrpc.getStartRoomCompositeMethod = getStartRoomCompositeMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.webrtc.services.v1.StartRoomCompositeRequest, com.udb.core.webrtc.services.v1.StartRoomCompositeResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "StartRoomComposite"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.webrtc.services.v1.StartRoomCompositeRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.webrtc.services.v1.StartRoomCompositeResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new RoomServiceMethodDescriptorSupplier("StartRoomComposite"))
+              .build();
+        }
+      }
+    }
+    return getStartRoomCompositeMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.webrtc.services.v1.StartTrackEgressRequest,
+      com.udb.core.webrtc.services.v1.StartTrackEgressResponse> getStartTrackEgressMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "StartTrackEgress",
+      requestType = com.udb.core.webrtc.services.v1.StartTrackEgressRequest.class,
+      responseType = com.udb.core.webrtc.services.v1.StartTrackEgressResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.webrtc.services.v1.StartTrackEgressRequest,
+      com.udb.core.webrtc.services.v1.StartTrackEgressResponse> getStartTrackEgressMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.webrtc.services.v1.StartTrackEgressRequest, com.udb.core.webrtc.services.v1.StartTrackEgressResponse> getStartTrackEgressMethod;
+    if ((getStartTrackEgressMethod = RoomServiceGrpc.getStartTrackEgressMethod) == null) {
+      synchronized (RoomServiceGrpc.class) {
+        if ((getStartTrackEgressMethod = RoomServiceGrpc.getStartTrackEgressMethod) == null) {
+          RoomServiceGrpc.getStartTrackEgressMethod = getStartTrackEgressMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.webrtc.services.v1.StartTrackEgressRequest, com.udb.core.webrtc.services.v1.StartTrackEgressResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "StartTrackEgress"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.webrtc.services.v1.StartTrackEgressRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.webrtc.services.v1.StartTrackEgressResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new RoomServiceMethodDescriptorSupplier("StartTrackEgress"))
+              .build();
+        }
+      }
+    }
+    return getStartTrackEgressMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.webrtc.services.v1.StopEgressRequest,
+      com.udb.core.webrtc.services.v1.StopEgressResponse> getStopEgressMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "StopEgress",
+      requestType = com.udb.core.webrtc.services.v1.StopEgressRequest.class,
+      responseType = com.udb.core.webrtc.services.v1.StopEgressResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.webrtc.services.v1.StopEgressRequest,
+      com.udb.core.webrtc.services.v1.StopEgressResponse> getStopEgressMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.webrtc.services.v1.StopEgressRequest, com.udb.core.webrtc.services.v1.StopEgressResponse> getStopEgressMethod;
+    if ((getStopEgressMethod = RoomServiceGrpc.getStopEgressMethod) == null) {
+      synchronized (RoomServiceGrpc.class) {
+        if ((getStopEgressMethod = RoomServiceGrpc.getStopEgressMethod) == null) {
+          RoomServiceGrpc.getStopEgressMethod = getStopEgressMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.webrtc.services.v1.StopEgressRequest, com.udb.core.webrtc.services.v1.StopEgressResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "StopEgress"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.webrtc.services.v1.StopEgressRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.webrtc.services.v1.StopEgressResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new RoomServiceMethodDescriptorSupplier("StopEgress"))
+              .build();
+        }
+      }
+    }
+    return getStopEgressMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.webrtc.services.v1.ListEgressRequest,
+      com.udb.core.webrtc.services.v1.ListEgressResponse> getListEgressMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "ListEgress",
+      requestType = com.udb.core.webrtc.services.v1.ListEgressRequest.class,
+      responseType = com.udb.core.webrtc.services.v1.ListEgressResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.webrtc.services.v1.ListEgressRequest,
+      com.udb.core.webrtc.services.v1.ListEgressResponse> getListEgressMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.webrtc.services.v1.ListEgressRequest, com.udb.core.webrtc.services.v1.ListEgressResponse> getListEgressMethod;
+    if ((getListEgressMethod = RoomServiceGrpc.getListEgressMethod) == null) {
+      synchronized (RoomServiceGrpc.class) {
+        if ((getListEgressMethod = RoomServiceGrpc.getListEgressMethod) == null) {
+          RoomServiceGrpc.getListEgressMethod = getListEgressMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.webrtc.services.v1.ListEgressRequest, com.udb.core.webrtc.services.v1.ListEgressResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ListEgress"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.webrtc.services.v1.ListEgressRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.webrtc.services.v1.ListEgressResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new RoomServiceMethodDescriptorSupplier("ListEgress"))
+              .build();
+        }
+      }
+    }
+    return getListEgressMethod;
+  }
+
   /**
    * Creates a new async stub that supports all call types for the service
    */
@@ -279,6 +403,46 @@ public final class RoomServiceGrpc {
         io.grpc.stub.StreamObserver<com.udb.core.webrtc.services.v1.ListRoomsResponse> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getListRoomsMethod(), responseObserver);
     }
+
+    /**
+     * <pre>
+     * Start a composite recording/egress of a whole room.
+     * </pre>
+     */
+    default void startRoomComposite(com.udb.core.webrtc.services.v1.StartRoomCompositeRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.webrtc.services.v1.StartRoomCompositeResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getStartRoomCompositeMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Start an egress of a single published track.
+     * </pre>
+     */
+    default void startTrackEgress(com.udb.core.webrtc.services.v1.StartTrackEgressRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.webrtc.services.v1.StartTrackEgressResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getStartTrackEgressMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Stop a running egress. `egress_id` must belong to the verified tenant.
+     * </pre>
+     */
+    default void stopEgress(com.udb.core.webrtc.services.v1.StopEgressRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.webrtc.services.v1.StopEgressResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getStopEgressMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * List egress jobs for the verified tenant.
+     * </pre>
+     */
+    default void listEgress(com.udb.core.webrtc.services.v1.ListEgressRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.webrtc.services.v1.ListEgressResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getListEgressMethod(), responseObserver);
+    }
   }
 
   /**
@@ -362,6 +526,50 @@ public final class RoomServiceGrpc {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getListRoomsMethod(), getCallOptions()), request, responseObserver);
     }
+
+    /**
+     * <pre>
+     * Start a composite recording/egress of a whole room.
+     * </pre>
+     */
+    public void startRoomComposite(com.udb.core.webrtc.services.v1.StartRoomCompositeRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.webrtc.services.v1.StartRoomCompositeResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getStartRoomCompositeMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Start an egress of a single published track.
+     * </pre>
+     */
+    public void startTrackEgress(com.udb.core.webrtc.services.v1.StartTrackEgressRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.webrtc.services.v1.StartTrackEgressResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getStartTrackEgressMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Stop a running egress. `egress_id` must belong to the verified tenant.
+     * </pre>
+     */
+    public void stopEgress(com.udb.core.webrtc.services.v1.StopEgressRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.webrtc.services.v1.StopEgressResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getStopEgressMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * List egress jobs for the verified tenant.
+     * </pre>
+     */
+    public void listEgress(com.udb.core.webrtc.services.v1.ListEgressRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.webrtc.services.v1.ListEgressResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getListEgressMethod(), getCallOptions()), request, responseObserver);
+    }
   }
 
   /**
@@ -429,6 +637,46 @@ public final class RoomServiceGrpc {
       return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
           getChannel(), getListRoomsMethod(), getCallOptions(), request);
     }
+
+    /**
+     * <pre>
+     * Start a composite recording/egress of a whole room.
+     * </pre>
+     */
+    public com.udb.core.webrtc.services.v1.StartRoomCompositeResponse startRoomComposite(com.udb.core.webrtc.services.v1.StartRoomCompositeRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getStartRoomCompositeMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Start an egress of a single published track.
+     * </pre>
+     */
+    public com.udb.core.webrtc.services.v1.StartTrackEgressResponse startTrackEgress(com.udb.core.webrtc.services.v1.StartTrackEgressRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getStartTrackEgressMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Stop a running egress. `egress_id` must belong to the verified tenant.
+     * </pre>
+     */
+    public com.udb.core.webrtc.services.v1.StopEgressResponse stopEgress(com.udb.core.webrtc.services.v1.StopEgressRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getStopEgressMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * List egress jobs for the verified tenant.
+     * </pre>
+     */
+    public com.udb.core.webrtc.services.v1.ListEgressResponse listEgress(com.udb.core.webrtc.services.v1.ListEgressRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getListEgressMethod(), getCallOptions(), request);
+    }
   }
 
   /**
@@ -495,6 +743,46 @@ public final class RoomServiceGrpc {
     public com.udb.core.webrtc.services.v1.ListRoomsResponse listRooms(com.udb.core.webrtc.services.v1.ListRoomsRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getListRoomsMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Start a composite recording/egress of a whole room.
+     * </pre>
+     */
+    public com.udb.core.webrtc.services.v1.StartRoomCompositeResponse startRoomComposite(com.udb.core.webrtc.services.v1.StartRoomCompositeRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getStartRoomCompositeMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Start an egress of a single published track.
+     * </pre>
+     */
+    public com.udb.core.webrtc.services.v1.StartTrackEgressResponse startTrackEgress(com.udb.core.webrtc.services.v1.StartTrackEgressRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getStartTrackEgressMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Stop a running egress. `egress_id` must belong to the verified tenant.
+     * </pre>
+     */
+    public com.udb.core.webrtc.services.v1.StopEgressResponse stopEgress(com.udb.core.webrtc.services.v1.StopEgressRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getStopEgressMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * List egress jobs for the verified tenant.
+     * </pre>
+     */
+    public com.udb.core.webrtc.services.v1.ListEgressResponse listEgress(com.udb.core.webrtc.services.v1.ListEgressRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getListEgressMethod(), getCallOptions(), request);
     }
   }
 
@@ -568,6 +856,50 @@ public final class RoomServiceGrpc {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getListRoomsMethod(), getCallOptions()), request);
     }
+
+    /**
+     * <pre>
+     * Start a composite recording/egress of a whole room.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.webrtc.services.v1.StartRoomCompositeResponse> startRoomComposite(
+        com.udb.core.webrtc.services.v1.StartRoomCompositeRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getStartRoomCompositeMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * Start an egress of a single published track.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.webrtc.services.v1.StartTrackEgressResponse> startTrackEgress(
+        com.udb.core.webrtc.services.v1.StartTrackEgressRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getStartTrackEgressMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * Stop a running egress. `egress_id` must belong to the verified tenant.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.webrtc.services.v1.StopEgressResponse> stopEgress(
+        com.udb.core.webrtc.services.v1.StopEgressRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getStopEgressMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * List egress jobs for the verified tenant.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.webrtc.services.v1.ListEgressResponse> listEgress(
+        com.udb.core.webrtc.services.v1.ListEgressRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getListEgressMethod(), getCallOptions()), request);
+    }
   }
 
   private static final int METHODID_CREATE_ROOM = 0;
@@ -575,6 +907,10 @@ public final class RoomServiceGrpc {
   private static final int METHODID_UPDATE_ROOM = 2;
   private static final int METHODID_CLOSE_ROOM = 3;
   private static final int METHODID_LIST_ROOMS = 4;
+  private static final int METHODID_START_ROOM_COMPOSITE = 5;
+  private static final int METHODID_START_TRACK_EGRESS = 6;
+  private static final int METHODID_STOP_EGRESS = 7;
+  private static final int METHODID_LIST_EGRESS = 8;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -612,6 +948,22 @@ public final class RoomServiceGrpc {
         case METHODID_LIST_ROOMS:
           serviceImpl.listRooms((com.udb.core.webrtc.services.v1.ListRoomsRequest) request,
               (io.grpc.stub.StreamObserver<com.udb.core.webrtc.services.v1.ListRoomsResponse>) responseObserver);
+          break;
+        case METHODID_START_ROOM_COMPOSITE:
+          serviceImpl.startRoomComposite((com.udb.core.webrtc.services.v1.StartRoomCompositeRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.webrtc.services.v1.StartRoomCompositeResponse>) responseObserver);
+          break;
+        case METHODID_START_TRACK_EGRESS:
+          serviceImpl.startTrackEgress((com.udb.core.webrtc.services.v1.StartTrackEgressRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.webrtc.services.v1.StartTrackEgressResponse>) responseObserver);
+          break;
+        case METHODID_STOP_EGRESS:
+          serviceImpl.stopEgress((com.udb.core.webrtc.services.v1.StopEgressRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.webrtc.services.v1.StopEgressResponse>) responseObserver);
+          break;
+        case METHODID_LIST_EGRESS:
+          serviceImpl.listEgress((com.udb.core.webrtc.services.v1.ListEgressRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.webrtc.services.v1.ListEgressResponse>) responseObserver);
           break;
         default:
           throw new AssertionError();
@@ -666,6 +1018,34 @@ public final class RoomServiceGrpc {
               com.udb.core.webrtc.services.v1.ListRoomsRequest,
               com.udb.core.webrtc.services.v1.ListRoomsResponse>(
                 service, METHODID_LIST_ROOMS)))
+        .addMethod(
+          getStartRoomCompositeMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.webrtc.services.v1.StartRoomCompositeRequest,
+              com.udb.core.webrtc.services.v1.StartRoomCompositeResponse>(
+                service, METHODID_START_ROOM_COMPOSITE)))
+        .addMethod(
+          getStartTrackEgressMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.webrtc.services.v1.StartTrackEgressRequest,
+              com.udb.core.webrtc.services.v1.StartTrackEgressResponse>(
+                service, METHODID_START_TRACK_EGRESS)))
+        .addMethod(
+          getStopEgressMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.webrtc.services.v1.StopEgressRequest,
+              com.udb.core.webrtc.services.v1.StopEgressResponse>(
+                service, METHODID_STOP_EGRESS)))
+        .addMethod(
+          getListEgressMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.webrtc.services.v1.ListEgressRequest,
+              com.udb.core.webrtc.services.v1.ListEgressResponse>(
+                service, METHODID_LIST_EGRESS)))
         .build();
   }
 
@@ -719,6 +1099,10 @@ public final class RoomServiceGrpc {
               .addMethod(getUpdateRoomMethod())
               .addMethod(getCloseRoomMethod())
               .addMethod(getListRoomsMethod())
+              .addMethod(getStartRoomCompositeMethod())
+              .addMethod(getStartTrackEgressMethod())
+              .addMethod(getStopEgressMethod())
+              .addMethod(getListEgressMethod())
               .build();
         }
       }

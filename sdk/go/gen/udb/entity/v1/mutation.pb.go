@@ -34,8 +34,11 @@ type MutationResponse struct {
 	ResourceVersion  string              `protobuf:"bytes,8,opt,name=resource_version,json=resourceVersion,proto3" json:"resource_version,omitempty"`
 	Metadata         map[string]string   `protobuf:"bytes,9,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	Warnings         []*OperationWarning `protobuf:"bytes,10,rep,name=warnings,proto3" json:"warnings,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// Typed write receipt. Kept in lockstep with write_receipt_json for clients
+	// that can consume protobuf messages directly.
+	WriteReceipt  *WriteReceipt `protobuf:"bytes,11,opt,name=write_receipt,json=writeReceipt,proto3" json:"write_receipt,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *MutationResponse) Reset() {
@@ -138,11 +141,18 @@ func (x *MutationResponse) GetWarnings() []*OperationWarning {
 	return nil
 }
 
+func (x *MutationResponse) GetWriteReceipt() *WriteReceipt {
+	if x != nil {
+		return x.WriteReceipt
+	}
+	return nil
+}
+
 var File_udb_entity_v1_mutation_proto protoreflect.FileDescriptor
 
 const file_udb_entity_v1_mutation_proto_rawDesc = "" +
 	"\n" +
-	"\x1cudb/entity/v1/mutation.proto\x12\rudb.entity.v1\x1a\x1dudb/entity/v1/operation.proto\"\x88\x04\n" +
+	"\x1cudb/entity/v1/mutation.proto\x12\rudb.entity.v1\x1a\x1dudb/entity/v1/operation.proto\x1a\x1fudb/entity/v1/consistency.proto\"\xca\x04\n" +
 	"\x10MutationResponse\x12\x1f\n" +
 	"\vmutation_id\x18\x01 \x01(\tR\n" +
 	"mutationId\x12!\n" +
@@ -156,7 +166,8 @@ const file_udb_entity_v1_mutation_proto_rawDesc = "" +
 	"\x10resource_version\x18\b \x01(\tR\x0fresourceVersion\x12I\n" +
 	"\bmetadata\x18\t \x03(\v2-.udb.entity.v1.MutationResponse.MetadataEntryR\bmetadata\x12;\n" +
 	"\bwarnings\x18\n" +
-	" \x03(\v2\x1f.udb.entity.v1.OperationWarningR\bwarnings\x1a;\n" +
+	" \x03(\v2\x1f.udb.entity.v1.OperationWarningR\bwarnings\x12@\n" +
+	"\rwrite_receipt\x18\v \x01(\v2\x1b.udb.entity.v1.WriteReceiptR\fwriteReceipt\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\xb3\x01\n" +
@@ -179,15 +190,17 @@ var file_udb_entity_v1_mutation_proto_goTypes = []any{
 	(*MutationResponse)(nil), // 0: udb.entity.v1.MutationResponse
 	nil,                      // 1: udb.entity.v1.MutationResponse.MetadataEntry
 	(*OperationWarning)(nil), // 2: udb.entity.v1.OperationWarning
+	(*WriteReceipt)(nil),     // 3: udb.entity.v1.WriteReceipt
 }
 var file_udb_entity_v1_mutation_proto_depIdxs = []int32{
 	1, // 0: udb.entity.v1.MutationResponse.metadata:type_name -> udb.entity.v1.MutationResponse.MetadataEntry
 	2, // 1: udb.entity.v1.MutationResponse.warnings:type_name -> udb.entity.v1.OperationWarning
-	2, // [2:2] is the sub-list for method output_type
-	2, // [2:2] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	3, // 2: udb.entity.v1.MutationResponse.write_receipt:type_name -> udb.entity.v1.WriteReceipt
+	3, // [3:3] is the sub-list for method output_type
+	3, // [3:3] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_udb_entity_v1_mutation_proto_init() }
@@ -196,6 +209,7 @@ func file_udb_entity_v1_mutation_proto_init() {
 		return
 	}
 	file_udb_entity_v1_operation_proto_init()
+	file_udb_entity_v1_consistency_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

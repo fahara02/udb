@@ -124,41 +124,54 @@ namespace udb.core.Notification.Services.V1 {
             "b3ZlcmFsbERlbGl2ZXJ5UmF0ZRJOCgpieV9jaGFubmVsGAUgAygLMi8udWRi",
             "LmNvcmUubm90aWZpY2F0aW9uLnNlcnZpY2VzLnYxLkNoYW5uZWxTdGF0c1IJ",
             "YnlDaGFubmVsOiOashkfCAEaA3VkYiiw6gEwA0ABSgxub3RpZmljYXRpb25Q",
-            "ASLAAgoUU2V0UHJlZmVyZW5jZVJlcXVlc3QSFwoHdXNlcl9pZBgBIAEoCVIG",
-            "dXNlcklkEhsKCXRlbmFudF9pZBgCIAEoCVIIdGVuYW50SWQSTgoHY2hhbm5l",
-            "bBgDIAEoDjI0LnVkYi5jb3JlLm5vdGlmaWNhdGlvbi5lbnRpdHkudjEuTm90",
-            "aWZpY2F0aW9uQ2hhbm5lbFIHY2hhbm5lbBIdCgpldmVudF90eXBlGAQgASgJ",
-            "UglldmVudFR5cGUSIAoMaXNfb3B0ZWRfb3V0GAUgASgIUgppc09wdGVkT3V0",
-            "EjwKB2NvbnRleHQYBiABKAsyIi51ZGIuY29yZS5jb21tb24udjEuUmVxdWVz",
-            "dENvbnRleHRSB2NvbnRleHQ6I5qyGR8IARoDdWRiKLDqATADQAFKDG5vdGlm",
-            "aWNhdGlvblABIpUBChVTZXRQcmVmZXJlbmNlUmVzcG9uc2USVwoKcHJlZmVy",
-            "ZW5jZRgBIAEoCzI3LnVkYi5jb3JlLm5vdGlmaWNhdGlvbi5lbnRpdHkudjEu",
-            "Tm90aWZpY2F0aW9uUHJlZmVyZW5jZVIKcHJlZmVyZW5jZTojmrIZHwgBGgN1",
-            "ZGIosOoBMANAAUoMbm90aWZpY2F0aW9uUAEi4AEKFEdldFByZWZlcmVuY2VS",
-            "ZXF1ZXN0EhcKB3VzZXJfaWQYASABKAlSBnVzZXJJZBIbCgl0ZW5hbnRfaWQY",
-            "AiABKAlSCHRlbmFudElkEk4KB2NoYW5uZWwYAyABKA4yNC51ZGIuY29yZS5u",
-            "b3RpZmljYXRpb24uZW50aXR5LnYxLk5vdGlmaWNhdGlvbkNoYW5uZWxSB2No",
-            "YW5uZWwSHQoKZXZlbnRfdHlwZRgEIAEoCVIJZXZlbnRUeXBlOiOashkfCAEa",
-            "A3VkYiiw6gEwA0ABSgxub3RpZmljYXRpb25QASKVAQoVR2V0UHJlZmVyZW5j",
-            "ZVJlc3BvbnNlElcKCnByZWZlcmVuY2UYASABKAsyNy51ZGIuY29yZS5ub3Rp",
-            "ZmljYXRpb24uZW50aXR5LnYxLk5vdGlmaWNhdGlvblByZWZlcmVuY2VSCnBy",
-            "ZWZlcmVuY2U6I5qyGR8IARoDdWRiKLDqATADQAFKDG5vdGlmaWNhdGlvblAB",
-            "IqgBChZMaXN0UHJlZmVyZW5jZXNSZXF1ZXN0EhcKB3VzZXJfaWQYASABKAlS",
-            "BnVzZXJJZBIbCgl0ZW5hbnRfaWQYAiABKAlSCHRlbmFudElkEjMKBHBhZ2UY",
-            "AyABKAsyHy51ZGIuY29yZS5jb21tb24udjEuUGFnZVJlcXVlc3RSBHBhZ2U6",
-            "I5qyGR8IARoDdWRiKLDqATADQAFKDG5vdGlmaWNhdGlvblABIs8BChdMaXN0",
-            "UHJlZmVyZW5jZXNSZXNwb25zZRJZCgtwcmVmZXJlbmNlcxgBIAMoCzI3LnVk",
-            "Yi5jb3JlLm5vdGlmaWNhdGlvbi5lbnRpdHkudjEuTm90aWZpY2F0aW9uUHJl",
-            "ZmVyZW5jZVILcHJlZmVyZW5jZXMSNAoEcGFnZRgCIAEoCzIgLnVkYi5jb3Jl",
-            "LmNvbW1vbi52MS5QYWdlUmVzcG9uc2VSBHBhZ2U6I5qyGR8IARoDdWRiKLDq",
-            "ATADQAFKDG5vdGlmaWNhdGlvblABQqwCCiVjb20udWRiLmNvcmUubm90aWZp",
-            "Y2F0aW9uLnNlcnZpY2VzLnYxQglDb3JlUHJvdG9QAVpPZ2l0aHViLmNvbS9m",
-            "YWhhcmEwMi91ZGIvc2RrL2dvL2dlbi91ZGIvY29yZS9ub3RpZmljYXRpb24v",
-            "c2VydmljZXMvdjE7c2VydmljZXN2MaICBFVDTlOqAiF1ZGIuY29yZS5Ob3Rp",
-            "ZmljYXRpb24uU2VydmljZXMuVjHKAiFVZGJcQ29yZVxOb3RpZmljYXRpb25c",
-            "U2VydmljZXNcVjHiAi1VZGJcR1BCTWV0YWRhdGFcQ29yZVxOb3RpZmljYXRp",
-            "b25cU2VydmljZXNcVjHqAiVVZGI6OkNvcmU6Ok5vdGlmaWNhdGlvbjo6U2Vy",
-            "dmljZXM6OlYxYgZwcm90bzM="));
+            "ASK8AwoVUmVwb3J0RGVsaXZlcnlSZXF1ZXN0EhsKCXRlbmFudF9pZBgBIAEo",
+            "CVIIdGVuYW50SWQSFQoGbG9nX2lkGAIgASgJUgVsb2dJZBJOCgdjaGFubmVs",
+            "GAMgASgOMjQudWRiLmNvcmUubm90aWZpY2F0aW9uLmVudGl0eS52MS5Ob3Rp",
+            "ZmljYXRpb25DaGFubmVsUgdjaGFubmVsEhoKCHByb3ZpZGVyGAQgASgJUghw",
+            "cm92aWRlchJLCgZzdGF0dXMYBSABKA4yMy51ZGIuY29yZS5ub3RpZmljYXRp",
+            "b24uZW50aXR5LnYxLk5vdGlmaWNhdGlvblN0YXR1c1IGc3RhdHVzEi4KE3By",
+            "b3ZpZGVyX21lc3NhZ2VfaWQYBiABKAlSEXByb3ZpZGVyTWVzc2FnZUlkEiMK",
+            "DWVycm9yX21lc3NhZ2UYByABKAlSDGVycm9yTWVzc2FnZRI8Cgdjb250ZXh0",
+            "GAggASgLMiIudWRiLmNvcmUuY29tbW9uLnYxLlJlcXVlc3RDb250ZXh0Ugdj",
+            "b250ZXh0OiOashkfCAEaA3VkYiiw6gEwA0ABSgxub3RpZmljYXRpb25QASKV",
+            "AQoWUmVwb3J0RGVsaXZlcnlSZXNwb25zZRJWCgdhdHRlbXB0GAEgASgLMjwu",
+            "dWRiLmNvcmUubm90aWZpY2F0aW9uLmVudGl0eS52MS5Ob3RpZmljYXRpb25E",
+            "ZWxpdmVyeUF0dGVtcHRSB2F0dGVtcHQ6I5qyGR8IARoDdWRiKLDqATADQAFK",
+            "DG5vdGlmaWNhdGlvblABIsACChRTZXRQcmVmZXJlbmNlUmVxdWVzdBIXCgd1",
+            "c2VyX2lkGAEgASgJUgZ1c2VySWQSGwoJdGVuYW50X2lkGAIgASgJUgh0ZW5h",
+            "bnRJZBJOCgdjaGFubmVsGAMgASgOMjQudWRiLmNvcmUubm90aWZpY2F0aW9u",
+            "LmVudGl0eS52MS5Ob3RpZmljYXRpb25DaGFubmVsUgdjaGFubmVsEh0KCmV2",
+            "ZW50X3R5cGUYBCABKAlSCWV2ZW50VHlwZRIgCgxpc19vcHRlZF9vdXQYBSAB",
+            "KAhSCmlzT3B0ZWRPdXQSPAoHY29udGV4dBgGIAEoCzIiLnVkYi5jb3JlLmNv",
+            "bW1vbi52MS5SZXF1ZXN0Q29udGV4dFIHY29udGV4dDojmrIZHwgBGgN1ZGIo",
+            "sOoBMANAAUoMbm90aWZpY2F0aW9uUAEilQEKFVNldFByZWZlcmVuY2VSZXNw",
+            "b25zZRJXCgpwcmVmZXJlbmNlGAEgASgLMjcudWRiLmNvcmUubm90aWZpY2F0",
+            "aW9uLmVudGl0eS52MS5Ob3RpZmljYXRpb25QcmVmZXJlbmNlUgpwcmVmZXJl",
+            "bmNlOiOashkfCAEaA3VkYiiw6gEwA0ABSgxub3RpZmljYXRpb25QASLgAQoU",
+            "R2V0UHJlZmVyZW5jZVJlcXVlc3QSFwoHdXNlcl9pZBgBIAEoCVIGdXNlcklk",
+            "EhsKCXRlbmFudF9pZBgCIAEoCVIIdGVuYW50SWQSTgoHY2hhbm5lbBgDIAEo",
+            "DjI0LnVkYi5jb3JlLm5vdGlmaWNhdGlvbi5lbnRpdHkudjEuTm90aWZpY2F0",
+            "aW9uQ2hhbm5lbFIHY2hhbm5lbBIdCgpldmVudF90eXBlGAQgASgJUglldmVu",
+            "dFR5cGU6I5qyGR8IARoDdWRiKLDqATADQAFKDG5vdGlmaWNhdGlvblABIpUB",
+            "ChVHZXRQcmVmZXJlbmNlUmVzcG9uc2USVwoKcHJlZmVyZW5jZRgBIAEoCzI3",
+            "LnVkYi5jb3JlLm5vdGlmaWNhdGlvbi5lbnRpdHkudjEuTm90aWZpY2F0aW9u",
+            "UHJlZmVyZW5jZVIKcHJlZmVyZW5jZTojmrIZHwgBGgN1ZGIosOoBMANAAUoM",
+            "bm90aWZpY2F0aW9uUAEiqAEKFkxpc3RQcmVmZXJlbmNlc1JlcXVlc3QSFwoH",
+            "dXNlcl9pZBgBIAEoCVIGdXNlcklkEhsKCXRlbmFudF9pZBgCIAEoCVIIdGVu",
+            "YW50SWQSMwoEcGFnZRgDIAEoCzIfLnVkYi5jb3JlLmNvbW1vbi52MS5QYWdl",
+            "UmVxdWVzdFIEcGFnZTojmrIZHwgBGgN1ZGIosOoBMANAAUoMbm90aWZpY2F0",
+            "aW9uUAEizwEKF0xpc3RQcmVmZXJlbmNlc1Jlc3BvbnNlElkKC3ByZWZlcmVu",
+            "Y2VzGAEgAygLMjcudWRiLmNvcmUubm90aWZpY2F0aW9uLmVudGl0eS52MS5O",
+            "b3RpZmljYXRpb25QcmVmZXJlbmNlUgtwcmVmZXJlbmNlcxI0CgRwYWdlGAIg",
+            "ASgLMiAudWRiLmNvcmUuY29tbW9uLnYxLlBhZ2VSZXNwb25zZVIEcGFnZToj",
+            "mrIZHwgBGgN1ZGIosOoBMANAAUoMbm90aWZpY2F0aW9uUAFCrAIKJWNvbS51",
+            "ZGIuY29yZS5ub3RpZmljYXRpb24uc2VydmljZXMudjFCCUNvcmVQcm90b1AB",
+            "Wk9naXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9jb3Jl",
+            "L25vdGlmaWNhdGlvbi9zZXJ2aWNlcy92MTtzZXJ2aWNlc3YxogIEVUNOU6oC",
+            "IXVkYi5jb3JlLk5vdGlmaWNhdGlvbi5TZXJ2aWNlcy5WMcoCIVVkYlxDb3Jl",
+            "XE5vdGlmaWNhdGlvblxTZXJ2aWNlc1xWMeICLVVkYlxHUEJNZXRhZGF0YVxD",
+            "b3JlXE5vdGlmaWNhdGlvblxTZXJ2aWNlc1xWMeoCJVVkYjo6Q29yZTo6Tm90",
+            "aWZpY2F0aW9uOjpTZXJ2aWNlczo6VjFiBnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::udb.core.Common.V1.DtoReflection.Descriptor, global::udb.core.Common.V1.TypesReflection.Descriptor, global::udb.core.Notification.Entity.V1.EnumsReflection.Descriptor, global::udb.core.Notification.Entity.V1.NotificationLogReflection.Descriptor, global::udb.core.Notification.Entity.V1.NotificationPreferenceReflection.Descriptor, global::udb.core.Notification.Entity.V1.NotificationTemplateReflection.Descriptor, global::udb.core.Common.V1.SecurityReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
@@ -179,6 +192,8 @@ namespace udb.core.Notification.Services.V1 {
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Notification.Services.V1.GetDeliveryStatsRequest), global::udb.core.Notification.Services.V1.GetDeliveryStatsRequest.Parser, new[]{ "TenantId", "EventType", "DateFrom", "DateTo" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Notification.Services.V1.ChannelStats), global::udb.core.Notification.Services.V1.ChannelStats.Parser, new[]{ "Channel", "Sent", "Delivered", "Failed", "Suppressed", "DeliveryRate" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Notification.Services.V1.GetDeliveryStatsResponse), global::udb.core.Notification.Services.V1.GetDeliveryStatsResponse.Parser, new[]{ "TotalSent", "TotalDelivered", "TotalFailed", "OverallDeliveryRate", "ByChannel" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Notification.Services.V1.ReportDeliveryRequest), global::udb.core.Notification.Services.V1.ReportDeliveryRequest.Parser, new[]{ "TenantId", "LogId", "Channel", "Provider", "Status", "ProviderMessageId", "ErrorMessage", "Context" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Notification.Services.V1.ReportDeliveryResponse), global::udb.core.Notification.Services.V1.ReportDeliveryResponse.Parser, new[]{ "Attempt" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Notification.Services.V1.SetPreferenceRequest), global::udb.core.Notification.Services.V1.SetPreferenceRequest.Parser, new[]{ "UserId", "TenantId", "Channel", "EventType", "IsOptedOut", "Context" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Notification.Services.V1.SetPreferenceResponse), global::udb.core.Notification.Services.V1.SetPreferenceResponse.Parser, new[]{ "Preference" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Notification.Services.V1.GetPreferenceRequest), global::udb.core.Notification.Services.V1.GetPreferenceRequest.Parser, new[]{ "UserId", "TenantId", "Channel", "EventType" }, null, null, null, null),
@@ -5312,6 +5327,695 @@ namespace udb.core.Notification.Services.V1 {
 
   }
 
+  /// <summary>
+  /// ReportDelivery — an internal/SDK seam. An authenticated caller (the leader
+  /// delivery worker) or a provider webhook bridge reports the terminal per-channel
+  /// delivery outcome for a previously-sent NotificationLog. The handler upserts the
+  /// matching NotificationDeliveryAttempt row and emits
+  /// `udb.notification.delivery.&lt;status>.v1` to the outbox.
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class ReportDeliveryRequest : pb::IMessage<ReportDeliveryRequest>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<ReportDeliveryRequest> _parser = new pb::MessageParser<ReportDeliveryRequest>(() => new ReportDeliveryRequest());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<ReportDeliveryRequest> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::udb.core.Notification.Services.V1.CoreReflection.Descriptor.MessageTypes[17]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public ReportDeliveryRequest() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public ReportDeliveryRequest(ReportDeliveryRequest other) : this() {
+      tenantId_ = other.tenantId_;
+      logId_ = other.logId_;
+      channel_ = other.channel_;
+      provider_ = other.provider_;
+      status_ = other.status_;
+      providerMessageId_ = other.providerMessageId_;
+      errorMessage_ = other.errorMessage_;
+      context_ = other.context_ != null ? other.context_.Clone() : null;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public ReportDeliveryRequest Clone() {
+      return new ReportDeliveryRequest(this);
+    }
+
+    /// <summary>Field number for the "tenant_id" field.</summary>
+    public const int TenantIdFieldNumber = 1;
+    private string tenantId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string TenantId {
+      get { return tenantId_; }
+      set {
+        tenantId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "log_id" field.</summary>
+    public const int LogIdFieldNumber = 2;
+    private string logId_ = "";
+    /// <summary>
+    /// The NotificationLog (intent) this outcome is for.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string LogId {
+      get { return logId_; }
+      set {
+        logId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "channel" field.</summary>
+    public const int ChannelFieldNumber = 3;
+    private global::udb.core.Notification.Entity.V1.NotificationChannel channel_ = global::udb.core.Notification.Entity.V1.NotificationChannel.Unspecified;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::udb.core.Notification.Entity.V1.NotificationChannel Channel {
+      get { return channel_; }
+      set {
+        channel_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "provider" field.</summary>
+    public const int ProviderFieldNumber = 4;
+    private string provider_ = "";
+    /// <summary>
+    /// SES | SMTP | TWILIO | FCM | …
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Provider {
+      get { return provider_; }
+      set {
+        provider_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "status" field.</summary>
+    public const int StatusFieldNumber = 5;
+    private global::udb.core.Notification.Entity.V1.NotificationStatus status_ = global::udb.core.Notification.Entity.V1.NotificationStatus.Unspecified;
+    /// <summary>
+    /// queued|sent|delivered|failed
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::udb.core.Notification.Entity.V1.NotificationStatus Status {
+      get { return status_; }
+      set {
+        status_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "provider_message_id" field.</summary>
+    public const int ProviderMessageIdFieldNumber = 6;
+    private string providerMessageId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ProviderMessageId {
+      get { return providerMessageId_; }
+      set {
+        providerMessageId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "error_message" field.</summary>
+    public const int ErrorMessageFieldNumber = 7;
+    private string errorMessage_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ErrorMessage {
+      get { return errorMessage_; }
+      set {
+        errorMessage_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "context" field.</summary>
+    public const int ContextFieldNumber = 8;
+    private global::udb.core.Common.V1.RequestContext context_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::udb.core.Common.V1.RequestContext Context {
+      get { return context_; }
+      set {
+        context_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as ReportDeliveryRequest);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(ReportDeliveryRequest other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (TenantId != other.TenantId) return false;
+      if (LogId != other.LogId) return false;
+      if (Channel != other.Channel) return false;
+      if (Provider != other.Provider) return false;
+      if (Status != other.Status) return false;
+      if (ProviderMessageId != other.ProviderMessageId) return false;
+      if (ErrorMessage != other.ErrorMessage) return false;
+      if (!object.Equals(Context, other.Context)) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (TenantId.Length != 0) hash ^= TenantId.GetHashCode();
+      if (LogId.Length != 0) hash ^= LogId.GetHashCode();
+      if (Channel != global::udb.core.Notification.Entity.V1.NotificationChannel.Unspecified) hash ^= Channel.GetHashCode();
+      if (Provider.Length != 0) hash ^= Provider.GetHashCode();
+      if (Status != global::udb.core.Notification.Entity.V1.NotificationStatus.Unspecified) hash ^= Status.GetHashCode();
+      if (ProviderMessageId.Length != 0) hash ^= ProviderMessageId.GetHashCode();
+      if (ErrorMessage.Length != 0) hash ^= ErrorMessage.GetHashCode();
+      if (context_ != null) hash ^= Context.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (TenantId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(TenantId);
+      }
+      if (LogId.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(LogId);
+      }
+      if (Channel != global::udb.core.Notification.Entity.V1.NotificationChannel.Unspecified) {
+        output.WriteRawTag(24);
+        output.WriteEnum((int) Channel);
+      }
+      if (Provider.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(Provider);
+      }
+      if (Status != global::udb.core.Notification.Entity.V1.NotificationStatus.Unspecified) {
+        output.WriteRawTag(40);
+        output.WriteEnum((int) Status);
+      }
+      if (ProviderMessageId.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(ProviderMessageId);
+      }
+      if (ErrorMessage.Length != 0) {
+        output.WriteRawTag(58);
+        output.WriteString(ErrorMessage);
+      }
+      if (context_ != null) {
+        output.WriteRawTag(66);
+        output.WriteMessage(Context);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (TenantId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(TenantId);
+      }
+      if (LogId.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(LogId);
+      }
+      if (Channel != global::udb.core.Notification.Entity.V1.NotificationChannel.Unspecified) {
+        output.WriteRawTag(24);
+        output.WriteEnum((int) Channel);
+      }
+      if (Provider.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(Provider);
+      }
+      if (Status != global::udb.core.Notification.Entity.V1.NotificationStatus.Unspecified) {
+        output.WriteRawTag(40);
+        output.WriteEnum((int) Status);
+      }
+      if (ProviderMessageId.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(ProviderMessageId);
+      }
+      if (ErrorMessage.Length != 0) {
+        output.WriteRawTag(58);
+        output.WriteString(ErrorMessage);
+      }
+      if (context_ != null) {
+        output.WriteRawTag(66);
+        output.WriteMessage(Context);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (TenantId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(TenantId);
+      }
+      if (LogId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(LogId);
+      }
+      if (Channel != global::udb.core.Notification.Entity.V1.NotificationChannel.Unspecified) {
+        size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) Channel);
+      }
+      if (Provider.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Provider);
+      }
+      if (Status != global::udb.core.Notification.Entity.V1.NotificationStatus.Unspecified) {
+        size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) Status);
+      }
+      if (ProviderMessageId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ProviderMessageId);
+      }
+      if (ErrorMessage.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ErrorMessage);
+      }
+      if (context_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Context);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(ReportDeliveryRequest other) {
+      if (other == null) {
+        return;
+      }
+      if (other.TenantId.Length != 0) {
+        TenantId = other.TenantId;
+      }
+      if (other.LogId.Length != 0) {
+        LogId = other.LogId;
+      }
+      if (other.Channel != global::udb.core.Notification.Entity.V1.NotificationChannel.Unspecified) {
+        Channel = other.Channel;
+      }
+      if (other.Provider.Length != 0) {
+        Provider = other.Provider;
+      }
+      if (other.Status != global::udb.core.Notification.Entity.V1.NotificationStatus.Unspecified) {
+        Status = other.Status;
+      }
+      if (other.ProviderMessageId.Length != 0) {
+        ProviderMessageId = other.ProviderMessageId;
+      }
+      if (other.ErrorMessage.Length != 0) {
+        ErrorMessage = other.ErrorMessage;
+      }
+      if (other.context_ != null) {
+        if (context_ == null) {
+          Context = new global::udb.core.Common.V1.RequestContext();
+        }
+        Context.MergeFrom(other.Context);
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            TenantId = input.ReadString();
+            break;
+          }
+          case 18: {
+            LogId = input.ReadString();
+            break;
+          }
+          case 24: {
+            Channel = (global::udb.core.Notification.Entity.V1.NotificationChannel) input.ReadEnum();
+            break;
+          }
+          case 34: {
+            Provider = input.ReadString();
+            break;
+          }
+          case 40: {
+            Status = (global::udb.core.Notification.Entity.V1.NotificationStatus) input.ReadEnum();
+            break;
+          }
+          case 50: {
+            ProviderMessageId = input.ReadString();
+            break;
+          }
+          case 58: {
+            ErrorMessage = input.ReadString();
+            break;
+          }
+          case 66: {
+            if (context_ == null) {
+              Context = new global::udb.core.Common.V1.RequestContext();
+            }
+            input.ReadMessage(Context);
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            TenantId = input.ReadString();
+            break;
+          }
+          case 18: {
+            LogId = input.ReadString();
+            break;
+          }
+          case 24: {
+            Channel = (global::udb.core.Notification.Entity.V1.NotificationChannel) input.ReadEnum();
+            break;
+          }
+          case 34: {
+            Provider = input.ReadString();
+            break;
+          }
+          case 40: {
+            Status = (global::udb.core.Notification.Entity.V1.NotificationStatus) input.ReadEnum();
+            break;
+          }
+          case 50: {
+            ProviderMessageId = input.ReadString();
+            break;
+          }
+          case 58: {
+            ErrorMessage = input.ReadString();
+            break;
+          }
+          case 66: {
+            if (context_ == null) {
+              Context = new global::udb.core.Common.V1.RequestContext();
+            }
+            input.ReadMessage(Context);
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class ReportDeliveryResponse : pb::IMessage<ReportDeliveryResponse>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<ReportDeliveryResponse> _parser = new pb::MessageParser<ReportDeliveryResponse>(() => new ReportDeliveryResponse());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<ReportDeliveryResponse> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::udb.core.Notification.Services.V1.CoreReflection.Descriptor.MessageTypes[18]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public ReportDeliveryResponse() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public ReportDeliveryResponse(ReportDeliveryResponse other) : this() {
+      attempt_ = other.attempt_ != null ? other.attempt_.Clone() : null;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public ReportDeliveryResponse Clone() {
+      return new ReportDeliveryResponse(this);
+    }
+
+    /// <summary>Field number for the "attempt" field.</summary>
+    public const int AttemptFieldNumber = 1;
+    private global::udb.core.Notification.Entity.V1.NotificationDeliveryAttempt attempt_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::udb.core.Notification.Entity.V1.NotificationDeliveryAttempt Attempt {
+      get { return attempt_; }
+      set {
+        attempt_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as ReportDeliveryResponse);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(ReportDeliveryResponse other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (!object.Equals(Attempt, other.Attempt)) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (attempt_ != null) hash ^= Attempt.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (attempt_ != null) {
+        output.WriteRawTag(10);
+        output.WriteMessage(Attempt);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (attempt_ != null) {
+        output.WriteRawTag(10);
+        output.WriteMessage(Attempt);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (attempt_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Attempt);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(ReportDeliveryResponse other) {
+      if (other == null) {
+        return;
+      }
+      if (other.attempt_ != null) {
+        if (attempt_ == null) {
+          Attempt = new global::udb.core.Notification.Entity.V1.NotificationDeliveryAttempt();
+        }
+        Attempt.MergeFrom(other.Attempt);
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            if (attempt_ == null) {
+              Attempt = new global::udb.core.Notification.Entity.V1.NotificationDeliveryAttempt();
+            }
+            input.ReadMessage(Attempt);
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            if (attempt_ == null) {
+              Attempt = new global::udb.core.Notification.Entity.V1.NotificationDeliveryAttempt();
+            }
+            input.ReadMessage(Attempt);
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
   [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
   public sealed partial class SetPreferenceRequest : pb::IMessage<SetPreferenceRequest>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
@@ -5327,7 +6031,7 @@ namespace udb.core.Notification.Services.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::udb.core.Notification.Services.V1.CoreReflection.Descriptor.MessageTypes[17]; }
+      get { return global::udb.core.Notification.Services.V1.CoreReflection.Descriptor.MessageTypes[19]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -5722,7 +6426,7 @@ namespace udb.core.Notification.Services.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::udb.core.Notification.Services.V1.CoreReflection.Descriptor.MessageTypes[18]; }
+      get { return global::udb.core.Notification.Services.V1.CoreReflection.Descriptor.MessageTypes[20]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -5929,7 +6633,7 @@ namespace udb.core.Notification.Services.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::udb.core.Notification.Services.V1.CoreReflection.Descriptor.MessageTypes[19]; }
+      get { return global::udb.core.Notification.Services.V1.CoreReflection.Descriptor.MessageTypes[21]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -6238,7 +6942,7 @@ namespace udb.core.Notification.Services.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::udb.core.Notification.Services.V1.CoreReflection.Descriptor.MessageTypes[20]; }
+      get { return global::udb.core.Notification.Services.V1.CoreReflection.Descriptor.MessageTypes[22]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -6445,7 +7149,7 @@ namespace udb.core.Notification.Services.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::udb.core.Notification.Services.V1.CoreReflection.Descriptor.MessageTypes[21]; }
+      get { return global::udb.core.Notification.Services.V1.CoreReflection.Descriptor.MessageTypes[23]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -6726,7 +7430,7 @@ namespace udb.core.Notification.Services.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::udb.core.Notification.Services.V1.CoreReflection.Descriptor.MessageTypes[22]; }
+      get { return global::udb.core.Notification.Services.V1.CoreReflection.Descriptor.MessageTypes[24]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]

@@ -44,7 +44,7 @@ public final class PipelineDefinitionProto {
       "nition.proto\022\030udb.core.asset.entity.v1\032\033" +
       "udb/core/common/v1/db.proto\032!udb/core/co" +
       "mmon/v1/security.proto\032\036udb/core/common/" +
-      "v1/types.proto\"\274\t\n\022PipelineDefinition\022U\n" +
+      "v1/types.proto\"\312\n\n\022PipelineDefinition\022U\n" +
       "\rdefinition_id\030\001 \001(\tB0\202\267\030,\n\rdefinition_i" +
       "d\022\004UUID\030\001(\001:\021gen_random_uuid()R\014definiti" +
       "onId\0227\n\ttenant_id\030\002 \001(\tB\032\202\267\030\026\n\ttenant_id" +
@@ -61,27 +61,30 @@ public final class PipelineDefinitionProto {
       "\006status\022\202\001\n\naudit_info\030\t \001(\0132\035.udb.core." +
       "common.v1.AuditInfoBD\202\267\030@\n\naudit_info\022\005J" +
       "SONB\030\001:\013\'{}\'::jsonbZ\032Audit trail stored " +
-      "as JSONx\001R\tauditInfo:\216\004\372\266\030\364\002\n\024pipeline_d" +
-      "efinitions\022\tudb_asset\030\002 \001*2Reusable vers" +
-      "ioned processing-pipeline definitions8\001@" +
-      "\001b\245\001\n%pipeline_definitions_tenant_isolat" +
-      "ion\032z(tenant_id::text = current_setting(" +
-      "\'app.current_tenant_id\', true) OR curren" +
-      "t_setting(\'app.platform_admin\', true) = " +
-      "\'true\')(\001h\001\212\0018\n\034idx_pipeline_def_name_un" +
-      "ique\022\005BTREE\030\001Z\ttenant_idZ\004name\362\001\"udb.ass" +
-      "et.pipeline_definitions.cdc\372\001\nasset:read" +
-      "\212\262\031\220\001\n\006tenant\032\ttenant_id*4tenant_id = cu" +
-      "rrent_setting(\'app.current_tenant_id\')2\004" +
-      "none:\021asset.operational@\373\023H\002R\006tenantZ\010st" +
-      "andardr\025tenant.data_residencyB\202\002\n\034com.ud" +
-      "b.core.asset.entity.v1B\027PipelineDefiniti" +
-      "onProtoP\001ZDgithub.com/fahara02/udb/sdk/g" +
-      "o/gen/udb/core/asset/entity/v1;entityv1\242" +
-      "\002\004UCAE\252\002\030udb.core.Asset.Entity.V1\312\002\030Udb\\" +
-      "Core\\Asset\\Entity\\V1\342\002$Udb\\GPBMetadata\\C" +
-      "ore\\Asset\\Entity\\V1\352\002\034Udb::Core::Asset::" +
-      "Entity::V1b\006proto3"
+      "as JSONx\001R\tauditInfo\022\213\001\n\rtrigger_topic\030\n" +
+      " \001(\tBf\202\267\030b\n\rtrigger_topic\022\014VARCHAR(255)Z" +
+      "CKafka topic that triggers this pipeline" +
+      "; NULL = not topic-triggeredR\014triggerTop" +
+      "ic:\216\004\372\266\030\364\002\n\024pipeline_definitions\022\tudb_as" +
+      "set\030\002 \001*2Reusable versioned processing-p" +
+      "ipeline definitions8\001@\001b\245\001\n%pipeline_def" +
+      "initions_tenant_isolation\032z(tenant_id::t" +
+      "ext = current_setting(\'app.current_tenan" +
+      "t_id\', true) OR current_setting(\'app.pla" +
+      "tform_admin\', true) = \'true\')(\001h\001\212\0018\n\034id" +
+      "x_pipeline_def_name_unique\022\005BTREE\030\001Z\tten" +
+      "ant_idZ\004name\362\001\"udb.asset.pipeline_defini" +
+      "tions.cdc\372\001\nasset:read\212\262\031\220\001\n\006tenant\032\tten" +
+      "ant_id*4tenant_id = current_setting(\'app" +
+      ".current_tenant_id\')2\004none:\021asset.operat" +
+      "ional@\373\023H\002R\006tenantZ\010standardr\025tenant.dat" +
+      "a_residencyB\202\002\n\034com.udb.core.asset.entit" +
+      "y.v1B\027PipelineDefinitionProtoP\001ZDgithub." +
+      "com/fahara02/udb/sdk/go/gen/udb/core/ass" +
+      "et/entity/v1;entityv1\242\002\004UCAE\252\002\030udb.core." +
+      "Asset.Entity.V1\312\002\030Udb\\Core\\Asset\\Entity\\" +
+      "V1\342\002$Udb\\GPBMetadata\\Core\\Asset\\Entity\\V" +
+      "1\352\002\034Udb::Core::Asset::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -95,7 +98,7 @@ public final class PipelineDefinitionProto {
     internal_static_udb_core_asset_entity_v1_PipelineDefinition_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_asset_entity_v1_PipelineDefinition_descriptor,
-        new java.lang.String[] { "DefinitionId", "TenantId", "Name", "Description", "MediaType", "Steps", "Version", "Status", "AuditInfo", });
+        new java.lang.String[] { "DefinitionId", "TenantId", "Name", "Description", "MediaType", "Steps", "Version", "Status", "AuditInfo", "TriggerTopic", });
     descriptor.resolveAllFeaturesImmutable();
     com.udb.core.common.v1.DbProto.getDescriptor();
     com.udb.core.common.v1.SecurityProto.getDescriptor();

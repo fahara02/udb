@@ -153,4 +153,34 @@ java.lang.String defaultValue);
    */
   com.udb.entity.v1.OperationWarningOrBuilder getWarningsOrBuilder(
       int index);
+
+  /**
+   * <pre>
+   * Typed write receipt. Kept in lockstep with write_receipt_json for clients
+   * that can consume protobuf messages directly.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.WriteReceipt write_receipt = 11 [json_name = "writeReceipt"];</code>
+   * @return Whether the writeReceipt field is set.
+   */
+  boolean hasWriteReceipt();
+  /**
+   * <pre>
+   * Typed write receipt. Kept in lockstep with write_receipt_json for clients
+   * that can consume protobuf messages directly.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.WriteReceipt write_receipt = 11 [json_name = "writeReceipt"];</code>
+   * @return The writeReceipt.
+   */
+  com.udb.entity.v1.WriteReceipt getWriteReceipt();
+  /**
+   * <pre>
+   * Typed write receipt. Kept in lockstep with write_receipt_json for clients
+   * that can consume protobuf messages directly.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.WriteReceipt write_receipt = 11 [json_name = "writeReceipt"];</code>
+   */
+  com.udb.entity.v1.WriteReceiptOrBuilder getWriteReceiptOrBuilder();
 }

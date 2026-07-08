@@ -12,6 +12,7 @@ import (
 	v11 "github.com/fahara02/udb/sdk/go/gen/udb/core/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	fieldmaskpb "google.golang.org/protobuf/types/known/fieldmaskpb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
@@ -1397,9 +1398,13 @@ func (x *CreatePolicyRuleResponse) GetPolicy() *v1.PolicyRule {
 }
 
 type ListUserPermissionsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	Domain        string                 `protobuf:"bytes,2,opt,name=domain,proto3" json:"domain,omitempty"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	UserId string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Domain string                 `protobuf:"bytes,2,opt,name=domain,proto3" json:"domain,omitempty"`
+	// Requested page size. Defaults to 50 and is capped at the native list maximum.
+	PageSize int32 `protobuf:"varint,3,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// Opaque pagination token returned by ListUserPermissionsResponse.next_page_token.
+	PageToken     string `protobuf:"bytes,4,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1448,13 +1453,29 @@ func (x *ListUserPermissionsRequest) GetDomain() string {
 	return ""
 }
 
+func (x *ListUserPermissionsRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListUserPermissionsRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
 type EffectivePermission struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Object        string                 `protobuf:"bytes,1,opt,name=object,proto3" json:"object,omitempty"`
-	Action        string                 `protobuf:"bytes,2,opt,name=action,proto3" json:"action,omitempty"`
-	ViaRole       string                 `protobuf:"bytes,3,opt,name=via_role,json=viaRole,proto3" json:"via_role,omitempty"`
-	ResourceType  string                 `protobuf:"bytes,4,opt,name=resource_type,json=resourceType,proto3" json:"resource_type,omitempty"`
-	Domain        string                 `protobuf:"bytes,5,opt,name=domain,proto3" json:"domain,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Canonical public permission object. Combined with action/domain/resource_type
+	// it forms the stable permission identity returned by ListUserPermissions.
+	Object        string `protobuf:"bytes,1,opt,name=object,proto3" json:"object,omitempty"`
+	Action        string `protobuf:"bytes,2,opt,name=action,proto3" json:"action,omitempty"`
+	ViaRole       string `protobuf:"bytes,3,opt,name=via_role,json=viaRole,proto3" json:"via_role,omitempty"`
+	ResourceType  string `protobuf:"bytes,4,opt,name=resource_type,json=resourceType,proto3" json:"resource_type,omitempty"`
+	Domain        string `protobuf:"bytes,5,opt,name=domain,proto3" json:"domain,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1525,8 +1546,10 @@ func (x *EffectivePermission) GetDomain() string {
 }
 
 type ListUserPermissionsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Permissions   []*EffectivePermission `protobuf:"bytes,1,rep,name=permissions,proto3" json:"permissions,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Permissions []*EffectivePermission `protobuf:"bytes,1,rep,name=permissions,proto3" json:"permissions,omitempty"`
+	// Opaque token for the next page; empty when no more permissions are available.
+	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1566,6 +1589,13 @@ func (x *ListUserPermissionsResponse) GetPermissions() []*EffectivePermission {
 		return x.Permissions
 	}
 	return nil
+}
+
+func (x *ListUserPermissionsResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
 }
 
 type ListAccessDecisionAuditsRequest struct {
@@ -1801,10 +1831,14 @@ func (x *RevokeRoleResponse) GetRevoked() bool {
 }
 
 type ListUserRolesRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	Domain        string                 `protobuf:"bytes,2,opt,name=domain,proto3" json:"domain,omitempty"`
-	ActiveOnly    bool                   `protobuf:"varint,3,opt,name=active_only,json=activeOnly,proto3" json:"active_only,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	UserId     string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Domain     string                 `protobuf:"bytes,2,opt,name=domain,proto3" json:"domain,omitempty"`
+	ActiveOnly bool                   `protobuf:"varint,3,opt,name=active_only,json=activeOnly,proto3" json:"active_only,omitempty"`
+	// Requested page size. Defaults to 50 and is capped at the native list maximum.
+	PageSize int32 `protobuf:"varint,4,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// Opaque pagination token returned by ListUserRolesResponse.next_page_token.
+	PageToken     string `protobuf:"bytes,5,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1860,9 +1894,25 @@ func (x *ListUserRolesRequest) GetActiveOnly() bool {
 	return false
 }
 
+func (x *ListUserRolesRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListUserRolesRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
 type ListUserRolesResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	UserRoles     []*v1.UserRole         `protobuf:"bytes,1,rep,name=user_roles,json=userRoles,proto3" json:"user_roles,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	UserRoles []*v1.UserRole         `protobuf:"bytes,1,rep,name=user_roles,json=userRoles,proto3" json:"user_roles,omitempty"`
+	// Opaque token for the next page; empty when no more user roles are available.
+	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1902,6 +1952,13 @@ func (x *ListUserRolesResponse) GetUserRoles() []*v1.UserRole {
 		return x.UserRoles
 	}
 	return nil
+}
+
+func (x *ListUserRolesResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
 }
 
 type GetRoleRequest struct {
@@ -2285,12 +2342,15 @@ func (x *BatchCheckPermissionsResponse) GetResults() map[string]bool {
 }
 
 type UpdateRoleRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	RoleId        string                 `protobuf:"bytes,1,opt,name=role_id,json=roleId,proto3" json:"role_id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Description   string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
-	IsActive      *bool                  `protobuf:"varint,4,opt,name=is_active,json=isActive,proto3,oneof" json:"is_active,omitempty"`
-	UpdatedBy     string                 `protobuf:"bytes,5,opt,name=updated_by,json=updatedBy,proto3" json:"updated_by,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	RoleId      string                 `protobuf:"bytes,1,opt,name=role_id,json=roleId,proto3" json:"role_id,omitempty"`
+	Name        string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Description string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	IsActive    *bool                  `protobuf:"varint,4,opt,name=is_active,json=isActive,proto3,oneof" json:"is_active,omitempty"`
+	UpdatedBy   string                 `protobuf:"bytes,5,opt,name=updated_by,json=updatedBy,proto3" json:"updated_by,omitempty"`
+	// Optional PATCH mask relative to the role resource. When omitted, legacy
+	// clients keep the historical non-empty-field patch behavior.
+	UpdateMask    *fieldmaskpb.FieldMask `protobuf:"bytes,6,opt,name=update_mask,json=updateMask,proto3" json:"update_mask,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2358,6 +2418,13 @@ func (x *UpdateRoleRequest) GetUpdatedBy() string {
 		return x.UpdatedBy
 	}
 	return ""
+}
+
+func (x *UpdateRoleRequest) GetUpdateMask() *fieldmaskpb.FieldMask {
+	if x != nil {
+		return x.UpdateMask
+	}
+	return nil
 }
 
 type UpdateRoleResponse struct {
@@ -3927,7 +3994,7 @@ var File_udb_core_authz_services_v1_core_proto protoreflect.FileDescriptor
 
 const file_udb_core_authz_services_v1_core_proto_rawDesc = "" +
 	"\n" +
-	"%udb/core/authz/services/v1/core.proto\x12\x1audb.core.authz.services.v1\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a4udb/core/authz/entity/v1/access_decision_audit.proto\x1a$udb/core/authz/entity/v1/enums.proto\x1a*udb/core/authz/entity/v1/policy_rule.proto\x1a#udb/core/authz/entity/v1/role.proto\x1a(udb/core/authz/entity/v1/user_role.proto\x1a\x1cudb/core/common/v1/dto.proto\x1a!udb/core/common/v1/security.proto\"\xcf\x04\n" +
+	"%udb/core/authz/services/v1/core.proto\x12\x1audb.core.authz.services.v1\x1a\x1fgoogle/api/field_behavior.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a4udb/core/authz/entity/v1/access_decision_audit.proto\x1a$udb/core/authz/entity/v1/enums.proto\x1a*udb/core/authz/entity/v1/policy_rule.proto\x1a#udb/core/authz/entity/v1/role.proto\x1a(udb/core/authz/entity/v1/user_role.proto\x1a\x1cudb/core/common/v1/dto.proto\x1a!udb/core/common/v1/security.proto\"\xcf\x04\n" +
 	"\tPrincipal\x12!\n" +
 	"\fprincipal_id\x18\x01 \x01(\tR\vprincipalId\x12\x18\n" +
 	"\asubject\x18\x02 \x01(\tR\asubject\x12\x17\n" +
@@ -4112,18 +4179,22 @@ const file_udb_core_authz_services_v1_core_proto_rawDesc = "" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"v\n" +
 	"\x18CreatePolicyRuleResponse\x12<\n" +
-	"\x06policy\x18\x01 \x01(\v2$.udb.core.authz.entity.v1.PolicyRuleR\x06policy:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"u\n" +
+	"\x06policy\x18\x01 \x01(\v2$.udb.core.authz.entity.v1.PolicyRuleR\x06policy:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\xbb\x01\n" +
 	"\x1aListUserPermissionsRequest\x12\x1c\n" +
 	"\auser_id\x18\x01 \x01(\tB\x03\xe0A\x02R\x06userId\x12\x1b\n" +
-	"\x06domain\x18\x02 \x01(\tB\x03\xe0A\x02R\x06domain:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\xbb\x01\n" +
+	"\x06domain\x18\x02 \x01(\tB\x03\xe0A\x02R\x06domain\x12 \n" +
+	"\tpage_size\x18\x03 \x01(\x05B\x03\xe0A\x01R\bpageSize\x12\"\n" +
+	"\n" +
+	"page_token\x18\x04 \x01(\tB\x03\xe0A\x01R\tpageToken:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\xbb\x01\n" +
 	"\x13EffectivePermission\x12\x16\n" +
 	"\x06object\x18\x01 \x01(\tR\x06object\x12\x16\n" +
 	"\x06action\x18\x02 \x01(\tR\x06action\x12\x19\n" +
 	"\bvia_role\x18\x03 \x01(\tR\aviaRole\x12#\n" +
 	"\rresource_type\x18\x04 \x01(\tR\fresourceType\x12\x16\n" +
-	"\x06domain\x18\x05 \x01(\tR\x06domain:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\x8e\x01\n" +
+	"\x06domain\x18\x05 \x01(\tR\x06domain:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\xb6\x01\n" +
 	"\x1bListUserPermissionsResponse\x12Q\n" +
-	"\vpermissions\x18\x01 \x03(\v2/.udb.core.authz.services.v1.EffectivePermissionR\vpermissions:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\xe0\x01\n" +
+	"\vpermissions\x18\x01 \x03(\v2/.udb.core.authz.services.v1.EffectivePermissionR\vpermissions\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\xe0\x01\n" +
 	"\x1fListAccessDecisionAuditsRequest\x12\x1c\n" +
 	"\auser_id\x18\x01 \x01(\tB\x03\xe0A\x01R\x06userId\x12\x1b\n" +
 	"\x06domain\x18\x02 \x01(\tB\x03\xe0A\x01R\x06domain\x12*\n" +
@@ -4140,15 +4211,19 @@ const file_udb_core_authz_services_v1_core_proto_rawDesc = "" +
 	"\n" +
 	"revoked_by\x18\x04 \x01(\tR\trevokedBy:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"L\n" +
 	"\x12RevokeRoleResponse\x12\x18\n" +
-	"\arevoked\x18\x01 \x01(\bR\arevoked:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\x86\x01\n" +
+	"\arevoked\x18\x01 \x01(\bR\arevoked:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\xc2\x01\n" +
 	"\x14ListUserRolesRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x16\n" +
 	"\x06domain\x18\x02 \x01(\tR\x06domain\x12\x1f\n" +
 	"\vactive_only\x18\x03 \x01(\bR\n" +
-	"activeOnly:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"x\n" +
+	"activeOnly\x12\x1b\n" +
+	"\tpage_size\x18\x04 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x05 \x01(\tR\tpageToken:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\xa0\x01\n" +
 	"\x15ListUserRolesResponse\x12A\n" +
 	"\n" +
-	"user_roles\x18\x01 \x03(\v2\".udb.core.authz.entity.v1.UserRoleR\tuserRoles:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"|\n" +
+	"user_roles\x18\x01 \x03(\v2\".udb.core.authz.entity.v1.UserRoleR\tuserRoles\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"|\n" +
 	"\x0eGetRoleRequest\x12\x17\n" +
 	"\arole_id\x18\x01 \x01(\tR\x06roleId\x12\x1b\n" +
 	"\trole_code\x18\x02 \x01(\tR\broleCode\x12\x16\n" +
@@ -4175,14 +4250,16 @@ const file_udb_core_authz_services_v1_core_proto_rawDesc = "" +
 	"\aresults\x18\x01 \x03(\v2F.udb.core.authz.services.v1.BatchCheckPermissionsResponse.ResultsEntryR\aresults\x1a:\n" +
 	"\fResultsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\bR\x05value:\x028\x01:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\xe8\x01\n" +
+	"\x05value\x18\x02 \x01(\bR\x05value:\x028\x01:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\xa5\x02\n" +
 	"\x11UpdateRoleRequest\x12\x1c\n" +
 	"\arole_id\x18\x01 \x01(\tB\x03\xe0A\x02R\x06roleId\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tB\x03\xe0A\x01R\x04name\x12%\n" +
 	"\vdescription\x18\x03 \x01(\tB\x03\xe0A\x01R\vdescription\x12%\n" +
 	"\tis_active\x18\x04 \x01(\bB\x03\xe0A\x01H\x00R\bisActive\x88\x01\x01\x12\"\n" +
 	"\n" +
-	"updated_by\x18\x05 \x01(\tB\x03\xe0A\x02R\tupdatedBy:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01B\f\n" +
+	"updated_by\x18\x05 \x01(\tB\x03\xe0A\x02R\tupdatedBy\x12;\n" +
+	"\vupdate_mask\x18\x06 \x01(\v2\x1a.google.protobuf.FieldMaskR\n" +
+	"updateMask:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01B\f\n" +
 	"\n" +
 	"_is_active\"f\n" +
 	"\x12UpdateRoleResponse\x122\n" +
@@ -4408,6 +4485,7 @@ var file_udb_core_authz_services_v1_core_proto_goTypes = []any{
 	(*v11.PageRequest)(nil),                  // 73: udb.core.common.v1.PageRequest
 	(*v1.AccessDecisionAudit)(nil),           // 74: udb.core.authz.entity.v1.AccessDecisionAudit
 	(*v11.PageResponse)(nil),                 // 75: udb.core.common.v1.PageResponse
+	(*fieldmaskpb.FieldMask)(nil),            // 76: google.protobuf.FieldMask
 }
 var file_udb_core_authz_services_v1_core_proto_depIdxs = []int32{
 	55, // 0: udb.core.authz.services.v1.Principal.attributes:type_name -> udb.core.authz.services.v1.Principal.AttributesEntry
@@ -4445,28 +4523,29 @@ var file_udb_core_authz_services_v1_core_proto_depIdxs = []int32{
 	27, // 32: udb.core.authz.services.v1.BatchCheckPermissionsRequest.checks:type_name -> udb.core.authz.services.v1.PermissionCheck
 	3,  // 33: udb.core.authz.services.v1.BatchCheckPermissionsRequest.context:type_name -> udb.core.authz.services.v1.AccessContext
 	62, // 34: udb.core.authz.services.v1.BatchCheckPermissionsResponse.results:type_name -> udb.core.authz.services.v1.BatchCheckPermissionsResponse.ResultsEntry
-	68, // 35: udb.core.authz.services.v1.UpdateRoleResponse.role:type_name -> udb.core.authz.entity.v1.Role
-	72, // 36: udb.core.authz.services.v1.GetPolicyRuleResponse.policy:type_name -> udb.core.authz.entity.v1.PolicyRule
-	73, // 37: udb.core.authz.services.v1.ListPolicyRulesRequest.page:type_name -> udb.core.common.v1.PageRequest
-	72, // 38: udb.core.authz.services.v1.ListPolicyRulesResponse.policies:type_name -> udb.core.authz.entity.v1.PolicyRule
-	75, // 39: udb.core.authz.services.v1.ListPolicyRulesResponse.page:type_name -> udb.core.common.v1.PageResponse
-	63, // 40: udb.core.authz.services.v1.AuthzPolicyRecord.conditions:type_name -> udb.core.authz.services.v1.AuthzPolicyRecord.ConditionsEntry
-	41, // 41: udb.core.authz.services.v1.PutRoleBindingRequest.binding:type_name -> udb.core.authz.services.v1.RoleBinding
-	42, // 42: udb.core.authz.services.v1.PutRelationshipRequest.tuple:type_name -> udb.core.authz.services.v1.RelationshipTuple
-	43, // 43: udb.core.authz.services.v1.PutAuthzPolicyRequest.policy:type_name -> udb.core.authz.services.v1.AuthzPolicyRecord
-	0,  // 44: udb.core.authz.services.v1.NativeAccessRequest.principal:type_name -> udb.core.authz.services.v1.Principal
-	1,  // 45: udb.core.authz.services.v1.NativeAccessRequest.resource:type_name -> udb.core.authz.services.v1.ResourceRef
-	3,  // 46: udb.core.authz.services.v1.NativeAccessRequest.context:type_name -> udb.core.authz.services.v1.AccessContext
-	64, // 47: udb.core.authz.services.v1.NativeAccessRequest.attributes:type_name -> udb.core.authz.services.v1.NativeAccessRequest.AttributesEntry
-	65, // 48: udb.core.authz.services.v1.NativeAccessGrant.session_variables:type_name -> udb.core.authz.services.v1.NativeAccessGrant.SessionVariablesEntry
-	2,  // 49: udb.core.authz.services.v1.NativeAccessResponse.decision:type_name -> udb.core.authz.services.v1.Decision
-	50, // 50: udb.core.authz.services.v1.NativeAccessResponse.grant:type_name -> udb.core.authz.services.v1.NativeAccessGrant
-	53, // 51: udb.core.authz.services.v1.PolicyBundleResponse.bundle:type_name -> udb.core.authz.services.v1.SignedPolicyBundle
-	52, // [52:52] is the sub-list for method output_type
-	52, // [52:52] is the sub-list for method input_type
-	52, // [52:52] is the sub-list for extension type_name
-	52, // [52:52] is the sub-list for extension extendee
-	0,  // [0:52] is the sub-list for field type_name
+	76, // 35: udb.core.authz.services.v1.UpdateRoleRequest.update_mask:type_name -> google.protobuf.FieldMask
+	68, // 36: udb.core.authz.services.v1.UpdateRoleResponse.role:type_name -> udb.core.authz.entity.v1.Role
+	72, // 37: udb.core.authz.services.v1.GetPolicyRuleResponse.policy:type_name -> udb.core.authz.entity.v1.PolicyRule
+	73, // 38: udb.core.authz.services.v1.ListPolicyRulesRequest.page:type_name -> udb.core.common.v1.PageRequest
+	72, // 39: udb.core.authz.services.v1.ListPolicyRulesResponse.policies:type_name -> udb.core.authz.entity.v1.PolicyRule
+	75, // 40: udb.core.authz.services.v1.ListPolicyRulesResponse.page:type_name -> udb.core.common.v1.PageResponse
+	63, // 41: udb.core.authz.services.v1.AuthzPolicyRecord.conditions:type_name -> udb.core.authz.services.v1.AuthzPolicyRecord.ConditionsEntry
+	41, // 42: udb.core.authz.services.v1.PutRoleBindingRequest.binding:type_name -> udb.core.authz.services.v1.RoleBinding
+	42, // 43: udb.core.authz.services.v1.PutRelationshipRequest.tuple:type_name -> udb.core.authz.services.v1.RelationshipTuple
+	43, // 44: udb.core.authz.services.v1.PutAuthzPolicyRequest.policy:type_name -> udb.core.authz.services.v1.AuthzPolicyRecord
+	0,  // 45: udb.core.authz.services.v1.NativeAccessRequest.principal:type_name -> udb.core.authz.services.v1.Principal
+	1,  // 46: udb.core.authz.services.v1.NativeAccessRequest.resource:type_name -> udb.core.authz.services.v1.ResourceRef
+	3,  // 47: udb.core.authz.services.v1.NativeAccessRequest.context:type_name -> udb.core.authz.services.v1.AccessContext
+	64, // 48: udb.core.authz.services.v1.NativeAccessRequest.attributes:type_name -> udb.core.authz.services.v1.NativeAccessRequest.AttributesEntry
+	65, // 49: udb.core.authz.services.v1.NativeAccessGrant.session_variables:type_name -> udb.core.authz.services.v1.NativeAccessGrant.SessionVariablesEntry
+	2,  // 50: udb.core.authz.services.v1.NativeAccessResponse.decision:type_name -> udb.core.authz.services.v1.Decision
+	50, // 51: udb.core.authz.services.v1.NativeAccessResponse.grant:type_name -> udb.core.authz.services.v1.NativeAccessGrant
+	53, // 52: udb.core.authz.services.v1.PolicyBundleResponse.bundle:type_name -> udb.core.authz.services.v1.SignedPolicyBundle
+	53, // [53:53] is the sub-list for method output_type
+	53, // [53:53] is the sub-list for method input_type
+	53, // [53:53] is the sub-list for extension type_name
+	53, // [53:53] is the sub-list for extension extendee
+	0,  // [0:53] is the sub-list for field type_name
 }
 
 func init() { file_udb_core_authz_services_v1_core_proto_init() }

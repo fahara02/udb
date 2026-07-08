@@ -52,20 +52,42 @@ namespace udb.core.Webrtc.Events.V1 {
             "cHJvdG9idWYuVGltZXN0YW1wUgl0aW1lc3RhbXA6bZKyGWkKInVkYi5jb3Jl",
             "LndlYnJ0Yy5ldmVudHMudjEuUGVlckxlZnQSF3VkYi53ZWJydGMucGVlcl9s",
             "ZWZ0LnYxGgl0ZW5hbnRfaWQiCHN0YW5kYXJkKg1hdF9sZWFzdF9vbmNlMgZz",
-            "dGFibGUiygIKDlRyYWNrUHVibGlzaGVkEhkKCGV2ZW50X2lkGAEgASgJUgdl",
-            "dmVudElkEhcKB3Jvb21faWQYAiABKAlSBnJvb21JZBIXCgdwZWVyX2lkGAMg",
-            "ASgJUgZwZWVySWQSGQoIdHJhY2tfaWQYBCABKAlSB3RyYWNrSWQSGwoJdGVu",
-            "YW50X2lkGAUgASgJUgh0ZW5hbnRJZBI4Cgl0aW1lc3RhbXAYBiABKAsyGi5n",
-            "b29nbGUucHJvdG9idWYuVGltZXN0YW1wUgl0aW1lc3RhbXA6eZKyGXUKKHVk",
-            "Yi5jb3JlLndlYnJ0Yy5ldmVudHMudjEuVHJhY2tQdWJsaXNoZWQSHXVkYi53",
-            "ZWJydGMudHJhY2tfcHVibGlzaGVkLnYxGgl0ZW5hbnRfaWQiCHN0YW5kYXJk",
-            "Kg1hdF9sZWFzdF9vbmNlMgZzdGFibGVCggIKHWNvbS51ZGIuY29yZS53ZWJy",
-            "dGMuZXZlbnRzLnYxQhFXZWJydGNFdmVudHNQcm90b1ABWkVnaXRodWIuY29t",
-            "L2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9jb3JlL3dlYnJ0Yy9ldmVu",
-            "dHMvdjE7ZXZlbnRzdjGiAgRVQ1dFqgIZdWRiLmNvcmUuV2VicnRjLkV2ZW50",
-            "cy5WMcoCGVVkYlxDb3JlXFdlYnJ0Y1xFdmVudHNcVjHiAiVVZGJcR1BCTWV0",
-            "YWRhdGFcQ29yZVxXZWJydGNcRXZlbnRzXFYx6gIdVWRiOjpDb3JlOjpXZWJy",
-            "dGM6OkV2ZW50czo6VjFiBnByb3RvMw=="));
+            "dGFibGUi3wIKDUVncmVzc1N0YXJ0ZWQSGQoIZXZlbnRfaWQYASABKAlSB2V2",
+            "ZW50SWQSGwoJZWdyZXNzX2lkGAIgASgJUghlZ3Jlc3NJZBIXCgdyb29tX2lk",
+            "GAMgASgJUgZyb29tSWQSGQoIdHJhY2tfaWQYBCABKAlSB3RyYWNrSWQSGwoJ",
+            "dGVuYW50X2lkGAUgASgJUgh0ZW5hbnRJZBISCgRraW5kGAYgASgJUgRraW5k",
+            "EjgKCXRpbWVzdGFtcBgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3Rh",
+            "bXBSCXRpbWVzdGFtcDp3krIZcwondWRiLmNvcmUud2VicnRjLmV2ZW50cy52",
+            "MS5FZ3Jlc3NTdGFydGVkEhx1ZGIud2VicnRjLmVncmVzc19zdGFydGVkLnYx",
+            "Ggl0ZW5hbnRfaWQiCHN0YW5kYXJkKg1hdF9sZWFzdF9vbmNlMgZzdGFibGUi",
+            "sAIKDUVncmVzc1N0b3BwZWQSGQoIZXZlbnRfaWQYASABKAlSB2V2ZW50SWQS",
+            "GwoJZWdyZXNzX2lkGAIgASgJUghlZ3Jlc3NJZBIXCgdyb29tX2lkGAMgASgJ",
+            "UgZyb29tSWQSGwoJdGVuYW50X2lkGAQgASgJUgh0ZW5hbnRJZBI4Cgl0aW1l",
+            "c3RhbXAYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wUgl0aW1l",
+            "c3RhbXA6d5KyGXMKJ3VkYi5jb3JlLndlYnJ0Yy5ldmVudHMudjEuRWdyZXNz",
+            "U3RvcHBlZBIcdWRiLndlYnJ0Yy5lZ3Jlc3Nfc3RvcHBlZC52MRoJdGVuYW50",
+            "X2lkIghzdGFuZGFyZCoNYXRfbGVhc3Rfb25jZTIGc3RhYmxlIsUCCgxFZ3Jl",
+            "c3NGYWlsZWQSGQoIZXZlbnRfaWQYASABKAlSB2V2ZW50SWQSGwoJZWdyZXNz",
+            "X2lkGAIgASgJUghlZ3Jlc3NJZBIXCgdyb29tX2lkGAMgASgJUgZyb29tSWQS",
+            "GwoJdGVuYW50X2lkGAQgASgJUgh0ZW5hbnRJZBIWCgZyZWFzb24YBSABKAlS",
+            "BnJlYXNvbhI4Cgl0aW1lc3RhbXAYBiABKAsyGi5nb29nbGUucHJvdG9idWYu",
+            "VGltZXN0YW1wUgl0aW1lc3RhbXA6dZKyGXEKJnVkYi5jb3JlLndlYnJ0Yy5l",
+            "dmVudHMudjEuRWdyZXNzRmFpbGVkEht1ZGIud2VicnRjLmVncmVzc19mYWls",
+            "ZWQudjEaCXRlbmFudF9pZCIIc3RhbmRhcmQqDWF0X2xlYXN0X29uY2UyBnN0",
+            "YWJsZSLKAgoOVHJhY2tQdWJsaXNoZWQSGQoIZXZlbnRfaWQYASABKAlSB2V2",
+            "ZW50SWQSFwoHcm9vbV9pZBgCIAEoCVIGcm9vbUlkEhcKB3BlZXJfaWQYAyAB",
+            "KAlSBnBlZXJJZBIZCgh0cmFja19pZBgEIAEoCVIHdHJhY2tJZBIbCgl0ZW5h",
+            "bnRfaWQYBSABKAlSCHRlbmFudElkEjgKCXRpbWVzdGFtcBgGIAEoCzIaLmdv",
+            "b2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBSCXRpbWVzdGFtcDp5krIZdQoodWRi",
+            "LmNvcmUud2VicnRjLmV2ZW50cy52MS5UcmFja1B1Ymxpc2hlZBIddWRiLndl",
+            "YnJ0Yy50cmFja19wdWJsaXNoZWQudjEaCXRlbmFudF9pZCIIc3RhbmRhcmQq",
+            "DWF0X2xlYXN0X29uY2UyBnN0YWJsZUKCAgodY29tLnVkYi5jb3JlLndlYnJ0",
+            "Yy5ldmVudHMudjFCEVdlYnJ0Y0V2ZW50c1Byb3RvUAFaRWdpdGh1Yi5jb20v",
+            "ZmFoYXJhMDIvdWRiL3Nkay9nby9nZW4vdWRiL2NvcmUvd2VicnRjL2V2ZW50",
+            "cy92MTtldmVudHN2MaICBFVDV0WqAhl1ZGIuY29yZS5XZWJydGMuRXZlbnRz",
+            "LlYxygIZVWRiXENvcmVcV2VicnRjXEV2ZW50c1xWMeICJVVkYlxHUEJNZXRh",
+            "ZGF0YVxDb3JlXFdlYnJ0Y1xFdmVudHNcVjHqAh1VZGI6OkNvcmU6OldlYnJ0",
+            "Yzo6RXZlbnRzOjpWMWIGcHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.TimestampReflection.Descriptor, global::udb.core.Common.V1.SecurityReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
@@ -73,6 +95,9 @@ namespace udb.core.Webrtc.Events.V1 {
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Webrtc.Events.V1.RoomClosed), global::udb.core.Webrtc.Events.V1.RoomClosed.Parser, new[]{ "EventId", "RoomId", "TenantId", "Timestamp" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Webrtc.Events.V1.PeerJoined), global::udb.core.Webrtc.Events.V1.PeerJoined.Parser, new[]{ "EventId", "RoomId", "PeerId", "TenantId", "Timestamp" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Webrtc.Events.V1.PeerLeft), global::udb.core.Webrtc.Events.V1.PeerLeft.Parser, new[]{ "EventId", "RoomId", "PeerId", "TenantId", "Timestamp" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Webrtc.Events.V1.EgressStarted), global::udb.core.Webrtc.Events.V1.EgressStarted.Parser, new[]{ "EventId", "EgressId", "RoomId", "TrackId", "TenantId", "Kind", "Timestamp" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Webrtc.Events.V1.EgressStopped), global::udb.core.Webrtc.Events.V1.EgressStopped.Parser, new[]{ "EventId", "EgressId", "RoomId", "TenantId", "Timestamp" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Webrtc.Events.V1.EgressFailed), global::udb.core.Webrtc.Events.V1.EgressFailed.Parser, new[]{ "EventId", "EgressId", "RoomId", "TenantId", "Reason", "Timestamp" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Webrtc.Events.V1.TrackPublished), global::udb.core.Webrtc.Events.V1.TrackPublished.Parser, new[]{ "EventId", "RoomId", "PeerId", "TrackId", "TenantId", "Timestamp" }, null, null, null, null)
           }));
     }
@@ -1439,6 +1464,1200 @@ namespace udb.core.Webrtc.Events.V1 {
   }
 
   /// <summary>
+  /// Emitted when a recording/egress job starts (master-plan 5.5).
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class EgressStarted : pb::IMessage<EgressStarted>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<EgressStarted> _parser = new pb::MessageParser<EgressStarted>(() => new EgressStarted());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<EgressStarted> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::udb.core.Webrtc.Events.V1.WebrtcEventsReflection.Descriptor.MessageTypes[4]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public EgressStarted() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public EgressStarted(EgressStarted other) : this() {
+      eventId_ = other.eventId_;
+      egressId_ = other.egressId_;
+      roomId_ = other.roomId_;
+      trackId_ = other.trackId_;
+      tenantId_ = other.tenantId_;
+      kind_ = other.kind_;
+      timestamp_ = other.timestamp_ != null ? other.timestamp_.Clone() : null;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public EgressStarted Clone() {
+      return new EgressStarted(this);
+    }
+
+    /// <summary>Field number for the "event_id" field.</summary>
+    public const int EventIdFieldNumber = 1;
+    private string eventId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string EventId {
+      get { return eventId_; }
+      set {
+        eventId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "egress_id" field.</summary>
+    public const int EgressIdFieldNumber = 2;
+    private string egressId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string EgressId {
+      get { return egressId_; }
+      set {
+        egressId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "room_id" field.</summary>
+    public const int RoomIdFieldNumber = 3;
+    private string roomId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string RoomId {
+      get { return roomId_; }
+      set {
+        roomId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "track_id" field.</summary>
+    public const int TrackIdFieldNumber = 4;
+    private string trackId_ = "";
+    /// <summary>
+    /// Empty for a room composite; set for a single-track egress.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string TrackId {
+      get { return trackId_; }
+      set {
+        trackId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "tenant_id" field.</summary>
+    public const int TenantIdFieldNumber = 5;
+    private string tenantId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string TenantId {
+      get { return tenantId_; }
+      set {
+        tenantId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "kind" field.</summary>
+    public const int KindFieldNumber = 6;
+    private string kind_ = "";
+    /// <summary>
+    /// "room_composite" | "track".
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Kind {
+      get { return kind_; }
+      set {
+        kind_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "timestamp" field.</summary>
+    public const int TimestampFieldNumber = 7;
+    private global::Google.Protobuf.WellKnownTypes.Timestamp timestamp_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Google.Protobuf.WellKnownTypes.Timestamp Timestamp {
+      get { return timestamp_; }
+      set {
+        timestamp_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as EgressStarted);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(EgressStarted other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (EventId != other.EventId) return false;
+      if (EgressId != other.EgressId) return false;
+      if (RoomId != other.RoomId) return false;
+      if (TrackId != other.TrackId) return false;
+      if (TenantId != other.TenantId) return false;
+      if (Kind != other.Kind) return false;
+      if (!object.Equals(Timestamp, other.Timestamp)) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (EventId.Length != 0) hash ^= EventId.GetHashCode();
+      if (EgressId.Length != 0) hash ^= EgressId.GetHashCode();
+      if (RoomId.Length != 0) hash ^= RoomId.GetHashCode();
+      if (TrackId.Length != 0) hash ^= TrackId.GetHashCode();
+      if (TenantId.Length != 0) hash ^= TenantId.GetHashCode();
+      if (Kind.Length != 0) hash ^= Kind.GetHashCode();
+      if (timestamp_ != null) hash ^= Timestamp.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (EventId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(EventId);
+      }
+      if (EgressId.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(EgressId);
+      }
+      if (RoomId.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(RoomId);
+      }
+      if (TrackId.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(TrackId);
+      }
+      if (TenantId.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(TenantId);
+      }
+      if (Kind.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(Kind);
+      }
+      if (timestamp_ != null) {
+        output.WriteRawTag(58);
+        output.WriteMessage(Timestamp);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (EventId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(EventId);
+      }
+      if (EgressId.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(EgressId);
+      }
+      if (RoomId.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(RoomId);
+      }
+      if (TrackId.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(TrackId);
+      }
+      if (TenantId.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(TenantId);
+      }
+      if (Kind.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(Kind);
+      }
+      if (timestamp_ != null) {
+        output.WriteRawTag(58);
+        output.WriteMessage(Timestamp);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (EventId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(EventId);
+      }
+      if (EgressId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(EgressId);
+      }
+      if (RoomId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(RoomId);
+      }
+      if (TrackId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(TrackId);
+      }
+      if (TenantId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(TenantId);
+      }
+      if (Kind.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Kind);
+      }
+      if (timestamp_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Timestamp);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(EgressStarted other) {
+      if (other == null) {
+        return;
+      }
+      if (other.EventId.Length != 0) {
+        EventId = other.EventId;
+      }
+      if (other.EgressId.Length != 0) {
+        EgressId = other.EgressId;
+      }
+      if (other.RoomId.Length != 0) {
+        RoomId = other.RoomId;
+      }
+      if (other.TrackId.Length != 0) {
+        TrackId = other.TrackId;
+      }
+      if (other.TenantId.Length != 0) {
+        TenantId = other.TenantId;
+      }
+      if (other.Kind.Length != 0) {
+        Kind = other.Kind;
+      }
+      if (other.timestamp_ != null) {
+        if (timestamp_ == null) {
+          Timestamp = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+        }
+        Timestamp.MergeFrom(other.Timestamp);
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            EventId = input.ReadString();
+            break;
+          }
+          case 18: {
+            EgressId = input.ReadString();
+            break;
+          }
+          case 26: {
+            RoomId = input.ReadString();
+            break;
+          }
+          case 34: {
+            TrackId = input.ReadString();
+            break;
+          }
+          case 42: {
+            TenantId = input.ReadString();
+            break;
+          }
+          case 50: {
+            Kind = input.ReadString();
+            break;
+          }
+          case 58: {
+            if (timestamp_ == null) {
+              Timestamp = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+            }
+            input.ReadMessage(Timestamp);
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            EventId = input.ReadString();
+            break;
+          }
+          case 18: {
+            EgressId = input.ReadString();
+            break;
+          }
+          case 26: {
+            RoomId = input.ReadString();
+            break;
+          }
+          case 34: {
+            TrackId = input.ReadString();
+            break;
+          }
+          case 42: {
+            TenantId = input.ReadString();
+            break;
+          }
+          case 50: {
+            Kind = input.ReadString();
+            break;
+          }
+          case 58: {
+            if (timestamp_ == null) {
+              Timestamp = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+            }
+            input.ReadMessage(Timestamp);
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  /// <summary>
+  /// Emitted when a recording/egress job stops cleanly (master-plan 5.5).
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class EgressStopped : pb::IMessage<EgressStopped>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<EgressStopped> _parser = new pb::MessageParser<EgressStopped>(() => new EgressStopped());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<EgressStopped> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::udb.core.Webrtc.Events.V1.WebrtcEventsReflection.Descriptor.MessageTypes[5]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public EgressStopped() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public EgressStopped(EgressStopped other) : this() {
+      eventId_ = other.eventId_;
+      egressId_ = other.egressId_;
+      roomId_ = other.roomId_;
+      tenantId_ = other.tenantId_;
+      timestamp_ = other.timestamp_ != null ? other.timestamp_.Clone() : null;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public EgressStopped Clone() {
+      return new EgressStopped(this);
+    }
+
+    /// <summary>Field number for the "event_id" field.</summary>
+    public const int EventIdFieldNumber = 1;
+    private string eventId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string EventId {
+      get { return eventId_; }
+      set {
+        eventId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "egress_id" field.</summary>
+    public const int EgressIdFieldNumber = 2;
+    private string egressId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string EgressId {
+      get { return egressId_; }
+      set {
+        egressId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "room_id" field.</summary>
+    public const int RoomIdFieldNumber = 3;
+    private string roomId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string RoomId {
+      get { return roomId_; }
+      set {
+        roomId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "tenant_id" field.</summary>
+    public const int TenantIdFieldNumber = 4;
+    private string tenantId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string TenantId {
+      get { return tenantId_; }
+      set {
+        tenantId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "timestamp" field.</summary>
+    public const int TimestampFieldNumber = 5;
+    private global::Google.Protobuf.WellKnownTypes.Timestamp timestamp_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Google.Protobuf.WellKnownTypes.Timestamp Timestamp {
+      get { return timestamp_; }
+      set {
+        timestamp_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as EgressStopped);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(EgressStopped other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (EventId != other.EventId) return false;
+      if (EgressId != other.EgressId) return false;
+      if (RoomId != other.RoomId) return false;
+      if (TenantId != other.TenantId) return false;
+      if (!object.Equals(Timestamp, other.Timestamp)) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (EventId.Length != 0) hash ^= EventId.GetHashCode();
+      if (EgressId.Length != 0) hash ^= EgressId.GetHashCode();
+      if (RoomId.Length != 0) hash ^= RoomId.GetHashCode();
+      if (TenantId.Length != 0) hash ^= TenantId.GetHashCode();
+      if (timestamp_ != null) hash ^= Timestamp.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (EventId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(EventId);
+      }
+      if (EgressId.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(EgressId);
+      }
+      if (RoomId.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(RoomId);
+      }
+      if (TenantId.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(TenantId);
+      }
+      if (timestamp_ != null) {
+        output.WriteRawTag(42);
+        output.WriteMessage(Timestamp);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (EventId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(EventId);
+      }
+      if (EgressId.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(EgressId);
+      }
+      if (RoomId.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(RoomId);
+      }
+      if (TenantId.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(TenantId);
+      }
+      if (timestamp_ != null) {
+        output.WriteRawTag(42);
+        output.WriteMessage(Timestamp);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (EventId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(EventId);
+      }
+      if (EgressId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(EgressId);
+      }
+      if (RoomId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(RoomId);
+      }
+      if (TenantId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(TenantId);
+      }
+      if (timestamp_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Timestamp);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(EgressStopped other) {
+      if (other == null) {
+        return;
+      }
+      if (other.EventId.Length != 0) {
+        EventId = other.EventId;
+      }
+      if (other.EgressId.Length != 0) {
+        EgressId = other.EgressId;
+      }
+      if (other.RoomId.Length != 0) {
+        RoomId = other.RoomId;
+      }
+      if (other.TenantId.Length != 0) {
+        TenantId = other.TenantId;
+      }
+      if (other.timestamp_ != null) {
+        if (timestamp_ == null) {
+          Timestamp = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+        }
+        Timestamp.MergeFrom(other.Timestamp);
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            EventId = input.ReadString();
+            break;
+          }
+          case 18: {
+            EgressId = input.ReadString();
+            break;
+          }
+          case 26: {
+            RoomId = input.ReadString();
+            break;
+          }
+          case 34: {
+            TenantId = input.ReadString();
+            break;
+          }
+          case 42: {
+            if (timestamp_ == null) {
+              Timestamp = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+            }
+            input.ReadMessage(Timestamp);
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            EventId = input.ReadString();
+            break;
+          }
+          case 18: {
+            EgressId = input.ReadString();
+            break;
+          }
+          case 26: {
+            RoomId = input.ReadString();
+            break;
+          }
+          case 34: {
+            TenantId = input.ReadString();
+            break;
+          }
+          case 42: {
+            if (timestamp_ == null) {
+              Timestamp = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+            }
+            input.ReadMessage(Timestamp);
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  /// <summary>
+  /// Emitted when a recording/egress job fails to start or aborts (master-plan 5.5).
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class EgressFailed : pb::IMessage<EgressFailed>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<EgressFailed> _parser = new pb::MessageParser<EgressFailed>(() => new EgressFailed());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<EgressFailed> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::udb.core.Webrtc.Events.V1.WebrtcEventsReflection.Descriptor.MessageTypes[6]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public EgressFailed() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public EgressFailed(EgressFailed other) : this() {
+      eventId_ = other.eventId_;
+      egressId_ = other.egressId_;
+      roomId_ = other.roomId_;
+      tenantId_ = other.tenantId_;
+      reason_ = other.reason_;
+      timestamp_ = other.timestamp_ != null ? other.timestamp_.Clone() : null;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public EgressFailed Clone() {
+      return new EgressFailed(this);
+    }
+
+    /// <summary>Field number for the "event_id" field.</summary>
+    public const int EventIdFieldNumber = 1;
+    private string eventId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string EventId {
+      get { return eventId_; }
+      set {
+        eventId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "egress_id" field.</summary>
+    public const int EgressIdFieldNumber = 2;
+    private string egressId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string EgressId {
+      get { return egressId_; }
+      set {
+        egressId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "room_id" field.</summary>
+    public const int RoomIdFieldNumber = 3;
+    private string roomId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string RoomId {
+      get { return roomId_; }
+      set {
+        roomId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "tenant_id" field.</summary>
+    public const int TenantIdFieldNumber = 4;
+    private string tenantId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string TenantId {
+      get { return tenantId_; }
+      set {
+        tenantId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "reason" field.</summary>
+    public const int ReasonFieldNumber = 5;
+    private string reason_ = "";
+    /// <summary>
+    /// Machine-readable failure reason (e.g. EGRESS_BACKEND_UNAVAILABLE).
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Reason {
+      get { return reason_; }
+      set {
+        reason_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "timestamp" field.</summary>
+    public const int TimestampFieldNumber = 6;
+    private global::Google.Protobuf.WellKnownTypes.Timestamp timestamp_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Google.Protobuf.WellKnownTypes.Timestamp Timestamp {
+      get { return timestamp_; }
+      set {
+        timestamp_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as EgressFailed);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(EgressFailed other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (EventId != other.EventId) return false;
+      if (EgressId != other.EgressId) return false;
+      if (RoomId != other.RoomId) return false;
+      if (TenantId != other.TenantId) return false;
+      if (Reason != other.Reason) return false;
+      if (!object.Equals(Timestamp, other.Timestamp)) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (EventId.Length != 0) hash ^= EventId.GetHashCode();
+      if (EgressId.Length != 0) hash ^= EgressId.GetHashCode();
+      if (RoomId.Length != 0) hash ^= RoomId.GetHashCode();
+      if (TenantId.Length != 0) hash ^= TenantId.GetHashCode();
+      if (Reason.Length != 0) hash ^= Reason.GetHashCode();
+      if (timestamp_ != null) hash ^= Timestamp.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (EventId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(EventId);
+      }
+      if (EgressId.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(EgressId);
+      }
+      if (RoomId.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(RoomId);
+      }
+      if (TenantId.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(TenantId);
+      }
+      if (Reason.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(Reason);
+      }
+      if (timestamp_ != null) {
+        output.WriteRawTag(50);
+        output.WriteMessage(Timestamp);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (EventId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(EventId);
+      }
+      if (EgressId.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(EgressId);
+      }
+      if (RoomId.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(RoomId);
+      }
+      if (TenantId.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(TenantId);
+      }
+      if (Reason.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(Reason);
+      }
+      if (timestamp_ != null) {
+        output.WriteRawTag(50);
+        output.WriteMessage(Timestamp);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (EventId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(EventId);
+      }
+      if (EgressId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(EgressId);
+      }
+      if (RoomId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(RoomId);
+      }
+      if (TenantId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(TenantId);
+      }
+      if (Reason.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Reason);
+      }
+      if (timestamp_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Timestamp);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(EgressFailed other) {
+      if (other == null) {
+        return;
+      }
+      if (other.EventId.Length != 0) {
+        EventId = other.EventId;
+      }
+      if (other.EgressId.Length != 0) {
+        EgressId = other.EgressId;
+      }
+      if (other.RoomId.Length != 0) {
+        RoomId = other.RoomId;
+      }
+      if (other.TenantId.Length != 0) {
+        TenantId = other.TenantId;
+      }
+      if (other.Reason.Length != 0) {
+        Reason = other.Reason;
+      }
+      if (other.timestamp_ != null) {
+        if (timestamp_ == null) {
+          Timestamp = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+        }
+        Timestamp.MergeFrom(other.Timestamp);
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            EventId = input.ReadString();
+            break;
+          }
+          case 18: {
+            EgressId = input.ReadString();
+            break;
+          }
+          case 26: {
+            RoomId = input.ReadString();
+            break;
+          }
+          case 34: {
+            TenantId = input.ReadString();
+            break;
+          }
+          case 42: {
+            Reason = input.ReadString();
+            break;
+          }
+          case 50: {
+            if (timestamp_ == null) {
+              Timestamp = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+            }
+            input.ReadMessage(Timestamp);
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            EventId = input.ReadString();
+            break;
+          }
+          case 18: {
+            EgressId = input.ReadString();
+            break;
+          }
+          case 26: {
+            RoomId = input.ReadString();
+            break;
+          }
+          case 34: {
+            TenantId = input.ReadString();
+            break;
+          }
+          case 42: {
+            Reason = input.ReadString();
+            break;
+          }
+          case 50: {
+            if (timestamp_ == null) {
+              Timestamp = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+            }
+            input.ReadMessage(Timestamp);
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  /// <summary>
   /// Emitted when a track is published.
   /// </summary>
   [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
@@ -1456,7 +2675,7 @@ namespace udb.core.Webrtc.Events.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::udb.core.Webrtc.Events.V1.WebrtcEventsReflection.Descriptor.MessageTypes[4]; }
+      get { return global::udb.core.Webrtc.Events.V1.WebrtcEventsReflection.Descriptor.MessageTypes[7]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]

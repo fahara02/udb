@@ -33,4 +33,34 @@ public interface ListUserPermissionsRequestOrBuilder extends
    */
   com.google.protobuf.ByteString
       getDomainBytes();
+
+  /**
+   * <pre>
+   * Requested page size. Defaults to 50 and is capped at the native list maximum.
+   * </pre>
+   *
+   * <code>int32 page_size = 3 [json_name = "pageSize", (.google.api.field_behavior) = OPTIONAL];</code>
+   * @return The pageSize.
+   */
+  int getPageSize();
+
+  /**
+   * <pre>
+   * Opaque pagination token returned by ListUserPermissionsResponse.next_page_token.
+   * </pre>
+   *
+   * <code>string page_token = 4 [json_name = "pageToken", (.google.api.field_behavior) = OPTIONAL];</code>
+   * @return The pageToken.
+   */
+  java.lang.String getPageToken();
+  /**
+   * <pre>
+   * Opaque pagination token returned by ListUserPermissionsResponse.next_page_token.
+   * </pre>
+   *
+   * <code>string page_token = 4 [json_name = "pageToken", (.google.api.field_behavior) = OPTIONAL];</code>
+   * @return The bytes for pageToken.
+   */
+  com.google.protobuf.ByteString
+      getPageTokenBytes();
 }

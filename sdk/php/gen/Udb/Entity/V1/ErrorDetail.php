@@ -68,6 +68,13 @@ class ErrorDetail extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>.udb.entity.v1.ErrorKind kind = 8 [json_name = "kind"];</code>
      */
     protected $kind = 0;
+    /**
+     * Structured invalid-field details for INVALID_ARGUMENT responses. Empty for
+     * non-validation errors.
+     *
+     * Generated from protobuf field <code>repeated .udb.entity.v1.ErrorFieldViolation field_violations = 9 [json_name = "fieldViolations"];</code>
+     */
+    private $field_violations;
 
     /**
      * Constructor.
@@ -97,6 +104,9 @@ class ErrorDetail extends \Google\Protobuf\Internal\Message
      *           its originating request in logs/traces.
      *     @type int $kind
      *           Coarse classification of the failure.
+     *     @type \Udb\Entity\V1\ErrorFieldViolation[] $field_violations
+     *           Structured invalid-field details for INVALID_ARGUMENT responses. Empty for
+     *           non-validation errors.
      * }
      */
     public function __construct($data = NULL) {
@@ -320,6 +330,34 @@ class ErrorDetail extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkEnum($var, \Udb\Entity\V1\ErrorKind::class);
         $this->kind = $var;
+
+        return $this;
+    }
+
+    /**
+     * Structured invalid-field details for INVALID_ARGUMENT responses. Empty for
+     * non-validation errors.
+     *
+     * Generated from protobuf field <code>repeated .udb.entity.v1.ErrorFieldViolation field_violations = 9 [json_name = "fieldViolations"];</code>
+     * @return RepeatedField<\Udb\Entity\V1\ErrorFieldViolation>
+     */
+    public function getFieldViolations()
+    {
+        return $this->field_violations;
+    }
+
+    /**
+     * Structured invalid-field details for INVALID_ARGUMENT responses. Empty for
+     * non-validation errors.
+     *
+     * Generated from protobuf field <code>repeated .udb.entity.v1.ErrorFieldViolation field_violations = 9 [json_name = "fieldViolations"];</code>
+     * @param \Udb\Entity\V1\ErrorFieldViolation[] $var
+     * @return $this
+     */
+    public function setFieldViolations($var)
+    {
+        $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Entity\V1\ErrorFieldViolation::class);
+        $this->field_violations = $arr;
 
         return $this;
     }

@@ -44,6 +44,11 @@ class TenantServiceStub(object):
                 request_serializer=udb_dot_core_dot_tenant_dot_services_dot_v1_dot_tenant__service__pb2.UpdateTenantConfigRequest.SerializeToString,
                 response_deserializer=udb_dot_core_dot_tenant_dot_services_dot_v1_dot_tenant__service__pb2.UpdateTenantConfigResponse.FromString,
                 _registered_method=True)
+        self.PurgeTenant = channel.unary_unary(
+                '/udb.core.tenant.services.v1.TenantService/PurgeTenant',
+                request_serializer=udb_dot_core_dot_tenant_dot_services_dot_v1_dot_tenant__service__pb2.PurgeTenantRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_tenant_dot_services_dot_v1_dot_tenant__service__pb2.PurgeTenantResponse.FromString,
+                _registered_method=True)
 
 
 class TenantServiceServicer(object):
@@ -91,6 +96,18 @@ class TenantServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def PurgeTenant(self, request, context):
+        """Purge tenant (GDPR right-to-be-forgotten). HARD-deletes every row the tenant
+        owns across all tenant-columned entity tables, then revokes the tenant's and
+        its principals' tokens. Irreversible — DESTRUCTIVE op-kind + a required
+        confirmation token gate it. Mirrors the destructive-RPC endpoint_security of
+        siblings like authn.ChangeUserStatus (AUTH_MODE_BEARER, tenant_required,
+        request_context_required).
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_TenantServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -123,6 +140,11 @@ def add_TenantServiceServicer_to_server(servicer, server):
                     servicer.UpdateTenantConfig,
                     request_deserializer=udb_dot_core_dot_tenant_dot_services_dot_v1_dot_tenant__service__pb2.UpdateTenantConfigRequest.FromString,
                     response_serializer=udb_dot_core_dot_tenant_dot_services_dot_v1_dot_tenant__service__pb2.UpdateTenantConfigResponse.SerializeToString,
+            ),
+            'PurgeTenant': grpc.unary_unary_rpc_method_handler(
+                    servicer.PurgeTenant,
+                    request_deserializer=udb_dot_core_dot_tenant_dot_services_dot_v1_dot_tenant__service__pb2.PurgeTenantRequest.FromString,
+                    response_serializer=udb_dot_core_dot_tenant_dot_services_dot_v1_dot_tenant__service__pb2.PurgeTenantResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -287,6 +309,33 @@ class TenantService(object):
             '/udb.core.tenant.services.v1.TenantService/UpdateTenantConfig',
             udb_dot_core_dot_tenant_dot_services_dot_v1_dot_tenant__service__pb2.UpdateTenantConfigRequest.SerializeToString,
             udb_dot_core_dot_tenant_dot_services_dot_v1_dot_tenant__service__pb2.UpdateTenantConfigResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def PurgeTenant(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.tenant.services.v1.TenantService/PurgeTenant',
+            udb_dot_core_dot_tenant_dot_services_dot_v1_dot_tenant__service__pb2.PurgeTenantRequest.SerializeToString,
+            udb_dot_core_dot_tenant_dot_services_dot_v1_dot_tenant__service__pb2.PurgeTenantResponse.FromString,
             options,
             channel_credentials,
             insecure,

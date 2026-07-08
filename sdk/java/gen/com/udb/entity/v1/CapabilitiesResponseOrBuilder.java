@@ -415,4 +415,30 @@ public interface CapabilitiesResponseOrBuilder extends
    */
   com.udb.entity.v1.NativeServiceStatusOrBuilder getNativeServicesOrBuilder(
       int index);
+
+  /**
+   * <pre>
+   * Operator-declared deployment tier (UDB_DEPLOYMENT_TIER), resolved once at
+   * startup (master-plan 3.5). One of "dev_single_node" / "system_store_capable"
+   * / "ha_canonical". Empty string means no tier was declared (the permissive
+   * dev default — the startup tier floor is not enforced). Additive (field 12).
+   * </pre>
+   *
+   * <code>string deployment_tier = 12 [json_name = "deploymentTier"];</code>
+   * @return The deploymentTier.
+   */
+  java.lang.String getDeploymentTier();
+  /**
+   * <pre>
+   * Operator-declared deployment tier (UDB_DEPLOYMENT_TIER), resolved once at
+   * startup (master-plan 3.5). One of "dev_single_node" / "system_store_capable"
+   * / "ha_canonical". Empty string means no tier was declared (the permissive
+   * dev default — the startup tier floor is not enforced). Additive (field 12).
+   * </pre>
+   *
+   * <code>string deployment_tier = 12 [json_name = "deploymentTier"];</code>
+   * @return The bytes for deploymentTier.
+   */
+  com.google.protobuf.ByteString
+      getDeploymentTierBytes();
 }

@@ -65,6 +65,22 @@ namespace udb.core.Webrtc.Services.V1 {
     static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.ListRoomsRequest> __Marshaller_udb_core_webrtc_services_v1_ListRoomsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.ListRoomsRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.ListRoomsResponse> __Marshaller_udb_core_webrtc_services_v1_ListRoomsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.ListRoomsResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.StartRoomCompositeRequest> __Marshaller_udb_core_webrtc_services_v1_StartRoomCompositeRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.StartRoomCompositeRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.StartRoomCompositeResponse> __Marshaller_udb_core_webrtc_services_v1_StartRoomCompositeResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.StartRoomCompositeResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.StartTrackEgressRequest> __Marshaller_udb_core_webrtc_services_v1_StartTrackEgressRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.StartTrackEgressRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.StartTrackEgressResponse> __Marshaller_udb_core_webrtc_services_v1_StartTrackEgressResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.StartTrackEgressResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.StopEgressRequest> __Marshaller_udb_core_webrtc_services_v1_StopEgressRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.StopEgressRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.StopEgressResponse> __Marshaller_udb_core_webrtc_services_v1_StopEgressResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.StopEgressResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.ListEgressRequest> __Marshaller_udb_core_webrtc_services_v1_ListEgressRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.ListEgressRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Webrtc.Services.V1.ListEgressResponse> __Marshaller_udb_core_webrtc_services_v1_ListEgressResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Webrtc.Services.V1.ListEgressResponse.Parser));
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Method<global::udb.core.Webrtc.Services.V1.CreateRoomRequest, global::udb.core.Webrtc.Services.V1.CreateRoomResponse> __Method_CreateRoom = new grpc::Method<global::udb.core.Webrtc.Services.V1.CreateRoomRequest, global::udb.core.Webrtc.Services.V1.CreateRoomResponse>(
@@ -105,6 +121,38 @@ namespace udb.core.Webrtc.Services.V1 {
         "ListRooms",
         __Marshaller_udb_core_webrtc_services_v1_ListRoomsRequest,
         __Marshaller_udb_core_webrtc_services_v1_ListRoomsResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Webrtc.Services.V1.StartRoomCompositeRequest, global::udb.core.Webrtc.Services.V1.StartRoomCompositeResponse> __Method_StartRoomComposite = new grpc::Method<global::udb.core.Webrtc.Services.V1.StartRoomCompositeRequest, global::udb.core.Webrtc.Services.V1.StartRoomCompositeResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "StartRoomComposite",
+        __Marshaller_udb_core_webrtc_services_v1_StartRoomCompositeRequest,
+        __Marshaller_udb_core_webrtc_services_v1_StartRoomCompositeResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Webrtc.Services.V1.StartTrackEgressRequest, global::udb.core.Webrtc.Services.V1.StartTrackEgressResponse> __Method_StartTrackEgress = new grpc::Method<global::udb.core.Webrtc.Services.V1.StartTrackEgressRequest, global::udb.core.Webrtc.Services.V1.StartTrackEgressResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "StartTrackEgress",
+        __Marshaller_udb_core_webrtc_services_v1_StartTrackEgressRequest,
+        __Marshaller_udb_core_webrtc_services_v1_StartTrackEgressResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Webrtc.Services.V1.StopEgressRequest, global::udb.core.Webrtc.Services.V1.StopEgressResponse> __Method_StopEgress = new grpc::Method<global::udb.core.Webrtc.Services.V1.StopEgressRequest, global::udb.core.Webrtc.Services.V1.StopEgressResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "StopEgress",
+        __Marshaller_udb_core_webrtc_services_v1_StopEgressRequest,
+        __Marshaller_udb_core_webrtc_services_v1_StopEgressResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Webrtc.Services.V1.ListEgressRequest, global::udb.core.Webrtc.Services.V1.ListEgressResponse> __Method_ListEgress = new grpc::Method<global::udb.core.Webrtc.Services.V1.ListEgressRequest, global::udb.core.Webrtc.Services.V1.ListEgressResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "ListEgress",
+        __Marshaller_udb_core_webrtc_services_v1_ListEgressRequest,
+        __Marshaller_udb_core_webrtc_services_v1_ListEgressResponse);
 
     /// <summary>Service descriptor</summary>
     public static global::Google.Protobuf.Reflection.ServiceDescriptor Descriptor
@@ -172,6 +220,54 @@ namespace udb.core.Webrtc.Services.V1 {
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::System.Threading.Tasks.Task<global::udb.core.Webrtc.Services.V1.ListRoomsResponse> ListRooms(global::udb.core.Webrtc.Services.V1.ListRoomsRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Start a composite recording/egress of a whole room.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Webrtc.Services.V1.StartRoomCompositeResponse> StartRoomComposite(global::udb.core.Webrtc.Services.V1.StartRoomCompositeRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Start an egress of a single published track.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Webrtc.Services.V1.StartTrackEgressResponse> StartTrackEgress(global::udb.core.Webrtc.Services.V1.StartTrackEgressRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Stop a running egress. `egress_id` must belong to the verified tenant.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Webrtc.Services.V1.StopEgressResponse> StopEgress(global::udb.core.Webrtc.Services.V1.StopEgressRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// List egress jobs for the verified tenant.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Webrtc.Services.V1.ListEgressResponse> ListEgress(global::udb.core.Webrtc.Services.V1.ListEgressRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -445,6 +541,198 @@ namespace udb.core.Webrtc.Services.V1 {
       {
         return CallInvoker.AsyncUnaryCall(__Method_ListRooms, null, options, request);
       }
+      /// <summary>
+      /// Start a composite recording/egress of a whole room.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Webrtc.Services.V1.StartRoomCompositeResponse StartRoomComposite(global::udb.core.Webrtc.Services.V1.StartRoomCompositeRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return StartRoomComposite(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Start a composite recording/egress of a whole room.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Webrtc.Services.V1.StartRoomCompositeResponse StartRoomComposite(global::udb.core.Webrtc.Services.V1.StartRoomCompositeRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_StartRoomComposite, null, options, request);
+      }
+      /// <summary>
+      /// Start a composite recording/egress of a whole room.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.StartRoomCompositeResponse> StartRoomCompositeAsync(global::udb.core.Webrtc.Services.V1.StartRoomCompositeRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return StartRoomCompositeAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Start a composite recording/egress of a whole room.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.StartRoomCompositeResponse> StartRoomCompositeAsync(global::udb.core.Webrtc.Services.V1.StartRoomCompositeRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_StartRoomComposite, null, options, request);
+      }
+      /// <summary>
+      /// Start an egress of a single published track.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Webrtc.Services.V1.StartTrackEgressResponse StartTrackEgress(global::udb.core.Webrtc.Services.V1.StartTrackEgressRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return StartTrackEgress(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Start an egress of a single published track.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Webrtc.Services.V1.StartTrackEgressResponse StartTrackEgress(global::udb.core.Webrtc.Services.V1.StartTrackEgressRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_StartTrackEgress, null, options, request);
+      }
+      /// <summary>
+      /// Start an egress of a single published track.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.StartTrackEgressResponse> StartTrackEgressAsync(global::udb.core.Webrtc.Services.V1.StartTrackEgressRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return StartTrackEgressAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Start an egress of a single published track.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.StartTrackEgressResponse> StartTrackEgressAsync(global::udb.core.Webrtc.Services.V1.StartTrackEgressRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_StartTrackEgress, null, options, request);
+      }
+      /// <summary>
+      /// Stop a running egress. `egress_id` must belong to the verified tenant.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Webrtc.Services.V1.StopEgressResponse StopEgress(global::udb.core.Webrtc.Services.V1.StopEgressRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return StopEgress(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Stop a running egress. `egress_id` must belong to the verified tenant.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Webrtc.Services.V1.StopEgressResponse StopEgress(global::udb.core.Webrtc.Services.V1.StopEgressRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_StopEgress, null, options, request);
+      }
+      /// <summary>
+      /// Stop a running egress. `egress_id` must belong to the verified tenant.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.StopEgressResponse> StopEgressAsync(global::udb.core.Webrtc.Services.V1.StopEgressRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return StopEgressAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Stop a running egress. `egress_id` must belong to the verified tenant.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.StopEgressResponse> StopEgressAsync(global::udb.core.Webrtc.Services.V1.StopEgressRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_StopEgress, null, options, request);
+      }
+      /// <summary>
+      /// List egress jobs for the verified tenant.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Webrtc.Services.V1.ListEgressResponse ListEgress(global::udb.core.Webrtc.Services.V1.ListEgressRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ListEgress(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// List egress jobs for the verified tenant.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Webrtc.Services.V1.ListEgressResponse ListEgress(global::udb.core.Webrtc.Services.V1.ListEgressRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_ListEgress, null, options, request);
+      }
+      /// <summary>
+      /// List egress jobs for the verified tenant.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.ListEgressResponse> ListEgressAsync(global::udb.core.Webrtc.Services.V1.ListEgressRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ListEgressAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// List egress jobs for the verified tenant.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Webrtc.Services.V1.ListEgressResponse> ListEgressAsync(global::udb.core.Webrtc.Services.V1.ListEgressRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_ListEgress, null, options, request);
+      }
       /// <summary>Creates a new instance of client from given <c>ClientBaseConfiguration</c>.</summary>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       protected override RoomServiceClient NewInstance(ClientBaseConfiguration configuration)
@@ -463,7 +751,11 @@ namespace udb.core.Webrtc.Services.V1 {
           .AddMethod(__Method_GetRoom, serviceImpl.GetRoom)
           .AddMethod(__Method_UpdateRoom, serviceImpl.UpdateRoom)
           .AddMethod(__Method_CloseRoom, serviceImpl.CloseRoom)
-          .AddMethod(__Method_ListRooms, serviceImpl.ListRooms).Build();
+          .AddMethod(__Method_ListRooms, serviceImpl.ListRooms)
+          .AddMethod(__Method_StartRoomComposite, serviceImpl.StartRoomComposite)
+          .AddMethod(__Method_StartTrackEgress, serviceImpl.StartTrackEgress)
+          .AddMethod(__Method_StopEgress, serviceImpl.StopEgress)
+          .AddMethod(__Method_ListEgress, serviceImpl.ListEgress).Build();
     }
 
     /// <summary>Register service method with a service binder with or without implementation. Useful when customizing the service binding logic.
@@ -478,6 +770,10 @@ namespace udb.core.Webrtc.Services.V1 {
       serviceBinder.AddMethod(__Method_UpdateRoom, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Webrtc.Services.V1.UpdateRoomRequest, global::udb.core.Webrtc.Services.V1.UpdateRoomResponse>(serviceImpl.UpdateRoom));
       serviceBinder.AddMethod(__Method_CloseRoom, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Webrtc.Services.V1.CloseRoomRequest, global::udb.core.Webrtc.Services.V1.CloseRoomResponse>(serviceImpl.CloseRoom));
       serviceBinder.AddMethod(__Method_ListRooms, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Webrtc.Services.V1.ListRoomsRequest, global::udb.core.Webrtc.Services.V1.ListRoomsResponse>(serviceImpl.ListRooms));
+      serviceBinder.AddMethod(__Method_StartRoomComposite, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Webrtc.Services.V1.StartRoomCompositeRequest, global::udb.core.Webrtc.Services.V1.StartRoomCompositeResponse>(serviceImpl.StartRoomComposite));
+      serviceBinder.AddMethod(__Method_StartTrackEgress, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Webrtc.Services.V1.StartTrackEgressRequest, global::udb.core.Webrtc.Services.V1.StartTrackEgressResponse>(serviceImpl.StartTrackEgress));
+      serviceBinder.AddMethod(__Method_StopEgress, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Webrtc.Services.V1.StopEgressRequest, global::udb.core.Webrtc.Services.V1.StopEgressResponse>(serviceImpl.StopEgress));
+      serviceBinder.AddMethod(__Method_ListEgress, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Webrtc.Services.V1.ListEgressRequest, global::udb.core.Webrtc.Services.V1.ListEgressResponse>(serviceImpl.ListEgress));
     }
 
   }

@@ -26,7 +26,7 @@ var File_udb_core_notification_services_v1_notification_service_proto protorefle
 
 const file_udb_core_notification_services_v1_notification_service_proto_rawDesc = "" +
 	"\n" +
-	"<udb/core/notification/services/v1/notification_service.proto\x12!udb.core.notification.services.v1\x1a\x1cgoogle/api/annotations.proto\x1a!udb/core/common/v1/security.proto\x1a,udb/core/notification/services/v1/core.proto2\xaaF\n" +
+	"<udb/core/notification/services/v1/notification_service.proto\x12!udb.core.notification.services.v1\x1a\x1cgoogle/api/annotations.proto\x1a!udb/core/common/v1/security.proto\x1a,udb/core/notification/services/v1/core.proto2\xabM\n" +
 	"\x13NotificationService\x12\xa3\a\n" +
 	"\x10SendNotification\x12:.udb.core.notification.services.v1.SendNotificationRequest\x1a;.udb.core.notification.services.v1.SendNotificationResponse\"\x95\x06\xca\xf3\x18N\b\x02\x1a\"udb:notification:send-notification \x01J\x02\x01\x02j\x1dnotification.SendNotification\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18D\b\x01\x12\x11send_notification\x1a\x03udb(\xb0\xea\x010\x03@\x01J\fnotificationP\x01Z\x10sendNotification\xe2\xf3\x18\xde\x01\n" +
 	"\fnotification\x12\x17udb/native/notification\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"5udb.native.notification.send_notification.boilerplate*\x11send_notification2\x10udb_notification:\fnotificationJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18\xa3\x01\n" +
@@ -54,7 +54,13 @@ const file_udb_core_notification_services_v1_notification_service_proto_rawDesc 
 	"\x0fNotificationLog\x12\x06FAILED\x12\n" +
 	"SUPPRESSED\x1a\aPENDING\xa2\xf4\x18,\n" +
 	"*\n" +
-	"\x13NOT_RETRYABLE_STATE\x12\x13FAILED_PRECONDITION\x82\xd3\xe4\x93\x02%:\x01*\" /v1/notifications/{log_id}:retry\x12\xf7\x05\n" +
+	"\x13NOT_RETRYABLE_STATE\x12\x13FAILED_PRECONDITION\x82\xd3\xe4\x93\x02%:\x01*\" /v1/notifications/{log_id}:retry\x12\xfe\x06\n" +
+	"\x0eReportDelivery\x128.udb.core.notification.services.v1.ReportDeliveryRequest\x1a9.udb.core.notification.services.v1.ReportDeliveryResponse\"\xf6\x05\xca\xf3\x18L\b\x02\x1a udb:notification:report-delivery \x018\x01J\x02\x01\x02j\x1bnotification.ReportDelivery\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18@\b\x01\x12\x0freport_delivery\x1a\x03udb(\xb0\xea\x010\x03@\x01J\fnotificationP\x01Z\x0ereportDelivery\xe2\xf3\x18\xda\x01\n" +
+	"\fnotification\x12\x17udb/native/notification\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"3udb.native.notification.report_delivery.boilerplate*\x0freport_delivery2\x10udb_notification:\fnotificationJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18\xab\x01\n" +
+	"\x1bnotification.ReportDelivery\x12\x13notification.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable:K\n" +
+	"&udb.notification.delivery.delivered.v1\x12\x06log_id\x1a\rat_least_once\"\bstandard(\x01\xf2\xf3\x18M\n" +
+	"\fnotification\x1a\bpostgres\x1a\x05kafka2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x92\xf4\x18;\n" +
+	"\x1bNotificationDeliveryAttempt\x1a\tDELIVERED\"\tDELIVERED\"\x06FAILED\x82\xd3\xe4\x93\x02/:\x01*\"*/v1/notifications/{log_id}:report-delivery\x12\xf7\x05\n" +
 	"\x0eUpsertTemplate\x128.udb.core.notification.services.v1.UpsertTemplateRequest\x1a9.udb.core.notification.services.v1.UpsertTemplateResponse\"\xef\x04\xca\xf3\x18J\b\x02\x1a udb:notification:upsert-template \x01J\x02\x01\x02j\x1bnotification.UpsertTemplate\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18@\b\x01\x12\x0fupsert_template\x1a\x03udb(\xb0\xea\x010\x03@\x01J\fnotificationP\x01Z\x0eupsertTemplate\xe2\xf3\x18\xda\x01\n" +
 	"\fnotification\x12\x17udb/native/notification\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"3udb.native.notification.upsert_template.boilerplate*\x0fupsert_template2\x10udb_notification:\fnotificationJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18^\n" +
 	"\x1bnotification.UpsertTemplate\x12\x13notification.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18M\n" +
@@ -93,50 +99,54 @@ var file_udb_core_notification_services_v1_notification_service_proto_goTypes = 
 	(*GetNotificationRequest)(nil),    // 1: udb.core.notification.services.v1.GetNotificationRequest
 	(*ListNotificationsRequest)(nil),  // 2: udb.core.notification.services.v1.ListNotificationsRequest
 	(*RetryNotificationRequest)(nil),  // 3: udb.core.notification.services.v1.RetryNotificationRequest
-	(*UpsertTemplateRequest)(nil),     // 4: udb.core.notification.services.v1.UpsertTemplateRequest
-	(*GetTemplateRequest)(nil),        // 5: udb.core.notification.services.v1.GetTemplateRequest
-	(*ListTemplatesRequest)(nil),      // 6: udb.core.notification.services.v1.ListTemplatesRequest
-	(*GetDeliveryStatsRequest)(nil),   // 7: udb.core.notification.services.v1.GetDeliveryStatsRequest
-	(*SetPreferenceRequest)(nil),      // 8: udb.core.notification.services.v1.SetPreferenceRequest
-	(*GetPreferenceRequest)(nil),      // 9: udb.core.notification.services.v1.GetPreferenceRequest
-	(*ListPreferencesRequest)(nil),    // 10: udb.core.notification.services.v1.ListPreferencesRequest
-	(*SendNotificationResponse)(nil),  // 11: udb.core.notification.services.v1.SendNotificationResponse
-	(*GetNotificationResponse)(nil),   // 12: udb.core.notification.services.v1.GetNotificationResponse
-	(*ListNotificationsResponse)(nil), // 13: udb.core.notification.services.v1.ListNotificationsResponse
-	(*RetryNotificationResponse)(nil), // 14: udb.core.notification.services.v1.RetryNotificationResponse
-	(*UpsertTemplateResponse)(nil),    // 15: udb.core.notification.services.v1.UpsertTemplateResponse
-	(*GetTemplateResponse)(nil),       // 16: udb.core.notification.services.v1.GetTemplateResponse
-	(*ListTemplatesResponse)(nil),     // 17: udb.core.notification.services.v1.ListTemplatesResponse
-	(*GetDeliveryStatsResponse)(nil),  // 18: udb.core.notification.services.v1.GetDeliveryStatsResponse
-	(*SetPreferenceResponse)(nil),     // 19: udb.core.notification.services.v1.SetPreferenceResponse
-	(*GetPreferenceResponse)(nil),     // 20: udb.core.notification.services.v1.GetPreferenceResponse
-	(*ListPreferencesResponse)(nil),   // 21: udb.core.notification.services.v1.ListPreferencesResponse
+	(*ReportDeliveryRequest)(nil),     // 4: udb.core.notification.services.v1.ReportDeliveryRequest
+	(*UpsertTemplateRequest)(nil),     // 5: udb.core.notification.services.v1.UpsertTemplateRequest
+	(*GetTemplateRequest)(nil),        // 6: udb.core.notification.services.v1.GetTemplateRequest
+	(*ListTemplatesRequest)(nil),      // 7: udb.core.notification.services.v1.ListTemplatesRequest
+	(*GetDeliveryStatsRequest)(nil),   // 8: udb.core.notification.services.v1.GetDeliveryStatsRequest
+	(*SetPreferenceRequest)(nil),      // 9: udb.core.notification.services.v1.SetPreferenceRequest
+	(*GetPreferenceRequest)(nil),      // 10: udb.core.notification.services.v1.GetPreferenceRequest
+	(*ListPreferencesRequest)(nil),    // 11: udb.core.notification.services.v1.ListPreferencesRequest
+	(*SendNotificationResponse)(nil),  // 12: udb.core.notification.services.v1.SendNotificationResponse
+	(*GetNotificationResponse)(nil),   // 13: udb.core.notification.services.v1.GetNotificationResponse
+	(*ListNotificationsResponse)(nil), // 14: udb.core.notification.services.v1.ListNotificationsResponse
+	(*RetryNotificationResponse)(nil), // 15: udb.core.notification.services.v1.RetryNotificationResponse
+	(*ReportDeliveryResponse)(nil),    // 16: udb.core.notification.services.v1.ReportDeliveryResponse
+	(*UpsertTemplateResponse)(nil),    // 17: udb.core.notification.services.v1.UpsertTemplateResponse
+	(*GetTemplateResponse)(nil),       // 18: udb.core.notification.services.v1.GetTemplateResponse
+	(*ListTemplatesResponse)(nil),     // 19: udb.core.notification.services.v1.ListTemplatesResponse
+	(*GetDeliveryStatsResponse)(nil),  // 20: udb.core.notification.services.v1.GetDeliveryStatsResponse
+	(*SetPreferenceResponse)(nil),     // 21: udb.core.notification.services.v1.SetPreferenceResponse
+	(*GetPreferenceResponse)(nil),     // 22: udb.core.notification.services.v1.GetPreferenceResponse
+	(*ListPreferencesResponse)(nil),   // 23: udb.core.notification.services.v1.ListPreferencesResponse
 }
 var file_udb_core_notification_services_v1_notification_service_proto_depIdxs = []int32{
 	0,  // 0: udb.core.notification.services.v1.NotificationService.SendNotification:input_type -> udb.core.notification.services.v1.SendNotificationRequest
 	1,  // 1: udb.core.notification.services.v1.NotificationService.GetNotification:input_type -> udb.core.notification.services.v1.GetNotificationRequest
 	2,  // 2: udb.core.notification.services.v1.NotificationService.ListNotifications:input_type -> udb.core.notification.services.v1.ListNotificationsRequest
 	3,  // 3: udb.core.notification.services.v1.NotificationService.RetryNotification:input_type -> udb.core.notification.services.v1.RetryNotificationRequest
-	4,  // 4: udb.core.notification.services.v1.NotificationService.UpsertTemplate:input_type -> udb.core.notification.services.v1.UpsertTemplateRequest
-	5,  // 5: udb.core.notification.services.v1.NotificationService.GetTemplate:input_type -> udb.core.notification.services.v1.GetTemplateRequest
-	6,  // 6: udb.core.notification.services.v1.NotificationService.ListTemplates:input_type -> udb.core.notification.services.v1.ListTemplatesRequest
-	7,  // 7: udb.core.notification.services.v1.NotificationService.GetDeliveryStats:input_type -> udb.core.notification.services.v1.GetDeliveryStatsRequest
-	8,  // 8: udb.core.notification.services.v1.NotificationService.SetPreference:input_type -> udb.core.notification.services.v1.SetPreferenceRequest
-	9,  // 9: udb.core.notification.services.v1.NotificationService.GetPreference:input_type -> udb.core.notification.services.v1.GetPreferenceRequest
-	10, // 10: udb.core.notification.services.v1.NotificationService.ListPreferences:input_type -> udb.core.notification.services.v1.ListPreferencesRequest
-	11, // 11: udb.core.notification.services.v1.NotificationService.SendNotification:output_type -> udb.core.notification.services.v1.SendNotificationResponse
-	12, // 12: udb.core.notification.services.v1.NotificationService.GetNotification:output_type -> udb.core.notification.services.v1.GetNotificationResponse
-	13, // 13: udb.core.notification.services.v1.NotificationService.ListNotifications:output_type -> udb.core.notification.services.v1.ListNotificationsResponse
-	14, // 14: udb.core.notification.services.v1.NotificationService.RetryNotification:output_type -> udb.core.notification.services.v1.RetryNotificationResponse
-	15, // 15: udb.core.notification.services.v1.NotificationService.UpsertTemplate:output_type -> udb.core.notification.services.v1.UpsertTemplateResponse
-	16, // 16: udb.core.notification.services.v1.NotificationService.GetTemplate:output_type -> udb.core.notification.services.v1.GetTemplateResponse
-	17, // 17: udb.core.notification.services.v1.NotificationService.ListTemplates:output_type -> udb.core.notification.services.v1.ListTemplatesResponse
-	18, // 18: udb.core.notification.services.v1.NotificationService.GetDeliveryStats:output_type -> udb.core.notification.services.v1.GetDeliveryStatsResponse
-	19, // 19: udb.core.notification.services.v1.NotificationService.SetPreference:output_type -> udb.core.notification.services.v1.SetPreferenceResponse
-	20, // 20: udb.core.notification.services.v1.NotificationService.GetPreference:output_type -> udb.core.notification.services.v1.GetPreferenceResponse
-	21, // 21: udb.core.notification.services.v1.NotificationService.ListPreferences:output_type -> udb.core.notification.services.v1.ListPreferencesResponse
-	11, // [11:22] is the sub-list for method output_type
-	0,  // [0:11] is the sub-list for method input_type
+	4,  // 4: udb.core.notification.services.v1.NotificationService.ReportDelivery:input_type -> udb.core.notification.services.v1.ReportDeliveryRequest
+	5,  // 5: udb.core.notification.services.v1.NotificationService.UpsertTemplate:input_type -> udb.core.notification.services.v1.UpsertTemplateRequest
+	6,  // 6: udb.core.notification.services.v1.NotificationService.GetTemplate:input_type -> udb.core.notification.services.v1.GetTemplateRequest
+	7,  // 7: udb.core.notification.services.v1.NotificationService.ListTemplates:input_type -> udb.core.notification.services.v1.ListTemplatesRequest
+	8,  // 8: udb.core.notification.services.v1.NotificationService.GetDeliveryStats:input_type -> udb.core.notification.services.v1.GetDeliveryStatsRequest
+	9,  // 9: udb.core.notification.services.v1.NotificationService.SetPreference:input_type -> udb.core.notification.services.v1.SetPreferenceRequest
+	10, // 10: udb.core.notification.services.v1.NotificationService.GetPreference:input_type -> udb.core.notification.services.v1.GetPreferenceRequest
+	11, // 11: udb.core.notification.services.v1.NotificationService.ListPreferences:input_type -> udb.core.notification.services.v1.ListPreferencesRequest
+	12, // 12: udb.core.notification.services.v1.NotificationService.SendNotification:output_type -> udb.core.notification.services.v1.SendNotificationResponse
+	13, // 13: udb.core.notification.services.v1.NotificationService.GetNotification:output_type -> udb.core.notification.services.v1.GetNotificationResponse
+	14, // 14: udb.core.notification.services.v1.NotificationService.ListNotifications:output_type -> udb.core.notification.services.v1.ListNotificationsResponse
+	15, // 15: udb.core.notification.services.v1.NotificationService.RetryNotification:output_type -> udb.core.notification.services.v1.RetryNotificationResponse
+	16, // 16: udb.core.notification.services.v1.NotificationService.ReportDelivery:output_type -> udb.core.notification.services.v1.ReportDeliveryResponse
+	17, // 17: udb.core.notification.services.v1.NotificationService.UpsertTemplate:output_type -> udb.core.notification.services.v1.UpsertTemplateResponse
+	18, // 18: udb.core.notification.services.v1.NotificationService.GetTemplate:output_type -> udb.core.notification.services.v1.GetTemplateResponse
+	19, // 19: udb.core.notification.services.v1.NotificationService.ListTemplates:output_type -> udb.core.notification.services.v1.ListTemplatesResponse
+	20, // 20: udb.core.notification.services.v1.NotificationService.GetDeliveryStats:output_type -> udb.core.notification.services.v1.GetDeliveryStatsResponse
+	21, // 21: udb.core.notification.services.v1.NotificationService.SetPreference:output_type -> udb.core.notification.services.v1.SetPreferenceResponse
+	22, // 22: udb.core.notification.services.v1.NotificationService.GetPreference:output_type -> udb.core.notification.services.v1.GetPreferenceResponse
+	23, // 23: udb.core.notification.services.v1.NotificationService.ListPreferences:output_type -> udb.core.notification.services.v1.ListPreferencesResponse
+	12, // [12:24] is the sub-list for method output_type
+	0,  // [0:12] is the sub-list for method input_type
 	0,  // [0:0] is the sub-list for extension type_name
 	0,  // [0:0] is the sub-list for extension extendee
 	0,  // [0:0] is the sub-list for field type_name

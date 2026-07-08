@@ -10,7 +10,7 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class PipelineDefinition(_message.Message):
-    __slots__ = ("definition_id", "tenant_id", "name", "description", "media_type", "steps", "version", "status", "audit_info")
+    __slots__ = ("definition_id", "tenant_id", "name", "description", "media_type", "steps", "version", "status", "audit_info", "trigger_topic")
     DEFINITION_ID_FIELD_NUMBER: _ClassVar[int]
     TENANT_ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
@@ -20,6 +20,7 @@ class PipelineDefinition(_message.Message):
     VERSION_FIELD_NUMBER: _ClassVar[int]
     STATUS_FIELD_NUMBER: _ClassVar[int]
     AUDIT_INFO_FIELD_NUMBER: _ClassVar[int]
+    TRIGGER_TOPIC_FIELD_NUMBER: _ClassVar[int]
     definition_id: str
     tenant_id: str
     name: str
@@ -29,4 +30,5 @@ class PipelineDefinition(_message.Message):
     version: int
     status: str
     audit_info: _types_pb2.AuditInfo
-    def __init__(self, definition_id: _Optional[str] = ..., tenant_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., media_type: _Optional[str] = ..., steps: _Optional[str] = ..., version: _Optional[int] = ..., status: _Optional[str] = ..., audit_info: _Optional[_Union[_types_pb2.AuditInfo, _Mapping]] = ...) -> None: ...
+    trigger_topic: str
+    def __init__(self, definition_id: _Optional[str] = ..., tenant_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., media_type: _Optional[str] = ..., steps: _Optional[str] = ..., version: _Optional[int] = ..., status: _Optional[str] = ..., audit_info: _Optional[_Union[_types_pb2.AuditInfo, _Mapping]] = ..., trigger_topic: _Optional[str] = ...) -> None: ...

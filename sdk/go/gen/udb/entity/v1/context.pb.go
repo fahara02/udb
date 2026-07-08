@@ -57,9 +57,16 @@ type RequestContext struct {
 	// Region or locality preference for latency and data-residency routing.
 	Region string `protobuf:"bytes,19,opt,name=region,proto3" json:"region,omitempty"`
 	// Caller-provided labels available to policy, routing, audit, and telemetry.
-	Attributes    map[string]string `protobuf:"bytes,20,rep,name=attributes,proto3" json:"attributes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Attributes map[string]string `protobuf:"bytes,20,rep,name=attributes,proto3" json:"attributes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// Typed read fence. Kept in lockstep with read_fence_json for clients that can
+	// consume protobuf messages directly. Metadata/header values still win when
+	// both are supplied.
+	ReadFence *ReadFence `protobuf:"bytes,21,opt,name=read_fence,json=readFence,proto3" json:"read_fence,omitempty"`
+	// Typed consistency mode. Mirrors the legacy consistency string/header token;
+	// the x-udb-consistency metadata header still wins when both are supplied.
+	ConsistencyMode ConsistencyMode `protobuf:"varint,22,opt,name=consistency_mode,json=consistencyMode,proto3,enum=udb.entity.v1.ConsistencyMode" json:"consistency_mode,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *RequestContext) Reset() {
@@ -232,11 +239,25 @@ func (x *RequestContext) GetAttributes() map[string]string {
 	return nil
 }
 
+func (x *RequestContext) GetReadFence() *ReadFence {
+	if x != nil {
+		return x.ReadFence
+	}
+	return nil
+}
+
+func (x *RequestContext) GetConsistencyMode() ConsistencyMode {
+	if x != nil {
+		return x.ConsistencyMode
+	}
+	return ConsistencyMode_CONSISTENCY_MODE_UNSPECIFIED
+}
+
 var File_udb_entity_v1_context_proto protoreflect.FileDescriptor
 
 const file_udb_entity_v1_context_proto_rawDesc = "" +
 	"\n" +
-	"\x1budb/entity/v1/context.proto\x12\rudb.entity.v1\"\xd0\x06\n" +
+	"\x1budb/entity/v1/context.proto\x12\rudb.entity.v1\x1a\x1fudb/entity/v1/consistency.proto\"\xd4\a\n" +
 	"\x0eRequestContext\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12%\n" +
@@ -261,7 +282,10 @@ const file_udb_entity_v1_context_proto_rawDesc = "" +
 	"\x06region\x18\x13 \x01(\tR\x06region\x12M\n" +
 	"\n" +
 	"attributes\x18\x14 \x03(\v2-.udb.entity.v1.RequestContext.AttributesEntryR\n" +
-	"attributes\x1a=\n" +
+	"attributes\x127\n" +
+	"\n" +
+	"read_fence\x18\x15 \x01(\v2\x18.udb.entity.v1.ReadFenceR\treadFence\x12I\n" +
+	"\x10consistency_mode\x18\x16 \x01(\x0e2\x1e.udb.entity.v1.ConsistencyModeR\x0fconsistencyMode\x1a=\n" +
 	"\x0fAttributesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\xb2\x01\n" +
@@ -283,14 +307,18 @@ var file_udb_entity_v1_context_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_udb_entity_v1_context_proto_goTypes = []any{
 	(*RequestContext)(nil), // 0: udb.entity.v1.RequestContext
 	nil,                    // 1: udb.entity.v1.RequestContext.AttributesEntry
+	(*ReadFence)(nil),      // 2: udb.entity.v1.ReadFence
+	(ConsistencyMode)(0),   // 3: udb.entity.v1.ConsistencyMode
 }
 var file_udb_entity_v1_context_proto_depIdxs = []int32{
 	1, // 0: udb.entity.v1.RequestContext.attributes:type_name -> udb.entity.v1.RequestContext.AttributesEntry
-	1, // [1:1] is the sub-list for method output_type
-	1, // [1:1] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	2, // 1: udb.entity.v1.RequestContext.read_fence:type_name -> udb.entity.v1.ReadFence
+	3, // 2: udb.entity.v1.RequestContext.consistency_mode:type_name -> udb.entity.v1.ConsistencyMode
+	3, // [3:3] is the sub-list for method output_type
+	3, // [3:3] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_udb_entity_v1_context_proto_init() }
@@ -298,6 +326,7 @@ func file_udb_entity_v1_context_proto_init() {
 	if File_udb_entity_v1_context_proto != nil {
 		return
 	}
+	file_udb_entity_v1_consistency_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

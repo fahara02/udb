@@ -1,6 +1,7 @@
 import datetime
 
 from google.protobuf import timestamp_pb2 as _timestamp_pb2
+from google.protobuf import field_mask_pb2 as _field_mask_pb2
 from udb.core.idp.entity.v1 import identity_provider_pb2 as _identity_provider_pb2
 from udb.core.idp.entity.v1 import external_identity_pb2 as _external_identity_pb2
 from udb.core.idp.entity.v1 import enums_pb2 as _enums_pb2
@@ -62,7 +63,7 @@ class CreateProviderResponse(_message.Message):
     def __init__(self, provider: _Optional[_Union[_identity_provider_pb2.IdentityProvider, _Mapping]] = ...) -> None: ...
 
 class UpdateProviderRequest(_message.Message):
-    __slots__ = ("provider_id", "tenant_id", "display_name", "issuer", "entity_id", "jwks_url", "saml_metadata_url", "client_ids", "audiences", "claim_mapping_json", "group_mapping_json", "jit_policy_json", "account_linking_policy", "client_secret", "saml_signing_key_pem", "updated_by", "context")
+    __slots__ = ("provider_id", "tenant_id", "display_name", "issuer", "entity_id", "jwks_url", "saml_metadata_url", "client_ids", "audiences", "claim_mapping_json", "group_mapping_json", "jit_policy_json", "account_linking_policy", "client_secret", "saml_signing_key_pem", "updated_by", "context", "update_mask")
     PROVIDER_ID_FIELD_NUMBER: _ClassVar[int]
     TENANT_ID_FIELD_NUMBER: _ClassVar[int]
     DISPLAY_NAME_FIELD_NUMBER: _ClassVar[int]
@@ -80,6 +81,7 @@ class UpdateProviderRequest(_message.Message):
     SAML_SIGNING_KEY_PEM_FIELD_NUMBER: _ClassVar[int]
     UPDATED_BY_FIELD_NUMBER: _ClassVar[int]
     CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    UPDATE_MASK_FIELD_NUMBER: _ClassVar[int]
     provider_id: str
     tenant_id: str
     display_name: str
@@ -97,7 +99,8 @@ class UpdateProviderRequest(_message.Message):
     saml_signing_key_pem: str
     updated_by: str
     context: _types_pb2.RequestContext
-    def __init__(self, provider_id: _Optional[str] = ..., tenant_id: _Optional[str] = ..., display_name: _Optional[str] = ..., issuer: _Optional[str] = ..., entity_id: _Optional[str] = ..., jwks_url: _Optional[str] = ..., saml_metadata_url: _Optional[str] = ..., client_ids: _Optional[_Iterable[str]] = ..., audiences: _Optional[_Iterable[str]] = ..., claim_mapping_json: _Optional[str] = ..., group_mapping_json: _Optional[str] = ..., jit_policy_json: _Optional[str] = ..., account_linking_policy: _Optional[str] = ..., client_secret: _Optional[str] = ..., saml_signing_key_pem: _Optional[str] = ..., updated_by: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ...) -> None: ...
+    update_mask: _field_mask_pb2.FieldMask
+    def __init__(self, provider_id: _Optional[str] = ..., tenant_id: _Optional[str] = ..., display_name: _Optional[str] = ..., issuer: _Optional[str] = ..., entity_id: _Optional[str] = ..., jwks_url: _Optional[str] = ..., saml_metadata_url: _Optional[str] = ..., client_ids: _Optional[_Iterable[str]] = ..., audiences: _Optional[_Iterable[str]] = ..., claim_mapping_json: _Optional[str] = ..., group_mapping_json: _Optional[str] = ..., jit_policy_json: _Optional[str] = ..., account_linking_policy: _Optional[str] = ..., client_secret: _Optional[str] = ..., saml_signing_key_pem: _Optional[str] = ..., updated_by: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ..., update_mask: _Optional[_Union[_field_mask_pb2.FieldMask, _Mapping]] = ...) -> None: ...
 
 class UpdateProviderResponse(_message.Message):
     __slots__ = ("provider",)

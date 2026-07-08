@@ -57,4 +57,34 @@ public interface ListTracksRequestOrBuilder extends
    */
   com.google.protobuf.ByteString
       getKindBytes();
+
+  /**
+   * <pre>
+   * Requested page size. Defaults to 50 and is capped at the native list maximum.
+   * </pre>
+   *
+   * <code>int32 page_size = 5 [json_name = "pageSize"];</code>
+   * @return The pageSize.
+   */
+  int getPageSize();
+
+  /**
+   * <pre>
+   * Opaque pagination token returned by ListTracksResponse.next_page_token.
+   * </pre>
+   *
+   * <code>string page_token = 6 [json_name = "pageToken"];</code>
+   * @return The pageToken.
+   */
+  java.lang.String getPageToken();
+  /**
+   * <pre>
+   * Opaque pagination token returned by ListTracksResponse.next_page_token.
+   * </pre>
+   *
+   * <code>string page_token = 6 [json_name = "pageToken"];</code>
+   * @return The bytes for pageToken.
+   */
+  com.google.protobuf.ByteString
+      getPageTokenBytes();
 }

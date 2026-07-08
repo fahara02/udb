@@ -43,6 +43,9 @@ const (
 	ErrorKind_ERROR_KIND_RETRYABLE ErrorKind = 5
 	// An unexpected internal error. Generally not retryable without investigation.
 	ErrorKind_ERROR_KIND_INTERNAL ErrorKind = 6
+	// Malformed or semantically invalid request fields. Maps to gRPC
+	// InvalidArgument and carries `field_violations`.
+	ErrorKind_ERROR_KIND_VALIDATION ErrorKind = 7
 )
 
 // Enum value maps for ErrorKind.
@@ -55,6 +58,7 @@ var (
 		4: "ERROR_KIND_SCHEMA",
 		5: "ERROR_KIND_RETRYABLE",
 		6: "ERROR_KIND_INTERNAL",
+		7: "ERROR_KIND_VALIDATION",
 	}
 	ErrorKind_value = map[string]int32{
 		"ERROR_KIND_UNSPECIFIED": 0,
@@ -64,6 +68,7 @@ var (
 		"ERROR_KIND_SCHEMA":      4,
 		"ERROR_KIND_RETRYABLE":   5,
 		"ERROR_KIND_INTERNAL":    6,
+		"ERROR_KIND_VALIDATION":  7,
 	}
 )
 
@@ -94,6 +99,61 @@ func (ErrorKind) EnumDescriptor() ([]byte, []int) {
 	return file_udb_entity_v1_error_proto_rawDescGZIP(), []int{0}
 }
 
+// A single invalid input field. `field` is the protobuf field path relative to
+// the request message (for example "tenant_id" or "policy.rules[0].action");
+// `description` is stable enough for operators but is not a machine enum.
+type ErrorFieldViolation struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Field         string                 `protobuf:"bytes,1,opt,name=field,proto3" json:"field,omitempty"`
+	Description   string                 `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ErrorFieldViolation) Reset() {
+	*x = ErrorFieldViolation{}
+	mi := &file_udb_entity_v1_error_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ErrorFieldViolation) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ErrorFieldViolation) ProtoMessage() {}
+
+func (x *ErrorFieldViolation) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_entity_v1_error_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ErrorFieldViolation.ProtoReflect.Descriptor instead.
+func (*ErrorFieldViolation) Descriptor() ([]byte, []int) {
+	return file_udb_entity_v1_error_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *ErrorFieldViolation) GetField() string {
+	if x != nil {
+		return x.Field
+	}
+	return ""
+}
+
+func (x *ErrorFieldViolation) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
 type ErrorDetail struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Backend selector base this error originated from (e.g. "postgres",
@@ -117,14 +177,17 @@ type ErrorDetail struct {
 	// its originating request in logs/traces.
 	CorrelationId string `protobuf:"bytes,7,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
 	// Coarse classification of the failure.
-	Kind          ErrorKind `protobuf:"varint,8,opt,name=kind,proto3,enum=udb.entity.v1.ErrorKind" json:"kind,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Kind ErrorKind `protobuf:"varint,8,opt,name=kind,proto3,enum=udb.entity.v1.ErrorKind" json:"kind,omitempty"`
+	// Structured invalid-field details for INVALID_ARGUMENT responses. Empty for
+	// non-validation errors.
+	FieldViolations []*ErrorFieldViolation `protobuf:"bytes,9,rep,name=field_violations,json=fieldViolations,proto3" json:"field_violations,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *ErrorDetail) Reset() {
 	*x = ErrorDetail{}
-	mi := &file_udb_entity_v1_error_proto_msgTypes[0]
+	mi := &file_udb_entity_v1_error_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -136,7 +199,7 @@ func (x *ErrorDetail) String() string {
 func (*ErrorDetail) ProtoMessage() {}
 
 func (x *ErrorDetail) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_entity_v1_error_proto_msgTypes[0]
+	mi := &file_udb_entity_v1_error_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -149,7 +212,7 @@ func (x *ErrorDetail) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ErrorDetail.ProtoReflect.Descriptor instead.
 func (*ErrorDetail) Descriptor() ([]byte, []int) {
-	return file_udb_entity_v1_error_proto_rawDescGZIP(), []int{0}
+	return file_udb_entity_v1_error_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *ErrorDetail) GetBackend() string {
@@ -208,11 +271,21 @@ func (x *ErrorDetail) GetKind() ErrorKind {
 	return ErrorKind_ERROR_KIND_UNSPECIFIED
 }
 
+func (x *ErrorDetail) GetFieldViolations() []*ErrorFieldViolation {
+	if x != nil {
+		return x.FieldViolations
+	}
+	return nil
+}
+
 var File_udb_entity_v1_error_proto protoreflect.FileDescriptor
 
 const file_udb_entity_v1_error_proto_rawDesc = "" +
 	"\n" +
-	"\x19udb/entity/v1/error.proto\x12\rudb.entity.v1\"\xbd\x02\n" +
+	"\x19udb/entity/v1/error.proto\x12\rudb.entity.v1\"M\n" +
+	"\x13ErrorFieldViolation\x12\x14\n" +
+	"\x05field\x18\x01 \x01(\tR\x05field\x12 \n" +
+	"\vdescription\x18\x02 \x01(\tR\vdescription\"\x8c\x03\n" +
 	"\vErrorDetail\x12\x18\n" +
 	"\abackend\x18\x01 \x01(\tR\abackend\x12\x1c\n" +
 	"\toperation\x18\x02 \x01(\tR\toperation\x12/\n" +
@@ -221,7 +294,8 @@ const file_udb_entity_v1_error_proto_rawDesc = "" +
 	"\x0eretry_after_ms\x18\x05 \x01(\x03R\fretryAfterMs\x12,\n" +
 	"\x12policy_decision_id\x18\x06 \x01(\tR\x10policyDecisionId\x12%\n" +
 	"\x0ecorrelation_id\x18\a \x01(\tR\rcorrelationId\x12,\n" +
-	"\x04kind\x18\b \x01(\x0e2\x18.udb.entity.v1.ErrorKindR\x04kind*\xb9\x01\n" +
+	"\x04kind\x18\b \x01(\x0e2\x18.udb.entity.v1.ErrorKindR\x04kind\x12M\n" +
+	"\x10field_violations\x18\t \x03(\v2\".udb.entity.v1.ErrorFieldViolationR\x0ffieldViolations*\xd4\x01\n" +
 	"\tErrorKind\x12\x1a\n" +
 	"\x16ERROR_KIND_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15ERROR_KIND_CAPABILITY\x10\x01\x12\x15\n" +
@@ -229,7 +303,8 @@ const file_udb_entity_v1_error_proto_rawDesc = "" +
 	"\x10ERROR_KIND_QUOTA\x10\x03\x12\x15\n" +
 	"\x11ERROR_KIND_SCHEMA\x10\x04\x12\x18\n" +
 	"\x14ERROR_KIND_RETRYABLE\x10\x05\x12\x17\n" +
-	"\x13ERROR_KIND_INTERNAL\x10\x06B\xb0\x01\n" +
+	"\x13ERROR_KIND_INTERNAL\x10\x06\x12\x19\n" +
+	"\x15ERROR_KIND_VALIDATION\x10\aB\xb0\x01\n" +
 	"\x11com.udb.entity.v1B\n" +
 	"ErrorProtoP\x01Z9github.com/fahara02/udb/sdk/go/gen/udb/entity/v1;entityv1\xa2\x02\x03UEX\xaa\x02\rUdb.Entity.V1\xca\x02\rUdb\\Entity\\V1\xe2\x02\x19Udb\\GPBMetadata\\Entity\\V1\xea\x02\x0fUdb::Entity::V1b\x06proto3"
 
@@ -246,18 +321,20 @@ func file_udb_entity_v1_error_proto_rawDescGZIP() []byte {
 }
 
 var file_udb_entity_v1_error_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_udb_entity_v1_error_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_udb_entity_v1_error_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_udb_entity_v1_error_proto_goTypes = []any{
-	(ErrorKind)(0),      // 0: udb.entity.v1.ErrorKind
-	(*ErrorDetail)(nil), // 1: udb.entity.v1.ErrorDetail
+	(ErrorKind)(0),              // 0: udb.entity.v1.ErrorKind
+	(*ErrorFieldViolation)(nil), // 1: udb.entity.v1.ErrorFieldViolation
+	(*ErrorDetail)(nil),         // 2: udb.entity.v1.ErrorDetail
 }
 var file_udb_entity_v1_error_proto_depIdxs = []int32{
 	0, // 0: udb.entity.v1.ErrorDetail.kind:type_name -> udb.entity.v1.ErrorKind
-	1, // [1:1] is the sub-list for method output_type
-	1, // [1:1] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	1, // 1: udb.entity.v1.ErrorDetail.field_violations:type_name -> udb.entity.v1.ErrorFieldViolation
+	2, // [2:2] is the sub-list for method output_type
+	2, // [2:2] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_udb_entity_v1_error_proto_init() }
@@ -271,7 +348,7 @@ func file_udb_entity_v1_error_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_udb_entity_v1_error_proto_rawDesc), len(file_udb_entity_v1_error_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   1,
+			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

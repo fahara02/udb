@@ -2,6 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
+from udb.core.webrtc.services.v1 import egress_pb2 as udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_egress__pb2
 from udb.core.webrtc.services.v1 import webrtc_service_pb2 as udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_webrtc__service__pb2
 
 
@@ -38,6 +39,26 @@ class RoomServiceStub(object):
                 '/udb.core.webrtc.services.v1.RoomService/ListRooms',
                 request_serializer=udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_webrtc__service__pb2.ListRoomsRequest.SerializeToString,
                 response_deserializer=udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_webrtc__service__pb2.ListRoomsResponse.FromString,
+                _registered_method=True)
+        self.StartRoomComposite = channel.unary_unary(
+                '/udb.core.webrtc.services.v1.RoomService/StartRoomComposite',
+                request_serializer=udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_egress__pb2.StartRoomCompositeRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_egress__pb2.StartRoomCompositeResponse.FromString,
+                _registered_method=True)
+        self.StartTrackEgress = channel.unary_unary(
+                '/udb.core.webrtc.services.v1.RoomService/StartTrackEgress',
+                request_serializer=udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_egress__pb2.StartTrackEgressRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_egress__pb2.StartTrackEgressResponse.FromString,
+                _registered_method=True)
+        self.StopEgress = channel.unary_unary(
+                '/udb.core.webrtc.services.v1.RoomService/StopEgress',
+                request_serializer=udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_egress__pb2.StopEgressRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_egress__pb2.StopEgressResponse.FromString,
+                _registered_method=True)
+        self.ListEgress = channel.unary_unary(
+                '/udb.core.webrtc.services.v1.RoomService/ListEgress',
+                request_serializer=udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_egress__pb2.ListEgressRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_egress__pb2.ListEgressResponse.FromString,
                 _registered_method=True)
 
 
@@ -79,6 +100,40 @@ class RoomServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def StartRoomComposite(self, request, context):
+        """── Recording / egress (master-plan 5.5) ───────────────────────────────────
+        Added to the EXISTING RoomService (not a new service) so the GOLDEN
+        service-set snapshot + sdk_manifest gates stay green (RPCs are subset-
+        checked). Handlers fail closed (FAILED_PRECONDITION, never UNIMPLEMENTED)
+        until UDB_WEBRTC_EGRESS_ENABLED is set and a real egress backend is wired.
+
+        Start a composite recording/egress of a whole room.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def StartTrackEgress(self, request, context):
+        """Start an egress of a single published track.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def StopEgress(self, request, context):
+        """Stop a running egress. `egress_id` must belong to the verified tenant.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ListEgress(self, request, context):
+        """List egress jobs for the verified tenant.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_RoomServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -106,6 +161,26 @@ def add_RoomServiceServicer_to_server(servicer, server):
                     servicer.ListRooms,
                     request_deserializer=udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_webrtc__service__pb2.ListRoomsRequest.FromString,
                     response_serializer=udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_webrtc__service__pb2.ListRoomsResponse.SerializeToString,
+            ),
+            'StartRoomComposite': grpc.unary_unary_rpc_method_handler(
+                    servicer.StartRoomComposite,
+                    request_deserializer=udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_egress__pb2.StartRoomCompositeRequest.FromString,
+                    response_serializer=udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_egress__pb2.StartRoomCompositeResponse.SerializeToString,
+            ),
+            'StartTrackEgress': grpc.unary_unary_rpc_method_handler(
+                    servicer.StartTrackEgress,
+                    request_deserializer=udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_egress__pb2.StartTrackEgressRequest.FromString,
+                    response_serializer=udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_egress__pb2.StartTrackEgressResponse.SerializeToString,
+            ),
+            'StopEgress': grpc.unary_unary_rpc_method_handler(
+                    servicer.StopEgress,
+                    request_deserializer=udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_egress__pb2.StopEgressRequest.FromString,
+                    response_serializer=udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_egress__pb2.StopEgressResponse.SerializeToString,
+            ),
+            'ListEgress': grpc.unary_unary_rpc_method_handler(
+                    servicer.ListEgress,
+                    request_deserializer=udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_egress__pb2.ListEgressRequest.FromString,
+                    response_serializer=udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_egress__pb2.ListEgressResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -243,6 +318,114 @@ class RoomService(object):
             '/udb.core.webrtc.services.v1.RoomService/ListRooms',
             udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_webrtc__service__pb2.ListRoomsRequest.SerializeToString,
             udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_webrtc__service__pb2.ListRoomsResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def StartRoomComposite(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.webrtc.services.v1.RoomService/StartRoomComposite',
+            udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_egress__pb2.StartRoomCompositeRequest.SerializeToString,
+            udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_egress__pb2.StartRoomCompositeResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def StartTrackEgress(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.webrtc.services.v1.RoomService/StartTrackEgress',
+            udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_egress__pb2.StartTrackEgressRequest.SerializeToString,
+            udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_egress__pb2.StartTrackEgressResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def StopEgress(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.webrtc.services.v1.RoomService/StopEgress',
+            udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_egress__pb2.StopEgressRequest.SerializeToString,
+            udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_egress__pb2.StopEgressResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ListEgress(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.webrtc.services.v1.RoomService/ListEgress',
+            udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_egress__pb2.ListEgressRequest.SerializeToString,
+            udb_dot_core_dot_webrtc_dot_services_dot_v1_dot_egress__pb2.ListEgressResponse.FromString,
             options,
             channel_credentials,
             insecure,

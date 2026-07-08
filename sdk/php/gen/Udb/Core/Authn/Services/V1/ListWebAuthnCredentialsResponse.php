@@ -18,6 +18,12 @@ class ListWebAuthnCredentialsResponse extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>repeated .udb.core.authn.services.v1.WebAuthnCredentialSummary credentials = 1 [json_name = "credentials"];</code>
      */
     private $credentials;
+    /**
+     * Opaque token for the next page; empty when no more credentials are available.
+     *
+     * Generated from protobuf field <code>string next_page_token = 2 [json_name = "nextPageToken"];</code>
+     */
+    protected $next_page_token = '';
 
     /**
      * Constructor.
@@ -26,6 +32,8 @@ class ListWebAuthnCredentialsResponse extends \Google\Protobuf\Internal\Message
      *     Optional. Data for populating the Message object.
      *
      *     @type \Udb\Core\Authn\Services\V1\WebAuthnCredentialSummary[] $credentials
+     *     @type string $next_page_token
+     *           Opaque token for the next page; empty when no more credentials are available.
      * }
      */
     public function __construct($data = NULL) {
@@ -51,6 +59,32 @@ class ListWebAuthnCredentialsResponse extends \Google\Protobuf\Internal\Message
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Authn\Services\V1\WebAuthnCredentialSummary::class);
         $this->credentials = $arr;
+
+        return $this;
+    }
+
+    /**
+     * Opaque token for the next page; empty when no more credentials are available.
+     *
+     * Generated from protobuf field <code>string next_page_token = 2 [json_name = "nextPageToken"];</code>
+     * @return string
+     */
+    public function getNextPageToken()
+    {
+        return $this->next_page_token;
+    }
+
+    /**
+     * Opaque token for the next page; empty when no more credentials are available.
+     *
+     * Generated from protobuf field <code>string next_page_token = 2 [json_name = "nextPageToken"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setNextPageToken($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->next_page_token = $var;
 
         return $this;
     }

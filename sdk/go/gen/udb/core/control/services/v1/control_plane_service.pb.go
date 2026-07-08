@@ -26,46 +26,51 @@ var File_udb_core_control_services_v1_control_plane_service_proto protoreflect.F
 
 const file_udb_core_control_services_v1_control_plane_service_proto_rawDesc = "" +
 	"\n" +
-	"8udb/core/control/services/v1/control_plane_service.proto\x12\x1cudb.core.control.services.v1\x1a\x1cgoogle/api/annotations.proto\x1a'udb/core/control/services/v1/core.proto\x1a!udb/core/common/v1/security.proto2\xdd\n" +
-	"\n" +
-	"\x13ControlPlaneService\x12\xc0\x01\n" +
-	"\x0fStreamResources\x12..udb.core.control.services.v1.DiscoveryRequest\x1a/.udb.core.control.services.v1.DiscoveryResponse\"H\xca\xf3\x18@\b\x02\x1a\x1cudb:control:stream-resourcesJ\x02\x01\x04j\x17control.StreamResources\x90\x01\x01\xf8\xf3\x18\x02(\x010\x01\x12\xc7\x01\n" +
-	"\x0eDeltaResources\x123.udb.core.control.services.v1.DeltaDiscoveryRequest\x1a4.udb.core.control.services.v1.DeltaDiscoveryResponse\"F\xca\xf3\x18>\b\x02\x1a\x1budb:control:delta-resourcesJ\x02\x01\x04j\x16control.DeltaResources\x90\x01\x01\xf8\xf3\x18\x02(\x010\x01\x12\xe8\x01\n" +
-	"\fGetResources\x121.udb.core.control.services.v1.GetResourcesRequest\x1a2.udb.core.control.services.v1.GetResourcesResponse\"q\xca\xf3\x18:\b\x02\x1a\x19udb:control:get-resourcesJ\x02\x01\x04j\x14control.GetResources\x90\x01\x01\xda\xf3\x18\x0eZ\fgetResources\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02\x17\x12\x15/v1/control/resources\x12\xf7\x01\n" +
-	"\x0eListNodeStates\x123.udb.core.control.services.v1.ListNodeStatesRequest\x1a4.udb.core.control.services.v1.ListNodeStatesResponse\"z\xca\xf3\x18?\b\x02\x1a\x1cudb:control:list-node-statesJ\x02\x01\x02j\x16control.ListNodeStates\x90\x01\x01\xda\xf3\x18\x10Z\x0elistNodeStates\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02\x19\x12\x17/v1/control/node-states\x12\xf0\x01\n" +
-	"\tAckStatus\x12..udb.core.control.services.v1.AckStatusRequest\x1a/.udb.core.control.services.v1.AckStatusResponse\"\x81\x01\xca\xf3\x184\b\x02\x1a\x16udb:control:ack-statusJ\x02\x01\x02j\x11control.AckStatus\x90\x01\x01\xda\xf3\x18\vZ\tackStatus\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x020:\x01*\"+/v1/control/node-states/{node_id}:ackStatus\x1a\xe0\x01\xca\xf0\x19y\n" +
+	"8udb/core/control/services/v1/control_plane_service.proto\x12\x1cudb.core.control.services.v1\x1a\x1cgoogle/api/annotations.proto\x1a'udb/core/control/services/v1/core.proto\x1a!udb/core/common/v1/security.proto2\xcf\r\n" +
+	"\x13ControlPlaneService\x12\xc2\x01\n" +
+	"\x0fStreamResources\x12..udb.core.control.services.v1.DiscoveryRequest\x1a/.udb.core.control.services.v1.DiscoveryResponse\"J\xca\xf3\x18B\b\x02\x1a\x1cudb:control:stream-resources8\x01J\x02\x01\x04j\x17control.StreamResources\x90\x01\x01\xf8\xf3\x18\x02(\x010\x01\x12\xc9\x01\n" +
+	"\x0eDeltaResources\x123.udb.core.control.services.v1.DeltaDiscoveryRequest\x1a4.udb.core.control.services.v1.DeltaDiscoveryResponse\"H\xca\xf3\x18@\b\x02\x1a\x1budb:control:delta-resources8\x01J\x02\x01\x04j\x16control.DeltaResources\x90\x01\x01\xf8\xf3\x18\x02(\x010\x01\x12\xf8\x01\n" +
+	"\fGetResources\x121.udb.core.control.services.v1.GetResourcesRequest\x1a2.udb.core.control.services.v1.GetResourcesResponse\"\x80\x01\xca\xf3\x18:\b\x02\x1a\x19udb:control:get-resourcesJ\x02\x01\x04j\x14control.GetResources\x90\x01\x01\xda\xf3\x18\x1d\x12\rget_resourcesZ\fgetResources\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02\x17\x12\x15/v1/control/resources\x12\x8a\x02\n" +
+	"\x0eListNodeStates\x123.udb.core.control.services.v1.ListNodeStatesRequest\x1a4.udb.core.control.services.v1.ListNodeStatesResponse\"\x8c\x01\xca\xf3\x18?\b\x02\x1a\x1cudb:control:list-node-statesJ\x02\x01\x02j\x16control.ListNodeStates\x90\x01\x01\xda\xf3\x18\"\x12\x10list_node_statesZ\x0elistNodeStates\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02\x19\x12\x17/v1/control/node-states\x12\xfc\x01\n" +
+	"\tAckStatus\x12..udb.core.control.services.v1.AckStatusRequest\x1a/.udb.core.control.services.v1.AckStatusResponse\"\x8d\x01\xca\xf3\x184\b\x02\x1a\x16udb:control:ack-statusJ\x02\x01\x02j\x11control.AckStatus\x90\x01\x01\xda\xf3\x18\x17\x12\n" +
+	"ack_statusZ\tackStatus\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x020:\x01*\"+/v1/control/node-states/{node_id}:ackStatus\x12\xbc\x02\n" +
+	"\x11RollbackResources\x126.udb.core.control.services.v1.RollbackResourcesRequest\x1a7.udb.core.control.services.v1.RollbackResourcesResponse\"\xb5\x01\xca\xf3\x18D\b\x02\x1a\x1eudb:control:rollback-resourcesJ\x02\x01\x04j\x19control.RollbackResources\x90\x01\x01\xda\xf3\x18'\x12\x12rollback_resourcesZ\x11rollbackResources\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x028:\x01*\"3/v1/control/node-states/{node_id}:rollbackResources\x1a\xe0\x01\xca\xf0\x19y\n" +
 	"\acontrol\x12\acontrol\x1a\acontrol\"\x1aControl Plane Distribution*\acontrol0\x018\x01h\x01z\fcontrolPlane\x82\x01\acontrol\x8a\x01\acontrol\x92\x01\x0enative.control\xd2\xf0\x19\x1a\b\x01\x1a\x03udb(\xe0\xd4\x030\x03@\x01J\acontrolP\x01\xe2\xf0\x19A\n" +
 	"\acontrol\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGETB\x9d\x02\n" +
 	" com.udb.core.control.services.v1B\x18ControlPlaneServiceProtoP\x01ZJgithub.com/fahara02/udb/sdk/go/gen/udb/core/control/services/v1;servicesv1\xa2\x02\x04UCCS\xaa\x02\x1cudb.core.Control.Services.V1\xca\x02\x1cUdb\\Core\\Control\\Services\\V1\xe2\x02(Udb\\GPBMetadata\\Core\\Control\\Services\\V1\xea\x02 Udb::Core::Control::Services::V1b\x06proto3"
 
 var file_udb_core_control_services_v1_control_plane_service_proto_goTypes = []any{
-	(*DiscoveryRequest)(nil),       // 0: udb.core.control.services.v1.DiscoveryRequest
-	(*DeltaDiscoveryRequest)(nil),  // 1: udb.core.control.services.v1.DeltaDiscoveryRequest
-	(*GetResourcesRequest)(nil),    // 2: udb.core.control.services.v1.GetResourcesRequest
-	(*ListNodeStatesRequest)(nil),  // 3: udb.core.control.services.v1.ListNodeStatesRequest
-	(*AckStatusRequest)(nil),       // 4: udb.core.control.services.v1.AckStatusRequest
-	(*DiscoveryResponse)(nil),      // 5: udb.core.control.services.v1.DiscoveryResponse
-	(*DeltaDiscoveryResponse)(nil), // 6: udb.core.control.services.v1.DeltaDiscoveryResponse
-	(*GetResourcesResponse)(nil),   // 7: udb.core.control.services.v1.GetResourcesResponse
-	(*ListNodeStatesResponse)(nil), // 8: udb.core.control.services.v1.ListNodeStatesResponse
-	(*AckStatusResponse)(nil),      // 9: udb.core.control.services.v1.AckStatusResponse
+	(*DiscoveryRequest)(nil),          // 0: udb.core.control.services.v1.DiscoveryRequest
+	(*DeltaDiscoveryRequest)(nil),     // 1: udb.core.control.services.v1.DeltaDiscoveryRequest
+	(*GetResourcesRequest)(nil),       // 2: udb.core.control.services.v1.GetResourcesRequest
+	(*ListNodeStatesRequest)(nil),     // 3: udb.core.control.services.v1.ListNodeStatesRequest
+	(*AckStatusRequest)(nil),          // 4: udb.core.control.services.v1.AckStatusRequest
+	(*RollbackResourcesRequest)(nil),  // 5: udb.core.control.services.v1.RollbackResourcesRequest
+	(*DiscoveryResponse)(nil),         // 6: udb.core.control.services.v1.DiscoveryResponse
+	(*DeltaDiscoveryResponse)(nil),    // 7: udb.core.control.services.v1.DeltaDiscoveryResponse
+	(*GetResourcesResponse)(nil),      // 8: udb.core.control.services.v1.GetResourcesResponse
+	(*ListNodeStatesResponse)(nil),    // 9: udb.core.control.services.v1.ListNodeStatesResponse
+	(*AckStatusResponse)(nil),         // 10: udb.core.control.services.v1.AckStatusResponse
+	(*RollbackResourcesResponse)(nil), // 11: udb.core.control.services.v1.RollbackResourcesResponse
 }
 var file_udb_core_control_services_v1_control_plane_service_proto_depIdxs = []int32{
-	0, // 0: udb.core.control.services.v1.ControlPlaneService.StreamResources:input_type -> udb.core.control.services.v1.DiscoveryRequest
-	1, // 1: udb.core.control.services.v1.ControlPlaneService.DeltaResources:input_type -> udb.core.control.services.v1.DeltaDiscoveryRequest
-	2, // 2: udb.core.control.services.v1.ControlPlaneService.GetResources:input_type -> udb.core.control.services.v1.GetResourcesRequest
-	3, // 3: udb.core.control.services.v1.ControlPlaneService.ListNodeStates:input_type -> udb.core.control.services.v1.ListNodeStatesRequest
-	4, // 4: udb.core.control.services.v1.ControlPlaneService.AckStatus:input_type -> udb.core.control.services.v1.AckStatusRequest
-	5, // 5: udb.core.control.services.v1.ControlPlaneService.StreamResources:output_type -> udb.core.control.services.v1.DiscoveryResponse
-	6, // 6: udb.core.control.services.v1.ControlPlaneService.DeltaResources:output_type -> udb.core.control.services.v1.DeltaDiscoveryResponse
-	7, // 7: udb.core.control.services.v1.ControlPlaneService.GetResources:output_type -> udb.core.control.services.v1.GetResourcesResponse
-	8, // 8: udb.core.control.services.v1.ControlPlaneService.ListNodeStates:output_type -> udb.core.control.services.v1.ListNodeStatesResponse
-	9, // 9: udb.core.control.services.v1.ControlPlaneService.AckStatus:output_type -> udb.core.control.services.v1.AckStatusResponse
-	5, // [5:10] is the sub-list for method output_type
-	0, // [0:5] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	0,  // 0: udb.core.control.services.v1.ControlPlaneService.StreamResources:input_type -> udb.core.control.services.v1.DiscoveryRequest
+	1,  // 1: udb.core.control.services.v1.ControlPlaneService.DeltaResources:input_type -> udb.core.control.services.v1.DeltaDiscoveryRequest
+	2,  // 2: udb.core.control.services.v1.ControlPlaneService.GetResources:input_type -> udb.core.control.services.v1.GetResourcesRequest
+	3,  // 3: udb.core.control.services.v1.ControlPlaneService.ListNodeStates:input_type -> udb.core.control.services.v1.ListNodeStatesRequest
+	4,  // 4: udb.core.control.services.v1.ControlPlaneService.AckStatus:input_type -> udb.core.control.services.v1.AckStatusRequest
+	5,  // 5: udb.core.control.services.v1.ControlPlaneService.RollbackResources:input_type -> udb.core.control.services.v1.RollbackResourcesRequest
+	6,  // 6: udb.core.control.services.v1.ControlPlaneService.StreamResources:output_type -> udb.core.control.services.v1.DiscoveryResponse
+	7,  // 7: udb.core.control.services.v1.ControlPlaneService.DeltaResources:output_type -> udb.core.control.services.v1.DeltaDiscoveryResponse
+	8,  // 8: udb.core.control.services.v1.ControlPlaneService.GetResources:output_type -> udb.core.control.services.v1.GetResourcesResponse
+	9,  // 9: udb.core.control.services.v1.ControlPlaneService.ListNodeStates:output_type -> udb.core.control.services.v1.ListNodeStatesResponse
+	10, // 10: udb.core.control.services.v1.ControlPlaneService.AckStatus:output_type -> udb.core.control.services.v1.AckStatusResponse
+	11, // 11: udb.core.control.services.v1.ControlPlaneService.RollbackResources:output_type -> udb.core.control.services.v1.RollbackResourcesResponse
+	6,  // [6:12] is the sub-list for method output_type
+	0,  // [0:6] is the sub-list for method input_type
+	0,  // [0:0] is the sub-list for extension type_name
+	0,  // [0:0] is the sub-list for extension extendee
+	0,  // [0:0] is the sub-list for field type_name
 }
 
 func init() { file_udb_core_control_services_v1_control_plane_service_proto_init() }

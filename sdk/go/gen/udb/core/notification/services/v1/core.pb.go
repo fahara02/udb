@@ -1139,6 +1139,155 @@ func (x *GetDeliveryStatsResponse) GetByChannel() []*ChannelStats {
 	return nil
 }
 
+// ReportDelivery — an internal/SDK seam. An authenticated caller (the leader
+// delivery worker) or a provider webhook bridge reports the terminal per-channel
+// delivery outcome for a previously-sent NotificationLog. The handler upserts the
+// matching NotificationDeliveryAttempt row and emits
+// `udb.notification.delivery.<status>.v1` to the outbox.
+type ReportDeliveryRequest struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	TenantId          string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	LogId             string                 `protobuf:"bytes,2,opt,name=log_id,json=logId,proto3" json:"log_id,omitempty"` // The NotificationLog (intent) this outcome is for.
+	Channel           v1.NotificationChannel `protobuf:"varint,3,opt,name=channel,proto3,enum=udb.core.notification.entity.v1.NotificationChannel" json:"channel,omitempty"`
+	Provider          string                 `protobuf:"bytes,4,opt,name=provider,proto3" json:"provider,omitempty"`                                                      // SES | SMTP | TWILIO | FCM | …
+	Status            v1.NotificationStatus  `protobuf:"varint,5,opt,name=status,proto3,enum=udb.core.notification.entity.v1.NotificationStatus" json:"status,omitempty"` // queued|sent|delivered|failed
+	ProviderMessageId string                 `protobuf:"bytes,6,opt,name=provider_message_id,json=providerMessageId,proto3" json:"provider_message_id,omitempty"`
+	ErrorMessage      string                 `protobuf:"bytes,7,opt,name=error_message,json=errorMessage,proto3" json:"error_message,omitempty"`
+	Context           *v11.RequestContext    `protobuf:"bytes,8,opt,name=context,proto3" json:"context,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *ReportDeliveryRequest) Reset() {
+	*x = ReportDeliveryRequest{}
+	mi := &file_udb_core_notification_services_v1_core_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReportDeliveryRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReportDeliveryRequest) ProtoMessage() {}
+
+func (x *ReportDeliveryRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_notification_services_v1_core_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReportDeliveryRequest.ProtoReflect.Descriptor instead.
+func (*ReportDeliveryRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_notification_services_v1_core_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *ReportDeliveryRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *ReportDeliveryRequest) GetLogId() string {
+	if x != nil {
+		return x.LogId
+	}
+	return ""
+}
+
+func (x *ReportDeliveryRequest) GetChannel() v1.NotificationChannel {
+	if x != nil {
+		return x.Channel
+	}
+	return v1.NotificationChannel(0)
+}
+
+func (x *ReportDeliveryRequest) GetProvider() string {
+	if x != nil {
+		return x.Provider
+	}
+	return ""
+}
+
+func (x *ReportDeliveryRequest) GetStatus() v1.NotificationStatus {
+	if x != nil {
+		return x.Status
+	}
+	return v1.NotificationStatus(0)
+}
+
+func (x *ReportDeliveryRequest) GetProviderMessageId() string {
+	if x != nil {
+		return x.ProviderMessageId
+	}
+	return ""
+}
+
+func (x *ReportDeliveryRequest) GetErrorMessage() string {
+	if x != nil {
+		return x.ErrorMessage
+	}
+	return ""
+}
+
+func (x *ReportDeliveryRequest) GetContext() *v11.RequestContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
+type ReportDeliveryResponse struct {
+	state         protoimpl.MessageState          `protogen:"open.v1"`
+	Attempt       *v1.NotificationDeliveryAttempt `protobuf:"bytes,1,opt,name=attempt,proto3" json:"attempt,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReportDeliveryResponse) Reset() {
+	*x = ReportDeliveryResponse{}
+	mi := &file_udb_core_notification_services_v1_core_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReportDeliveryResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReportDeliveryResponse) ProtoMessage() {}
+
+func (x *ReportDeliveryResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_notification_services_v1_core_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReportDeliveryResponse.ProtoReflect.Descriptor instead.
+func (*ReportDeliveryResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_notification_services_v1_core_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *ReportDeliveryResponse) GetAttempt() *v1.NotificationDeliveryAttempt {
+	if x != nil {
+		return x.Attempt
+	}
+	return nil
+}
+
 type SetPreferenceRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
@@ -1153,7 +1302,7 @@ type SetPreferenceRequest struct {
 
 func (x *SetPreferenceRequest) Reset() {
 	*x = SetPreferenceRequest{}
-	mi := &file_udb_core_notification_services_v1_core_proto_msgTypes[17]
+	mi := &file_udb_core_notification_services_v1_core_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1165,7 +1314,7 @@ func (x *SetPreferenceRequest) String() string {
 func (*SetPreferenceRequest) ProtoMessage() {}
 
 func (x *SetPreferenceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_notification_services_v1_core_proto_msgTypes[17]
+	mi := &file_udb_core_notification_services_v1_core_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1178,7 +1327,7 @@ func (x *SetPreferenceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetPreferenceRequest.ProtoReflect.Descriptor instead.
 func (*SetPreferenceRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_notification_services_v1_core_proto_rawDescGZIP(), []int{17}
+	return file_udb_core_notification_services_v1_core_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *SetPreferenceRequest) GetUserId() string {
@@ -1232,7 +1381,7 @@ type SetPreferenceResponse struct {
 
 func (x *SetPreferenceResponse) Reset() {
 	*x = SetPreferenceResponse{}
-	mi := &file_udb_core_notification_services_v1_core_proto_msgTypes[18]
+	mi := &file_udb_core_notification_services_v1_core_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1244,7 +1393,7 @@ func (x *SetPreferenceResponse) String() string {
 func (*SetPreferenceResponse) ProtoMessage() {}
 
 func (x *SetPreferenceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_notification_services_v1_core_proto_msgTypes[18]
+	mi := &file_udb_core_notification_services_v1_core_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1257,7 +1406,7 @@ func (x *SetPreferenceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetPreferenceResponse.ProtoReflect.Descriptor instead.
 func (*SetPreferenceResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_notification_services_v1_core_proto_rawDescGZIP(), []int{18}
+	return file_udb_core_notification_services_v1_core_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *SetPreferenceResponse) GetPreference() *v1.NotificationPreference {
@@ -1279,7 +1428,7 @@ type GetPreferenceRequest struct {
 
 func (x *GetPreferenceRequest) Reset() {
 	*x = GetPreferenceRequest{}
-	mi := &file_udb_core_notification_services_v1_core_proto_msgTypes[19]
+	mi := &file_udb_core_notification_services_v1_core_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1291,7 +1440,7 @@ func (x *GetPreferenceRequest) String() string {
 func (*GetPreferenceRequest) ProtoMessage() {}
 
 func (x *GetPreferenceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_notification_services_v1_core_proto_msgTypes[19]
+	mi := &file_udb_core_notification_services_v1_core_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1304,7 +1453,7 @@ func (x *GetPreferenceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPreferenceRequest.ProtoReflect.Descriptor instead.
 func (*GetPreferenceRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_notification_services_v1_core_proto_rawDescGZIP(), []int{19}
+	return file_udb_core_notification_services_v1_core_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *GetPreferenceRequest) GetUserId() string {
@@ -1344,7 +1493,7 @@ type GetPreferenceResponse struct {
 
 func (x *GetPreferenceResponse) Reset() {
 	*x = GetPreferenceResponse{}
-	mi := &file_udb_core_notification_services_v1_core_proto_msgTypes[20]
+	mi := &file_udb_core_notification_services_v1_core_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1356,7 +1505,7 @@ func (x *GetPreferenceResponse) String() string {
 func (*GetPreferenceResponse) ProtoMessage() {}
 
 func (x *GetPreferenceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_notification_services_v1_core_proto_msgTypes[20]
+	mi := &file_udb_core_notification_services_v1_core_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1369,7 +1518,7 @@ func (x *GetPreferenceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPreferenceResponse.ProtoReflect.Descriptor instead.
 func (*GetPreferenceResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_notification_services_v1_core_proto_rawDescGZIP(), []int{20}
+	return file_udb_core_notification_services_v1_core_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *GetPreferenceResponse) GetPreference() *v1.NotificationPreference {
@@ -1390,7 +1539,7 @@ type ListPreferencesRequest struct {
 
 func (x *ListPreferencesRequest) Reset() {
 	*x = ListPreferencesRequest{}
-	mi := &file_udb_core_notification_services_v1_core_proto_msgTypes[21]
+	mi := &file_udb_core_notification_services_v1_core_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1402,7 +1551,7 @@ func (x *ListPreferencesRequest) String() string {
 func (*ListPreferencesRequest) ProtoMessage() {}
 
 func (x *ListPreferencesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_notification_services_v1_core_proto_msgTypes[21]
+	mi := &file_udb_core_notification_services_v1_core_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1415,7 +1564,7 @@ func (x *ListPreferencesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPreferencesRequest.ProtoReflect.Descriptor instead.
 func (*ListPreferencesRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_notification_services_v1_core_proto_rawDescGZIP(), []int{21}
+	return file_udb_core_notification_services_v1_core_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *ListPreferencesRequest) GetUserId() string {
@@ -1449,7 +1598,7 @@ type ListPreferencesResponse struct {
 
 func (x *ListPreferencesResponse) Reset() {
 	*x = ListPreferencesResponse{}
-	mi := &file_udb_core_notification_services_v1_core_proto_msgTypes[22]
+	mi := &file_udb_core_notification_services_v1_core_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1461,7 +1610,7 @@ func (x *ListPreferencesResponse) String() string {
 func (*ListPreferencesResponse) ProtoMessage() {}
 
 func (x *ListPreferencesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_notification_services_v1_core_proto_msgTypes[22]
+	mi := &file_udb_core_notification_services_v1_core_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1474,7 +1623,7 @@ func (x *ListPreferencesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPreferencesResponse.ProtoReflect.Descriptor instead.
 func (*ListPreferencesResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_notification_services_v1_core_proto_rawDescGZIP(), []int{22}
+	return file_udb_core_notification_services_v1_core_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *ListPreferencesResponse) GetPreferences() []*v1.NotificationPreference {
@@ -1594,7 +1743,18 @@ const file_udb_core_notification_services_v1_core_proto_rawDesc = "" +
 	"\ftotal_failed\x18\x03 \x01(\x03R\vtotalFailed\x122\n" +
 	"\x15overall_delivery_rate\x18\x04 \x01(\x01R\x13overallDeliveryRate\x12N\n" +
 	"\n" +
-	"by_channel\x18\x05 \x03(\v2/.udb.core.notification.services.v1.ChannelStatsR\tbyChannel:#\x9a\xb2\x19\x1f\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\fnotificationP\x01\"\xc0\x02\n" +
+	"by_channel\x18\x05 \x03(\v2/.udb.core.notification.services.v1.ChannelStatsR\tbyChannel:#\x9a\xb2\x19\x1f\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\fnotificationP\x01\"\xbc\x03\n" +
+	"\x15ReportDeliveryRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x15\n" +
+	"\x06log_id\x18\x02 \x01(\tR\x05logId\x12N\n" +
+	"\achannel\x18\x03 \x01(\x0e24.udb.core.notification.entity.v1.NotificationChannelR\achannel\x12\x1a\n" +
+	"\bprovider\x18\x04 \x01(\tR\bprovider\x12K\n" +
+	"\x06status\x18\x05 \x01(\x0e23.udb.core.notification.entity.v1.NotificationStatusR\x06status\x12.\n" +
+	"\x13provider_message_id\x18\x06 \x01(\tR\x11providerMessageId\x12#\n" +
+	"\rerror_message\x18\a \x01(\tR\ferrorMessage\x12<\n" +
+	"\acontext\x18\b \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:#\x9a\xb2\x19\x1f\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\fnotificationP\x01\"\x95\x01\n" +
+	"\x16ReportDeliveryResponse\x12V\n" +
+	"\aattempt\x18\x01 \x01(\v2<.udb.core.notification.entity.v1.NotificationDeliveryAttemptR\aattempt:#\x9a\xb2\x19\x1f\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\fnotificationP\x01\"\xc0\x02\n" +
 	"\x14SetPreferenceRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12N\n" +
@@ -1639,78 +1799,85 @@ func file_udb_core_notification_services_v1_core_proto_rawDescGZIP() []byte {
 	return file_udb_core_notification_services_v1_core_proto_rawDescData
 }
 
-var file_udb_core_notification_services_v1_core_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
+var file_udb_core_notification_services_v1_core_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
 var file_udb_core_notification_services_v1_core_proto_goTypes = []any{
-	(*SendNotificationRequest)(nil),   // 0: udb.core.notification.services.v1.SendNotificationRequest
-	(*SendNotificationResponse)(nil),  // 1: udb.core.notification.services.v1.SendNotificationResponse
-	(*GetNotificationRequest)(nil),    // 2: udb.core.notification.services.v1.GetNotificationRequest
-	(*GetNotificationResponse)(nil),   // 3: udb.core.notification.services.v1.GetNotificationResponse
-	(*ListNotificationsRequest)(nil),  // 4: udb.core.notification.services.v1.ListNotificationsRequest
-	(*ListNotificationsResponse)(nil), // 5: udb.core.notification.services.v1.ListNotificationsResponse
-	(*RetryNotificationRequest)(nil),  // 6: udb.core.notification.services.v1.RetryNotificationRequest
-	(*RetryNotificationResponse)(nil), // 7: udb.core.notification.services.v1.RetryNotificationResponse
-	(*UpsertTemplateRequest)(nil),     // 8: udb.core.notification.services.v1.UpsertTemplateRequest
-	(*UpsertTemplateResponse)(nil),    // 9: udb.core.notification.services.v1.UpsertTemplateResponse
-	(*GetTemplateRequest)(nil),        // 10: udb.core.notification.services.v1.GetTemplateRequest
-	(*GetTemplateResponse)(nil),       // 11: udb.core.notification.services.v1.GetTemplateResponse
-	(*ListTemplatesRequest)(nil),      // 12: udb.core.notification.services.v1.ListTemplatesRequest
-	(*ListTemplatesResponse)(nil),     // 13: udb.core.notification.services.v1.ListTemplatesResponse
-	(*GetDeliveryStatsRequest)(nil),   // 14: udb.core.notification.services.v1.GetDeliveryStatsRequest
-	(*ChannelStats)(nil),              // 15: udb.core.notification.services.v1.ChannelStats
-	(*GetDeliveryStatsResponse)(nil),  // 16: udb.core.notification.services.v1.GetDeliveryStatsResponse
-	(*SetPreferenceRequest)(nil),      // 17: udb.core.notification.services.v1.SetPreferenceRequest
-	(*SetPreferenceResponse)(nil),     // 18: udb.core.notification.services.v1.SetPreferenceResponse
-	(*GetPreferenceRequest)(nil),      // 19: udb.core.notification.services.v1.GetPreferenceRequest
-	(*GetPreferenceResponse)(nil),     // 20: udb.core.notification.services.v1.GetPreferenceResponse
-	(*ListPreferencesRequest)(nil),    // 21: udb.core.notification.services.v1.ListPreferencesRequest
-	(*ListPreferencesResponse)(nil),   // 22: udb.core.notification.services.v1.ListPreferencesResponse
-	nil,                               // 23: udb.core.notification.services.v1.SendNotificationRequest.VariablesEntry
-	(v1.NotificationChannel)(0),       // 24: udb.core.notification.entity.v1.NotificationChannel
-	(*v11.RequestContext)(nil),        // 25: udb.core.common.v1.RequestContext
-	(*v1.NotificationLog)(nil),        // 26: udb.core.notification.entity.v1.NotificationLog
-	(v1.NotificationStatus)(0),        // 27: udb.core.notification.entity.v1.NotificationStatus
-	(*v11.PageRequest)(nil),           // 28: udb.core.common.v1.PageRequest
-	(*v11.PageResponse)(nil),          // 29: udb.core.common.v1.PageResponse
-	(*v1.NotificationTemplate)(nil),   // 30: udb.core.notification.entity.v1.NotificationTemplate
-	(*v1.NotificationPreference)(nil), // 31: udb.core.notification.entity.v1.NotificationPreference
+	(*SendNotificationRequest)(nil),        // 0: udb.core.notification.services.v1.SendNotificationRequest
+	(*SendNotificationResponse)(nil),       // 1: udb.core.notification.services.v1.SendNotificationResponse
+	(*GetNotificationRequest)(nil),         // 2: udb.core.notification.services.v1.GetNotificationRequest
+	(*GetNotificationResponse)(nil),        // 3: udb.core.notification.services.v1.GetNotificationResponse
+	(*ListNotificationsRequest)(nil),       // 4: udb.core.notification.services.v1.ListNotificationsRequest
+	(*ListNotificationsResponse)(nil),      // 5: udb.core.notification.services.v1.ListNotificationsResponse
+	(*RetryNotificationRequest)(nil),       // 6: udb.core.notification.services.v1.RetryNotificationRequest
+	(*RetryNotificationResponse)(nil),      // 7: udb.core.notification.services.v1.RetryNotificationResponse
+	(*UpsertTemplateRequest)(nil),          // 8: udb.core.notification.services.v1.UpsertTemplateRequest
+	(*UpsertTemplateResponse)(nil),         // 9: udb.core.notification.services.v1.UpsertTemplateResponse
+	(*GetTemplateRequest)(nil),             // 10: udb.core.notification.services.v1.GetTemplateRequest
+	(*GetTemplateResponse)(nil),            // 11: udb.core.notification.services.v1.GetTemplateResponse
+	(*ListTemplatesRequest)(nil),           // 12: udb.core.notification.services.v1.ListTemplatesRequest
+	(*ListTemplatesResponse)(nil),          // 13: udb.core.notification.services.v1.ListTemplatesResponse
+	(*GetDeliveryStatsRequest)(nil),        // 14: udb.core.notification.services.v1.GetDeliveryStatsRequest
+	(*ChannelStats)(nil),                   // 15: udb.core.notification.services.v1.ChannelStats
+	(*GetDeliveryStatsResponse)(nil),       // 16: udb.core.notification.services.v1.GetDeliveryStatsResponse
+	(*ReportDeliveryRequest)(nil),          // 17: udb.core.notification.services.v1.ReportDeliveryRequest
+	(*ReportDeliveryResponse)(nil),         // 18: udb.core.notification.services.v1.ReportDeliveryResponse
+	(*SetPreferenceRequest)(nil),           // 19: udb.core.notification.services.v1.SetPreferenceRequest
+	(*SetPreferenceResponse)(nil),          // 20: udb.core.notification.services.v1.SetPreferenceResponse
+	(*GetPreferenceRequest)(nil),           // 21: udb.core.notification.services.v1.GetPreferenceRequest
+	(*GetPreferenceResponse)(nil),          // 22: udb.core.notification.services.v1.GetPreferenceResponse
+	(*ListPreferencesRequest)(nil),         // 23: udb.core.notification.services.v1.ListPreferencesRequest
+	(*ListPreferencesResponse)(nil),        // 24: udb.core.notification.services.v1.ListPreferencesResponse
+	nil,                                    // 25: udb.core.notification.services.v1.SendNotificationRequest.VariablesEntry
+	(v1.NotificationChannel)(0),            // 26: udb.core.notification.entity.v1.NotificationChannel
+	(*v11.RequestContext)(nil),             // 27: udb.core.common.v1.RequestContext
+	(*v1.NotificationLog)(nil),             // 28: udb.core.notification.entity.v1.NotificationLog
+	(v1.NotificationStatus)(0),             // 29: udb.core.notification.entity.v1.NotificationStatus
+	(*v11.PageRequest)(nil),                // 30: udb.core.common.v1.PageRequest
+	(*v11.PageResponse)(nil),               // 31: udb.core.common.v1.PageResponse
+	(*v1.NotificationTemplate)(nil),        // 32: udb.core.notification.entity.v1.NotificationTemplate
+	(*v1.NotificationDeliveryAttempt)(nil), // 33: udb.core.notification.entity.v1.NotificationDeliveryAttempt
+	(*v1.NotificationPreference)(nil),      // 34: udb.core.notification.entity.v1.NotificationPreference
 }
 var file_udb_core_notification_services_v1_core_proto_depIdxs = []int32{
-	23, // 0: udb.core.notification.services.v1.SendNotificationRequest.variables:type_name -> udb.core.notification.services.v1.SendNotificationRequest.VariablesEntry
-	24, // 1: udb.core.notification.services.v1.SendNotificationRequest.channels:type_name -> udb.core.notification.entity.v1.NotificationChannel
-	25, // 2: udb.core.notification.services.v1.SendNotificationRequest.context:type_name -> udb.core.common.v1.RequestContext
-	26, // 3: udb.core.notification.services.v1.SendNotificationResponse.logs:type_name -> udb.core.notification.entity.v1.NotificationLog
-	26, // 4: udb.core.notification.services.v1.GetNotificationResponse.log:type_name -> udb.core.notification.entity.v1.NotificationLog
-	24, // 5: udb.core.notification.services.v1.ListNotificationsRequest.channel:type_name -> udb.core.notification.entity.v1.NotificationChannel
-	27, // 6: udb.core.notification.services.v1.ListNotificationsRequest.status:type_name -> udb.core.notification.entity.v1.NotificationStatus
-	28, // 7: udb.core.notification.services.v1.ListNotificationsRequest.page:type_name -> udb.core.common.v1.PageRequest
-	26, // 8: udb.core.notification.services.v1.ListNotificationsResponse.logs:type_name -> udb.core.notification.entity.v1.NotificationLog
-	29, // 9: udb.core.notification.services.v1.ListNotificationsResponse.page:type_name -> udb.core.common.v1.PageResponse
-	25, // 10: udb.core.notification.services.v1.RetryNotificationRequest.context:type_name -> udb.core.common.v1.RequestContext
-	26, // 11: udb.core.notification.services.v1.RetryNotificationResponse.log:type_name -> udb.core.notification.entity.v1.NotificationLog
-	24, // 12: udb.core.notification.services.v1.UpsertTemplateRequest.channel:type_name -> udb.core.notification.entity.v1.NotificationChannel
-	25, // 13: udb.core.notification.services.v1.UpsertTemplateRequest.context:type_name -> udb.core.common.v1.RequestContext
-	30, // 14: udb.core.notification.services.v1.UpsertTemplateResponse.template:type_name -> udb.core.notification.entity.v1.NotificationTemplate
-	24, // 15: udb.core.notification.services.v1.GetTemplateRequest.channel:type_name -> udb.core.notification.entity.v1.NotificationChannel
-	30, // 16: udb.core.notification.services.v1.GetTemplateResponse.template:type_name -> udb.core.notification.entity.v1.NotificationTemplate
-	24, // 17: udb.core.notification.services.v1.ListTemplatesRequest.channel:type_name -> udb.core.notification.entity.v1.NotificationChannel
-	28, // 18: udb.core.notification.services.v1.ListTemplatesRequest.page:type_name -> udb.core.common.v1.PageRequest
-	30, // 19: udb.core.notification.services.v1.ListTemplatesResponse.templates:type_name -> udb.core.notification.entity.v1.NotificationTemplate
-	29, // 20: udb.core.notification.services.v1.ListTemplatesResponse.page:type_name -> udb.core.common.v1.PageResponse
-	24, // 21: udb.core.notification.services.v1.ChannelStats.channel:type_name -> udb.core.notification.entity.v1.NotificationChannel
+	25, // 0: udb.core.notification.services.v1.SendNotificationRequest.variables:type_name -> udb.core.notification.services.v1.SendNotificationRequest.VariablesEntry
+	26, // 1: udb.core.notification.services.v1.SendNotificationRequest.channels:type_name -> udb.core.notification.entity.v1.NotificationChannel
+	27, // 2: udb.core.notification.services.v1.SendNotificationRequest.context:type_name -> udb.core.common.v1.RequestContext
+	28, // 3: udb.core.notification.services.v1.SendNotificationResponse.logs:type_name -> udb.core.notification.entity.v1.NotificationLog
+	28, // 4: udb.core.notification.services.v1.GetNotificationResponse.log:type_name -> udb.core.notification.entity.v1.NotificationLog
+	26, // 5: udb.core.notification.services.v1.ListNotificationsRequest.channel:type_name -> udb.core.notification.entity.v1.NotificationChannel
+	29, // 6: udb.core.notification.services.v1.ListNotificationsRequest.status:type_name -> udb.core.notification.entity.v1.NotificationStatus
+	30, // 7: udb.core.notification.services.v1.ListNotificationsRequest.page:type_name -> udb.core.common.v1.PageRequest
+	28, // 8: udb.core.notification.services.v1.ListNotificationsResponse.logs:type_name -> udb.core.notification.entity.v1.NotificationLog
+	31, // 9: udb.core.notification.services.v1.ListNotificationsResponse.page:type_name -> udb.core.common.v1.PageResponse
+	27, // 10: udb.core.notification.services.v1.RetryNotificationRequest.context:type_name -> udb.core.common.v1.RequestContext
+	28, // 11: udb.core.notification.services.v1.RetryNotificationResponse.log:type_name -> udb.core.notification.entity.v1.NotificationLog
+	26, // 12: udb.core.notification.services.v1.UpsertTemplateRequest.channel:type_name -> udb.core.notification.entity.v1.NotificationChannel
+	27, // 13: udb.core.notification.services.v1.UpsertTemplateRequest.context:type_name -> udb.core.common.v1.RequestContext
+	32, // 14: udb.core.notification.services.v1.UpsertTemplateResponse.template:type_name -> udb.core.notification.entity.v1.NotificationTemplate
+	26, // 15: udb.core.notification.services.v1.GetTemplateRequest.channel:type_name -> udb.core.notification.entity.v1.NotificationChannel
+	32, // 16: udb.core.notification.services.v1.GetTemplateResponse.template:type_name -> udb.core.notification.entity.v1.NotificationTemplate
+	26, // 17: udb.core.notification.services.v1.ListTemplatesRequest.channel:type_name -> udb.core.notification.entity.v1.NotificationChannel
+	30, // 18: udb.core.notification.services.v1.ListTemplatesRequest.page:type_name -> udb.core.common.v1.PageRequest
+	32, // 19: udb.core.notification.services.v1.ListTemplatesResponse.templates:type_name -> udb.core.notification.entity.v1.NotificationTemplate
+	31, // 20: udb.core.notification.services.v1.ListTemplatesResponse.page:type_name -> udb.core.common.v1.PageResponse
+	26, // 21: udb.core.notification.services.v1.ChannelStats.channel:type_name -> udb.core.notification.entity.v1.NotificationChannel
 	15, // 22: udb.core.notification.services.v1.GetDeliveryStatsResponse.by_channel:type_name -> udb.core.notification.services.v1.ChannelStats
-	24, // 23: udb.core.notification.services.v1.SetPreferenceRequest.channel:type_name -> udb.core.notification.entity.v1.NotificationChannel
-	25, // 24: udb.core.notification.services.v1.SetPreferenceRequest.context:type_name -> udb.core.common.v1.RequestContext
-	31, // 25: udb.core.notification.services.v1.SetPreferenceResponse.preference:type_name -> udb.core.notification.entity.v1.NotificationPreference
-	24, // 26: udb.core.notification.services.v1.GetPreferenceRequest.channel:type_name -> udb.core.notification.entity.v1.NotificationChannel
-	31, // 27: udb.core.notification.services.v1.GetPreferenceResponse.preference:type_name -> udb.core.notification.entity.v1.NotificationPreference
-	28, // 28: udb.core.notification.services.v1.ListPreferencesRequest.page:type_name -> udb.core.common.v1.PageRequest
-	31, // 29: udb.core.notification.services.v1.ListPreferencesResponse.preferences:type_name -> udb.core.notification.entity.v1.NotificationPreference
-	29, // 30: udb.core.notification.services.v1.ListPreferencesResponse.page:type_name -> udb.core.common.v1.PageResponse
-	31, // [31:31] is the sub-list for method output_type
-	31, // [31:31] is the sub-list for method input_type
-	31, // [31:31] is the sub-list for extension type_name
-	31, // [31:31] is the sub-list for extension extendee
-	0,  // [0:31] is the sub-list for field type_name
+	26, // 23: udb.core.notification.services.v1.ReportDeliveryRequest.channel:type_name -> udb.core.notification.entity.v1.NotificationChannel
+	29, // 24: udb.core.notification.services.v1.ReportDeliveryRequest.status:type_name -> udb.core.notification.entity.v1.NotificationStatus
+	27, // 25: udb.core.notification.services.v1.ReportDeliveryRequest.context:type_name -> udb.core.common.v1.RequestContext
+	33, // 26: udb.core.notification.services.v1.ReportDeliveryResponse.attempt:type_name -> udb.core.notification.entity.v1.NotificationDeliveryAttempt
+	26, // 27: udb.core.notification.services.v1.SetPreferenceRequest.channel:type_name -> udb.core.notification.entity.v1.NotificationChannel
+	27, // 28: udb.core.notification.services.v1.SetPreferenceRequest.context:type_name -> udb.core.common.v1.RequestContext
+	34, // 29: udb.core.notification.services.v1.SetPreferenceResponse.preference:type_name -> udb.core.notification.entity.v1.NotificationPreference
+	26, // 30: udb.core.notification.services.v1.GetPreferenceRequest.channel:type_name -> udb.core.notification.entity.v1.NotificationChannel
+	34, // 31: udb.core.notification.services.v1.GetPreferenceResponse.preference:type_name -> udb.core.notification.entity.v1.NotificationPreference
+	30, // 32: udb.core.notification.services.v1.ListPreferencesRequest.page:type_name -> udb.core.common.v1.PageRequest
+	34, // 33: udb.core.notification.services.v1.ListPreferencesResponse.preferences:type_name -> udb.core.notification.entity.v1.NotificationPreference
+	31, // 34: udb.core.notification.services.v1.ListPreferencesResponse.page:type_name -> udb.core.common.v1.PageResponse
+	35, // [35:35] is the sub-list for method output_type
+	35, // [35:35] is the sub-list for method input_type
+	35, // [35:35] is the sub-list for extension type_name
+	35, // [35:35] is the sub-list for extension extendee
+	0,  // [0:35] is the sub-list for field type_name
 }
 
 func init() { file_udb_core_notification_services_v1_core_proto_init() }
@@ -1724,7 +1891,7 @@ func file_udb_core_notification_services_v1_core_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_udb_core_notification_services_v1_core_proto_rawDesc), len(file_udb_core_notification_services_v1_core_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   24,
+			NumMessages:   26,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

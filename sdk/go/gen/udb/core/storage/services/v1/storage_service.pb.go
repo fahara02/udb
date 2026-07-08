@@ -12,6 +12,7 @@ import (
 	v11 "github.com/fahara02/udb/sdk/go/gen/udb/core/storage/entity/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	fieldmaskpb "google.golang.org/protobuf/types/known/fieldmaskpb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
@@ -768,7 +769,10 @@ type UpdateFileRequest struct {
 	ReferenceType string                 `protobuf:"bytes,7,opt,name=reference_type,json=referenceType,proto3" json:"reference_type,omitempty"`
 	// Proto3 explicit presence: absent leaves the stored visibility unchanged —
 	// a partial update can never silently flip a file public/private.
-	IsPublic      *bool `protobuf:"varint,8,opt,name=is_public,json=isPublic,proto3,oneof" json:"is_public,omitempty"`
+	IsPublic *bool `protobuf:"varint,8,opt,name=is_public,json=isPublic,proto3,oneof" json:"is_public,omitempty"`
+	// Optional PATCH mask relative to the file resource. When omitted, legacy
+	// clients keep the historical non-empty-field patch behavior.
+	UpdateMask    *fieldmaskpb.FieldMask `protobuf:"bytes,9,opt,name=update_mask,json=updateMask,proto3" json:"update_mask,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -857,6 +861,13 @@ func (x *UpdateFileRequest) GetIsPublic() bool {
 		return *x.IsPublic
 	}
 	return false
+}
+
+func (x *UpdateFileRequest) GetUpdateMask() *fieldmaskpb.FieldMask {
+	if x != nil {
+		return x.UpdateMask
+	}
+	return nil
 }
 
 type UpdateFileResponse struct {
@@ -1026,6 +1037,8 @@ type ListFilesRequest struct {
 	UploadedBy    string                 `protobuf:"bytes,5,opt,name=uploaded_by,json=uploadedBy,proto3" json:"uploaded_by,omitempty"`
 	Page          int32                  `protobuf:"varint,6,opt,name=page,proto3" json:"page,omitempty"`
 	PageSize      int32                  `protobuf:"varint,7,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// Opaque pagination token returned by ListFilesResponse.next_page_token.
+	PageToken     string `protobuf:"bytes,8,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1109,12 +1122,21 @@ func (x *ListFilesRequest) GetPageSize() int32 {
 	return 0
 }
 
+func (x *ListFilesRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
 type ListFilesResponse struct {
 	state      protoimpl.MessageState `protogen:"open.v1"`
 	Files      []*v11.File            `protobuf:"bytes,1,rep,name=files,proto3" json:"files,omitempty"`
 	TotalCount int32                  `protobuf:"varint,2,opt,name=total_count,json=totalCount,proto3" json:"total_count,omitempty"`
 	// Error information if operation failed
-	Error         *v1.ApiError `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
+	Error *v1.ApiError `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
+	// Opaque token for the next page; empty when no more files are available.
+	NextPageToken string `protobuf:"bytes,4,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1170,11 +1192,18 @@ func (x *ListFilesResponse) GetError() *v1.ApiError {
 	return nil
 }
 
+func (x *ListFilesResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
 var File_udb_core_storage_services_v1_storage_service_proto protoreflect.FileDescriptor
 
 const file_udb_core_storage_services_v1_storage_service_proto_rawDesc = "" +
 	"\n" +
-	"2udb/core/storage/services/v1/storage_service.proto\x12\x1cudb.core.storage.services.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cudb/core/common/v1/dto.proto\x1a!udb/core/common/v1/security.proto\x1a%udb/core/storage/entity/v1/file.proto\"\x96\x03\n" +
+	"2udb/core/storage/services/v1/storage_service.proto\x12\x1cudb.core.storage.services.v1\x1a\x1cgoogle/api/annotations.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cudb/core/common/v1/dto.proto\x1a!udb/core/common/v1/security.proto\x1a%udb/core/storage/entity/v1/file.proto\"\x96\x03\n" +
 	"\x15RegisterUploadRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1d\n" +
 	"\n" +
@@ -1248,7 +1277,7 @@ const file_udb_core_storage_services_v1_storage_service_proto_rawDesc = "" +
 	"\afile_id\x18\x02 \x01(\tR\x06fileId:\x1e\x9a\xb2\x19\x1a\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\"\x9b\x01\n" +
 	"\x0fGetFileResponse\x124\n" +
 	"\x04file\x18\x01 \x01(\v2 .udb.core.storage.entity.v1.FileR\x04file\x122\n" +
-	"\x05error\x18\x02 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1e\x9a\xb2\x19\x1a\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\"\xbf\x02\n" +
+	"\x05error\x18\x02 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1e\x9a\xb2\x19\x1a\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\"\xfc\x02\n" +
 	"\x11UpdateFileRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x17\n" +
 	"\afile_id\x18\x02 \x01(\tR\x06fileId\x12\x1a\n" +
@@ -1257,7 +1286,9 @@ const file_udb_core_storage_services_v1_storage_service_proto_rawDesc = "" +
 	"\tfile_type\x18\x05 \x01(\tR\bfileType\x12!\n" +
 	"\freference_id\x18\x06 \x01(\tR\vreferenceId\x12%\n" +
 	"\x0ereference_type\x18\a \x01(\tR\rreferenceType\x12 \n" +
-	"\tis_public\x18\b \x01(\bH\x00R\bisPublic\x88\x01\x01:\x1e\x9a\xb2\x19\x1a\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01B\f\n" +
+	"\tis_public\x18\b \x01(\bH\x00R\bisPublic\x88\x01\x01\x12;\n" +
+	"\vupdate_mask\x18\t \x01(\v2\x1a.google.protobuf.FieldMaskR\n" +
+	"updateMask:\x1e\x9a\xb2\x19\x1a\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01B\f\n" +
 	"\n" +
 	"_is_public\"\x82\x01\n" +
 	"\x12UpdateFileResponse\x12\x18\n" +
@@ -1268,7 +1299,7 @@ const file_udb_core_storage_services_v1_storage_service_proto_rawDesc = "" +
 	"\afile_id\x18\x02 \x01(\tR\x06fileId:\x1e\x9a\xb2\x19\x1a\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\"\x82\x01\n" +
 	"\x12DeleteFileResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x122\n" +
-	"\x05error\x18\x02 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1e\x9a\xb2\x19\x1a\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\"\x88\x02\n" +
+	"\x05error\x18\x02 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1e\x9a\xb2\x19\x1a\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\"\xa7\x02\n" +
 	"\x10ListFilesRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1b\n" +
 	"\tfile_type\x18\x02 \x01(\tR\bfileType\x12!\n" +
@@ -1277,12 +1308,15 @@ const file_udb_core_storage_services_v1_storage_service_proto_rawDesc = "" +
 	"\vuploaded_by\x18\x05 \x01(\tR\n" +
 	"uploadedBy\x12\x12\n" +
 	"\x04page\x18\x06 \x01(\x05R\x04page\x12\x1b\n" +
-	"\tpage_size\x18\a \x01(\x05R\bpageSize:\x1e\x9a\xb2\x19\x1a\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\"\xc0\x01\n" +
+	"\tpage_size\x18\a \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\b \x01(\tR\tpageToken:\x1e\x9a\xb2\x19\x1a\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\"\xe8\x01\n" +
 	"\x11ListFilesResponse\x126\n" +
 	"\x05files\x18\x01 \x03(\v2 .udb.core.storage.entity.v1.FileR\x05files\x12\x1f\n" +
 	"\vtotal_count\x18\x02 \x01(\x05R\n" +
 	"totalCount\x122\n" +
-	"\x05error\x18\x03 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1e\x9a\xb2\x19\x1a\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x012\xb70\n" +
+	"\x05error\x18\x03 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error\x12&\n" +
+	"\x0fnext_page_token\x18\x04 \x01(\tR\rnextPageToken:\x1e\x9a\xb2\x19\x1a\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x012\xb90\n" +
 	"\x0eStorageService\x12\x8b\x06\n" +
 	"\x0eRegisterUpload\x123.udb.core.storage.services.v1.RegisterUploadRequest\x1a4.udb.core.storage.services.v1.RegisterUploadResponse\"\x8d\x05\xca\xf3\x18@\b\x02\x1a\x1budb:storage:register-upload \x01J\x02\x01\x02j\x16storage.RegisterUpload\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18;\b\x01\x12\x0fregister_upload\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01Z\x0eregisterUpload\xe2\xf3\x18\xc1\x01\n" +
 	"\astorage\x12\x12udb/native/storage\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\".udb.native.storage.register_upload.boilerplate*\x0fregister_upload2\vudb_storage:\astorageJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18\x9f\x01\n" +
@@ -1303,15 +1337,15 @@ const file_udb_core_storage_services_v1_storage_service_proto_rawDesc = "" +
 	")\n" +
 	"\x12OBJECT_NOT_PRESENT\x12\x13FAILED_PRECONDITION\n" +
 	"+\n" +
-	"\x14UPLOAD_SIZE_MISMATCH\x12\x13FAILED_PRECONDITION\x82\xd3\xe4\x93\x02+:\x01*\"&/v1/storage/uploads/{file_id}:finalize\x12\xb4\x05\n" +
-	"\x0eGetDownloadUrl\x123.udb.core.storage.services.v1.GetDownloadUrlRequest\x1a4.udb.core.storage.services.v1.GetDownloadUrlResponse\"\xb6\x04\xca\xf3\x18A\b\x02\x1a\x1cudb:storage:get-download-url \x01J\x02\x01\x02j\x16storage.GetDownloadUrl\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18<\b\x01\x12\x10get_download_url\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01Z\x0egetDownloadUrl\xe2\xf3\x18\xc3\x01\n" +
+	"\x14UPLOAD_SIZE_MISMATCH\x12\x13FAILED_PRECONDITION\x82\xd3\xe4\x93\x02+:\x01*\"&/v1/storage/uploads/{file_id}:finalize\x12\xb6\x05\n" +
+	"\x0eGetDownloadUrl\x123.udb.core.storage.services.v1.GetDownloadUrlRequest\x1a4.udb.core.storage.services.v1.GetDownloadUrlResponse\"\xb8\x04\xca\xf3\x18A\b\x02\x1a\x1cudb:storage:get-download-url \x01J\x02\x01\x02j\x16storage.GetDownloadUrl\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18<\b\x01\x12\x10get_download_url\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01Z\x0egetDownloadUrl\xe2\xf3\x18\xc3\x01\n" +
 	"\astorage\x12\x12udb/native/storage\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"/udb.native.storage.get_download_url.boilerplate*\x10get_download_url2\vudb_storage:\astorageJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18T\n" +
 	"\x16storage.GetDownloadUrl\x12\x0estorage.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18O\n" +
-	"\astorage\x1a\bpostgres\x1a\fobject_store2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02*\x12(/v1/storage/files/{file_id}/download-url\x12\x9a\x05\n" +
+	"\astorage\x1a\bpostgres\x1a\fobject_store2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02,\x12*/v1/storage/files/{file_id}:getDownloadUrl\x12\x9a\x05\n" +
 	"\fDownloadFile\x121.udb.core.storage.services.v1.DownloadFileRequest\x1a/.udb.core.storage.services.v1.DownloadFileChunk\"\xa3\x04\xca\xf3\x18?\b\x02\x1a\x1cudb:storage:get-download-url \x01J\x02\x01\x02j\x14storage.DownloadFile\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x187\b\x01\x12\rdownload_file\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01Z\fdownloadFile\xe2\xf3\x18\xbd\x01\n" +
 	"\astorage\x12\x12udb/native/storage\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\",udb.native.storage.download_file.boilerplate*\rdownload_file2\vudb_storage:\astorageJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18R\n" +
 	"\x14storage.DownloadFile\x12\x0estorage.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18O\n" +
-	"\astorage\x1a\bpostgres\x1a\fobject_store2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02&\x12$/v1/storage/files/{file_id}/download0\x01\x12\xdd\x04\n" +
+	"\astorage\x1a\bpostgres\x1a\fobject_store2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02&\x12$/v1/storage/files/{file_id}:download0\x01\x12\xdd\x04\n" +
 	"\aGetFile\x12,.udb.core.storage.services.v1.GetFileRequest\x1a-.udb.core.storage.services.v1.GetFileResponse\"\xf4\x03\xca\xf3\x182\b\x02\x1a\x14udb:storage:get-file \x01J\x02\x01\x02j\x0fstorage.GetFile\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18-\b\x01\x12\bget_file\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01Z\agetFile\xe2\xf3\x18\xb3\x01\n" +
 	"\astorage\x12\x12udb/native/storage\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"'udb.native.storage.get_file.boilerplate*\bget_file2\vudb_storage:\astorageJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18M\n" +
 	"\x0fstorage.GetFile\x12\x0estorage.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18O\n" +
@@ -1374,6 +1408,7 @@ var file_udb_core_storage_services_v1_storage_service_proto_goTypes = []any{
 	(*v1.ApiError)(nil),            // 16: udb.core.common.v1.ApiError
 	(*v11.File)(nil),               // 17: udb.core.storage.entity.v1.File
 	(*timestamppb.Timestamp)(nil),  // 18: google.protobuf.Timestamp
+	(*fieldmaskpb.FieldMask)(nil),  // 19: google.protobuf.FieldMask
 }
 var file_udb_core_storage_services_v1_storage_service_proto_depIdxs = []int32{
 	16, // 0: udb.core.storage.services.v1.RegisterUploadResponse.error:type_name -> udb.core.common.v1.ApiError
@@ -1383,31 +1418,32 @@ var file_udb_core_storage_services_v1_storage_service_proto_depIdxs = []int32{
 	16, // 4: udb.core.storage.services.v1.GetDownloadUrlResponse.error:type_name -> udb.core.common.v1.ApiError
 	17, // 5: udb.core.storage.services.v1.GetFileResponse.file:type_name -> udb.core.storage.entity.v1.File
 	16, // 6: udb.core.storage.services.v1.GetFileResponse.error:type_name -> udb.core.common.v1.ApiError
-	16, // 7: udb.core.storage.services.v1.UpdateFileResponse.error:type_name -> udb.core.common.v1.ApiError
-	16, // 8: udb.core.storage.services.v1.DeleteFileResponse.error:type_name -> udb.core.common.v1.ApiError
-	17, // 9: udb.core.storage.services.v1.ListFilesResponse.files:type_name -> udb.core.storage.entity.v1.File
-	16, // 10: udb.core.storage.services.v1.ListFilesResponse.error:type_name -> udb.core.common.v1.ApiError
-	0,  // 11: udb.core.storage.services.v1.StorageService.RegisterUpload:input_type -> udb.core.storage.services.v1.RegisterUploadRequest
-	2,  // 12: udb.core.storage.services.v1.StorageService.FinalizeUpload:input_type -> udb.core.storage.services.v1.FinalizeUploadRequest
-	4,  // 13: udb.core.storage.services.v1.StorageService.GetDownloadUrl:input_type -> udb.core.storage.services.v1.GetDownloadUrlRequest
-	6,  // 14: udb.core.storage.services.v1.StorageService.DownloadFile:input_type -> udb.core.storage.services.v1.DownloadFileRequest
-	8,  // 15: udb.core.storage.services.v1.StorageService.GetFile:input_type -> udb.core.storage.services.v1.GetFileRequest
-	10, // 16: udb.core.storage.services.v1.StorageService.UpdateFile:input_type -> udb.core.storage.services.v1.UpdateFileRequest
-	12, // 17: udb.core.storage.services.v1.StorageService.DeleteFile:input_type -> udb.core.storage.services.v1.DeleteFileRequest
-	14, // 18: udb.core.storage.services.v1.StorageService.ListFiles:input_type -> udb.core.storage.services.v1.ListFilesRequest
-	1,  // 19: udb.core.storage.services.v1.StorageService.RegisterUpload:output_type -> udb.core.storage.services.v1.RegisterUploadResponse
-	3,  // 20: udb.core.storage.services.v1.StorageService.FinalizeUpload:output_type -> udb.core.storage.services.v1.FinalizeUploadResponse
-	5,  // 21: udb.core.storage.services.v1.StorageService.GetDownloadUrl:output_type -> udb.core.storage.services.v1.GetDownloadUrlResponse
-	7,  // 22: udb.core.storage.services.v1.StorageService.DownloadFile:output_type -> udb.core.storage.services.v1.DownloadFileChunk
-	9,  // 23: udb.core.storage.services.v1.StorageService.GetFile:output_type -> udb.core.storage.services.v1.GetFileResponse
-	11, // 24: udb.core.storage.services.v1.StorageService.UpdateFile:output_type -> udb.core.storage.services.v1.UpdateFileResponse
-	13, // 25: udb.core.storage.services.v1.StorageService.DeleteFile:output_type -> udb.core.storage.services.v1.DeleteFileResponse
-	15, // 26: udb.core.storage.services.v1.StorageService.ListFiles:output_type -> udb.core.storage.services.v1.ListFilesResponse
-	19, // [19:27] is the sub-list for method output_type
-	11, // [11:19] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	19, // 7: udb.core.storage.services.v1.UpdateFileRequest.update_mask:type_name -> google.protobuf.FieldMask
+	16, // 8: udb.core.storage.services.v1.UpdateFileResponse.error:type_name -> udb.core.common.v1.ApiError
+	16, // 9: udb.core.storage.services.v1.DeleteFileResponse.error:type_name -> udb.core.common.v1.ApiError
+	17, // 10: udb.core.storage.services.v1.ListFilesResponse.files:type_name -> udb.core.storage.entity.v1.File
+	16, // 11: udb.core.storage.services.v1.ListFilesResponse.error:type_name -> udb.core.common.v1.ApiError
+	0,  // 12: udb.core.storage.services.v1.StorageService.RegisterUpload:input_type -> udb.core.storage.services.v1.RegisterUploadRequest
+	2,  // 13: udb.core.storage.services.v1.StorageService.FinalizeUpload:input_type -> udb.core.storage.services.v1.FinalizeUploadRequest
+	4,  // 14: udb.core.storage.services.v1.StorageService.GetDownloadUrl:input_type -> udb.core.storage.services.v1.GetDownloadUrlRequest
+	6,  // 15: udb.core.storage.services.v1.StorageService.DownloadFile:input_type -> udb.core.storage.services.v1.DownloadFileRequest
+	8,  // 16: udb.core.storage.services.v1.StorageService.GetFile:input_type -> udb.core.storage.services.v1.GetFileRequest
+	10, // 17: udb.core.storage.services.v1.StorageService.UpdateFile:input_type -> udb.core.storage.services.v1.UpdateFileRequest
+	12, // 18: udb.core.storage.services.v1.StorageService.DeleteFile:input_type -> udb.core.storage.services.v1.DeleteFileRequest
+	14, // 19: udb.core.storage.services.v1.StorageService.ListFiles:input_type -> udb.core.storage.services.v1.ListFilesRequest
+	1,  // 20: udb.core.storage.services.v1.StorageService.RegisterUpload:output_type -> udb.core.storage.services.v1.RegisterUploadResponse
+	3,  // 21: udb.core.storage.services.v1.StorageService.FinalizeUpload:output_type -> udb.core.storage.services.v1.FinalizeUploadResponse
+	5,  // 22: udb.core.storage.services.v1.StorageService.GetDownloadUrl:output_type -> udb.core.storage.services.v1.GetDownloadUrlResponse
+	7,  // 23: udb.core.storage.services.v1.StorageService.DownloadFile:output_type -> udb.core.storage.services.v1.DownloadFileChunk
+	9,  // 24: udb.core.storage.services.v1.StorageService.GetFile:output_type -> udb.core.storage.services.v1.GetFileResponse
+	11, // 25: udb.core.storage.services.v1.StorageService.UpdateFile:output_type -> udb.core.storage.services.v1.UpdateFileResponse
+	13, // 26: udb.core.storage.services.v1.StorageService.DeleteFile:output_type -> udb.core.storage.services.v1.DeleteFileResponse
+	15, // 27: udb.core.storage.services.v1.StorageService.ListFiles:output_type -> udb.core.storage.services.v1.ListFilesResponse
+	20, // [20:28] is the sub-list for method output_type
+	12, // [12:20] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_udb_core_storage_services_v1_storage_service_proto_init() }

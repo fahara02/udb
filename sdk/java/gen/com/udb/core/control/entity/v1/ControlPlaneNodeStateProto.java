@@ -45,7 +45,7 @@ public final class ControlPlaneNodeStateProto {
       "tity.v1\032\037google/protobuf/timestamp.proto" +
       "\032&udb/core/control/entity/v1/enums.proto" +
       "\032\033udb/core/common/v1/db.proto\032!udb/core/" +
-      "common/v1/security.proto\"\357\014\n\025ControlPlan" +
+      "common/v1/security.proto\"\211\016\n\025ControlPlan" +
       "eNodeState\022T\n\rnode_state_id\030\001 \001(\tB0\202\267\030,\n" +
       "\rnode_state_id\022\004UUID\030\001(\001:\021gen_random_uui" +
       "d()R\013nodeStateId\0226\n\007node_id\030\002 \001(\tB\035\202\267\030\031\n" +
@@ -77,23 +77,27 @@ public final class ControlPlaneNodeStateProto {
       "ENT_TIMESTAMP`\001h\001R\tcreatedAt\022m\n\nupdated_" +
       "at\030\013 \001(\0132\032.google.protobuf.TimestampB2\202\267" +
       "\030.\n\nupdated_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_T" +
-      "IMESTAMPR\tupdatedAt:\364\002\372\266\030\267\002\n\031control_pla" +
-      "ne_node_states\022\013udb_control\030= \001*APer-nod" +
-      "e ACK/NACK/last-good ledger for control-" +
-      "plane distribution\212\001C\n uq_control_node_s" +
-      "tates_node_type\022\005BTREE\030\001Z\007node_idZ\rresou" +
-      "rce_type\212\001.\n\034idx_control_node_states_nod" +
-      "e\022\005BTREEZ\007node_id\352\001\007primary\362\001)udb.contro" +
-      "l.control_plane_node_states.cdc\372\001\030contro" +
-      "l:node-states:read\212\262\0314\n\006global2\004none:\023co" +
-      "ntrol.operational@\355\002H\002R\004noneZ\004noneB\221\002\n\036c" +
-      "om.udb.core.control.entity.v1B\032ControlPl" +
-      "aneNodeStateProtoP\001ZFgithub.com/fahara02" +
-      "/udb/sdk/go/gen/udb/core/control/entity/" +
-      "v1;entityv1\242\002\004UCCE\252\002\032udb.core.Control.En" +
-      "tity.V1\312\002\032Udb\\Core\\Control\\Entity\\V1\342\002&U" +
-      "db\\GPBMetadata\\Core\\Control\\Entity\\V1\352\002\036" +
-      "Udb::Core::Control::Entity::V1b\006proto3"
+      "IMESTAMPR\tupdatedAt\022\227\001\n\020served_snapshots" +
+      "\030\014 \001(\tBl\202\267\030h\n\020served_snapshots\022\005JSONB\030\001:" +
+      "\013\'[]\'::jsonbZ<Bounded ring of recently-s" +
+      "erved snapshots (rollback targets)x\001R\017se" +
+      "rvedSnapshots:\364\002\372\266\030\267\002\n\031control_plane_nod" +
+      "e_states\022\013udb_control\030= \001*APer-node ACK/" +
+      "NACK/last-good ledger for control-plane " +
+      "distribution\212\001C\n uq_control_node_states_" +
+      "node_type\022\005BTREE\030\001Z\007node_idZ\rresource_ty" +
+      "pe\212\001.\n\034idx_control_node_states_node\022\005BTR" +
+      "EEZ\007node_id\352\001\007primary\362\001)udb.control.cont" +
+      "rol_plane_node_states.cdc\372\001\030control:node" +
+      "-states:read\212\262\0314\n\006global2\004none:\023control." +
+      "operational@\355\002H\002R\004noneZ\004noneB\221\002\n\036com.udb" +
+      ".core.control.entity.v1B\032ControlPlaneNod" +
+      "eStateProtoP\001ZFgithub.com/fahara02/udb/s" +
+      "dk/go/gen/udb/core/control/entity/v1;ent" +
+      "ityv1\242\002\004UCCE\252\002\032udb.core.Control.Entity.V" +
+      "1\312\002\032Udb\\Core\\Control\\Entity\\V1\342\002&Udb\\GPB" +
+      "Metadata\\Core\\Control\\Entity\\V1\352\002\036Udb::C" +
+      "ore::Control::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -108,7 +112,7 @@ public final class ControlPlaneNodeStateProto {
     internal_static_udb_core_control_entity_v1_ControlPlaneNodeState_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_control_entity_v1_ControlPlaneNodeState_descriptor,
-        new java.lang.String[] { "NodeStateId", "NodeId", "ResourceType", "SubscribedNames", "AcceptedVersion", "LastGoodVersion", "LastResponseNonce", "NackErrorDetail", "NonceCounter", "CreatedAt", "UpdatedAt", });
+        new java.lang.String[] { "NodeStateId", "NodeId", "ResourceType", "SubscribedNames", "AcceptedVersion", "LastGoodVersion", "LastResponseNonce", "NackErrorDetail", "NonceCounter", "CreatedAt", "UpdatedAt", "ServedSnapshots", });
     descriptor.resolveAllFeaturesImmutable();
     com.google.protobuf.TimestampProto.getDescriptor();
     com.udb.core.control.entity.v1.EnumsProto.getDescriptor();

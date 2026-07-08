@@ -18,6 +18,12 @@ class ListUserPermissionsResponse extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>repeated .udb.core.authz.services.v1.EffectivePermission permissions = 1 [json_name = "permissions"];</code>
      */
     private $permissions;
+    /**
+     * Opaque token for the next page; empty when no more permissions are available.
+     *
+     * Generated from protobuf field <code>string next_page_token = 2 [json_name = "nextPageToken"];</code>
+     */
+    protected $next_page_token = '';
 
     /**
      * Constructor.
@@ -26,6 +32,8 @@ class ListUserPermissionsResponse extends \Google\Protobuf\Internal\Message
      *     Optional. Data for populating the Message object.
      *
      *     @type \Udb\Core\Authz\Services\V1\EffectivePermission[] $permissions
+     *     @type string $next_page_token
+     *           Opaque token for the next page; empty when no more permissions are available.
      * }
      */
     public function __construct($data = NULL) {
@@ -51,6 +59,32 @@ class ListUserPermissionsResponse extends \Google\Protobuf\Internal\Message
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Authz\Services\V1\EffectivePermission::class);
         $this->permissions = $arr;
+
+        return $this;
+    }
+
+    /**
+     * Opaque token for the next page; empty when no more permissions are available.
+     *
+     * Generated from protobuf field <code>string next_page_token = 2 [json_name = "nextPageToken"];</code>
+     * @return string
+     */
+    public function getNextPageToken()
+    {
+        return $this->next_page_token;
+    }
+
+    /**
+     * Opaque token for the next page; empty when no more permissions are available.
+     *
+     * Generated from protobuf field <code>string next_page_token = 2 [json_name = "nextPageToken"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setNextPageToken($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->next_page_token = $var;
 
         return $this;
     }

@@ -26,166 +26,206 @@ namespace udb.core.Tenant.Services.V1 {
           string.Concat(
             "CjB1ZGIvY29yZS90ZW5hbnQvc2VydmljZXMvdjEvdGVuYW50X3NlcnZpY2Uu",
             "cHJvdG8SG3VkYi5jb3JlLnRlbmFudC5zZXJ2aWNlcy52MRocZ29vZ2xlL2Fw",
-            "aS9hbm5vdGF0aW9ucy5wcm90bxocdWRiL2NvcmUvY29tbW9uL3YxL2R0by5w",
-            "cm90bxohdWRiL2NvcmUvY29tbW9uL3YxL3NlY3VyaXR5LnByb3RvGiZ1ZGIv",
-            "Y29yZS90ZW5hbnQvZW50aXR5L3YxL3RlbmFudC5wcm90bxotdWRiL2NvcmUv",
-            "dGVuYW50L2VudGl0eS92MS90ZW5hbnRfY29uZmlnLnByb3RvIs4BChNDcmVh",
-            "dGVUZW5hbnRSZXF1ZXN0EhIKBGNvZGUYASABKAlSBGNvZGUSEgoEbmFtZRgC",
-            "IAEoCVIEbmFtZRISCgR0eXBlGAMgASgJUgR0eXBlEigKEHBhcmVudF90ZW5h",
-            "bnRfaWQYBCABKAlSDnBhcmVudFRlbmFudElkEhYKBmNvbmZpZxgFIAEoCVIG",
-            "Y29uZmlnEhoKCGJyYW5kaW5nGAYgASgJUghicmFuZGluZzodmrIZGQgBGgN1",
-            "ZGIosOoBMANAAUoGdGVuYW50UAEioAEKFENyZWF0ZVRlbmFudFJlc3BvbnNl",
-            "EhsKCXRlbmFudF9pZBgBIAEoCVIIdGVuYW50SWQSGAoHbWVzc2FnZRgCIAEo",
-            "CVIHbWVzc2FnZRIyCgVlcnJvchgDIAEoCzIcLnVkYi5jb3JlLmNvbW1vbi52",
-            "MS5BcGlFcnJvclIFZXJyb3I6HZqyGRkIARoDdWRiKLDqATADQAFKBnRlbmFu",
-            "dFABIk4KEEdldFRlbmFudFJlcXVlc3QSGwoJdGVuYW50X2lkGAEgASgJUgh0",
-            "ZW5hbnRJZDodmrIZGQgBGgN1ZGIosOoBMANAAUoGdGVuYW50UAEioQEKEUdl",
-            "dFRlbmFudFJlc3BvbnNlEjkKBnRlbmFudBgBIAEoCzIhLnVkYi5jb3JlLnRl",
-            "bmFudC5lbnRpdHkudjEuVGVuYW50UgZ0ZW5hbnQSMgoFZXJyb3IYAiABKAsy",
-            "HC51ZGIuY29yZS5jb21tb24udjEuQXBpRXJyb3JSBWVycm9yOh2ashkZCAEa",
-            "A3VkYiiw6gEwA0ABSgZ0ZW5hbnRQASKQAQoSTGlzdFRlbmFudHNSZXF1ZXN0",
-            "EhIKBHR5cGUYASABKAlSBHR5cGUSFgoGc3RhdHVzGAIgASgJUgZzdGF0dXMS",
-            "EgoEcGFnZRgDIAEoBVIEcGFnZRIbCglwYWdlX3NpemUYBCABKAVSCHBhZ2VT",
-            "aXplOh2ashkZCAEaA3VkYiiw6gEwA0ABSgZ0ZW5hbnRQASLGAQoTTGlzdFRl",
-            "bmFudHNSZXNwb25zZRI7Cgd0ZW5hbnRzGAEgAygLMiEudWRiLmNvcmUudGVu",
-            "YW50LmVudGl0eS52MS5UZW5hbnRSB3RlbmFudHMSHwoLdG90YWxfY291bnQY",
-            "AiABKAVSCnRvdGFsQ291bnQSMgoFZXJyb3IYAyABKAsyHC51ZGIuY29yZS5j",
-            "b21tb24udjEuQXBpRXJyb3JSBWVycm9yOh2ashkZCAEaA3VkYiiw6gEwA0AB",
-            "SgZ0ZW5hbnRQASKxAQoTVXBkYXRlVGVuYW50UmVxdWVzdBIbCgl0ZW5hbnRf",
-            "aWQYASABKAlSCHRlbmFudElkEhIKBG5hbWUYAiABKAlSBG5hbWUSFgoGc3Rh",
-            "dHVzGAMgASgJUgZzdGF0dXMSFgoGY29uZmlnGAQgASgJUgZjb25maWcSGgoI",
-            "YnJhbmRpbmcYBSABKAlSCGJyYW5kaW5nOh2ashkZCAEaA3VkYiiw6gEwA0AB",
-            "SgZ0ZW5hbnRQASKDAQoUVXBkYXRlVGVuYW50UmVzcG9uc2USGAoHbWVzc2Fn",
-            "ZRgBIAEoCVIHbWVzc2FnZRIyCgVlcnJvchgCIAEoCzIcLnVkYi5jb3JlLmNv",
-            "bW1vbi52MS5BcGlFcnJvclIFZXJyb3I6HZqyGRkIARoDdWRiKLDqATADQAFK",
-            "BnRlbmFudFABIlQKFkdldFRlbmFudENvbmZpZ1JlcXVlc3QSGwoJdGVuYW50",
-            "X2lkGAEgASgJUgh0ZW5hbnRJZDodmrIZGQgBGgN1ZGIosOoBMANAAUoGdGVu",
-            "YW50UAEirwEKF0dldFRlbmFudENvbmZpZ1Jlc3BvbnNlEkEKB2NvbmZpZ3MY",
-            "ASADKAsyJy51ZGIuY29yZS50ZW5hbnQuZW50aXR5LnYxLlRlbmFudENvbmZp",
-            "Z1IHY29uZmlncxIyCgVlcnJvchgCIAEoCzIcLnVkYi5jb3JlLmNvbW1vbi52",
-            "MS5BcGlFcnJvclIFZXJyb3I6HZqyGRkIARoDdWRiKLDqATADQAFKBnRlbmFu",
-            "dFABIq0BChlVcGRhdGVUZW5hbnRDb25maWdSZXF1ZXN0EhsKCXRlbmFudF9p",
-            "ZBgBIAEoCVIIdGVuYW50SWQSHQoKY29uZmlnX2tleRgCIAEoCVIJY29uZmln",
-            "S2V5EiEKDGNvbmZpZ192YWx1ZRgDIAEoCVILY29uZmlnVmFsdWUSEgoEdHlw",
-            "ZRgEIAEoCVIEdHlwZTodmrIZGQgBGgN1ZGIosOoBMANAAUoGdGVuYW50UAEi",
-            "iQEKGlVwZGF0ZVRlbmFudENvbmZpZ1Jlc3BvbnNlEhgKB21lc3NhZ2UYASAB",
-            "KAlSB21lc3NhZ2USMgoFZXJyb3IYAiABKAsyHC51ZGIuY29yZS5jb21tb24u",
-            "djEuQXBpRXJyb3JSBWVycm9yOh2ashkZCAEaA3VkYiiw6gEwA0ABSgZ0ZW5h",
-            "bnRQATLJIAoNVGVuYW50U2VydmljZRLnBAoMQ3JlYXRlVGVuYW50EjAudWRi",
-            "LmNvcmUudGVuYW50LnNlcnZpY2VzLnYxLkNyZWF0ZVRlbmFudFJlcXVlc3Qa",
-            "MS51ZGIuY29yZS50ZW5hbnQuc2VydmljZXMudjEuQ3JlYXRlVGVuYW50UmVz",
-            "cG9uc2Ui8QPK8xg6CAIaGHVkYjp0ZW5hbnQ6Y3JlYXRlLXRlbmFudCABSgIB",
-            "AmoTdGVuYW50LkNyZWF0ZVRlbmFudJABAdLzGAYIARABIAHa8xg2CAESDWNy",
-            "ZWF0ZV90ZW5hbnQaA3VkYiiw6gEwA0ABSgZ0ZW5hbnRQAVoMY3JlYXRlVGVu",
-            "YW504vMYuAEKBnRlbmFudBIRdWRiL25hdGl2ZS90ZW5hbnQaG1VEQl9OQVRJ",
-            "VkVfU0VSVklDRVNfRU5BQkxFRBoPVURCX0dSUENfVEFSR0VUIit1ZGIubmF0",
-            "aXZlLnRlbmFudC5jcmVhdGVfdGVuYW50LmJvaWxlcnBsYXRlKg1jcmVhdGVf",
-            "dGVuYW50Mgp1ZGJfdGVuYW50OgZ0ZW5hbnRKC1VEQl9BUElfS0VZWhB1ZGIg",
-            "bmF0aXZlIHNtb2tl6vMYUAoTdGVuYW50LkNyZWF0ZVRlbmFudBINdGVuYW50",
-            "LmV2ZW50cxoJdGVuYW50X2lkIghzdGFuZGFyZCoNYXRfbGVhc3Rfb25jZTIG",
-            "c3RhYmxl8vMYQAoGdGVuYW50Gghwb3N0Z3JlczIbVURCX05BVElWRV9TRVJW",
-            "SUNFU19FTkFCTEVEMg9VREJfR1JQQ19UQVJHRVT48xgCgtPkkwIQIgsvdjEv",
-            "dGVuYW50czoBKhLSBAoJR2V0VGVuYW50Ei0udWRiLmNvcmUudGVuYW50LnNl",
-            "cnZpY2VzLnYxLkdldFRlbmFudFJlcXVlc3QaLi51ZGIuY29yZS50ZW5hbnQu",
-            "c2VydmljZXMudjEuR2V0VGVuYW50UmVzcG9uc2Ui5QPK8xg0CAIaFXVkYjp0",
-            "ZW5hbnQ6Z2V0LXRlbmFudCABSgIBAmoQdGVuYW50LkdldFRlbmFudJABAdLz",
-            "GAYIARABIAHa8xgwCAESCmdldF90ZW5hbnQaA3VkYiiw6gEwA0ABSgZ0ZW5h",
-            "bnRQAVoJZ2V0VGVuYW504vMYsgEKBnRlbmFudBIRdWRiL25hdGl2ZS90ZW5h",
-            "bnQaG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRBoPVURCX0dSUENfVEFS",
-            "R0VUIih1ZGIubmF0aXZlLnRlbmFudC5nZXRfdGVuYW50LmJvaWxlcnBsYXRl",
-            "KgpnZXRfdGVuYW50Mgp1ZGJfdGVuYW50OgZ0ZW5hbnRKC1VEQl9BUElfS0VZ",
-            "WhB1ZGIgbmF0aXZlIHNtb2tl6vMYTQoQdGVuYW50LkdldFRlbmFudBINdGVu",
-            "YW50LmV2ZW50cxoJdGVuYW50X2lkIghzdGFuZGFyZCoNYXRfbGVhc3Rfb25j",
-            "ZTIGc3RhYmxl8vMYQAoGdGVuYW50Gghwb3N0Z3JlczIbVURCX05BVElWRV9T",
-            "RVJWSUNFU19FTkFCTEVEMg9VREJfR1JQQ19UQVJHRVT48xgBgtPkkwIZEhcv",
-            "djEvdGVuYW50cy97dGVuYW50X2lkfRLaBAoLTGlzdFRlbmFudHMSLy51ZGIu",
-            "Y29yZS50ZW5hbnQuc2VydmljZXMudjEuTGlzdFRlbmFudHNSZXF1ZXN0GjAu",
-            "dWRiLmNvcmUudGVuYW50LnNlcnZpY2VzLnYxLkxpc3RUZW5hbnRzUmVzcG9u",
-            "c2Ui5wPK8xg4CAIaF3VkYjp0ZW5hbnQ6bGlzdC10ZW5hbnRzIAFKAgECahJ0",
-            "ZW5hbnQuTGlzdFRlbmFudHOQAQHS8xgGCAEQASAB2vMYNAgBEgxsaXN0X3Rl",
-            "bmFudHMaA3VkYiiw6gEwA0ABSgZ0ZW5hbnRQAVoLbGlzdFRlbmFudHPi8xi2",
-            "AQoGdGVuYW50EhF1ZGIvbmF0aXZlL3RlbmFudBobVURCX05BVElWRV9TRVJW",
-            "SUNFU19FTkFCTEVEGg9VREJfR1JQQ19UQVJHRVQiKnVkYi5uYXRpdmUudGVu",
-            "YW50Lmxpc3RfdGVuYW50cy5ib2lsZXJwbGF0ZSoMbGlzdF90ZW5hbnRzMgp1",
-            "ZGJfdGVuYW50OgZ0ZW5hbnRKC1VEQl9BUElfS0VZWhB1ZGIgbmF0aXZlIHNt",
-            "b2tl6vMYTwoSdGVuYW50Lkxpc3RUZW5hbnRzEg10ZW5hbnQuZXZlbnRzGgl0",
-            "ZW5hbnRfaWQiCHN0YW5kYXJkKg1hdF9sZWFzdF9vbmNlMgZzdGFibGXy8xhA",
-            "CgZ0ZW5hbnQaCHBvc3RncmVzMhtVREJfTkFUSVZFX1NFUlZJQ0VTX0VOQUJM",
-            "RUQyD1VEQl9HUlBDX1RBUkdFVPjzGAGC0+STAg0SCy92MS90ZW5hbnRzEvME",
-            "CgxVcGRhdGVUZW5hbnQSMC51ZGIuY29yZS50ZW5hbnQuc2VydmljZXMudjEu",
-            "VXBkYXRlVGVuYW50UmVxdWVzdBoxLnVkYi5jb3JlLnRlbmFudC5zZXJ2aWNl",
-            "cy52MS5VcGRhdGVUZW5hbnRSZXNwb25zZSL9A8rzGDoIAhoYdWRiOnRlbmFu",
-            "dDp1cGRhdGUtdGVuYW50IAFKAgECahN0ZW5hbnQuVXBkYXRlVGVuYW50kAEB",
-            "0vMYBggBEAEgAdrzGDYIARINdXBkYXRlX3RlbmFudBoDdWRiKLDqATADQAFK",
-            "BnRlbmFudFABWgx1cGRhdGVUZW5hbnTi8xi4AQoGdGVuYW50EhF1ZGIvbmF0",
-            "aXZlL3RlbmFudBobVURCX05BVElWRV9TRVJWSUNFU19FTkFCTEVEGg9VREJf",
-            "R1JQQ19UQVJHRVQiK3VkYi5uYXRpdmUudGVuYW50LnVwZGF0ZV90ZW5hbnQu",
-            "Ym9pbGVycGxhdGUqDXVwZGF0ZV90ZW5hbnQyCnVkYl90ZW5hbnQ6BnRlbmFu",
-            "dEoLVURCX0FQSV9LRVlaEHVkYiBuYXRpdmUgc21va2Xq8xhQChN0ZW5hbnQu",
-            "VXBkYXRlVGVuYW50Eg10ZW5hbnQuZXZlbnRzGgl0ZW5hbnRfaWQiCHN0YW5k",
-            "YXJkKg1hdF9sZWFzdF9vbmNlMgZzdGFibGXy8xhACgZ0ZW5hbnQaCHBvc3Rn",
-            "cmVzMhtVREJfTkFUSVZFX1NFUlZJQ0VTX0VOQUJMRUQyD1VEQl9HUlBDX1RB",
-            "UkdFVPjzGAKC0+STAhwyFy92MS90ZW5hbnRzL3t0ZW5hbnRfaWR9OgEqEpkF",
-            "Cg9HZXRUZW5hbnRDb25maWcSMy51ZGIuY29yZS50ZW5hbnQuc2VydmljZXMu",
-            "djEuR2V0VGVuYW50Q29uZmlnUmVxdWVzdBo0LnVkYi5jb3JlLnRlbmFudC5z",
-            "ZXJ2aWNlcy52MS5HZXRUZW5hbnRDb25maWdSZXNwb25zZSKaBMrzGEEIAhoc",
-            "dWRiOnRlbmFudDpnZXQtdGVuYW50LWNvbmZpZyABSgIBAmoWdGVuYW50Lkdl",
-            "dFRlbmFudENvbmZpZ5ABAdLzGAYIARABIAHa8xg9CAESEWdldF90ZW5hbnRf",
-            "Y29uZmlnGgN1ZGIosOoBMANAAUoGdGVuYW50UAFaD2dldFRlbmFudENvbmZp",
-            "Z+LzGMABCgZ0ZW5hbnQSEXVkYi9uYXRpdmUvdGVuYW50GhtVREJfTkFUSVZF",
-            "X1NFUlZJQ0VTX0VOQUJMRUQaD1VEQl9HUlBDX1RBUkdFVCIvdWRiLm5hdGl2",
-            "ZS50ZW5hbnQuZ2V0X3RlbmFudF9jb25maWcuYm9pbGVycGxhdGUqEWdldF90",
-            "ZW5hbnRfY29uZmlnMgp1ZGJfdGVuYW50OgZ0ZW5hbnRKC1VEQl9BUElfS0VZ",
-            "WhB1ZGIgbmF0aXZlIHNtb2tl6vMYUwoWdGVuYW50LkdldFRlbmFudENvbmZp",
-            "ZxINdGVuYW50LmV2ZW50cxoJdGVuYW50X2lkIghzdGFuZGFyZCoNYXRfbGVh",
+            "aS9hbm5vdGF0aW9ucy5wcm90bxogZ29vZ2xlL3Byb3RvYnVmL2ZpZWxkX21h",
+            "c2sucHJvdG8aHHVkYi9jb3JlL2NvbW1vbi92MS9kdG8ucHJvdG8aIXVkYi9j",
+            "b3JlL2NvbW1vbi92MS9zZWN1cml0eS5wcm90bxomdWRiL2NvcmUvdGVuYW50",
+            "L2VudGl0eS92MS90ZW5hbnQucHJvdG8aLXVkYi9jb3JlL3RlbmFudC9lbnRp",
+            "dHkvdjEvdGVuYW50X2NvbmZpZy5wcm90byLOAQoTQ3JlYXRlVGVuYW50UmVx",
+            "dWVzdBISCgRjb2RlGAEgASgJUgRjb2RlEhIKBG5hbWUYAiABKAlSBG5hbWUS",
+            "EgoEdHlwZRgDIAEoCVIEdHlwZRIoChBwYXJlbnRfdGVuYW50X2lkGAQgASgJ",
+            "Ug5wYXJlbnRUZW5hbnRJZBIWCgZjb25maWcYBSABKAlSBmNvbmZpZxIaCghi",
+            "cmFuZGluZxgGIAEoCVIIYnJhbmRpbmc6HZqyGRkIARoDdWRiKLDqATADQAFK",
+            "BnRlbmFudFABIqABChRDcmVhdGVUZW5hbnRSZXNwb25zZRIbCgl0ZW5hbnRf",
+            "aWQYASABKAlSCHRlbmFudElkEhgKB21lc3NhZ2UYAiABKAlSB21lc3NhZ2US",
+            "MgoFZXJyb3IYAyABKAsyHC51ZGIuY29yZS5jb21tb24udjEuQXBpRXJyb3JS",
+            "BWVycm9yOh2ashkZCAEaA3VkYiiw6gEwA0ABSgZ0ZW5hbnRQASJOChBHZXRU",
+            "ZW5hbnRSZXF1ZXN0EhsKCXRlbmFudF9pZBgBIAEoCVIIdGVuYW50SWQ6HZqy",
+            "GRkIARoDdWRiKLDqATADQAFKBnRlbmFudFABIqEBChFHZXRUZW5hbnRSZXNw",
+            "b25zZRI5CgZ0ZW5hbnQYASABKAsyIS51ZGIuY29yZS50ZW5hbnQuZW50aXR5",
+            "LnYxLlRlbmFudFIGdGVuYW50EjIKBWVycm9yGAIgASgLMhwudWRiLmNvcmUu",
+            "Y29tbW9uLnYxLkFwaUVycm9yUgVlcnJvcjodmrIZGQgBGgN1ZGIosOoBMANA",
+            "AUoGdGVuYW50UAEirwEKEkxpc3RUZW5hbnRzUmVxdWVzdBISCgR0eXBlGAEg",
+            "ASgJUgR0eXBlEhYKBnN0YXR1cxgCIAEoCVIGc3RhdHVzEhIKBHBhZ2UYAyAB",
+            "KAVSBHBhZ2USGwoJcGFnZV9zaXplGAQgASgFUghwYWdlU2l6ZRIdCgpwYWdl",
+            "X3Rva2VuGAUgASgJUglwYWdlVG9rZW46HZqyGRkIARoDdWRiKLDqATADQAFK",
+            "BnRlbmFudFABIu4BChNMaXN0VGVuYW50c1Jlc3BvbnNlEjsKB3RlbmFudHMY",
+            "ASADKAsyIS51ZGIuY29yZS50ZW5hbnQuZW50aXR5LnYxLlRlbmFudFIHdGVu",
+            "YW50cxIfCgt0b3RhbF9jb3VudBgCIAEoBVIKdG90YWxDb3VudBIyCgVlcnJv",
+            "chgDIAEoCzIcLnVkYi5jb3JlLmNvbW1vbi52MS5BcGlFcnJvclIFZXJyb3IS",
+            "JgoPbmV4dF9wYWdlX3Rva2VuGAQgASgJUg1uZXh0UGFnZVRva2VuOh2ashkZ",
+            "CAEaA3VkYiiw6gEwA0ABSgZ0ZW5hbnRQASLuAQoTVXBkYXRlVGVuYW50UmVx",
+            "dWVzdBIbCgl0ZW5hbnRfaWQYASABKAlSCHRlbmFudElkEhIKBG5hbWUYAiAB",
+            "KAlSBG5hbWUSFgoGc3RhdHVzGAMgASgJUgZzdGF0dXMSFgoGY29uZmlnGAQg",
+            "ASgJUgZjb25maWcSGgoIYnJhbmRpbmcYBSABKAlSCGJyYW5kaW5nEjsKC3Vw",
+            "ZGF0ZV9tYXNrGAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLkZpZWxkTWFza1IK",
+            "dXBkYXRlTWFzazodmrIZGQgBGgN1ZGIosOoBMANAAUoGdGVuYW50UAEigwEK",
+            "FFVwZGF0ZVRlbmFudFJlc3BvbnNlEhgKB21lc3NhZ2UYASABKAlSB21lc3Nh",
+            "Z2USMgoFZXJyb3IYAiABKAsyHC51ZGIuY29yZS5jb21tb24udjEuQXBpRXJy",
+            "b3JSBWVycm9yOh2ashkZCAEaA3VkYiiw6gEwA0ABSgZ0ZW5hbnRQASJUChZH",
+            "ZXRUZW5hbnRDb25maWdSZXF1ZXN0EhsKCXRlbmFudF9pZBgBIAEoCVIIdGVu",
+            "YW50SWQ6HZqyGRkIARoDdWRiKLDqATADQAFKBnRlbmFudFABIq8BChdHZXRU",
+            "ZW5hbnRDb25maWdSZXNwb25zZRJBCgdjb25maWdzGAEgAygLMicudWRiLmNv",
+            "cmUudGVuYW50LmVudGl0eS52MS5UZW5hbnRDb25maWdSB2NvbmZpZ3MSMgoF",
+            "ZXJyb3IYAiABKAsyHC51ZGIuY29yZS5jb21tb24udjEuQXBpRXJyb3JSBWVy",
+            "cm9yOh2ashkZCAEaA3VkYiiw6gEwA0ABSgZ0ZW5hbnRQASKtAQoZVXBkYXRl",
+            "VGVuYW50Q29uZmlnUmVxdWVzdBIbCgl0ZW5hbnRfaWQYASABKAlSCHRlbmFu",
+            "dElkEh0KCmNvbmZpZ19rZXkYAiABKAlSCWNvbmZpZ0tleRIhCgxjb25maWdf",
+            "dmFsdWUYAyABKAlSC2NvbmZpZ1ZhbHVlEhIKBHR5cGUYBCABKAlSBHR5cGU6",
+            "HZqyGRkIARoDdWRiKLDqATADQAFKBnRlbmFudFABIokBChpVcGRhdGVUZW5h",
+            "bnRDb25maWdSZXNwb25zZRIYCgdtZXNzYWdlGAEgASgJUgdtZXNzYWdlEjIK",
+            "BWVycm9yGAIgASgLMhwudWRiLmNvcmUuY29tbW9uLnYxLkFwaUVycm9yUgVl",
+            "cnJvcjodmrIZGQgBGgN1ZGIosOoBMANAAUoGdGVuYW50UAEifwoSUHVyZ2VU",
+            "ZW5hbnRSZXF1ZXN0EhsKCXRlbmFudF9pZBgBIAEoCVIIdGVuYW50SWQSLQoS",
+            "Y29uZmlybWF0aW9uX3Rva2VuGAIgASgJUhFjb25maXJtYXRpb25Ub2tlbjod",
+            "mrIZGQgBGgN1ZGIosOoBMANAAUoGdGVuYW50UAEingEKEFB1cmdlZFRhYmxl",
+            "Q291bnQSFgoGc2NoZW1hGAEgASgJUgZzY2hlbWESFAoFdGFibGUYAiABKAlS",
+            "BXRhYmxlEiMKDXRlbmFudF9jb2x1bW4YAyABKAlSDHRlbmFudENvbHVtbhIY",
+            "CgdkZWxldGVkGAQgASgEUgdkZWxldGVkOh2ashkZCAEaA3VkYiiw6gEwA0AB",
+            "SgZ0ZW5hbnRQASJ5ChJQdXJnZUV4Y2x1ZGVkVGFibGUSFgoGc2NoZW1hGAEg",
+            "ASgJUgZzY2hlbWESFAoFdGFibGUYAiABKAlSBXRhYmxlEhYKBnJlYXNvbhgD",
+            "IAEoCVIGcmVhc29uOh2ashkZCAEaA3VkYiiw6gEwA0ABSgZ0ZW5hbnRQASK6",
+            "AwoTUHVyZ2VUZW5hbnRSZXNwb25zZRIbCgl0ZW5hbnRfaWQYASABKAlSCHRl",
+            "bmFudElkEkUKBnB1cmdlZBgCIAMoCzItLnVkYi5jb3JlLnRlbmFudC5zZXJ2",
+            "aWNlcy52MS5QdXJnZWRUYWJsZUNvdW50UgZwdXJnZWQSSwoIZXhjbHVkZWQY",
+            "AyADKAsyLy51ZGIuY29yZS50ZW5hbnQuc2VydmljZXMudjEuUHVyZ2VFeGNs",
+            "dWRlZFRhYmxlUghleGNsdWRlZBIjCg10b3RhbF9kZWxldGVkGAQgASgEUgx0",
+            "b3RhbERlbGV0ZWQSKwoRdGVuYW50X2RlbnlsaXN0ZWQYBSABKAhSEHRlbmFu",
+            "dERlbnlsaXN0ZWQSMwoVcHJpbmNpcGFsc19kZW55bGlzdGVkGAYgASgNUhRw",
+            "cmluY2lwYWxzRGVueWxpc3RlZBIYCgdtZXNzYWdlGAcgASgJUgdtZXNzYWdl",
+            "EjIKBWVycm9yGAggASgLMhwudWRiLmNvcmUuY29tbW9uLnYxLkFwaUVycm9y",
+            "UgVlcnJvcjodmrIZGQgBGgN1ZGIosOoBMANAAUoGdGVuYW50UAEyuyUKDVRl",
+            "bmFudFNlcnZpY2US5wQKDENyZWF0ZVRlbmFudBIwLnVkYi5jb3JlLnRlbmFu",
+            "dC5zZXJ2aWNlcy52MS5DcmVhdGVUZW5hbnRSZXF1ZXN0GjEudWRiLmNvcmUu",
+            "dGVuYW50LnNlcnZpY2VzLnYxLkNyZWF0ZVRlbmFudFJlc3BvbnNlIvEDyvMY",
+            "OggCGhh1ZGI6dGVuYW50OmNyZWF0ZS10ZW5hbnQgAUoCAQJqE3RlbmFudC5D",
+            "cmVhdGVUZW5hbnSQAQHS8xgGCAEQASAB2vMYNggBEg1jcmVhdGVfdGVuYW50",
+            "GgN1ZGIosOoBMANAAUoGdGVuYW50UAFaDGNyZWF0ZVRlbmFudOLzGLgBCgZ0",
+            "ZW5hbnQSEXVkYi9uYXRpdmUvdGVuYW50GhtVREJfTkFUSVZFX1NFUlZJQ0VT",
+            "X0VOQUJMRUQaD1VEQl9HUlBDX1RBUkdFVCIrdWRiLm5hdGl2ZS50ZW5hbnQu",
+            "Y3JlYXRlX3RlbmFudC5ib2lsZXJwbGF0ZSoNY3JlYXRlX3RlbmFudDIKdWRi",
+            "X3RlbmFudDoGdGVuYW50SgtVREJfQVBJX0tFWVoQdWRiIG5hdGl2ZSBzbW9r",
+            "ZerzGFAKE3RlbmFudC5DcmVhdGVUZW5hbnQSDXRlbmFudC5ldmVudHMaCXRl",
+            "bmFudF9pZCIIc3RhbmRhcmQqDWF0X2xlYXN0X29uY2UyBnN0YWJsZfLzGEAK",
+            "BnRlbmFudBoIcG9zdGdyZXMyG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxF",
+            "RDIPVURCX0dSUENfVEFSR0VU+PMYAoLT5JMCECILL3YxL3RlbmFudHM6ASoS",
+            "0gQKCUdldFRlbmFudBItLnVkYi5jb3JlLnRlbmFudC5zZXJ2aWNlcy52MS5H",
+            "ZXRUZW5hbnRSZXF1ZXN0Gi4udWRiLmNvcmUudGVuYW50LnNlcnZpY2VzLnYx",
+            "LkdldFRlbmFudFJlc3BvbnNlIuUDyvMYNAgCGhV1ZGI6dGVuYW50OmdldC10",
+            "ZW5hbnQgAUoCAQJqEHRlbmFudC5HZXRUZW5hbnSQAQHS8xgGCAEQASAB2vMY",
+            "MAgBEgpnZXRfdGVuYW50GgN1ZGIosOoBMANAAUoGdGVuYW50UAFaCWdldFRl",
+            "bmFudOLzGLIBCgZ0ZW5hbnQSEXVkYi9uYXRpdmUvdGVuYW50GhtVREJfTkFU",
+            "SVZFX1NFUlZJQ0VTX0VOQUJMRUQaD1VEQl9HUlBDX1RBUkdFVCIodWRiLm5h",
+            "dGl2ZS50ZW5hbnQuZ2V0X3RlbmFudC5ib2lsZXJwbGF0ZSoKZ2V0X3RlbmFu",
+            "dDIKdWRiX3RlbmFudDoGdGVuYW50SgtVREJfQVBJX0tFWVoQdWRiIG5hdGl2",
+            "ZSBzbW9rZerzGE0KEHRlbmFudC5HZXRUZW5hbnQSDXRlbmFudC5ldmVudHMa",
+            "CXRlbmFudF9pZCIIc3RhbmRhcmQqDWF0X2xlYXN0X29uY2UyBnN0YWJsZfLz",
+            "GEAKBnRlbmFudBoIcG9zdGdyZXMyG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5B",
+            "QkxFRDIPVURCX0dSUENfVEFSR0VU+PMYAYLT5JMCGRIXL3YxL3RlbmFudHMv",
+            "e3RlbmFudF9pZH0S2gQKC0xpc3RUZW5hbnRzEi8udWRiLmNvcmUudGVuYW50",
+            "LnNlcnZpY2VzLnYxLkxpc3RUZW5hbnRzUmVxdWVzdBowLnVkYi5jb3JlLnRl",
+            "bmFudC5zZXJ2aWNlcy52MS5MaXN0VGVuYW50c1Jlc3BvbnNlIucDyvMYOAgC",
+            "Ghd1ZGI6dGVuYW50Omxpc3QtdGVuYW50cyABSgIBAmoSdGVuYW50Lkxpc3RU",
+            "ZW5hbnRzkAEB0vMYBggBEAEgAdrzGDQIARIMbGlzdF90ZW5hbnRzGgN1ZGIo",
+            "sOoBMANAAUoGdGVuYW50UAFaC2xpc3RUZW5hbnRz4vMYtgEKBnRlbmFudBIR",
+            "dWRiL25hdGl2ZS90ZW5hbnQaG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxF",
+            "RBoPVURCX0dSUENfVEFSR0VUIip1ZGIubmF0aXZlLnRlbmFudC5saXN0X3Rl",
+            "bmFudHMuYm9pbGVycGxhdGUqDGxpc3RfdGVuYW50czIKdWRiX3RlbmFudDoG",
+            "dGVuYW50SgtVREJfQVBJX0tFWVoQdWRiIG5hdGl2ZSBzbW9rZerzGE8KEnRl",
+            "bmFudC5MaXN0VGVuYW50cxINdGVuYW50LmV2ZW50cxoJdGVuYW50X2lkIghz",
+            "dGFuZGFyZCoNYXRfbGVhc3Rfb25jZTIGc3RhYmxl8vMYQAoGdGVuYW50Gghw",
+            "b3N0Z3JlczIbVURCX05BVElWRV9TRVJWSUNFU19FTkFCTEVEMg9VREJfR1JQ",
+            "Q19UQVJHRVT48xgBgtPkkwINEgsvdjEvdGVuYW50cxLzBAoMVXBkYXRlVGVu",
+            "YW50EjAudWRiLmNvcmUudGVuYW50LnNlcnZpY2VzLnYxLlVwZGF0ZVRlbmFu",
+            "dFJlcXVlc3QaMS51ZGIuY29yZS50ZW5hbnQuc2VydmljZXMudjEuVXBkYXRl",
+            "VGVuYW50UmVzcG9uc2Ui/QPK8xg6CAIaGHVkYjp0ZW5hbnQ6dXBkYXRlLXRl",
+            "bmFudCABSgIBAmoTdGVuYW50LlVwZGF0ZVRlbmFudJABAdLzGAYIARABIAHa",
+            "8xg2CAESDXVwZGF0ZV90ZW5hbnQaA3VkYiiw6gEwA0ABSgZ0ZW5hbnRQAVoM",
+            "dXBkYXRlVGVuYW504vMYuAEKBnRlbmFudBIRdWRiL25hdGl2ZS90ZW5hbnQa",
+            "G1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRBoPVURCX0dSUENfVEFSR0VU",
+            "Iit1ZGIubmF0aXZlLnRlbmFudC51cGRhdGVfdGVuYW50LmJvaWxlcnBsYXRl",
+            "Kg11cGRhdGVfdGVuYW50Mgp1ZGJfdGVuYW50OgZ0ZW5hbnRKC1VEQl9BUElf",
+            "S0VZWhB1ZGIgbmF0aXZlIHNtb2tl6vMYUAoTdGVuYW50LlVwZGF0ZVRlbmFu",
+            "dBINdGVuYW50LmV2ZW50cxoJdGVuYW50X2lkIghzdGFuZGFyZCoNYXRfbGVh",
             "c3Rfb25jZTIGc3RhYmxl8vMYQAoGdGVuYW50Gghwb3N0Z3JlczIbVURCX05B",
-            "VElWRV9TRVJWSUNFU19FTkFCTEVEMg9VREJfR1JQQ19UQVJHRVT48xgBgtPk",
-            "kwIgEh4vdjEvdGVuYW50cy97dGVuYW50X2lkfS9jb25maWcSugUKElVwZGF0",
-            "ZVRlbmFudENvbmZpZxI2LnVkYi5jb3JlLnRlbmFudC5zZXJ2aWNlcy52MS5V",
-            "cGRhdGVUZW5hbnRDb25maWdSZXF1ZXN0GjcudWRiLmNvcmUudGVuYW50LnNl",
-            "cnZpY2VzLnYxLlVwZGF0ZVRlbmFudENvbmZpZ1Jlc3BvbnNlIrIEyvMYRwgC",
-            "Gh91ZGI6dGVuYW50OnVwZGF0ZS10ZW5hbnQtY29uZmlnIAFKAgECahl0ZW5h",
-            "bnQuVXBkYXRlVGVuYW50Q29uZmlnkAEB0vMYBggBEAEgAdrzGEMIARIUdXBk",
-            "YXRlX3RlbmFudF9jb25maWcaA3VkYiiw6gEwA0ABSgZ0ZW5hbnRQAVoSdXBk",
-            "YXRlVGVuYW50Q29uZmln4vMYxgEKBnRlbmFudBIRdWRiL25hdGl2ZS90ZW5h",
-            "bnQaG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRBoPVURCX0dSUENfVEFS",
-            "R0VUIjJ1ZGIubmF0aXZlLnRlbmFudC51cGRhdGVfdGVuYW50X2NvbmZpZy5i",
-            "b2lsZXJwbGF0ZSoUdXBkYXRlX3RlbmFudF9jb25maWcyCnVkYl90ZW5hbnQ6",
-            "BnRlbmFudEoLVURCX0FQSV9LRVlaEHVkYiBuYXRpdmUgc21va2Xq8xhWChl0",
-            "ZW5hbnQuVXBkYXRlVGVuYW50Q29uZmlnEg10ZW5hbnQuZXZlbnRzGgl0ZW5h",
-            "bnRfaWQiCHN0YW5kYXJkKg1hdF9sZWFzdF9vbmNlMgZzdGFibGXy8xhACgZ0",
-            "ZW5hbnQaCHBvc3RncmVzMhtVREJfTkFUSVZFX1NFUlZJQ0VTX0VOQUJMRUQy",
-            "D1VEQl9HUlBDX1RBUkdFVPjzGAKC0+STAiMaHi92MS90ZW5hbnRzL3t0ZW5h",
-            "bnRfaWR9L2NvbmZpZzoBKhrMAsrwGVkKBnRlbmFudBIGdGVuYW50GgZ0ZW5h",
-            "bnQiB1RlbmFudHMqBnRlbmFudDABOAFoAXoGdGVuYW50ggEGdGVuYW50igEG",
-            "dGVuYW50kgENbmF0aXZlLnRlbmFudNLwGRkIARoDdWRiKLDqATADQAFKBnRl",
-            "bmFudFAB2vAZiQEKBnRlbmFudBIRdWRiL25hdGl2ZS90ZW5hbnQaG1VEQl9O",
-            "QVRJVkVfU0VSVklDRVNfRU5BQkxFRBoPVURCX0dSUENfVEFSR0VUIhh1ZGIu",
-            "bmF0aXZlLnRlbmFudC5jb25maWc6BnRlbmFudEoLVURCX0FQSV9LRVlaD3Vk",
-            "YiBuYXRpdmUgbGludOLwGUAKBnRlbmFudBoIcG9zdGdyZXMyG1VEQl9OQVRJ",
-            "VkVfU0VSVklDRVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VUQpECCh9jb20u",
-            "dWRiLmNvcmUudGVuYW50LnNlcnZpY2VzLnYxQhJUZW5hbnRTZXJ2aWNlUHJv",
-            "dG9QAVpJZ2l0aHViLmNvbS9mYWhhcmEwMi91ZGIvc2RrL2dvL2dlbi91ZGIv",
-            "Y29yZS90ZW5hbnQvc2VydmljZXMvdjE7c2VydmljZXN2MaICBFVDVFOqAht1",
-            "ZGIuY29yZS5UZW5hbnQuU2VydmljZXMuVjHKAhtVZGJcQ29yZVxUZW5hbnRc",
-            "U2VydmljZXNcVjHiAidVZGJcR1BCTWV0YWRhdGFcQ29yZVxUZW5hbnRcU2Vy",
-            "dmljZXNcVjHqAh9VZGI6OkNvcmU6OlRlbmFudDo6U2VydmljZXM6OlYxYgZw",
-            "cm90bzM="));
+            "VElWRV9TRVJWSUNFU19FTkFCTEVEMg9VREJfR1JQQ19UQVJHRVT48xgCgtPk",
+            "kwIcMhcvdjEvdGVuYW50cy97dGVuYW50X2lkfToBKhKZBQoPR2V0VGVuYW50",
+            "Q29uZmlnEjMudWRiLmNvcmUudGVuYW50LnNlcnZpY2VzLnYxLkdldFRlbmFu",
+            "dENvbmZpZ1JlcXVlc3QaNC51ZGIuY29yZS50ZW5hbnQuc2VydmljZXMudjEu",
+            "R2V0VGVuYW50Q29uZmlnUmVzcG9uc2UimgTK8xhBCAIaHHVkYjp0ZW5hbnQ6",
+            "Z2V0LXRlbmFudC1jb25maWcgAUoCAQJqFnRlbmFudC5HZXRUZW5hbnRDb25m",
+            "aWeQAQHS8xgGCAEQASAB2vMYPQgBEhFnZXRfdGVuYW50X2NvbmZpZxoDdWRi",
+            "KLDqATADQAFKBnRlbmFudFABWg9nZXRUZW5hbnRDb25maWfi8xjAAQoGdGVu",
+            "YW50EhF1ZGIvbmF0aXZlL3RlbmFudBobVURCX05BVElWRV9TRVJWSUNFU19F",
+            "TkFCTEVEGg9VREJfR1JQQ19UQVJHRVQiL3VkYi5uYXRpdmUudGVuYW50Lmdl",
+            "dF90ZW5hbnRfY29uZmlnLmJvaWxlcnBsYXRlKhFnZXRfdGVuYW50X2NvbmZp",
+            "ZzIKdWRiX3RlbmFudDoGdGVuYW50SgtVREJfQVBJX0tFWVoQdWRiIG5hdGl2",
+            "ZSBzbW9rZerzGFMKFnRlbmFudC5HZXRUZW5hbnRDb25maWcSDXRlbmFudC5l",
+            "dmVudHMaCXRlbmFudF9pZCIIc3RhbmRhcmQqDWF0X2xlYXN0X29uY2UyBnN0",
+            "YWJsZfLzGEAKBnRlbmFudBoIcG9zdGdyZXMyG1VEQl9OQVRJVkVfU0VSVklD",
+            "RVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VU+PMYAYLT5JMCIBIeL3YxL3Rl",
+            "bmFudHMve3RlbmFudF9pZH0vY29uZmlnEroFChJVcGRhdGVUZW5hbnRDb25m",
+            "aWcSNi51ZGIuY29yZS50ZW5hbnQuc2VydmljZXMudjEuVXBkYXRlVGVuYW50",
+            "Q29uZmlnUmVxdWVzdBo3LnVkYi5jb3JlLnRlbmFudC5zZXJ2aWNlcy52MS5V",
+            "cGRhdGVUZW5hbnRDb25maWdSZXNwb25zZSKyBMrzGEcIAhofdWRiOnRlbmFu",
+            "dDp1cGRhdGUtdGVuYW50LWNvbmZpZyABSgIBAmoZdGVuYW50LlVwZGF0ZVRl",
+            "bmFudENvbmZpZ5ABAdLzGAYIARABIAHa8xhDCAESFHVwZGF0ZV90ZW5hbnRf",
+            "Y29uZmlnGgN1ZGIosOoBMANAAUoGdGVuYW50UAFaEnVwZGF0ZVRlbmFudENv",
+            "bmZpZ+LzGMYBCgZ0ZW5hbnQSEXVkYi9uYXRpdmUvdGVuYW50GhtVREJfTkFU",
+            "SVZFX1NFUlZJQ0VTX0VOQUJMRUQaD1VEQl9HUlBDX1RBUkdFVCIydWRiLm5h",
+            "dGl2ZS50ZW5hbnQudXBkYXRlX3RlbmFudF9jb25maWcuYm9pbGVycGxhdGUq",
+            "FHVwZGF0ZV90ZW5hbnRfY29uZmlnMgp1ZGJfdGVuYW50OgZ0ZW5hbnRKC1VE",
+            "Ql9BUElfS0VZWhB1ZGIgbmF0aXZlIHNtb2tl6vMYVgoZdGVuYW50LlVwZGF0",
+            "ZVRlbmFudENvbmZpZxINdGVuYW50LmV2ZW50cxoJdGVuYW50X2lkIghzdGFu",
+            "ZGFyZCoNYXRfbGVhc3Rfb25jZTIGc3RhYmxl8vMYQAoGdGVuYW50Gghwb3N0",
+            "Z3JlczIbVURCX05BVElWRV9TRVJWSUNFU19FTkFCTEVEMg9VREJfR1JQQ19U",
+            "QVJHRVT48xgCgtPkkwIjGh4vdjEvdGVuYW50cy97dGVuYW50X2lkfS9jb25m",
+            "aWc6ASoS7wQKC1B1cmdlVGVuYW50Ei8udWRiLmNvcmUudGVuYW50LnNlcnZp",
+            "Y2VzLnYxLlB1cmdlVGVuYW50UmVxdWVzdBowLnVkYi5jb3JlLnRlbmFudC5z",
+            "ZXJ2aWNlcy52MS5QdXJnZVRlbmFudFJlc3BvbnNlIvwDyvMYOAgCGhd1ZGI6",
+            "dGVuYW50OnB1cmdlLXRlbmFudCABSgIBAmoSdGVuYW50LlB1cmdlVGVuYW50",
+            "kAEB0vMYBggBEAEgAdrzGDQIARIMcHVyZ2VfdGVuYW50GgN1ZGIosOoBMANA",
+            "AUoGdGVuYW50UAFaC3B1cmdlVGVuYW504vMYtgEKBnRlbmFudBIRdWRiL25h",
+            "dGl2ZS90ZW5hbnQaG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRBoPVURC",
+            "X0dSUENfVEFSR0VUIip1ZGIubmF0aXZlLnRlbmFudC5wdXJnZV90ZW5hbnQu",
+            "Ym9pbGVycGxhdGUqDHB1cmdlX3RlbmFudDIKdWRiX3RlbmFudDoGdGVuYW50",
+            "SgtVREJfQVBJX0tFWVoQdWRiIG5hdGl2ZSBzbW9rZerzGE8KEnRlbmFudC5Q",
+            "dXJnZVRlbmFudBINdGVuYW50LmV2ZW50cxoJdGVuYW50X2lkIghzdGFuZGFy",
+            "ZCoNYXRfbGVhc3Rfb25jZTIGc3RhYmxl8vMYQAoGdGVuYW50Gghwb3N0Z3Jl",
+            "czIbVURCX05BVElWRV9TRVJWSUNFU19FTkFCTEVEMg9VREJfR1JQQ19UQVJH",
+            "RVT48xgDgtPkkwIiIh0vdjEvdGVuYW50cy97dGVuYW50X2lkfTpwdXJnZToB",
+            "KhrMAsrwGVkKBnRlbmFudBIGdGVuYW50GgZ0ZW5hbnQiB1RlbmFudHMqBnRl",
+            "bmFudDABOAFoAXoGdGVuYW50ggEGdGVuYW50igEGdGVuYW50kgENbmF0aXZl",
+            "LnRlbmFudNLwGRkIARoDdWRiKLDqATADQAFKBnRlbmFudFAB2vAZiQEKBnRl",
+            "bmFudBIRdWRiL25hdGl2ZS90ZW5hbnQaG1VEQl9OQVRJVkVfU0VSVklDRVNf",
+            "RU5BQkxFRBoPVURCX0dSUENfVEFSR0VUIhh1ZGIubmF0aXZlLnRlbmFudC5j",
+            "b25maWc6BnRlbmFudEoLVURCX0FQSV9LRVlaD3VkYiBuYXRpdmUgbGludOLw",
+            "GUAKBnRlbmFudBoIcG9zdGdyZXMyG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5B",
+            "QkxFRDIPVURCX0dSUENfVEFSR0VUQpECCh9jb20udWRiLmNvcmUudGVuYW50",
+            "LnNlcnZpY2VzLnYxQhJUZW5hbnRTZXJ2aWNlUHJvdG9QAVpJZ2l0aHViLmNv",
+            "bS9mYWhhcmEwMi91ZGIvc2RrL2dvL2dlbi91ZGIvY29yZS90ZW5hbnQvc2Vy",
+            "dmljZXMvdjE7c2VydmljZXN2MaICBFVDVFOqAht1ZGIuY29yZS5UZW5hbnQu",
+            "U2VydmljZXMuVjHKAhtVZGJcQ29yZVxUZW5hbnRcU2VydmljZXNcVjHiAidV",
+            "ZGJcR1BCTWV0YWRhdGFcQ29yZVxUZW5hbnRcU2VydmljZXNcVjHqAh9VZGI6",
+            "OkNvcmU6OlRlbmFudDo6U2VydmljZXM6OlYxYgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
-          new pbr::FileDescriptor[] { global::Google.Api.AnnotationsReflection.Descriptor, global::udb.core.Common.V1.DtoReflection.Descriptor, global::udb.core.Common.V1.SecurityReflection.Descriptor, global::udb.core.Tenant.Entity.V1.TenantReflection.Descriptor, global::udb.core.Tenant.Entity.V1.TenantConfigReflection.Descriptor, },
+          new pbr::FileDescriptor[] { global::Google.Api.AnnotationsReflection.Descriptor, global::Google.Protobuf.WellKnownTypes.FieldMaskReflection.Descriptor, global::udb.core.Common.V1.DtoReflection.Descriptor, global::udb.core.Common.V1.SecurityReflection.Descriptor, global::udb.core.Tenant.Entity.V1.TenantReflection.Descriptor, global::udb.core.Tenant.Entity.V1.TenantConfigReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Tenant.Services.V1.CreateTenantRequest), global::udb.core.Tenant.Services.V1.CreateTenantRequest.Parser, new[]{ "Code", "Name", "Type", "ParentTenantId", "Config", "Branding" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Tenant.Services.V1.CreateTenantResponse), global::udb.core.Tenant.Services.V1.CreateTenantResponse.Parser, new[]{ "TenantId", "Message", "Error" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Tenant.Services.V1.GetTenantRequest), global::udb.core.Tenant.Services.V1.GetTenantRequest.Parser, new[]{ "TenantId" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Tenant.Services.V1.GetTenantResponse), global::udb.core.Tenant.Services.V1.GetTenantResponse.Parser, new[]{ "Tenant", "Error" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Tenant.Services.V1.ListTenantsRequest), global::udb.core.Tenant.Services.V1.ListTenantsRequest.Parser, new[]{ "Type", "Status", "Page", "PageSize" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Tenant.Services.V1.ListTenantsResponse), global::udb.core.Tenant.Services.V1.ListTenantsResponse.Parser, new[]{ "Tenants", "TotalCount", "Error" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Tenant.Services.V1.UpdateTenantRequest), global::udb.core.Tenant.Services.V1.UpdateTenantRequest.Parser, new[]{ "TenantId", "Name", "Status", "Config", "Branding" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Tenant.Services.V1.ListTenantsRequest), global::udb.core.Tenant.Services.V1.ListTenantsRequest.Parser, new[]{ "Type", "Status", "Page", "PageSize", "PageToken" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Tenant.Services.V1.ListTenantsResponse), global::udb.core.Tenant.Services.V1.ListTenantsResponse.Parser, new[]{ "Tenants", "TotalCount", "Error", "NextPageToken" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Tenant.Services.V1.UpdateTenantRequest), global::udb.core.Tenant.Services.V1.UpdateTenantRequest.Parser, new[]{ "TenantId", "Name", "Status", "Config", "Branding", "UpdateMask" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Tenant.Services.V1.UpdateTenantResponse), global::udb.core.Tenant.Services.V1.UpdateTenantResponse.Parser, new[]{ "Message", "Error" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Tenant.Services.V1.GetTenantConfigRequest), global::udb.core.Tenant.Services.V1.GetTenantConfigRequest.Parser, new[]{ "TenantId" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Tenant.Services.V1.GetTenantConfigResponse), global::udb.core.Tenant.Services.V1.GetTenantConfigResponse.Parser, new[]{ "Configs", "Error" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Tenant.Services.V1.UpdateTenantConfigRequest), global::udb.core.Tenant.Services.V1.UpdateTenantConfigRequest.Parser, new[]{ "TenantId", "ConfigKey", "ConfigValue", "Type" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Tenant.Services.V1.UpdateTenantConfigResponse), global::udb.core.Tenant.Services.V1.UpdateTenantConfigResponse.Parser, new[]{ "Message", "Error" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Tenant.Services.V1.UpdateTenantConfigResponse), global::udb.core.Tenant.Services.V1.UpdateTenantConfigResponse.Parser, new[]{ "Message", "Error" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Tenant.Services.V1.PurgeTenantRequest), global::udb.core.Tenant.Services.V1.PurgeTenantRequest.Parser, new[]{ "TenantId", "ConfirmationToken" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Tenant.Services.V1.PurgedTableCount), global::udb.core.Tenant.Services.V1.PurgedTableCount.Parser, new[]{ "Schema", "Table", "TenantColumn", "Deleted" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Tenant.Services.V1.PurgeExcludedTable), global::udb.core.Tenant.Services.V1.PurgeExcludedTable.Parser, new[]{ "Schema", "Table", "Reason" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Tenant.Services.V1.PurgeTenantResponse), global::udb.core.Tenant.Services.V1.PurgeTenantResponse.Parser, new[]{ "TenantId", "Purged", "Excluded", "TotalDeleted", "TenantDenylisted", "PrincipalsDenylisted", "Message", "Error" }, null, null, null, null)
           }));
     }
     #endregion
@@ -1358,6 +1398,7 @@ namespace udb.core.Tenant.Services.V1 {
       status_ = other.status_;
       page_ = other.page_;
       pageSize_ = other.pageSize_;
+      pageToken_ = other.pageToken_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -1415,6 +1456,21 @@ namespace udb.core.Tenant.Services.V1 {
       }
     }
 
+    /// <summary>Field number for the "page_token" field.</summary>
+    public const int PageTokenFieldNumber = 5;
+    private string pageToken_ = "";
+    /// <summary>
+    /// Opaque pagination token returned by ListTenantsResponse.next_page_token.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string PageToken {
+      get { return pageToken_; }
+      set {
+        pageToken_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -1434,6 +1490,7 @@ namespace udb.core.Tenant.Services.V1 {
       if (Status != other.Status) return false;
       if (Page != other.Page) return false;
       if (PageSize != other.PageSize) return false;
+      if (PageToken != other.PageToken) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -1445,6 +1502,7 @@ namespace udb.core.Tenant.Services.V1 {
       if (Status.Length != 0) hash ^= Status.GetHashCode();
       if (Page != 0) hash ^= Page.GetHashCode();
       if (PageSize != 0) hash ^= PageSize.GetHashCode();
+      if (PageToken.Length != 0) hash ^= PageToken.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -1479,6 +1537,10 @@ namespace udb.core.Tenant.Services.V1 {
         output.WriteRawTag(32);
         output.WriteInt32(PageSize);
       }
+      if (PageToken.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(PageToken);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -1505,6 +1567,10 @@ namespace udb.core.Tenant.Services.V1 {
         output.WriteRawTag(32);
         output.WriteInt32(PageSize);
       }
+      if (PageToken.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(PageToken);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -1526,6 +1592,9 @@ namespace udb.core.Tenant.Services.V1 {
       }
       if (PageSize != 0) {
         size += 1 + pb::CodedOutputStream.ComputeInt32Size(PageSize);
+      }
+      if (PageToken.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(PageToken);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -1550,6 +1619,9 @@ namespace udb.core.Tenant.Services.V1 {
       }
       if (other.PageSize != 0) {
         PageSize = other.PageSize;
+      }
+      if (other.PageToken.Length != 0) {
+        PageToken = other.PageToken;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -1586,6 +1658,10 @@ namespace udb.core.Tenant.Services.V1 {
             PageSize = input.ReadInt32();
             break;
           }
+          case 42: {
+            PageToken = input.ReadString();
+            break;
+          }
         }
       }
     #endif
@@ -1619,6 +1695,10 @@ namespace udb.core.Tenant.Services.V1 {
           }
           case 32: {
             PageSize = input.ReadInt32();
+            break;
+          }
+          case 42: {
+            PageToken = input.ReadString();
             break;
           }
         }
@@ -1666,6 +1746,7 @@ namespace udb.core.Tenant.Services.V1 {
       tenants_ = other.tenants_.Clone();
       totalCount_ = other.totalCount_;
       error_ = other.error_ != null ? other.error_.Clone() : null;
+      nextPageToken_ = other.nextPageToken_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -1713,6 +1794,21 @@ namespace udb.core.Tenant.Services.V1 {
       }
     }
 
+    /// <summary>Field number for the "next_page_token" field.</summary>
+    public const int NextPageTokenFieldNumber = 4;
+    private string nextPageToken_ = "";
+    /// <summary>
+    /// Opaque token for the next page; empty when no more tenants are available.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string NextPageToken {
+      get { return nextPageToken_; }
+      set {
+        nextPageToken_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -1731,6 +1827,7 @@ namespace udb.core.Tenant.Services.V1 {
       if(!tenants_.Equals(other.tenants_)) return false;
       if (TotalCount != other.TotalCount) return false;
       if (!object.Equals(Error, other.Error)) return false;
+      if (NextPageToken != other.NextPageToken) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -1741,6 +1838,7 @@ namespace udb.core.Tenant.Services.V1 {
       hash ^= tenants_.GetHashCode();
       if (TotalCount != 0) hash ^= TotalCount.GetHashCode();
       if (error_ != null) hash ^= Error.GetHashCode();
+      if (NextPageToken.Length != 0) hash ^= NextPageToken.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -1768,6 +1866,10 @@ namespace udb.core.Tenant.Services.V1 {
         output.WriteRawTag(26);
         output.WriteMessage(Error);
       }
+      if (NextPageToken.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(NextPageToken);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -1787,6 +1889,10 @@ namespace udb.core.Tenant.Services.V1 {
         output.WriteRawTag(26);
         output.WriteMessage(Error);
       }
+      if (NextPageToken.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(NextPageToken);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -1803,6 +1909,9 @@ namespace udb.core.Tenant.Services.V1 {
       }
       if (error_ != null) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(Error);
+      }
+      if (NextPageToken.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(NextPageToken);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -1825,6 +1934,9 @@ namespace udb.core.Tenant.Services.V1 {
           Error = new global::udb.core.Common.V1.ApiError();
         }
         Error.MergeFrom(other.Error);
+      }
+      if (other.NextPageToken.Length != 0) {
+        NextPageToken = other.NextPageToken;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -1860,6 +1972,10 @@ namespace udb.core.Tenant.Services.V1 {
             input.ReadMessage(Error);
             break;
           }
+          case 34: {
+            NextPageToken = input.ReadString();
+            break;
+          }
         }
       }
     #endif
@@ -1892,6 +2008,10 @@ namespace udb.core.Tenant.Services.V1 {
               Error = new global::udb.core.Common.V1.ApiError();
             }
             input.ReadMessage(Error);
+            break;
+          }
+          case 34: {
+            NextPageToken = input.ReadString();
             break;
           }
         }
@@ -1941,6 +2061,7 @@ namespace udb.core.Tenant.Services.V1 {
       status_ = other.status_;
       config_ = other.config_;
       branding_ = other.branding_;
+      updateMask_ = other.updateMask_ != null ? other.updateMask_.Clone() : null;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -2016,6 +2137,22 @@ namespace udb.core.Tenant.Services.V1 {
       }
     }
 
+    /// <summary>Field number for the "update_mask" field.</summary>
+    public const int UpdateMaskFieldNumber = 6;
+    private global::Google.Protobuf.WellKnownTypes.FieldMask updateMask_;
+    /// <summary>
+    /// Optional PATCH mask relative to the tenant resource. When omitted, legacy
+    /// clients keep the historical non-empty-field patch behavior.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Google.Protobuf.WellKnownTypes.FieldMask UpdateMask {
+      get { return updateMask_; }
+      set {
+        updateMask_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -2036,6 +2173,7 @@ namespace udb.core.Tenant.Services.V1 {
       if (Status != other.Status) return false;
       if (Config != other.Config) return false;
       if (Branding != other.Branding) return false;
+      if (!object.Equals(UpdateMask, other.UpdateMask)) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -2048,6 +2186,7 @@ namespace udb.core.Tenant.Services.V1 {
       if (Status.Length != 0) hash ^= Status.GetHashCode();
       if (Config.Length != 0) hash ^= Config.GetHashCode();
       if (Branding.Length != 0) hash ^= Branding.GetHashCode();
+      if (updateMask_ != null) hash ^= UpdateMask.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -2086,6 +2225,10 @@ namespace udb.core.Tenant.Services.V1 {
         output.WriteRawTag(42);
         output.WriteString(Branding);
       }
+      if (updateMask_ != null) {
+        output.WriteRawTag(50);
+        output.WriteMessage(UpdateMask);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -2116,6 +2259,10 @@ namespace udb.core.Tenant.Services.V1 {
         output.WriteRawTag(42);
         output.WriteString(Branding);
       }
+      if (updateMask_ != null) {
+        output.WriteRawTag(50);
+        output.WriteMessage(UpdateMask);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -2140,6 +2287,9 @@ namespace udb.core.Tenant.Services.V1 {
       }
       if (Branding.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(Branding);
+      }
+      if (updateMask_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(UpdateMask);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -2167,6 +2317,12 @@ namespace udb.core.Tenant.Services.V1 {
       }
       if (other.Branding.Length != 0) {
         Branding = other.Branding;
+      }
+      if (other.updateMask_ != null) {
+        if (updateMask_ == null) {
+          UpdateMask = new global::Google.Protobuf.WellKnownTypes.FieldMask();
+        }
+        UpdateMask.MergeFrom(other.UpdateMask);
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -2207,6 +2363,13 @@ namespace udb.core.Tenant.Services.V1 {
             Branding = input.ReadString();
             break;
           }
+          case 50: {
+            if (updateMask_ == null) {
+              UpdateMask = new global::Google.Protobuf.WellKnownTypes.FieldMask();
+            }
+            input.ReadMessage(UpdateMask);
+            break;
+          }
         }
       }
     #endif
@@ -2244,6 +2407,13 @@ namespace udb.core.Tenant.Services.V1 {
           }
           case 42: {
             Branding = input.ReadString();
+            break;
+          }
+          case 50: {
+            if (updateMask_ == null) {
+              UpdateMask = new global::Google.Protobuf.WellKnownTypes.FieldMask();
+            }
+            input.ReadMessage(UpdateMask);
             break;
           }
         }
@@ -3477,6 +3647,1292 @@ namespace udb.core.Tenant.Services.V1 {
             break;
           }
           case 18: {
+            if (error_ == null) {
+              Error = new global::udb.core.Common.V1.ApiError();
+            }
+            input.ReadMessage(Error);
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class PurgeTenantRequest : pb::IMessage<PurgeTenantRequest>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<PurgeTenantRequest> _parser = new pb::MessageParser<PurgeTenantRequest>(() => new PurgeTenantRequest());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<PurgeTenantRequest> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::udb.core.Tenant.Services.V1.TenantServiceReflection.Descriptor.MessageTypes[12]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public PurgeTenantRequest() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public PurgeTenantRequest(PurgeTenantRequest other) : this() {
+      tenantId_ = other.tenantId_;
+      confirmationToken_ = other.confirmationToken_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public PurgeTenantRequest Clone() {
+      return new PurgeTenantRequest(this);
+    }
+
+    /// <summary>Field number for the "tenant_id" field.</summary>
+    public const int TenantIdFieldNumber = 1;
+    private string tenantId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string TenantId {
+      get { return tenantId_; }
+      set {
+        tenantId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "confirmation_token" field.</summary>
+    public const int ConfirmationTokenFieldNumber = 2;
+    private string confirmationToken_ = "";
+    /// <summary>
+    /// Required explicit confirmation token. The purge is an irreversible HARD
+    /// delete; an empty or non-matching token MUST fail closed (DESTRUCTIVE).
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ConfirmationToken {
+      get { return confirmationToken_; }
+      set {
+        confirmationToken_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as PurgeTenantRequest);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(PurgeTenantRequest other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (TenantId != other.TenantId) return false;
+      if (ConfirmationToken != other.ConfirmationToken) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (TenantId.Length != 0) hash ^= TenantId.GetHashCode();
+      if (ConfirmationToken.Length != 0) hash ^= ConfirmationToken.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (TenantId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(TenantId);
+      }
+      if (ConfirmationToken.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(ConfirmationToken);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (TenantId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(TenantId);
+      }
+      if (ConfirmationToken.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(ConfirmationToken);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (TenantId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(TenantId);
+      }
+      if (ConfirmationToken.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ConfirmationToken);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(PurgeTenantRequest other) {
+      if (other == null) {
+        return;
+      }
+      if (other.TenantId.Length != 0) {
+        TenantId = other.TenantId;
+      }
+      if (other.ConfirmationToken.Length != 0) {
+        ConfirmationToken = other.ConfirmationToken;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            TenantId = input.ReadString();
+            break;
+          }
+          case 18: {
+            ConfirmationToken = input.ReadString();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            TenantId = input.ReadString();
+            break;
+          }
+          case 18: {
+            ConfirmationToken = input.ReadString();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  /// <summary>
+  /// One entity table the purge hard-deleted the tenant's rows from.
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class PurgedTableCount : pb::IMessage<PurgedTableCount>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<PurgedTableCount> _parser = new pb::MessageParser<PurgedTableCount>(() => new PurgedTableCount());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<PurgedTableCount> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::udb.core.Tenant.Services.V1.TenantServiceReflection.Descriptor.MessageTypes[13]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public PurgedTableCount() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public PurgedTableCount(PurgedTableCount other) : this() {
+      schema_ = other.schema_;
+      table_ = other.table_;
+      tenantColumn_ = other.tenantColumn_;
+      deleted_ = other.deleted_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public PurgedTableCount Clone() {
+      return new PurgedTableCount(this);
+    }
+
+    /// <summary>Field number for the "schema" field.</summary>
+    public const int SchemaFieldNumber = 1;
+    private string schema_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Schema {
+      get { return schema_; }
+      set {
+        schema_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "table" field.</summary>
+    public const int TableFieldNumber = 2;
+    private string table_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Table {
+      get { return table_; }
+      set {
+        table_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "tenant_column" field.</summary>
+    public const int TenantColumnFieldNumber = 3;
+    private string tenantColumn_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string TenantColumn {
+      get { return tenantColumn_; }
+      set {
+        tenantColumn_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "deleted" field.</summary>
+    public const int DeletedFieldNumber = 4;
+    private ulong deleted_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public ulong Deleted {
+      get { return deleted_; }
+      set {
+        deleted_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as PurgedTableCount);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(PurgedTableCount other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (Schema != other.Schema) return false;
+      if (Table != other.Table) return false;
+      if (TenantColumn != other.TenantColumn) return false;
+      if (Deleted != other.Deleted) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (Schema.Length != 0) hash ^= Schema.GetHashCode();
+      if (Table.Length != 0) hash ^= Table.GetHashCode();
+      if (TenantColumn.Length != 0) hash ^= TenantColumn.GetHashCode();
+      if (Deleted != 0UL) hash ^= Deleted.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (Schema.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(Schema);
+      }
+      if (Table.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(Table);
+      }
+      if (TenantColumn.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(TenantColumn);
+      }
+      if (Deleted != 0UL) {
+        output.WriteRawTag(32);
+        output.WriteUInt64(Deleted);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (Schema.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(Schema);
+      }
+      if (Table.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(Table);
+      }
+      if (TenantColumn.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(TenantColumn);
+      }
+      if (Deleted != 0UL) {
+        output.WriteRawTag(32);
+        output.WriteUInt64(Deleted);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (Schema.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Schema);
+      }
+      if (Table.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Table);
+      }
+      if (TenantColumn.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(TenantColumn);
+      }
+      if (Deleted != 0UL) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt64Size(Deleted);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(PurgedTableCount other) {
+      if (other == null) {
+        return;
+      }
+      if (other.Schema.Length != 0) {
+        Schema = other.Schema;
+      }
+      if (other.Table.Length != 0) {
+        Table = other.Table;
+      }
+      if (other.TenantColumn.Length != 0) {
+        TenantColumn = other.TenantColumn;
+      }
+      if (other.Deleted != 0UL) {
+        Deleted = other.Deleted;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            Schema = input.ReadString();
+            break;
+          }
+          case 18: {
+            Table = input.ReadString();
+            break;
+          }
+          case 26: {
+            TenantColumn = input.ReadString();
+            break;
+          }
+          case 32: {
+            Deleted = input.ReadUInt64();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            Schema = input.ReadString();
+            break;
+          }
+          case 18: {
+            Table = input.ReadString();
+            break;
+          }
+          case 26: {
+            TenantColumn = input.ReadString();
+            break;
+          }
+          case 32: {
+            Deleted = input.ReadUInt64();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  /// <summary>
+  /// An entity table the purge SKIPPED because it has no resolvable tenant column.
+  /// Reported, never silently dropped (capability honesty).
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class PurgeExcludedTable : pb::IMessage<PurgeExcludedTable>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<PurgeExcludedTable> _parser = new pb::MessageParser<PurgeExcludedTable>(() => new PurgeExcludedTable());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<PurgeExcludedTable> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::udb.core.Tenant.Services.V1.TenantServiceReflection.Descriptor.MessageTypes[14]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public PurgeExcludedTable() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public PurgeExcludedTable(PurgeExcludedTable other) : this() {
+      schema_ = other.schema_;
+      table_ = other.table_;
+      reason_ = other.reason_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public PurgeExcludedTable Clone() {
+      return new PurgeExcludedTable(this);
+    }
+
+    /// <summary>Field number for the "schema" field.</summary>
+    public const int SchemaFieldNumber = 1;
+    private string schema_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Schema {
+      get { return schema_; }
+      set {
+        schema_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "table" field.</summary>
+    public const int TableFieldNumber = 2;
+    private string table_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Table {
+      get { return table_; }
+      set {
+        table_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "reason" field.</summary>
+    public const int ReasonFieldNumber = 3;
+    private string reason_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Reason {
+      get { return reason_; }
+      set {
+        reason_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as PurgeExcludedTable);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(PurgeExcludedTable other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (Schema != other.Schema) return false;
+      if (Table != other.Table) return false;
+      if (Reason != other.Reason) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (Schema.Length != 0) hash ^= Schema.GetHashCode();
+      if (Table.Length != 0) hash ^= Table.GetHashCode();
+      if (Reason.Length != 0) hash ^= Reason.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (Schema.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(Schema);
+      }
+      if (Table.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(Table);
+      }
+      if (Reason.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(Reason);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (Schema.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(Schema);
+      }
+      if (Table.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(Table);
+      }
+      if (Reason.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(Reason);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (Schema.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Schema);
+      }
+      if (Table.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Table);
+      }
+      if (Reason.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Reason);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(PurgeExcludedTable other) {
+      if (other == null) {
+        return;
+      }
+      if (other.Schema.Length != 0) {
+        Schema = other.Schema;
+      }
+      if (other.Table.Length != 0) {
+        Table = other.Table;
+      }
+      if (other.Reason.Length != 0) {
+        Reason = other.Reason;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            Schema = input.ReadString();
+            break;
+          }
+          case 18: {
+            Table = input.ReadString();
+            break;
+          }
+          case 26: {
+            Reason = input.ReadString();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            Schema = input.ReadString();
+            break;
+          }
+          case 18: {
+            Table = input.ReadString();
+            break;
+          }
+          case 26: {
+            Reason = input.ReadString();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class PurgeTenantResponse : pb::IMessage<PurgeTenantResponse>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<PurgeTenantResponse> _parser = new pb::MessageParser<PurgeTenantResponse>(() => new PurgeTenantResponse());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<PurgeTenantResponse> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::udb.core.Tenant.Services.V1.TenantServiceReflection.Descriptor.MessageTypes[15]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public PurgeTenantResponse() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public PurgeTenantResponse(PurgeTenantResponse other) : this() {
+      tenantId_ = other.tenantId_;
+      purged_ = other.purged_.Clone();
+      excluded_ = other.excluded_.Clone();
+      totalDeleted_ = other.totalDeleted_;
+      tenantDenylisted_ = other.tenantDenylisted_;
+      principalsDenylisted_ = other.principalsDenylisted_;
+      message_ = other.message_;
+      error_ = other.error_ != null ? other.error_.Clone() : null;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public PurgeTenantResponse Clone() {
+      return new PurgeTenantResponse(this);
+    }
+
+    /// <summary>Field number for the "tenant_id" field.</summary>
+    public const int TenantIdFieldNumber = 1;
+    private string tenantId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string TenantId {
+      get { return tenantId_; }
+      set {
+        tenantId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "purged" field.</summary>
+    public const int PurgedFieldNumber = 2;
+    private static readonly pb::FieldCodec<global::udb.core.Tenant.Services.V1.PurgedTableCount> _repeated_purged_codec
+        = pb::FieldCodec.ForMessage(18, global::udb.core.Tenant.Services.V1.PurgedTableCount.Parser);
+    private readonly pbc::RepeatedField<global::udb.core.Tenant.Services.V1.PurgedTableCount> purged_ = new pbc::RepeatedField<global::udb.core.Tenant.Services.V1.PurgedTableCount>();
+    /// <summary>
+    /// Per-table hard-delete counts, in execution (children->parents) order.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<global::udb.core.Tenant.Services.V1.PurgedTableCount> Purged {
+      get { return purged_; }
+    }
+
+    /// <summary>Field number for the "excluded" field.</summary>
+    public const int ExcludedFieldNumber = 3;
+    private static readonly pb::FieldCodec<global::udb.core.Tenant.Services.V1.PurgeExcludedTable> _repeated_excluded_codec
+        = pb::FieldCodec.ForMessage(26, global::udb.core.Tenant.Services.V1.PurgeExcludedTable.Parser);
+    private readonly pbc::RepeatedField<global::udb.core.Tenant.Services.V1.PurgeExcludedTable> excluded_ = new pbc::RepeatedField<global::udb.core.Tenant.Services.V1.PurgeExcludedTable>();
+    /// <summary>
+    /// Tenant-less tables reported as excluded from the ripple.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<global::udb.core.Tenant.Services.V1.PurgeExcludedTable> Excluded {
+      get { return excluded_; }
+    }
+
+    /// <summary>Field number for the "total_deleted" field.</summary>
+    public const int TotalDeletedFieldNumber = 4;
+    private ulong totalDeleted_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public ulong TotalDeleted {
+      get { return totalDeleted_; }
+      set {
+        totalDeleted_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "tenant_denylisted" field.</summary>
+    public const int TenantDenylistedFieldNumber = 5;
+    private bool tenantDenylisted_;
+    /// <summary>
+    /// Whether the tenant-level cluster denylist cutoff was recorded (best-effort).
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool TenantDenylisted {
+      get { return tenantDenylisted_; }
+      set {
+        tenantDenylisted_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "principals_denylisted" field.</summary>
+    public const int PrincipalsDenylistedFieldNumber = 6;
+    private uint principalsDenylisted_;
+    /// <summary>
+    /// How many principals had a denylist cutoff recorded (best-effort).
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public uint PrincipalsDenylisted {
+      get { return principalsDenylisted_; }
+      set {
+        principalsDenylisted_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "message" field.</summary>
+    public const int MessageFieldNumber = 7;
+    private string message_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Message {
+      get { return message_; }
+      set {
+        message_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "error" field.</summary>
+    public const int ErrorFieldNumber = 8;
+    private global::udb.core.Common.V1.ApiError error_;
+    /// <summary>
+    /// Error information if operation failed
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::udb.core.Common.V1.ApiError Error {
+      get { return error_; }
+      set {
+        error_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as PurgeTenantResponse);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(PurgeTenantResponse other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (TenantId != other.TenantId) return false;
+      if(!purged_.Equals(other.purged_)) return false;
+      if(!excluded_.Equals(other.excluded_)) return false;
+      if (TotalDeleted != other.TotalDeleted) return false;
+      if (TenantDenylisted != other.TenantDenylisted) return false;
+      if (PrincipalsDenylisted != other.PrincipalsDenylisted) return false;
+      if (Message != other.Message) return false;
+      if (!object.Equals(Error, other.Error)) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (TenantId.Length != 0) hash ^= TenantId.GetHashCode();
+      hash ^= purged_.GetHashCode();
+      hash ^= excluded_.GetHashCode();
+      if (TotalDeleted != 0UL) hash ^= TotalDeleted.GetHashCode();
+      if (TenantDenylisted != false) hash ^= TenantDenylisted.GetHashCode();
+      if (PrincipalsDenylisted != 0) hash ^= PrincipalsDenylisted.GetHashCode();
+      if (Message.Length != 0) hash ^= Message.GetHashCode();
+      if (error_ != null) hash ^= Error.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (TenantId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(TenantId);
+      }
+      purged_.WriteTo(output, _repeated_purged_codec);
+      excluded_.WriteTo(output, _repeated_excluded_codec);
+      if (TotalDeleted != 0UL) {
+        output.WriteRawTag(32);
+        output.WriteUInt64(TotalDeleted);
+      }
+      if (TenantDenylisted != false) {
+        output.WriteRawTag(40);
+        output.WriteBool(TenantDenylisted);
+      }
+      if (PrincipalsDenylisted != 0) {
+        output.WriteRawTag(48);
+        output.WriteUInt32(PrincipalsDenylisted);
+      }
+      if (Message.Length != 0) {
+        output.WriteRawTag(58);
+        output.WriteString(Message);
+      }
+      if (error_ != null) {
+        output.WriteRawTag(66);
+        output.WriteMessage(Error);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (TenantId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(TenantId);
+      }
+      purged_.WriteTo(ref output, _repeated_purged_codec);
+      excluded_.WriteTo(ref output, _repeated_excluded_codec);
+      if (TotalDeleted != 0UL) {
+        output.WriteRawTag(32);
+        output.WriteUInt64(TotalDeleted);
+      }
+      if (TenantDenylisted != false) {
+        output.WriteRawTag(40);
+        output.WriteBool(TenantDenylisted);
+      }
+      if (PrincipalsDenylisted != 0) {
+        output.WriteRawTag(48);
+        output.WriteUInt32(PrincipalsDenylisted);
+      }
+      if (Message.Length != 0) {
+        output.WriteRawTag(58);
+        output.WriteString(Message);
+      }
+      if (error_ != null) {
+        output.WriteRawTag(66);
+        output.WriteMessage(Error);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (TenantId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(TenantId);
+      }
+      size += purged_.CalculateSize(_repeated_purged_codec);
+      size += excluded_.CalculateSize(_repeated_excluded_codec);
+      if (TotalDeleted != 0UL) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt64Size(TotalDeleted);
+      }
+      if (TenantDenylisted != false) {
+        size += 1 + 1;
+      }
+      if (PrincipalsDenylisted != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(PrincipalsDenylisted);
+      }
+      if (Message.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Message);
+      }
+      if (error_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Error);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(PurgeTenantResponse other) {
+      if (other == null) {
+        return;
+      }
+      if (other.TenantId.Length != 0) {
+        TenantId = other.TenantId;
+      }
+      purged_.Add(other.purged_);
+      excluded_.Add(other.excluded_);
+      if (other.TotalDeleted != 0UL) {
+        TotalDeleted = other.TotalDeleted;
+      }
+      if (other.TenantDenylisted != false) {
+        TenantDenylisted = other.TenantDenylisted;
+      }
+      if (other.PrincipalsDenylisted != 0) {
+        PrincipalsDenylisted = other.PrincipalsDenylisted;
+      }
+      if (other.Message.Length != 0) {
+        Message = other.Message;
+      }
+      if (other.error_ != null) {
+        if (error_ == null) {
+          Error = new global::udb.core.Common.V1.ApiError();
+        }
+        Error.MergeFrom(other.Error);
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            TenantId = input.ReadString();
+            break;
+          }
+          case 18: {
+            purged_.AddEntriesFrom(input, _repeated_purged_codec);
+            break;
+          }
+          case 26: {
+            excluded_.AddEntriesFrom(input, _repeated_excluded_codec);
+            break;
+          }
+          case 32: {
+            TotalDeleted = input.ReadUInt64();
+            break;
+          }
+          case 40: {
+            TenantDenylisted = input.ReadBool();
+            break;
+          }
+          case 48: {
+            PrincipalsDenylisted = input.ReadUInt32();
+            break;
+          }
+          case 58: {
+            Message = input.ReadString();
+            break;
+          }
+          case 66: {
+            if (error_ == null) {
+              Error = new global::udb.core.Common.V1.ApiError();
+            }
+            input.ReadMessage(Error);
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            TenantId = input.ReadString();
+            break;
+          }
+          case 18: {
+            purged_.AddEntriesFrom(ref input, _repeated_purged_codec);
+            break;
+          }
+          case 26: {
+            excluded_.AddEntriesFrom(ref input, _repeated_excluded_codec);
+            break;
+          }
+          case 32: {
+            TotalDeleted = input.ReadUInt64();
+            break;
+          }
+          case 40: {
+            TenantDenylisted = input.ReadBool();
+            break;
+          }
+          case 48: {
+            PrincipalsDenylisted = input.ReadUInt32();
+            break;
+          }
+          case 58: {
+            Message = input.ReadString();
+            break;
+          }
+          case 66: {
             if (error_ == null) {
               Error = new global::udb.core.Common.V1.ApiError();
             }

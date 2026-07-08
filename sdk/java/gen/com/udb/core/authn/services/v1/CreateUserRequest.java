@@ -355,6 +355,11 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object externalProviderId_ = "";
   /**
+   * <pre>
+   * Stable public IdP provider id. Caller-chosen format is provider-specific,
+   * bounded to 120 characters by the user store, and scoped by tenant.
+   * </pre>
+   *
    * <code>string external_provider_id = 9 [json_name = "externalProviderId"];</code>
    * @return The externalProviderId.
    */
@@ -372,6 +377,11 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
+   * <pre>
+   * Stable public IdP provider id. Caller-chosen format is provider-specific,
+   * bounded to 120 characters by the user store, and scoped by tenant.
+   * </pre>
+   *
    * <code>string external_provider_id = 9 [json_name = "externalProviderId"];</code>
    * @return The bytes for externalProviderId.
    */
@@ -1724,6 +1734,11 @@ java.lang.String defaultValue) {
 
     private java.lang.Object externalProviderId_ = "";
     /**
+     * <pre>
+     * Stable public IdP provider id. Caller-chosen format is provider-specific,
+     * bounded to 120 characters by the user store, and scoped by tenant.
+     * </pre>
+     *
      * <code>string external_provider_id = 9 [json_name = "externalProviderId"];</code>
      * @return The externalProviderId.
      */
@@ -1740,6 +1755,11 @@ java.lang.String defaultValue) {
       }
     }
     /**
+     * <pre>
+     * Stable public IdP provider id. Caller-chosen format is provider-specific,
+     * bounded to 120 characters by the user store, and scoped by tenant.
+     * </pre>
+     *
      * <code>string external_provider_id = 9 [json_name = "externalProviderId"];</code>
      * @return The bytes for externalProviderId.
      */
@@ -1757,6 +1777,11 @@ java.lang.String defaultValue) {
       }
     }
     /**
+     * <pre>
+     * Stable public IdP provider id. Caller-chosen format is provider-specific,
+     * bounded to 120 characters by the user store, and scoped by tenant.
+     * </pre>
+     *
      * <code>string external_provider_id = 9 [json_name = "externalProviderId"];</code>
      * @param value The externalProviderId to set.
      * @return This builder for chaining.
@@ -1770,6 +1795,11 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
+     * <pre>
+     * Stable public IdP provider id. Caller-chosen format is provider-specific,
+     * bounded to 120 characters by the user store, and scoped by tenant.
+     * </pre>
+     *
      * <code>string external_provider_id = 9 [json_name = "externalProviderId"];</code>
      * @return This builder for chaining.
      */
@@ -1780,6 +1810,11 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
+     * <pre>
+     * Stable public IdP provider id. Caller-chosen format is provider-specific,
+     * bounded to 120 characters by the user store, and scoped by tenant.
+     * </pre>
+     *
      * <code>string external_provider_id = 9 [json_name = "externalProviderId"];</code>
      * @param value The bytes for externalProviderId to set.
      * @return This builder for chaining.

@@ -11,6 +11,7 @@ import (
 	v1 "github.com/fahara02/udb/sdk/go/gen/udb/core/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	fieldmaskpb "google.golang.org/protobuf/types/known/fieldmaskpb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
@@ -25,18 +26,20 @@ const (
 )
 
 type CreateUserRequest struct {
-	state              protoimpl.MessageState `protogen:"open.v1"`
-	Username           string                 `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty"`
-	Email              string                 `protobuf:"bytes,2,opt,name=email,proto3" json:"email,omitempty"`
-	Password           string                 `protobuf:"bytes,3,opt,name=password,proto3" json:"password,omitempty"` // Min 10 chars; 1 upper, 1 lower, 1 digit, 1 special
-	TenantId           string                 `protobuf:"bytes,4,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	FullName           string                 `protobuf:"bytes,5,opt,name=full_name,json=fullName,proto3" json:"full_name,omitempty"`
-	Context            *v1.RequestContext     `protobuf:"bytes,6,opt,name=context,proto3" json:"context,omitempty"`
-	AccountKind        v11.AccountKind        `protobuf:"varint,7,opt,name=account_kind,json=accountKind,proto3,enum=udb.core.authn.entity.v1.AccountKind" json:"account_kind,omitempty"`
-	ProjectId          string                 `protobuf:"bytes,8,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	ExternalProviderId string                 `protobuf:"bytes,9,opt,name=external_provider_id,json=externalProviderId,proto3" json:"external_provider_id,omitempty"`
-	ExternalSubject    string                 `protobuf:"bytes,10,opt,name=external_subject,json=externalSubject,proto3" json:"external_subject,omitempty"`
-	ProfileAttributes  map[string]string      `protobuf:"bytes,11,rep,name=profile_attributes,json=profileAttributes,proto3" json:"profile_attributes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Username    string                 `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty"`
+	Email       string                 `protobuf:"bytes,2,opt,name=email,proto3" json:"email,omitempty"`
+	Password    string                 `protobuf:"bytes,3,opt,name=password,proto3" json:"password,omitempty"` // Min 10 chars; 1 upper, 1 lower, 1 digit, 1 special
+	TenantId    string                 `protobuf:"bytes,4,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	FullName    string                 `protobuf:"bytes,5,opt,name=full_name,json=fullName,proto3" json:"full_name,omitempty"`
+	Context     *v1.RequestContext     `protobuf:"bytes,6,opt,name=context,proto3" json:"context,omitempty"`
+	AccountKind v11.AccountKind        `protobuf:"varint,7,opt,name=account_kind,json=accountKind,proto3,enum=udb.core.authn.entity.v1.AccountKind" json:"account_kind,omitempty"`
+	ProjectId   string                 `protobuf:"bytes,8,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	// Stable public IdP provider id. Caller-chosen format is provider-specific,
+	// bounded to 120 characters by the user store, and scoped by tenant.
+	ExternalProviderId string            `protobuf:"bytes,9,opt,name=external_provider_id,json=externalProviderId,proto3" json:"external_provider_id,omitempty"`
+	ExternalSubject    string            `protobuf:"bytes,10,opt,name=external_subject,json=externalSubject,proto3" json:"external_subject,omitempty"`
+	ProfileAttributes  map[string]string `protobuf:"bytes,11,rep,name=profile_attributes,json=profileAttributes,proto3" json:"profile_attributes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -436,8 +439,11 @@ type UpdateUserRequest struct {
 	ProfileAttributes  map[string]string      `protobuf:"bytes,8,rep,name=profile_attributes,json=profileAttributes,proto3" json:"profile_attributes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	ExternalProviderId string                 `protobuf:"bytes,9,opt,name=external_provider_id,json=externalProviderId,proto3" json:"external_provider_id,omitempty"`
 	ExternalSubject    string                 `protobuf:"bytes,10,opt,name=external_subject,json=externalSubject,proto3" json:"external_subject,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// Optional PATCH mask relative to the user resource. When omitted, legacy
+	// clients keep the historical non-empty-field patch behavior.
+	UpdateMask    *fieldmaskpb.FieldMask `protobuf:"bytes,11,opt,name=update_mask,json=updateMask,proto3" json:"update_mask,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UpdateUserRequest) Reset() {
@@ -538,6 +544,13 @@ func (x *UpdateUserRequest) GetExternalSubject() string {
 		return x.ExternalSubject
 	}
 	return ""
+}
+
+func (x *UpdateUserRequest) GetUpdateMask() *fieldmaskpb.FieldMask {
+	if x != nil {
+		return x.UpdateMask
+	}
+	return nil
 }
 
 type UpdateUserResponse struct {
@@ -5716,10 +5729,11 @@ func (x *VerifyMfaChallengeResponse) GetUserId() string {
 }
 
 type MfaFactorSummary struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	FactorKind    v11.AuthFactorKind     `protobuf:"varint,1,opt,name=factor_kind,json=factorKind,proto3,enum=udb.core.authn.entity.v1.AuthFactorKind" json:"factor_kind,omitempty"`
-	Enabled       bool                   `protobuf:"varint,2,opt,name=enabled,proto3" json:"enabled,omitempty"`
-	Label         string                 `protobuf:"bytes,3,opt,name=label,proto3" json:"label,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Canonical public identity of this MFA factor within the owning user.
+	FactorKind    v11.AuthFactorKind `protobuf:"varint,1,opt,name=factor_kind,json=factorKind,proto3,enum=udb.core.authn.entity.v1.AuthFactorKind" json:"factor_kind,omitempty"`
+	Enabled       bool               `protobuf:"varint,2,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	Label         string             `protobuf:"bytes,3,opt,name=label,proto3" json:"label,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -5776,9 +5790,13 @@ func (x *MfaFactorSummary) GetLabel() string {
 }
 
 type ListMfaFactorsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	Context       *v1.RequestContext     `protobuf:"bytes,2,opt,name=context,proto3" json:"context,omitempty"`
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	UserId  string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Context *v1.RequestContext     `protobuf:"bytes,2,opt,name=context,proto3" json:"context,omitempty"`
+	// Requested page size. Defaults to 50 and is capped at the native list maximum.
+	PageSize int32 `protobuf:"varint,3,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// Opaque pagination token returned by ListMfaFactorsResponse.next_page_token.
+	PageToken     string `protobuf:"bytes,4,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -5827,9 +5845,25 @@ func (x *ListMfaFactorsRequest) GetContext() *v1.RequestContext {
 	return nil
 }
 
+func (x *ListMfaFactorsRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListMfaFactorsRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
 type ListMfaFactorsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Factors       []*MfaFactorSummary    `protobuf:"bytes,1,rep,name=factors,proto3" json:"factors,omitempty"`
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Factors []*MfaFactorSummary    `protobuf:"bytes,1,rep,name=factors,proto3" json:"factors,omitempty"`
+	// Opaque token for the next page; empty when no more factors are available.
+	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -5869,6 +5903,13 @@ func (x *ListMfaFactorsResponse) GetFactors() []*MfaFactorSummary {
 		return x.Factors
 	}
 	return nil
+}
+
+func (x *ListMfaFactorsResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
 }
 
 type DisableMfaFactorRequest struct {
@@ -6356,9 +6397,13 @@ func (x *WebAuthnCredentialSummary) GetLastUsedAtUnix() int64 {
 }
 
 type ListWebAuthnCredentialsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	Context       *v1.RequestContext     `protobuf:"bytes,2,opt,name=context,proto3" json:"context,omitempty"`
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	UserId  string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Context *v1.RequestContext     `protobuf:"bytes,2,opt,name=context,proto3" json:"context,omitempty"`
+	// Requested page size. Defaults to 50 and is capped at the native list maximum.
+	PageSize int32 `protobuf:"varint,3,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// Opaque pagination token returned by ListWebAuthnCredentialsResponse.next_page_token.
+	PageToken     string `protobuf:"bytes,4,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -6407,9 +6452,25 @@ func (x *ListWebAuthnCredentialsRequest) GetContext() *v1.RequestContext {
 	return nil
 }
 
+func (x *ListWebAuthnCredentialsRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListWebAuthnCredentialsRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
 type ListWebAuthnCredentialsResponse struct {
-	state         protoimpl.MessageState       `protogen:"open.v1"`
-	Credentials   []*WebAuthnCredentialSummary `protobuf:"bytes,1,rep,name=credentials,proto3" json:"credentials,omitempty"`
+	state       protoimpl.MessageState       `protogen:"open.v1"`
+	Credentials []*WebAuthnCredentialSummary `protobuf:"bytes,1,rep,name=credentials,proto3" json:"credentials,omitempty"`
+	// Opaque token for the next page; empty when no more credentials are available.
+	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -6449,6 +6510,13 @@ func (x *ListWebAuthnCredentialsResponse) GetCredentials() []*WebAuthnCredential
 		return x.Credentials
 	}
 	return nil
+}
+
+func (x *ListWebAuthnCredentialsResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
 }
 
 type DeleteWebAuthnCredentialRequest struct {
@@ -6559,7 +6627,7 @@ var File_udb_core_authn_services_v1_core_proto protoreflect.FileDescriptor
 
 const file_udb_core_authn_services_v1_core_proto_rawDesc = "" +
 	"\n" +
-	"%udb/core/authn/services/v1/core.proto\x12\x1audb.core.authn.services.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a&udb/core/authn/entity/v1/session.proto\x1a#udb/core/authn/entity/v1/user.proto\x1a%udb/core/authn/entity/v1/device.proto\x1a\x1cudb/core/common/v1/dto.proto\x1a\x1eudb/core/common/v1/types.proto\x1a!udb/core/common/v1/security.proto\"\xf8\x04\n" +
+	"%udb/core/authn/services/v1/core.proto\x12\x1audb.core.authn.services.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a google/protobuf/field_mask.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a&udb/core/authn/entity/v1/session.proto\x1a#udb/core/authn/entity/v1/user.proto\x1a%udb/core/authn/entity/v1/device.proto\x1a\x1cudb/core/common/v1/dto.proto\x1a\x1eudb/core/common/v1/types.proto\x1a!udb/core/common/v1/security.proto\"\xf8\x04\n" +
 	"\x11CreateUserRequest\x12\x1a\n" +
 	"\busername\x18\x01 \x01(\tR\busername\x12\x14\n" +
 	"\x05email\x18\x02 \x01(\tR\x05email\x12\x1a\n" +
@@ -6593,7 +6661,7 @@ const file_udb_core_authn_services_v1_core_proto_rawDesc = "" +
 	"\x04page\x18\x04 \x01(\v2\x1f.udb.core.common.v1.PageRequestR\x04page:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\x9d\x01\n" +
 	"\x11ListUsersResponse\x124\n" +
 	"\x05users\x18\x01 \x03(\v2\x1e.udb.core.authn.entity.v1.UserR\x05users\x124\n" +
-	"\x04page\x18\x02 \x01(\v2 .udb.core.common.v1.PageResponseR\x04page:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xd9\x04\n" +
+	"\x04page\x18\x02 \x01(\v2 .udb.core.common.v1.PageResponseR\x04page:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\x96\x05\n" +
 	"\x11UpdateUserRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1b\n" +
 	"\tfull_name\x18\x02 \x01(\tR\bfullName\x12\x14\n" +
@@ -6606,7 +6674,9 @@ const file_udb_core_authn_services_v1_core_proto_rawDesc = "" +
 	"\x12profile_attributes\x18\b \x03(\v2D.udb.core.authn.services.v1.UpdateUserRequest.ProfileAttributesEntryR\x11profileAttributes\x120\n" +
 	"\x14external_provider_id\x18\t \x01(\tR\x12externalProviderId\x12)\n" +
 	"\x10external_subject\x18\n" +
-	" \x01(\tR\x0fexternalSubject\x1aD\n" +
+	" \x01(\tR\x0fexternalSubject\x12;\n" +
+	"\vupdate_mask\x18\v \x01(\v2\x1a.google.protobuf.FieldMaskR\n" +
+	"updateMask\x1aD\n" +
 	"\x16ProfileAttributesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"f\n" +
@@ -7051,12 +7121,16 @@ const file_udb_core_authn_services_v1_core_proto_rawDesc = "" +
 	"\vfactor_kind\x18\x01 \x01(\x0e2(.udb.core.authn.entity.v1.AuthFactorKindR\n" +
 	"factorKind\x12\x18\n" +
 	"\aenabled\x18\x02 \x01(\bR\aenabled\x12\x14\n" +
-	"\x05label\x18\x03 \x01(\tR\x05label:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\x8c\x01\n" +
+	"\x05label\x18\x03 \x01(\tR\x05label:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xc8\x01\n" +
 	"\x15ListMfaFactorsRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12<\n" +
-	"\acontext\x18\x02 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"~\n" +
+	"\acontext\x18\x02 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\x12\x1b\n" +
+	"\tpage_size\x18\x03 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x04 \x01(\tR\tpageToken:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xa6\x01\n" +
 	"\x16ListMfaFactorsResponse\x12F\n" +
-	"\afactors\x18\x01 \x03(\v2,.udb.core.authn.services.v1.MfaFactorSummaryR\afactors:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xd9\x01\n" +
+	"\afactors\x18\x01 \x03(\v2,.udb.core.authn.services.v1.MfaFactorSummaryR\afactors\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xd9\x01\n" +
 	"\x17DisableMfaFactorRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12I\n" +
 	"\vfactor_kind\x18\x02 \x01(\x0e2(.udb.core.authn.entity.v1.AuthFactorKindR\n" +
@@ -7086,12 +7160,16 @@ const file_udb_core_authn_services_v1_core_proto_rawDesc = "" +
 	"\rcredential_id\x18\x01 \x01(\tR\fcredentialId\x12\x14\n" +
 	"\x05label\x18\x02 \x01(\tR\x05label\x12&\n" +
 	"\x0fcreated_at_unix\x18\x03 \x01(\x03R\rcreatedAtUnix\x12)\n" +
-	"\x11last_used_at_unix\x18\x04 \x01(\x03R\x0elastUsedAtUnix:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\x95\x01\n" +
+	"\x11last_used_at_unix\x18\x04 \x01(\x03R\x0elastUsedAtUnix:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xd1\x01\n" +
 	"\x1eListWebAuthnCredentialsRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12<\n" +
-	"\acontext\x18\x02 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\x98\x01\n" +
+	"\acontext\x18\x02 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\x12\x1b\n" +
+	"\tpage_size\x18\x03 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x04 \x01(\tR\tpageToken:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xc0\x01\n" +
 	"\x1fListWebAuthnCredentialsResponse\x12W\n" +
-	"\vcredentials\x18\x01 \x03(\v25.udb.core.authn.services.v1.WebAuthnCredentialSummaryR\vcredentials:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xbb\x01\n" +
+	"\vcredentials\x18\x01 \x03(\v25.udb.core.authn.services.v1.WebAuthnCredentialSummaryR\vcredentials\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xbb\x01\n" +
 	"\x1fDeleteWebAuthnCredentialRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12#\n" +
 	"\rcredential_id\x18\x02 \x01(\tR\fcredentialId\x12<\n" +
@@ -7228,16 +7306,17 @@ var file_udb_core_authn_services_v1_core_proto_goTypes = []any{
 	(v11.UserStatus)(0),                          // 111: udb.core.authn.entity.v1.UserStatus
 	(*v1.PageRequest)(nil),                       // 112: udb.core.common.v1.PageRequest
 	(*v1.PageResponse)(nil),                      // 113: udb.core.common.v1.PageResponse
-	(v11.OTPType)(0),                             // 114: udb.core.authn.entity.v1.OTPType
-	(v11.AuthCredentialType)(0),                  // 115: udb.core.authn.entity.v1.AuthCredentialType
-	(v11.DeviceType)(0),                          // 116: udb.core.authn.entity.v1.DeviceType
-	(*timestamppb.Timestamp)(nil),                // 117: google.protobuf.Timestamp
-	(v11.TokenType)(0),                           // 118: udb.core.authn.entity.v1.TokenType
-	(v11.SessionType)(0),                         // 119: udb.core.authn.entity.v1.SessionType
-	(*v11.Session)(nil),                          // 120: udb.core.authn.entity.v1.Session
-	(v11.AuthFactorKind)(0),                      // 121: udb.core.authn.entity.v1.AuthFactorKind
-	(*v11.Device)(nil),                           // 122: udb.core.authn.entity.v1.Device
-	(v11.MfaChallengePurpose)(0),                 // 123: udb.core.authn.entity.v1.MfaChallengePurpose
+	(*fieldmaskpb.FieldMask)(nil),                // 114: google.protobuf.FieldMask
+	(v11.OTPType)(0),                             // 115: udb.core.authn.entity.v1.OTPType
+	(v11.AuthCredentialType)(0),                  // 116: udb.core.authn.entity.v1.AuthCredentialType
+	(v11.DeviceType)(0),                          // 117: udb.core.authn.entity.v1.DeviceType
+	(*timestamppb.Timestamp)(nil),                // 118: google.protobuf.Timestamp
+	(v11.TokenType)(0),                           // 119: udb.core.authn.entity.v1.TokenType
+	(v11.SessionType)(0),                         // 120: udb.core.authn.entity.v1.SessionType
+	(*v11.Session)(nil),                          // 121: udb.core.authn.entity.v1.Session
+	(v11.AuthFactorKind)(0),                      // 122: udb.core.authn.entity.v1.AuthFactorKind
+	(*v11.Device)(nil),                           // 123: udb.core.authn.entity.v1.Device
+	(v11.MfaChallengePurpose)(0),                 // 124: udb.core.authn.entity.v1.MfaChallengePurpose
 }
 var file_udb_core_authn_services_v1_core_proto_depIdxs = []int32{
 	108, // 0: udb.core.authn.services.v1.CreateUserRequest.context:type_name -> udb.core.common.v1.RequestContext
@@ -7253,82 +7332,83 @@ var file_udb_core_authn_services_v1_core_proto_depIdxs = []int32{
 	108, // 10: udb.core.authn.services.v1.UpdateUserRequest.context:type_name -> udb.core.common.v1.RequestContext
 	109, // 11: udb.core.authn.services.v1.UpdateUserRequest.account_kind:type_name -> udb.core.authn.entity.v1.AccountKind
 	104, // 12: udb.core.authn.services.v1.UpdateUserRequest.profile_attributes:type_name -> udb.core.authn.services.v1.UpdateUserRequest.ProfileAttributesEntry
-	110, // 13: udb.core.authn.services.v1.UpdateUserResponse.user:type_name -> udb.core.authn.entity.v1.User
-	111, // 14: udb.core.authn.services.v1.ChangeUserStatusRequest.new_status:type_name -> udb.core.authn.entity.v1.UserStatus
-	108, // 15: udb.core.authn.services.v1.ChangeUserStatusRequest.context:type_name -> udb.core.common.v1.RequestContext
-	110, // 16: udb.core.authn.services.v1.ChangeUserStatusResponse.user:type_name -> udb.core.authn.entity.v1.User
-	108, // 17: udb.core.authn.services.v1.AdminResetPasswordRequest.context:type_name -> udb.core.common.v1.RequestContext
-	114, // 18: udb.core.authn.services.v1.SendOTPRequest.otp_type:type_name -> udb.core.authn.entity.v1.OTPType
-	108, // 19: udb.core.authn.services.v1.SendOTPRequest.context:type_name -> udb.core.common.v1.RequestContext
-	114, // 20: udb.core.authn.services.v1.VerifyOTPResponse.otp_type:type_name -> udb.core.authn.entity.v1.OTPType
-	109, // 21: udb.core.authn.services.v1.Principal.account_kind:type_name -> udb.core.authn.entity.v1.AccountKind
-	105, // 22: udb.core.authn.services.v1.Principal.attributes:type_name -> udb.core.authn.services.v1.Principal.AttributesEntry
-	106, // 23: udb.core.authn.services.v1.AuthnRequest.attributes:type_name -> udb.core.authn.services.v1.AuthnRequest.AttributesEntry
-	115, // 24: udb.core.authn.services.v1.AuthnRequest.credential_type:type_name -> udb.core.authn.entity.v1.AuthCredentialType
-	18,  // 25: udb.core.authn.services.v1.AuthnResponse.principal:type_name -> udb.core.authn.services.v1.Principal
-	116, // 26: udb.core.authn.services.v1.LoginRequest.device_type:type_name -> udb.core.authn.entity.v1.DeviceType
-	108, // 27: udb.core.authn.services.v1.LogoutRequest.context:type_name -> udb.core.common.v1.RequestContext
-	108, // 28: udb.core.authn.services.v1.ChangePasswordRequest.context:type_name -> udb.core.common.v1.RequestContext
-	117, // 29: udb.core.authn.services.v1.ChangePasswordResponse.changed_at:type_name -> google.protobuf.Timestamp
-	118, // 30: udb.core.authn.services.v1.ValidateTokenRequest.token_type:type_name -> udb.core.authn.entity.v1.TokenType
-	109, // 31: udb.core.authn.services.v1.ValidateTokenResponse.account_kind:type_name -> udb.core.authn.entity.v1.AccountKind
-	117, // 32: udb.core.authn.services.v1.ValidateTokenResponse.expires_at:type_name -> google.protobuf.Timestamp
-	119, // 33: udb.core.authn.services.v1.ValidateTokenResponse.session_type:type_name -> udb.core.authn.entity.v1.SessionType
-	18,  // 34: udb.core.authn.services.v1.ValidateTokenResponse.principal:type_name -> udb.core.authn.services.v1.Principal
-	107, // 35: udb.core.authn.services.v1.ValidateTokenResponse.attributes:type_name -> udb.core.authn.services.v1.ValidateTokenResponse.AttributesEntry
-	18,  // 36: udb.core.authn.services.v1.CreateSessionRequest.principal:type_name -> udb.core.authn.services.v1.Principal
-	120, // 37: udb.core.authn.services.v1.GetSessionResponse.session:type_name -> udb.core.authn.entity.v1.Session
-	112, // 38: udb.core.authn.services.v1.ListSessionsRequest.page:type_name -> udb.core.common.v1.PageRequest
-	120, // 39: udb.core.authn.services.v1.ListSessionsResponse.sessions:type_name -> udb.core.authn.entity.v1.Session
-	113, // 40: udb.core.authn.services.v1.ListSessionsResponse.page:type_name -> udb.core.common.v1.PageResponse
-	108, // 41: udb.core.authn.services.v1.RevokeSessionRequest.context:type_name -> udb.core.common.v1.RequestContext
-	117, // 42: udb.core.authn.services.v1.RevokeSessionResponse.revoked_at:type_name -> google.protobuf.Timestamp
-	121, // 43: udb.core.authn.services.v1.EnrollMFARequest.mfa_type:type_name -> udb.core.authn.entity.v1.AuthFactorKind
-	108, // 44: udb.core.authn.services.v1.EnrollMFARequest.context:type_name -> udb.core.common.v1.RequestContext
-	108, // 45: udb.core.authn.services.v1.ConfirmMFAEnrollmentRequest.context:type_name -> udb.core.common.v1.RequestContext
-	108, // 46: udb.core.authn.services.v1.GenerateRecoveryCodesRequest.context:type_name -> udb.core.common.v1.RequestContext
-	108, // 47: udb.core.authn.services.v1.PutMfaPolicyRequest.context:type_name -> udb.core.common.v1.RequestContext
-	108, // 48: udb.core.authn.services.v1.GetMfaPolicyRequest.context:type_name -> udb.core.common.v1.RequestContext
-	108, // 49: udb.core.authn.services.v1.ForgotPasswordRequest.context:type_name -> udb.core.common.v1.RequestContext
-	108, // 50: udb.core.authn.services.v1.ResetPasswordRequest.context:type_name -> udb.core.common.v1.RequestContext
-	108, // 51: udb.core.authn.services.v1.IntrospectTokenRequest.context:type_name -> udb.core.common.v1.RequestContext
-	108, // 52: udb.core.authn.services.v1.GetJwksRequest.context:type_name -> udb.core.common.v1.RequestContext
-	108, // 53: udb.core.authn.services.v1.SendPhoneVerificationRequest.context:type_name -> udb.core.common.v1.RequestContext
-	108, // 54: udb.core.authn.services.v1.StartWebAuthnRegistrationRequest.context:type_name -> udb.core.common.v1.RequestContext
-	108, // 55: udb.core.authn.services.v1.FinishWebAuthnRegistrationRequest.context:type_name -> udb.core.common.v1.RequestContext
-	108, // 56: udb.core.authn.services.v1.StartWebAuthnAuthenticationRequest.context:type_name -> udb.core.common.v1.RequestContext
-	108, // 57: udb.core.authn.services.v1.FinishWebAuthnAuthenticationRequest.context:type_name -> udb.core.common.v1.RequestContext
-	18,  // 58: udb.core.authn.services.v1.FinishWebAuthnAuthenticationResponse.principal:type_name -> udb.core.authn.services.v1.Principal
-	112, // 59: udb.core.authn.services.v1.ListDevicesRequest.page:type_name -> udb.core.common.v1.PageRequest
-	108, // 60: udb.core.authn.services.v1.ListDevicesRequest.context:type_name -> udb.core.common.v1.RequestContext
-	122, // 61: udb.core.authn.services.v1.ListDevicesResponse.devices:type_name -> udb.core.authn.entity.v1.Device
-	113, // 62: udb.core.authn.services.v1.ListDevicesResponse.page:type_name -> udb.core.common.v1.PageResponse
-	108, // 63: udb.core.authn.services.v1.RevokeDeviceRequest.context:type_name -> udb.core.common.v1.RequestContext
-	108, // 64: udb.core.authn.services.v1.AdminRevokeSessionRequest.context:type_name -> udb.core.common.v1.RequestContext
-	108, // 65: udb.core.authn.services.v1.AdminRevokeAllUserSessionsRequest.context:type_name -> udb.core.common.v1.RequestContext
-	108, // 66: udb.core.authn.services.v1.AdminRevokeAllTenantSessionsRequest.context:type_name -> udb.core.common.v1.RequestContext
-	108, // 67: udb.core.authn.services.v1.EmergencyRevokeRequest.context:type_name -> udb.core.common.v1.RequestContext
-	121, // 68: udb.core.authn.services.v1.IssueMfaChallengeRequest.factor_kind:type_name -> udb.core.authn.entity.v1.AuthFactorKind
-	123, // 69: udb.core.authn.services.v1.IssueMfaChallengeRequest.purpose:type_name -> udb.core.authn.entity.v1.MfaChallengePurpose
-	108, // 70: udb.core.authn.services.v1.IssueMfaChallengeRequest.context:type_name -> udb.core.common.v1.RequestContext
-	121, // 71: udb.core.authn.services.v1.IssueMfaChallengeResponse.factor_kind:type_name -> udb.core.authn.entity.v1.AuthFactorKind
-	108, // 72: udb.core.authn.services.v1.VerifyMfaChallengeRequest.context:type_name -> udb.core.common.v1.RequestContext
-	121, // 73: udb.core.authn.services.v1.MfaFactorSummary.factor_kind:type_name -> udb.core.authn.entity.v1.AuthFactorKind
-	108, // 74: udb.core.authn.services.v1.ListMfaFactorsRequest.context:type_name -> udb.core.common.v1.RequestContext
-	87,  // 75: udb.core.authn.services.v1.ListMfaFactorsResponse.factors:type_name -> udb.core.authn.services.v1.MfaFactorSummary
-	121, // 76: udb.core.authn.services.v1.DisableMfaFactorRequest.factor_kind:type_name -> udb.core.authn.entity.v1.AuthFactorKind
-	108, // 77: udb.core.authn.services.v1.DisableMfaFactorRequest.context:type_name -> udb.core.common.v1.RequestContext
-	108, // 78: udb.core.authn.services.v1.RenamePasskeyRequest.context:type_name -> udb.core.common.v1.RequestContext
-	108, // 79: udb.core.authn.services.v1.RevokeRecoveryCodesRequest.context:type_name -> udb.core.common.v1.RequestContext
-	108, // 80: udb.core.authn.services.v1.AdminResetMfaRequest.context:type_name -> udb.core.common.v1.RequestContext
-	108, // 81: udb.core.authn.services.v1.ListWebAuthnCredentialsRequest.context:type_name -> udb.core.common.v1.RequestContext
-	98,  // 82: udb.core.authn.services.v1.ListWebAuthnCredentialsResponse.credentials:type_name -> udb.core.authn.services.v1.WebAuthnCredentialSummary
-	108, // 83: udb.core.authn.services.v1.DeleteWebAuthnCredentialRequest.context:type_name -> udb.core.common.v1.RequestContext
-	84,  // [84:84] is the sub-list for method output_type
-	84,  // [84:84] is the sub-list for method input_type
-	84,  // [84:84] is the sub-list for extension type_name
-	84,  // [84:84] is the sub-list for extension extendee
-	0,   // [0:84] is the sub-list for field type_name
+	114, // 13: udb.core.authn.services.v1.UpdateUserRequest.update_mask:type_name -> google.protobuf.FieldMask
+	110, // 14: udb.core.authn.services.v1.UpdateUserResponse.user:type_name -> udb.core.authn.entity.v1.User
+	111, // 15: udb.core.authn.services.v1.ChangeUserStatusRequest.new_status:type_name -> udb.core.authn.entity.v1.UserStatus
+	108, // 16: udb.core.authn.services.v1.ChangeUserStatusRequest.context:type_name -> udb.core.common.v1.RequestContext
+	110, // 17: udb.core.authn.services.v1.ChangeUserStatusResponse.user:type_name -> udb.core.authn.entity.v1.User
+	108, // 18: udb.core.authn.services.v1.AdminResetPasswordRequest.context:type_name -> udb.core.common.v1.RequestContext
+	115, // 19: udb.core.authn.services.v1.SendOTPRequest.otp_type:type_name -> udb.core.authn.entity.v1.OTPType
+	108, // 20: udb.core.authn.services.v1.SendOTPRequest.context:type_name -> udb.core.common.v1.RequestContext
+	115, // 21: udb.core.authn.services.v1.VerifyOTPResponse.otp_type:type_name -> udb.core.authn.entity.v1.OTPType
+	109, // 22: udb.core.authn.services.v1.Principal.account_kind:type_name -> udb.core.authn.entity.v1.AccountKind
+	105, // 23: udb.core.authn.services.v1.Principal.attributes:type_name -> udb.core.authn.services.v1.Principal.AttributesEntry
+	106, // 24: udb.core.authn.services.v1.AuthnRequest.attributes:type_name -> udb.core.authn.services.v1.AuthnRequest.AttributesEntry
+	116, // 25: udb.core.authn.services.v1.AuthnRequest.credential_type:type_name -> udb.core.authn.entity.v1.AuthCredentialType
+	18,  // 26: udb.core.authn.services.v1.AuthnResponse.principal:type_name -> udb.core.authn.services.v1.Principal
+	117, // 27: udb.core.authn.services.v1.LoginRequest.device_type:type_name -> udb.core.authn.entity.v1.DeviceType
+	108, // 28: udb.core.authn.services.v1.LogoutRequest.context:type_name -> udb.core.common.v1.RequestContext
+	108, // 29: udb.core.authn.services.v1.ChangePasswordRequest.context:type_name -> udb.core.common.v1.RequestContext
+	118, // 30: udb.core.authn.services.v1.ChangePasswordResponse.changed_at:type_name -> google.protobuf.Timestamp
+	119, // 31: udb.core.authn.services.v1.ValidateTokenRequest.token_type:type_name -> udb.core.authn.entity.v1.TokenType
+	109, // 32: udb.core.authn.services.v1.ValidateTokenResponse.account_kind:type_name -> udb.core.authn.entity.v1.AccountKind
+	118, // 33: udb.core.authn.services.v1.ValidateTokenResponse.expires_at:type_name -> google.protobuf.Timestamp
+	120, // 34: udb.core.authn.services.v1.ValidateTokenResponse.session_type:type_name -> udb.core.authn.entity.v1.SessionType
+	18,  // 35: udb.core.authn.services.v1.ValidateTokenResponse.principal:type_name -> udb.core.authn.services.v1.Principal
+	107, // 36: udb.core.authn.services.v1.ValidateTokenResponse.attributes:type_name -> udb.core.authn.services.v1.ValidateTokenResponse.AttributesEntry
+	18,  // 37: udb.core.authn.services.v1.CreateSessionRequest.principal:type_name -> udb.core.authn.services.v1.Principal
+	121, // 38: udb.core.authn.services.v1.GetSessionResponse.session:type_name -> udb.core.authn.entity.v1.Session
+	112, // 39: udb.core.authn.services.v1.ListSessionsRequest.page:type_name -> udb.core.common.v1.PageRequest
+	121, // 40: udb.core.authn.services.v1.ListSessionsResponse.sessions:type_name -> udb.core.authn.entity.v1.Session
+	113, // 41: udb.core.authn.services.v1.ListSessionsResponse.page:type_name -> udb.core.common.v1.PageResponse
+	108, // 42: udb.core.authn.services.v1.RevokeSessionRequest.context:type_name -> udb.core.common.v1.RequestContext
+	118, // 43: udb.core.authn.services.v1.RevokeSessionResponse.revoked_at:type_name -> google.protobuf.Timestamp
+	122, // 44: udb.core.authn.services.v1.EnrollMFARequest.mfa_type:type_name -> udb.core.authn.entity.v1.AuthFactorKind
+	108, // 45: udb.core.authn.services.v1.EnrollMFARequest.context:type_name -> udb.core.common.v1.RequestContext
+	108, // 46: udb.core.authn.services.v1.ConfirmMFAEnrollmentRequest.context:type_name -> udb.core.common.v1.RequestContext
+	108, // 47: udb.core.authn.services.v1.GenerateRecoveryCodesRequest.context:type_name -> udb.core.common.v1.RequestContext
+	108, // 48: udb.core.authn.services.v1.PutMfaPolicyRequest.context:type_name -> udb.core.common.v1.RequestContext
+	108, // 49: udb.core.authn.services.v1.GetMfaPolicyRequest.context:type_name -> udb.core.common.v1.RequestContext
+	108, // 50: udb.core.authn.services.v1.ForgotPasswordRequest.context:type_name -> udb.core.common.v1.RequestContext
+	108, // 51: udb.core.authn.services.v1.ResetPasswordRequest.context:type_name -> udb.core.common.v1.RequestContext
+	108, // 52: udb.core.authn.services.v1.IntrospectTokenRequest.context:type_name -> udb.core.common.v1.RequestContext
+	108, // 53: udb.core.authn.services.v1.GetJwksRequest.context:type_name -> udb.core.common.v1.RequestContext
+	108, // 54: udb.core.authn.services.v1.SendPhoneVerificationRequest.context:type_name -> udb.core.common.v1.RequestContext
+	108, // 55: udb.core.authn.services.v1.StartWebAuthnRegistrationRequest.context:type_name -> udb.core.common.v1.RequestContext
+	108, // 56: udb.core.authn.services.v1.FinishWebAuthnRegistrationRequest.context:type_name -> udb.core.common.v1.RequestContext
+	108, // 57: udb.core.authn.services.v1.StartWebAuthnAuthenticationRequest.context:type_name -> udb.core.common.v1.RequestContext
+	108, // 58: udb.core.authn.services.v1.FinishWebAuthnAuthenticationRequest.context:type_name -> udb.core.common.v1.RequestContext
+	18,  // 59: udb.core.authn.services.v1.FinishWebAuthnAuthenticationResponse.principal:type_name -> udb.core.authn.services.v1.Principal
+	112, // 60: udb.core.authn.services.v1.ListDevicesRequest.page:type_name -> udb.core.common.v1.PageRequest
+	108, // 61: udb.core.authn.services.v1.ListDevicesRequest.context:type_name -> udb.core.common.v1.RequestContext
+	123, // 62: udb.core.authn.services.v1.ListDevicesResponse.devices:type_name -> udb.core.authn.entity.v1.Device
+	113, // 63: udb.core.authn.services.v1.ListDevicesResponse.page:type_name -> udb.core.common.v1.PageResponse
+	108, // 64: udb.core.authn.services.v1.RevokeDeviceRequest.context:type_name -> udb.core.common.v1.RequestContext
+	108, // 65: udb.core.authn.services.v1.AdminRevokeSessionRequest.context:type_name -> udb.core.common.v1.RequestContext
+	108, // 66: udb.core.authn.services.v1.AdminRevokeAllUserSessionsRequest.context:type_name -> udb.core.common.v1.RequestContext
+	108, // 67: udb.core.authn.services.v1.AdminRevokeAllTenantSessionsRequest.context:type_name -> udb.core.common.v1.RequestContext
+	108, // 68: udb.core.authn.services.v1.EmergencyRevokeRequest.context:type_name -> udb.core.common.v1.RequestContext
+	122, // 69: udb.core.authn.services.v1.IssueMfaChallengeRequest.factor_kind:type_name -> udb.core.authn.entity.v1.AuthFactorKind
+	124, // 70: udb.core.authn.services.v1.IssueMfaChallengeRequest.purpose:type_name -> udb.core.authn.entity.v1.MfaChallengePurpose
+	108, // 71: udb.core.authn.services.v1.IssueMfaChallengeRequest.context:type_name -> udb.core.common.v1.RequestContext
+	122, // 72: udb.core.authn.services.v1.IssueMfaChallengeResponse.factor_kind:type_name -> udb.core.authn.entity.v1.AuthFactorKind
+	108, // 73: udb.core.authn.services.v1.VerifyMfaChallengeRequest.context:type_name -> udb.core.common.v1.RequestContext
+	122, // 74: udb.core.authn.services.v1.MfaFactorSummary.factor_kind:type_name -> udb.core.authn.entity.v1.AuthFactorKind
+	108, // 75: udb.core.authn.services.v1.ListMfaFactorsRequest.context:type_name -> udb.core.common.v1.RequestContext
+	87,  // 76: udb.core.authn.services.v1.ListMfaFactorsResponse.factors:type_name -> udb.core.authn.services.v1.MfaFactorSummary
+	122, // 77: udb.core.authn.services.v1.DisableMfaFactorRequest.factor_kind:type_name -> udb.core.authn.entity.v1.AuthFactorKind
+	108, // 78: udb.core.authn.services.v1.DisableMfaFactorRequest.context:type_name -> udb.core.common.v1.RequestContext
+	108, // 79: udb.core.authn.services.v1.RenamePasskeyRequest.context:type_name -> udb.core.common.v1.RequestContext
+	108, // 80: udb.core.authn.services.v1.RevokeRecoveryCodesRequest.context:type_name -> udb.core.common.v1.RequestContext
+	108, // 81: udb.core.authn.services.v1.AdminResetMfaRequest.context:type_name -> udb.core.common.v1.RequestContext
+	108, // 82: udb.core.authn.services.v1.ListWebAuthnCredentialsRequest.context:type_name -> udb.core.common.v1.RequestContext
+	98,  // 83: udb.core.authn.services.v1.ListWebAuthnCredentialsResponse.credentials:type_name -> udb.core.authn.services.v1.WebAuthnCredentialSummary
+	108, // 84: udb.core.authn.services.v1.DeleteWebAuthnCredentialRequest.context:type_name -> udb.core.common.v1.RequestContext
+	85,  // [85:85] is the sub-list for method output_type
+	85,  // [85:85] is the sub-list for method input_type
+	85,  // [85:85] is the sub-list for extension type_name
+	85,  // [85:85] is the sub-list for extension extendee
+	0,   // [0:85] is the sub-list for field type_name
 }
 
 func init() { file_udb_core_authn_services_v1_core_proto_init() }

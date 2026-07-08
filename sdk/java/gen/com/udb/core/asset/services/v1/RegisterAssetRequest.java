@@ -131,6 +131,10 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object fileId_ = "";
   /**
+   * <pre>
+   * Stable public storage file UUID previously returned by StorageService.
+   * </pre>
+   *
    * <code>string file_id = 3 [json_name = "fileId"];</code>
    * @return The fileId.
    */
@@ -148,6 +152,10 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
+   * <pre>
+   * Stable public storage file UUID previously returned by StorageService.
+   * </pre>
+   *
    * <code>string file_id = 3 [json_name = "fileId"];</code>
    * @return The bytes for fileId.
    */
@@ -851,6 +859,10 @@ private static final long serialVersionUID = 0L;
 
     private java.lang.Object fileId_ = "";
     /**
+     * <pre>
+     * Stable public storage file UUID previously returned by StorageService.
+     * </pre>
+     *
      * <code>string file_id = 3 [json_name = "fileId"];</code>
      * @return The fileId.
      */
@@ -867,6 +879,10 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
+     * <pre>
+     * Stable public storage file UUID previously returned by StorageService.
+     * </pre>
+     *
      * <code>string file_id = 3 [json_name = "fileId"];</code>
      * @return The bytes for fileId.
      */
@@ -884,6 +900,10 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
+     * <pre>
+     * Stable public storage file UUID previously returned by StorageService.
+     * </pre>
+     *
      * <code>string file_id = 3 [json_name = "fileId"];</code>
      * @param value The fileId to set.
      * @return This builder for chaining.
@@ -897,6 +917,10 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * Stable public storage file UUID previously returned by StorageService.
+     * </pre>
+     *
      * <code>string file_id = 3 [json_name = "fileId"];</code>
      * @return This builder for chaining.
      */
@@ -907,6 +931,10 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * Stable public storage file UUID previously returned by StorageService.
+     * </pre>
+     *
      * <code>string file_id = 3 [json_name = "fileId"];</code>
      * @param value The bytes for fileId to set.
      * @return This builder for chaining.

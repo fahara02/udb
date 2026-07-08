@@ -1,6 +1,7 @@
 import datetime
 
 from google.protobuf import timestamp_pb2 as _timestamp_pb2
+from google.protobuf import field_mask_pb2 as _field_mask_pb2
 from udb.core.apikey.entity.v1 import api_key_pb2 as _api_key_pb2
 from udb.core.apikey.entity.v1 import enums_pb2 as _enums_pb2
 from udb.core.common.v1 import dto_pb2 as _dto_pb2
@@ -100,7 +101,7 @@ class RevokeApiKeyResponse(_message.Message):
     def __init__(self, key_id: _Optional[str] = ..., revoked_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., operation_id: _Optional[str] = ...) -> None: ...
 
 class UpdateApiKeyRequest(_message.Message):
-    __slots__ = ("key_id", "name", "description", "scopes", "ip_allowlist", "rate_limit_per_minute", "rate_limit_per_day", "expires_at", "context")
+    __slots__ = ("key_id", "name", "description", "scopes", "ip_allowlist", "rate_limit_per_minute", "rate_limit_per_day", "expires_at", "context", "update_mask")
     KEY_ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
     DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
@@ -110,6 +111,7 @@ class UpdateApiKeyRequest(_message.Message):
     RATE_LIMIT_PER_DAY_FIELD_NUMBER: _ClassVar[int]
     EXPIRES_AT_FIELD_NUMBER: _ClassVar[int]
     CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    UPDATE_MASK_FIELD_NUMBER: _ClassVar[int]
     key_id: str
     name: str
     description: str
@@ -119,7 +121,8 @@ class UpdateApiKeyRequest(_message.Message):
     rate_limit_per_day: int
     expires_at: _timestamp_pb2.Timestamp
     context: _types_pb2.RequestContext
-    def __init__(self, key_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., scopes: _Optional[_Iterable[str]] = ..., ip_allowlist: _Optional[_Iterable[str]] = ..., rate_limit_per_minute: _Optional[int] = ..., rate_limit_per_day: _Optional[int] = ..., expires_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ...) -> None: ...
+    update_mask: _field_mask_pb2.FieldMask
+    def __init__(self, key_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., scopes: _Optional[_Iterable[str]] = ..., ip_allowlist: _Optional[_Iterable[str]] = ..., rate_limit_per_minute: _Optional[int] = ..., rate_limit_per_day: _Optional[int] = ..., expires_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ..., update_mask: _Optional[_Union[_field_mask_pb2.FieldMask, _Mapping]] = ...) -> None: ...
 
 class UpdateApiKeyResponse(_message.Message):
     __slots__ = ("key",)

@@ -106,4 +106,24 @@ class TenantServiceClient extends \Grpc\BaseStub {
         $metadata, $options);
     }
 
+    /**
+     * Purge tenant (GDPR right-to-be-forgotten). HARD-deletes every row the tenant
+     * owns across all tenant-columned entity tables, then revokes the tenant's and
+     * its principals' tokens. Irreversible — DESTRUCTIVE op-kind + a required
+     * confirmation token gate it. Mirrors the destructive-RPC endpoint_security of
+     * siblings like authn.ChangeUserStatus (AUTH_MODE_BEARER, tenant_required,
+     * request_context_required).
+     * @param \Udb\Core\Tenant\Services\V1\PurgeTenantRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Tenant\Services\V1\PurgeTenantResponse>
+     */
+    public function PurgeTenant(\Udb\Core\Tenant\Services\V1\PurgeTenantRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.tenant.services.v1.TenantService/PurgeTenant',
+        $argument,
+        ['\Udb\Core\Tenant\Services\V1\PurgeTenantResponse', 'decode'],
+        $metadata, $options);
+    }
+
 }

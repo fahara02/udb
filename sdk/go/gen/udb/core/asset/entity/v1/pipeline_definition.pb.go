@@ -24,16 +24,22 @@ const (
 
 // PipelineDefinition is a reusable, versioned processing-pipeline template.
 type PipelineDefinition struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	DefinitionId  string                 `protobuf:"bytes,1,opt,name=definition_id,json=definitionId,proto3" json:"definition_id,omitempty"` // @inject_tag: gorm:"primaryKey;column:definition_id;not null"
-	TenantId      string                 `protobuf:"bytes,2,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`             // @inject_tag: gorm:"column:tenant_id;not null"
-	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`                                     // @inject_tag: gorm:"column:name;not null"
-	Description   string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`                       // @inject_tag: gorm:"column:description"
-	MediaType     string                 `protobuf:"bytes,5,opt,name=media_type,json=mediaType,proto3" json:"media_type,omitempty"`          // @inject_tag: gorm:"column:media_type"
-	Steps         string                 `protobuf:"bytes,6,opt,name=steps,proto3" json:"steps,omitempty"`                                   // @inject_tag: gorm:"column:steps;not null"
-	Version       int32                  `protobuf:"varint,7,opt,name=version,proto3" json:"version,omitempty"`                              // @inject_tag: gorm:"column:version;not null"
-	Status        string                 `protobuf:"bytes,8,opt,name=status,proto3" json:"status,omitempty"`                                 // @inject_tag: gorm:"column:status;not null"
-	AuditInfo     *v1.AuditInfo          `protobuf:"bytes,9,opt,name=audit_info,json=auditInfo,proto3" json:"audit_info,omitempty"`          // @inject_tag: gorm:"column:audit_info;not null"
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	DefinitionId string                 `protobuf:"bytes,1,opt,name=definition_id,json=definitionId,proto3" json:"definition_id,omitempty"` // @inject_tag: gorm:"primaryKey;column:definition_id;not null"
+	TenantId     string                 `protobuf:"bytes,2,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`             // @inject_tag: gorm:"column:tenant_id;not null"
+	Name         string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`                                     // @inject_tag: gorm:"column:name;not null"
+	Description  string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`                       // @inject_tag: gorm:"column:description"
+	MediaType    string                 `protobuf:"bytes,5,opt,name=media_type,json=mediaType,proto3" json:"media_type,omitempty"`          // @inject_tag: gorm:"column:media_type"
+	Steps        string                 `protobuf:"bytes,6,opt,name=steps,proto3" json:"steps,omitempty"`                                   // @inject_tag: gorm:"column:steps;not null"
+	Version      int32                  `protobuf:"varint,7,opt,name=version,proto3" json:"version,omitempty"`                              // @inject_tag: gorm:"column:version;not null"
+	Status       string                 `protobuf:"bytes,8,opt,name=status,proto3" json:"status,omitempty"`                                 // @inject_tag: gorm:"column:status;not null"
+	AuditInfo    *v1.AuditInfo          `protobuf:"bytes,9,opt,name=audit_info,json=auditInfo,proto3" json:"audit_info,omitempty"`          // @inject_tag: gorm:"column:audit_info;not null"
+	// Optional Kafka topic that fires this pipeline (master-plan 5.2). When set, the
+	// leader-elected trigger manager runs exactly one consumer per distinct
+	// trigger_topic cluster-wide and starts this pipeline for each inbound event.
+	// Additive; NULL/empty = not Kafka-triggered (the static storage-finalized
+	// auto-trigger still applies, matched by media_type).
+	TriggerTopic  string `protobuf:"bytes,10,opt,name=trigger_topic,json=triggerTopic,proto3" json:"trigger_topic,omitempty"` // @inject_tag: gorm:"column:trigger_topic"
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -131,11 +137,19 @@ func (x *PipelineDefinition) GetAuditInfo() *v1.AuditInfo {
 	return nil
 }
 
+func (x *PipelineDefinition) GetTriggerTopic() string {
+	if x != nil {
+		return x.TriggerTopic
+	}
+	return ""
+}
+
 var File_udb_core_asset_entity_v1_pipeline_definition_proto protoreflect.FileDescriptor
 
 const file_udb_core_asset_entity_v1_pipeline_definition_proto_rawDesc = "" +
 	"\n" +
-	"2udb/core/asset/entity/v1/pipeline_definition.proto\x12\x18udb.core.asset.entity.v1\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\"\xbc\t\n" +
+	"2udb/core/asset/entity/v1/pipeline_definition.proto\x12\x18udb.core.asset.entity.v1\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\"\xca\n" +
+	"\n" +
 	"\x12PipelineDefinition\x12U\n" +
 	"\rdefinition_id\x18\x01 \x01(\tB0\x82\xb7\x18,\n" +
 	"\rdefinition_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\fdefinitionId\x127\n" +
@@ -158,7 +172,10 @@ const file_udb_core_asset_entity_v1_pipeline_definition_proto_rawDesc = "" +
 	"\n" +
 	"audit_info\x18\t \x01(\v2\x1d.udb.core.common.v1.AuditInfoBD\x82\xb7\x18@\n" +
 	"\n" +
-	"audit_info\x12\x05JSONB\x18\x01:\v'{}'::jsonbZ\x1aAudit trail stored as JSONx\x01R\tauditInfo:\x8e\x04\xfa\xb6\x18\xf4\x02\n" +
+	"audit_info\x12\x05JSONB\x18\x01:\v'{}'::jsonbZ\x1aAudit trail stored as JSONx\x01R\tauditInfo\x12\x8b\x01\n" +
+	"\rtrigger_topic\x18\n" +
+	" \x01(\tBf\x82\xb7\x18b\n" +
+	"\rtrigger_topic\x12\fVARCHAR(255)ZCKafka topic that triggers this pipeline; NULL = not topic-triggeredR\ftriggerTopic:\x8e\x04\xfa\xb6\x18\xf4\x02\n" +
 	"\x14pipeline_definitions\x12\tudb_asset\x18\x02 \x01*2Reusable versioned processing-pipeline definitions8\x01@\x01b\xa5\x01\n" +
 	"%pipeline_definitions_tenant_isolation\x1az(tenant_id::text = current_setting('app.current_tenant_id', true) OR current_setting('app.platform_admin', true) = 'true')(\x01h\x01\x8a\x018\n" +
 	"\x1cidx_pipeline_def_name_unique\x12\x05BTREE\x18\x01Z\ttenant_idZ\x04name\xf2\x01\"udb.asset.pipeline_definitions.cdc\xfa\x01\n" +

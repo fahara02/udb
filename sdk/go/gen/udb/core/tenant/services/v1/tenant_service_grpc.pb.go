@@ -25,6 +25,7 @@ const (
 	TenantService_UpdateTenant_FullMethodName       = "/udb.core.tenant.services.v1.TenantService/UpdateTenant"
 	TenantService_GetTenantConfig_FullMethodName    = "/udb.core.tenant.services.v1.TenantService/GetTenantConfig"
 	TenantService_UpdateTenantConfig_FullMethodName = "/udb.core.tenant.services.v1.TenantService/UpdateTenantConfig"
+	TenantService_PurgeTenant_FullMethodName        = "/udb.core.tenant.services.v1.TenantService/PurgeTenant"
 )
 
 // TenantServiceClient is the client API for TenantService service.
@@ -43,6 +44,13 @@ type TenantServiceClient interface {
 	GetTenantConfig(ctx context.Context, in *GetTenantConfigRequest, opts ...grpc.CallOption) (*GetTenantConfigResponse, error)
 	// Update tenant config
 	UpdateTenantConfig(ctx context.Context, in *UpdateTenantConfigRequest, opts ...grpc.CallOption) (*UpdateTenantConfigResponse, error)
+	// Purge tenant (GDPR right-to-be-forgotten). HARD-deletes every row the tenant
+	// owns across all tenant-columned entity tables, then revokes the tenant's and
+	// its principals' tokens. Irreversible — DESTRUCTIVE op-kind + a required
+	// confirmation token gate it. Mirrors the destructive-RPC endpoint_security of
+	// siblings like authn.ChangeUserStatus (AUTH_MODE_BEARER, tenant_required,
+	// request_context_required).
+	PurgeTenant(ctx context.Context, in *PurgeTenantRequest, opts ...grpc.CallOption) (*PurgeTenantResponse, error)
 }
 
 type tenantServiceClient struct {
@@ -113,6 +121,16 @@ func (c *tenantServiceClient) UpdateTenantConfig(ctx context.Context, in *Update
 	return out, nil
 }
 
+func (c *tenantServiceClient) PurgeTenant(ctx context.Context, in *PurgeTenantRequest, opts ...grpc.CallOption) (*PurgeTenantResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PurgeTenantResponse)
+	err := c.cc.Invoke(ctx, TenantService_PurgeTenant_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TenantServiceServer is the server API for TenantService service.
 // All implementations should embed UnimplementedTenantServiceServer
 // for forward compatibility.
@@ -129,6 +147,13 @@ type TenantServiceServer interface {
 	GetTenantConfig(context.Context, *GetTenantConfigRequest) (*GetTenantConfigResponse, error)
 	// Update tenant config
 	UpdateTenantConfig(context.Context, *UpdateTenantConfigRequest) (*UpdateTenantConfigResponse, error)
+	// Purge tenant (GDPR right-to-be-forgotten). HARD-deletes every row the tenant
+	// owns across all tenant-columned entity tables, then revokes the tenant's and
+	// its principals' tokens. Irreversible — DESTRUCTIVE op-kind + a required
+	// confirmation token gate it. Mirrors the destructive-RPC endpoint_security of
+	// siblings like authn.ChangeUserStatus (AUTH_MODE_BEARER, tenant_required,
+	// request_context_required).
+	PurgeTenant(context.Context, *PurgeTenantRequest) (*PurgeTenantResponse, error)
 }
 
 // UnimplementedTenantServiceServer should be embedded to have
@@ -155,6 +180,9 @@ func (UnimplementedTenantServiceServer) GetTenantConfig(context.Context, *GetTen
 }
 func (UnimplementedTenantServiceServer) UpdateTenantConfig(context.Context, *UpdateTenantConfigRequest) (*UpdateTenantConfigResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateTenantConfig not implemented")
+}
+func (UnimplementedTenantServiceServer) PurgeTenant(context.Context, *PurgeTenantRequest) (*PurgeTenantResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method PurgeTenant not implemented")
 }
 func (UnimplementedTenantServiceServer) testEmbeddedByValue() {}
 
@@ -284,6 +312,24 @@ func _TenantService_UpdateTenantConfig_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TenantService_PurgeTenant_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PurgeTenantRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TenantServiceServer).PurgeTenant(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TenantService_PurgeTenant_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TenantServiceServer).PurgeTenant(ctx, req.(*PurgeTenantRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // TenantService_ServiceDesc is the grpc.ServiceDesc for TenantService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -314,6 +360,10 @@ var TenantService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateTenantConfig",
 			Handler:    _TenantService_UpdateTenantConfig_Handler,
+		},
+		{
+			MethodName: "PurgeTenant",
+			Handler:    _TenantService_PurgeTenant_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

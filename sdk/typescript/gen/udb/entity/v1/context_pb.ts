@@ -4,13 +4,15 @@
 
 import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
+import type { ConsistencyMode, ReadFence } from "./consistency_pb";
+import { file_udb_entity_v1_consistency } from "./consistency_pb";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file udb/entity/v1/context.proto.
  */
 export const file_udb_entity_v1_context: GenFile = /*@__PURE__*/
-  fileDesc("Cht1ZGIvZW50aXR5L3YxL2NvbnRleHQucHJvdG8SDXVkYi5lbnRpdHkudjEitQQKDlJlcXVlc3RDb250ZXh0EhEKCXRlbmFudF9pZBgBIAEoCRIPCgd1c2VyX2lkGAIgASgJEhYKDmNvcnJlbGF0aW9uX2lkGAMgASgJEg8KB3B1cnBvc2UYBCABKAkSDgoGc2NvcGVzGAUgAygJEhgKEHNlcnZpY2VfaWRlbnRpdHkYBiABKAkSEAoIdHJhY2VfaWQYByABKAkSFgoOdGFyZ2V0X2JhY2tlbmQYCCABKAkSFwoPdGFyZ2V0X2luc3RhbmNlGAkgASgJEhYKDnJvdXRpbmdfcG9saWN5GAogASgJEhQKDHByaW1hcnlfcmVhZBgLIAEoCBIaChJtYXhfcmVwbGljYV9sYWdfbXMYDCABKAQSJAocZXZlbnR1YWxfY29uc2lzdGVuY3lfYWxsb3dlZBgNIAEoCBIXCg9yZWFkX2ZlbmNlX2pzb24YDiABKAkSEgoKcHJvamVjdF9pZBgPIAEoCRIeChZjbGllbnRfY2F0YWxvZ192ZXJzaW9uGBAgASgJEhEKCWNsaWVudF9pZBgRIAEoCRITCgtjb25zaXN0ZW5jeRgSIAEoCRIOCgZyZWdpb24YEyABKAkSQQoKYXR0cmlidXRlcxgUIAMoCzItLnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHQuQXR0cmlidXRlc0VudHJ5GjEKD0F0dHJpYnV0ZXNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBQrIBChFjb20udWRiLmVudGl0eS52MUIMQ29udGV4dFByb3RvUAFaOWdpdGh1Yi5jb20vZmFoYXJhMDIvdWRiL3Nkay9nby9nZW4vdWRiL2VudGl0eS92MTtlbnRpdHl2MaICA1VFWKoCDVVkYi5FbnRpdHkuVjHKAg1VZGJcRW50aXR5XFYx4gIZVWRiXEdQQk1ldGFkYXRhXEVudGl0eVxWMeoCD1VkYjo6RW50aXR5OjpWMWIGcHJvdG8z");
+  fileDesc("Cht1ZGIvZW50aXR5L3YxL2NvbnRleHQucHJvdG8SDXVkYi5lbnRpdHkudjEinQUKDlJlcXVlc3RDb250ZXh0EhEKCXRlbmFudF9pZBgBIAEoCRIPCgd1c2VyX2lkGAIgASgJEhYKDmNvcnJlbGF0aW9uX2lkGAMgASgJEg8KB3B1cnBvc2UYBCABKAkSDgoGc2NvcGVzGAUgAygJEhgKEHNlcnZpY2VfaWRlbnRpdHkYBiABKAkSEAoIdHJhY2VfaWQYByABKAkSFgoOdGFyZ2V0X2JhY2tlbmQYCCABKAkSFwoPdGFyZ2V0X2luc3RhbmNlGAkgASgJEhYKDnJvdXRpbmdfcG9saWN5GAogASgJEhQKDHByaW1hcnlfcmVhZBgLIAEoCBIaChJtYXhfcmVwbGljYV9sYWdfbXMYDCABKAQSJAocZXZlbnR1YWxfY29uc2lzdGVuY3lfYWxsb3dlZBgNIAEoCBIXCg9yZWFkX2ZlbmNlX2pzb24YDiABKAkSEgoKcHJvamVjdF9pZBgPIAEoCRIeChZjbGllbnRfY2F0YWxvZ192ZXJzaW9uGBAgASgJEhEKCWNsaWVudF9pZBgRIAEoCRITCgtjb25zaXN0ZW5jeRgSIAEoCRIOCgZyZWdpb24YEyABKAkSQQoKYXR0cmlidXRlcxgUIAMoCzItLnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHQuQXR0cmlidXRlc0VudHJ5EiwKCnJlYWRfZmVuY2UYFSABKAsyGC51ZGIuZW50aXR5LnYxLlJlYWRGZW5jZRI4ChBjb25zaXN0ZW5jeV9tb2RlGBYgASgOMh4udWRiLmVudGl0eS52MS5Db25zaXN0ZW5jeU1vZGUaMQoPQXR0cmlidXRlc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAFCsgEKEWNvbS51ZGIuZW50aXR5LnYxQgxDb250ZXh0UHJvdG9QAVo5Z2l0aHViLmNvbS9mYWhhcmEwMi91ZGIvc2RrL2dvL2dlbi91ZGIvZW50aXR5L3YxO2VudGl0eXYxogIDVUVYqgINVWRiLkVudGl0eS5WMcoCDVVkYlxFbnRpdHlcVjHiAhlVZGJcR1BCTWV0YWRhdGFcRW50aXR5XFYx6gIPVWRiOjpFbnRpdHk6OlYxYgZwcm90bzM", [file_udb_entity_v1_consistency]);
 
 /**
  * @generated from message udb.entity.v1.RequestContext
@@ -142,6 +144,23 @@ export type RequestContext = Message<"udb.entity.v1.RequestContext"> & {
    * @generated from field: map<string, string> attributes = 20;
    */
   attributes: { [key: string]: string };
+
+  /**
+   * Typed read fence. Kept in lockstep with read_fence_json for clients that can
+   * consume protobuf messages directly. Metadata/header values still win when
+   * both are supplied.
+   *
+   * @generated from field: udb.entity.v1.ReadFence read_fence = 21;
+   */
+  readFence?: ReadFence | undefined;
+
+  /**
+   * Typed consistency mode. Mirrors the legacy consistency string/header token;
+   * the x-udb-consistency metadata header still wins when both are supplied.
+   *
+   * @generated from field: udb.entity.v1.ConsistencyMode consistency_mode = 22;
+   */
+  consistencyMode: ConsistencyMode;
 };
 
 /**

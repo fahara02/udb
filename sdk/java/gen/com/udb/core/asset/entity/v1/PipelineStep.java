@@ -39,6 +39,7 @@ private static final long serialVersionUID = 0L;
     stepType_ = 0;
     status_ = 0;
     result_ = "";
+    params_ = "";
     error_ = "";
   }
 
@@ -345,6 +346,61 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int PARAMS_FIELD_NUMBER = 13;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object params_ = "";
+  /**
+   * <pre>
+   * Transform parameters applied to a byte/image step, as a JSON object, e.g.
+   * {"width":800,"height":600,"format":"jpeg"}. RESIZE reads width/height;
+   * CONVERT (format-only RESIZE) reads format. Empty `{}` for steps that take no
+   * parameters. Additive: lets RESIZE/CONVERT be parameterized instead of a
+   * hardcoded 256x256/png, and surfaces the applied params on read.
+   * </pre>
+   *
+   * <code>string params = 13 [json_name = "params", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The params.
+   */
+  @java.lang.Override
+  public java.lang.String getParams() {
+    java.lang.Object ref = params_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      params_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Transform parameters applied to a byte/image step, as a JSON object, e.g.
+   * {"width":800,"height":600,"format":"jpeg"}. RESIZE reads width/height;
+   * CONVERT (format-only RESIZE) reads format. Empty `{}` for steps that take no
+   * parameters. Additive: lets RESIZE/CONVERT be parameterized instead of a
+   * hardcoded 256x256/png, and surfaces the applied params on read.
+   * </pre>
+   *
+   * <code>string params = 13 [json_name = "params", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for params.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getParamsBytes() {
+    java.lang.Object ref = params_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      params_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   public static final int ERROR_FIELD_NUMBER = 7;
   @SuppressWarnings("serial")
   private volatile java.lang.Object error_ = "";
@@ -571,6 +627,9 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(tenantId_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 12, tenantId_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(params_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 13, params_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -622,6 +681,9 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(tenantId_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(12, tenantId_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(params_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(13, params_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -649,6 +711,8 @@ private static final long serialVersionUID = 0L;
     if (status_ != other.status_) return false;
     if (!getResult()
         .equals(other.getResult())) return false;
+    if (!getParams()
+        .equals(other.getParams())) return false;
     if (!getError()
         .equals(other.getError())) return false;
     if (getRetryCount()
@@ -693,6 +757,8 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + status_;
     hash = (37 * hash) + RESULT_FIELD_NUMBER;
     hash = (53 * hash) + getResult().hashCode();
+    hash = (37 * hash) + PARAMS_FIELD_NUMBER;
+    hash = (53 * hash) + getParams().hashCode();
     hash = (37 * hash) + ERROR_FIELD_NUMBER;
     hash = (53 * hash) + getError().hashCode();
     hash = (37 * hash) + RETRY_COUNT_FIELD_NUMBER;
@@ -859,6 +925,7 @@ private static final long serialVersionUID = 0L;
       stepType_ = 0;
       status_ = 0;
       result_ = "";
+      params_ = "";
       error_ = "";
       retryCount_ = 0;
       startedAt_ = null;
@@ -931,25 +998,28 @@ private static final long serialVersionUID = 0L;
         result.result_ = result_;
       }
       if (((from_bitField0_ & 0x00000080) != 0)) {
-        result.error_ = error_;
+        result.params_ = params_;
       }
       if (((from_bitField0_ & 0x00000100) != 0)) {
+        result.error_ = error_;
+      }
+      if (((from_bitField0_ & 0x00000200) != 0)) {
         result.retryCount_ = retryCount_;
       }
       int to_bitField0_ = 0;
-      if (((from_bitField0_ & 0x00000200) != 0)) {
+      if (((from_bitField0_ & 0x00000400) != 0)) {
         result.startedAt_ = startedAtBuilder_ == null
             ? startedAt_
             : startedAtBuilder_.build();
         to_bitField0_ |= 0x00000001;
       }
-      if (((from_bitField0_ & 0x00000400) != 0)) {
+      if (((from_bitField0_ & 0x00000800) != 0)) {
         result.completedAt_ = completedAtBuilder_ == null
             ? completedAt_
             : completedAtBuilder_.build();
         to_bitField0_ |= 0x00000002;
       }
-      if (((from_bitField0_ & 0x00000800) != 0)) {
+      if (((from_bitField0_ & 0x00001000) != 0)) {
         result.auditInfo_ = auditInfoBuilder_ == null
             ? auditInfo_
             : auditInfoBuilder_.build();
@@ -1001,9 +1071,14 @@ private static final long serialVersionUID = 0L;
         bitField0_ |= 0x00000040;
         onChanged();
       }
+      if (!other.getParams().isEmpty()) {
+        params_ = other.params_;
+        bitField0_ |= 0x00000080;
+        onChanged();
+      }
       if (!other.getError().isEmpty()) {
         error_ = other.error_;
-        bitField0_ |= 0x00000080;
+        bitField0_ |= 0x00000100;
         onChanged();
       }
       if (other.getRetryCount() != 0) {
@@ -1076,33 +1151,33 @@ private static final long serialVersionUID = 0L;
             } // case 50
             case 58: {
               error_ = input.readStringRequireUtf8();
-              bitField0_ |= 0x00000080;
+              bitField0_ |= 0x00000100;
               break;
             } // case 58
             case 64: {
               retryCount_ = input.readInt32();
-              bitField0_ |= 0x00000100;
+              bitField0_ |= 0x00000200;
               break;
             } // case 64
             case 74: {
               input.readMessage(
                   internalGetStartedAtFieldBuilder().getBuilder(),
                   extensionRegistry);
-              bitField0_ |= 0x00000200;
+              bitField0_ |= 0x00000400;
               break;
             } // case 74
             case 82: {
               input.readMessage(
                   internalGetCompletedAtFieldBuilder().getBuilder(),
                   extensionRegistry);
-              bitField0_ |= 0x00000400;
+              bitField0_ |= 0x00000800;
               break;
             } // case 82
             case 90: {
               input.readMessage(
                   internalGetAuditInfoFieldBuilder().getBuilder(),
                   extensionRegistry);
-              bitField0_ |= 0x00000800;
+              bitField0_ |= 0x00001000;
               break;
             } // case 90
             case 98: {
@@ -1110,6 +1185,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000004;
               break;
             } // case 98
+            case 106: {
+              params_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000080;
+              break;
+            } // case 106
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1734,6 +1814,118 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
+    private java.lang.Object params_ = "";
+    /**
+     * <pre>
+     * Transform parameters applied to a byte/image step, as a JSON object, e.g.
+     * {"width":800,"height":600,"format":"jpeg"}. RESIZE reads width/height;
+     * CONVERT (format-only RESIZE) reads format. Empty `{}` for steps that take no
+     * parameters. Additive: lets RESIZE/CONVERT be parameterized instead of a
+     * hardcoded 256x256/png, and surfaces the applied params on read.
+     * </pre>
+     *
+     * <code>string params = 13 [json_name = "params", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The params.
+     */
+    public java.lang.String getParams() {
+      java.lang.Object ref = params_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        params_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Transform parameters applied to a byte/image step, as a JSON object, e.g.
+     * {"width":800,"height":600,"format":"jpeg"}. RESIZE reads width/height;
+     * CONVERT (format-only RESIZE) reads format. Empty `{}` for steps that take no
+     * parameters. Additive: lets RESIZE/CONVERT be parameterized instead of a
+     * hardcoded 256x256/png, and surfaces the applied params on read.
+     * </pre>
+     *
+     * <code>string params = 13 [json_name = "params", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The bytes for params.
+     */
+    public com.google.protobuf.ByteString
+        getParamsBytes() {
+      java.lang.Object ref = params_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        params_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Transform parameters applied to a byte/image step, as a JSON object, e.g.
+     * {"width":800,"height":600,"format":"jpeg"}. RESIZE reads width/height;
+     * CONVERT (format-only RESIZE) reads format. Empty `{}` for steps that take no
+     * parameters. Additive: lets RESIZE/CONVERT be parameterized instead of a
+     * hardcoded 256x256/png, and surfaces the applied params on read.
+     * </pre>
+     *
+     * <code>string params = 13 [json_name = "params", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The params to set.
+     * @return This builder for chaining.
+     */
+    public Builder setParams(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      params_ = value;
+      bitField0_ |= 0x00000080;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Transform parameters applied to a byte/image step, as a JSON object, e.g.
+     * {"width":800,"height":600,"format":"jpeg"}. RESIZE reads width/height;
+     * CONVERT (format-only RESIZE) reads format. Empty `{}` for steps that take no
+     * parameters. Additive: lets RESIZE/CONVERT be parameterized instead of a
+     * hardcoded 256x256/png, and surfaces the applied params on read.
+     * </pre>
+     *
+     * <code>string params = 13 [json_name = "params", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearParams() {
+      params_ = getDefaultInstance().getParams();
+      bitField0_ = (bitField0_ & ~0x00000080);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Transform parameters applied to a byte/image step, as a JSON object, e.g.
+     * {"width":800,"height":600,"format":"jpeg"}. RESIZE reads width/height;
+     * CONVERT (format-only RESIZE) reads format. Empty `{}` for steps that take no
+     * parameters. Additive: lets RESIZE/CONVERT be parameterized instead of a
+     * hardcoded 256x256/png, and surfaces the applied params on read.
+     * </pre>
+     *
+     * <code>string params = 13 [json_name = "params", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The bytes for params to set.
+     * @return This builder for chaining.
+     */
+    public Builder setParamsBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      params_ = value;
+      bitField0_ |= 0x00000080;
+      onChanged();
+      return this;
+    }
+
     private java.lang.Object error_ = "";
     /**
      * <pre>
@@ -1789,7 +1981,7 @@ private static final long serialVersionUID = 0L;
         java.lang.String value) {
       if (value == null) { throw new NullPointerException(); }
       error_ = value;
-      bitField0_ |= 0x00000080;
+      bitField0_ |= 0x00000100;
       onChanged();
       return this;
     }
@@ -1803,7 +1995,7 @@ private static final long serialVersionUID = 0L;
      */
     public Builder clearError() {
       error_ = getDefaultInstance().getError();
-      bitField0_ = (bitField0_ & ~0x00000080);
+      bitField0_ = (bitField0_ & ~0x00000100);
       onChanged();
       return this;
     }
@@ -1821,7 +2013,7 @@ private static final long serialVersionUID = 0L;
       if (value == null) { throw new NullPointerException(); }
       checkByteStringIsUtf8(value);
       error_ = value;
-      bitField0_ |= 0x00000080;
+      bitField0_ |= 0x00000100;
       onChanged();
       return this;
     }
@@ -1851,7 +2043,7 @@ private static final long serialVersionUID = 0L;
     public Builder setRetryCount(int value) {
 
       retryCount_ = value;
-      bitField0_ |= 0x00000100;
+      bitField0_ |= 0x00000200;
       onChanged();
       return this;
     }
@@ -1864,7 +2056,7 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder clearRetryCount() {
-      bitField0_ = (bitField0_ & ~0x00000100);
+      bitField0_ = (bitField0_ & ~0x00000200);
       retryCount_ = 0;
       onChanged();
       return this;
@@ -1882,7 +2074,7 @@ private static final long serialVersionUID = 0L;
      * @return Whether the startedAt field is set.
      */
     public boolean hasStartedAt() {
-      return ((bitField0_ & 0x00000200) != 0);
+      return ((bitField0_ & 0x00000400) != 0);
     }
     /**
      * <pre>
@@ -1915,7 +2107,7 @@ private static final long serialVersionUID = 0L;
       } else {
         startedAtBuilder_.setMessage(value);
       }
-      bitField0_ |= 0x00000200;
+      bitField0_ |= 0x00000400;
       onChanged();
       return this;
     }
@@ -1933,7 +2125,7 @@ private static final long serialVersionUID = 0L;
       } else {
         startedAtBuilder_.setMessage(builderForValue.build());
       }
-      bitField0_ |= 0x00000200;
+      bitField0_ |= 0x00000400;
       onChanged();
       return this;
     }
@@ -1946,7 +2138,7 @@ private static final long serialVersionUID = 0L;
      */
     public Builder mergeStartedAt(com.google.protobuf.Timestamp value) {
       if (startedAtBuilder_ == null) {
-        if (((bitField0_ & 0x00000200) != 0) &&
+        if (((bitField0_ & 0x00000400) != 0) &&
           startedAt_ != null &&
           startedAt_ != com.google.protobuf.Timestamp.getDefaultInstance()) {
           getStartedAtBuilder().mergeFrom(value);
@@ -1957,7 +2149,7 @@ private static final long serialVersionUID = 0L;
         startedAtBuilder_.mergeFrom(value);
       }
       if (startedAt_ != null) {
-        bitField0_ |= 0x00000200;
+        bitField0_ |= 0x00000400;
         onChanged();
       }
       return this;
@@ -1970,7 +2162,7 @@ private static final long serialVersionUID = 0L;
      * <code>.google.protobuf.Timestamp started_at = 9 [json_name = "startedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     public Builder clearStartedAt() {
-      bitField0_ = (bitField0_ & ~0x00000200);
+      bitField0_ = (bitField0_ & ~0x00000400);
       startedAt_ = null;
       if (startedAtBuilder_ != null) {
         startedAtBuilder_.dispose();
@@ -1987,7 +2179,7 @@ private static final long serialVersionUID = 0L;
      * <code>.google.protobuf.Timestamp started_at = 9 [json_name = "startedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     public com.google.protobuf.Timestamp.Builder getStartedAtBuilder() {
-      bitField0_ |= 0x00000200;
+      bitField0_ |= 0x00000400;
       onChanged();
       return internalGetStartedAtFieldBuilder().getBuilder();
     }
@@ -2039,7 +2231,7 @@ private static final long serialVersionUID = 0L;
      * @return Whether the completedAt field is set.
      */
     public boolean hasCompletedAt() {
-      return ((bitField0_ & 0x00000400) != 0);
+      return ((bitField0_ & 0x00000800) != 0);
     }
     /**
      * <pre>
@@ -2072,7 +2264,7 @@ private static final long serialVersionUID = 0L;
       } else {
         completedAtBuilder_.setMessage(value);
       }
-      bitField0_ |= 0x00000400;
+      bitField0_ |= 0x00000800;
       onChanged();
       return this;
     }
@@ -2090,7 +2282,7 @@ private static final long serialVersionUID = 0L;
       } else {
         completedAtBuilder_.setMessage(builderForValue.build());
       }
-      bitField0_ |= 0x00000400;
+      bitField0_ |= 0x00000800;
       onChanged();
       return this;
     }
@@ -2103,7 +2295,7 @@ private static final long serialVersionUID = 0L;
      */
     public Builder mergeCompletedAt(com.google.protobuf.Timestamp value) {
       if (completedAtBuilder_ == null) {
-        if (((bitField0_ & 0x00000400) != 0) &&
+        if (((bitField0_ & 0x00000800) != 0) &&
           completedAt_ != null &&
           completedAt_ != com.google.protobuf.Timestamp.getDefaultInstance()) {
           getCompletedAtBuilder().mergeFrom(value);
@@ -2114,7 +2306,7 @@ private static final long serialVersionUID = 0L;
         completedAtBuilder_.mergeFrom(value);
       }
       if (completedAt_ != null) {
-        bitField0_ |= 0x00000400;
+        bitField0_ |= 0x00000800;
         onChanged();
       }
       return this;
@@ -2127,7 +2319,7 @@ private static final long serialVersionUID = 0L;
      * <code>.google.protobuf.Timestamp completed_at = 10 [json_name = "completedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     public Builder clearCompletedAt() {
-      bitField0_ = (bitField0_ & ~0x00000400);
+      bitField0_ = (bitField0_ & ~0x00000800);
       completedAt_ = null;
       if (completedAtBuilder_ != null) {
         completedAtBuilder_.dispose();
@@ -2144,7 +2336,7 @@ private static final long serialVersionUID = 0L;
      * <code>.google.protobuf.Timestamp completed_at = 10 [json_name = "completedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     public com.google.protobuf.Timestamp.Builder getCompletedAtBuilder() {
-      bitField0_ |= 0x00000400;
+      bitField0_ |= 0x00000800;
       onChanged();
       return internalGetCompletedAtFieldBuilder().getBuilder();
     }
@@ -2196,7 +2388,7 @@ private static final long serialVersionUID = 0L;
      * @return Whether the auditInfo field is set.
      */
     public boolean hasAuditInfo() {
-      return ((bitField0_ & 0x00000800) != 0);
+      return ((bitField0_ & 0x00001000) != 0);
     }
     /**
      * <pre>
@@ -2229,7 +2421,7 @@ private static final long serialVersionUID = 0L;
       } else {
         auditInfoBuilder_.setMessage(value);
       }
-      bitField0_ |= 0x00000800;
+      bitField0_ |= 0x00001000;
       onChanged();
       return this;
     }
@@ -2247,7 +2439,7 @@ private static final long serialVersionUID = 0L;
       } else {
         auditInfoBuilder_.setMessage(builderForValue.build());
       }
-      bitField0_ |= 0x00000800;
+      bitField0_ |= 0x00001000;
       onChanged();
       return this;
     }
@@ -2260,7 +2452,7 @@ private static final long serialVersionUID = 0L;
      */
     public Builder mergeAuditInfo(com.udb.core.common.v1.AuditInfo value) {
       if (auditInfoBuilder_ == null) {
-        if (((bitField0_ & 0x00000800) != 0) &&
+        if (((bitField0_ & 0x00001000) != 0) &&
           auditInfo_ != null &&
           auditInfo_ != com.udb.core.common.v1.AuditInfo.getDefaultInstance()) {
           getAuditInfoBuilder().mergeFrom(value);
@@ -2271,7 +2463,7 @@ private static final long serialVersionUID = 0L;
         auditInfoBuilder_.mergeFrom(value);
       }
       if (auditInfo_ != null) {
-        bitField0_ |= 0x00000800;
+        bitField0_ |= 0x00001000;
         onChanged();
       }
       return this;
@@ -2284,7 +2476,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.AuditInfo audit_info = 11 [json_name = "auditInfo", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     public Builder clearAuditInfo() {
-      bitField0_ = (bitField0_ & ~0x00000800);
+      bitField0_ = (bitField0_ & ~0x00001000);
       auditInfo_ = null;
       if (auditInfoBuilder_ != null) {
         auditInfoBuilder_.dispose();
@@ -2301,7 +2493,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.AuditInfo audit_info = 11 [json_name = "auditInfo", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     public com.udb.core.common.v1.AuditInfo.Builder getAuditInfoBuilder() {
-      bitField0_ |= 0x00000800;
+      bitField0_ |= 0x00001000;
       onChanged();
       return internalGetAuditInfoFieldBuilder().getBuilder();
     }

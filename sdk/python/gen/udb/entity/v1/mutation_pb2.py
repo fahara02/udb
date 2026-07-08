@@ -23,9 +23,10 @@ _sym_db = _symbol_database.Default()
 
 
 from udb.entity.v1 import operation_pb2 as udb_dot_entity_dot_v1_dot_operation__pb2
+from udb.entity.v1 import consistency_pb2 as udb_dot_entity_dot_v1_dot_consistency__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1cudb/entity/v1/mutation.proto\x12\rudb.entity.v1\x1a\x1dudb/entity/v1/operation.proto\"\x88\x04\n\x10MutationResponse\x12\x1f\n\x0bmutation_id\x18\x01 \x01(\tR\nmutationId\x12!\n\x0cresource_uri\x18\x02 \x01(\tR\x0bresourceUri\x12\'\n\x0f\x63hecksum_sha256\x18\x03 \x01(\tR\x0e\x63hecksumSha256\x12\x1f\n\x0brecord_json\x18\x04 \x01(\x0cR\nrecordJson\x12#\n\raffected_rows\x18\x05 \x01(\x03R\x0c\x61\x66\x66\x65\x63tedRows\x12#\n\rwas_duplicate\x18\x06 \x01(\x08R\x0cwasDuplicate\x12,\n\x12write_receipt_json\x18\x07 \x01(\tR\x10writeReceiptJson\x12)\n\x10resource_version\x18\x08 \x01(\tR\x0fresourceVersion\x12I\n\x08metadata\x18\t \x03(\x0b\x32-.udb.entity.v1.MutationResponse.MetadataEntryR\x08metadata\x12;\n\x08warnings\x18\n \x03(\x0b\x32\x1f.udb.entity.v1.OperationWarningR\x08warnings\x1a;\n\rMetadataEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n\x05value\x18\x02 \x01(\tR\x05value:\x02\x38\x01\x42\xb3\x01\n\x11\x63om.udb.entity.v1B\rMutationProtoP\x01Z9github.com/fahara02/udb/sdk/go/gen/udb/entity/v1;entityv1\xa2\x02\x03UEX\xaa\x02\rUdb.Entity.V1\xca\x02\rUdb\\Entity\\V1\xe2\x02\x19Udb\\GPBMetadata\\Entity\\V1\xea\x02\x0fUdb::Entity::V1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1cudb/entity/v1/mutation.proto\x12\rudb.entity.v1\x1a\x1dudb/entity/v1/operation.proto\x1a\x1fudb/entity/v1/consistency.proto\"\xca\x04\n\x10MutationResponse\x12\x1f\n\x0bmutation_id\x18\x01 \x01(\tR\nmutationId\x12!\n\x0cresource_uri\x18\x02 \x01(\tR\x0bresourceUri\x12\'\n\x0f\x63hecksum_sha256\x18\x03 \x01(\tR\x0e\x63hecksumSha256\x12\x1f\n\x0brecord_json\x18\x04 \x01(\x0cR\nrecordJson\x12#\n\raffected_rows\x18\x05 \x01(\x03R\x0c\x61\x66\x66\x65\x63tedRows\x12#\n\rwas_duplicate\x18\x06 \x01(\x08R\x0cwasDuplicate\x12,\n\x12write_receipt_json\x18\x07 \x01(\tR\x10writeReceiptJson\x12)\n\x10resource_version\x18\x08 \x01(\tR\x0fresourceVersion\x12I\n\x08metadata\x18\t \x03(\x0b\x32-.udb.entity.v1.MutationResponse.MetadataEntryR\x08metadata\x12;\n\x08warnings\x18\n \x03(\x0b\x32\x1f.udb.entity.v1.OperationWarningR\x08warnings\x12@\n\rwrite_receipt\x18\x0b \x01(\x0b\x32\x1b.udb.entity.v1.WriteReceiptR\x0cwriteReceipt\x1a;\n\rMetadataEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n\x05value\x18\x02 \x01(\tR\x05value:\x02\x38\x01\x42\xb3\x01\n\x11\x63om.udb.entity.v1B\rMutationProtoP\x01Z9github.com/fahara02/udb/sdk/go/gen/udb/entity/v1;entityv1\xa2\x02\x03UEX\xaa\x02\rUdb.Entity.V1\xca\x02\rUdb\\Entity\\V1\xe2\x02\x19Udb\\GPBMetadata\\Entity\\V1\xea\x02\x0fUdb::Entity::V1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -35,8 +36,8 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._serialized_options = b'\n\021com.udb.entity.v1B\rMutationProtoP\001Z9github.com/fahara02/udb/sdk/go/gen/udb/entity/v1;entityv1\242\002\003UEX\252\002\rUdb.Entity.V1\312\002\rUdb\\Entity\\V1\342\002\031Udb\\GPBMetadata\\Entity\\V1\352\002\017Udb::Entity::V1'
   _globals['_MUTATIONRESPONSE_METADATAENTRY']._loaded_options = None
   _globals['_MUTATIONRESPONSE_METADATAENTRY']._serialized_options = b'8\001'
-  _globals['_MUTATIONRESPONSE']._serialized_start=79
-  _globals['_MUTATIONRESPONSE']._serialized_end=599
-  _globals['_MUTATIONRESPONSE_METADATAENTRY']._serialized_start=540
-  _globals['_MUTATIONRESPONSE_METADATAENTRY']._serialized_end=599
+  _globals['_MUTATIONRESPONSE']._serialized_start=112
+  _globals['_MUTATIONRESPONSE']._serialized_end=698
+  _globals['_MUTATIONRESPONSE_METADATAENTRY']._serialized_start=639
+  _globals['_MUTATIONRESPONSE_METADATAENTRY']._serialized_end=698
 # @@protoc_insertion_point(module_scope)

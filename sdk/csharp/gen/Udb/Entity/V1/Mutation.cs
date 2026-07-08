@@ -25,27 +25,29 @@ namespace Udb.Entity.V1 {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
             "Chx1ZGIvZW50aXR5L3YxL211dGF0aW9uLnByb3RvEg11ZGIuZW50aXR5LnYx",
-            "Gh11ZGIvZW50aXR5L3YxL29wZXJhdGlvbi5wcm90byKIBAoQTXV0YXRpb25S",
-            "ZXNwb25zZRIfCgttdXRhdGlvbl9pZBgBIAEoCVIKbXV0YXRpb25JZBIhCgxy",
-            "ZXNvdXJjZV91cmkYAiABKAlSC3Jlc291cmNlVXJpEicKD2NoZWNrc3VtX3No",
-            "YTI1NhgDIAEoCVIOY2hlY2tzdW1TaGEyNTYSHwoLcmVjb3JkX2pzb24YBCAB",
-            "KAxSCnJlY29yZEpzb24SIwoNYWZmZWN0ZWRfcm93cxgFIAEoA1IMYWZmZWN0",
-            "ZWRSb3dzEiMKDXdhc19kdXBsaWNhdGUYBiABKAhSDHdhc0R1cGxpY2F0ZRIs",
-            "ChJ3cml0ZV9yZWNlaXB0X2pzb24YByABKAlSEHdyaXRlUmVjZWlwdEpzb24S",
-            "KQoQcmVzb3VyY2VfdmVyc2lvbhgIIAEoCVIPcmVzb3VyY2VWZXJzaW9uEkkK",
-            "CG1ldGFkYXRhGAkgAygLMi0udWRiLmVudGl0eS52MS5NdXRhdGlvblJlc3Bv",
-            "bnNlLk1ldGFkYXRhRW50cnlSCG1ldGFkYXRhEjsKCHdhcm5pbmdzGAogAygL",
-            "Mh8udWRiLmVudGl0eS52MS5PcGVyYXRpb25XYXJuaW5nUgh3YXJuaW5ncxo7",
-            "Cg1NZXRhZGF0YUVudHJ5EhAKA2tleRgBIAEoCVIDa2V5EhQKBXZhbHVlGAIg",
-            "ASgJUgV2YWx1ZToCOAFCswEKEWNvbS51ZGIuZW50aXR5LnYxQg1NdXRhdGlv",
-            "blByb3RvUAFaOWdpdGh1Yi5jb20vZmFoYXJhMDIvdWRiL3Nkay9nby9nZW4v",
-            "dWRiL2VudGl0eS92MTtlbnRpdHl2MaICA1VFWKoCDVVkYi5FbnRpdHkuVjHK",
-            "Ag1VZGJcRW50aXR5XFYx4gIZVWRiXEdQQk1ldGFkYXRhXEVudGl0eVxWMeoC",
-            "D1VkYjo6RW50aXR5OjpWMWIGcHJvdG8z"));
+            "Gh11ZGIvZW50aXR5L3YxL29wZXJhdGlvbi5wcm90bxofdWRiL2VudGl0eS92",
+            "MS9jb25zaXN0ZW5jeS5wcm90byLKBAoQTXV0YXRpb25SZXNwb25zZRIfCgtt",
+            "dXRhdGlvbl9pZBgBIAEoCVIKbXV0YXRpb25JZBIhCgxyZXNvdXJjZV91cmkY",
+            "AiABKAlSC3Jlc291cmNlVXJpEicKD2NoZWNrc3VtX3NoYTI1NhgDIAEoCVIO",
+            "Y2hlY2tzdW1TaGEyNTYSHwoLcmVjb3JkX2pzb24YBCABKAxSCnJlY29yZEpz",
+            "b24SIwoNYWZmZWN0ZWRfcm93cxgFIAEoA1IMYWZmZWN0ZWRSb3dzEiMKDXdh",
+            "c19kdXBsaWNhdGUYBiABKAhSDHdhc0R1cGxpY2F0ZRIsChJ3cml0ZV9yZWNl",
+            "aXB0X2pzb24YByABKAlSEHdyaXRlUmVjZWlwdEpzb24SKQoQcmVzb3VyY2Vf",
+            "dmVyc2lvbhgIIAEoCVIPcmVzb3VyY2VWZXJzaW9uEkkKCG1ldGFkYXRhGAkg",
+            "AygLMi0udWRiLmVudGl0eS52MS5NdXRhdGlvblJlc3BvbnNlLk1ldGFkYXRh",
+            "RW50cnlSCG1ldGFkYXRhEjsKCHdhcm5pbmdzGAogAygLMh8udWRiLmVudGl0",
+            "eS52MS5PcGVyYXRpb25XYXJuaW5nUgh3YXJuaW5ncxJACg13cml0ZV9yZWNl",
+            "aXB0GAsgASgLMhsudWRiLmVudGl0eS52MS5Xcml0ZVJlY2VpcHRSDHdyaXRl",
+            "UmVjZWlwdBo7Cg1NZXRhZGF0YUVudHJ5EhAKA2tleRgBIAEoCVIDa2V5EhQK",
+            "BXZhbHVlGAIgASgJUgV2YWx1ZToCOAFCswEKEWNvbS51ZGIuZW50aXR5LnYx",
+            "Qg1NdXRhdGlvblByb3RvUAFaOWdpdGh1Yi5jb20vZmFoYXJhMDIvdWRiL3Nk",
+            "ay9nby9nZW4vdWRiL2VudGl0eS92MTtlbnRpdHl2MaICA1VFWKoCDVVkYi5F",
+            "bnRpdHkuVjHKAg1VZGJcRW50aXR5XFYx4gIZVWRiXEdQQk1ldGFkYXRhXEVu",
+            "dGl0eVxWMeoCD1VkYjo6RW50aXR5OjpWMWIGcHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
-          new pbr::FileDescriptor[] { global::Udb.Entity.V1.OperationReflection.Descriptor, },
+          new pbr::FileDescriptor[] { global::Udb.Entity.V1.OperationReflection.Descriptor, global::Udb.Entity.V1.ConsistencyReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.MutationResponse), global::Udb.Entity.V1.MutationResponse.Parser, new[]{ "MutationId", "ResourceUri", "ChecksumSha256", "RecordJson", "AffectedRows", "WasDuplicate", "WriteReceiptJson", "ResourceVersion", "Metadata", "Warnings" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, })
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.MutationResponse), global::Udb.Entity.V1.MutationResponse.Parser, new[]{ "MutationId", "ResourceUri", "ChecksumSha256", "RecordJson", "AffectedRows", "WasDuplicate", "WriteReceiptJson", "ResourceVersion", "Metadata", "Warnings", "WriteReceipt" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, })
           }));
     }
     #endregion
@@ -97,6 +99,7 @@ namespace Udb.Entity.V1 {
       resourceVersion_ = other.resourceVersion_;
       metadata_ = other.metadata_.Clone();
       warnings_ = other.warnings_.Clone();
+      writeReceipt_ = other.writeReceipt_ != null ? other.writeReceipt_.Clone() : null;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -227,6 +230,22 @@ namespace Udb.Entity.V1 {
       get { return warnings_; }
     }
 
+    /// <summary>Field number for the "write_receipt" field.</summary>
+    public const int WriteReceiptFieldNumber = 11;
+    private global::Udb.Entity.V1.WriteReceipt writeReceipt_;
+    /// <summary>
+    /// Typed write receipt. Kept in lockstep with write_receipt_json for clients
+    /// that can consume protobuf messages directly.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Udb.Entity.V1.WriteReceipt WriteReceipt {
+      get { return writeReceipt_; }
+      set {
+        writeReceipt_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -252,6 +271,7 @@ namespace Udb.Entity.V1 {
       if (ResourceVersion != other.ResourceVersion) return false;
       if (!Metadata.Equals(other.Metadata)) return false;
       if(!warnings_.Equals(other.warnings_)) return false;
+      if (!object.Equals(WriteReceipt, other.WriteReceipt)) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -269,6 +289,7 @@ namespace Udb.Entity.V1 {
       if (ResourceVersion.Length != 0) hash ^= ResourceVersion.GetHashCode();
       hash ^= Metadata.GetHashCode();
       hash ^= warnings_.GetHashCode();
+      if (writeReceipt_ != null) hash ^= WriteReceipt.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -321,6 +342,10 @@ namespace Udb.Entity.V1 {
       }
       metadata_.WriteTo(output, _map_metadata_codec);
       warnings_.WriteTo(output, _repeated_warnings_codec);
+      if (writeReceipt_ != null) {
+        output.WriteRawTag(90);
+        output.WriteMessage(WriteReceipt);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -365,6 +390,10 @@ namespace Udb.Entity.V1 {
       }
       metadata_.WriteTo(ref output, _map_metadata_codec);
       warnings_.WriteTo(ref output, _repeated_warnings_codec);
+      if (writeReceipt_ != null) {
+        output.WriteRawTag(90);
+        output.WriteMessage(WriteReceipt);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -401,6 +430,9 @@ namespace Udb.Entity.V1 {
       }
       size += metadata_.CalculateSize(_map_metadata_codec);
       size += warnings_.CalculateSize(_repeated_warnings_codec);
+      if (writeReceipt_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(WriteReceipt);
+      }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
       }
@@ -439,6 +471,12 @@ namespace Udb.Entity.V1 {
       }
       metadata_.MergeFrom(other.metadata_);
       warnings_.Add(other.warnings_);
+      if (other.writeReceipt_ != null) {
+        if (writeReceipt_ == null) {
+          WriteReceipt = new global::Udb.Entity.V1.WriteReceipt();
+        }
+        WriteReceipt.MergeFrom(other.WriteReceipt);
+      }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
 
@@ -498,6 +536,13 @@ namespace Udb.Entity.V1 {
             warnings_.AddEntriesFrom(input, _repeated_warnings_codec);
             break;
           }
+          case 90: {
+            if (writeReceipt_ == null) {
+              WriteReceipt = new global::Udb.Entity.V1.WriteReceipt();
+            }
+            input.ReadMessage(WriteReceipt);
+            break;
+          }
         }
       }
     #endif
@@ -555,6 +600,13 @@ namespace Udb.Entity.V1 {
           }
           case 82: {
             warnings_.AddEntriesFrom(ref input, _repeated_warnings_codec);
+            break;
+          }
+          case 90: {
+            if (writeReceipt_ == null) {
+              WriteReceipt = new global::Udb.Entity.V1.WriteReceipt();
+            }
+            input.ReadMessage(WriteReceipt);
             break;
           }
         }

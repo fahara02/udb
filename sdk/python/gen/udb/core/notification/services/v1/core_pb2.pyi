@@ -215,6 +215,32 @@ class GetDeliveryStatsResponse(_message.Message):
     by_channel: _containers.RepeatedCompositeFieldContainer[ChannelStats]
     def __init__(self, total_sent: _Optional[int] = ..., total_delivered: _Optional[int] = ..., total_failed: _Optional[int] = ..., overall_delivery_rate: _Optional[float] = ..., by_channel: _Optional[_Iterable[_Union[ChannelStats, _Mapping]]] = ...) -> None: ...
 
+class ReportDeliveryRequest(_message.Message):
+    __slots__ = ("tenant_id", "log_id", "channel", "provider", "status", "provider_message_id", "error_message", "context")
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    LOG_ID_FIELD_NUMBER: _ClassVar[int]
+    CHANNEL_FIELD_NUMBER: _ClassVar[int]
+    PROVIDER_FIELD_NUMBER: _ClassVar[int]
+    STATUS_FIELD_NUMBER: _ClassVar[int]
+    PROVIDER_MESSAGE_ID_FIELD_NUMBER: _ClassVar[int]
+    ERROR_MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    tenant_id: str
+    log_id: str
+    channel: _enums_pb2.NotificationChannel
+    provider: str
+    status: _enums_pb2.NotificationStatus
+    provider_message_id: str
+    error_message: str
+    context: _types_pb2.RequestContext
+    def __init__(self, tenant_id: _Optional[str] = ..., log_id: _Optional[str] = ..., channel: _Optional[_Union[_enums_pb2.NotificationChannel, str]] = ..., provider: _Optional[str] = ..., status: _Optional[_Union[_enums_pb2.NotificationStatus, str]] = ..., provider_message_id: _Optional[str] = ..., error_message: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ...) -> None: ...
+
+class ReportDeliveryResponse(_message.Message):
+    __slots__ = ("attempt",)
+    ATTEMPT_FIELD_NUMBER: _ClassVar[int]
+    attempt: _notification_log_pb2.NotificationDeliveryAttempt
+    def __init__(self, attempt: _Optional[_Union[_notification_log_pb2.NotificationDeliveryAttempt, _Mapping]] = ...) -> None: ...
+
 class SetPreferenceRequest(_message.Message):
     __slots__ = ("user_id", "tenant_id", "channel", "event_type", "is_opted_out", "context")
     USER_ID_FIELD_NUMBER: _ClassVar[int]

@@ -227,6 +227,148 @@ func (x *NotificationLog) GetRenderedBody() string {
 	return ""
 }
 
+// ---------------------------------------------------------------------------
+// NotificationDeliveryAttempt — master-plan 9.13 delivery-status record.
+//
+// The broker records each notification SEND as a PENDING NotificationLog
+// (intent). A leader-elected delivery worker, or a provider webhook bridge that
+// calls NotificationService.ReportDelivery, then drives the terminal per-channel
+// delivery outcome here: one durable, tenant-scoped row per (notification,
+// channel, provider) carrying the queued/sent/failed/delivered status, the
+// attempt count, the provider's message id, the last error, and a timestamp.
+// This EXTENDS the existing intent/outbox path — it does not replace it. RLS
+// scopes rows to the current tenant.
+// ---------------------------------------------------------------------------
+type NotificationDeliveryAttempt struct {
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	AttemptId string                 `protobuf:"bytes,1,opt,name=attempt_id,json=attemptId,proto3" json:"attempt_id,omitempty"`
+	// The NotificationLog (intent) this delivery outcome is for.
+	NotificationId string              `protobuf:"bytes,2,opt,name=notification_id,json=notificationId,proto3" json:"notification_id,omitempty"`
+	TenantId       string              `protobuf:"bytes,3,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	Channel        NotificationChannel `protobuf:"varint,4,opt,name=channel,proto3,enum=udb.core.notification.entity.v1.NotificationChannel" json:"channel,omitempty"`
+	// Delivery provider that handled (or will handle) this channel: SES, SMTP,
+	// TWILIO, FCM, etc.
+	Provider string `protobuf:"bytes,5,opt,name=provider,proto3" json:"provider,omitempty"`
+	// queued(PENDING) | sent(SENT) | delivered(DELIVERED) | failed(FAILED).
+	Status       NotificationStatus `protobuf:"varint,6,opt,name=status,proto3,enum=udb.core.notification.entity.v1.NotificationStatus" json:"status,omitempty"`
+	AttemptCount int32              `protobuf:"varint,7,opt,name=attempt_count,json=attemptCount,proto3" json:"attempt_count,omitempty"`
+	LastError    string             `protobuf:"bytes,8,opt,name=last_error,json=lastError,proto3" json:"last_error,omitempty"`
+	// The delivery provider's message id (SES, Twilio, FCM, …) for the terminal attempt.
+	ProviderMessageId string                 `protobuf:"bytes,9,opt,name=provider_message_id,json=providerMessageId,proto3" json:"provider_message_id,omitempty"`
+	CreatedAt         *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	// The "ts" of the latest reported outcome.
+	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *NotificationDeliveryAttempt) Reset() {
+	*x = NotificationDeliveryAttempt{}
+	mi := &file_udb_core_notification_entity_v1_notification_log_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NotificationDeliveryAttempt) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NotificationDeliveryAttempt) ProtoMessage() {}
+
+func (x *NotificationDeliveryAttempt) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_notification_entity_v1_notification_log_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NotificationDeliveryAttempt.ProtoReflect.Descriptor instead.
+func (*NotificationDeliveryAttempt) Descriptor() ([]byte, []int) {
+	return file_udb_core_notification_entity_v1_notification_log_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *NotificationDeliveryAttempt) GetAttemptId() string {
+	if x != nil {
+		return x.AttemptId
+	}
+	return ""
+}
+
+func (x *NotificationDeliveryAttempt) GetNotificationId() string {
+	if x != nil {
+		return x.NotificationId
+	}
+	return ""
+}
+
+func (x *NotificationDeliveryAttempt) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *NotificationDeliveryAttempt) GetChannel() NotificationChannel {
+	if x != nil {
+		return x.Channel
+	}
+	return NotificationChannel_NOTIFICATION_CHANNEL_UNSPECIFIED
+}
+
+func (x *NotificationDeliveryAttempt) GetProvider() string {
+	if x != nil {
+		return x.Provider
+	}
+	return ""
+}
+
+func (x *NotificationDeliveryAttempt) GetStatus() NotificationStatus {
+	if x != nil {
+		return x.Status
+	}
+	return NotificationStatus_NOTIFICATION_STATUS_UNSPECIFIED
+}
+
+func (x *NotificationDeliveryAttempt) GetAttemptCount() int32 {
+	if x != nil {
+		return x.AttemptCount
+	}
+	return 0
+}
+
+func (x *NotificationDeliveryAttempt) GetLastError() string {
+	if x != nil {
+		return x.LastError
+	}
+	return ""
+}
+
+func (x *NotificationDeliveryAttempt) GetProviderMessageId() string {
+	if x != nil {
+		return x.ProviderMessageId
+	}
+	return ""
+}
+
+func (x *NotificationDeliveryAttempt) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *NotificationDeliveryAttempt) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
 var File_udb_core_notification_entity_v1_notification_log_proto protoreflect.FileDescriptor
 
 const file_udb_core_notification_entity_v1_notification_log_proto_rawDesc = "" +
@@ -298,6 +440,45 @@ const file_udb_core_notification_entity_v1_notification_log_proto_rawDesc = "" +
 	"\x10tenant_isolation\x1aH(tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\x8a\x01C\n" +
 	"\x1eidx_nlog_tenant_channel_status\x12\x05BTREEZ\ttenant_idZ\achannelZ\x06status\x8a\x01!\n" +
 	"\x10idx_nlog_sent_at\x12\x04BRINZ\asent_at\xf2\x01\x16notification.failed.v1\x8a\xb2\x19\x96\x01\n" +
+	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x18notification.operational@ZH\x02R\x06tenantZ\bstandardr\x15tenant.data_residency\"\xa5\r\n" +
+	"\x1bNotificationDeliveryAttempt\x12L\n" +
+	"\n" +
+	"attempt_id\x18\x01 \x01(\tB-\x82\xb7\x18)\n" +
+	"\n" +
+	"attempt_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\tattemptId\x12x\n" +
+	"\x0fnotification_id\x18\x02 \x01(\tBO\x82\xb7\x18K\n" +
+	"\x0fnotification_id\x12\x04UUID\x18\x01R0\n" +
+	"'idx_notif_delivery_attempt_notification\x12\x05BTREER\x0enotificationId\x12?\n" +
+	"\ttenant_id\x18\x03 \x01(\tB\"\x82\xb7\x18\x1e\n" +
+	"\ttenant_id\x12\fVARCHAR(120)\x18\x01\x98\x02\x01R\btenantId\x12l\n" +
+	"\achannel\x18\x04 \x01(\x0e24.udb.core.notification.entity.v1.NotificationChannelB\x1c\x82\xb7\x18\x18\n" +
+	"\achannel\x12\vVARCHAR(20)\x18\x01R\achannel\x12=\n" +
+	"\bprovider\x18\x05 \x01(\tB!\x82\xb7\x18\x1d\n" +
+	"\bprovider\x12\vVARCHAR(60)\x18\x01:\x02''R\bprovider\x12\x9f\x01\n" +
+	"\x06status\x18\x06 \x01(\x0e23.udb.core.notification.entity.v1.NotificationStatusBR\x82\xb7\x18N\n" +
+	"\x06status\x12\vVARCHAR(20)\x18\x01:\t'PENDING'R*\n" +
+	"!idx_notif_delivery_attempt_status\x12\x05BTREER\x06status\x12F\n" +
+	"\rattempt_count\x18\a \x01(\x05B!\x82\xb7\x18\x1d\n" +
+	"\rattempt_count\x12\aINTEGER\x18\x01:\x010R\fattemptCount\x125\n" +
+	"\n" +
+	"last_error\x18\b \x01(\tB\x16\x82\xb7\x18\x12\n" +
+	"\n" +
+	"last_error\x12\x04TEXTR\tlastError\x12W\n" +
+	"\x13provider_message_id\x18\t \x01(\tB'\x82\xb7\x18#\n" +
+	"\x13provider_message_id\x12\fVARCHAR(255)R\x11providerMessageId\x12q\n" +
+	"\n" +
+	"created_at\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampB6\x82\xb7\x182\n" +
+	"\n" +
+	"created_at\x12\vTIMESTAMPTZ\x18\x01:\x11CURRENT_TIMESTAMP`\x01h\x01R\tcreatedAt\x12m\n" +
+	"\n" +
+	"updated_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampB2\x82\xb7\x18.\n" +
+	"\n" +
+	"updated_at\x12\vTIMESTAMPTZ\x18\x01:\x11CURRENT_TIMESTAMPR\tupdatedAt:\xf3\x04\xfa\xb6\x18\xd3\x03\n" +
+	"\x1enotification_delivery_attempts\x12\x10udb_notification\x18\x04 \x01*BPer-channel notification delivery-status record (master-plan 9.13)8\x01@\x01b\x97\x01\n" +
+	"\x10tenant_isolation\x1a\x80\x01(tenant_id::text = current_setting('app.current_tenant_id', true)::text OR current_setting('app.platform_admin', true) = 'true')(\x01h\x01\x8a\x01O\n" +
+	" uq_notif_delivery_attempt_target\x12\x05BTREE\x18\x01Z\x0fnotification_idZ\achannelZ\bprovider\x8a\x01D\n" +
+	"(idx_notif_delivery_attempt_tenant_status\x12\x05BTREEZ\ttenant_idZ\x06status\xf2\x01\x1dudb.notification.delivery.cdc\x8a\xb2\x19\x96\x01\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x18notification.operational@ZH\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xa9\x02\n" +
 	"#com.udb.core.notification.entity.v1B\x14NotificationLogProtoP\x01ZKgithub.com/fahara02/udb/sdk/go/gen/udb/core/notification/entity/v1;entityv1\xa2\x02\x04UCNE\xaa\x02\x1fudb.core.Notification.Entity.V1\xca\x02\x1fUdb\\Core\\Notification\\Entity\\V1\xe2\x02+Udb\\GPBMetadata\\Core\\Notification\\Entity\\V1\xea\x02#Udb::Core::Notification::Entity::V1b\x06proto3"
 
@@ -313,24 +494,29 @@ func file_udb_core_notification_entity_v1_notification_log_proto_rawDescGZIP() [
 	return file_udb_core_notification_entity_v1_notification_log_proto_rawDescData
 }
 
-var file_udb_core_notification_entity_v1_notification_log_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_udb_core_notification_entity_v1_notification_log_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_udb_core_notification_entity_v1_notification_log_proto_goTypes = []any{
-	(*NotificationLog)(nil),       // 0: udb.core.notification.entity.v1.NotificationLog
-	(NotificationChannel)(0),      // 1: udb.core.notification.entity.v1.NotificationChannel
-	(NotificationStatus)(0),       // 2: udb.core.notification.entity.v1.NotificationStatus
-	(*timestamppb.Timestamp)(nil), // 3: google.protobuf.Timestamp
+	(*NotificationLog)(nil),             // 0: udb.core.notification.entity.v1.NotificationLog
+	(*NotificationDeliveryAttempt)(nil), // 1: udb.core.notification.entity.v1.NotificationDeliveryAttempt
+	(NotificationChannel)(0),            // 2: udb.core.notification.entity.v1.NotificationChannel
+	(NotificationStatus)(0),             // 3: udb.core.notification.entity.v1.NotificationStatus
+	(*timestamppb.Timestamp)(nil),       // 4: google.protobuf.Timestamp
 }
 var file_udb_core_notification_entity_v1_notification_log_proto_depIdxs = []int32{
-	1, // 0: udb.core.notification.entity.v1.NotificationLog.channel:type_name -> udb.core.notification.entity.v1.NotificationChannel
-	2, // 1: udb.core.notification.entity.v1.NotificationLog.status:type_name -> udb.core.notification.entity.v1.NotificationStatus
-	3, // 2: udb.core.notification.entity.v1.NotificationLog.sent_at:type_name -> google.protobuf.Timestamp
-	3, // 3: udb.core.notification.entity.v1.NotificationLog.delivered_at:type_name -> google.protobuf.Timestamp
-	3, // 4: udb.core.notification.entity.v1.NotificationLog.created_at:type_name -> google.protobuf.Timestamp
-	5, // [5:5] is the sub-list for method output_type
-	5, // [5:5] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	2, // 0: udb.core.notification.entity.v1.NotificationLog.channel:type_name -> udb.core.notification.entity.v1.NotificationChannel
+	3, // 1: udb.core.notification.entity.v1.NotificationLog.status:type_name -> udb.core.notification.entity.v1.NotificationStatus
+	4, // 2: udb.core.notification.entity.v1.NotificationLog.sent_at:type_name -> google.protobuf.Timestamp
+	4, // 3: udb.core.notification.entity.v1.NotificationLog.delivered_at:type_name -> google.protobuf.Timestamp
+	4, // 4: udb.core.notification.entity.v1.NotificationLog.created_at:type_name -> google.protobuf.Timestamp
+	2, // 5: udb.core.notification.entity.v1.NotificationDeliveryAttempt.channel:type_name -> udb.core.notification.entity.v1.NotificationChannel
+	3, // 6: udb.core.notification.entity.v1.NotificationDeliveryAttempt.status:type_name -> udb.core.notification.entity.v1.NotificationStatus
+	4, // 7: udb.core.notification.entity.v1.NotificationDeliveryAttempt.created_at:type_name -> google.protobuf.Timestamp
+	4, // 8: udb.core.notification.entity.v1.NotificationDeliveryAttempt.updated_at:type_name -> google.protobuf.Timestamp
+	9, // [9:9] is the sub-list for method output_type
+	9, // [9:9] is the sub-list for method input_type
+	9, // [9:9] is the sub-list for extension type_name
+	9, // [9:9] is the sub-list for extension extendee
+	0, // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_udb_core_notification_entity_v1_notification_log_proto_init() }
@@ -345,7 +531,7 @@ func file_udb_core_notification_entity_v1_notification_log_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_udb_core_notification_entity_v1_notification_log_proto_rawDesc), len(file_udb_core_notification_entity_v1_notification_log_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   1,
+			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -52,6 +52,11 @@ class ControlPlaneServiceStub(object):
                 request_serializer=udb_dot_core_dot_control_dot_services_dot_v1_dot_core__pb2.AckStatusRequest.SerializeToString,
                 response_deserializer=udb_dot_core_dot_control_dot_services_dot_v1_dot_core__pb2.AckStatusResponse.FromString,
                 _registered_method=True)
+        self.RollbackResources = channel.unary_unary(
+                '/udb.core.control.services.v1.ControlPlaneService/RollbackResources',
+                request_serializer=udb_dot_core_dot_control_dot_services_dot_v1_dot_core__pb2.RollbackResourcesRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_control_dot_services_dot_v1_dot_core__pb2.RollbackResourcesResponse.FromString,
+                _registered_method=True)
 
 
 class ControlPlaneServiceServicer(object):
@@ -72,6 +77,11 @@ class ControlPlaneServiceServicer(object):
 
     def StreamResources(self, request_iterator, context):
         """── Aggregated state-of-the-world (ADS) ───────────────────────────────────
+        Node↔broker push channel only: a data-plane PEP node opens this bidirectional
+        stream to receive versioned resources and echo ACK/NACK nonces. It carries no
+        human/session credential, no REST surface, and is never part of an application
+        CRUD facade — so it is gated to internal callers (a loopback node or a node
+        presenting a verified mTLS identity); an untrusted remote caller is rejected.
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -79,6 +89,9 @@ class ControlPlaneServiceServicer(object):
 
     def DeltaResources(self, request_iterator, context):
         """── Incremental / delta discovery ─────────────────────────────────────────
+        Same node↔broker push semantics as StreamResources (incremental form). Only a
+        data-plane node should open it; restricted to internal callers for the same
+        reasons (no session credential, no REST surface, not an application facade RPC).
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -100,6 +113,13 @@ class ControlPlaneServiceServicer(object):
 
     def AckStatus(self, request, context):
         """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def RollbackResources(self, request, context):
+        """── Rollback a node/resource-type to a retained served snapshot ────────────
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
@@ -131,6 +151,11 @@ def add_ControlPlaneServiceServicer_to_server(servicer, server):
                     servicer.AckStatus,
                     request_deserializer=udb_dot_core_dot_control_dot_services_dot_v1_dot_core__pb2.AckStatusRequest.FromString,
                     response_serializer=udb_dot_core_dot_control_dot_services_dot_v1_dot_core__pb2.AckStatusResponse.SerializeToString,
+            ),
+            'RollbackResources': grpc.unary_unary_rpc_method_handler(
+                    servicer.RollbackResources,
+                    request_deserializer=udb_dot_core_dot_control_dot_services_dot_v1_dot_core__pb2.RollbackResourcesRequest.FromString,
+                    response_serializer=udb_dot_core_dot_control_dot_services_dot_v1_dot_core__pb2.RollbackResourcesResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -281,6 +306,33 @@ class ControlPlaneService(object):
             '/udb.core.control.services.v1.ControlPlaneService/AckStatus',
             udb_dot_core_dot_control_dot_services_dot_v1_dot_core__pb2.AckStatusRequest.SerializeToString,
             udb_dot_core_dot_control_dot_services_dot_v1_dot_core__pb2.AckStatusResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def RollbackResources(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.control.services.v1.ControlPlaneService/RollbackResources',
+            udb_dot_core_dot_control_dot_services_dot_v1_dot_core__pb2.RollbackResourcesRequest.SerializeToString,
+            udb_dot_core_dot_control_dot_services_dot_v1_dot_core__pb2.RollbackResourcesResponse.FromString,
             options,
             channel_credentials,
             insecure,

@@ -83,6 +83,26 @@ class NotificationServiceClient extends \Grpc\BaseStub {
     }
 
     /**
+     * ── Delivery reporting (master-plan 9.13) ───────────────────────────────
+     *
+     * Report the terminal per-channel delivery outcome for a sent notification.
+     * Internal seam: the leader-elected delivery worker — or a provider webhook
+     * bridge — reports queued/sent/delivered/failed; the handler upserts the
+     * NotificationDeliveryAttempt row and emits `udb.notification.delivery.<status>.v1`.
+     * @param \Udb\Core\Notification\Services\V1\ReportDeliveryRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Notification\Services\V1\ReportDeliveryResponse>
+     */
+    public function ReportDelivery(\Udb\Core\Notification\Services\V1\ReportDeliveryRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.notification.services.v1.NotificationService/ReportDelivery',
+        $argument,
+        ['\Udb\Core\Notification\Services\V1\ReportDeliveryResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
      * ── Template management ─────────────────────────────────────────────────
      *
      * Upsert a notification template.

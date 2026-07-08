@@ -1,6 +1,7 @@
 import datetime
 
 from google.api import field_behavior_pb2 as _field_behavior_pb2
+from google.protobuf import field_mask_pb2 as _field_mask_pb2
 from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from udb.core.authz.entity.v1 import access_decision_audit_pb2 as _access_decision_audit_pb2
 from udb.core.authz.entity.v1 import enums_pb2 as _enums_pb2
@@ -339,12 +340,16 @@ class CreatePolicyRuleResponse(_message.Message):
     def __init__(self, policy: _Optional[_Union[_policy_rule_pb2.PolicyRule, _Mapping]] = ...) -> None: ...
 
 class ListUserPermissionsRequest(_message.Message):
-    __slots__ = ("user_id", "domain")
+    __slots__ = ("user_id", "domain", "page_size", "page_token")
     USER_ID_FIELD_NUMBER: _ClassVar[int]
     DOMAIN_FIELD_NUMBER: _ClassVar[int]
+    PAGE_SIZE_FIELD_NUMBER: _ClassVar[int]
+    PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
     user_id: str
     domain: str
-    def __init__(self, user_id: _Optional[str] = ..., domain: _Optional[str] = ...) -> None: ...
+    page_size: int
+    page_token: str
+    def __init__(self, user_id: _Optional[str] = ..., domain: _Optional[str] = ..., page_size: _Optional[int] = ..., page_token: _Optional[str] = ...) -> None: ...
 
 class EffectivePermission(_message.Message):
     __slots__ = ("object", "action", "via_role", "resource_type", "domain")
@@ -361,10 +366,12 @@ class EffectivePermission(_message.Message):
     def __init__(self, object: _Optional[str] = ..., action: _Optional[str] = ..., via_role: _Optional[str] = ..., resource_type: _Optional[str] = ..., domain: _Optional[str] = ...) -> None: ...
 
 class ListUserPermissionsResponse(_message.Message):
-    __slots__ = ("permissions",)
+    __slots__ = ("permissions", "next_page_token")
     PERMISSIONS_FIELD_NUMBER: _ClassVar[int]
+    NEXT_PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
     permissions: _containers.RepeatedCompositeFieldContainer[EffectivePermission]
-    def __init__(self, permissions: _Optional[_Iterable[_Union[EffectivePermission, _Mapping]]] = ...) -> None: ...
+    next_page_token: str
+    def __init__(self, permissions: _Optional[_Iterable[_Union[EffectivePermission, _Mapping]]] = ..., next_page_token: _Optional[str] = ...) -> None: ...
 
 class ListAccessDecisionAuditsRequest(_message.Message):
     __slots__ = ("user_id", "domain", "correlation_id", "page")
@@ -405,20 +412,26 @@ class RevokeRoleResponse(_message.Message):
     def __init__(self, revoked: bool = ...) -> None: ...
 
 class ListUserRolesRequest(_message.Message):
-    __slots__ = ("user_id", "domain", "active_only")
+    __slots__ = ("user_id", "domain", "active_only", "page_size", "page_token")
     USER_ID_FIELD_NUMBER: _ClassVar[int]
     DOMAIN_FIELD_NUMBER: _ClassVar[int]
     ACTIVE_ONLY_FIELD_NUMBER: _ClassVar[int]
+    PAGE_SIZE_FIELD_NUMBER: _ClassVar[int]
+    PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
     user_id: str
     domain: str
     active_only: bool
-    def __init__(self, user_id: _Optional[str] = ..., domain: _Optional[str] = ..., active_only: bool = ...) -> None: ...
+    page_size: int
+    page_token: str
+    def __init__(self, user_id: _Optional[str] = ..., domain: _Optional[str] = ..., active_only: bool = ..., page_size: _Optional[int] = ..., page_token: _Optional[str] = ...) -> None: ...
 
 class ListUserRolesResponse(_message.Message):
-    __slots__ = ("user_roles",)
+    __slots__ = ("user_roles", "next_page_token")
     USER_ROLES_FIELD_NUMBER: _ClassVar[int]
+    NEXT_PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
     user_roles: _containers.RepeatedCompositeFieldContainer[_user_role_pb2.UserRole]
-    def __init__(self, user_roles: _Optional[_Iterable[_Union[_user_role_pb2.UserRole, _Mapping]]] = ...) -> None: ...
+    next_page_token: str
+    def __init__(self, user_roles: _Optional[_Iterable[_Union[_user_role_pb2.UserRole, _Mapping]]] = ..., next_page_token: _Optional[str] = ...) -> None: ...
 
 class GetRoleRequest(_message.Message):
     __slots__ = ("role_id", "role_code", "domain")
@@ -488,18 +501,20 @@ class BatchCheckPermissionsResponse(_message.Message):
     def __init__(self, results: _Optional[_Mapping[str, bool]] = ...) -> None: ...
 
 class UpdateRoleRequest(_message.Message):
-    __slots__ = ("role_id", "name", "description", "is_active", "updated_by")
+    __slots__ = ("role_id", "name", "description", "is_active", "updated_by", "update_mask")
     ROLE_ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
     DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
     IS_ACTIVE_FIELD_NUMBER: _ClassVar[int]
     UPDATED_BY_FIELD_NUMBER: _ClassVar[int]
+    UPDATE_MASK_FIELD_NUMBER: _ClassVar[int]
     role_id: str
     name: str
     description: str
     is_active: bool
     updated_by: str
-    def __init__(self, role_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., is_active: bool = ..., updated_by: _Optional[str] = ...) -> None: ...
+    update_mask: _field_mask_pb2.FieldMask
+    def __init__(self, role_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., is_active: bool = ..., updated_by: _Optional[str] = ..., update_mask: _Optional[_Union[_field_mask_pb2.FieldMask, _Mapping]] = ...) -> None: ...
 
 class UpdateRoleResponse(_message.Message):
     __slots__ = ("role",)

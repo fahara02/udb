@@ -153,4 +153,34 @@ java.lang.String defaultValue);
    */
   com.google.protobuf.ByteString
       getExternalSubjectBytes();
+
+  /**
+   * <pre>
+   * Optional PATCH mask relative to the user resource. When omitted, legacy
+   * clients keep the historical non-empty-field patch behavior.
+   * </pre>
+   *
+   * <code>.google.protobuf.FieldMask update_mask = 11 [json_name = "updateMask"];</code>
+   * @return Whether the updateMask field is set.
+   */
+  boolean hasUpdateMask();
+  /**
+   * <pre>
+   * Optional PATCH mask relative to the user resource. When omitted, legacy
+   * clients keep the historical non-empty-field patch behavior.
+   * </pre>
+   *
+   * <code>.google.protobuf.FieldMask update_mask = 11 [json_name = "updateMask"];</code>
+   * @return The updateMask.
+   */
+  com.google.protobuf.FieldMask getUpdateMask();
+  /**
+   * <pre>
+   * Optional PATCH mask relative to the user resource. When omitted, legacy
+   * clients keep the historical non-empty-field patch behavior.
+   * </pre>
+   *
+   * <code>.google.protobuf.FieldMask update_mask = 11 [json_name = "updateMask"];</code>
+   */
+  com.google.protobuf.FieldMaskOrBuilder getUpdateMaskOrBuilder();
 }

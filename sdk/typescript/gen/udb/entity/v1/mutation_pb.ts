@@ -6,13 +6,15 @@ import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
 import type { OperationWarning } from "./operation_pb";
 import { file_udb_entity_v1_operation } from "./operation_pb";
+import type { WriteReceipt } from "./consistency_pb";
+import { file_udb_entity_v1_consistency } from "./consistency_pb";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file udb/entity/v1/mutation.proto.
  */
 export const file_udb_entity_v1_mutation: GenFile = /*@__PURE__*/
-  fileDesc("Chx1ZGIvZW50aXR5L3YxL211dGF0aW9uLnByb3RvEg11ZGIuZW50aXR5LnYxIvQCChBNdXRhdGlvblJlc3BvbnNlEhMKC211dGF0aW9uX2lkGAEgASgJEhQKDHJlc291cmNlX3VyaRgCIAEoCRIXCg9jaGVja3N1bV9zaGEyNTYYAyABKAkSEwoLcmVjb3JkX2pzb24YBCABKAwSFQoNYWZmZWN0ZWRfcm93cxgFIAEoAxIVCg13YXNfZHVwbGljYXRlGAYgASgIEhoKEndyaXRlX3JlY2VpcHRfanNvbhgHIAEoCRIYChByZXNvdXJjZV92ZXJzaW9uGAggASgJEj8KCG1ldGFkYXRhGAkgAygLMi0udWRiLmVudGl0eS52MS5NdXRhdGlvblJlc3BvbnNlLk1ldGFkYXRhRW50cnkSMQoId2FybmluZ3MYCiADKAsyHy51ZGIuZW50aXR5LnYxLk9wZXJhdGlvbldhcm5pbmcaLwoNTWV0YWRhdGFFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBQrMBChFjb20udWRiLmVudGl0eS52MUINTXV0YXRpb25Qcm90b1ABWjlnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9lbnRpdHkvdjE7ZW50aXR5djGiAgNVRViqAg1VZGIuRW50aXR5LlYxygINVWRiXEVudGl0eVxWMeICGVVkYlxHUEJNZXRhZGF0YVxFbnRpdHlcVjHqAg9VZGI6OkVudGl0eTo6VjFiBnByb3RvMw", [file_udb_entity_v1_operation]);
+  fileDesc("Chx1ZGIvZW50aXR5L3YxL211dGF0aW9uLnByb3RvEg11ZGIuZW50aXR5LnYxIqgDChBNdXRhdGlvblJlc3BvbnNlEhMKC211dGF0aW9uX2lkGAEgASgJEhQKDHJlc291cmNlX3VyaRgCIAEoCRIXCg9jaGVja3N1bV9zaGEyNTYYAyABKAkSEwoLcmVjb3JkX2pzb24YBCABKAwSFQoNYWZmZWN0ZWRfcm93cxgFIAEoAxIVCg13YXNfZHVwbGljYXRlGAYgASgIEhoKEndyaXRlX3JlY2VpcHRfanNvbhgHIAEoCRIYChByZXNvdXJjZV92ZXJzaW9uGAggASgJEj8KCG1ldGFkYXRhGAkgAygLMi0udWRiLmVudGl0eS52MS5NdXRhdGlvblJlc3BvbnNlLk1ldGFkYXRhRW50cnkSMQoId2FybmluZ3MYCiADKAsyHy51ZGIuZW50aXR5LnYxLk9wZXJhdGlvbldhcm5pbmcSMgoNd3JpdGVfcmVjZWlwdBgLIAEoCzIbLnVkYi5lbnRpdHkudjEuV3JpdGVSZWNlaXB0Gi8KDU1ldGFkYXRhRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4AUKzAQoRY29tLnVkYi5lbnRpdHkudjFCDU11dGF0aW9uUHJvdG9QAVo5Z2l0aHViLmNvbS9mYWhhcmEwMi91ZGIvc2RrL2dvL2dlbi91ZGIvZW50aXR5L3YxO2VudGl0eXYxogIDVUVYqgINVWRiLkVudGl0eS5WMcoCDVVkYlxFbnRpdHlcVjHiAhlVZGJcR1BCTWV0YWRhdGFcRW50aXR5XFYx6gIPVWRiOjpFbnRpdHk6OlYxYgZwcm90bzM", [file_udb_entity_v1_operation, file_udb_entity_v1_consistency]);
 
 /**
  * @generated from message udb.entity.v1.MutationResponse
@@ -69,6 +71,14 @@ export type MutationResponse = Message<"udb.entity.v1.MutationResponse"> & {
    * @generated from field: repeated udb.entity.v1.OperationWarning warnings = 10;
    */
   warnings: OperationWarning[];
+
+  /**
+   * Typed write receipt. Kept in lockstep with write_receipt_json for clients
+   * that can consume protobuf messages directly.
+   *
+   * @generated from field: udb.entity.v1.WriteReceipt write_receipt = 11;
+   */
+  writeReceipt?: WriteReceipt | undefined;
 };
 
 /**

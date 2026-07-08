@@ -49,6 +49,13 @@ class UpdateFileRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>optional bool is_public = 8 [json_name = "isPublic"];</code>
      */
     protected $is_public = null;
+    /**
+     * Optional PATCH mask relative to the file resource. When omitted, legacy
+     * clients keep the historical non-empty-field patch behavior.
+     *
+     * Generated from protobuf field <code>.google.protobuf.FieldMask update_mask = 9 [json_name = "updateMask"];</code>
+     */
+    protected $update_mask = null;
 
     /**
      * Constructor.
@@ -66,6 +73,9 @@ class UpdateFileRequest extends \Google\Protobuf\Internal\Message
      *     @type bool $is_public
      *           Proto3 explicit presence: absent leaves the stored visibility unchanged —
      *           a partial update can never silently flip a file public/private.
+     *     @type \Google\Protobuf\FieldMask $update_mask
+     *           Optional PATCH mask relative to the file resource. When omitted, legacy
+     *           clients keep the historical non-empty-field patch behavior.
      * }
      */
     public function __construct($data = NULL) {
@@ -261,6 +271,44 @@ class UpdateFileRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkBool($var);
         $this->is_public = $var;
+
+        return $this;
+    }
+
+    /**
+     * Optional PATCH mask relative to the file resource. When omitted, legacy
+     * clients keep the historical non-empty-field patch behavior.
+     *
+     * Generated from protobuf field <code>.google.protobuf.FieldMask update_mask = 9 [json_name = "updateMask"];</code>
+     * @return \Google\Protobuf\FieldMask|null
+     */
+    public function getUpdateMask()
+    {
+        return $this->update_mask;
+    }
+
+    public function hasUpdateMask()
+    {
+        return isset($this->update_mask);
+    }
+
+    public function clearUpdateMask()
+    {
+        unset($this->update_mask);
+    }
+
+    /**
+     * Optional PATCH mask relative to the file resource. When omitted, legacy
+     * clients keep the historical non-empty-field patch behavior.
+     *
+     * Generated from protobuf field <code>.google.protobuf.FieldMask update_mask = 9 [json_name = "updateMask"];</code>
+     * @param \Google\Protobuf\FieldMask $var
+     * @return $this
+     */
+    public function setUpdateMask($var)
+    {
+        GPBUtil::checkMessage($var, \Google\Protobuf\FieldMask::class);
+        $this->update_mask = $var;
 
         return $this;
     }

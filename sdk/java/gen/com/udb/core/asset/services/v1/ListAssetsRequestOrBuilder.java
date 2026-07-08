@@ -57,4 +57,24 @@ public interface ListAssetsRequestOrBuilder extends
    * @return The pageSize.
    */
   int getPageSize();
+
+  /**
+   * <pre>
+   * Opaque pagination token returned by ListAssetsResponse.next_page_token.
+   * </pre>
+   *
+   * <code>string page_token = 6 [json_name = "pageToken"];</code>
+   * @return The pageToken.
+   */
+  java.lang.String getPageToken();
+  /**
+   * <pre>
+   * Opaque pagination token returned by ListAssetsResponse.next_page_token.
+   * </pre>
+   *
+   * <code>string page_token = 6 [json_name = "pageToken"];</code>
+   * @return The bytes for pageToken.
+   */
+  com.google.protobuf.ByteString
+      getPageTokenBytes();
 }

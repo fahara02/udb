@@ -460,6 +460,47 @@ java.lang.String defaultValue) {
     }
   }
 
+  public static final int UPDATE_MASK_FIELD_NUMBER = 11;
+  private com.google.protobuf.FieldMask updateMask_;
+  /**
+   * <pre>
+   * Optional PATCH mask relative to the user resource. When omitted, legacy
+   * clients keep the historical non-empty-field patch behavior.
+   * </pre>
+   *
+   * <code>.google.protobuf.FieldMask update_mask = 11 [json_name = "updateMask"];</code>
+   * @return Whether the updateMask field is set.
+   */
+  @java.lang.Override
+  public boolean hasUpdateMask() {
+    return ((bitField0_ & 0x00000002) != 0);
+  }
+  /**
+   * <pre>
+   * Optional PATCH mask relative to the user resource. When omitted, legacy
+   * clients keep the historical non-empty-field patch behavior.
+   * </pre>
+   *
+   * <code>.google.protobuf.FieldMask update_mask = 11 [json_name = "updateMask"];</code>
+   * @return The updateMask.
+   */
+  @java.lang.Override
+  public com.google.protobuf.FieldMask getUpdateMask() {
+    return updateMask_ == null ? com.google.protobuf.FieldMask.getDefaultInstance() : updateMask_;
+  }
+  /**
+   * <pre>
+   * Optional PATCH mask relative to the user resource. When omitted, legacy
+   * clients keep the historical non-empty-field patch behavior.
+   * </pre>
+   *
+   * <code>.google.protobuf.FieldMask update_mask = 11 [json_name = "updateMask"];</code>
+   */
+  @java.lang.Override
+  public com.google.protobuf.FieldMaskOrBuilder getUpdateMaskOrBuilder() {
+    return updateMask_ == null ? com.google.protobuf.FieldMask.getDefaultInstance() : updateMask_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -506,6 +547,9 @@ java.lang.String defaultValue) {
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(externalSubject_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 10, externalSubject_);
+    }
+    if (((bitField0_ & 0x00000002) != 0)) {
+      output.writeMessage(11, getUpdateMask());
     }
     getUnknownFields().writeTo(output);
   }
@@ -555,6 +599,10 @@ java.lang.String defaultValue) {
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(externalSubject_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(10, externalSubject_);
     }
+    if (((bitField0_ & 0x00000002) != 0)) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(11, getUpdateMask());
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -592,6 +640,11 @@ java.lang.String defaultValue) {
         .equals(other.getExternalProviderId())) return false;
     if (!getExternalSubject()
         .equals(other.getExternalSubject())) return false;
+    if (hasUpdateMask() != other.hasUpdateMask()) return false;
+    if (hasUpdateMask()) {
+      if (!getUpdateMask()
+          .equals(other.getUpdateMask())) return false;
+    }
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -627,6 +680,10 @@ java.lang.String defaultValue) {
     hash = (53 * hash) + getExternalProviderId().hashCode();
     hash = (37 * hash) + EXTERNAL_SUBJECT_FIELD_NUMBER;
     hash = (53 * hash) + getExternalSubject().hashCode();
+    if (hasUpdateMask()) {
+      hash = (37 * hash) + UPDATE_MASK_FIELD_NUMBER;
+      hash = (53 * hash) + getUpdateMask().hashCode();
+    }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -780,6 +837,7 @@ java.lang.String defaultValue) {
       if (com.google.protobuf.GeneratedMessage
               .alwaysUseFieldBuilders) {
         internalGetContextFieldBuilder();
+        internalGetUpdateMaskFieldBuilder();
       }
     }
     @java.lang.Override
@@ -800,6 +858,11 @@ java.lang.String defaultValue) {
       internalGetMutableProfileAttributes().clear();
       externalProviderId_ = "";
       externalSubject_ = "";
+      updateMask_ = null;
+      if (updateMaskBuilder_ != null) {
+        updateMaskBuilder_.dispose();
+        updateMaskBuilder_ = null;
+      }
       return this;
     }
 
@@ -868,6 +931,12 @@ java.lang.String defaultValue) {
       if (((from_bitField0_ & 0x00000200) != 0)) {
         result.externalSubject_ = externalSubject_;
       }
+      if (((from_bitField0_ & 0x00000400) != 0)) {
+        result.updateMask_ = updateMaskBuilder_ == null
+            ? updateMask_
+            : updateMaskBuilder_.build();
+        to_bitField0_ |= 0x00000002;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -926,6 +995,9 @@ java.lang.String defaultValue) {
         externalSubject_ = other.externalSubject_;
         bitField0_ |= 0x00000200;
         onChanged();
+      }
+      if (other.hasUpdateMask()) {
+        mergeUpdateMask(other.getUpdateMask());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -1009,6 +1081,13 @@ java.lang.String defaultValue) {
               bitField0_ |= 0x00000200;
               break;
             } // case 82
+            case 90: {
+              input.readMessage(
+                  internalGetUpdateMaskFieldBuilder().getBuilder(),
+                  extensionRegistry);
+              bitField0_ |= 0x00000400;
+              break;
+            } // case 90
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1827,6 +1906,172 @@ java.lang.String defaultValue) {
       bitField0_ |= 0x00000200;
       onChanged();
       return this;
+    }
+
+    private com.google.protobuf.FieldMask updateMask_;
+    private com.google.protobuf.SingleFieldBuilder<
+        com.google.protobuf.FieldMask, com.google.protobuf.FieldMask.Builder, com.google.protobuf.FieldMaskOrBuilder> updateMaskBuilder_;
+    /**
+     * <pre>
+     * Optional PATCH mask relative to the user resource. When omitted, legacy
+     * clients keep the historical non-empty-field patch behavior.
+     * </pre>
+     *
+     * <code>.google.protobuf.FieldMask update_mask = 11 [json_name = "updateMask"];</code>
+     * @return Whether the updateMask field is set.
+     */
+    public boolean hasUpdateMask() {
+      return ((bitField0_ & 0x00000400) != 0);
+    }
+    /**
+     * <pre>
+     * Optional PATCH mask relative to the user resource. When omitted, legacy
+     * clients keep the historical non-empty-field patch behavior.
+     * </pre>
+     *
+     * <code>.google.protobuf.FieldMask update_mask = 11 [json_name = "updateMask"];</code>
+     * @return The updateMask.
+     */
+    public com.google.protobuf.FieldMask getUpdateMask() {
+      if (updateMaskBuilder_ == null) {
+        return updateMask_ == null ? com.google.protobuf.FieldMask.getDefaultInstance() : updateMask_;
+      } else {
+        return updateMaskBuilder_.getMessage();
+      }
+    }
+    /**
+     * <pre>
+     * Optional PATCH mask relative to the user resource. When omitted, legacy
+     * clients keep the historical non-empty-field patch behavior.
+     * </pre>
+     *
+     * <code>.google.protobuf.FieldMask update_mask = 11 [json_name = "updateMask"];</code>
+     */
+    public Builder setUpdateMask(com.google.protobuf.FieldMask value) {
+      if (updateMaskBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        updateMask_ = value;
+      } else {
+        updateMaskBuilder_.setMessage(value);
+      }
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Optional PATCH mask relative to the user resource. When omitted, legacy
+     * clients keep the historical non-empty-field patch behavior.
+     * </pre>
+     *
+     * <code>.google.protobuf.FieldMask update_mask = 11 [json_name = "updateMask"];</code>
+     */
+    public Builder setUpdateMask(
+        com.google.protobuf.FieldMask.Builder builderForValue) {
+      if (updateMaskBuilder_ == null) {
+        updateMask_ = builderForValue.build();
+      } else {
+        updateMaskBuilder_.setMessage(builderForValue.build());
+      }
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Optional PATCH mask relative to the user resource. When omitted, legacy
+     * clients keep the historical non-empty-field patch behavior.
+     * </pre>
+     *
+     * <code>.google.protobuf.FieldMask update_mask = 11 [json_name = "updateMask"];</code>
+     */
+    public Builder mergeUpdateMask(com.google.protobuf.FieldMask value) {
+      if (updateMaskBuilder_ == null) {
+        if (((bitField0_ & 0x00000400) != 0) &&
+          updateMask_ != null &&
+          updateMask_ != com.google.protobuf.FieldMask.getDefaultInstance()) {
+          getUpdateMaskBuilder().mergeFrom(value);
+        } else {
+          updateMask_ = value;
+        }
+      } else {
+        updateMaskBuilder_.mergeFrom(value);
+      }
+      if (updateMask_ != null) {
+        bitField0_ |= 0x00000400;
+        onChanged();
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Optional PATCH mask relative to the user resource. When omitted, legacy
+     * clients keep the historical non-empty-field patch behavior.
+     * </pre>
+     *
+     * <code>.google.protobuf.FieldMask update_mask = 11 [json_name = "updateMask"];</code>
+     */
+    public Builder clearUpdateMask() {
+      bitField0_ = (bitField0_ & ~0x00000400);
+      updateMask_ = null;
+      if (updateMaskBuilder_ != null) {
+        updateMaskBuilder_.dispose();
+        updateMaskBuilder_ = null;
+      }
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Optional PATCH mask relative to the user resource. When omitted, legacy
+     * clients keep the historical non-empty-field patch behavior.
+     * </pre>
+     *
+     * <code>.google.protobuf.FieldMask update_mask = 11 [json_name = "updateMask"];</code>
+     */
+    public com.google.protobuf.FieldMask.Builder getUpdateMaskBuilder() {
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return internalGetUpdateMaskFieldBuilder().getBuilder();
+    }
+    /**
+     * <pre>
+     * Optional PATCH mask relative to the user resource. When omitted, legacy
+     * clients keep the historical non-empty-field patch behavior.
+     * </pre>
+     *
+     * <code>.google.protobuf.FieldMask update_mask = 11 [json_name = "updateMask"];</code>
+     */
+    public com.google.protobuf.FieldMaskOrBuilder getUpdateMaskOrBuilder() {
+      if (updateMaskBuilder_ != null) {
+        return updateMaskBuilder_.getMessageOrBuilder();
+      } else {
+        return updateMask_ == null ?
+            com.google.protobuf.FieldMask.getDefaultInstance() : updateMask_;
+      }
+    }
+    /**
+     * <pre>
+     * Optional PATCH mask relative to the user resource. When omitted, legacy
+     * clients keep the historical non-empty-field patch behavior.
+     * </pre>
+     *
+     * <code>.google.protobuf.FieldMask update_mask = 11 [json_name = "updateMask"];</code>
+     */
+    private com.google.protobuf.SingleFieldBuilder<
+        com.google.protobuf.FieldMask, com.google.protobuf.FieldMask.Builder, com.google.protobuf.FieldMaskOrBuilder>
+        internalGetUpdateMaskFieldBuilder() {
+      if (updateMaskBuilder_ == null) {
+        updateMaskBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+            com.google.protobuf.FieldMask, com.google.protobuf.FieldMask.Builder, com.google.protobuf.FieldMaskOrBuilder>(
+                getUpdateMask(),
+                getParentForChildren(),
+                isClean());
+        updateMask_ = null;
+      }
+      return updateMaskBuilder_;
     }
 
     // @@protoc_insertion_point(builder_scope:udb.core.authn.services.v1.UpdateUserRequest)

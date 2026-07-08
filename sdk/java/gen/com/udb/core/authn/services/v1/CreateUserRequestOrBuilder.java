@@ -117,11 +117,21 @@ public interface CreateUserRequestOrBuilder extends
       getProjectIdBytes();
 
   /**
+   * <pre>
+   * Stable public IdP provider id. Caller-chosen format is provider-specific,
+   * bounded to 120 characters by the user store, and scoped by tenant.
+   * </pre>
+   *
    * <code>string external_provider_id = 9 [json_name = "externalProviderId"];</code>
    * @return The externalProviderId.
    */
   java.lang.String getExternalProviderId();
   /**
+   * <pre>
+   * Stable public IdP provider id. Caller-chosen format is provider-specific,
+   * bounded to 120 characters by the user store, and scoped by tenant.
+   * </pre>
+   *
    * <code>string external_provider_id = 9 [json_name = "externalProviderId"];</code>
    * @return The bytes for externalProviderId.
    */

@@ -198,6 +198,37 @@ public final class TenantServiceGrpc {
     return getUpdateTenantConfigMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.tenant.services.v1.PurgeTenantRequest,
+      com.udb.core.tenant.services.v1.PurgeTenantResponse> getPurgeTenantMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "PurgeTenant",
+      requestType = com.udb.core.tenant.services.v1.PurgeTenantRequest.class,
+      responseType = com.udb.core.tenant.services.v1.PurgeTenantResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.tenant.services.v1.PurgeTenantRequest,
+      com.udb.core.tenant.services.v1.PurgeTenantResponse> getPurgeTenantMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.tenant.services.v1.PurgeTenantRequest, com.udb.core.tenant.services.v1.PurgeTenantResponse> getPurgeTenantMethod;
+    if ((getPurgeTenantMethod = TenantServiceGrpc.getPurgeTenantMethod) == null) {
+      synchronized (TenantServiceGrpc.class) {
+        if ((getPurgeTenantMethod = TenantServiceGrpc.getPurgeTenantMethod) == null) {
+          TenantServiceGrpc.getPurgeTenantMethod = getPurgeTenantMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.tenant.services.v1.PurgeTenantRequest, com.udb.core.tenant.services.v1.PurgeTenantResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "PurgeTenant"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.tenant.services.v1.PurgeTenantRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.tenant.services.v1.PurgeTenantResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new TenantServiceMethodDescriptorSupplier("PurgeTenant"))
+              .build();
+        }
+      }
+    }
+    return getPurgeTenantMethod;
+  }
+
   /**
    * Creates a new async stub that supports all call types for the service
    */
@@ -320,6 +351,21 @@ public final class TenantServiceGrpc {
         io.grpc.stub.StreamObserver<com.udb.core.tenant.services.v1.UpdateTenantConfigResponse> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getUpdateTenantConfigMethod(), responseObserver);
     }
+
+    /**
+     * <pre>
+     * Purge tenant (GDPR right-to-be-forgotten). HARD-deletes every row the tenant
+     * owns across all tenant-columned entity tables, then revokes the tenant's and
+     * its principals' tokens. Irreversible — DESTRUCTIVE op-kind + a required
+     * confirmation token gate it. Mirrors the destructive-RPC endpoint_security of
+     * siblings like authn.ChangeUserStatus (AUTH_MODE_BEARER, tenant_required,
+     * request_context_required).
+     * </pre>
+     */
+    default void purgeTenant(com.udb.core.tenant.services.v1.PurgeTenantRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.tenant.services.v1.PurgeTenantResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getPurgeTenantMethod(), responseObserver);
+    }
   }
 
   /**
@@ -414,6 +460,22 @@ public final class TenantServiceGrpc {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getUpdateTenantConfigMethod(), getCallOptions()), request, responseObserver);
     }
+
+    /**
+     * <pre>
+     * Purge tenant (GDPR right-to-be-forgotten). HARD-deletes every row the tenant
+     * owns across all tenant-columned entity tables, then revokes the tenant's and
+     * its principals' tokens. Irreversible — DESTRUCTIVE op-kind + a required
+     * confirmation token gate it. Mirrors the destructive-RPC endpoint_security of
+     * siblings like authn.ChangeUserStatus (AUTH_MODE_BEARER, tenant_required,
+     * request_context_required).
+     * </pre>
+     */
+    public void purgeTenant(com.udb.core.tenant.services.v1.PurgeTenantRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.tenant.services.v1.PurgeTenantResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getPurgeTenantMethod(), getCallOptions()), request, responseObserver);
+    }
   }
 
   /**
@@ -491,6 +553,21 @@ public final class TenantServiceGrpc {
       return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
           getChannel(), getUpdateTenantConfigMethod(), getCallOptions(), request);
     }
+
+    /**
+     * <pre>
+     * Purge tenant (GDPR right-to-be-forgotten). HARD-deletes every row the tenant
+     * owns across all tenant-columned entity tables, then revokes the tenant's and
+     * its principals' tokens. Irreversible — DESTRUCTIVE op-kind + a required
+     * confirmation token gate it. Mirrors the destructive-RPC endpoint_security of
+     * siblings like authn.ChangeUserStatus (AUTH_MODE_BEARER, tenant_required,
+     * request_context_required).
+     * </pre>
+     */
+    public com.udb.core.tenant.services.v1.PurgeTenantResponse purgeTenant(com.udb.core.tenant.services.v1.PurgeTenantRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getPurgeTenantMethod(), getCallOptions(), request);
+    }
   }
 
   /**
@@ -567,6 +644,21 @@ public final class TenantServiceGrpc {
     public com.udb.core.tenant.services.v1.UpdateTenantConfigResponse updateTenantConfig(com.udb.core.tenant.services.v1.UpdateTenantConfigRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getUpdateTenantConfigMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Purge tenant (GDPR right-to-be-forgotten). HARD-deletes every row the tenant
+     * owns across all tenant-columned entity tables, then revokes the tenant's and
+     * its principals' tokens. Irreversible — DESTRUCTIVE op-kind + a required
+     * confirmation token gate it. Mirrors the destructive-RPC endpoint_security of
+     * siblings like authn.ChangeUserStatus (AUTH_MODE_BEARER, tenant_required,
+     * request_context_required).
+     * </pre>
+     */
+    public com.udb.core.tenant.services.v1.PurgeTenantResponse purgeTenant(com.udb.core.tenant.services.v1.PurgeTenantRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getPurgeTenantMethod(), getCallOptions(), request);
     }
   }
 
@@ -651,6 +743,22 @@ public final class TenantServiceGrpc {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getUpdateTenantConfigMethod(), getCallOptions()), request);
     }
+
+    /**
+     * <pre>
+     * Purge tenant (GDPR right-to-be-forgotten). HARD-deletes every row the tenant
+     * owns across all tenant-columned entity tables, then revokes the tenant's and
+     * its principals' tokens. Irreversible — DESTRUCTIVE op-kind + a required
+     * confirmation token gate it. Mirrors the destructive-RPC endpoint_security of
+     * siblings like authn.ChangeUserStatus (AUTH_MODE_BEARER, tenant_required,
+     * request_context_required).
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.tenant.services.v1.PurgeTenantResponse> purgeTenant(
+        com.udb.core.tenant.services.v1.PurgeTenantRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getPurgeTenantMethod(), getCallOptions()), request);
+    }
   }
 
   private static final int METHODID_CREATE_TENANT = 0;
@@ -659,6 +767,7 @@ public final class TenantServiceGrpc {
   private static final int METHODID_UPDATE_TENANT = 3;
   private static final int METHODID_GET_TENANT_CONFIG = 4;
   private static final int METHODID_UPDATE_TENANT_CONFIG = 5;
+  private static final int METHODID_PURGE_TENANT = 6;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -700,6 +809,10 @@ public final class TenantServiceGrpc {
         case METHODID_UPDATE_TENANT_CONFIG:
           serviceImpl.updateTenantConfig((com.udb.core.tenant.services.v1.UpdateTenantConfigRequest) request,
               (io.grpc.stub.StreamObserver<com.udb.core.tenant.services.v1.UpdateTenantConfigResponse>) responseObserver);
+          break;
+        case METHODID_PURGE_TENANT:
+          serviceImpl.purgeTenant((com.udb.core.tenant.services.v1.PurgeTenantRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.tenant.services.v1.PurgeTenantResponse>) responseObserver);
           break;
         default:
           throw new AssertionError();
@@ -761,6 +874,13 @@ public final class TenantServiceGrpc {
               com.udb.core.tenant.services.v1.UpdateTenantConfigRequest,
               com.udb.core.tenant.services.v1.UpdateTenantConfigResponse>(
                 service, METHODID_UPDATE_TENANT_CONFIG)))
+        .addMethod(
+          getPurgeTenantMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.tenant.services.v1.PurgeTenantRequest,
+              com.udb.core.tenant.services.v1.PurgeTenantResponse>(
+                service, METHODID_PURGE_TENANT)))
         .build();
   }
 
@@ -815,6 +935,7 @@ public final class TenantServiceGrpc {
               .addMethod(getUpdateTenantMethod())
               .addMethod(getGetTenantConfigMethod())
               .addMethod(getUpdateTenantConfigMethod())
+              .addMethod(getPurgeTenantMethod())
               .build();
         }
       }

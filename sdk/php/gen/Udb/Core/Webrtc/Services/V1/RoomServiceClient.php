@@ -91,4 +91,70 @@ class RoomServiceClient extends \Grpc\BaseStub {
         $metadata, $options);
     }
 
+    /**
+     * ── Recording / egress (master-plan 5.5) ───────────────────────────────────
+     * Added to the EXISTING RoomService (not a new service) so the GOLDEN
+     * service-set snapshot + sdk_manifest gates stay green (RPCs are subset-
+     * checked). Handlers fail closed (FAILED_PRECONDITION, never UNIMPLEMENTED)
+     * until UDB_WEBRTC_EGRESS_ENABLED is set and a real egress backend is wired.
+     *
+     * Start a composite recording/egress of a whole room.
+     * @param \Udb\Core\Webrtc\Services\V1\StartRoomCompositeRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Webrtc\Services\V1\StartRoomCompositeResponse>
+     */
+    public function StartRoomComposite(\Udb\Core\Webrtc\Services\V1\StartRoomCompositeRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.webrtc.services.v1.RoomService/StartRoomComposite',
+        $argument,
+        ['\Udb\Core\Webrtc\Services\V1\StartRoomCompositeResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * Start an egress of a single published track.
+     * @param \Udb\Core\Webrtc\Services\V1\StartTrackEgressRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Webrtc\Services\V1\StartTrackEgressResponse>
+     */
+    public function StartTrackEgress(\Udb\Core\Webrtc\Services\V1\StartTrackEgressRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.webrtc.services.v1.RoomService/StartTrackEgress',
+        $argument,
+        ['\Udb\Core\Webrtc\Services\V1\StartTrackEgressResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * Stop a running egress. `egress_id` must belong to the verified tenant.
+     * @param \Udb\Core\Webrtc\Services\V1\StopEgressRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Webrtc\Services\V1\StopEgressResponse>
+     */
+    public function StopEgress(\Udb\Core\Webrtc\Services\V1\StopEgressRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.webrtc.services.v1.RoomService/StopEgress',
+        $argument,
+        ['\Udb\Core\Webrtc\Services\V1\StopEgressResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * List egress jobs for the verified tenant.
+     * @param \Udb\Core\Webrtc\Services\V1\ListEgressRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Webrtc\Services\V1\ListEgressResponse>
+     */
+    public function ListEgress(\Udb\Core\Webrtc\Services\V1\ListEgressRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.webrtc.services.v1.RoomService/ListEgress',
+        $argument,
+        ['\Udb\Core\Webrtc\Services\V1\ListEgressResponse', 'decode'],
+        $metadata, $options);
+    }
+
 }

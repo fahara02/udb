@@ -11,6 +11,7 @@ import (
 	v11 "github.com/fahara02/udb/sdk/go/gen/udb/core/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	fieldmaskpb "google.golang.org/protobuf/types/known/fieldmaskpb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
@@ -533,8 +534,11 @@ type UpdateApiKeyRequest struct {
 	RateLimitPerDay    int64                  `protobuf:"varint,7,opt,name=rate_limit_per_day,json=rateLimitPerDay,proto3" json:"rate_limit_per_day,omitempty"`
 	ExpiresAt          *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
 	Context            *v11.RequestContext    `protobuf:"bytes,9,opt,name=context,proto3" json:"context,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// Optional PATCH mask relative to the API key resource. When omitted, legacy
+	// clients keep the historical non-empty-field patch behavior.
+	UpdateMask    *fieldmaskpb.FieldMask `protobuf:"bytes,10,opt,name=update_mask,json=updateMask,proto3" json:"update_mask,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UpdateApiKeyRequest) Reset() {
@@ -626,6 +630,13 @@ func (x *UpdateApiKeyRequest) GetExpiresAt() *timestamppb.Timestamp {
 func (x *UpdateApiKeyRequest) GetContext() *v11.RequestContext {
 	if x != nil {
 		return x.Context
+	}
+	return nil
+}
+
+func (x *UpdateApiKeyRequest) GetUpdateMask() *fieldmaskpb.FieldMask {
+	if x != nil {
+		return x.UpdateMask
 	}
 	return nil
 }
@@ -1306,7 +1317,7 @@ var File_udb_core_apikey_services_v1_core_proto protoreflect.FileDescriptor
 
 const file_udb_core_apikey_services_v1_core_proto_rawDesc = "" +
 	"\n" +
-	"&udb/core/apikey/services/v1/core.proto\x12\x1budb.core.apikey.services.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a'udb/core/apikey/entity/v1/api_key.proto\x1a%udb/core/apikey/entity/v1/enums.proto\x1a\x1cudb/core/common/v1/dto.proto\x1a\x1eudb/core/common/v1/types.proto\x1a!udb/core/common/v1/security.proto\"\xe4\x03\n" +
+	"&udb/core/apikey/services/v1/core.proto\x12\x1budb.core.apikey.services.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a google/protobuf/field_mask.proto\x1a'udb/core/apikey/entity/v1/api_key.proto\x1a%udb/core/apikey/entity/v1/enums.proto\x1a\x1cudb/core/common/v1/dto.proto\x1a\x1eudb/core/common/v1/types.proto\x1a!udb/core/common/v1/security.proto\"\xe4\x03\n" +
 	"\x13CreateApiKeyRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
 	"\vdescription\x18\x02 \x01(\tR\vdescription\x12I\n" +
@@ -1345,7 +1356,7 @@ const file_udb_core_apikey_services_v1_core_proto_rawDesc = "" +
 	"\x06key_id\x18\x01 \x01(\tR\x05keyId\x129\n" +
 	"\n" +
 	"revoked_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\trevokedAt\x12!\n" +
-	"\foperation_id\x18\x03 \x01(\tR\voperationId:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06apikeyP\x01\"\x95\x03\n" +
+	"\foperation_id\x18\x03 \x01(\tR\voperationId:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06apikeyP\x01\"\xd2\x03\n" +
 	"\x13UpdateApiKeyRequest\x12\x15\n" +
 	"\x06key_id\x18\x01 \x01(\tR\x05keyId\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
@@ -1356,7 +1367,10 @@ const file_udb_core_apikey_services_v1_core_proto_rawDesc = "" +
 	"\x12rate_limit_per_day\x18\a \x01(\x03R\x0frateLimitPerDay\x129\n" +
 	"\n" +
 	"expires_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\x12<\n" +
-	"\acontext\x18\t \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06apikeyP\x01\"j\n" +
+	"\acontext\x18\t \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\x12;\n" +
+	"\vupdate_mask\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.FieldMaskR\n" +
+	"updateMask:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06apikeyP\x01\"j\n" +
 	"\x14UpdateApiKeyResponse\x123\n" +
 	"\x03key\x18\x01 \x01(\v2!.udb.core.apikey.entity.v1.ApiKeyR\x03key:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06apikeyP\x01\"\xb2\x01\n" +
 	"\x13RotateApiKeyRequest\x12\x15\n" +
@@ -1455,6 +1469,7 @@ var file_udb_core_apikey_services_v1_core_proto_goTypes = []any{
 	(v1.ApiKeyStatus)(0),                   // 24: udb.core.apikey.entity.v1.ApiKeyStatus
 	(*v11.PageRequest)(nil),                // 25: udb.core.common.v1.PageRequest
 	(*v11.PageResponse)(nil),               // 26: udb.core.common.v1.PageResponse
+	(*fieldmaskpb.FieldMask)(nil),          // 27: google.protobuf.FieldMask
 }
 var file_udb_core_apikey_services_v1_core_proto_depIdxs = []int32{
 	20, // 0: udb.core.apikey.services.v1.CreateApiKeyRequest.owner_type:type_name -> udb.core.apikey.entity.v1.ApiKeyOwnerType
@@ -1471,21 +1486,22 @@ var file_udb_core_apikey_services_v1_core_proto_depIdxs = []int32{
 	21, // 11: udb.core.apikey.services.v1.RevokeApiKeyResponse.revoked_at:type_name -> google.protobuf.Timestamp
 	21, // 12: udb.core.apikey.services.v1.UpdateApiKeyRequest.expires_at:type_name -> google.protobuf.Timestamp
 	22, // 13: udb.core.apikey.services.v1.UpdateApiKeyRequest.context:type_name -> udb.core.common.v1.RequestContext
-	23, // 14: udb.core.apikey.services.v1.UpdateApiKeyResponse.key:type_name -> udb.core.apikey.entity.v1.ApiKey
-	22, // 15: udb.core.apikey.services.v1.RotateApiKeyRequest.context:type_name -> udb.core.common.v1.RequestContext
-	23, // 16: udb.core.apikey.services.v1.RotateApiKeyResponse.key:type_name -> udb.core.apikey.entity.v1.ApiKey
-	21, // 17: udb.core.apikey.services.v1.EmergencyRevokeApiKeysRequest.created_before:type_name -> google.protobuf.Timestamp
-	22, // 18: udb.core.apikey.services.v1.EmergencyRevokeApiKeysRequest.context:type_name -> udb.core.common.v1.RequestContext
-	20, // 19: udb.core.apikey.services.v1.ValidateApiKeyResponse.owner_type:type_name -> udb.core.apikey.entity.v1.ApiKeyOwnerType
-	21, // 20: udb.core.apikey.services.v1.GetApiKeyUsageStatsRequest.from:type_name -> google.protobuf.Timestamp
-	21, // 21: udb.core.apikey.services.v1.GetApiKeyUsageStatsRequest.to:type_name -> google.protobuf.Timestamp
-	19, // 22: udb.core.apikey.services.v1.ApiKeyDailyStat.status_counts:type_name -> udb.core.apikey.services.v1.ApiKeyDailyStat.StatusCountsEntry
-	17, // 23: udb.core.apikey.services.v1.GetApiKeyUsageStatsResponse.stats:type_name -> udb.core.apikey.services.v1.ApiKeyDailyStat
-	24, // [24:24] is the sub-list for method output_type
-	24, // [24:24] is the sub-list for method input_type
-	24, // [24:24] is the sub-list for extension type_name
-	24, // [24:24] is the sub-list for extension extendee
-	0,  // [0:24] is the sub-list for field type_name
+	27, // 14: udb.core.apikey.services.v1.UpdateApiKeyRequest.update_mask:type_name -> google.protobuf.FieldMask
+	23, // 15: udb.core.apikey.services.v1.UpdateApiKeyResponse.key:type_name -> udb.core.apikey.entity.v1.ApiKey
+	22, // 16: udb.core.apikey.services.v1.RotateApiKeyRequest.context:type_name -> udb.core.common.v1.RequestContext
+	23, // 17: udb.core.apikey.services.v1.RotateApiKeyResponse.key:type_name -> udb.core.apikey.entity.v1.ApiKey
+	21, // 18: udb.core.apikey.services.v1.EmergencyRevokeApiKeysRequest.created_before:type_name -> google.protobuf.Timestamp
+	22, // 19: udb.core.apikey.services.v1.EmergencyRevokeApiKeysRequest.context:type_name -> udb.core.common.v1.RequestContext
+	20, // 20: udb.core.apikey.services.v1.ValidateApiKeyResponse.owner_type:type_name -> udb.core.apikey.entity.v1.ApiKeyOwnerType
+	21, // 21: udb.core.apikey.services.v1.GetApiKeyUsageStatsRequest.from:type_name -> google.protobuf.Timestamp
+	21, // 22: udb.core.apikey.services.v1.GetApiKeyUsageStatsRequest.to:type_name -> google.protobuf.Timestamp
+	19, // 23: udb.core.apikey.services.v1.ApiKeyDailyStat.status_counts:type_name -> udb.core.apikey.services.v1.ApiKeyDailyStat.StatusCountsEntry
+	17, // 24: udb.core.apikey.services.v1.GetApiKeyUsageStatsResponse.stats:type_name -> udb.core.apikey.services.v1.ApiKeyDailyStat
+	25, // [25:25] is the sub-list for method output_type
+	25, // [25:25] is the sub-list for method input_type
+	25, // [25:25] is the sub-list for extension type_name
+	25, // [25:25] is the sub-list for extension extendee
+	0,  // [0:25] is the sub-list for field type_name
 }
 
 func init() { file_udb_core_apikey_services_v1_core_proto_init() }

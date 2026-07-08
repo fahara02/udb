@@ -49,6 +49,9 @@ class CreateUserRequest extends \Google\Protobuf\Internal\Message
      */
     protected $project_id = '';
     /**
+     * Stable public IdP provider id. Caller-chosen format is provider-specific,
+     * bounded to 120 characters by the user store, and scoped by tenant.
+     *
      * Generated from protobuf field <code>string external_provider_id = 9 [json_name = "externalProviderId"];</code>
      */
     protected $external_provider_id = '';
@@ -77,6 +80,8 @@ class CreateUserRequest extends \Google\Protobuf\Internal\Message
      *     @type int $account_kind
      *     @type string $project_id
      *     @type string $external_provider_id
+     *           Stable public IdP provider id. Caller-chosen format is provider-specific,
+     *           bounded to 120 characters by the user store, and scoped by tenant.
      *     @type string $external_subject
      *     @type array|\Google\Protobuf\Internal\MapField $profile_attributes
      * }
@@ -277,6 +282,9 @@ class CreateUserRequest extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * Stable public IdP provider id. Caller-chosen format is provider-specific,
+     * bounded to 120 characters by the user store, and scoped by tenant.
+     *
      * Generated from protobuf field <code>string external_provider_id = 9 [json_name = "externalProviderId"];</code>
      * @return string
      */
@@ -286,6 +294,9 @@ class CreateUserRequest extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * Stable public IdP provider id. Caller-chosen format is provider-specific,
+     * bounded to 120 characters by the user store, and scoped by tenant.
+     *
      * Generated from protobuf field <code>string external_provider_id = 9 [json_name = "externalProviderId"];</code>
      * @param string $var
      * @return $this

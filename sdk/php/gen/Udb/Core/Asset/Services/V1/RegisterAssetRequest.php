@@ -23,6 +23,8 @@ class RegisterAssetRequest extends \Google\Protobuf\Internal\Message
      */
     protected $project_id = '';
     /**
+     * Stable public storage file UUID previously returned by StorageService.
+     *
      * Generated from protobuf field <code>string file_id = 3 [json_name = "fileId"];</code>
      */
     protected $file_id = '';
@@ -50,6 +52,7 @@ class RegisterAssetRequest extends \Google\Protobuf\Internal\Message
      *     @type string $tenant_id
      *     @type string $project_id
      *     @type string $file_id
+     *           Stable public storage file UUID previously returned by StorageService.
      *     @type string $name
      *     @type string $media_type
      *     @type string $metadata
@@ -106,6 +109,8 @@ class RegisterAssetRequest extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * Stable public storage file UUID previously returned by StorageService.
+     *
      * Generated from protobuf field <code>string file_id = 3 [json_name = "fileId"];</code>
      * @return string
      */
@@ -115,6 +120,8 @@ class RegisterAssetRequest extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * Stable public storage file UUID previously returned by StorageService.
+     *
      * Generated from protobuf field <code>string file_id = 3 [json_name = "fileId"];</code>
      * @param string $var
      * @return $this

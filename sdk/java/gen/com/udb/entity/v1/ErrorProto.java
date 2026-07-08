@@ -27,6 +27,11 @@ public final class ErrorProto {
         (com.google.protobuf.ExtensionRegistryLite) registry);
   }
   static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_entity_v1_ErrorFieldViolation_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_entity_v1_ErrorFieldViolation_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_entity_v1_ErrorDetail_descriptor;
   static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
@@ -41,35 +46,46 @@ public final class ErrorProto {
   static {
     java.lang.String[] descriptorData = {
       "\n\031udb/entity/v1/error.proto\022\rudb.entity." +
-      "v1\"\275\002\n\013ErrorDetail\022\030\n\007backend\030\001 \001(\tR\007bac" +
-      "kend\022\034\n\toperation\030\002 \001(\tR\toperation\022/\n\023ca" +
-      "pability_required\030\003 \001(\tR\022capabilityRequi" +
-      "red\022\034\n\tretryable\030\004 \001(\010R\tretryable\022$\n\016ret" +
-      "ry_after_ms\030\005 \001(\003R\014retryAfterMs\022,\n\022polic" +
-      "y_decision_id\030\006 \001(\tR\020policyDecisionId\022%\n" +
-      "\016correlation_id\030\007 \001(\tR\rcorrelationId\022,\n\004" +
-      "kind\030\010 \001(\0162\030.udb.entity.v1.ErrorKindR\004ki" +
-      "nd*\271\001\n\tErrorKind\022\032\n\026ERROR_KIND_UNSPECIFI" +
-      "ED\020\000\022\031\n\025ERROR_KIND_CAPABILITY\020\001\022\025\n\021ERROR" +
-      "_KIND_POLICY\020\002\022\024\n\020ERROR_KIND_QUOTA\020\003\022\025\n\021" +
-      "ERROR_KIND_SCHEMA\020\004\022\030\n\024ERROR_KIND_RETRYA" +
-      "BLE\020\005\022\027\n\023ERROR_KIND_INTERNAL\020\006B\260\001\n\021com.u" +
-      "db.entity.v1B\nErrorProtoP\001Z9github.com/f" +
-      "ahara02/udb/sdk/go/gen/udb/entity/v1;ent" +
-      "ityv1\242\002\003UEX\252\002\rUdb.Entity.V1\312\002\rUdb\\Entity" +
-      "\\V1\342\002\031Udb\\GPBMetadata\\Entity\\V1\352\002\017Udb::E" +
-      "ntity::V1b\006proto3"
+      "v1\"M\n\023ErrorFieldViolation\022\024\n\005field\030\001 \001(\t" +
+      "R\005field\022 \n\013description\030\002 \001(\tR\013descriptio" +
+      "n\"\214\003\n\013ErrorDetail\022\030\n\007backend\030\001 \001(\tR\007back" +
+      "end\022\034\n\toperation\030\002 \001(\tR\toperation\022/\n\023cap" +
+      "ability_required\030\003 \001(\tR\022capabilityRequir" +
+      "ed\022\034\n\tretryable\030\004 \001(\010R\tretryable\022$\n\016retr" +
+      "y_after_ms\030\005 \001(\003R\014retryAfterMs\022,\n\022policy" +
+      "_decision_id\030\006 \001(\tR\020policyDecisionId\022%\n\016" +
+      "correlation_id\030\007 \001(\tR\rcorrelationId\022,\n\004k" +
+      "ind\030\010 \001(\0162\030.udb.entity.v1.ErrorKindR\004kin" +
+      "d\022M\n\020field_violations\030\t \003(\0132\".udb.entity" +
+      ".v1.ErrorFieldViolationR\017fieldViolations" +
+      "*\324\001\n\tErrorKind\022\032\n\026ERROR_KIND_UNSPECIFIED" +
+      "\020\000\022\031\n\025ERROR_KIND_CAPABILITY\020\001\022\025\n\021ERROR_K" +
+      "IND_POLICY\020\002\022\024\n\020ERROR_KIND_QUOTA\020\003\022\025\n\021ER" +
+      "ROR_KIND_SCHEMA\020\004\022\030\n\024ERROR_KIND_RETRYABL" +
+      "E\020\005\022\027\n\023ERROR_KIND_INTERNAL\020\006\022\031\n\025ERROR_KI" +
+      "ND_VALIDATION\020\007B\260\001\n\021com.udb.entity.v1B\nE" +
+      "rrorProtoP\001Z9github.com/fahara02/udb/sdk" +
+      "/go/gen/udb/entity/v1;entityv1\242\002\003UEX\252\002\rU" +
+      "db.Entity.V1\312\002\rUdb\\Entity\\V1\342\002\031Udb\\GPBMe" +
+      "tadata\\Entity\\V1\352\002\017Udb::Entity::V1b\006prot" +
+      "o3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
         });
-    internal_static_udb_entity_v1_ErrorDetail_descriptor =
+    internal_static_udb_entity_v1_ErrorFieldViolation_descriptor =
       getDescriptor().getMessageTypes().get(0);
+    internal_static_udb_entity_v1_ErrorFieldViolation_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_entity_v1_ErrorFieldViolation_descriptor,
+        new java.lang.String[] { "Field", "Description", });
+    internal_static_udb_entity_v1_ErrorDetail_descriptor =
+      getDescriptor().getMessageTypes().get(1);
     internal_static_udb_entity_v1_ErrorDetail_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_ErrorDetail_descriptor,
-        new java.lang.String[] { "Backend", "Operation", "CapabilityRequired", "Retryable", "RetryAfterMs", "PolicyDecisionId", "CorrelationId", "Kind", });
+        new java.lang.String[] { "Backend", "Operation", "CapabilityRequired", "Retryable", "RetryAfterMs", "PolicyDecisionId", "CorrelationId", "Kind", "FieldViolations", });
     descriptor.resolveAllFeaturesImmutable();
   }
 

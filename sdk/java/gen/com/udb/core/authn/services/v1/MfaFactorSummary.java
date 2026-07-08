@@ -48,6 +48,10 @@ private static final long serialVersionUID = 0L;
   public static final int FACTOR_KIND_FIELD_NUMBER = 1;
   private int factorKind_ = 0;
   /**
+   * <pre>
+   * Canonical public identity of this MFA factor within the owning user.
+   * </pre>
+   *
    * <code>.udb.core.authn.entity.v1.AuthFactorKind factor_kind = 1 [json_name = "factorKind"];</code>
    * @return The enum numeric value on the wire for factorKind.
    */
@@ -55,6 +59,10 @@ private static final long serialVersionUID = 0L;
     return factorKind_;
   }
   /**
+   * <pre>
+   * Canonical public identity of this MFA factor within the owning user.
+   * </pre>
+   *
    * <code>.udb.core.authn.entity.v1.AuthFactorKind factor_kind = 1 [json_name = "factorKind"];</code>
    * @return The factorKind.
    */
@@ -455,6 +463,10 @@ private static final long serialVersionUID = 0L;
 
     private int factorKind_ = 0;
     /**
+     * <pre>
+     * Canonical public identity of this MFA factor within the owning user.
+     * </pre>
+     *
      * <code>.udb.core.authn.entity.v1.AuthFactorKind factor_kind = 1 [json_name = "factorKind"];</code>
      * @return The enum numeric value on the wire for factorKind.
      */
@@ -462,6 +474,10 @@ private static final long serialVersionUID = 0L;
       return factorKind_;
     }
     /**
+     * <pre>
+     * Canonical public identity of this MFA factor within the owning user.
+     * </pre>
+     *
      * <code>.udb.core.authn.entity.v1.AuthFactorKind factor_kind = 1 [json_name = "factorKind"];</code>
      * @param value The enum numeric value on the wire for factorKind to set.
      * @return This builder for chaining.
@@ -473,6 +489,10 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * Canonical public identity of this MFA factor within the owning user.
+     * </pre>
+     *
      * <code>.udb.core.authn.entity.v1.AuthFactorKind factor_kind = 1 [json_name = "factorKind"];</code>
      * @return The factorKind.
      */
@@ -482,6 +502,10 @@ private static final long serialVersionUID = 0L;
       return result == null ? com.udb.core.authn.entity.v1.AuthFactorKind.UNRECOGNIZED : result;
     }
     /**
+     * <pre>
+     * Canonical public identity of this MFA factor within the owning user.
+     * </pre>
+     *
      * <code>.udb.core.authn.entity.v1.AuthFactorKind factor_kind = 1 [json_name = "factorKind"];</code>
      * @param value The factorKind to set.
      * @return This builder for chaining.
@@ -494,6 +518,10 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * Canonical public identity of this MFA factor within the owning user.
+     * </pre>
+     *
      * <code>.udb.core.authn.entity.v1.AuthFactorKind factor_kind = 1 [json_name = "factorKind"];</code>
      * @return This builder for chaining.
      */

@@ -1,6 +1,7 @@
 import datetime
 
 from google.protobuf import timestamp_pb2 as _timestamp_pb2
+from google.protobuf import field_mask_pb2 as _field_mask_pb2
 from udb.core.authn.entity.v1 import enums_pb2 as _enums_pb2
 from udb.core.authn.entity.v1 import session_pb2 as _session_pb2
 from udb.core.authn.entity.v1 import user_pb2 as _user_pb2
@@ -95,7 +96,7 @@ class ListUsersResponse(_message.Message):
     def __init__(self, users: _Optional[_Iterable[_Union[_user_pb2.User, _Mapping]]] = ..., page: _Optional[_Union[_dto_pb2.PageResponse, _Mapping]] = ...) -> None: ...
 
 class UpdateUserRequest(_message.Message):
-    __slots__ = ("user_id", "full_name", "email", "tenant_id", "context", "account_kind", "project_id", "profile_attributes", "external_provider_id", "external_subject")
+    __slots__ = ("user_id", "full_name", "email", "tenant_id", "context", "account_kind", "project_id", "profile_attributes", "external_provider_id", "external_subject", "update_mask")
     class ProfileAttributesEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -113,6 +114,7 @@ class UpdateUserRequest(_message.Message):
     PROFILE_ATTRIBUTES_FIELD_NUMBER: _ClassVar[int]
     EXTERNAL_PROVIDER_ID_FIELD_NUMBER: _ClassVar[int]
     EXTERNAL_SUBJECT_FIELD_NUMBER: _ClassVar[int]
+    UPDATE_MASK_FIELD_NUMBER: _ClassVar[int]
     user_id: str
     full_name: str
     email: str
@@ -123,7 +125,8 @@ class UpdateUserRequest(_message.Message):
     profile_attributes: _containers.ScalarMap[str, str]
     external_provider_id: str
     external_subject: str
-    def __init__(self, user_id: _Optional[str] = ..., full_name: _Optional[str] = ..., email: _Optional[str] = ..., tenant_id: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ..., account_kind: _Optional[_Union[_enums_pb2.AccountKind, str]] = ..., project_id: _Optional[str] = ..., profile_attributes: _Optional[_Mapping[str, str]] = ..., external_provider_id: _Optional[str] = ..., external_subject: _Optional[str] = ...) -> None: ...
+    update_mask: _field_mask_pb2.FieldMask
+    def __init__(self, user_id: _Optional[str] = ..., full_name: _Optional[str] = ..., email: _Optional[str] = ..., tenant_id: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ..., account_kind: _Optional[_Union[_enums_pb2.AccountKind, str]] = ..., project_id: _Optional[str] = ..., profile_attributes: _Optional[_Mapping[str, str]] = ..., external_provider_id: _Optional[str] = ..., external_subject: _Optional[str] = ..., update_mask: _Optional[_Union[_field_mask_pb2.FieldMask, _Mapping]] = ...) -> None: ...
 
 class UpdateUserResponse(_message.Message):
     __slots__ = ("user",)
@@ -1041,18 +1044,24 @@ class MfaFactorSummary(_message.Message):
     def __init__(self, factor_kind: _Optional[_Union[_enums_pb2.AuthFactorKind, str]] = ..., enabled: bool = ..., label: _Optional[str] = ...) -> None: ...
 
 class ListMfaFactorsRequest(_message.Message):
-    __slots__ = ("user_id", "context")
+    __slots__ = ("user_id", "context", "page_size", "page_token")
     USER_ID_FIELD_NUMBER: _ClassVar[int]
     CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    PAGE_SIZE_FIELD_NUMBER: _ClassVar[int]
+    PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
     user_id: str
     context: _types_pb2.RequestContext
-    def __init__(self, user_id: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ...) -> None: ...
+    page_size: int
+    page_token: str
+    def __init__(self, user_id: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ..., page_size: _Optional[int] = ..., page_token: _Optional[str] = ...) -> None: ...
 
 class ListMfaFactorsResponse(_message.Message):
-    __slots__ = ("factors",)
+    __slots__ = ("factors", "next_page_token")
     FACTORS_FIELD_NUMBER: _ClassVar[int]
+    NEXT_PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
     factors: _containers.RepeatedCompositeFieldContainer[MfaFactorSummary]
-    def __init__(self, factors: _Optional[_Iterable[_Union[MfaFactorSummary, _Mapping]]] = ...) -> None: ...
+    next_page_token: str
+    def __init__(self, factors: _Optional[_Iterable[_Union[MfaFactorSummary, _Mapping]]] = ..., next_page_token: _Optional[str] = ...) -> None: ...
 
 class DisableMfaFactorRequest(_message.Message):
     __slots__ = ("user_id", "factor_kind", "context")
@@ -1131,18 +1140,24 @@ class WebAuthnCredentialSummary(_message.Message):
     def __init__(self, credential_id: _Optional[str] = ..., label: _Optional[str] = ..., created_at_unix: _Optional[int] = ..., last_used_at_unix: _Optional[int] = ...) -> None: ...
 
 class ListWebAuthnCredentialsRequest(_message.Message):
-    __slots__ = ("user_id", "context")
+    __slots__ = ("user_id", "context", "page_size", "page_token")
     USER_ID_FIELD_NUMBER: _ClassVar[int]
     CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    PAGE_SIZE_FIELD_NUMBER: _ClassVar[int]
+    PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
     user_id: str
     context: _types_pb2.RequestContext
-    def __init__(self, user_id: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ...) -> None: ...
+    page_size: int
+    page_token: str
+    def __init__(self, user_id: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ..., page_size: _Optional[int] = ..., page_token: _Optional[str] = ...) -> None: ...
 
 class ListWebAuthnCredentialsResponse(_message.Message):
-    __slots__ = ("credentials",)
+    __slots__ = ("credentials", "next_page_token")
     CREDENTIALS_FIELD_NUMBER: _ClassVar[int]
+    NEXT_PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
     credentials: _containers.RepeatedCompositeFieldContainer[WebAuthnCredentialSummary]
-    def __init__(self, credentials: _Optional[_Iterable[_Union[WebAuthnCredentialSummary, _Mapping]]] = ...) -> None: ...
+    next_page_token: str
+    def __init__(self, credentials: _Optional[_Iterable[_Union[WebAuthnCredentialSummary, _Mapping]]] = ..., next_page_token: _Optional[str] = ...) -> None: ...
 
 class DeleteWebAuthnCredentialRequest(_message.Message):
     __slots__ = ("user_id", "credential_id", "context")

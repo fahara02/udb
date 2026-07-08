@@ -34,6 +34,7 @@ private static final long serialVersionUID = 0L;
     policyDecisionId_ = "";
     correlationId_ = "";
     kind_ = 0;
+    fieldViolations_ = java.util.Collections.emptyList();
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -352,6 +353,72 @@ private static final long serialVersionUID = 0L;
     return result == null ? com.udb.entity.v1.ErrorKind.UNRECOGNIZED : result;
   }
 
+  public static final int FIELD_VIOLATIONS_FIELD_NUMBER = 9;
+  @SuppressWarnings("serial")
+  private java.util.List<com.udb.entity.v1.ErrorFieldViolation> fieldViolations_;
+  /**
+   * <pre>
+   * Structured invalid-field details for INVALID_ARGUMENT responses. Empty for
+   * non-validation errors.
+   * </pre>
+   *
+   * <code>repeated .udb.entity.v1.ErrorFieldViolation field_violations = 9 [json_name = "fieldViolations"];</code>
+   */
+  @java.lang.Override
+  public java.util.List<com.udb.entity.v1.ErrorFieldViolation> getFieldViolationsList() {
+    return fieldViolations_;
+  }
+  /**
+   * <pre>
+   * Structured invalid-field details for INVALID_ARGUMENT responses. Empty for
+   * non-validation errors.
+   * </pre>
+   *
+   * <code>repeated .udb.entity.v1.ErrorFieldViolation field_violations = 9 [json_name = "fieldViolations"];</code>
+   */
+  @java.lang.Override
+  public java.util.List<? extends com.udb.entity.v1.ErrorFieldViolationOrBuilder>
+      getFieldViolationsOrBuilderList() {
+    return fieldViolations_;
+  }
+  /**
+   * <pre>
+   * Structured invalid-field details for INVALID_ARGUMENT responses. Empty for
+   * non-validation errors.
+   * </pre>
+   *
+   * <code>repeated .udb.entity.v1.ErrorFieldViolation field_violations = 9 [json_name = "fieldViolations"];</code>
+   */
+  @java.lang.Override
+  public int getFieldViolationsCount() {
+    return fieldViolations_.size();
+  }
+  /**
+   * <pre>
+   * Structured invalid-field details for INVALID_ARGUMENT responses. Empty for
+   * non-validation errors.
+   * </pre>
+   *
+   * <code>repeated .udb.entity.v1.ErrorFieldViolation field_violations = 9 [json_name = "fieldViolations"];</code>
+   */
+  @java.lang.Override
+  public com.udb.entity.v1.ErrorFieldViolation getFieldViolations(int index) {
+    return fieldViolations_.get(index);
+  }
+  /**
+   * <pre>
+   * Structured invalid-field details for INVALID_ARGUMENT responses. Empty for
+   * non-validation errors.
+   * </pre>
+   *
+   * <code>repeated .udb.entity.v1.ErrorFieldViolation field_violations = 9 [json_name = "fieldViolations"];</code>
+   */
+  @java.lang.Override
+  public com.udb.entity.v1.ErrorFieldViolationOrBuilder getFieldViolationsOrBuilder(
+      int index) {
+    return fieldViolations_.get(index);
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -390,6 +457,9 @@ private static final long serialVersionUID = 0L;
     if (kind_ != com.udb.entity.v1.ErrorKind.ERROR_KIND_UNSPECIFIED.getNumber()) {
       output.writeEnum(8, kind_);
     }
+    for (int i = 0; i < fieldViolations_.size(); i++) {
+      output.writeMessage(9, fieldViolations_.get(i));
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -426,6 +496,10 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeEnumSize(8, kind_);
     }
+    for (int i = 0; i < fieldViolations_.size(); i++) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(9, fieldViolations_.get(i));
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -456,6 +530,8 @@ private static final long serialVersionUID = 0L;
     if (!getCorrelationId()
         .equals(other.getCorrelationId())) return false;
     if (kind_ != other.kind_) return false;
+    if (!getFieldViolationsList()
+        .equals(other.getFieldViolationsList())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -485,6 +561,10 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getCorrelationId().hashCode();
     hash = (37 * hash) + KIND_FIELD_NUMBER;
     hash = (53 * hash) + kind_;
+    if (getFieldViolationsCount() > 0) {
+      hash = (37 * hash) + FIELD_VIOLATIONS_FIELD_NUMBER;
+      hash = (53 * hash) + getFieldViolationsList().hashCode();
+    }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -624,6 +704,13 @@ private static final long serialVersionUID = 0L;
       policyDecisionId_ = "";
       correlationId_ = "";
       kind_ = 0;
+      if (fieldViolationsBuilder_ == null) {
+        fieldViolations_ = java.util.Collections.emptyList();
+      } else {
+        fieldViolations_ = null;
+        fieldViolationsBuilder_.clear();
+      }
+      bitField0_ = (bitField0_ & ~0x00000100);
       return this;
     }
 
@@ -650,9 +737,22 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.udb.entity.v1.ErrorDetail buildPartial() {
       com.udb.entity.v1.ErrorDetail result = new com.udb.entity.v1.ErrorDetail(this);
+      buildPartialRepeatedFields(result);
       if (bitField0_ != 0) { buildPartial0(result); }
       onBuilt();
       return result;
+    }
+
+    private void buildPartialRepeatedFields(com.udb.entity.v1.ErrorDetail result) {
+      if (fieldViolationsBuilder_ == null) {
+        if (((bitField0_ & 0x00000100) != 0)) {
+          fieldViolations_ = java.util.Collections.unmodifiableList(fieldViolations_);
+          bitField0_ = (bitField0_ & ~0x00000100);
+        }
+        result.fieldViolations_ = fieldViolations_;
+      } else {
+        result.fieldViolations_ = fieldViolationsBuilder_.build();
+      }
     }
 
     private void buildPartial0(com.udb.entity.v1.ErrorDetail result) {
@@ -729,6 +829,32 @@ private static final long serialVersionUID = 0L;
       if (other.kind_ != 0) {
         setKindValue(other.getKindValue());
       }
+      if (fieldViolationsBuilder_ == null) {
+        if (!other.fieldViolations_.isEmpty()) {
+          if (fieldViolations_.isEmpty()) {
+            fieldViolations_ = other.fieldViolations_;
+            bitField0_ = (bitField0_ & ~0x00000100);
+          } else {
+            ensureFieldViolationsIsMutable();
+            fieldViolations_.addAll(other.fieldViolations_);
+          }
+          onChanged();
+        }
+      } else {
+        if (!other.fieldViolations_.isEmpty()) {
+          if (fieldViolationsBuilder_.isEmpty()) {
+            fieldViolationsBuilder_.dispose();
+            fieldViolationsBuilder_ = null;
+            fieldViolations_ = other.fieldViolations_;
+            bitField0_ = (bitField0_ & ~0x00000100);
+            fieldViolationsBuilder_ =
+              com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                 internalGetFieldViolationsFieldBuilder() : null;
+          } else {
+            fieldViolationsBuilder_.addAllMessages(other.fieldViolations_);
+          }
+        }
+      }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
@@ -795,6 +921,19 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000080;
               break;
             } // case 64
+            case 74: {
+              com.udb.entity.v1.ErrorFieldViolation m =
+                  input.readMessage(
+                      com.udb.entity.v1.ErrorFieldViolation.parser(),
+                      extensionRegistry);
+              if (fieldViolationsBuilder_ == null) {
+                ensureFieldViolationsIsMutable();
+                fieldViolations_.add(m);
+              } else {
+                fieldViolationsBuilder_.addMessage(m);
+              }
+              break;
+            } // case 74
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1459,6 +1598,336 @@ private static final long serialVersionUID = 0L;
       kind_ = 0;
       onChanged();
       return this;
+    }
+
+    private java.util.List<com.udb.entity.v1.ErrorFieldViolation> fieldViolations_ =
+      java.util.Collections.emptyList();
+    private void ensureFieldViolationsIsMutable() {
+      if (!((bitField0_ & 0x00000100) != 0)) {
+        fieldViolations_ = new java.util.ArrayList<com.udb.entity.v1.ErrorFieldViolation>(fieldViolations_);
+        bitField0_ |= 0x00000100;
+       }
+    }
+
+    private com.google.protobuf.RepeatedFieldBuilder<
+        com.udb.entity.v1.ErrorFieldViolation, com.udb.entity.v1.ErrorFieldViolation.Builder, com.udb.entity.v1.ErrorFieldViolationOrBuilder> fieldViolationsBuilder_;
+
+    /**
+     * <pre>
+     * Structured invalid-field details for INVALID_ARGUMENT responses. Empty for
+     * non-validation errors.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.ErrorFieldViolation field_violations = 9 [json_name = "fieldViolations"];</code>
+     */
+    public java.util.List<com.udb.entity.v1.ErrorFieldViolation> getFieldViolationsList() {
+      if (fieldViolationsBuilder_ == null) {
+        return java.util.Collections.unmodifiableList(fieldViolations_);
+      } else {
+        return fieldViolationsBuilder_.getMessageList();
+      }
+    }
+    /**
+     * <pre>
+     * Structured invalid-field details for INVALID_ARGUMENT responses. Empty for
+     * non-validation errors.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.ErrorFieldViolation field_violations = 9 [json_name = "fieldViolations"];</code>
+     */
+    public int getFieldViolationsCount() {
+      if (fieldViolationsBuilder_ == null) {
+        return fieldViolations_.size();
+      } else {
+        return fieldViolationsBuilder_.getCount();
+      }
+    }
+    /**
+     * <pre>
+     * Structured invalid-field details for INVALID_ARGUMENT responses. Empty for
+     * non-validation errors.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.ErrorFieldViolation field_violations = 9 [json_name = "fieldViolations"];</code>
+     */
+    public com.udb.entity.v1.ErrorFieldViolation getFieldViolations(int index) {
+      if (fieldViolationsBuilder_ == null) {
+        return fieldViolations_.get(index);
+      } else {
+        return fieldViolationsBuilder_.getMessage(index);
+      }
+    }
+    /**
+     * <pre>
+     * Structured invalid-field details for INVALID_ARGUMENT responses. Empty for
+     * non-validation errors.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.ErrorFieldViolation field_violations = 9 [json_name = "fieldViolations"];</code>
+     */
+    public Builder setFieldViolations(
+        int index, com.udb.entity.v1.ErrorFieldViolation value) {
+      if (fieldViolationsBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureFieldViolationsIsMutable();
+        fieldViolations_.set(index, value);
+        onChanged();
+      } else {
+        fieldViolationsBuilder_.setMessage(index, value);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Structured invalid-field details for INVALID_ARGUMENT responses. Empty for
+     * non-validation errors.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.ErrorFieldViolation field_violations = 9 [json_name = "fieldViolations"];</code>
+     */
+    public Builder setFieldViolations(
+        int index, com.udb.entity.v1.ErrorFieldViolation.Builder builderForValue) {
+      if (fieldViolationsBuilder_ == null) {
+        ensureFieldViolationsIsMutable();
+        fieldViolations_.set(index, builderForValue.build());
+        onChanged();
+      } else {
+        fieldViolationsBuilder_.setMessage(index, builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Structured invalid-field details for INVALID_ARGUMENT responses. Empty for
+     * non-validation errors.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.ErrorFieldViolation field_violations = 9 [json_name = "fieldViolations"];</code>
+     */
+    public Builder addFieldViolations(com.udb.entity.v1.ErrorFieldViolation value) {
+      if (fieldViolationsBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureFieldViolationsIsMutable();
+        fieldViolations_.add(value);
+        onChanged();
+      } else {
+        fieldViolationsBuilder_.addMessage(value);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Structured invalid-field details for INVALID_ARGUMENT responses. Empty for
+     * non-validation errors.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.ErrorFieldViolation field_violations = 9 [json_name = "fieldViolations"];</code>
+     */
+    public Builder addFieldViolations(
+        int index, com.udb.entity.v1.ErrorFieldViolation value) {
+      if (fieldViolationsBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureFieldViolationsIsMutable();
+        fieldViolations_.add(index, value);
+        onChanged();
+      } else {
+        fieldViolationsBuilder_.addMessage(index, value);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Structured invalid-field details for INVALID_ARGUMENT responses. Empty for
+     * non-validation errors.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.ErrorFieldViolation field_violations = 9 [json_name = "fieldViolations"];</code>
+     */
+    public Builder addFieldViolations(
+        com.udb.entity.v1.ErrorFieldViolation.Builder builderForValue) {
+      if (fieldViolationsBuilder_ == null) {
+        ensureFieldViolationsIsMutable();
+        fieldViolations_.add(builderForValue.build());
+        onChanged();
+      } else {
+        fieldViolationsBuilder_.addMessage(builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Structured invalid-field details for INVALID_ARGUMENT responses. Empty for
+     * non-validation errors.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.ErrorFieldViolation field_violations = 9 [json_name = "fieldViolations"];</code>
+     */
+    public Builder addFieldViolations(
+        int index, com.udb.entity.v1.ErrorFieldViolation.Builder builderForValue) {
+      if (fieldViolationsBuilder_ == null) {
+        ensureFieldViolationsIsMutable();
+        fieldViolations_.add(index, builderForValue.build());
+        onChanged();
+      } else {
+        fieldViolationsBuilder_.addMessage(index, builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Structured invalid-field details for INVALID_ARGUMENT responses. Empty for
+     * non-validation errors.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.ErrorFieldViolation field_violations = 9 [json_name = "fieldViolations"];</code>
+     */
+    public Builder addAllFieldViolations(
+        java.lang.Iterable<? extends com.udb.entity.v1.ErrorFieldViolation> values) {
+      if (fieldViolationsBuilder_ == null) {
+        ensureFieldViolationsIsMutable();
+        com.google.protobuf.AbstractMessageLite.Builder.addAll(
+            values, fieldViolations_);
+        onChanged();
+      } else {
+        fieldViolationsBuilder_.addAllMessages(values);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Structured invalid-field details for INVALID_ARGUMENT responses. Empty for
+     * non-validation errors.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.ErrorFieldViolation field_violations = 9 [json_name = "fieldViolations"];</code>
+     */
+    public Builder clearFieldViolations() {
+      if (fieldViolationsBuilder_ == null) {
+        fieldViolations_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000100);
+        onChanged();
+      } else {
+        fieldViolationsBuilder_.clear();
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Structured invalid-field details for INVALID_ARGUMENT responses. Empty for
+     * non-validation errors.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.ErrorFieldViolation field_violations = 9 [json_name = "fieldViolations"];</code>
+     */
+    public Builder removeFieldViolations(int index) {
+      if (fieldViolationsBuilder_ == null) {
+        ensureFieldViolationsIsMutable();
+        fieldViolations_.remove(index);
+        onChanged();
+      } else {
+        fieldViolationsBuilder_.remove(index);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Structured invalid-field details for INVALID_ARGUMENT responses. Empty for
+     * non-validation errors.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.ErrorFieldViolation field_violations = 9 [json_name = "fieldViolations"];</code>
+     */
+    public com.udb.entity.v1.ErrorFieldViolation.Builder getFieldViolationsBuilder(
+        int index) {
+      return internalGetFieldViolationsFieldBuilder().getBuilder(index);
+    }
+    /**
+     * <pre>
+     * Structured invalid-field details for INVALID_ARGUMENT responses. Empty for
+     * non-validation errors.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.ErrorFieldViolation field_violations = 9 [json_name = "fieldViolations"];</code>
+     */
+    public com.udb.entity.v1.ErrorFieldViolationOrBuilder getFieldViolationsOrBuilder(
+        int index) {
+      if (fieldViolationsBuilder_ == null) {
+        return fieldViolations_.get(index);  } else {
+        return fieldViolationsBuilder_.getMessageOrBuilder(index);
+      }
+    }
+    /**
+     * <pre>
+     * Structured invalid-field details for INVALID_ARGUMENT responses. Empty for
+     * non-validation errors.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.ErrorFieldViolation field_violations = 9 [json_name = "fieldViolations"];</code>
+     */
+    public java.util.List<? extends com.udb.entity.v1.ErrorFieldViolationOrBuilder>
+         getFieldViolationsOrBuilderList() {
+      if (fieldViolationsBuilder_ != null) {
+        return fieldViolationsBuilder_.getMessageOrBuilderList();
+      } else {
+        return java.util.Collections.unmodifiableList(fieldViolations_);
+      }
+    }
+    /**
+     * <pre>
+     * Structured invalid-field details for INVALID_ARGUMENT responses. Empty for
+     * non-validation errors.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.ErrorFieldViolation field_violations = 9 [json_name = "fieldViolations"];</code>
+     */
+    public com.udb.entity.v1.ErrorFieldViolation.Builder addFieldViolationsBuilder() {
+      return internalGetFieldViolationsFieldBuilder().addBuilder(
+          com.udb.entity.v1.ErrorFieldViolation.getDefaultInstance());
+    }
+    /**
+     * <pre>
+     * Structured invalid-field details for INVALID_ARGUMENT responses. Empty for
+     * non-validation errors.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.ErrorFieldViolation field_violations = 9 [json_name = "fieldViolations"];</code>
+     */
+    public com.udb.entity.v1.ErrorFieldViolation.Builder addFieldViolationsBuilder(
+        int index) {
+      return internalGetFieldViolationsFieldBuilder().addBuilder(
+          index, com.udb.entity.v1.ErrorFieldViolation.getDefaultInstance());
+    }
+    /**
+     * <pre>
+     * Structured invalid-field details for INVALID_ARGUMENT responses. Empty for
+     * non-validation errors.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.ErrorFieldViolation field_violations = 9 [json_name = "fieldViolations"];</code>
+     */
+    public java.util.List<com.udb.entity.v1.ErrorFieldViolation.Builder>
+         getFieldViolationsBuilderList() {
+      return internalGetFieldViolationsFieldBuilder().getBuilderList();
+    }
+    private com.google.protobuf.RepeatedFieldBuilder<
+        com.udb.entity.v1.ErrorFieldViolation, com.udb.entity.v1.ErrorFieldViolation.Builder, com.udb.entity.v1.ErrorFieldViolationOrBuilder>
+        internalGetFieldViolationsFieldBuilder() {
+      if (fieldViolationsBuilder_ == null) {
+        fieldViolationsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+            com.udb.entity.v1.ErrorFieldViolation, com.udb.entity.v1.ErrorFieldViolation.Builder, com.udb.entity.v1.ErrorFieldViolationOrBuilder>(
+                fieldViolations_,
+                ((bitField0_ & 0x00000100) != 0),
+                getParentForChildren(),
+                isClean());
+        fieldViolations_ = null;
+      }
+      return fieldViolationsBuilder_;
     }
 
     // @@protoc_insertion_point(builder_scope:udb.entity.v1.ErrorDetail)

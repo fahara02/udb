@@ -23,6 +23,7 @@ const (
 	NotificationService_GetNotification_FullMethodName   = "/udb.core.notification.services.v1.NotificationService/GetNotification"
 	NotificationService_ListNotifications_FullMethodName = "/udb.core.notification.services.v1.NotificationService/ListNotifications"
 	NotificationService_RetryNotification_FullMethodName = "/udb.core.notification.services.v1.NotificationService/RetryNotification"
+	NotificationService_ReportDelivery_FullMethodName    = "/udb.core.notification.services.v1.NotificationService/ReportDelivery"
 	NotificationService_UpsertTemplate_FullMethodName    = "/udb.core.notification.services.v1.NotificationService/UpsertTemplate"
 	NotificationService_GetTemplate_FullMethodName       = "/udb.core.notification.services.v1.NotificationService/GetTemplate"
 	NotificationService_ListTemplates_FullMethodName     = "/udb.core.notification.services.v1.NotificationService/ListTemplates"
@@ -44,6 +45,11 @@ type NotificationServiceClient interface {
 	ListNotifications(ctx context.Context, in *ListNotificationsRequest, opts ...grpc.CallOption) (*ListNotificationsResponse, error)
 	// Retry a failed notification.
 	RetryNotification(ctx context.Context, in *RetryNotificationRequest, opts ...grpc.CallOption) (*RetryNotificationResponse, error)
+	// Report the terminal per-channel delivery outcome for a sent notification.
+	// Internal seam: the leader-elected delivery worker — or a provider webhook
+	// bridge — reports queued/sent/delivered/failed; the handler upserts the
+	// NotificationDeliveryAttempt row and emits `udb.notification.delivery.<status>.v1`.
+	ReportDelivery(ctx context.Context, in *ReportDeliveryRequest, opts ...grpc.CallOption) (*ReportDeliveryResponse, error)
 	// Upsert a notification template.
 	UpsertTemplate(ctx context.Context, in *UpsertTemplateRequest, opts ...grpc.CallOption) (*UpsertTemplateResponse, error)
 	// Get a template by event_type + channel + locale.
@@ -102,6 +108,16 @@ func (c *notificationServiceClient) RetryNotification(ctx context.Context, in *R
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(RetryNotificationResponse)
 	err := c.cc.Invoke(ctx, NotificationService_RetryNotification_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *notificationServiceClient) ReportDelivery(ctx context.Context, in *ReportDeliveryRequest, opts ...grpc.CallOption) (*ReportDeliveryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReportDeliveryResponse)
+	err := c.cc.Invoke(ctx, NotificationService_ReportDelivery_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -190,6 +206,11 @@ type NotificationServiceServer interface {
 	ListNotifications(context.Context, *ListNotificationsRequest) (*ListNotificationsResponse, error)
 	// Retry a failed notification.
 	RetryNotification(context.Context, *RetryNotificationRequest) (*RetryNotificationResponse, error)
+	// Report the terminal per-channel delivery outcome for a sent notification.
+	// Internal seam: the leader-elected delivery worker — or a provider webhook
+	// bridge — reports queued/sent/delivered/failed; the handler upserts the
+	// NotificationDeliveryAttempt row and emits `udb.notification.delivery.<status>.v1`.
+	ReportDelivery(context.Context, *ReportDeliveryRequest) (*ReportDeliveryResponse, error)
 	// Upsert a notification template.
 	UpsertTemplate(context.Context, *UpsertTemplateRequest) (*UpsertTemplateResponse, error)
 	// Get a template by event_type + channel + locale.
@@ -224,6 +245,9 @@ func (UnimplementedNotificationServiceServer) ListNotifications(context.Context,
 }
 func (UnimplementedNotificationServiceServer) RetryNotification(context.Context, *RetryNotificationRequest) (*RetryNotificationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RetryNotification not implemented")
+}
+func (UnimplementedNotificationServiceServer) ReportDelivery(context.Context, *ReportDeliveryRequest) (*ReportDeliveryResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ReportDelivery not implemented")
 }
 func (UnimplementedNotificationServiceServer) UpsertTemplate(context.Context, *UpsertTemplateRequest) (*UpsertTemplateResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpsertTemplate not implemented")
@@ -334,6 +358,24 @@ func _NotificationService_RetryNotification_Handler(srv interface{}, ctx context
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(NotificationServiceServer).RetryNotification(ctx, req.(*RetryNotificationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _NotificationService_ReportDelivery_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReportDeliveryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NotificationServiceServer).ReportDelivery(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: NotificationService_ReportDelivery_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NotificationServiceServer).ReportDelivery(ctx, req.(*ReportDeliveryRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -486,6 +528,10 @@ var NotificationService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RetryNotification",
 			Handler:    _NotificationService_RetryNotification_Handler,
+		},
+		{
+			MethodName: "ReportDelivery",
+			Handler:    _NotificationService_ReportDelivery_Handler,
 		},
 		{
 			MethodName: "UpsertTemplate",

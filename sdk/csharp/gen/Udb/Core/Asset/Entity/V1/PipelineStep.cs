@@ -29,7 +29,7 @@ namespace udb.core.Asset.Entity.V1 {
             "dGltZXN0YW1wLnByb3RvGht1ZGIvY29yZS9jb21tb24vdjEvZGIucHJvdG8a",
             "IXVkYi9jb3JlL2NvbW1vbi92MS9zZWN1cml0eS5wcm90bxoedWRiL2NvcmUv",
             "Y29tbW9uL3YxL3R5cGVzLnByb3RvGiR1ZGIvY29yZS9hc3NldC9lbnRpdHkv",
-            "djEvZW51bXMucHJvdG8i5QsKDFBpcGVsaW5lU3RlcBJDCgdzdGVwX2lkGAEg",
+            "djEvZW51bXMucHJvdG8ixgwKDFBpcGVsaW5lU3RlcBJDCgdzdGVwX2lkGAEg",
             "ASgJQiqCtxgmCgdzdGVwX2lkEgRVVUlEGAEoAToRZ2VuX3JhbmRvbV91dWlk",
             "KClSBnN0ZXBJZBI6CgtpbnN0YW5jZV9pZBgCIAEoCUIZgrcYFQoLaW5zdGFu",
             "Y2VfaWQSBFVVSUQYAVIKaW5zdGFuY2VJZBI3Cgl0ZW5hbnRfaWQYDCABKAlC",
@@ -41,38 +41,40 @@ namespace udb.core.Asset.Entity.V1 {
             "c3NldC5lbnRpdHkudjEuU3RlcFN0YXR1c0ImgrcYIgoGc3RhdHVzEgtWQVJD",
             "SEFSKDIwKRgBOgknUEVORElORydSBnN0YXR1cxJCCgZyZXN1bHQYBiABKAlC",
             "KoK3GCYKBnJlc3VsdBIFSlNPTkJaE1N0ZXAgcmVzdWx0IHBheWxvYWR4AVIG",
-            "cmVzdWx0EicKBWVycm9yGAcgASgJQhGCtxgNCgVlcnJvchIEVEVYVFIFZXJy",
-            "b3ISQAoLcmV0cnlfY291bnQYCCABKAVCH4K3GBsKC3JldHJ5X2NvdW50EgdJ",
-            "TlRFR0VSGAE6ATBSCnJldHJ5Q291bnQSWAoKc3RhcnRlZF9hdBgJIAEoCzIa",
-            "Lmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCHYK3GBkKCnN0YXJ0ZWRfYXQS",
-            "C1RJTUVTVEFNUFRaUglzdGFydGVkQXQSXgoMY29tcGxldGVkX2F0GAogASgL",
-            "MhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIfgrcYGwoMY29tcGxldGVk",
-            "X2F0EgtUSU1FU1RBTVBUWlILY29tcGxldGVkQXQSggEKCmF1ZGl0X2luZm8Y",
-            "CyABKAsyHS51ZGIuY29yZS5jb21tb24udjEuQXVkaXRJbmZvQkSCtxhACgph",
-            "dWRpdF9pbmZvEgVKU09OQhgBOgsne30nOjpqc29uYloaQXVkaXQgdHJhaWwg",
-            "c3RvcmVkIGFzIEpTT054AVIJYXVkaXRJbmZvOqcE+rYYjQMKDnBpcGVsaW5l",
-            "X3N0ZXBzEgl1ZGJfYXNzZXQYBCABKjZJbmRpdmlkdWFsIGV4ZWN1dGFibGUg",
-            "c3RlcHMgd2l0aGluIGEgcGlwZWxpbmUgaW5zdGFuY2U4AUABYp8BCh9waXBl",
-            "bGluZV9zdGVwc190ZW5hbnRfaXNvbGF0aW9uGnoodGVuYW50X2lkOjp0ZXh0",
-            "ID0gY3VycmVudF9zZXR0aW5nKCdhcHAuY3VycmVudF90ZW5hbnRfaWQnLCB0",
-            "cnVlKSBPUiBjdXJyZW50X3NldHRpbmcoJ2FwcC5wbGF0Zm9ybV9hZG1pbics",
-            "IHRydWUpID0gJ3RydWUnKSgBaAGKATAKGmlkeF9waXBlbGluZV9zdGVwX2lu",
-            "c3RhbmNlEgVCVFJFRVoLaW5zdGFuY2VfaWSKASwKGGlkeF9waXBlbGluZV9z",
-            "dGVwX3RlbmFudBIFQlRSRUVaCXRlbmFudF9pZPIBHHVkYi5hc3NldC5waXBl",
-            "bGluZV9zdGVwcy5jZGP6AQphc3NldDpyZWFkirIZkAEKBnRlbmFudBoJdGVu",
-            "YW50X2lkKjR0ZW5hbnRfaWQgPSBjdXJyZW50X3NldHRpbmcoJ2FwcC5jdXJy",
-            "ZW50X3RlbmFudF9pZCcpMgRub25lOhFhc3NldC5vcGVyYXRpb25hbED7E0gC",
-            "UgZ0ZW5hbnRaCHN0YW5kYXJkchV0ZW5hbnQuZGF0YV9yZXNpZGVuY3lC/AEK",
-            "HGNvbS51ZGIuY29yZS5hc3NldC5lbnRpdHkudjFCEVBpcGVsaW5lU3RlcFBy",
-            "b3RvUAFaRGdpdGh1Yi5jb20vZmFoYXJhMDIvdWRiL3Nkay9nby9nZW4vdWRi",
-            "L2NvcmUvYXNzZXQvZW50aXR5L3YxO2VudGl0eXYxogIEVUNBRaoCGHVkYi5j",
-            "b3JlLkFzc2V0LkVudGl0eS5WMcoCGFVkYlxDb3JlXEFzc2V0XEVudGl0eVxW",
-            "MeICJFVkYlxHUEJNZXRhZGF0YVxDb3JlXEFzc2V0XEVudGl0eVxWMeoCHFVk",
-            "Yjo6Q29yZTo6QXNzZXQ6OkVudGl0eTo6VjFiBnByb3RvMw=="));
+            "cmVzdWx0El8KBnBhcmFtcxgNIAEoCUJHgrcYQwoGcGFyYW1zEgVKU09OQhgB",
+            "Ogsne30nOjpqc29uYlohU3RlcCB0cmFuc2Zvcm0gcGFyYW1ldGVycyBhcyBK",
+            "U09OeAFSBnBhcmFtcxInCgVlcnJvchgHIAEoCUIRgrcYDQoFZXJyb3ISBFRF",
+            "WFRSBWVycm9yEkAKC3JldHJ5X2NvdW50GAggASgFQh+CtxgbCgtyZXRyeV9j",
+            "b3VudBIHSU5URUdFUhgBOgEwUgpyZXRyeUNvdW50ElgKCnN0YXJ0ZWRfYXQY",
+            "CSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQh2CtxgZCgpzdGFy",
+            "dGVkX2F0EgtUSU1FU1RBTVBUWlIJc3RhcnRlZEF0El4KDGNvbXBsZXRlZF9h",
+            "dBgKIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCH4K3GBsKDGNv",
+            "bXBsZXRlZF9hdBILVElNRVNUQU1QVFpSC2NvbXBsZXRlZEF0EoIBCgphdWRp",
+            "dF9pbmZvGAsgASgLMh0udWRiLmNvcmUuY29tbW9uLnYxLkF1ZGl0SW5mb0JE",
+            "grcYQAoKYXVkaXRfaW5mbxIFSlNPTkIYAToLJ3t9Jzo6anNvbmJaGkF1ZGl0",
+            "IHRyYWlsIHN0b3JlZCBhcyBKU09OeAFSCWF1ZGl0SW5mbzqnBPq2GI0DCg5w",
+            "aXBlbGluZV9zdGVwcxIJdWRiX2Fzc2V0GAQgASo2SW5kaXZpZHVhbCBleGVj",
+            "dXRhYmxlIHN0ZXBzIHdpdGhpbiBhIHBpcGVsaW5lIGluc3RhbmNlOAFAAWKf",
+            "AQofcGlwZWxpbmVfc3RlcHNfdGVuYW50X2lzb2xhdGlvbhp6KHRlbmFudF9p",
+            "ZDo6dGV4dCA9IGN1cnJlbnRfc2V0dGluZygnYXBwLmN1cnJlbnRfdGVuYW50",
+            "X2lkJywgdHJ1ZSkgT1IgY3VycmVudF9zZXR0aW5nKCdhcHAucGxhdGZvcm1f",
+            "YWRtaW4nLCB0cnVlKSA9ICd0cnVlJykoAWgBigEwChppZHhfcGlwZWxpbmVf",
+            "c3RlcF9pbnN0YW5jZRIFQlRSRUVaC2luc3RhbmNlX2lkigEsChhpZHhfcGlw",
+            "ZWxpbmVfc3RlcF90ZW5hbnQSBUJUUkVFWgl0ZW5hbnRfaWTyARx1ZGIuYXNz",
+            "ZXQucGlwZWxpbmVfc3RlcHMuY2Rj+gEKYXNzZXQ6cmVhZIqyGZABCgZ0ZW5h",
+            "bnQaCXRlbmFudF9pZCo0dGVuYW50X2lkID0gY3VycmVudF9zZXR0aW5nKCdh",
+            "cHAuY3VycmVudF90ZW5hbnRfaWQnKTIEbm9uZToRYXNzZXQub3BlcmF0aW9u",
+            "YWxA+xNIAlIGdGVuYW50WghzdGFuZGFyZHIVdGVuYW50LmRhdGFfcmVzaWRl",
+            "bmN5QvwBChxjb20udWRiLmNvcmUuYXNzZXQuZW50aXR5LnYxQhFQaXBlbGlu",
+            "ZVN0ZXBQcm90b1ABWkRnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28v",
+            "Z2VuL3VkYi9jb3JlL2Fzc2V0L2VudGl0eS92MTtlbnRpdHl2MaICBFVDQUWq",
+            "Ahh1ZGIuY29yZS5Bc3NldC5FbnRpdHkuVjHKAhhVZGJcQ29yZVxBc3NldFxF",
+            "bnRpdHlcVjHiAiRVZGJcR1BCTWV0YWRhdGFcQ29yZVxBc3NldFxFbnRpdHlc",
+            "VjHqAhxVZGI6OkNvcmU6OkFzc2V0OjpFbnRpdHk6OlYxYgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.TimestampReflection.Descriptor, global::udb.core.Common.V1.DbReflection.Descriptor, global::udb.core.Common.V1.SecurityReflection.Descriptor, global::udb.core.Common.V1.TypesReflection.Descriptor, global::udb.core.Asset.Entity.V1.EnumsReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Asset.Entity.V1.PipelineStep), global::udb.core.Asset.Entity.V1.PipelineStep.Parser, new[]{ "StepId", "InstanceId", "TenantId", "StepName", "StepType", "Status", "Result", "Error", "RetryCount", "StartedAt", "CompletedAt", "AuditInfo" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Asset.Entity.V1.PipelineStep), global::udb.core.Asset.Entity.V1.PipelineStep.Parser, new[]{ "StepId", "InstanceId", "TenantId", "StepName", "StepType", "Status", "Result", "Params", "Error", "RetryCount", "StartedAt", "CompletedAt", "AuditInfo" }, null, null, null, null)
           }));
     }
     #endregion
@@ -124,6 +126,7 @@ namespace udb.core.Asset.Entity.V1 {
       stepType_ = other.stepType_;
       status_ = other.status_;
       result_ = other.result_;
+      params_ = other.params_;
       error_ = other.error_;
       retryCount_ = other.retryCount_;
       startedAt_ = other.startedAt_ != null ? other.startedAt_.Clone() : null;
@@ -244,6 +247,25 @@ namespace udb.core.Asset.Entity.V1 {
       }
     }
 
+    /// <summary>Field number for the "params" field.</summary>
+    public const int ParamsFieldNumber = 13;
+    private string params_ = "";
+    /// <summary>
+    /// Transform parameters applied to a byte/image step, as a JSON object, e.g.
+    /// {"width":800,"height":600,"format":"jpeg"}. RESIZE reads width/height;
+    /// CONVERT (format-only RESIZE) reads format. Empty `{}` for steps that take no
+    /// parameters. Additive: lets RESIZE/CONVERT be parameterized instead of a
+    /// hardcoded 256x256/png, and surfaces the applied params on read.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Params {
+      get { return params_; }
+      set {
+        params_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
     /// <summary>Field number for the "error" field.</summary>
     public const int ErrorFieldNumber = 7;
     private string error_ = "";
@@ -341,6 +363,7 @@ namespace udb.core.Asset.Entity.V1 {
       if (StepType != other.StepType) return false;
       if (Status != other.Status) return false;
       if (Result != other.Result) return false;
+      if (Params != other.Params) return false;
       if (Error != other.Error) return false;
       if (RetryCount != other.RetryCount) return false;
       if (!object.Equals(StartedAt, other.StartedAt)) return false;
@@ -360,6 +383,7 @@ namespace udb.core.Asset.Entity.V1 {
       if (StepType != global::udb.core.Asset.Entity.V1.StepType.Unspecified) hash ^= StepType.GetHashCode();
       if (Status != global::udb.core.Asset.Entity.V1.StepStatus.Unspecified) hash ^= Status.GetHashCode();
       if (Result.Length != 0) hash ^= Result.GetHashCode();
+      if (Params.Length != 0) hash ^= Params.GetHashCode();
       if (Error.Length != 0) hash ^= Error.GetHashCode();
       if (RetryCount != 0) hash ^= RetryCount.GetHashCode();
       if (startedAt_ != null) hash ^= StartedAt.GetHashCode();
@@ -431,6 +455,10 @@ namespace udb.core.Asset.Entity.V1 {
         output.WriteRawTag(98);
         output.WriteString(TenantId);
       }
+      if (Params.Length != 0) {
+        output.WriteRawTag(106);
+        output.WriteString(Params);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -489,6 +517,10 @@ namespace udb.core.Asset.Entity.V1 {
         output.WriteRawTag(98);
         output.WriteString(TenantId);
       }
+      if (Params.Length != 0) {
+        output.WriteRawTag(106);
+        output.WriteString(Params);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -519,6 +551,9 @@ namespace udb.core.Asset.Entity.V1 {
       }
       if (Result.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(Result);
+      }
+      if (Params.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Params);
       }
       if (Error.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(Error);
@@ -567,6 +602,9 @@ namespace udb.core.Asset.Entity.V1 {
       }
       if (other.Result.Length != 0) {
         Result = other.Result;
+      }
+      if (other.Params.Length != 0) {
+        Params = other.Params;
       }
       if (other.Error.Length != 0) {
         Error = other.Error;
@@ -668,6 +706,10 @@ namespace udb.core.Asset.Entity.V1 {
             TenantId = input.ReadString();
             break;
           }
+          case 106: {
+            Params = input.ReadString();
+            break;
+          }
         }
       }
     #endif
@@ -742,6 +784,10 @@ namespace udb.core.Asset.Entity.V1 {
           }
           case 98: {
             TenantId = input.ReadString();
+            break;
+          }
+          case 106: {
+            Params = input.ReadString();
             break;
           }
         }

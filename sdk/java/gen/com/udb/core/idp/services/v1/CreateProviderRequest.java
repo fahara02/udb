@@ -201,6 +201,11 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object entityId_ = "";
   /**
+   * <pre>
+   * Stable public SAML entityID. Caller-chosen format follows the SAML entityID
+   * URI/string rules and is scoped by tenant/provider kind.
+   * </pre>
+   *
    * <code>string entity_id = 5 [json_name = "entityId"];</code>
    * @return The entityId.
    */
@@ -218,6 +223,11 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
+   * <pre>
+   * Stable public SAML entityID. Caller-chosen format follows the SAML entityID
+   * URI/string rules and is scoped by tenant/provider kind.
+   * </pre>
+   *
    * <code>string entity_id = 5 [json_name = "entityId"];</code>
    * @return The bytes for entityId.
    */
@@ -1742,6 +1752,11 @@ private static final long serialVersionUID = 0L;
 
     private java.lang.Object entityId_ = "";
     /**
+     * <pre>
+     * Stable public SAML entityID. Caller-chosen format follows the SAML entityID
+     * URI/string rules and is scoped by tenant/provider kind.
+     * </pre>
+     *
      * <code>string entity_id = 5 [json_name = "entityId"];</code>
      * @return The entityId.
      */
@@ -1758,6 +1773,11 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
+     * <pre>
+     * Stable public SAML entityID. Caller-chosen format follows the SAML entityID
+     * URI/string rules and is scoped by tenant/provider kind.
+     * </pre>
+     *
      * <code>string entity_id = 5 [json_name = "entityId"];</code>
      * @return The bytes for entityId.
      */
@@ -1775,6 +1795,11 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
+     * <pre>
+     * Stable public SAML entityID. Caller-chosen format follows the SAML entityID
+     * URI/string rules and is scoped by tenant/provider kind.
+     * </pre>
+     *
      * <code>string entity_id = 5 [json_name = "entityId"];</code>
      * @param value The entityId to set.
      * @return This builder for chaining.
@@ -1788,6 +1813,11 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * Stable public SAML entityID. Caller-chosen format follows the SAML entityID
+     * URI/string rules and is scoped by tenant/provider kind.
+     * </pre>
+     *
      * <code>string entity_id = 5 [json_name = "entityId"];</code>
      * @return This builder for chaining.
      */
@@ -1798,6 +1828,11 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * Stable public SAML entityID. Caller-chosen format follows the SAML entityID
+     * URI/string rules and is scoped by tenant/provider kind.
+     * </pre>
+     *
      * <code>string entity_id = 5 [json_name = "entityId"];</code>
      * @param value The bytes for entityId to set.
      * @return This builder for chaining.

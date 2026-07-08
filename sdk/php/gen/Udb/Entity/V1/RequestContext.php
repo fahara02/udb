@@ -121,6 +121,21 @@ class RequestContext extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>map<string, string> attributes = 20 [json_name = "attributes"];</code>
      */
     private $attributes;
+    /**
+     * Typed read fence. Kept in lockstep with read_fence_json for clients that can
+     * consume protobuf messages directly. Metadata/header values still win when
+     * both are supplied.
+     *
+     * Generated from protobuf field <code>.udb.entity.v1.ReadFence read_fence = 21 [json_name = "readFence"];</code>
+     */
+    protected $read_fence = null;
+    /**
+     * Typed consistency mode. Mirrors the legacy consistency string/header token;
+     * the x-udb-consistency metadata header still wins when both are supplied.
+     *
+     * Generated from protobuf field <code>.udb.entity.v1.ConsistencyMode consistency_mode = 22 [json_name = "consistencyMode"];</code>
+     */
+    protected $consistency_mode = 0;
 
     /**
      * Constructor.
@@ -163,6 +178,13 @@ class RequestContext extends \Google\Protobuf\Internal\Message
      *           Region or locality preference for latency and data-residency routing.
      *     @type array|\Google\Protobuf\Internal\MapField $attributes
      *           Caller-provided labels available to policy, routing, audit, and telemetry.
+     *     @type \Udb\Entity\V1\ReadFence $read_fence
+     *           Typed read fence. Kept in lockstep with read_fence_json for clients that can
+     *           consume protobuf messages directly. Metadata/header values still win when
+     *           both are supplied.
+     *     @type int $consistency_mode
+     *           Typed consistency mode. Mirrors the legacy consistency string/header token;
+     *           the x-udb-consistency metadata header still wins when both are supplied.
      * }
      */
     public function __construct($data = NULL) {
@@ -660,6 +682,74 @@ class RequestContext extends \Google\Protobuf\Internal\Message
     {
         $arr = GPBUtil::checkMapField($var, \Google\Protobuf\Internal\GPBType::STRING, \Google\Protobuf\Internal\GPBType::STRING);
         $this->attributes = $arr;
+
+        return $this;
+    }
+
+    /**
+     * Typed read fence. Kept in lockstep with read_fence_json for clients that can
+     * consume protobuf messages directly. Metadata/header values still win when
+     * both are supplied.
+     *
+     * Generated from protobuf field <code>.udb.entity.v1.ReadFence read_fence = 21 [json_name = "readFence"];</code>
+     * @return \Udb\Entity\V1\ReadFence|null
+     */
+    public function getReadFence()
+    {
+        return $this->read_fence;
+    }
+
+    public function hasReadFence()
+    {
+        return isset($this->read_fence);
+    }
+
+    public function clearReadFence()
+    {
+        unset($this->read_fence);
+    }
+
+    /**
+     * Typed read fence. Kept in lockstep with read_fence_json for clients that can
+     * consume protobuf messages directly. Metadata/header values still win when
+     * both are supplied.
+     *
+     * Generated from protobuf field <code>.udb.entity.v1.ReadFence read_fence = 21 [json_name = "readFence"];</code>
+     * @param \Udb\Entity\V1\ReadFence $var
+     * @return $this
+     */
+    public function setReadFence($var)
+    {
+        GPBUtil::checkMessage($var, \Udb\Entity\V1\ReadFence::class);
+        $this->read_fence = $var;
+
+        return $this;
+    }
+
+    /**
+     * Typed consistency mode. Mirrors the legacy consistency string/header token;
+     * the x-udb-consistency metadata header still wins when both are supplied.
+     *
+     * Generated from protobuf field <code>.udb.entity.v1.ConsistencyMode consistency_mode = 22 [json_name = "consistencyMode"];</code>
+     * @return int
+     */
+    public function getConsistencyMode()
+    {
+        return $this->consistency_mode;
+    }
+
+    /**
+     * Typed consistency mode. Mirrors the legacy consistency string/header token;
+     * the x-udb-consistency metadata header still wins when both are supplied.
+     *
+     * Generated from protobuf field <code>.udb.entity.v1.ConsistencyMode consistency_mode = 22 [json_name = "consistencyMode"];</code>
+     * @param int $var
+     * @return $this
+     */
+    public function setConsistencyMode($var)
+    {
+        GPBUtil::checkEnum($var, \Udb\Entity\V1\ConsistencyMode::class);
+        $this->consistency_mode = $var;
 
         return $this;
     }

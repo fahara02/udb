@@ -186,4 +186,32 @@ public interface PipelineDefinitionOrBuilder extends
    * <code>.udb.core.common.v1.AuditInfo audit_info = 9 [json_name = "auditInfo", (.udb.core.common.v1.pg_column) = { ... }</code>
    */
   com.udb.core.common.v1.AuditInfoOrBuilder getAuditInfoOrBuilder();
+
+  /**
+   * <pre>
+   * Optional Kafka topic that fires this pipeline (master-plan 5.2). When set, the
+   * leader-elected trigger manager runs exactly one consumer per distinct
+   * trigger_topic cluster-wide and starts this pipeline for each inbound event.
+   * Additive; NULL/empty = not Kafka-triggered (the static storage-finalized
+   * auto-trigger still applies, matched by media_type).
+   * </pre>
+   *
+   * <code>string trigger_topic = 10 [json_name = "triggerTopic", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The triggerTopic.
+   */
+  java.lang.String getTriggerTopic();
+  /**
+   * <pre>
+   * Optional Kafka topic that fires this pipeline (master-plan 5.2). When set, the
+   * leader-elected trigger manager runs exactly one consumer per distinct
+   * trigger_topic cluster-wide and starts this pipeline for each inbound event.
+   * Additive; NULL/empty = not Kafka-triggered (the static storage-finalized
+   * auto-trigger still applies, matched by media_type).
+   * </pre>
+   *
+   * <code>string trigger_topic = 10 [json_name = "triggerTopic", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for triggerTopic.
+   */
+  com.google.protobuf.ByteString
+      getTriggerTopicBytes();
 }

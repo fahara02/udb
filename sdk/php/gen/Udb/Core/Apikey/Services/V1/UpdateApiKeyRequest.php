@@ -52,6 +52,13 @@ class UpdateApiKeyRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>.udb.core.common.v1.RequestContext context = 9 [json_name = "context"];</code>
      */
     protected $context = null;
+    /**
+     * Optional PATCH mask relative to the API key resource. When omitted, legacy
+     * clients keep the historical non-empty-field patch behavior.
+     *
+     * Generated from protobuf field <code>.google.protobuf.FieldMask update_mask = 10 [json_name = "updateMask"];</code>
+     */
+    protected $update_mask = null;
 
     /**
      * Constructor.
@@ -68,6 +75,9 @@ class UpdateApiKeyRequest extends \Google\Protobuf\Internal\Message
      *     @type int|string $rate_limit_per_day
      *     @type \Google\Protobuf\Timestamp $expires_at
      *     @type \Udb\Core\Common\V1\RequestContext $context
+     *     @type \Google\Protobuf\FieldMask $update_mask
+     *           Optional PATCH mask relative to the API key resource. When omitted, legacy
+     *           clients keep the historical non-empty-field patch behavior.
      * }
      */
     public function __construct($data = NULL) {
@@ -289,6 +299,44 @@ class UpdateApiKeyRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkMessage($var, \Udb\Core\Common\V1\RequestContext::class);
         $this->context = $var;
+
+        return $this;
+    }
+
+    /**
+     * Optional PATCH mask relative to the API key resource. When omitted, legacy
+     * clients keep the historical non-empty-field patch behavior.
+     *
+     * Generated from protobuf field <code>.google.protobuf.FieldMask update_mask = 10 [json_name = "updateMask"];</code>
+     * @return \Google\Protobuf\FieldMask|null
+     */
+    public function getUpdateMask()
+    {
+        return $this->update_mask;
+    }
+
+    public function hasUpdateMask()
+    {
+        return isset($this->update_mask);
+    }
+
+    public function clearUpdateMask()
+    {
+        unset($this->update_mask);
+    }
+
+    /**
+     * Optional PATCH mask relative to the API key resource. When omitted, legacy
+     * clients keep the historical non-empty-field patch behavior.
+     *
+     * Generated from protobuf field <code>.google.protobuf.FieldMask update_mask = 10 [json_name = "updateMask"];</code>
+     * @param \Google\Protobuf\FieldMask $var
+     * @return $this
+     */
+    public function setUpdateMask($var)
+    {
+        GPBUtil::checkMessage($var, \Google\Protobuf\FieldMask::class);
+        $this->update_mask = $var;
 
         return $this;
     }

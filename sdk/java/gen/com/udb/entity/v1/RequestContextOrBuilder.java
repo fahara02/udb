@@ -368,4 +368,58 @@ java.lang.String defaultValue);
    */
   java.lang.String getAttributesOrThrow(
       java.lang.String key);
+
+  /**
+   * <pre>
+   * Typed read fence. Kept in lockstep with read_fence_json for clients that can
+   * consume protobuf messages directly. Metadata/header values still win when
+   * both are supplied.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.ReadFence read_fence = 21 [json_name = "readFence"];</code>
+   * @return Whether the readFence field is set.
+   */
+  boolean hasReadFence();
+  /**
+   * <pre>
+   * Typed read fence. Kept in lockstep with read_fence_json for clients that can
+   * consume protobuf messages directly. Metadata/header values still win when
+   * both are supplied.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.ReadFence read_fence = 21 [json_name = "readFence"];</code>
+   * @return The readFence.
+   */
+  com.udb.entity.v1.ReadFence getReadFence();
+  /**
+   * <pre>
+   * Typed read fence. Kept in lockstep with read_fence_json for clients that can
+   * consume protobuf messages directly. Metadata/header values still win when
+   * both are supplied.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.ReadFence read_fence = 21 [json_name = "readFence"];</code>
+   */
+  com.udb.entity.v1.ReadFenceOrBuilder getReadFenceOrBuilder();
+
+  /**
+   * <pre>
+   * Typed consistency mode. Mirrors the legacy consistency string/header token;
+   * the x-udb-consistency metadata header still wins when both are supplied.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.ConsistencyMode consistency_mode = 22 [json_name = "consistencyMode"];</code>
+   * @return The enum numeric value on the wire for consistencyMode.
+   */
+  int getConsistencyModeValue();
+  /**
+   * <pre>
+   * Typed consistency mode. Mirrors the legacy consistency string/header token;
+   * the x-udb-consistency metadata header still wins when both are supplied.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.ConsistencyMode consistency_mode = 22 [json_name = "consistencyMode"];</code>
+   * @return The consistencyMode.
+   */
+  com.udb.entity.v1.ConsistencyMode getConsistencyMode();
 }

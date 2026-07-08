@@ -39,49 +39,58 @@ public final class ControlPlaneServiceProto {
       "lane_service.proto\022\034udb.core.control.ser" +
       "vices.v1\032\034google/api/annotations.proto\032\'" +
       "udb/core/control/services/v1/core.proto\032" +
-      "!udb/core/common/v1/security.proto2\335\n\n\023C" +
-      "ontrolPlaneService\022\300\001\n\017StreamResources\022." +
+      "!udb/core/common/v1/security.proto2\317\r\n\023C" +
+      "ontrolPlaneService\022\302\001\n\017StreamResources\022." +
       ".udb.core.control.services.v1.DiscoveryR" +
       "equest\032/.udb.core.control.services.v1.Di" +
-      "scoveryResponse\"H\312\363\030@\010\002\032\034udb:control:str" +
-      "eam-resourcesJ\002\001\004j\027control.StreamResourc" +
-      "es\220\001\001\370\363\030\002(\0010\001\022\307\001\n\016DeltaResources\0223.udb.c" +
-      "ore.control.services.v1.DeltaDiscoveryRe" +
-      "quest\0324.udb.core.control.services.v1.Del" +
-      "taDiscoveryResponse\"F\312\363\030>\010\002\032\033udb:control" +
-      ":delta-resourcesJ\002\001\004j\026control.DeltaResou" +
-      "rces\220\001\001\370\363\030\002(\0010\001\022\350\001\n\014GetResources\0221.udb.c" +
-      "ore.control.services.v1.GetResourcesRequ" +
-      "est\0322.udb.core.control.services.v1.GetRe" +
-      "sourcesResponse\"q\312\363\030:\010\002\032\031udb:control:get" +
-      "-resourcesJ\002\001\004j\024control.GetResources\220\001\001\332" +
-      "\363\030\016Z\014getResources\370\363\030\001\202\323\344\223\002\027\022\025/v1/control" +
-      "/resources\022\367\001\n\016ListNodeStates\0223.udb.core" +
-      ".control.services.v1.ListNodeStatesReque" +
-      "st\0324.udb.core.control.services.v1.ListNo" +
-      "deStatesResponse\"z\312\363\030?\010\002\032\034udb:control:li" +
-      "st-node-statesJ\002\001\002j\026control.ListNodeStat" +
-      "es\220\001\001\332\363\030\020Z\016listNodeStates\370\363\030\001\202\323\344\223\002\031\022\027/v1" +
-      "/control/node-states\022\360\001\n\tAckStatus\022..udb" +
-      ".core.control.services.v1.AckStatusReque" +
-      "st\032/.udb.core.control.services.v1.AckSta" +
-      "tusResponse\"\201\001\312\363\0304\010\002\032\026udb:control:ack-st" +
-      "atusJ\002\001\002j\021control.AckStatus\220\001\001\332\363\030\013Z\tackS" +
-      "tatus\370\363\030\002\202\323\344\223\0020\"+/v1/control/node-states" +
-      "/{node_id}:ackStatus:\001*\032\340\001\312\360\031y\n\007control\022" +
-      "\007control\032\007control\"\032Control Plane Distrib" +
-      "ution*\007control0\0018\001h\001z\014controlPlane\202\001\007con" +
-      "trol\212\001\007control\222\001\016native.control\322\360\031\032\010\001\032\003u" +
-      "db(\340\324\0030\003@\001J\007controlP\001\342\360\031A\n\007control\032\010post" +
-      "gres2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_G" +
-      "RPC_TARGETB\235\002\n com.udb.core.control.serv" +
-      "ices.v1B\030ControlPlaneServiceProtoP\001ZJgit" +
-      "hub.com/fahara02/udb/sdk/go/gen/udb/core" +
-      "/control/services/v1;servicesv1\242\002\004UCCS\252\002" +
-      "\034udb.core.Control.Services.V1\312\002\034Udb\\Core" +
-      "\\Control\\Services\\V1\342\002(Udb\\GPBMetadata\\C" +
-      "ore\\Control\\Services\\V1\352\002 Udb::Core::Con" +
-      "trol::Services::V1b\006proto3"
+      "scoveryResponse\"J\312\363\030B\010\002\032\034udb:control:str" +
+      "eam-resources8\001J\002\001\004j\027control.StreamResou" +
+      "rces\220\001\001\370\363\030\002(\0010\001\022\311\001\n\016DeltaResources\0223.udb" +
+      ".core.control.services.v1.DeltaDiscovery" +
+      "Request\0324.udb.core.control.services.v1.D" +
+      "eltaDiscoveryResponse\"H\312\363\030@\010\002\032\033udb:contr" +
+      "ol:delta-resources8\001J\002\001\004j\026control.DeltaR" +
+      "esources\220\001\001\370\363\030\002(\0010\001\022\370\001\n\014GetResources\0221.u" +
+      "db.core.control.services.v1.GetResources" +
+      "Request\0322.udb.core.control.services.v1.G" +
+      "etResourcesResponse\"\200\001\312\363\030:\010\002\032\031udb:contro" +
+      "l:get-resourcesJ\002\001\004j\024control.GetResource" +
+      "s\220\001\001\332\363\030\035\022\rget_resourcesZ\014getResources\370\363\030" +
+      "\001\202\323\344\223\002\027\022\025/v1/control/resources\022\212\002\n\016ListN" +
+      "odeStates\0223.udb.core.control.services.v1" +
+      ".ListNodeStatesRequest\0324.udb.core.contro" +
+      "l.services.v1.ListNodeStatesResponse\"\214\001\312" +
+      "\363\030?\010\002\032\034udb:control:list-node-statesJ\002\001\002j" +
+      "\026control.ListNodeStates\220\001\001\332\363\030\"\022\020list_nod" +
+      "e_statesZ\016listNodeStates\370\363\030\001\202\323\344\223\002\031\022\027/v1/" +
+      "control/node-states\022\374\001\n\tAckStatus\022..udb." +
+      "core.control.services.v1.AckStatusReques" +
+      "t\032/.udb.core.control.services.v1.AckStat" +
+      "usResponse\"\215\001\312\363\0304\010\002\032\026udb:control:ack-sta" +
+      "tusJ\002\001\002j\021control.AckStatus\220\001\001\332\363\030\027\022\nack_s" +
+      "tatusZ\tackStatus\370\363\030\002\202\323\344\223\0020\"+/v1/control/" +
+      "node-states/{node_id}:ackStatus:\001*\022\274\002\n\021R" +
+      "ollbackResources\0226.udb.core.control.serv" +
+      "ices.v1.RollbackResourcesRequest\0327.udb.c" +
+      "ore.control.services.v1.RollbackResource" +
+      "sResponse\"\265\001\312\363\030D\010\002\032\036udb:control:rollback" +
+      "-resourcesJ\002\001\004j\031control.RollbackResource" +
+      "s\220\001\001\332\363\030\'\022\022rollback_resourcesZ\021rollbackRe" +
+      "sources\370\363\030\002\202\323\344\223\0028\"3/v1/control/node-stat" +
+      "es/{node_id}:rollbackResources:\001*\032\340\001\312\360\031y" +
+      "\n\007control\022\007control\032\007control\"\032Control Pla" +
+      "ne Distribution*\007control0\0018\001h\001z\014controlP" +
+      "lane\202\001\007control\212\001\007control\222\001\016native.contro" +
+      "l\322\360\031\032\010\001\032\003udb(\340\324\0030\003@\001J\007controlP\001\342\360\031A\n\007con" +
+      "trol\032\010postgres2\033UDB_NATIVE_SERVICES_ENAB" +
+      "LED2\017UDB_GRPC_TARGETB\235\002\n com.udb.core.co" +
+      "ntrol.services.v1B\030ControlPlaneServicePr" +
+      "otoP\001ZJgithub.com/fahara02/udb/sdk/go/ge" +
+      "n/udb/core/control/services/v1;servicesv" +
+      "1\242\002\004UCCS\252\002\034udb.core.Control.Services.V1\312" +
+      "\002\034Udb\\Core\\Control\\Services\\V1\342\002(Udb\\GPB" +
+      "Metadata\\Core\\Control\\Services\\V1\352\002 Udb:" +
+      ":Core::Control::Services::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

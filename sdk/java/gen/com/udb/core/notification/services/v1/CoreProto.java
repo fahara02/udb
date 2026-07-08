@@ -117,6 +117,16 @@ public final class CoreProto {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_notification_services_v1_GetDeliveryStatsResponse_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_notification_services_v1_ReportDeliveryRequest_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_notification_services_v1_ReportDeliveryRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_notification_services_v1_ReportDeliveryResponse_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_notification_services_v1_ReportDeliveryResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_notification_services_v1_SetPreferenceRequest_descriptor;
   static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
@@ -267,46 +277,61 @@ public final class CoreProto {
       "\001(\001R\023overallDeliveryRate\022N\n\nby_channel\030\005" +
       " \003(\0132/.udb.core.notification.services.v1" +
       ".ChannelStatsR\tbyChannel:#\232\262\031\037\010\001\032\003udb(\260\352" +
-      "\0010\003@\001J\014notificationP\001\"\300\002\n\024SetPreferenceR" +
-      "equest\022\027\n\007user_id\030\001 \001(\tR\006userId\022\033\n\ttenan" +
-      "t_id\030\002 \001(\tR\010tenantId\022N\n\007channel\030\003 \001(\01624." +
-      "udb.core.notification.entity.v1.Notifica" +
-      "tionChannelR\007channel\022\035\n\nevent_type\030\004 \001(\t" +
-      "R\teventType\022 \n\014is_opted_out\030\005 \001(\010R\nisOpt" +
-      "edOut\022<\n\007context\030\006 \001(\0132\".udb.core.common" +
-      ".v1.RequestContextR\007context:#\232\262\031\037\010\001\032\003udb" +
-      "(\260\352\0010\003@\001J\014notificationP\001\"\225\001\n\025SetPreferen" +
-      "ceResponse\022W\n\npreference\030\001 \001(\01327.udb.cor" +
-      "e.notification.entity.v1.NotificationPre" +
-      "ferenceR\npreference:#\232\262\031\037\010\001\032\003udb(\260\352\0010\003@\001" +
-      "J\014notificationP\001\"\340\001\n\024GetPreferenceReques" +
-      "t\022\027\n\007user_id\030\001 \001(\tR\006userId\022\033\n\ttenant_id\030" +
-      "\002 \001(\tR\010tenantId\022N\n\007channel\030\003 \001(\01624.udb.c" +
-      "ore.notification.entity.v1.NotificationC" +
-      "hannelR\007channel\022\035\n\nevent_type\030\004 \001(\tR\teve" +
-      "ntType:#\232\262\031\037\010\001\032\003udb(\260\352\0010\003@\001J\014notificatio" +
-      "nP\001\"\225\001\n\025GetPreferenceResponse\022W\n\nprefere" +
-      "nce\030\001 \001(\01327.udb.core.notification.entity" +
-      ".v1.NotificationPreferenceR\npreference:#" +
-      "\232\262\031\037\010\001\032\003udb(\260\352\0010\003@\001J\014notificationP\001\"\250\001\n\026" +
-      "ListPreferencesRequest\022\027\n\007user_id\030\001 \001(\tR" +
-      "\006userId\022\033\n\ttenant_id\030\002 \001(\tR\010tenantId\0223\n\004" +
-      "page\030\003 \001(\0132\037.udb.core.common.v1.PageRequ" +
-      "estR\004page:#\232\262\031\037\010\001\032\003udb(\260\352\0010\003@\001J\014notifica" +
-      "tionP\001\"\317\001\n\027ListPreferencesResponse\022Y\n\013pr" +
-      "eferences\030\001 \003(\01327.udb.core.notification." +
-      "entity.v1.NotificationPreferenceR\013prefer" +
-      "ences\0224\n\004page\030\002 \001(\0132 .udb.core.common.v1" +
-      ".PageResponseR\004page:#\232\262\031\037\010\001\032\003udb(\260\352\0010\003@\001" +
-      "J\014notificationP\001B\254\002\n%com.udb.core.notifi" +
-      "cation.services.v1B\tCoreProtoP\001ZOgithub." +
-      "com/fahara02/udb/sdk/go/gen/udb/core/not" +
-      "ification/services/v1;servicesv1\242\002\004UCNS\252" +
-      "\002!udb.core.Notification.Services.V1\312\002!Ud" +
-      "b\\Core\\Notification\\Services\\V1\342\002-Udb\\GP" +
-      "BMetadata\\Core\\Notification\\Services\\V1\352" +
-      "\002%Udb::Core::Notification::Services::V1b" +
-      "\006proto3"
+      "\0010\003@\001J\014notificationP\001\"\274\003\n\025ReportDelivery" +
+      "Request\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022\025\n\006" +
+      "log_id\030\002 \001(\tR\005logId\022N\n\007channel\030\003 \001(\01624.u" +
+      "db.core.notification.entity.v1.Notificat" +
+      "ionChannelR\007channel\022\032\n\010provider\030\004 \001(\tR\010p" +
+      "rovider\022K\n\006status\030\005 \001(\01623.udb.core.notif" +
+      "ication.entity.v1.NotificationStatusR\006st" +
+      "atus\022.\n\023provider_message_id\030\006 \001(\tR\021provi" +
+      "derMessageId\022#\n\rerror_message\030\007 \001(\tR\014err" +
+      "orMessage\022<\n\007context\030\010 \001(\0132\".udb.core.co" +
+      "mmon.v1.RequestContextR\007context:#\232\262\031\037\010\001\032" +
+      "\003udb(\260\352\0010\003@\001J\014notificationP\001\"\225\001\n\026ReportD" +
+      "eliveryResponse\022V\n\007attempt\030\001 \001(\0132<.udb.c" +
+      "ore.notification.entity.v1.NotificationD" +
+      "eliveryAttemptR\007attempt:#\232\262\031\037\010\001\032\003udb(\260\352\001" +
+      "0\003@\001J\014notificationP\001\"\300\002\n\024SetPreferenceRe" +
+      "quest\022\027\n\007user_id\030\001 \001(\tR\006userId\022\033\n\ttenant" +
+      "_id\030\002 \001(\tR\010tenantId\022N\n\007channel\030\003 \001(\01624.u" +
+      "db.core.notification.entity.v1.Notificat" +
+      "ionChannelR\007channel\022\035\n\nevent_type\030\004 \001(\tR" +
+      "\teventType\022 \n\014is_opted_out\030\005 \001(\010R\nisOpte" +
+      "dOut\022<\n\007context\030\006 \001(\0132\".udb.core.common." +
+      "v1.RequestContextR\007context:#\232\262\031\037\010\001\032\003udb(" +
+      "\260\352\0010\003@\001J\014notificationP\001\"\225\001\n\025SetPreferenc" +
+      "eResponse\022W\n\npreference\030\001 \001(\01327.udb.core" +
+      ".notification.entity.v1.NotificationPref" +
+      "erenceR\npreference:#\232\262\031\037\010\001\032\003udb(\260\352\0010\003@\001J" +
+      "\014notificationP\001\"\340\001\n\024GetPreferenceRequest" +
+      "\022\027\n\007user_id\030\001 \001(\tR\006userId\022\033\n\ttenant_id\030\002" +
+      " \001(\tR\010tenantId\022N\n\007channel\030\003 \001(\01624.udb.co" +
+      "re.notification.entity.v1.NotificationCh" +
+      "annelR\007channel\022\035\n\nevent_type\030\004 \001(\tR\teven" +
+      "tType:#\232\262\031\037\010\001\032\003udb(\260\352\0010\003@\001J\014notification" +
+      "P\001\"\225\001\n\025GetPreferenceResponse\022W\n\npreferen" +
+      "ce\030\001 \001(\01327.udb.core.notification.entity." +
+      "v1.NotificationPreferenceR\npreference:#\232" +
+      "\262\031\037\010\001\032\003udb(\260\352\0010\003@\001J\014notificationP\001\"\250\001\n\026L" +
+      "istPreferencesRequest\022\027\n\007user_id\030\001 \001(\tR\006" +
+      "userId\022\033\n\ttenant_id\030\002 \001(\tR\010tenantId\0223\n\004p" +
+      "age\030\003 \001(\0132\037.udb.core.common.v1.PageReque" +
+      "stR\004page:#\232\262\031\037\010\001\032\003udb(\260\352\0010\003@\001J\014notificat" +
+      "ionP\001\"\317\001\n\027ListPreferencesResponse\022Y\n\013pre" +
+      "ferences\030\001 \003(\01327.udb.core.notification.e" +
+      "ntity.v1.NotificationPreferenceR\013prefere" +
+      "nces\0224\n\004page\030\002 \001(\0132 .udb.core.common.v1." +
+      "PageResponseR\004page:#\232\262\031\037\010\001\032\003udb(\260\352\0010\003@\001J" +
+      "\014notificationP\001B\254\002\n%com.udb.core.notific" +
+      "ation.services.v1B\tCoreProtoP\001ZOgithub.c" +
+      "om/fahara02/udb/sdk/go/gen/udb/core/noti" +
+      "fication/services/v1;servicesv1\242\002\004UCNS\252\002" +
+      "!udb.core.Notification.Services.V1\312\002!Udb" +
+      "\\Core\\Notification\\Services\\V1\342\002-Udb\\GPB" +
+      "Metadata\\Core\\Notification\\Services\\V1\352\002" +
+      "%Udb::Core::Notification::Services::V1b\006" +
+      "proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -427,38 +452,50 @@ public final class CoreProto {
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_notification_services_v1_GetDeliveryStatsResponse_descriptor,
         new java.lang.String[] { "TotalSent", "TotalDelivered", "TotalFailed", "OverallDeliveryRate", "ByChannel", });
-    internal_static_udb_core_notification_services_v1_SetPreferenceRequest_descriptor =
+    internal_static_udb_core_notification_services_v1_ReportDeliveryRequest_descriptor =
       getDescriptor().getMessageTypes().get(17);
+    internal_static_udb_core_notification_services_v1_ReportDeliveryRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_notification_services_v1_ReportDeliveryRequest_descriptor,
+        new java.lang.String[] { "TenantId", "LogId", "Channel", "Provider", "Status", "ProviderMessageId", "ErrorMessage", "Context", });
+    internal_static_udb_core_notification_services_v1_ReportDeliveryResponse_descriptor =
+      getDescriptor().getMessageTypes().get(18);
+    internal_static_udb_core_notification_services_v1_ReportDeliveryResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_notification_services_v1_ReportDeliveryResponse_descriptor,
+        new java.lang.String[] { "Attempt", });
+    internal_static_udb_core_notification_services_v1_SetPreferenceRequest_descriptor =
+      getDescriptor().getMessageTypes().get(19);
     internal_static_udb_core_notification_services_v1_SetPreferenceRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_notification_services_v1_SetPreferenceRequest_descriptor,
         new java.lang.String[] { "UserId", "TenantId", "Channel", "EventType", "IsOptedOut", "Context", });
     internal_static_udb_core_notification_services_v1_SetPreferenceResponse_descriptor =
-      getDescriptor().getMessageTypes().get(18);
+      getDescriptor().getMessageTypes().get(20);
     internal_static_udb_core_notification_services_v1_SetPreferenceResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_notification_services_v1_SetPreferenceResponse_descriptor,
         new java.lang.String[] { "Preference", });
     internal_static_udb_core_notification_services_v1_GetPreferenceRequest_descriptor =
-      getDescriptor().getMessageTypes().get(19);
+      getDescriptor().getMessageTypes().get(21);
     internal_static_udb_core_notification_services_v1_GetPreferenceRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_notification_services_v1_GetPreferenceRequest_descriptor,
         new java.lang.String[] { "UserId", "TenantId", "Channel", "EventType", });
     internal_static_udb_core_notification_services_v1_GetPreferenceResponse_descriptor =
-      getDescriptor().getMessageTypes().get(20);
+      getDescriptor().getMessageTypes().get(22);
     internal_static_udb_core_notification_services_v1_GetPreferenceResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_notification_services_v1_GetPreferenceResponse_descriptor,
         new java.lang.String[] { "Preference", });
     internal_static_udb_core_notification_services_v1_ListPreferencesRequest_descriptor =
-      getDescriptor().getMessageTypes().get(21);
+      getDescriptor().getMessageTypes().get(23);
     internal_static_udb_core_notification_services_v1_ListPreferencesRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_notification_services_v1_ListPreferencesRequest_descriptor,
         new java.lang.String[] { "UserId", "TenantId", "Page", });
     internal_static_udb_core_notification_services_v1_ListPreferencesResponse_descriptor =
-      getDescriptor().getMessageTypes().get(22);
+      getDescriptor().getMessageTypes().get(24);
     internal_static_udb_core_notification_services_v1_ListPreferencesResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_notification_services_v1_ListPreferencesResponse_descriptor,

@@ -62,6 +62,10 @@ namespace udb.core.Notification.Services.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::udb.core.Notification.Services.V1.RetryNotificationResponse> __Marshaller_udb_core_notification_services_v1_RetryNotificationResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Notification.Services.V1.RetryNotificationResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Notification.Services.V1.ReportDeliveryRequest> __Marshaller_udb_core_notification_services_v1_ReportDeliveryRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Notification.Services.V1.ReportDeliveryRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Notification.Services.V1.ReportDeliveryResponse> __Marshaller_udb_core_notification_services_v1_ReportDeliveryResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Notification.Services.V1.ReportDeliveryResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::udb.core.Notification.Services.V1.UpsertTemplateRequest> __Marshaller_udb_core_notification_services_v1_UpsertTemplateRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Notification.Services.V1.UpsertTemplateRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::udb.core.Notification.Services.V1.UpsertTemplateResponse> __Marshaller_udb_core_notification_services_v1_UpsertTemplateResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Notification.Services.V1.UpsertTemplateResponse.Parser));
@@ -121,6 +125,14 @@ namespace udb.core.Notification.Services.V1 {
         "RetryNotification",
         __Marshaller_udb_core_notification_services_v1_RetryNotificationRequest,
         __Marshaller_udb_core_notification_services_v1_RetryNotificationResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Notification.Services.V1.ReportDeliveryRequest, global::udb.core.Notification.Services.V1.ReportDeliveryResponse> __Method_ReportDelivery = new grpc::Method<global::udb.core.Notification.Services.V1.ReportDeliveryRequest, global::udb.core.Notification.Services.V1.ReportDeliveryResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "ReportDelivery",
+        __Marshaller_udb_core_notification_services_v1_ReportDeliveryRequest,
+        __Marshaller_udb_core_notification_services_v1_ReportDeliveryResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Method<global::udb.core.Notification.Services.V1.UpsertTemplateRequest, global::udb.core.Notification.Services.V1.UpsertTemplateResponse> __Method_UpsertTemplate = new grpc::Method<global::udb.core.Notification.Services.V1.UpsertTemplateRequest, global::udb.core.Notification.Services.V1.UpsertTemplateResponse>(
@@ -232,6 +244,21 @@ namespace udb.core.Notification.Services.V1 {
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::System.Threading.Tasks.Task<global::udb.core.Notification.Services.V1.RetryNotificationResponse> RetryNotification(global::udb.core.Notification.Services.V1.RetryNotificationRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Report the terminal per-channel delivery outcome for a sent notification.
+      /// Internal seam: the leader-elected delivery worker — or a provider webhook
+      /// bridge — reports queued/sent/delivered/failed; the handler upserts the
+      /// NotificationDeliveryAttempt row and emits `udb.notification.delivery.&lt;status>.v1`.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Notification.Services.V1.ReportDeliveryResponse> ReportDelivery(global::udb.core.Notification.Services.V1.ReportDeliveryRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -540,6 +567,66 @@ namespace udb.core.Notification.Services.V1 {
       public virtual grpc::AsyncUnaryCall<global::udb.core.Notification.Services.V1.RetryNotificationResponse> RetryNotificationAsync(global::udb.core.Notification.Services.V1.RetryNotificationRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_RetryNotification, null, options, request);
+      }
+      /// <summary>
+      /// Report the terminal per-channel delivery outcome for a sent notification.
+      /// Internal seam: the leader-elected delivery worker — or a provider webhook
+      /// bridge — reports queued/sent/delivered/failed; the handler upserts the
+      /// NotificationDeliveryAttempt row and emits `udb.notification.delivery.&lt;status>.v1`.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Notification.Services.V1.ReportDeliveryResponse ReportDelivery(global::udb.core.Notification.Services.V1.ReportDeliveryRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ReportDelivery(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Report the terminal per-channel delivery outcome for a sent notification.
+      /// Internal seam: the leader-elected delivery worker — or a provider webhook
+      /// bridge — reports queued/sent/delivered/failed; the handler upserts the
+      /// NotificationDeliveryAttempt row and emits `udb.notification.delivery.&lt;status>.v1`.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Notification.Services.V1.ReportDeliveryResponse ReportDelivery(global::udb.core.Notification.Services.V1.ReportDeliveryRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_ReportDelivery, null, options, request);
+      }
+      /// <summary>
+      /// Report the terminal per-channel delivery outcome for a sent notification.
+      /// Internal seam: the leader-elected delivery worker — or a provider webhook
+      /// bridge — reports queued/sent/delivered/failed; the handler upserts the
+      /// NotificationDeliveryAttempt row and emits `udb.notification.delivery.&lt;status>.v1`.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Notification.Services.V1.ReportDeliveryResponse> ReportDeliveryAsync(global::udb.core.Notification.Services.V1.ReportDeliveryRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ReportDeliveryAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Report the terminal per-channel delivery outcome for a sent notification.
+      /// Internal seam: the leader-elected delivery worker — or a provider webhook
+      /// bridge — reports queued/sent/delivered/failed; the handler upserts the
+      /// NotificationDeliveryAttempt row and emits `udb.notification.delivery.&lt;status>.v1`.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Notification.Services.V1.ReportDeliveryResponse> ReportDeliveryAsync(global::udb.core.Notification.Services.V1.ReportDeliveryRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_ReportDelivery, null, options, request);
       }
       /// <summary>
       /// Upsert a notification template.
@@ -895,6 +982,7 @@ namespace udb.core.Notification.Services.V1 {
           .AddMethod(__Method_GetNotification, serviceImpl.GetNotification)
           .AddMethod(__Method_ListNotifications, serviceImpl.ListNotifications)
           .AddMethod(__Method_RetryNotification, serviceImpl.RetryNotification)
+          .AddMethod(__Method_ReportDelivery, serviceImpl.ReportDelivery)
           .AddMethod(__Method_UpsertTemplate, serviceImpl.UpsertTemplate)
           .AddMethod(__Method_GetTemplate, serviceImpl.GetTemplate)
           .AddMethod(__Method_ListTemplates, serviceImpl.ListTemplates)
@@ -915,6 +1003,7 @@ namespace udb.core.Notification.Services.V1 {
       serviceBinder.AddMethod(__Method_GetNotification, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Notification.Services.V1.GetNotificationRequest, global::udb.core.Notification.Services.V1.GetNotificationResponse>(serviceImpl.GetNotification));
       serviceBinder.AddMethod(__Method_ListNotifications, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Notification.Services.V1.ListNotificationsRequest, global::udb.core.Notification.Services.V1.ListNotificationsResponse>(serviceImpl.ListNotifications));
       serviceBinder.AddMethod(__Method_RetryNotification, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Notification.Services.V1.RetryNotificationRequest, global::udb.core.Notification.Services.V1.RetryNotificationResponse>(serviceImpl.RetryNotification));
+      serviceBinder.AddMethod(__Method_ReportDelivery, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Notification.Services.V1.ReportDeliveryRequest, global::udb.core.Notification.Services.V1.ReportDeliveryResponse>(serviceImpl.ReportDelivery));
       serviceBinder.AddMethod(__Method_UpsertTemplate, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Notification.Services.V1.UpsertTemplateRequest, global::udb.core.Notification.Services.V1.UpsertTemplateResponse>(serviceImpl.UpsertTemplate));
       serviceBinder.AddMethod(__Method_GetTemplate, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Notification.Services.V1.GetTemplateRequest, global::udb.core.Notification.Services.V1.GetTemplateResponse>(serviceImpl.GetTemplate));
       serviceBinder.AddMethod(__Method_ListTemplates, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Notification.Services.V1.ListTemplatesRequest, global::udb.core.Notification.Services.V1.ListTemplatesResponse>(serviceImpl.ListTemplates));

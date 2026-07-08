@@ -12,6 +12,7 @@ import (
 	v11 "github.com/fahara02/udb/sdk/go/gen/udb/core/webrtc/entity/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	fieldmaskpb "google.golang.org/protobuf/types/known/fieldmaskpb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
@@ -268,12 +269,15 @@ func (x *GetRoomResponse) GetError() *v1.ApiError {
 }
 
 type UpdateRoomRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	RoomId        string                 `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
-	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	State         string                 `protobuf:"bytes,4,opt,name=state,proto3" json:"state,omitempty"`
-	Config        string                 `protobuf:"bytes,5,opt,name=config,proto3" json:"config,omitempty"` // JSON
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	TenantId string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	RoomId   string                 `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
+	Name     string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	State    string                 `protobuf:"bytes,4,opt,name=state,proto3" json:"state,omitempty"`
+	Config   string                 `protobuf:"bytes,5,opt,name=config,proto3" json:"config,omitempty"` // JSON
+	// Optional PATCH mask relative to the room resource. When omitted, legacy
+	// clients keep the historical non-empty-field patch behavior.
+	UpdateMask    *fieldmaskpb.FieldMask `protobuf:"bytes,6,opt,name=update_mask,json=updateMask,proto3" json:"update_mask,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -341,6 +345,13 @@ func (x *UpdateRoomRequest) GetConfig() string {
 		return x.Config
 	}
 	return ""
+}
+
+func (x *UpdateRoomRequest) GetUpdateMask() *fieldmaskpb.FieldMask {
+	if x != nil {
+		return x.UpdateMask
+	}
+	return nil
 }
 
 type UpdateRoomResponse struct {
@@ -502,11 +513,13 @@ func (x *CloseRoomResponse) GetError() *v1.ApiError {
 }
 
 type ListRoomsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	State         string                 `protobuf:"bytes,2,opt,name=state,proto3" json:"state,omitempty"`
-	Page          int32                  `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
-	PageSize      int32                  `protobuf:"varint,4,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	TenantId string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	State    string                 `protobuf:"bytes,2,opt,name=state,proto3" json:"state,omitempty"`
+	Page     int32                  `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
+	PageSize int32                  `protobuf:"varint,4,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// Opaque pagination token returned by ListRoomsResponse.next_page_token.
+	PageToken     string `protobuf:"bytes,5,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -569,12 +582,21 @@ func (x *ListRoomsRequest) GetPageSize() int32 {
 	return 0
 }
 
+func (x *ListRoomsRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
 type ListRoomsResponse struct {
 	state      protoimpl.MessageState `protogen:"open.v1"`
 	Rooms      []*v11.Room            `protobuf:"bytes,1,rep,name=rooms,proto3" json:"rooms,omitempty"`
 	TotalCount int32                  `protobuf:"varint,2,opt,name=total_count,json=totalCount,proto3" json:"total_count,omitempty"`
 	// Error information if operation failed
-	Error         *v1.ApiError `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
+	Error *v1.ApiError `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
+	// Opaque token for the next page; empty when no more rooms are available.
+	NextPageToken string `protobuf:"bytes,4,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -628,6 +650,13 @@ func (x *ListRoomsResponse) GetError() *v1.ApiError {
 		return x.Error
 	}
 	return nil
+}
+
+func (x *ListRoomsResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
 }
 
 type JoinRoomRequest struct {
@@ -1147,10 +1176,14 @@ func (x *GetPeerResponse) GetError() *v1.ApiError {
 }
 
 type ListPeersRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	RoomId        string                 `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
-	State         string                 `protobuf:"bytes,3,opt,name=state,proto3" json:"state,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	TenantId string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	RoomId   string                 `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
+	State    string                 `protobuf:"bytes,3,opt,name=state,proto3" json:"state,omitempty"`
+	// Requested page size. Defaults to 50 and is capped at the native list maximum.
+	PageSize int32 `protobuf:"varint,4,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// Opaque pagination token returned by ListPeersResponse.next_page_token.
+	PageToken     string `protobuf:"bytes,5,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1206,11 +1239,27 @@ func (x *ListPeersRequest) GetState() string {
 	return ""
 }
 
+func (x *ListPeersRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListPeersRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
 type ListPeersResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Peers []*v11.Peer            `protobuf:"bytes,1,rep,name=peers,proto3" json:"peers,omitempty"`
 	// Error information if operation failed
-	Error         *v1.ApiError `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
+	Error *v1.ApiError `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
+	// Opaque token for the next page; empty when no more peers are available.
+	NextPageToken string `protobuf:"bytes,3,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1257,6 +1306,13 @@ func (x *ListPeersResponse) GetError() *v1.ApiError {
 		return x.Error
 	}
 	return nil
+}
+
+func (x *ListPeersResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
 }
 
 type PublishTrackRequest struct {
@@ -1631,11 +1687,15 @@ func (x *MuteTrackResponse) GetError() *v1.ApiError {
 }
 
 type ListTracksRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	RoomId        string                 `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
-	PeerId        string                 `protobuf:"bytes,3,opt,name=peer_id,json=peerId,proto3" json:"peer_id,omitempty"`
-	Kind          string                 `protobuf:"bytes,4,opt,name=kind,proto3" json:"kind,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	TenantId string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	RoomId   string                 `protobuf:"bytes,2,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
+	PeerId   string                 `protobuf:"bytes,3,opt,name=peer_id,json=peerId,proto3" json:"peer_id,omitempty"`
+	Kind     string                 `protobuf:"bytes,4,opt,name=kind,proto3" json:"kind,omitempty"`
+	// Requested page size. Defaults to 50 and is capped at the native list maximum.
+	PageSize int32 `protobuf:"varint,5,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// Opaque pagination token returned by ListTracksResponse.next_page_token.
+	PageToken     string `protobuf:"bytes,6,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1698,11 +1758,27 @@ func (x *ListTracksRequest) GetKind() string {
 	return ""
 }
 
+func (x *ListTracksRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListTracksRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
 type ListTracksResponse struct {
 	state  protoimpl.MessageState `protogen:"open.v1"`
 	Tracks []*v11.Track           `protobuf:"bytes,1,rep,name=tracks,proto3" json:"tracks,omitempty"`
 	// Error information if operation failed
-	Error         *v1.ApiError `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
+	Error *v1.ApiError `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
+	// Opaque token for the next page; empty when no more tracks are available.
+	NextPageToken string `protobuf:"bytes,3,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1749,6 +1825,13 @@ func (x *ListTracksResponse) GetError() *v1.ApiError {
 		return x.Error
 	}
 	return nil
+}
+
+func (x *ListTracksResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
 }
 
 type IceServer struct {
@@ -2278,7 +2361,7 @@ var File_udb_core_webrtc_services_v1_webrtc_service_proto protoreflect.FileDescr
 
 const file_udb_core_webrtc_services_v1_webrtc_service_proto_rawDesc = "" +
 	"\n" +
-	"0udb/core/webrtc/services/v1/webrtc_service.proto\x12\x1budb.core.webrtc.services.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cudb/core/common/v1/dto.proto\x1a!udb/core/common/v1/security.proto\x1a$udb/core/webrtc/entity/v1/room.proto\x1a$udb/core/webrtc/entity/v1/peer.proto\x1a%udb/core/webrtc/entity/v1/track.proto\"\xc5\x01\n" +
+	"0udb/core/webrtc/services/v1/webrtc_service.proto\x12\x1budb.core.webrtc.services.v1\x1a\x1cgoogle/api/annotations.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cudb/core/common/v1/dto.proto\x1a!udb/core/common/v1/security.proto\x1a$udb/core/webrtc/entity/v1/room.proto\x1a$udb/core/webrtc/entity/v1/peer.proto\x1a%udb/core/webrtc/entity/v1/track.proto\x1a(udb/core/webrtc/services/v1/egress.proto\"\xc5\x01\n" +
 	"\x11CreateRoomRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12)\n" +
@@ -2295,13 +2378,15 @@ const file_udb_core_webrtc_services_v1_webrtc_service_proto_rawDesc = "" +
 	"\aroom_id\x18\x02 \x01(\tR\x06roomId:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\"\x99\x01\n" +
 	"\x0fGetRoomResponse\x123\n" +
 	"\x04room\x18\x01 \x01(\v2\x1f.udb.core.webrtc.entity.v1.RoomR\x04room\x122\n" +
-	"\x05error\x18\x02 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\"\xaa\x01\n" +
+	"\x05error\x18\x02 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\"\xe7\x01\n" +
 	"\x11UpdateRoomRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x17\n" +
 	"\aroom_id\x18\x02 \x01(\tR\x06roomId\x12\x12\n" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12\x14\n" +
 	"\x05state\x18\x04 \x01(\tR\x05state\x12\x16\n" +
-	"\x06config\x18\x05 \x01(\tR\x06config:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\"\x81\x01\n" +
+	"\x06config\x18\x05 \x01(\tR\x06config\x12;\n" +
+	"\vupdate_mask\x18\x06 \x01(\v2\x1a.google.protobuf.FieldMaskR\n" +
+	"updateMask:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\"\x81\x01\n" +
 	"\x12UpdateRoomResponse\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\x122\n" +
 	"\x05error\x18\x02 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\"g\n" +
@@ -2310,17 +2395,20 @@ const file_udb_core_webrtc_services_v1_webrtc_service_proto_rawDesc = "" +
 	"\aroom_id\x18\x02 \x01(\tR\x06roomId:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\"\x80\x01\n" +
 	"\x11CloseRoomResponse\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\x122\n" +
-	"\x05error\x18\x02 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\"\x95\x01\n" +
+	"\x05error\x18\x02 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\"\xb4\x01\n" +
 	"\x10ListRoomsRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x14\n" +
 	"\x05state\x18\x02 \x01(\tR\x05state\x12\x12\n" +
 	"\x04page\x18\x03 \x01(\x05R\x04page\x12\x1b\n" +
-	"\tpage_size\x18\x04 \x01(\x05R\bpageSize:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\"\xbe\x01\n" +
+	"\tpage_size\x18\x04 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x05 \x01(\tR\tpageToken:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\"\xe6\x01\n" +
 	"\x11ListRoomsResponse\x125\n" +
 	"\x05rooms\x18\x01 \x03(\v2\x1f.udb.core.webrtc.entity.v1.RoomR\x05rooms\x12\x1f\n" +
 	"\vtotal_count\x18\x02 \x01(\x05R\n" +
 	"totalCount\x122\n" +
-	"\x05error\x18\x03 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\"\xc4\x01\n" +
+	"\x05error\x18\x03 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error\x12&\n" +
+	"\x0fnext_page_token\x18\x04 \x01(\tR\rnextPageToken:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\"\xc4\x01\n" +
 	"\x0fJoinRoomRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x17\n" +
 	"\aroom_id\x18\x02 \x01(\tR\x06roomId\x12!\n" +
@@ -2361,14 +2449,18 @@ const file_udb_core_webrtc_services_v1_webrtc_service_proto_rawDesc = "" +
 	"\apeer_id\x18\x02 \x01(\tR\x06peerId:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\"\x99\x01\n" +
 	"\x0fGetPeerResponse\x123\n" +
 	"\x04peer\x18\x01 \x01(\v2\x1f.udb.core.webrtc.entity.v1.PeerR\x04peer\x122\n" +
-	"\x05error\x18\x02 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\"}\n" +
+	"\x05error\x18\x02 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\"\xb9\x01\n" +
 	"\x10ListPeersRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x17\n" +
 	"\aroom_id\x18\x02 \x01(\tR\x06roomId\x12\x14\n" +
-	"\x05state\x18\x03 \x01(\tR\x05state:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\"\x9d\x01\n" +
+	"\x05state\x18\x03 \x01(\tR\x05state\x12\x1b\n" +
+	"\tpage_size\x18\x04 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x05 \x01(\tR\tpageToken:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\"\xc5\x01\n" +
 	"\x11ListPeersResponse\x125\n" +
 	"\x05peers\x18\x01 \x03(\v2\x1f.udb.core.webrtc.entity.v1.PeerR\x05peers\x122\n" +
-	"\x05error\x18\x02 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\"\xe5\x01\n" +
+	"\x05error\x18\x02 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error\x12&\n" +
+	"\x0fnext_page_token\x18\x03 \x01(\tR\rnextPageToken:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\"\xe5\x01\n" +
 	"\x13PublishTrackRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x17\n" +
 	"\aroom_id\x18\x02 \x01(\tR\x06roomId\x12\x17\n" +
@@ -2393,15 +2485,19 @@ const file_udb_core_webrtc_services_v1_webrtc_service_proto_rawDesc = "" +
 	"\x05muted\x18\x03 \x01(\bR\x05muted:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\"\x80\x01\n" +
 	"\x11MuteTrackResponse\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\x122\n" +
-	"\x05error\x18\x02 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\"\x95\x01\n" +
+	"\x05error\x18\x02 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\"\xd1\x01\n" +
 	"\x11ListTracksRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x17\n" +
 	"\aroom_id\x18\x02 \x01(\tR\x06roomId\x12\x17\n" +
 	"\apeer_id\x18\x03 \x01(\tR\x06peerId\x12\x12\n" +
-	"\x04kind\x18\x04 \x01(\tR\x04kind:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\"\xa1\x01\n" +
+	"\x04kind\x18\x04 \x01(\tR\x04kind\x12\x1b\n" +
+	"\tpage_size\x18\x05 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x06 \x01(\tR\tpageToken:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\"\xc9\x01\n" +
 	"\x12ListTracksResponse\x128\n" +
 	"\x06tracks\x18\x01 \x03(\v2 .udb.core.webrtc.entity.v1.TrackR\x06tracks\x122\n" +
-	"\x05error\x18\x02 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\"z\n" +
+	"\x05error\x18\x02 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error\x12&\n" +
+	"\x0fnext_page_token\x18\x03 \x01(\tR\rnextPageToken:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\"z\n" +
 	"\tIceServer\x12\x12\n" +
 	"\x04urls\x18\x01 \x03(\tR\x04urls\x12\x1a\n" +
 	"\busername\x18\x02 \x01(\tR\busername\x12\x1e\n" +
@@ -2447,7 +2543,7 @@ const file_udb_core_webrtc_services_v1_webrtc_service_proto_rawDesc = "" +
 	"\tpeer_left\x18\x05 \x01(\tH\x00R\bpeerLeft\x12)\n" +
 	"\x0ftrack_published\x18\x06 \x01(\tH\x00R\x0etrackPublished\x12\x14\n" +
 	"\x04pong\x18\a \x01(\bH\x00R\x04pong:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01B\t\n" +
-	"\apayload2\x8a\x1e\n" +
+	"\apayload2\xe16\n" +
 	"\vRoomService\x12\xd8\x05\n" +
 	"\n" +
 	"CreateRoom\x12..udb.core.webrtc.services.v1.CreateRoomRequest\x1a/.udb.core.webrtc.services.v1.CreateRoomResponse\"\xe8\x04\xca\xf3\x18@\b\x02\x1a\x1budb:webrtc:room:create-room \x01J\x02\x01\x02j\x16webrtc.room.CreateRoom\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x182\b\x01\x12\vcreate_room\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01Z\n" +
@@ -2487,7 +2583,37 @@ const file_udb_core_webrtc_services_v1_webrtc_service_proto_rawDesc = "" +
 	"list_rooms2\n" +
 	"udb_webrtc:\vwebrtc.roomJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18W\n" +
 	"\x15webrtc.room.ListRooms\x12\x12webrtc.room.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18E\n" +
-	"\vwebrtc.room\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02\x12\x12\x10/v1/webrtc/rooms\x1a\xf5\x02\xca\xf0\x19s\n" +
+	"\vwebrtc.room\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02\x12\x12\x10/v1/webrtc/rooms\x12\xed\x06\n" +
+	"\x12StartRoomComposite\x126.udb.core.webrtc.services.v1.StartRoomCompositeRequest\x1a7.udb.core.webrtc.services.v1.StartRoomCompositeResponse\"\xe5\x05\xca\xf3\x18Q\b\x02\x1a$udb:webrtc:room:start-room-composite \x01J\x02\x01\x02j\x1ewebrtc.room.StartRoomComposite\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18C\b\x01\x12\x14start_room_composite\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01Z\x12startRoomComposite\xe2\xf3\x18\xcb\x01\n" +
+	"\x06webrtc\x12\x11udb/native/webrtc\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"2udb.native.webrtc.start_room_composite.boilerplate*\x14start_room_composite2\n" +
+	"udb_webrtc:\vwebrtc.roomJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18\xe7\x01\n" +
+	"\x1ewebrtc.room.StartRoomComposite\x12\x12webrtc.room.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable:B\n" +
+	"\x1cudb.webrtc.egress.started.v1\x12\aroom_id\x1a\rat_least_once\"\bstandard(\x01:A\n" +
+	"\x1budb.webrtc.egress.failed.v1\x12\aroom_id\x1a\rat_least_once\"\bstandard(\x01\xf2\xf3\x18E\n" +
+	"\vwebrtc.room\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x020:\x01*\"+/v1/webrtc/rooms/{room_id}/egress:composite\x12\xd6\x06\n" +
+	"\x10StartTrackEgress\x124.udb.core.webrtc.services.v1.StartTrackEgressRequest\x1a5.udb.core.webrtc.services.v1.StartTrackEgressResponse\"\xd4\x05\xca\xf3\x18M\b\x02\x1a\"udb:webrtc:room:start-track-egress \x01J\x02\x01\x02j\x1cwebrtc.room.StartTrackEgress\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18?\b\x01\x12\x12start_track_egress\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01Z\x10startTrackEgress\xe2\xf3\x18\xc7\x01\n" +
+	"\x06webrtc\x12\x11udb/native/webrtc\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"0udb.native.webrtc.start_track_egress.boilerplate*\x12start_track_egress2\n" +
+	"udb_webrtc:\vwebrtc.roomJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18\xe5\x01\n" +
+	"\x1cwebrtc.room.StartTrackEgress\x12\x12webrtc.room.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable:B\n" +
+	"\x1cudb.webrtc.egress.started.v1\x12\aroom_id\x1a\rat_least_once\"\bstandard(\x01:A\n" +
+	"\x1budb.webrtc.egress.failed.v1\x12\aroom_id\x1a\rat_least_once\"\bstandard(\x01\xf2\xf3\x18E\n" +
+	"\vwebrtc.room\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02-:\x01*\"(/v1/webrtc/tracks/{track_id}:startEgress\x12\x94\x06\n" +
+	"\n" +
+	"StopEgress\x12..udb.core.webrtc.services.v1.StopEgressRequest\x1a/.udb.core.webrtc.services.v1.StopEgressResponse\"\xa4\x05\xca\xf3\x18@\b\x02\x1a\x1budb:webrtc:room:stop-egress \x01J\x02\x01\x02j\x16webrtc.room.StopEgress\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x182\b\x01\x12\vstop_egress\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01Z\n" +
+	"stopEgress\xe2\xf3\x18\xb9\x01\n" +
+	"\x06webrtc\x12\x11udb/native/webrtc\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\")udb.native.webrtc.stop_egress.boilerplate*\vstop_egress2\n" +
+	"udb_webrtc:\vwebrtc.roomJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18\xe3\x01\n" +
+	"\x16webrtc.room.StopEgress\x12\x12webrtc.room.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable:D\n" +
+	"\x1cudb.webrtc.egress.stopped.v1\x12\ttenant_id\x1a\rat_least_once\"\bstandard(\x01:C\n" +
+	"\x1budb.webrtc.egress.failed.v1\x12\ttenant_id\x1a\rat_least_once\"\bstandard(\x01\xf2\xf3\x18E\n" +
+	"\vwebrtc.room\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02':\x01*\"\"/v1/webrtc/egress/{egress_id}:stop\x12\xf4\x04\n" +
+	"\n" +
+	"ListEgress\x12..udb.core.webrtc.services.v1.ListEgressRequest\x1a/.udb.core.webrtc.services.v1.ListEgressResponse\"\x84\x04\xca\xf3\x18@\b\x02\x1a\x1budb:webrtc:room:list-egress \x01J\x02\x01\x02j\x16webrtc.room.ListEgress\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x182\b\x01\x12\vlist_egress\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01Z\n" +
+	"listEgress\xe2\xf3\x18\xb9\x01\n" +
+	"\x06webrtc\x12\x11udb/native/webrtc\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\")udb.native.webrtc.list_egress.boilerplate*\vlist_egress2\n" +
+	"udb_webrtc:\vwebrtc.roomJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18X\n" +
+	"\x16webrtc.room.ListEgress\x12\x12webrtc.room.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18E\n" +
+	"\vwebrtc.room\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02\x13\x12\x11/v1/webrtc/egress\x1a\xf5\x02\xca\xf0\x19s\n" +
 	"\vwebrtc.room\x12\x06webrtc\x1a\x04room\"\fWebRTC Rooms*\brealtime0\x018\x01h\x01z\fwebrtc.rooms\x82\x01\x06webrtc\x8a\x01\vwebrtc.room\x92\x01\x12native.webrtc.room\xd2\xf0\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\xda\xf0\x19\x93\x01\n" +
 	"\x06webrtc\x12\x11udb/native/webrtc\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"\x1dudb.native.webrtc.config.json:\vwebrtc.roomJ\vUDB_API_KEYZ\x0fudb native lint\xe2\xf0\x19E\n" +
 	"\vwebrtc.room\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET2\x8e\x1b\n" +
@@ -2593,111 +2719,129 @@ func file_udb_core_webrtc_services_v1_webrtc_service_proto_rawDescGZIP() []byte 
 
 var file_udb_core_webrtc_services_v1_webrtc_service_proto_msgTypes = make([]protoimpl.MessageInfo, 33)
 var file_udb_core_webrtc_services_v1_webrtc_service_proto_goTypes = []any{
-	(*CreateRoomRequest)(nil),        // 0: udb.core.webrtc.services.v1.CreateRoomRequest
-	(*CreateRoomResponse)(nil),       // 1: udb.core.webrtc.services.v1.CreateRoomResponse
-	(*GetRoomRequest)(nil),           // 2: udb.core.webrtc.services.v1.GetRoomRequest
-	(*GetRoomResponse)(nil),          // 3: udb.core.webrtc.services.v1.GetRoomResponse
-	(*UpdateRoomRequest)(nil),        // 4: udb.core.webrtc.services.v1.UpdateRoomRequest
-	(*UpdateRoomResponse)(nil),       // 5: udb.core.webrtc.services.v1.UpdateRoomResponse
-	(*CloseRoomRequest)(nil),         // 6: udb.core.webrtc.services.v1.CloseRoomRequest
-	(*CloseRoomResponse)(nil),        // 7: udb.core.webrtc.services.v1.CloseRoomResponse
-	(*ListRoomsRequest)(nil),         // 8: udb.core.webrtc.services.v1.ListRoomsRequest
-	(*ListRoomsResponse)(nil),        // 9: udb.core.webrtc.services.v1.ListRoomsResponse
-	(*JoinRoomRequest)(nil),          // 10: udb.core.webrtc.services.v1.JoinRoomRequest
-	(*JoinRoomResponse)(nil),         // 11: udb.core.webrtc.services.v1.JoinRoomResponse
-	(*JoinSessionRequest)(nil),       // 12: udb.core.webrtc.services.v1.JoinSessionRequest
-	(*JoinSessionResponse)(nil),      // 13: udb.core.webrtc.services.v1.JoinSessionResponse
-	(*LeaveRoomRequest)(nil),         // 14: udb.core.webrtc.services.v1.LeaveRoomRequest
-	(*LeaveRoomResponse)(nil),        // 15: udb.core.webrtc.services.v1.LeaveRoomResponse
-	(*GetPeerRequest)(nil),           // 16: udb.core.webrtc.services.v1.GetPeerRequest
-	(*GetPeerResponse)(nil),          // 17: udb.core.webrtc.services.v1.GetPeerResponse
-	(*ListPeersRequest)(nil),         // 18: udb.core.webrtc.services.v1.ListPeersRequest
-	(*ListPeersResponse)(nil),        // 19: udb.core.webrtc.services.v1.ListPeersResponse
-	(*PublishTrackRequest)(nil),      // 20: udb.core.webrtc.services.v1.PublishTrackRequest
-	(*PublishTrackResponse)(nil),     // 21: udb.core.webrtc.services.v1.PublishTrackResponse
-	(*UnpublishTrackRequest)(nil),    // 22: udb.core.webrtc.services.v1.UnpublishTrackRequest
-	(*UnpublishTrackResponse)(nil),   // 23: udb.core.webrtc.services.v1.UnpublishTrackResponse
-	(*MuteTrackRequest)(nil),         // 24: udb.core.webrtc.services.v1.MuteTrackRequest
-	(*MuteTrackResponse)(nil),        // 25: udb.core.webrtc.services.v1.MuteTrackResponse
-	(*ListTracksRequest)(nil),        // 26: udb.core.webrtc.services.v1.ListTracksRequest
-	(*ListTracksResponse)(nil),       // 27: udb.core.webrtc.services.v1.ListTracksResponse
-	(*IceServer)(nil),                // 28: udb.core.webrtc.services.v1.IceServer
-	(*IssueCredentialsRequest)(nil),  // 29: udb.core.webrtc.services.v1.IssueCredentialsRequest
-	(*IssueCredentialsResponse)(nil), // 30: udb.core.webrtc.services.v1.IssueCredentialsResponse
-	(*SignalRequest)(nil),            // 31: udb.core.webrtc.services.v1.SignalRequest
-	(*SignalResponse)(nil),           // 32: udb.core.webrtc.services.v1.SignalResponse
-	(*v1.ApiError)(nil),              // 33: udb.core.common.v1.ApiError
-	(*v11.Room)(nil),                 // 34: udb.core.webrtc.entity.v1.Room
-	(*v11.Peer)(nil),                 // 35: udb.core.webrtc.entity.v1.Peer
-	(*timestamppb.Timestamp)(nil),    // 36: google.protobuf.Timestamp
-	(*v11.Track)(nil),                // 37: udb.core.webrtc.entity.v1.Track
+	(*CreateRoomRequest)(nil),          // 0: udb.core.webrtc.services.v1.CreateRoomRequest
+	(*CreateRoomResponse)(nil),         // 1: udb.core.webrtc.services.v1.CreateRoomResponse
+	(*GetRoomRequest)(nil),             // 2: udb.core.webrtc.services.v1.GetRoomRequest
+	(*GetRoomResponse)(nil),            // 3: udb.core.webrtc.services.v1.GetRoomResponse
+	(*UpdateRoomRequest)(nil),          // 4: udb.core.webrtc.services.v1.UpdateRoomRequest
+	(*UpdateRoomResponse)(nil),         // 5: udb.core.webrtc.services.v1.UpdateRoomResponse
+	(*CloseRoomRequest)(nil),           // 6: udb.core.webrtc.services.v1.CloseRoomRequest
+	(*CloseRoomResponse)(nil),          // 7: udb.core.webrtc.services.v1.CloseRoomResponse
+	(*ListRoomsRequest)(nil),           // 8: udb.core.webrtc.services.v1.ListRoomsRequest
+	(*ListRoomsResponse)(nil),          // 9: udb.core.webrtc.services.v1.ListRoomsResponse
+	(*JoinRoomRequest)(nil),            // 10: udb.core.webrtc.services.v1.JoinRoomRequest
+	(*JoinRoomResponse)(nil),           // 11: udb.core.webrtc.services.v1.JoinRoomResponse
+	(*JoinSessionRequest)(nil),         // 12: udb.core.webrtc.services.v1.JoinSessionRequest
+	(*JoinSessionResponse)(nil),        // 13: udb.core.webrtc.services.v1.JoinSessionResponse
+	(*LeaveRoomRequest)(nil),           // 14: udb.core.webrtc.services.v1.LeaveRoomRequest
+	(*LeaveRoomResponse)(nil),          // 15: udb.core.webrtc.services.v1.LeaveRoomResponse
+	(*GetPeerRequest)(nil),             // 16: udb.core.webrtc.services.v1.GetPeerRequest
+	(*GetPeerResponse)(nil),            // 17: udb.core.webrtc.services.v1.GetPeerResponse
+	(*ListPeersRequest)(nil),           // 18: udb.core.webrtc.services.v1.ListPeersRequest
+	(*ListPeersResponse)(nil),          // 19: udb.core.webrtc.services.v1.ListPeersResponse
+	(*PublishTrackRequest)(nil),        // 20: udb.core.webrtc.services.v1.PublishTrackRequest
+	(*PublishTrackResponse)(nil),       // 21: udb.core.webrtc.services.v1.PublishTrackResponse
+	(*UnpublishTrackRequest)(nil),      // 22: udb.core.webrtc.services.v1.UnpublishTrackRequest
+	(*UnpublishTrackResponse)(nil),     // 23: udb.core.webrtc.services.v1.UnpublishTrackResponse
+	(*MuteTrackRequest)(nil),           // 24: udb.core.webrtc.services.v1.MuteTrackRequest
+	(*MuteTrackResponse)(nil),          // 25: udb.core.webrtc.services.v1.MuteTrackResponse
+	(*ListTracksRequest)(nil),          // 26: udb.core.webrtc.services.v1.ListTracksRequest
+	(*ListTracksResponse)(nil),         // 27: udb.core.webrtc.services.v1.ListTracksResponse
+	(*IceServer)(nil),                  // 28: udb.core.webrtc.services.v1.IceServer
+	(*IssueCredentialsRequest)(nil),    // 29: udb.core.webrtc.services.v1.IssueCredentialsRequest
+	(*IssueCredentialsResponse)(nil),   // 30: udb.core.webrtc.services.v1.IssueCredentialsResponse
+	(*SignalRequest)(nil),              // 31: udb.core.webrtc.services.v1.SignalRequest
+	(*SignalResponse)(nil),             // 32: udb.core.webrtc.services.v1.SignalResponse
+	(*v1.ApiError)(nil),                // 33: udb.core.common.v1.ApiError
+	(*v11.Room)(nil),                   // 34: udb.core.webrtc.entity.v1.Room
+	(*fieldmaskpb.FieldMask)(nil),      // 35: google.protobuf.FieldMask
+	(*v11.Peer)(nil),                   // 36: udb.core.webrtc.entity.v1.Peer
+	(*timestamppb.Timestamp)(nil),      // 37: google.protobuf.Timestamp
+	(*v11.Track)(nil),                  // 38: udb.core.webrtc.entity.v1.Track
+	(*StartRoomCompositeRequest)(nil),  // 39: udb.core.webrtc.services.v1.StartRoomCompositeRequest
+	(*StartTrackEgressRequest)(nil),    // 40: udb.core.webrtc.services.v1.StartTrackEgressRequest
+	(*StopEgressRequest)(nil),          // 41: udb.core.webrtc.services.v1.StopEgressRequest
+	(*ListEgressRequest)(nil),          // 42: udb.core.webrtc.services.v1.ListEgressRequest
+	(*StartRoomCompositeResponse)(nil), // 43: udb.core.webrtc.services.v1.StartRoomCompositeResponse
+	(*StartTrackEgressResponse)(nil),   // 44: udb.core.webrtc.services.v1.StartTrackEgressResponse
+	(*StopEgressResponse)(nil),         // 45: udb.core.webrtc.services.v1.StopEgressResponse
+	(*ListEgressResponse)(nil),         // 46: udb.core.webrtc.services.v1.ListEgressResponse
 }
 var file_udb_core_webrtc_services_v1_webrtc_service_proto_depIdxs = []int32{
 	33, // 0: udb.core.webrtc.services.v1.CreateRoomResponse.error:type_name -> udb.core.common.v1.ApiError
 	34, // 1: udb.core.webrtc.services.v1.GetRoomResponse.room:type_name -> udb.core.webrtc.entity.v1.Room
 	33, // 2: udb.core.webrtc.services.v1.GetRoomResponse.error:type_name -> udb.core.common.v1.ApiError
-	33, // 3: udb.core.webrtc.services.v1.UpdateRoomResponse.error:type_name -> udb.core.common.v1.ApiError
-	33, // 4: udb.core.webrtc.services.v1.CloseRoomResponse.error:type_name -> udb.core.common.v1.ApiError
-	34, // 5: udb.core.webrtc.services.v1.ListRoomsResponse.rooms:type_name -> udb.core.webrtc.entity.v1.Room
-	33, // 6: udb.core.webrtc.services.v1.ListRoomsResponse.error:type_name -> udb.core.common.v1.ApiError
-	35, // 7: udb.core.webrtc.services.v1.JoinRoomResponse.peer:type_name -> udb.core.webrtc.entity.v1.Peer
-	35, // 8: udb.core.webrtc.services.v1.JoinRoomResponse.existing_peers:type_name -> udb.core.webrtc.entity.v1.Peer
-	33, // 9: udb.core.webrtc.services.v1.JoinRoomResponse.error:type_name -> udb.core.common.v1.ApiError
-	35, // 10: udb.core.webrtc.services.v1.JoinSessionResponse.peer:type_name -> udb.core.webrtc.entity.v1.Peer
-	35, // 11: udb.core.webrtc.services.v1.JoinSessionResponse.existing_peers:type_name -> udb.core.webrtc.entity.v1.Peer
-	28, // 12: udb.core.webrtc.services.v1.JoinSessionResponse.ice_servers:type_name -> udb.core.webrtc.services.v1.IceServer
-	36, // 13: udb.core.webrtc.services.v1.JoinSessionResponse.expires_at:type_name -> google.protobuf.Timestamp
-	33, // 14: udb.core.webrtc.services.v1.JoinSessionResponse.error:type_name -> udb.core.common.v1.ApiError
-	33, // 15: udb.core.webrtc.services.v1.LeaveRoomResponse.error:type_name -> udb.core.common.v1.ApiError
-	35, // 16: udb.core.webrtc.services.v1.GetPeerResponse.peer:type_name -> udb.core.webrtc.entity.v1.Peer
-	33, // 17: udb.core.webrtc.services.v1.GetPeerResponse.error:type_name -> udb.core.common.v1.ApiError
-	35, // 18: udb.core.webrtc.services.v1.ListPeersResponse.peers:type_name -> udb.core.webrtc.entity.v1.Peer
-	33, // 19: udb.core.webrtc.services.v1.ListPeersResponse.error:type_name -> udb.core.common.v1.ApiError
-	33, // 20: udb.core.webrtc.services.v1.PublishTrackResponse.error:type_name -> udb.core.common.v1.ApiError
-	33, // 21: udb.core.webrtc.services.v1.UnpublishTrackResponse.error:type_name -> udb.core.common.v1.ApiError
-	33, // 22: udb.core.webrtc.services.v1.MuteTrackResponse.error:type_name -> udb.core.common.v1.ApiError
-	37, // 23: udb.core.webrtc.services.v1.ListTracksResponse.tracks:type_name -> udb.core.webrtc.entity.v1.Track
-	33, // 24: udb.core.webrtc.services.v1.ListTracksResponse.error:type_name -> udb.core.common.v1.ApiError
-	28, // 25: udb.core.webrtc.services.v1.IssueCredentialsResponse.ice_servers:type_name -> udb.core.webrtc.services.v1.IceServer
-	36, // 26: udb.core.webrtc.services.v1.IssueCredentialsResponse.expires_at:type_name -> google.protobuf.Timestamp
-	33, // 27: udb.core.webrtc.services.v1.IssueCredentialsResponse.error:type_name -> udb.core.common.v1.ApiError
-	0,  // 28: udb.core.webrtc.services.v1.RoomService.CreateRoom:input_type -> udb.core.webrtc.services.v1.CreateRoomRequest
-	2,  // 29: udb.core.webrtc.services.v1.RoomService.GetRoom:input_type -> udb.core.webrtc.services.v1.GetRoomRequest
-	4,  // 30: udb.core.webrtc.services.v1.RoomService.UpdateRoom:input_type -> udb.core.webrtc.services.v1.UpdateRoomRequest
-	6,  // 31: udb.core.webrtc.services.v1.RoomService.CloseRoom:input_type -> udb.core.webrtc.services.v1.CloseRoomRequest
-	8,  // 32: udb.core.webrtc.services.v1.RoomService.ListRooms:input_type -> udb.core.webrtc.services.v1.ListRoomsRequest
-	10, // 33: udb.core.webrtc.services.v1.PeerService.JoinRoom:input_type -> udb.core.webrtc.services.v1.JoinRoomRequest
-	12, // 34: udb.core.webrtc.services.v1.PeerService.JoinSession:input_type -> udb.core.webrtc.services.v1.JoinSessionRequest
-	14, // 35: udb.core.webrtc.services.v1.PeerService.LeaveRoom:input_type -> udb.core.webrtc.services.v1.LeaveRoomRequest
-	16, // 36: udb.core.webrtc.services.v1.PeerService.GetPeer:input_type -> udb.core.webrtc.services.v1.GetPeerRequest
-	18, // 37: udb.core.webrtc.services.v1.PeerService.ListPeers:input_type -> udb.core.webrtc.services.v1.ListPeersRequest
-	20, // 38: udb.core.webrtc.services.v1.TrackService.PublishTrack:input_type -> udb.core.webrtc.services.v1.PublishTrackRequest
-	22, // 39: udb.core.webrtc.services.v1.TrackService.UnpublishTrack:input_type -> udb.core.webrtc.services.v1.UnpublishTrackRequest
-	24, // 40: udb.core.webrtc.services.v1.TrackService.MuteTrack:input_type -> udb.core.webrtc.services.v1.MuteTrackRequest
-	26, // 41: udb.core.webrtc.services.v1.TrackService.ListTracks:input_type -> udb.core.webrtc.services.v1.ListTracksRequest
-	29, // 42: udb.core.webrtc.services.v1.TurnService.IssueCredentials:input_type -> udb.core.webrtc.services.v1.IssueCredentialsRequest
-	31, // 43: udb.core.webrtc.services.v1.SignalingService.Signal:input_type -> udb.core.webrtc.services.v1.SignalRequest
-	1,  // 44: udb.core.webrtc.services.v1.RoomService.CreateRoom:output_type -> udb.core.webrtc.services.v1.CreateRoomResponse
-	3,  // 45: udb.core.webrtc.services.v1.RoomService.GetRoom:output_type -> udb.core.webrtc.services.v1.GetRoomResponse
-	5,  // 46: udb.core.webrtc.services.v1.RoomService.UpdateRoom:output_type -> udb.core.webrtc.services.v1.UpdateRoomResponse
-	7,  // 47: udb.core.webrtc.services.v1.RoomService.CloseRoom:output_type -> udb.core.webrtc.services.v1.CloseRoomResponse
-	9,  // 48: udb.core.webrtc.services.v1.RoomService.ListRooms:output_type -> udb.core.webrtc.services.v1.ListRoomsResponse
-	11, // 49: udb.core.webrtc.services.v1.PeerService.JoinRoom:output_type -> udb.core.webrtc.services.v1.JoinRoomResponse
-	13, // 50: udb.core.webrtc.services.v1.PeerService.JoinSession:output_type -> udb.core.webrtc.services.v1.JoinSessionResponse
-	15, // 51: udb.core.webrtc.services.v1.PeerService.LeaveRoom:output_type -> udb.core.webrtc.services.v1.LeaveRoomResponse
-	17, // 52: udb.core.webrtc.services.v1.PeerService.GetPeer:output_type -> udb.core.webrtc.services.v1.GetPeerResponse
-	19, // 53: udb.core.webrtc.services.v1.PeerService.ListPeers:output_type -> udb.core.webrtc.services.v1.ListPeersResponse
-	21, // 54: udb.core.webrtc.services.v1.TrackService.PublishTrack:output_type -> udb.core.webrtc.services.v1.PublishTrackResponse
-	23, // 55: udb.core.webrtc.services.v1.TrackService.UnpublishTrack:output_type -> udb.core.webrtc.services.v1.UnpublishTrackResponse
-	25, // 56: udb.core.webrtc.services.v1.TrackService.MuteTrack:output_type -> udb.core.webrtc.services.v1.MuteTrackResponse
-	27, // 57: udb.core.webrtc.services.v1.TrackService.ListTracks:output_type -> udb.core.webrtc.services.v1.ListTracksResponse
-	30, // 58: udb.core.webrtc.services.v1.TurnService.IssueCredentials:output_type -> udb.core.webrtc.services.v1.IssueCredentialsResponse
-	32, // 59: udb.core.webrtc.services.v1.SignalingService.Signal:output_type -> udb.core.webrtc.services.v1.SignalResponse
-	44, // [44:60] is the sub-list for method output_type
-	28, // [28:44] is the sub-list for method input_type
-	28, // [28:28] is the sub-list for extension type_name
-	28, // [28:28] is the sub-list for extension extendee
-	0,  // [0:28] is the sub-list for field type_name
+	35, // 3: udb.core.webrtc.services.v1.UpdateRoomRequest.update_mask:type_name -> google.protobuf.FieldMask
+	33, // 4: udb.core.webrtc.services.v1.UpdateRoomResponse.error:type_name -> udb.core.common.v1.ApiError
+	33, // 5: udb.core.webrtc.services.v1.CloseRoomResponse.error:type_name -> udb.core.common.v1.ApiError
+	34, // 6: udb.core.webrtc.services.v1.ListRoomsResponse.rooms:type_name -> udb.core.webrtc.entity.v1.Room
+	33, // 7: udb.core.webrtc.services.v1.ListRoomsResponse.error:type_name -> udb.core.common.v1.ApiError
+	36, // 8: udb.core.webrtc.services.v1.JoinRoomResponse.peer:type_name -> udb.core.webrtc.entity.v1.Peer
+	36, // 9: udb.core.webrtc.services.v1.JoinRoomResponse.existing_peers:type_name -> udb.core.webrtc.entity.v1.Peer
+	33, // 10: udb.core.webrtc.services.v1.JoinRoomResponse.error:type_name -> udb.core.common.v1.ApiError
+	36, // 11: udb.core.webrtc.services.v1.JoinSessionResponse.peer:type_name -> udb.core.webrtc.entity.v1.Peer
+	36, // 12: udb.core.webrtc.services.v1.JoinSessionResponse.existing_peers:type_name -> udb.core.webrtc.entity.v1.Peer
+	28, // 13: udb.core.webrtc.services.v1.JoinSessionResponse.ice_servers:type_name -> udb.core.webrtc.services.v1.IceServer
+	37, // 14: udb.core.webrtc.services.v1.JoinSessionResponse.expires_at:type_name -> google.protobuf.Timestamp
+	33, // 15: udb.core.webrtc.services.v1.JoinSessionResponse.error:type_name -> udb.core.common.v1.ApiError
+	33, // 16: udb.core.webrtc.services.v1.LeaveRoomResponse.error:type_name -> udb.core.common.v1.ApiError
+	36, // 17: udb.core.webrtc.services.v1.GetPeerResponse.peer:type_name -> udb.core.webrtc.entity.v1.Peer
+	33, // 18: udb.core.webrtc.services.v1.GetPeerResponse.error:type_name -> udb.core.common.v1.ApiError
+	36, // 19: udb.core.webrtc.services.v1.ListPeersResponse.peers:type_name -> udb.core.webrtc.entity.v1.Peer
+	33, // 20: udb.core.webrtc.services.v1.ListPeersResponse.error:type_name -> udb.core.common.v1.ApiError
+	33, // 21: udb.core.webrtc.services.v1.PublishTrackResponse.error:type_name -> udb.core.common.v1.ApiError
+	33, // 22: udb.core.webrtc.services.v1.UnpublishTrackResponse.error:type_name -> udb.core.common.v1.ApiError
+	33, // 23: udb.core.webrtc.services.v1.MuteTrackResponse.error:type_name -> udb.core.common.v1.ApiError
+	38, // 24: udb.core.webrtc.services.v1.ListTracksResponse.tracks:type_name -> udb.core.webrtc.entity.v1.Track
+	33, // 25: udb.core.webrtc.services.v1.ListTracksResponse.error:type_name -> udb.core.common.v1.ApiError
+	28, // 26: udb.core.webrtc.services.v1.IssueCredentialsResponse.ice_servers:type_name -> udb.core.webrtc.services.v1.IceServer
+	37, // 27: udb.core.webrtc.services.v1.IssueCredentialsResponse.expires_at:type_name -> google.protobuf.Timestamp
+	33, // 28: udb.core.webrtc.services.v1.IssueCredentialsResponse.error:type_name -> udb.core.common.v1.ApiError
+	0,  // 29: udb.core.webrtc.services.v1.RoomService.CreateRoom:input_type -> udb.core.webrtc.services.v1.CreateRoomRequest
+	2,  // 30: udb.core.webrtc.services.v1.RoomService.GetRoom:input_type -> udb.core.webrtc.services.v1.GetRoomRequest
+	4,  // 31: udb.core.webrtc.services.v1.RoomService.UpdateRoom:input_type -> udb.core.webrtc.services.v1.UpdateRoomRequest
+	6,  // 32: udb.core.webrtc.services.v1.RoomService.CloseRoom:input_type -> udb.core.webrtc.services.v1.CloseRoomRequest
+	8,  // 33: udb.core.webrtc.services.v1.RoomService.ListRooms:input_type -> udb.core.webrtc.services.v1.ListRoomsRequest
+	39, // 34: udb.core.webrtc.services.v1.RoomService.StartRoomComposite:input_type -> udb.core.webrtc.services.v1.StartRoomCompositeRequest
+	40, // 35: udb.core.webrtc.services.v1.RoomService.StartTrackEgress:input_type -> udb.core.webrtc.services.v1.StartTrackEgressRequest
+	41, // 36: udb.core.webrtc.services.v1.RoomService.StopEgress:input_type -> udb.core.webrtc.services.v1.StopEgressRequest
+	42, // 37: udb.core.webrtc.services.v1.RoomService.ListEgress:input_type -> udb.core.webrtc.services.v1.ListEgressRequest
+	10, // 38: udb.core.webrtc.services.v1.PeerService.JoinRoom:input_type -> udb.core.webrtc.services.v1.JoinRoomRequest
+	12, // 39: udb.core.webrtc.services.v1.PeerService.JoinSession:input_type -> udb.core.webrtc.services.v1.JoinSessionRequest
+	14, // 40: udb.core.webrtc.services.v1.PeerService.LeaveRoom:input_type -> udb.core.webrtc.services.v1.LeaveRoomRequest
+	16, // 41: udb.core.webrtc.services.v1.PeerService.GetPeer:input_type -> udb.core.webrtc.services.v1.GetPeerRequest
+	18, // 42: udb.core.webrtc.services.v1.PeerService.ListPeers:input_type -> udb.core.webrtc.services.v1.ListPeersRequest
+	20, // 43: udb.core.webrtc.services.v1.TrackService.PublishTrack:input_type -> udb.core.webrtc.services.v1.PublishTrackRequest
+	22, // 44: udb.core.webrtc.services.v1.TrackService.UnpublishTrack:input_type -> udb.core.webrtc.services.v1.UnpublishTrackRequest
+	24, // 45: udb.core.webrtc.services.v1.TrackService.MuteTrack:input_type -> udb.core.webrtc.services.v1.MuteTrackRequest
+	26, // 46: udb.core.webrtc.services.v1.TrackService.ListTracks:input_type -> udb.core.webrtc.services.v1.ListTracksRequest
+	29, // 47: udb.core.webrtc.services.v1.TurnService.IssueCredentials:input_type -> udb.core.webrtc.services.v1.IssueCredentialsRequest
+	31, // 48: udb.core.webrtc.services.v1.SignalingService.Signal:input_type -> udb.core.webrtc.services.v1.SignalRequest
+	1,  // 49: udb.core.webrtc.services.v1.RoomService.CreateRoom:output_type -> udb.core.webrtc.services.v1.CreateRoomResponse
+	3,  // 50: udb.core.webrtc.services.v1.RoomService.GetRoom:output_type -> udb.core.webrtc.services.v1.GetRoomResponse
+	5,  // 51: udb.core.webrtc.services.v1.RoomService.UpdateRoom:output_type -> udb.core.webrtc.services.v1.UpdateRoomResponse
+	7,  // 52: udb.core.webrtc.services.v1.RoomService.CloseRoom:output_type -> udb.core.webrtc.services.v1.CloseRoomResponse
+	9,  // 53: udb.core.webrtc.services.v1.RoomService.ListRooms:output_type -> udb.core.webrtc.services.v1.ListRoomsResponse
+	43, // 54: udb.core.webrtc.services.v1.RoomService.StartRoomComposite:output_type -> udb.core.webrtc.services.v1.StartRoomCompositeResponse
+	44, // 55: udb.core.webrtc.services.v1.RoomService.StartTrackEgress:output_type -> udb.core.webrtc.services.v1.StartTrackEgressResponse
+	45, // 56: udb.core.webrtc.services.v1.RoomService.StopEgress:output_type -> udb.core.webrtc.services.v1.StopEgressResponse
+	46, // 57: udb.core.webrtc.services.v1.RoomService.ListEgress:output_type -> udb.core.webrtc.services.v1.ListEgressResponse
+	11, // 58: udb.core.webrtc.services.v1.PeerService.JoinRoom:output_type -> udb.core.webrtc.services.v1.JoinRoomResponse
+	13, // 59: udb.core.webrtc.services.v1.PeerService.JoinSession:output_type -> udb.core.webrtc.services.v1.JoinSessionResponse
+	15, // 60: udb.core.webrtc.services.v1.PeerService.LeaveRoom:output_type -> udb.core.webrtc.services.v1.LeaveRoomResponse
+	17, // 61: udb.core.webrtc.services.v1.PeerService.GetPeer:output_type -> udb.core.webrtc.services.v1.GetPeerResponse
+	19, // 62: udb.core.webrtc.services.v1.PeerService.ListPeers:output_type -> udb.core.webrtc.services.v1.ListPeersResponse
+	21, // 63: udb.core.webrtc.services.v1.TrackService.PublishTrack:output_type -> udb.core.webrtc.services.v1.PublishTrackResponse
+	23, // 64: udb.core.webrtc.services.v1.TrackService.UnpublishTrack:output_type -> udb.core.webrtc.services.v1.UnpublishTrackResponse
+	25, // 65: udb.core.webrtc.services.v1.TrackService.MuteTrack:output_type -> udb.core.webrtc.services.v1.MuteTrackResponse
+	27, // 66: udb.core.webrtc.services.v1.TrackService.ListTracks:output_type -> udb.core.webrtc.services.v1.ListTracksResponse
+	30, // 67: udb.core.webrtc.services.v1.TurnService.IssueCredentials:output_type -> udb.core.webrtc.services.v1.IssueCredentialsResponse
+	32, // 68: udb.core.webrtc.services.v1.SignalingService.Signal:output_type -> udb.core.webrtc.services.v1.SignalResponse
+	49, // [49:69] is the sub-list for method output_type
+	29, // [29:49] is the sub-list for method input_type
+	29, // [29:29] is the sub-list for extension type_name
+	29, // [29:29] is the sub-list for extension extendee
+	0,  // [0:29] is the sub-list for field type_name
 }
 
 func init() { file_udb_core_webrtc_services_v1_webrtc_service_proto_init() }
@@ -2705,6 +2849,7 @@ func file_udb_core_webrtc_services_v1_webrtc_service_proto_init() {
 	if File_udb_core_webrtc_services_v1_webrtc_service_proto != nil {
 		return
 	}
+	file_udb_core_webrtc_services_v1_egress_proto_init()
 	file_udb_core_webrtc_services_v1_webrtc_service_proto_msgTypes[31].OneofWrappers = []any{
 		(*SignalRequest_OfferSdp)(nil),
 		(*SignalRequest_AnswerSdp)(nil),

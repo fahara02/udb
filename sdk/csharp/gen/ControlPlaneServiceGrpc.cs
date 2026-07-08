@@ -80,6 +80,10 @@ namespace udb.core.Control.Services.V1 {
     static readonly grpc::Marshaller<global::udb.core.Control.Services.V1.AckStatusRequest> __Marshaller_udb_core_control_services_v1_AckStatusRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Control.Services.V1.AckStatusRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::udb.core.Control.Services.V1.AckStatusResponse> __Marshaller_udb_core_control_services_v1_AckStatusResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Control.Services.V1.AckStatusResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Control.Services.V1.RollbackResourcesRequest> __Marshaller_udb_core_control_services_v1_RollbackResourcesRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Control.Services.V1.RollbackResourcesRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Control.Services.V1.RollbackResourcesResponse> __Marshaller_udb_core_control_services_v1_RollbackResourcesResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Control.Services.V1.RollbackResourcesResponse.Parser));
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Method<global::udb.core.Control.Services.V1.DiscoveryRequest, global::udb.core.Control.Services.V1.DiscoveryResponse> __Method_StreamResources = new grpc::Method<global::udb.core.Control.Services.V1.DiscoveryRequest, global::udb.core.Control.Services.V1.DiscoveryResponse>(
@@ -121,6 +125,14 @@ namespace udb.core.Control.Services.V1 {
         __Marshaller_udb_core_control_services_v1_AckStatusRequest,
         __Marshaller_udb_core_control_services_v1_AckStatusResponse);
 
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Control.Services.V1.RollbackResourcesRequest, global::udb.core.Control.Services.V1.RollbackResourcesResponse> __Method_RollbackResources = new grpc::Method<global::udb.core.Control.Services.V1.RollbackResourcesRequest, global::udb.core.Control.Services.V1.RollbackResourcesResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "RollbackResources",
+        __Marshaller_udb_core_control_services_v1_RollbackResourcesRequest,
+        __Marshaller_udb_core_control_services_v1_RollbackResourcesResponse);
+
     /// <summary>Service descriptor</summary>
     public static global::Google.Protobuf.Reflection.ServiceDescriptor Descriptor
     {
@@ -133,6 +145,11 @@ namespace udb.core.Control.Services.V1 {
     {
       /// <summary>
       /// ── Aggregated state-of-the-world (ADS) ───────────────────────────────────
+      /// Node↔broker push channel only: a data-plane PEP node opens this bidirectional
+      /// stream to receive versioned resources and echo ACK/NACK nonces. It carries no
+      /// human/session credential, no REST surface, and is never part of an application
+      /// CRUD facade — so it is gated to internal callers (a loopback node or a node
+      /// presenting a verified mTLS identity); an untrusted remote caller is rejected.
       /// </summary>
       /// <param name="requestStream">Used for reading requests from the client.</param>
       /// <param name="responseStream">Used for sending responses back to the client.</param>
@@ -146,6 +163,9 @@ namespace udb.core.Control.Services.V1 {
 
       /// <summary>
       /// ── Incremental / delta discovery ─────────────────────────────────────────
+      /// Same node↔broker push semantics as StreamResources (incremental form). Only a
+      /// data-plane node should open it; restricted to internal callers for the same
+      /// reasons (no session credential, no REST surface, not an application facade RPC).
       /// </summary>
       /// <param name="requestStream">Used for reading requests from the client.</param>
       /// <param name="responseStream">Used for sending responses back to the client.</param>
@@ -187,6 +207,18 @@ namespace udb.core.Control.Services.V1 {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
 
+      /// <summary>
+      /// ── Rollback a node/resource-type to a retained served snapshot ────────────
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Control.Services.V1.RollbackResourcesResponse> RollbackResources(global::udb.core.Control.Services.V1.RollbackResourcesRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
     }
 
     /// <summary>Client for ControlPlaneService</summary>
@@ -218,6 +250,11 @@ namespace udb.core.Control.Services.V1 {
 
       /// <summary>
       /// ── Aggregated state-of-the-world (ADS) ───────────────────────────────────
+      /// Node↔broker push channel only: a data-plane PEP node opens this bidirectional
+      /// stream to receive versioned resources and echo ACK/NACK nonces. It carries no
+      /// human/session credential, no REST surface, and is never part of an application
+      /// CRUD facade — so it is gated to internal callers (a loopback node or a node
+      /// presenting a verified mTLS identity); an untrusted remote caller is rejected.
       /// </summary>
       /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
       /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
@@ -230,6 +267,11 @@ namespace udb.core.Control.Services.V1 {
       }
       /// <summary>
       /// ── Aggregated state-of-the-world (ADS) ───────────────────────────────────
+      /// Node↔broker push channel only: a data-plane PEP node opens this bidirectional
+      /// stream to receive versioned resources and echo ACK/NACK nonces. It carries no
+      /// human/session credential, no REST surface, and is never part of an application
+      /// CRUD facade — so it is gated to internal callers (a loopback node or a node
+      /// presenting a verified mTLS identity); an untrusted remote caller is rejected.
       /// </summary>
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
@@ -240,6 +282,9 @@ namespace udb.core.Control.Services.V1 {
       }
       /// <summary>
       /// ── Incremental / delta discovery ─────────────────────────────────────────
+      /// Same node↔broker push semantics as StreamResources (incremental form). Only a
+      /// data-plane node should open it; restricted to internal callers for the same
+      /// reasons (no session credential, no REST surface, not an application facade RPC).
       /// </summary>
       /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
       /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
@@ -252,6 +297,9 @@ namespace udb.core.Control.Services.V1 {
       }
       /// <summary>
       /// ── Incremental / delta discovery ─────────────────────────────────────────
+      /// Same node↔broker push semantics as StreamResources (incremental form). Only a
+      /// data-plane node should open it; restricted to internal callers for the same
+      /// reasons (no session credential, no REST surface, not an application facade RPC).
       /// </summary>
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
@@ -376,6 +424,54 @@ namespace udb.core.Control.Services.V1 {
       {
         return CallInvoker.AsyncUnaryCall(__Method_AckStatus, null, options, request);
       }
+      /// <summary>
+      /// ── Rollback a node/resource-type to a retained served snapshot ────────────
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Control.Services.V1.RollbackResourcesResponse RollbackResources(global::udb.core.Control.Services.V1.RollbackResourcesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return RollbackResources(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// ── Rollback a node/resource-type to a retained served snapshot ────────────
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Control.Services.V1.RollbackResourcesResponse RollbackResources(global::udb.core.Control.Services.V1.RollbackResourcesRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_RollbackResources, null, options, request);
+      }
+      /// <summary>
+      /// ── Rollback a node/resource-type to a retained served snapshot ────────────
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Control.Services.V1.RollbackResourcesResponse> RollbackResourcesAsync(global::udb.core.Control.Services.V1.RollbackResourcesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return RollbackResourcesAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// ── Rollback a node/resource-type to a retained served snapshot ────────────
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Control.Services.V1.RollbackResourcesResponse> RollbackResourcesAsync(global::udb.core.Control.Services.V1.RollbackResourcesRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_RollbackResources, null, options, request);
+      }
       /// <summary>Creates a new instance of client from given <c>ClientBaseConfiguration</c>.</summary>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       protected override ControlPlaneServiceClient NewInstance(ClientBaseConfiguration configuration)
@@ -394,7 +490,8 @@ namespace udb.core.Control.Services.V1 {
           .AddMethod(__Method_DeltaResources, serviceImpl.DeltaResources)
           .AddMethod(__Method_GetResources, serviceImpl.GetResources)
           .AddMethod(__Method_ListNodeStates, serviceImpl.ListNodeStates)
-          .AddMethod(__Method_AckStatus, serviceImpl.AckStatus).Build();
+          .AddMethod(__Method_AckStatus, serviceImpl.AckStatus)
+          .AddMethod(__Method_RollbackResources, serviceImpl.RollbackResources).Build();
     }
 
     /// <summary>Register service method with a service binder with or without implementation. Useful when customizing the service binding logic.
@@ -409,6 +506,7 @@ namespace udb.core.Control.Services.V1 {
       serviceBinder.AddMethod(__Method_GetResources, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Control.Services.V1.GetResourcesRequest, global::udb.core.Control.Services.V1.GetResourcesResponse>(serviceImpl.GetResources));
       serviceBinder.AddMethod(__Method_ListNodeStates, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Control.Services.V1.ListNodeStatesRequest, global::udb.core.Control.Services.V1.ListNodeStatesResponse>(serviceImpl.ListNodeStates));
       serviceBinder.AddMethod(__Method_AckStatus, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Control.Services.V1.AckStatusRequest, global::udb.core.Control.Services.V1.AckStatusResponse>(serviceImpl.AckStatus));
+      serviceBinder.AddMethod(__Method_RollbackResources, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Control.Services.V1.RollbackResourcesRequest, global::udb.core.Control.Services.V1.RollbackResourcesResponse>(serviceImpl.RollbackResources));
     }
 
   }

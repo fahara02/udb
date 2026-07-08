@@ -47,6 +47,21 @@ public final class WebrtcEventsProto {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_webrtc_events_v1_PeerLeft_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_webrtc_events_v1_EgressStarted_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_webrtc_events_v1_EgressStarted_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_webrtc_events_v1_EgressStopped_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_webrtc_events_v1_EgressStopped_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_webrtc_events_v1_EgressFailed_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_webrtc_events_v1_EgressFailed_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_webrtc_events_v1_TrackPublished_descriptor;
   static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
@@ -91,22 +106,47 @@ public final class WebrtcEventsProto {
       "ogle.protobuf.TimestampR\ttimestamp:m\222\262\031i" +
       "\n\"udb.core.webrtc.events.v1.PeerLeft\022\027ud" +
       "b.webrtc.peer_left.v1\032\ttenant_id\"\010standa" +
-      "rd*\rat_least_once2\006stable\"\312\002\n\016TrackPubli" +
-      "shed\022\031\n\010event_id\030\001 \001(\tR\007eventId\022\027\n\007room_" +
-      "id\030\002 \001(\tR\006roomId\022\027\n\007peer_id\030\003 \001(\tR\006peerI" +
-      "d\022\031\n\010track_id\030\004 \001(\tR\007trackId\022\033\n\ttenant_i" +
-      "d\030\005 \001(\tR\010tenantId\0228\n\ttimestamp\030\006 \001(\0132\032.g" +
-      "oogle.protobuf.TimestampR\ttimestamp:y\222\262\031" +
-      "u\n(udb.core.webrtc.events.v1.TrackPublis" +
-      "hed\022\035udb.webrtc.track_published.v1\032\ttena" +
-      "nt_id\"\010standard*\rat_least_once2\006stableB\202" +
-      "\002\n\035com.udb.core.webrtc.events.v1B\021Webrtc" +
-      "EventsProtoP\001ZEgithub.com/fahara02/udb/s" +
-      "dk/go/gen/udb/core/webrtc/events/v1;even" +
-      "tsv1\242\002\004UCWE\252\002\031udb.core.Webrtc.Events.V1\312" +
-      "\002\031Udb\\Core\\Webrtc\\Events\\V1\342\002%Udb\\GPBMet" +
-      "adata\\Core\\Webrtc\\Events\\V1\352\002\035Udb::Core:" +
-      ":Webrtc::Events::V1b\006proto3"
+      "rd*\rat_least_once2\006stable\"\337\002\n\rEgressStar" +
+      "ted\022\031\n\010event_id\030\001 \001(\tR\007eventId\022\033\n\tegress" +
+      "_id\030\002 \001(\tR\010egressId\022\027\n\007room_id\030\003 \001(\tR\006ro" +
+      "omId\022\031\n\010track_id\030\004 \001(\tR\007trackId\022\033\n\ttenan" +
+      "t_id\030\005 \001(\tR\010tenantId\022\022\n\004kind\030\006 \001(\tR\004kind" +
+      "\0228\n\ttimestamp\030\007 \001(\0132\032.google.protobuf.Ti" +
+      "mestampR\ttimestamp:w\222\262\031s\n\'udb.core.webrt" +
+      "c.events.v1.EgressStarted\022\034udb.webrtc.eg" +
+      "ress_started.v1\032\ttenant_id\"\010standard*\rat" +
+      "_least_once2\006stable\"\260\002\n\rEgressStopped\022\031\n" +
+      "\010event_id\030\001 \001(\tR\007eventId\022\033\n\tegress_id\030\002 " +
+      "\001(\tR\010egressId\022\027\n\007room_id\030\003 \001(\tR\006roomId\022\033" +
+      "\n\ttenant_id\030\004 \001(\tR\010tenantId\0228\n\ttimestamp" +
+      "\030\005 \001(\0132\032.google.protobuf.TimestampR\ttime" +
+      "stamp:w\222\262\031s\n\'udb.core.webrtc.events.v1.E" +
+      "gressStopped\022\034udb.webrtc.egress_stopped." +
+      "v1\032\ttenant_id\"\010standard*\rat_least_once2\006" +
+      "stable\"\305\002\n\014EgressFailed\022\031\n\010event_id\030\001 \001(" +
+      "\tR\007eventId\022\033\n\tegress_id\030\002 \001(\tR\010egressId\022" +
+      "\027\n\007room_id\030\003 \001(\tR\006roomId\022\033\n\ttenant_id\030\004 " +
+      "\001(\tR\010tenantId\022\026\n\006reason\030\005 \001(\tR\006reason\0228\n" +
+      "\ttimestamp\030\006 \001(\0132\032.google.protobuf.Times" +
+      "tampR\ttimestamp:u\222\262\031q\n&udb.core.webrtc.e" +
+      "vents.v1.EgressFailed\022\033udb.webrtc.egress" +
+      "_failed.v1\032\ttenant_id\"\010standard*\rat_leas" +
+      "t_once2\006stable\"\312\002\n\016TrackPublished\022\031\n\010eve" +
+      "nt_id\030\001 \001(\tR\007eventId\022\027\n\007room_id\030\002 \001(\tR\006r" +
+      "oomId\022\027\n\007peer_id\030\003 \001(\tR\006peerId\022\031\n\010track_" +
+      "id\030\004 \001(\tR\007trackId\022\033\n\ttenant_id\030\005 \001(\tR\010te" +
+      "nantId\0228\n\ttimestamp\030\006 \001(\0132\032.google.proto" +
+      "buf.TimestampR\ttimestamp:y\222\262\031u\n(udb.core" +
+      ".webrtc.events.v1.TrackPublished\022\035udb.we" +
+      "brtc.track_published.v1\032\ttenant_id\"\010stan" +
+      "dard*\rat_least_once2\006stableB\202\002\n\035com.udb." +
+      "core.webrtc.events.v1B\021WebrtcEventsProto" +
+      "P\001ZEgithub.com/fahara02/udb/sdk/go/gen/u" +
+      "db/core/webrtc/events/v1;eventsv1\242\002\004UCWE" +
+      "\252\002\031udb.core.Webrtc.Events.V1\312\002\031Udb\\Core\\" +
+      "Webrtc\\Events\\V1\342\002%Udb\\GPBMetadata\\Core\\" +
+      "Webrtc\\Events\\V1\352\002\035Udb::Core::Webrtc::Ev" +
+      "ents::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -138,8 +178,26 @@ public final class WebrtcEventsProto {
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_webrtc_events_v1_PeerLeft_descriptor,
         new java.lang.String[] { "EventId", "RoomId", "PeerId", "TenantId", "Timestamp", });
-    internal_static_udb_core_webrtc_events_v1_TrackPublished_descriptor =
+    internal_static_udb_core_webrtc_events_v1_EgressStarted_descriptor =
       getDescriptor().getMessageTypes().get(4);
+    internal_static_udb_core_webrtc_events_v1_EgressStarted_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_webrtc_events_v1_EgressStarted_descriptor,
+        new java.lang.String[] { "EventId", "EgressId", "RoomId", "TrackId", "TenantId", "Kind", "Timestamp", });
+    internal_static_udb_core_webrtc_events_v1_EgressStopped_descriptor =
+      getDescriptor().getMessageTypes().get(5);
+    internal_static_udb_core_webrtc_events_v1_EgressStopped_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_webrtc_events_v1_EgressStopped_descriptor,
+        new java.lang.String[] { "EventId", "EgressId", "RoomId", "TenantId", "Timestamp", });
+    internal_static_udb_core_webrtc_events_v1_EgressFailed_descriptor =
+      getDescriptor().getMessageTypes().get(6);
+    internal_static_udb_core_webrtc_events_v1_EgressFailed_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_webrtc_events_v1_EgressFailed_descriptor,
+        new java.lang.String[] { "EventId", "EgressId", "RoomId", "TenantId", "Reason", "Timestamp", });
+    internal_static_udb_core_webrtc_events_v1_TrackPublished_descriptor =
+      getDescriptor().getMessageTypes().get(7);
     internal_static_udb_core_webrtc_events_v1_TrackPublished_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_webrtc_events_v1_TrackPublished_descriptor,

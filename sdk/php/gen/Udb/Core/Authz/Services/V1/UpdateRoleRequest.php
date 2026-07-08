@@ -34,6 +34,13 @@ class UpdateRoleRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string updated_by = 5 [json_name = "updatedBy", (.google.api.field_behavior) = REQUIRED];</code>
      */
     protected $updated_by = '';
+    /**
+     * Optional PATCH mask relative to the role resource. When omitted, legacy
+     * clients keep the historical non-empty-field patch behavior.
+     *
+     * Generated from protobuf field <code>.google.protobuf.FieldMask update_mask = 6 [json_name = "updateMask"];</code>
+     */
+    protected $update_mask = null;
 
     /**
      * Constructor.
@@ -46,6 +53,9 @@ class UpdateRoleRequest extends \Google\Protobuf\Internal\Message
      *     @type string $description
      *     @type bool $is_active
      *     @type string $updated_by
+     *     @type \Google\Protobuf\FieldMask $update_mask
+     *           Optional PATCH mask relative to the role resource. When omitted, legacy
+     *           clients keep the historical non-empty-field patch behavior.
      * }
      */
     public function __construct($data = NULL) {
@@ -169,6 +179,44 @@ class UpdateRoleRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, True);
         $this->updated_by = $var;
+
+        return $this;
+    }
+
+    /**
+     * Optional PATCH mask relative to the role resource. When omitted, legacy
+     * clients keep the historical non-empty-field patch behavior.
+     *
+     * Generated from protobuf field <code>.google.protobuf.FieldMask update_mask = 6 [json_name = "updateMask"];</code>
+     * @return \Google\Protobuf\FieldMask|null
+     */
+    public function getUpdateMask()
+    {
+        return $this->update_mask;
+    }
+
+    public function hasUpdateMask()
+    {
+        return isset($this->update_mask);
+    }
+
+    public function clearUpdateMask()
+    {
+        unset($this->update_mask);
+    }
+
+    /**
+     * Optional PATCH mask relative to the role resource. When omitted, legacy
+     * clients keep the historical non-empty-field patch behavior.
+     *
+     * Generated from protobuf field <code>.google.protobuf.FieldMask update_mask = 6 [json_name = "updateMask"];</code>
+     * @param \Google\Protobuf\FieldMask $var
+     * @return $this
+     */
+    public function setUpdateMask($var)
+    {
+        GPBUtil::checkMessage($var, \Google\Protobuf\FieldMask::class);
+        $this->update_mask = $var;
 
         return $this;
     }

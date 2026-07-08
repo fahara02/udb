@@ -34,6 +34,12 @@ class ListAssetsRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>int32 page_size = 5 [json_name = "pageSize"];</code>
      */
     protected $page_size = 0;
+    /**
+     * Opaque pagination token returned by ListAssetsResponse.next_page_token.
+     *
+     * Generated from protobuf field <code>string page_token = 6 [json_name = "pageToken"];</code>
+     */
+    protected $page_token = '';
 
     /**
      * Constructor.
@@ -46,6 +52,8 @@ class ListAssetsRequest extends \Google\Protobuf\Internal\Message
      *     @type string $status
      *     @type int $page
      *     @type int $page_size
+     *     @type string $page_token
+     *           Opaque pagination token returned by ListAssetsResponse.next_page_token.
      * }
      */
     public function __construct($data = NULL) {
@@ -159,6 +167,32 @@ class ListAssetsRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkInt32($var);
         $this->page_size = $var;
+
+        return $this;
+    }
+
+    /**
+     * Opaque pagination token returned by ListAssetsResponse.next_page_token.
+     *
+     * Generated from protobuf field <code>string page_token = 6 [json_name = "pageToken"];</code>
+     * @return string
+     */
+    public function getPageToken()
+    {
+        return $this->page_token;
+    }
+
+    /**
+     * Opaque pagination token returned by ListAssetsResponse.next_page_token.
+     *
+     * Generated from protobuf field <code>string page_token = 6 [json_name = "pageToken"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setPageToken($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->page_token = $var;
 
         return $this;
     }

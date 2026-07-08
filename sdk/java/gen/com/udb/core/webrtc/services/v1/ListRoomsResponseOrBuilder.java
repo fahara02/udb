@@ -66,4 +66,24 @@ public interface ListRoomsResponseOrBuilder extends
    * <code>.udb.core.common.v1.ApiError error = 3 [json_name = "error"];</code>
    */
   com.udb.core.common.v1.ApiErrorOrBuilder getErrorOrBuilder();
+
+  /**
+   * <pre>
+   * Opaque token for the next page; empty when no more rooms are available.
+   * </pre>
+   *
+   * <code>string next_page_token = 4 [json_name = "nextPageToken"];</code>
+   * @return The nextPageToken.
+   */
+  java.lang.String getNextPageToken();
+  /**
+   * <pre>
+   * Opaque token for the next page; empty when no more rooms are available.
+   * </pre>
+   *
+   * <code>string next_page_token = 4 [json_name = "nextPageToken"];</code>
+   * @return The bytes for nextPageToken.
+   */
+  com.google.protobuf.ByteString
+      getNextPageTokenBytes();
 }

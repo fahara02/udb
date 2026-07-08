@@ -16,7 +16,7 @@ class CapabilitiesRequest(_message.Message):
     def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., project_id: _Optional[str] = ...) -> None: ...
 
 class CapabilitiesResponse(_message.Message):
-    __slots__ = ("schema_checksum", "protocol_version", "enabled_backends", "degraded_backends", "system_catalog_relations", "supported_rpcs", "backend_instances", "backend_capabilities", "protocol_support", "backend_protocol_support", "native_services")
+    __slots__ = ("schema_checksum", "protocol_version", "enabled_backends", "degraded_backends", "system_catalog_relations", "supported_rpcs", "backend_instances", "backend_capabilities", "protocol_support", "backend_protocol_support", "native_services", "deployment_tier")
     SCHEMA_CHECKSUM_FIELD_NUMBER: _ClassVar[int]
     PROTOCOL_VERSION_FIELD_NUMBER: _ClassVar[int]
     ENABLED_BACKENDS_FIELD_NUMBER: _ClassVar[int]
@@ -28,6 +28,7 @@ class CapabilitiesResponse(_message.Message):
     PROTOCOL_SUPPORT_FIELD_NUMBER: _ClassVar[int]
     BACKEND_PROTOCOL_SUPPORT_FIELD_NUMBER: _ClassVar[int]
     NATIVE_SERVICES_FIELD_NUMBER: _ClassVar[int]
+    DEPLOYMENT_TIER_FIELD_NUMBER: _ClassVar[int]
     schema_checksum: str
     protocol_version: str
     enabled_backends: _containers.RepeatedScalarFieldContainer[str]
@@ -39,7 +40,8 @@ class CapabilitiesResponse(_message.Message):
     protocol_support: ProtocolSupport
     backend_protocol_support: _containers.RepeatedCompositeFieldContainer[BackendProtocolSupport]
     native_services: _containers.RepeatedCompositeFieldContainer[NativeServiceStatus]
-    def __init__(self, schema_checksum: _Optional[str] = ..., protocol_version: _Optional[str] = ..., enabled_backends: _Optional[_Iterable[str]] = ..., degraded_backends: _Optional[_Iterable[str]] = ..., system_catalog_relations: _Optional[_Iterable[str]] = ..., supported_rpcs: _Optional[_Iterable[str]] = ..., backend_instances: _Optional[_Iterable[_Union[BackendInstanceStatus, _Mapping]]] = ..., backend_capabilities: _Optional[_Iterable[_Union[BackendCapabilityDescriptor, _Mapping]]] = ..., protocol_support: _Optional[_Union[ProtocolSupport, _Mapping]] = ..., backend_protocol_support: _Optional[_Iterable[_Union[BackendProtocolSupport, _Mapping]]] = ..., native_services: _Optional[_Iterable[_Union[NativeServiceStatus, _Mapping]]] = ...) -> None: ...
+    deployment_tier: str
+    def __init__(self, schema_checksum: _Optional[str] = ..., protocol_version: _Optional[str] = ..., enabled_backends: _Optional[_Iterable[str]] = ..., degraded_backends: _Optional[_Iterable[str]] = ..., system_catalog_relations: _Optional[_Iterable[str]] = ..., supported_rpcs: _Optional[_Iterable[str]] = ..., backend_instances: _Optional[_Iterable[_Union[BackendInstanceStatus, _Mapping]]] = ..., backend_capabilities: _Optional[_Iterable[_Union[BackendCapabilityDescriptor, _Mapping]]] = ..., protocol_support: _Optional[_Union[ProtocolSupport, _Mapping]] = ..., backend_protocol_support: _Optional[_Iterable[_Union[BackendProtocolSupport, _Mapping]]] = ..., native_services: _Optional[_Iterable[_Union[NativeServiceStatus, _Mapping]]] = ..., deployment_tier: _Optional[str] = ...) -> None: ...
 
 class ProtocolSupport(_message.Message):
     __slots__ = ("min_protocol_version", "max_protocol_version", "encodings", "compression", "supports_streaming_reads", "supports_object_streaming", "max_recv_message_bytes", "max_send_message_bytes", "supported_rpcs")

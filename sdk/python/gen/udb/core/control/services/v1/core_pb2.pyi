@@ -193,3 +193,25 @@ class AckStatusResponse(_message.Message):
     acknowledged: bool
     nacked: bool
     def __init__(self, node_state: _Optional[_Union[NodeAckState, _Mapping]] = ..., current_version: _Optional[str] = ..., acknowledged: bool = ..., nacked: bool = ...) -> None: ...
+
+class RollbackResourcesRequest(_message.Message):
+    __slots__ = ("node_id", "resource_type", "target_version", "context")
+    NODE_ID_FIELD_NUMBER: _ClassVar[int]
+    RESOURCE_TYPE_FIELD_NUMBER: _ClassVar[int]
+    TARGET_VERSION_FIELD_NUMBER: _ClassVar[int]
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    node_id: str
+    resource_type: _enums_pb2.ResourceType
+    target_version: str
+    context: _types_pb2.RequestContext
+    def __init__(self, node_id: _Optional[str] = ..., resource_type: _Optional[_Union[_enums_pb2.ResourceType, str]] = ..., target_version: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ...) -> None: ...
+
+class RollbackResourcesResponse(_message.Message):
+    __slots__ = ("rolled_back_to_version", "current_version", "resources_restored")
+    ROLLED_BACK_TO_VERSION_FIELD_NUMBER: _ClassVar[int]
+    CURRENT_VERSION_FIELD_NUMBER: _ClassVar[int]
+    RESOURCES_RESTORED_FIELD_NUMBER: _ClassVar[int]
+    rolled_back_to_version: str
+    current_version: str
+    resources_restored: int
+    def __init__(self, rolled_back_to_version: _Optional[str] = ..., current_version: _Optional[str] = ..., resources_restored: _Optional[int] = ...) -> None: ...

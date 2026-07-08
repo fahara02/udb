@@ -10,7 +10,33 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file udb/entity/v1/error.proto.
  */
 export const file_udb_entity_v1_error: GenFile = /*@__PURE__*/
-  fileDesc("Chl1ZGIvZW50aXR5L3YxL2Vycm9yLnByb3RvEg11ZGIuZW50aXR5LnYxItUBCgtFcnJvckRldGFpbBIPCgdiYWNrZW5kGAEgASgJEhEKCW9wZXJhdGlvbhgCIAEoCRIbChNjYXBhYmlsaXR5X3JlcXVpcmVkGAMgASgJEhEKCXJldHJ5YWJsZRgEIAEoCBIWCg5yZXRyeV9hZnRlcl9tcxgFIAEoAxIaChJwb2xpY3lfZGVjaXNpb25faWQYBiABKAkSFgoOY29ycmVsYXRpb25faWQYByABKAkSJgoEa2luZBgIIAEoDjIYLnVkYi5lbnRpdHkudjEuRXJyb3JLaW5kKrkBCglFcnJvcktpbmQSGgoWRVJST1JfS0lORF9VTlNQRUNJRklFRBAAEhkKFUVSUk9SX0tJTkRfQ0FQQUJJTElUWRABEhUKEUVSUk9SX0tJTkRfUE9MSUNZEAISFAoQRVJST1JfS0lORF9RVU9UQRADEhUKEUVSUk9SX0tJTkRfU0NIRU1BEAQSGAoURVJST1JfS0lORF9SRVRSWUFCTEUQBRIXChNFUlJPUl9LSU5EX0lOVEVSTkFMEAZCsAEKEWNvbS51ZGIuZW50aXR5LnYxQgpFcnJvclByb3RvUAFaOWdpdGh1Yi5jb20vZmFoYXJhMDIvdWRiL3Nkay9nby9nZW4vdWRiL2VudGl0eS92MTtlbnRpdHl2MaICA1VFWKoCDVVkYi5FbnRpdHkuVjHKAg1VZGJcRW50aXR5XFYx4gIZVWRiXEdQQk1ldGFkYXRhXEVudGl0eVxWMeoCD1VkYjo6RW50aXR5OjpWMWIGcHJvdG8z");
+  fileDesc("Chl1ZGIvZW50aXR5L3YxL2Vycm9yLnByb3RvEg11ZGIuZW50aXR5LnYxIjkKE0Vycm9yRmllbGRWaW9sYXRpb24SDQoFZmllbGQYASABKAkSEwoLZGVzY3JpcHRpb24YAiABKAkikwIKC0Vycm9yRGV0YWlsEg8KB2JhY2tlbmQYASABKAkSEQoJb3BlcmF0aW9uGAIgASgJEhsKE2NhcGFiaWxpdHlfcmVxdWlyZWQYAyABKAkSEQoJcmV0cnlhYmxlGAQgASgIEhYKDnJldHJ5X2FmdGVyX21zGAUgASgDEhoKEnBvbGljeV9kZWNpc2lvbl9pZBgGIAEoCRIWCg5jb3JyZWxhdGlvbl9pZBgHIAEoCRImCgRraW5kGAggASgOMhgudWRiLmVudGl0eS52MS5FcnJvcktpbmQSPAoQZmllbGRfdmlvbGF0aW9ucxgJIAMoCzIiLnVkYi5lbnRpdHkudjEuRXJyb3JGaWVsZFZpb2xhdGlvbirUAQoJRXJyb3JLaW5kEhoKFkVSUk9SX0tJTkRfVU5TUEVDSUZJRUQQABIZChVFUlJPUl9LSU5EX0NBUEFCSUxJVFkQARIVChFFUlJPUl9LSU5EX1BPTElDWRACEhQKEEVSUk9SX0tJTkRfUVVPVEEQAxIVChFFUlJPUl9LSU5EX1NDSEVNQRAEEhgKFEVSUk9SX0tJTkRfUkVUUllBQkxFEAUSFwoTRVJST1JfS0lORF9JTlRFUk5BTBAGEhkKFUVSUk9SX0tJTkRfVkFMSURBVElPThAHQrABChFjb20udWRiLmVudGl0eS52MUIKRXJyb3JQcm90b1ABWjlnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9lbnRpdHkvdjE7ZW50aXR5djGiAgNVRViqAg1VZGIuRW50aXR5LlYxygINVWRiXEVudGl0eVxWMeICGVVkYlxHUEJNZXRhZGF0YVxFbnRpdHlcVjHqAg9VZGI6OkVudGl0eTo6VjFiBnByb3RvMw");
+
+/**
+ * A single invalid input field. `field` is the protobuf field path relative to
+ * the request message (for example "tenant_id" or "policy.rules[0].action");
+ * `description` is stable enough for operators but is not a machine enum.
+ *
+ * @generated from message udb.entity.v1.ErrorFieldViolation
+ */
+export type ErrorFieldViolation = Message<"udb.entity.v1.ErrorFieldViolation"> & {
+  /**
+   * @generated from field: string field = 1;
+   */
+  field: string;
+
+  /**
+   * @generated from field: string description = 2;
+   */
+  description: string;
+};
+
+/**
+ * Describes the message udb.entity.v1.ErrorFieldViolation.
+ * Use `create(ErrorFieldViolationSchema)` to create a new message.
+ */
+export const ErrorFieldViolationSchema: GenMessage<ErrorFieldViolation> = /*@__PURE__*/
+  messageDesc(file_udb_entity_v1_error, 0);
 
 /**
  * @generated from message udb.entity.v1.ErrorDetail
@@ -77,6 +103,14 @@ export type ErrorDetail = Message<"udb.entity.v1.ErrorDetail"> & {
    * @generated from field: udb.entity.v1.ErrorKind kind = 8;
    */
   kind: ErrorKind;
+
+  /**
+   * Structured invalid-field details for INVALID_ARGUMENT responses. Empty for
+   * non-validation errors.
+   *
+   * @generated from field: repeated udb.entity.v1.ErrorFieldViolation field_violations = 9;
+   */
+  fieldViolations: ErrorFieldViolation[];
 };
 
 /**
@@ -84,7 +118,7 @@ export type ErrorDetail = Message<"udb.entity.v1.ErrorDetail"> & {
  * Use `create(ErrorDetailSchema)` to create a new message.
  */
 export const ErrorDetailSchema: GenMessage<ErrorDetail> = /*@__PURE__*/
-  messageDesc(file_udb_entity_v1_error, 0);
+  messageDesc(file_udb_entity_v1_error, 1);
 
 /**
  * Coarse classification of why a request failed. SDKs branch on `kind` to pick
@@ -144,6 +178,14 @@ export enum ErrorKind {
    * @generated from enum value: ERROR_KIND_INTERNAL = 6;
    */
   INTERNAL = 6,
+
+  /**
+   * Malformed or semantically invalid request fields. Maps to gRPC
+   * InvalidArgument and carries `field_violations`.
+   *
+   * @generated from enum value: ERROR_KIND_VALIDATION = 7;
+   */
+  VALIDATION = 7,
 }
 
 /**

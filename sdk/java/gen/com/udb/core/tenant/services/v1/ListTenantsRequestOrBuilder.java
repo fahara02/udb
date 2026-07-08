@@ -45,4 +45,24 @@ public interface ListTenantsRequestOrBuilder extends
    * @return The pageSize.
    */
   int getPageSize();
+
+  /**
+   * <pre>
+   * Opaque pagination token returned by ListTenantsResponse.next_page_token.
+   * </pre>
+   *
+   * <code>string page_token = 5 [json_name = "pageToken"];</code>
+   * @return The pageToken.
+   */
+  java.lang.String getPageToken();
+  /**
+   * <pre>
+   * Opaque pagination token returned by ListTenantsResponse.next_page_token.
+   * </pre>
+   *
+   * <code>string page_token = 5 [json_name = "pageToken"];</code>
+   * @return The bytes for pageToken.
+   */
+  com.google.protobuf.ByteString
+      getPageTokenBytes();
 }

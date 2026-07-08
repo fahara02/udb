@@ -11,11 +11,19 @@ public interface MfaFactorSummaryOrBuilder extends
     com.google.protobuf.MessageOrBuilder {
 
   /**
+   * <pre>
+   * Canonical public identity of this MFA factor within the owning user.
+   * </pre>
+   *
    * <code>.udb.core.authn.entity.v1.AuthFactorKind factor_kind = 1 [json_name = "factorKind"];</code>
    * @return The enum numeric value on the wire for factorKind.
    */
   int getFactorKindValue();
   /**
+   * <pre>
+   * Canonical public identity of this MFA factor within the owning user.
+   * </pre>
+   *
    * <code>.udb.core.authn.entity.v1.AuthFactorKind factor_kind = 1 [json_name = "factorKind"];</code>
    * @return The factorKind.
    */

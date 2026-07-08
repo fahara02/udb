@@ -60,6 +60,16 @@ class PipelineStep extends \Google\Protobuf\Internal\Message
      */
     protected $result = '';
     /**
+     * Transform parameters applied to a byte/image step, as a JSON object, e.g.
+     * {"width":800,"height":600,"format":"jpeg"}. RESIZE reads width/height;
+     * CONVERT (format-only RESIZE) reads format. Empty `{}` for steps that take no
+     * parameters. Additive: lets RESIZE/CONVERT be parameterized instead of a
+     * hardcoded 256x256/png, and surfaces the applied params on read.
+     *
+     * Generated from protobuf field <code>string params = 13 [json_name = "params", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $params = '';
+    /**
      * \@inject_tag: gorm:"column:error"
      *
      * Generated from protobuf field <code>string error = 7 [json_name = "error", (.udb.core.common.v1.pg_column) = {</code>
@@ -111,6 +121,12 @@ class PipelineStep extends \Google\Protobuf\Internal\Message
      *           \@inject_tag: gorm:"column:status;not null;serializer:proto_enum"
      *     @type string $result
      *           \@inject_tag: gorm:"column:result"
+     *     @type string $params
+     *           Transform parameters applied to a byte/image step, as a JSON object, e.g.
+     *           {"width":800,"height":600,"format":"jpeg"}. RESIZE reads width/height;
+     *           CONVERT (format-only RESIZE) reads format. Empty `{}` for steps that take no
+     *           parameters. Additive: lets RESIZE/CONVERT be parameterized instead of a
+     *           hardcoded 256x256/png, and surfaces the applied params on read.
      *     @type string $error
      *           \@inject_tag: gorm:"column:error"
      *     @type int $retry_count
@@ -308,6 +324,40 @@ class PipelineStep extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, True);
         $this->result = $var;
+
+        return $this;
+    }
+
+    /**
+     * Transform parameters applied to a byte/image step, as a JSON object, e.g.
+     * {"width":800,"height":600,"format":"jpeg"}. RESIZE reads width/height;
+     * CONVERT (format-only RESIZE) reads format. Empty `{}` for steps that take no
+     * parameters. Additive: lets RESIZE/CONVERT be parameterized instead of a
+     * hardcoded 256x256/png, and surfaces the applied params on read.
+     *
+     * Generated from protobuf field <code>string params = 13 [json_name = "params", (.udb.core.common.v1.pg_column) = {</code>
+     * @return string
+     */
+    public function getParams()
+    {
+        return $this->params;
+    }
+
+    /**
+     * Transform parameters applied to a byte/image step, as a JSON object, e.g.
+     * {"width":800,"height":600,"format":"jpeg"}. RESIZE reads width/height;
+     * CONVERT (format-only RESIZE) reads format. Empty `{}` for steps that take no
+     * parameters. Additive: lets RESIZE/CONVERT be parameterized instead of a
+     * hardcoded 256x256/png, and surfaces the applied params on read.
+     *
+     * Generated from protobuf field <code>string params = 13 [json_name = "params", (.udb.core.common.v1.pg_column) = {</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setParams($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->params = $var;
 
         return $this;
     }

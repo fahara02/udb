@@ -181,6 +181,37 @@ public final class ControlPlaneServiceGrpc {
     return getAckStatusMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.control.services.v1.RollbackResourcesRequest,
+      com.udb.core.control.services.v1.RollbackResourcesResponse> getRollbackResourcesMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "RollbackResources",
+      requestType = com.udb.core.control.services.v1.RollbackResourcesRequest.class,
+      responseType = com.udb.core.control.services.v1.RollbackResourcesResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.control.services.v1.RollbackResourcesRequest,
+      com.udb.core.control.services.v1.RollbackResourcesResponse> getRollbackResourcesMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.control.services.v1.RollbackResourcesRequest, com.udb.core.control.services.v1.RollbackResourcesResponse> getRollbackResourcesMethod;
+    if ((getRollbackResourcesMethod = ControlPlaneServiceGrpc.getRollbackResourcesMethod) == null) {
+      synchronized (ControlPlaneServiceGrpc.class) {
+        if ((getRollbackResourcesMethod = ControlPlaneServiceGrpc.getRollbackResourcesMethod) == null) {
+          ControlPlaneServiceGrpc.getRollbackResourcesMethod = getRollbackResourcesMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.control.services.v1.RollbackResourcesRequest, com.udb.core.control.services.v1.RollbackResourcesResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "RollbackResources"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.control.services.v1.RollbackResourcesRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.control.services.v1.RollbackResourcesResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new ControlPlaneServiceMethodDescriptorSupplier("RollbackResources"))
+              .build();
+        }
+      }
+    }
+    return getRollbackResourcesMethod;
+  }
+
   /**
    * Creates a new async stub that supports all call types for the service
    */
@@ -261,6 +292,11 @@ public final class ControlPlaneServiceGrpc {
     /**
      * <pre>
      * ── Aggregated state-of-the-world (ADS) ───────────────────────────────────
+     * Node↔broker push channel only: a data-plane PEP node opens this bidirectional
+     * stream to receive versioned resources and echo ACK/NACK nonces. It carries no
+     * human/session credential, no REST surface, and is never part of an application
+     * CRUD facade — so it is gated to internal callers (a loopback node or a node
+     * presenting a verified mTLS identity); an untrusted remote caller is rejected.
      * </pre>
      */
     default io.grpc.stub.StreamObserver<com.udb.core.control.services.v1.DiscoveryRequest> streamResources(
@@ -271,6 +307,9 @@ public final class ControlPlaneServiceGrpc {
     /**
      * <pre>
      * ── Incremental / delta discovery ─────────────────────────────────────────
+     * Same node↔broker push semantics as StreamResources (incremental form). Only a
+     * data-plane node should open it; restricted to internal callers for the same
+     * reasons (no session credential, no REST surface, not an application facade RPC).
      * </pre>
      */
     default io.grpc.stub.StreamObserver<com.udb.core.control.services.v1.DeltaDiscoveryRequest> deltaResources(
@@ -303,6 +342,16 @@ public final class ControlPlaneServiceGrpc {
     default void ackStatus(com.udb.core.control.services.v1.AckStatusRequest request,
         io.grpc.stub.StreamObserver<com.udb.core.control.services.v1.AckStatusResponse> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getAckStatusMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * ── Rollback a node/resource-type to a retained served snapshot ────────────
+     * </pre>
+     */
+    default void rollbackResources(com.udb.core.control.services.v1.RollbackResourcesRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.control.services.v1.RollbackResourcesResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getRollbackResourcesMethod(), responseObserver);
     }
   }
 
@@ -364,6 +413,11 @@ public final class ControlPlaneServiceGrpc {
     /**
      * <pre>
      * ── Aggregated state-of-the-world (ADS) ───────────────────────────────────
+     * Node↔broker push channel only: a data-plane PEP node opens this bidirectional
+     * stream to receive versioned resources and echo ACK/NACK nonces. It carries no
+     * human/session credential, no REST surface, and is never part of an application
+     * CRUD facade — so it is gated to internal callers (a loopback node or a node
+     * presenting a verified mTLS identity); an untrusted remote caller is rejected.
      * </pre>
      */
     public io.grpc.stub.StreamObserver<com.udb.core.control.services.v1.DiscoveryRequest> streamResources(
@@ -375,6 +429,9 @@ public final class ControlPlaneServiceGrpc {
     /**
      * <pre>
      * ── Incremental / delta discovery ─────────────────────────────────────────
+     * Same node↔broker push semantics as StreamResources (incremental form). Only a
+     * data-plane node should open it; restricted to internal callers for the same
+     * reasons (no session credential, no REST surface, not an application facade RPC).
      * </pre>
      */
     public io.grpc.stub.StreamObserver<com.udb.core.control.services.v1.DeltaDiscoveryRequest> deltaResources(
@@ -412,6 +469,17 @@ public final class ControlPlaneServiceGrpc {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getAckStatusMethod(), getCallOptions()), request, responseObserver);
     }
+
+    /**
+     * <pre>
+     * ── Rollback a node/resource-type to a retained served snapshot ────────────
+     * </pre>
+     */
+    public void rollbackResources(com.udb.core.control.services.v1.RollbackResourcesRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.control.services.v1.RollbackResourcesResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getRollbackResourcesMethod(), getCallOptions()), request, responseObserver);
+    }
   }
 
   /**
@@ -447,6 +515,11 @@ public final class ControlPlaneServiceGrpc {
     /**
      * <pre>
      * ── Aggregated state-of-the-world (ADS) ───────────────────────────────────
+     * Node↔broker push channel only: a data-plane PEP node opens this bidirectional
+     * stream to receive versioned resources and echo ACK/NACK nonces. It carries no
+     * human/session credential, no REST surface, and is never part of an application
+     * CRUD facade — so it is gated to internal callers (a loopback node or a node
+     * presenting a verified mTLS identity); an untrusted remote caller is rejected.
      * </pre>
      */
     @io.grpc.ExperimentalApi("https://github.com/grpc/grpc-java/issues/10918")
@@ -459,6 +532,9 @@ public final class ControlPlaneServiceGrpc {
     /**
      * <pre>
      * ── Incremental / delta discovery ─────────────────────────────────────────
+     * Same node↔broker push semantics as StreamResources (incremental form). Only a
+     * data-plane node should open it; restricted to internal callers for the same
+     * reasons (no session credential, no REST surface, not an application facade RPC).
      * </pre>
      */
     @io.grpc.ExperimentalApi("https://github.com/grpc/grpc-java/issues/10918")
@@ -493,6 +569,16 @@ public final class ControlPlaneServiceGrpc {
     public com.udb.core.control.services.v1.AckStatusResponse ackStatus(com.udb.core.control.services.v1.AckStatusRequest request) throws io.grpc.StatusException {
       return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
           getChannel(), getAckStatusMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * ── Rollback a node/resource-type to a retained served snapshot ────────────
+     * </pre>
+     */
+    public com.udb.core.control.services.v1.RollbackResourcesResponse rollbackResources(com.udb.core.control.services.v1.RollbackResourcesRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getRollbackResourcesMethod(), getCallOptions(), request);
     }
   }
 
@@ -551,6 +637,16 @@ public final class ControlPlaneServiceGrpc {
     public com.udb.core.control.services.v1.AckStatusResponse ackStatus(com.udb.core.control.services.v1.AckStatusRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getAckStatusMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * ── Rollback a node/resource-type to a retained served snapshot ────────────
+     * </pre>
+     */
+    public com.udb.core.control.services.v1.RollbackResourcesResponse rollbackResources(com.udb.core.control.services.v1.RollbackResourcesRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getRollbackResourcesMethod(), getCallOptions(), request);
     }
   }
 
@@ -613,13 +709,25 @@ public final class ControlPlaneServiceGrpc {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getAckStatusMethod(), getCallOptions()), request);
     }
+
+    /**
+     * <pre>
+     * ── Rollback a node/resource-type to a retained served snapshot ────────────
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.control.services.v1.RollbackResourcesResponse> rollbackResources(
+        com.udb.core.control.services.v1.RollbackResourcesRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getRollbackResourcesMethod(), getCallOptions()), request);
+    }
   }
 
   private static final int METHODID_GET_RESOURCES = 0;
   private static final int METHODID_LIST_NODE_STATES = 1;
   private static final int METHODID_ACK_STATUS = 2;
-  private static final int METHODID_STREAM_RESOURCES = 3;
-  private static final int METHODID_DELTA_RESOURCES = 4;
+  private static final int METHODID_ROLLBACK_RESOURCES = 3;
+  private static final int METHODID_STREAM_RESOURCES = 4;
+  private static final int METHODID_DELTA_RESOURCES = 5;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -649,6 +757,10 @@ public final class ControlPlaneServiceGrpc {
         case METHODID_ACK_STATUS:
           serviceImpl.ackStatus((com.udb.core.control.services.v1.AckStatusRequest) request,
               (io.grpc.stub.StreamObserver<com.udb.core.control.services.v1.AckStatusResponse>) responseObserver);
+          break;
+        case METHODID_ROLLBACK_RESOURCES:
+          serviceImpl.rollbackResources((com.udb.core.control.services.v1.RollbackResourcesRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.control.services.v1.RollbackResourcesResponse>) responseObserver);
           break;
         default:
           throw new AssertionError();
@@ -709,6 +821,13 @@ public final class ControlPlaneServiceGrpc {
               com.udb.core.control.services.v1.AckStatusRequest,
               com.udb.core.control.services.v1.AckStatusResponse>(
                 service, METHODID_ACK_STATUS)))
+        .addMethod(
+          getRollbackResourcesMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.control.services.v1.RollbackResourcesRequest,
+              com.udb.core.control.services.v1.RollbackResourcesResponse>(
+                service, METHODID_ROLLBACK_RESOURCES)))
         .build();
   }
 
@@ -762,6 +881,7 @@ public final class ControlPlaneServiceGrpc {
               .addMethod(getGetResourcesMethod())
               .addMethod(getListNodeStatesMethod())
               .addMethod(getAckStatusMethod())
+              .addMethod(getRollbackResourcesMethod())
               .build();
         }
       }

@@ -60,6 +60,13 @@ class ErrorKind
      * Generated from protobuf enum <code>ERROR_KIND_INTERNAL = 6;</code>
      */
     const ERROR_KIND_INTERNAL = 6;
+    /**
+     * Malformed or semantically invalid request fields. Maps to gRPC
+     * InvalidArgument and carries `field_violations`.
+     *
+     * Generated from protobuf enum <code>ERROR_KIND_VALIDATION = 7;</code>
+     */
+    const ERROR_KIND_VALIDATION = 7;
 
     private static $valueToName = [
         self::ERROR_KIND_UNSPECIFIED => 'ERROR_KIND_UNSPECIFIED',
@@ -69,6 +76,7 @@ class ErrorKind
         self::ERROR_KIND_SCHEMA => 'ERROR_KIND_SCHEMA',
         self::ERROR_KIND_RETRYABLE => 'ERROR_KIND_RETRYABLE',
         self::ERROR_KIND_INTERNAL => 'ERROR_KIND_INTERNAL',
+        self::ERROR_KIND_VALIDATION => 'ERROR_KIND_VALIDATION',
     ];
 
     public static function name($value)

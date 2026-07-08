@@ -11,11 +11,21 @@ public interface EffectivePermissionOrBuilder extends
     com.google.protobuf.MessageOrBuilder {
 
   /**
+   * <pre>
+   * Canonical public permission object. Combined with action/domain/resource_type
+   * it forms the stable permission identity returned by ListUserPermissions.
+   * </pre>
+   *
    * <code>string object = 1 [json_name = "object"];</code>
    * @return The object.
    */
   java.lang.String getObject();
   /**
+   * <pre>
+   * Canonical public permission object. Combined with action/domain/resource_type
+   * it forms the stable permission identity returned by ListUserPermissions.
+   * </pre>
+   *
    * <code>string object = 1 [json_name = "object"];</code>
    * @return The bytes for object.
    */

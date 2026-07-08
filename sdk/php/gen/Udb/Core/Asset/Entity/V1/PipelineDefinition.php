@@ -70,6 +70,16 @@ class PipelineDefinition extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>.udb.core.common.v1.AuditInfo audit_info = 9 [json_name = "auditInfo", (.udb.core.common.v1.pg_column) = {</code>
      */
     protected $audit_info = null;
+    /**
+     * Optional Kafka topic that fires this pipeline (master-plan 5.2). When set, the
+     * leader-elected trigger manager runs exactly one consumer per distinct
+     * trigger_topic cluster-wide and starts this pipeline for each inbound event.
+     * Additive; NULL/empty = not Kafka-triggered (the static storage-finalized
+     * auto-trigger still applies, matched by media_type).
+     *
+     * Generated from protobuf field <code>string trigger_topic = 10 [json_name = "triggerTopic", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $trigger_topic = '';
 
     /**
      * Constructor.
@@ -95,6 +105,12 @@ class PipelineDefinition extends \Google\Protobuf\Internal\Message
      *           \@inject_tag: gorm:"column:status;not null"
      *     @type \Udb\Core\Common\V1\AuditInfo $audit_info
      *           \@inject_tag: gorm:"column:audit_info;not null"
+     *     @type string $trigger_topic
+     *           Optional Kafka topic that fires this pipeline (master-plan 5.2). When set, the
+     *           leader-elected trigger manager runs exactly one consumer per distinct
+     *           trigger_topic cluster-wide and starts this pipeline for each inbound event.
+     *           Additive; NULL/empty = not Kafka-triggered (the static storage-finalized
+     *           auto-trigger still applies, matched by media_type).
      * }
      */
     public function __construct($data = NULL) {
@@ -342,6 +358,40 @@ class PipelineDefinition extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkMessage($var, \Udb\Core\Common\V1\AuditInfo::class);
         $this->audit_info = $var;
+
+        return $this;
+    }
+
+    /**
+     * Optional Kafka topic that fires this pipeline (master-plan 5.2). When set, the
+     * leader-elected trigger manager runs exactly one consumer per distinct
+     * trigger_topic cluster-wide and starts this pipeline for each inbound event.
+     * Additive; NULL/empty = not Kafka-triggered (the static storage-finalized
+     * auto-trigger still applies, matched by media_type).
+     *
+     * Generated from protobuf field <code>string trigger_topic = 10 [json_name = "triggerTopic", (.udb.core.common.v1.pg_column) = {</code>
+     * @return string
+     */
+    public function getTriggerTopic()
+    {
+        return $this->trigger_topic;
+    }
+
+    /**
+     * Optional Kafka topic that fires this pipeline (master-plan 5.2). When set, the
+     * leader-elected trigger manager runs exactly one consumer per distinct
+     * trigger_topic cluster-wide and starts this pipeline for each inbound event.
+     * Additive; NULL/empty = not Kafka-triggered (the static storage-finalized
+     * auto-trigger still applies, matched by media_type).
+     *
+     * Generated from protobuf field <code>string trigger_topic = 10 [json_name = "triggerTopic", (.udb.core.common.v1.pg_column) = {</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setTriggerTopic($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->trigger_topic = $var;
 
         return $this;
     }

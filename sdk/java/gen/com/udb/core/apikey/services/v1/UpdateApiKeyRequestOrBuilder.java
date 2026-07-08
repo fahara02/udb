@@ -137,4 +137,34 @@ public interface UpdateApiKeyRequestOrBuilder extends
    * <code>.udb.core.common.v1.RequestContext context = 9 [json_name = "context"];</code>
    */
   com.udb.core.common.v1.RequestContextOrBuilder getContextOrBuilder();
+
+  /**
+   * <pre>
+   * Optional PATCH mask relative to the API key resource. When omitted, legacy
+   * clients keep the historical non-empty-field patch behavior.
+   * </pre>
+   *
+   * <code>.google.protobuf.FieldMask update_mask = 10 [json_name = "updateMask"];</code>
+   * @return Whether the updateMask field is set.
+   */
+  boolean hasUpdateMask();
+  /**
+   * <pre>
+   * Optional PATCH mask relative to the API key resource. When omitted, legacy
+   * clients keep the historical non-empty-field patch behavior.
+   * </pre>
+   *
+   * <code>.google.protobuf.FieldMask update_mask = 10 [json_name = "updateMask"];</code>
+   * @return The updateMask.
+   */
+  com.google.protobuf.FieldMask getUpdateMask();
+  /**
+   * <pre>
+   * Optional PATCH mask relative to the API key resource. When omitted, legacy
+   * clients keep the historical non-empty-field patch behavior.
+   * </pre>
+   *
+   * <code>.google.protobuf.FieldMask update_mask = 10 [json_name = "updateMask"];</code>
+   */
+  com.google.protobuf.FieldMaskOrBuilder getUpdateMaskOrBuilder();
 }

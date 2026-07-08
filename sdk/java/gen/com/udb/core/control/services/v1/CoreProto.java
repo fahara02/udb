@@ -96,6 +96,16 @@ public final class CoreProto {
   static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_control_services_v1_AckStatusResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_control_services_v1_RollbackResourcesRequest_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_control_services_v1_RollbackResourcesRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_control_services_v1_RollbackResourcesResponse_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_control_services_v1_RollbackResourcesResponse_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -197,14 +207,25 @@ public final class CoreProto {
       "*.udb.core.control.services.v1.NodeAckSt" +
       "ateR\tnodeState\022\'\n\017current_version\030\002 \001(\tR" +
       "\016currentVersion\022\"\n\014acknowledged\030\003 \001(\010R\014a" +
-      "cknowledged\022\026\n\006nacked\030\004 \001(\010R\006nackedB\216\002\n " +
-      "com.udb.core.control.services.v1B\tCorePr" +
-      "otoP\001ZJgithub.com/fahara02/udb/sdk/go/ge" +
-      "n/udb/core/control/services/v1;servicesv" +
-      "1\242\002\004UCCS\252\002\034udb.core.Control.Services.V1\312" +
-      "\002\034Udb\\Core\\Control\\Services\\V1\342\002(Udb\\GPB" +
-      "Metadata\\Core\\Control\\Services\\V1\352\002 Udb:" +
-      ":Core::Control::Services::V1b\006proto3"
+      "cknowledged\022\026\n\006nacked\030\004 \001(\010R\006nacked\"\347\001\n\030" +
+      "RollbackResourcesRequest\022\027\n\007node_id\030\001 \001(" +
+      "\tR\006nodeId\022M\n\rresource_type\030\002 \001(\0162(.udb.c" +
+      "ore.control.entity.v1.ResourceTypeR\014reso" +
+      "urceType\022%\n\016target_version\030\003 \001(\tR\rtarget" +
+      "Version\022<\n\007context\030\004 \001(\0132\".udb.core.comm" +
+      "on.v1.RequestContextR\007context\"\250\001\n\031Rollba" +
+      "ckResourcesResponse\0223\n\026rolled_back_to_ve" +
+      "rsion\030\001 \001(\tR\023rolledBackToVersion\022\'\n\017curr" +
+      "ent_version\030\002 \001(\tR\016currentVersion\022-\n\022res" +
+      "ources_restored\030\003 \001(\005R\021resourcesRestored" +
+      "B\216\002\n com.udb.core.control.services.v1B\tC" +
+      "oreProtoP\001ZJgithub.com/fahara02/udb/sdk/" +
+      "go/gen/udb/core/control/services/v1;serv" +
+      "icesv1\242\002\004UCCS\252\002\034udb.core.Control.Service" +
+      "s.V1\312\002\034Udb\\Core\\Control\\Services\\V1\342\002(Ud" +
+      "b\\GPBMetadata\\Core\\Control\\Services\\V1\352\002" +
+      " Udb::Core::Control::Services::V1b\006proto" +
+      "3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -298,6 +319,18 @@ public final class CoreProto {
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_control_services_v1_AckStatusResponse_descriptor,
         new java.lang.String[] { "NodeState", "CurrentVersion", "Acknowledged", "Nacked", });
+    internal_static_udb_core_control_services_v1_RollbackResourcesRequest_descriptor =
+      getDescriptor().getMessageTypes().get(13);
+    internal_static_udb_core_control_services_v1_RollbackResourcesRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_control_services_v1_RollbackResourcesRequest_descriptor,
+        new java.lang.String[] { "NodeId", "ResourceType", "TargetVersion", "Context", });
+    internal_static_udb_core_control_services_v1_RollbackResourcesResponse_descriptor =
+      getDescriptor().getMessageTypes().get(14);
+    internal_static_udb_core_control_services_v1_RollbackResourcesResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_control_services_v1_RollbackResourcesResponse_descriptor,
+        new java.lang.String[] { "RolledBackToVersion", "CurrentVersion", "ResourcesRestored", });
     descriptor.resolveAllFeaturesImmutable();
     com.google.protobuf.TimestampProto.getDescriptor();
     com.udb.core.control.entity.v1.EnumsProto.getDescriptor();

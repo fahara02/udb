@@ -11,6 +11,7 @@ from udb.core.notification.entity.v1.enums_pb2 import NotificationType as Notifi
 from udb.core.notification.entity.v1.enums_pb2 import NotificationPriority as NotificationPriority
 from udb.core.notification.entity.v1.notification_pb2 import Notification as Notification
 from udb.core.notification.entity.v1.notification_log_pb2 import NotificationLog as NotificationLog
+from udb.core.notification.entity.v1.notification_log_pb2 import NotificationDeliveryAttempt as NotificationDeliveryAttempt
 from udb.core.notification.entity.v1.notification_preference_pb2 import NotificationPreference as NotificationPreference
 from udb.core.notification.entity.v1.notification_template_pb2 import NotificationTemplate as NotificationTemplate
 

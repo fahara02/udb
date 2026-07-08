@@ -33,4 +33,24 @@ public interface ListWebAuthnCredentialsResponseOrBuilder extends
    */
   com.udb.core.authn.services.v1.WebAuthnCredentialSummaryOrBuilder getCredentialsOrBuilder(
       int index);
+
+  /**
+   * <pre>
+   * Opaque token for the next page; empty when no more credentials are available.
+   * </pre>
+   *
+   * <code>string next_page_token = 2 [json_name = "nextPageToken"];</code>
+   * @return The nextPageToken.
+   */
+  java.lang.String getNextPageToken();
+  /**
+   * <pre>
+   * Opaque token for the next page; empty when no more credentials are available.
+   * </pre>
+   *
+   * <code>string next_page_token = 2 [json_name = "nextPageToken"];</code>
+   * @return The bytes for nextPageToken.
+   */
+  com.google.protobuf.ByteString
+      getNextPageTokenBytes();
 }

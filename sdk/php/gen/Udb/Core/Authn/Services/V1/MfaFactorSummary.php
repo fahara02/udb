@@ -15,6 +15,8 @@ use Google\Protobuf\RepeatedField;
 class MfaFactorSummary extends \Google\Protobuf\Internal\Message
 {
     /**
+     * Canonical public identity of this MFA factor within the owning user.
+     *
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.AuthFactorKind factor_kind = 1 [json_name = "factorKind"];</code>
      */
     protected $factor_kind = 0;
@@ -34,6 +36,7 @@ class MfaFactorSummary extends \Google\Protobuf\Internal\Message
      *     Optional. Data for populating the Message object.
      *
      *     @type int $factor_kind
+     *           Canonical public identity of this MFA factor within the owning user.
      *     @type bool $enabled
      *     @type string $label
      * }
@@ -44,6 +47,8 @@ class MfaFactorSummary extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * Canonical public identity of this MFA factor within the owning user.
+     *
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.AuthFactorKind factor_kind = 1 [json_name = "factorKind"];</code>
      * @return int
      */
@@ -53,6 +58,8 @@ class MfaFactorSummary extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * Canonical public identity of this MFA factor within the owning user.
+     *
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.AuthFactorKind factor_kind = 1 [json_name = "factorKind"];</code>
      * @param int $var
      * @return $this

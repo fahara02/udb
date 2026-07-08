@@ -12,6 +12,7 @@ import (
 	v11 "github.com/fahara02/udb/sdk/go/gen/udb/core/tenant/entity/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	fieldmaskpb "google.golang.org/protobuf/types/known/fieldmaskpb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -267,11 +268,13 @@ func (x *GetTenantResponse) GetError() *v1.ApiError {
 }
 
 type ListTenantsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Type          string                 `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
-	Status        string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
-	Page          int32                  `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
-	PageSize      int32                  `protobuf:"varint,4,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Type     string                 `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
+	Status   string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
+	Page     int32                  `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
+	PageSize int32                  `protobuf:"varint,4,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// Opaque pagination token returned by ListTenantsResponse.next_page_token.
+	PageToken     string `protobuf:"bytes,5,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -334,12 +337,21 @@ func (x *ListTenantsRequest) GetPageSize() int32 {
 	return 0
 }
 
+func (x *ListTenantsRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
 type ListTenantsResponse struct {
 	state      protoimpl.MessageState `protogen:"open.v1"`
 	Tenants    []*v11.Tenant          `protobuf:"bytes,1,rep,name=tenants,proto3" json:"tenants,omitempty"`
 	TotalCount int32                  `protobuf:"varint,2,opt,name=total_count,json=totalCount,proto3" json:"total_count,omitempty"`
 	// Error information if operation failed
-	Error         *v1.ApiError `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
+	Error *v1.ApiError `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
+	// Opaque token for the next page; empty when no more tenants are available.
+	NextPageToken string `protobuf:"bytes,4,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -395,13 +407,23 @@ func (x *ListTenantsResponse) GetError() *v1.ApiError {
 	return nil
 }
 
+func (x *ListTenantsResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
 type UpdateTenantRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Status        string                 `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
-	Config        string                 `protobuf:"bytes,4,opt,name=config,proto3" json:"config,omitempty"`     // JSON
-	Branding      string                 `protobuf:"bytes,5,opt,name=branding,proto3" json:"branding,omitempty"` // JSON
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	TenantId string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	Name     string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Status   string                 `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
+	Config   string                 `protobuf:"bytes,4,opt,name=config,proto3" json:"config,omitempty"`     // JSON
+	Branding string                 `protobuf:"bytes,5,opt,name=branding,proto3" json:"branding,omitempty"` // JSON
+	// Optional PATCH mask relative to the tenant resource. When omitted, legacy
+	// clients keep the historical non-empty-field patch behavior.
+	UpdateMask    *fieldmaskpb.FieldMask `protobuf:"bytes,6,opt,name=update_mask,json=updateMask,proto3" json:"update_mask,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -469,6 +491,13 @@ func (x *UpdateTenantRequest) GetBranding() string {
 		return x.Branding
 	}
 	return ""
+}
+
+func (x *UpdateTenantRequest) GetUpdateMask() *fieldmaskpb.FieldMask {
+	if x != nil {
+		return x.UpdateMask
+	}
+	return nil
 }
 
 type UpdateTenantResponse struct {
@@ -742,11 +771,301 @@ func (x *UpdateTenantConfigResponse) GetError() *v1.ApiError {
 	return nil
 }
 
+type PurgeTenantRequest struct {
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	TenantId string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	// Required explicit confirmation token. The purge is an irreversible HARD
+	// delete; an empty or non-matching token MUST fail closed (DESTRUCTIVE).
+	ConfirmationToken string `protobuf:"bytes,2,opt,name=confirmation_token,json=confirmationToken,proto3" json:"confirmation_token,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *PurgeTenantRequest) Reset() {
+	*x = PurgeTenantRequest{}
+	mi := &file_udb_core_tenant_services_v1_tenant_service_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PurgeTenantRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PurgeTenantRequest) ProtoMessage() {}
+
+func (x *PurgeTenantRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_tenant_services_v1_tenant_service_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PurgeTenantRequest.ProtoReflect.Descriptor instead.
+func (*PurgeTenantRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_tenant_services_v1_tenant_service_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *PurgeTenantRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *PurgeTenantRequest) GetConfirmationToken() string {
+	if x != nil {
+		return x.ConfirmationToken
+	}
+	return ""
+}
+
+// One entity table the purge hard-deleted the tenant's rows from.
+type PurgedTableCount struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Schema        string                 `protobuf:"bytes,1,opt,name=schema,proto3" json:"schema,omitempty"`
+	Table         string                 `protobuf:"bytes,2,opt,name=table,proto3" json:"table,omitempty"`
+	TenantColumn  string                 `protobuf:"bytes,3,opt,name=tenant_column,json=tenantColumn,proto3" json:"tenant_column,omitempty"`
+	Deleted       uint64                 `protobuf:"varint,4,opt,name=deleted,proto3" json:"deleted,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PurgedTableCount) Reset() {
+	*x = PurgedTableCount{}
+	mi := &file_udb_core_tenant_services_v1_tenant_service_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PurgedTableCount) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PurgedTableCount) ProtoMessage() {}
+
+func (x *PurgedTableCount) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_tenant_services_v1_tenant_service_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PurgedTableCount.ProtoReflect.Descriptor instead.
+func (*PurgedTableCount) Descriptor() ([]byte, []int) {
+	return file_udb_core_tenant_services_v1_tenant_service_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *PurgedTableCount) GetSchema() string {
+	if x != nil {
+		return x.Schema
+	}
+	return ""
+}
+
+func (x *PurgedTableCount) GetTable() string {
+	if x != nil {
+		return x.Table
+	}
+	return ""
+}
+
+func (x *PurgedTableCount) GetTenantColumn() string {
+	if x != nil {
+		return x.TenantColumn
+	}
+	return ""
+}
+
+func (x *PurgedTableCount) GetDeleted() uint64 {
+	if x != nil {
+		return x.Deleted
+	}
+	return 0
+}
+
+// An entity table the purge SKIPPED because it has no resolvable tenant column.
+// Reported, never silently dropped (capability honesty).
+type PurgeExcludedTable struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Schema        string                 `protobuf:"bytes,1,opt,name=schema,proto3" json:"schema,omitempty"`
+	Table         string                 `protobuf:"bytes,2,opt,name=table,proto3" json:"table,omitempty"`
+	Reason        string                 `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PurgeExcludedTable) Reset() {
+	*x = PurgeExcludedTable{}
+	mi := &file_udb_core_tenant_services_v1_tenant_service_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PurgeExcludedTable) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PurgeExcludedTable) ProtoMessage() {}
+
+func (x *PurgeExcludedTable) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_tenant_services_v1_tenant_service_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PurgeExcludedTable.ProtoReflect.Descriptor instead.
+func (*PurgeExcludedTable) Descriptor() ([]byte, []int) {
+	return file_udb_core_tenant_services_v1_tenant_service_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *PurgeExcludedTable) GetSchema() string {
+	if x != nil {
+		return x.Schema
+	}
+	return ""
+}
+
+func (x *PurgeExcludedTable) GetTable() string {
+	if x != nil {
+		return x.Table
+	}
+	return ""
+}
+
+func (x *PurgeExcludedTable) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type PurgeTenantResponse struct {
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	TenantId string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	// Per-table hard-delete counts, in execution (children->parents) order.
+	Purged []*PurgedTableCount `protobuf:"bytes,2,rep,name=purged,proto3" json:"purged,omitempty"`
+	// Tenant-less tables reported as excluded from the ripple.
+	Excluded     []*PurgeExcludedTable `protobuf:"bytes,3,rep,name=excluded,proto3" json:"excluded,omitempty"`
+	TotalDeleted uint64                `protobuf:"varint,4,opt,name=total_deleted,json=totalDeleted,proto3" json:"total_deleted,omitempty"`
+	// Whether the tenant-level cluster denylist cutoff was recorded (best-effort).
+	TenantDenylisted bool `protobuf:"varint,5,opt,name=tenant_denylisted,json=tenantDenylisted,proto3" json:"tenant_denylisted,omitempty"`
+	// How many principals had a denylist cutoff recorded (best-effort).
+	PrincipalsDenylisted uint32 `protobuf:"varint,6,opt,name=principals_denylisted,json=principalsDenylisted,proto3" json:"principals_denylisted,omitempty"`
+	Message              string `protobuf:"bytes,7,opt,name=message,proto3" json:"message,omitempty"`
+	// Error information if operation failed
+	Error         *v1.ApiError `protobuf:"bytes,8,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PurgeTenantResponse) Reset() {
+	*x = PurgeTenantResponse{}
+	mi := &file_udb_core_tenant_services_v1_tenant_service_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PurgeTenantResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PurgeTenantResponse) ProtoMessage() {}
+
+func (x *PurgeTenantResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_tenant_services_v1_tenant_service_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PurgeTenantResponse.ProtoReflect.Descriptor instead.
+func (*PurgeTenantResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_tenant_services_v1_tenant_service_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *PurgeTenantResponse) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *PurgeTenantResponse) GetPurged() []*PurgedTableCount {
+	if x != nil {
+		return x.Purged
+	}
+	return nil
+}
+
+func (x *PurgeTenantResponse) GetExcluded() []*PurgeExcludedTable {
+	if x != nil {
+		return x.Excluded
+	}
+	return nil
+}
+
+func (x *PurgeTenantResponse) GetTotalDeleted() uint64 {
+	if x != nil {
+		return x.TotalDeleted
+	}
+	return 0
+}
+
+func (x *PurgeTenantResponse) GetTenantDenylisted() bool {
+	if x != nil {
+		return x.TenantDenylisted
+	}
+	return false
+}
+
+func (x *PurgeTenantResponse) GetPrincipalsDenylisted() uint32 {
+	if x != nil {
+		return x.PrincipalsDenylisted
+	}
+	return 0
+}
+
+func (x *PurgeTenantResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *PurgeTenantResponse) GetError() *v1.ApiError {
+	if x != nil {
+		return x.Error
+	}
+	return nil
+}
+
 var File_udb_core_tenant_services_v1_tenant_service_proto protoreflect.FileDescriptor
 
 const file_udb_core_tenant_services_v1_tenant_service_proto_rawDesc = "" +
 	"\n" +
-	"0udb/core/tenant/services/v1/tenant_service.proto\x12\x1budb.core.tenant.services.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1cudb/core/common/v1/dto.proto\x1a!udb/core/common/v1/security.proto\x1a&udb/core/tenant/entity/v1/tenant.proto\x1a-udb/core/tenant/entity/v1/tenant_config.proto\"\xce\x01\n" +
+	"0udb/core/tenant/services/v1/tenant_service.proto\x12\x1budb.core.tenant.services.v1\x1a\x1cgoogle/api/annotations.proto\x1a google/protobuf/field_mask.proto\x1a\x1cudb/core/common/v1/dto.proto\x1a!udb/core/common/v1/security.proto\x1a&udb/core/tenant/entity/v1/tenant.proto\x1a-udb/core/tenant/entity/v1/tenant_config.proto\"\xce\x01\n" +
 	"\x13CreateTenantRequest\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
@@ -762,23 +1081,28 @@ const file_udb_core_tenant_services_v1_tenant_service_proto_rawDesc = "" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06tenantP\x01\"\xa1\x01\n" +
 	"\x11GetTenantResponse\x129\n" +
 	"\x06tenant\x18\x01 \x01(\v2!.udb.core.tenant.entity.v1.TenantR\x06tenant\x122\n" +
-	"\x05error\x18\x02 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06tenantP\x01\"\x90\x01\n" +
+	"\x05error\x18\x02 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06tenantP\x01\"\xaf\x01\n" +
 	"\x12ListTenantsRequest\x12\x12\n" +
 	"\x04type\x18\x01 \x01(\tR\x04type\x12\x16\n" +
 	"\x06status\x18\x02 \x01(\tR\x06status\x12\x12\n" +
 	"\x04page\x18\x03 \x01(\x05R\x04page\x12\x1b\n" +
-	"\tpage_size\x18\x04 \x01(\x05R\bpageSize:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06tenantP\x01\"\xc6\x01\n" +
+	"\tpage_size\x18\x04 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x05 \x01(\tR\tpageToken:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06tenantP\x01\"\xee\x01\n" +
 	"\x13ListTenantsResponse\x12;\n" +
 	"\atenants\x18\x01 \x03(\v2!.udb.core.tenant.entity.v1.TenantR\atenants\x12\x1f\n" +
 	"\vtotal_count\x18\x02 \x01(\x05R\n" +
 	"totalCount\x122\n" +
-	"\x05error\x18\x03 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06tenantP\x01\"\xb1\x01\n" +
+	"\x05error\x18\x03 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error\x12&\n" +
+	"\x0fnext_page_token\x18\x04 \x01(\tR\rnextPageToken:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06tenantP\x01\"\xee\x01\n" +
 	"\x13UpdateTenantRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x16\n" +
 	"\x06status\x18\x03 \x01(\tR\x06status\x12\x16\n" +
 	"\x06config\x18\x04 \x01(\tR\x06config\x12\x1a\n" +
-	"\bbranding\x18\x05 \x01(\tR\bbranding:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06tenantP\x01\"\x83\x01\n" +
+	"\bbranding\x18\x05 \x01(\tR\bbranding\x12;\n" +
+	"\vupdate_mask\x18\x06 \x01(\v2\x1a.google.protobuf.FieldMaskR\n" +
+	"updateMask:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06tenantP\x01\"\x83\x01\n" +
 	"\x14UpdateTenantResponse\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\x122\n" +
 	"\x05error\x18\x02 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06tenantP\x01\"T\n" +
@@ -795,7 +1119,28 @@ const file_udb_core_tenant_services_v1_tenant_service_proto_rawDesc = "" +
 	"\x04type\x18\x04 \x01(\tR\x04type:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06tenantP\x01\"\x89\x01\n" +
 	"\x1aUpdateTenantConfigResponse\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\x122\n" +
-	"\x05error\x18\x02 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06tenantP\x012\xc9 \n" +
+	"\x05error\x18\x02 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06tenantP\x01\"\x7f\n" +
+	"\x12PurgeTenantRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12-\n" +
+	"\x12confirmation_token\x18\x02 \x01(\tR\x11confirmationToken:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06tenantP\x01\"\x9e\x01\n" +
+	"\x10PurgedTableCount\x12\x16\n" +
+	"\x06schema\x18\x01 \x01(\tR\x06schema\x12\x14\n" +
+	"\x05table\x18\x02 \x01(\tR\x05table\x12#\n" +
+	"\rtenant_column\x18\x03 \x01(\tR\ftenantColumn\x12\x18\n" +
+	"\adeleted\x18\x04 \x01(\x04R\adeleted:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06tenantP\x01\"y\n" +
+	"\x12PurgeExcludedTable\x12\x16\n" +
+	"\x06schema\x18\x01 \x01(\tR\x06schema\x12\x14\n" +
+	"\x05table\x18\x02 \x01(\tR\x05table\x12\x16\n" +
+	"\x06reason\x18\x03 \x01(\tR\x06reason:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06tenantP\x01\"\xba\x03\n" +
+	"\x13PurgeTenantResponse\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12E\n" +
+	"\x06purged\x18\x02 \x03(\v2-.udb.core.tenant.services.v1.PurgedTableCountR\x06purged\x12K\n" +
+	"\bexcluded\x18\x03 \x03(\v2/.udb.core.tenant.services.v1.PurgeExcludedTableR\bexcluded\x12#\n" +
+	"\rtotal_deleted\x18\x04 \x01(\x04R\ftotalDeleted\x12+\n" +
+	"\x11tenant_denylisted\x18\x05 \x01(\bR\x10tenantDenylisted\x123\n" +
+	"\x15principals_denylisted\x18\x06 \x01(\rR\x14principalsDenylisted\x12\x18\n" +
+	"\amessage\x18\a \x01(\tR\amessage\x122\n" +
+	"\x05error\x18\b \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06tenantP\x012\xbb%\n" +
 	"\rTenantService\x12\xe7\x04\n" +
 	"\fCreateTenant\x120.udb.core.tenant.services.v1.CreateTenantRequest\x1a1.udb.core.tenant.services.v1.CreateTenantResponse\"\xf1\x03\xca\xf3\x18:\b\x02\x1a\x18udb:tenant:create-tenant \x01J\x02\x01\x02j\x13tenant.CreateTenant\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x186\b\x01\x12\rcreate_tenant\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06tenantP\x01Z\fcreateTenant\xe2\xf3\x18\xb8\x01\n" +
 	"\x06tenant\x12\x11udb/native/tenant\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"+udb.native.tenant.create_tenant.boilerplate*\rcreate_tenant2\n" +
@@ -828,7 +1173,12 @@ const file_udb_core_tenant_services_v1_tenant_service_proto_rawDesc = "" +
 	"\x06tenant\x12\x11udb/native/tenant\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"2udb.native.tenant.update_tenant_config.boilerplate*\x14update_tenant_config2\n" +
 	"udb_tenant:\x06tenantJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18V\n" +
 	"\x19tenant.UpdateTenantConfig\x12\rtenant.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18@\n" +
-	"\x06tenant\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02#:\x01*\x1a\x1e/v1/tenants/{tenant_id}/config\x1a\xcc\x02\xca\xf0\x19Y\n" +
+	"\x06tenant\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02#:\x01*\x1a\x1e/v1/tenants/{tenant_id}/config\x12\xef\x04\n" +
+	"\vPurgeTenant\x12/.udb.core.tenant.services.v1.PurgeTenantRequest\x1a0.udb.core.tenant.services.v1.PurgeTenantResponse\"\xfc\x03\xca\xf3\x188\b\x02\x1a\x17udb:tenant:purge-tenant \x01J\x02\x01\x02j\x12tenant.PurgeTenant\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x184\b\x01\x12\fpurge_tenant\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06tenantP\x01Z\vpurgeTenant\xe2\xf3\x18\xb6\x01\n" +
+	"\x06tenant\x12\x11udb/native/tenant\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"*udb.native.tenant.purge_tenant.boilerplate*\fpurge_tenant2\n" +
+	"udb_tenant:\x06tenantJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18O\n" +
+	"\x12tenant.PurgeTenant\x12\rtenant.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18@\n" +
+	"\x06tenant\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x03\x82\xd3\xe4\x93\x02\":\x01*\"\x1d/v1/tenants/{tenant_id}:purge\x1a\xcc\x02\xca\xf0\x19Y\n" +
 	"\x06tenant\x12\x06tenant\x1a\x06tenant\"\aTenants*\x06tenant0\x018\x01h\x01z\x06tenant\x82\x01\x06tenant\x8a\x01\x06tenant\x92\x01\rnative.tenant\xd2\xf0\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06tenantP\x01\xda\xf0\x19\x89\x01\n" +
 	"\x06tenant\x12\x11udb/native/tenant\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"\x18udb.native.tenant.config:\x06tenantJ\vUDB_API_KEYZ\x0fudb native lint\xe2\xf0\x19@\n" +
 	"\x06tenant\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGETB\x91\x02\n" +
@@ -846,7 +1196,7 @@ func file_udb_core_tenant_services_v1_tenant_service_proto_rawDescGZIP() []byte 
 	return file_udb_core_tenant_services_v1_tenant_service_proto_rawDescData
 }
 
-var file_udb_core_tenant_services_v1_tenant_service_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_udb_core_tenant_services_v1_tenant_service_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_udb_core_tenant_services_v1_tenant_service_proto_goTypes = []any{
 	(*CreateTenantRequest)(nil),        // 0: udb.core.tenant.services.v1.CreateTenantRequest
 	(*CreateTenantResponse)(nil),       // 1: udb.core.tenant.services.v1.CreateTenantResponse
@@ -860,37 +1210,48 @@ var file_udb_core_tenant_services_v1_tenant_service_proto_goTypes = []any{
 	(*GetTenantConfigResponse)(nil),    // 9: udb.core.tenant.services.v1.GetTenantConfigResponse
 	(*UpdateTenantConfigRequest)(nil),  // 10: udb.core.tenant.services.v1.UpdateTenantConfigRequest
 	(*UpdateTenantConfigResponse)(nil), // 11: udb.core.tenant.services.v1.UpdateTenantConfigResponse
-	(*v1.ApiError)(nil),                // 12: udb.core.common.v1.ApiError
-	(*v11.Tenant)(nil),                 // 13: udb.core.tenant.entity.v1.Tenant
-	(*v11.TenantConfig)(nil),           // 14: udb.core.tenant.entity.v1.TenantConfig
+	(*PurgeTenantRequest)(nil),         // 12: udb.core.tenant.services.v1.PurgeTenantRequest
+	(*PurgedTableCount)(nil),           // 13: udb.core.tenant.services.v1.PurgedTableCount
+	(*PurgeExcludedTable)(nil),         // 14: udb.core.tenant.services.v1.PurgeExcludedTable
+	(*PurgeTenantResponse)(nil),        // 15: udb.core.tenant.services.v1.PurgeTenantResponse
+	(*v1.ApiError)(nil),                // 16: udb.core.common.v1.ApiError
+	(*v11.Tenant)(nil),                 // 17: udb.core.tenant.entity.v1.Tenant
+	(*fieldmaskpb.FieldMask)(nil),      // 18: google.protobuf.FieldMask
+	(*v11.TenantConfig)(nil),           // 19: udb.core.tenant.entity.v1.TenantConfig
 }
 var file_udb_core_tenant_services_v1_tenant_service_proto_depIdxs = []int32{
-	12, // 0: udb.core.tenant.services.v1.CreateTenantResponse.error:type_name -> udb.core.common.v1.ApiError
-	13, // 1: udb.core.tenant.services.v1.GetTenantResponse.tenant:type_name -> udb.core.tenant.entity.v1.Tenant
-	12, // 2: udb.core.tenant.services.v1.GetTenantResponse.error:type_name -> udb.core.common.v1.ApiError
-	13, // 3: udb.core.tenant.services.v1.ListTenantsResponse.tenants:type_name -> udb.core.tenant.entity.v1.Tenant
-	12, // 4: udb.core.tenant.services.v1.ListTenantsResponse.error:type_name -> udb.core.common.v1.ApiError
-	12, // 5: udb.core.tenant.services.v1.UpdateTenantResponse.error:type_name -> udb.core.common.v1.ApiError
-	14, // 6: udb.core.tenant.services.v1.GetTenantConfigResponse.configs:type_name -> udb.core.tenant.entity.v1.TenantConfig
-	12, // 7: udb.core.tenant.services.v1.GetTenantConfigResponse.error:type_name -> udb.core.common.v1.ApiError
-	12, // 8: udb.core.tenant.services.v1.UpdateTenantConfigResponse.error:type_name -> udb.core.common.v1.ApiError
-	0,  // 9: udb.core.tenant.services.v1.TenantService.CreateTenant:input_type -> udb.core.tenant.services.v1.CreateTenantRequest
-	2,  // 10: udb.core.tenant.services.v1.TenantService.GetTenant:input_type -> udb.core.tenant.services.v1.GetTenantRequest
-	4,  // 11: udb.core.tenant.services.v1.TenantService.ListTenants:input_type -> udb.core.tenant.services.v1.ListTenantsRequest
-	6,  // 12: udb.core.tenant.services.v1.TenantService.UpdateTenant:input_type -> udb.core.tenant.services.v1.UpdateTenantRequest
-	8,  // 13: udb.core.tenant.services.v1.TenantService.GetTenantConfig:input_type -> udb.core.tenant.services.v1.GetTenantConfigRequest
-	10, // 14: udb.core.tenant.services.v1.TenantService.UpdateTenantConfig:input_type -> udb.core.tenant.services.v1.UpdateTenantConfigRequest
-	1,  // 15: udb.core.tenant.services.v1.TenantService.CreateTenant:output_type -> udb.core.tenant.services.v1.CreateTenantResponse
-	3,  // 16: udb.core.tenant.services.v1.TenantService.GetTenant:output_type -> udb.core.tenant.services.v1.GetTenantResponse
-	5,  // 17: udb.core.tenant.services.v1.TenantService.ListTenants:output_type -> udb.core.tenant.services.v1.ListTenantsResponse
-	7,  // 18: udb.core.tenant.services.v1.TenantService.UpdateTenant:output_type -> udb.core.tenant.services.v1.UpdateTenantResponse
-	9,  // 19: udb.core.tenant.services.v1.TenantService.GetTenantConfig:output_type -> udb.core.tenant.services.v1.GetTenantConfigResponse
-	11, // 20: udb.core.tenant.services.v1.TenantService.UpdateTenantConfig:output_type -> udb.core.tenant.services.v1.UpdateTenantConfigResponse
-	15, // [15:21] is the sub-list for method output_type
-	9,  // [9:15] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	16, // 0: udb.core.tenant.services.v1.CreateTenantResponse.error:type_name -> udb.core.common.v1.ApiError
+	17, // 1: udb.core.tenant.services.v1.GetTenantResponse.tenant:type_name -> udb.core.tenant.entity.v1.Tenant
+	16, // 2: udb.core.tenant.services.v1.GetTenantResponse.error:type_name -> udb.core.common.v1.ApiError
+	17, // 3: udb.core.tenant.services.v1.ListTenantsResponse.tenants:type_name -> udb.core.tenant.entity.v1.Tenant
+	16, // 4: udb.core.tenant.services.v1.ListTenantsResponse.error:type_name -> udb.core.common.v1.ApiError
+	18, // 5: udb.core.tenant.services.v1.UpdateTenantRequest.update_mask:type_name -> google.protobuf.FieldMask
+	16, // 6: udb.core.tenant.services.v1.UpdateTenantResponse.error:type_name -> udb.core.common.v1.ApiError
+	19, // 7: udb.core.tenant.services.v1.GetTenantConfigResponse.configs:type_name -> udb.core.tenant.entity.v1.TenantConfig
+	16, // 8: udb.core.tenant.services.v1.GetTenantConfigResponse.error:type_name -> udb.core.common.v1.ApiError
+	16, // 9: udb.core.tenant.services.v1.UpdateTenantConfigResponse.error:type_name -> udb.core.common.v1.ApiError
+	13, // 10: udb.core.tenant.services.v1.PurgeTenantResponse.purged:type_name -> udb.core.tenant.services.v1.PurgedTableCount
+	14, // 11: udb.core.tenant.services.v1.PurgeTenantResponse.excluded:type_name -> udb.core.tenant.services.v1.PurgeExcludedTable
+	16, // 12: udb.core.tenant.services.v1.PurgeTenantResponse.error:type_name -> udb.core.common.v1.ApiError
+	0,  // 13: udb.core.tenant.services.v1.TenantService.CreateTenant:input_type -> udb.core.tenant.services.v1.CreateTenantRequest
+	2,  // 14: udb.core.tenant.services.v1.TenantService.GetTenant:input_type -> udb.core.tenant.services.v1.GetTenantRequest
+	4,  // 15: udb.core.tenant.services.v1.TenantService.ListTenants:input_type -> udb.core.tenant.services.v1.ListTenantsRequest
+	6,  // 16: udb.core.tenant.services.v1.TenantService.UpdateTenant:input_type -> udb.core.tenant.services.v1.UpdateTenantRequest
+	8,  // 17: udb.core.tenant.services.v1.TenantService.GetTenantConfig:input_type -> udb.core.tenant.services.v1.GetTenantConfigRequest
+	10, // 18: udb.core.tenant.services.v1.TenantService.UpdateTenantConfig:input_type -> udb.core.tenant.services.v1.UpdateTenantConfigRequest
+	12, // 19: udb.core.tenant.services.v1.TenantService.PurgeTenant:input_type -> udb.core.tenant.services.v1.PurgeTenantRequest
+	1,  // 20: udb.core.tenant.services.v1.TenantService.CreateTenant:output_type -> udb.core.tenant.services.v1.CreateTenantResponse
+	3,  // 21: udb.core.tenant.services.v1.TenantService.GetTenant:output_type -> udb.core.tenant.services.v1.GetTenantResponse
+	5,  // 22: udb.core.tenant.services.v1.TenantService.ListTenants:output_type -> udb.core.tenant.services.v1.ListTenantsResponse
+	7,  // 23: udb.core.tenant.services.v1.TenantService.UpdateTenant:output_type -> udb.core.tenant.services.v1.UpdateTenantResponse
+	9,  // 24: udb.core.tenant.services.v1.TenantService.GetTenantConfig:output_type -> udb.core.tenant.services.v1.GetTenantConfigResponse
+	11, // 25: udb.core.tenant.services.v1.TenantService.UpdateTenantConfig:output_type -> udb.core.tenant.services.v1.UpdateTenantConfigResponse
+	15, // 26: udb.core.tenant.services.v1.TenantService.PurgeTenant:output_type -> udb.core.tenant.services.v1.PurgeTenantResponse
+	20, // [20:27] is the sub-list for method output_type
+	13, // [13:20] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_udb_core_tenant_services_v1_tenant_service_proto_init() }
@@ -904,7 +1265,7 @@ func file_udb_core_tenant_services_v1_tenant_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_udb_core_tenant_services_v1_tenant_service_proto_rawDesc), len(file_udb_core_tenant_services_v1_tenant_service_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   12,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -367,350 +367,359 @@ public final class CoreProto {
     java.lang.String[] descriptorData = {
       "\n%udb/core/authz/services/v1/core.proto\022" +
       "\032udb.core.authz.services.v1\032\037google/api/" +
-      "field_behavior.proto\032\037google/protobuf/ti" +
-      "mestamp.proto\0324udb/core/authz/entity/v1/" +
-      "access_decision_audit.proto\032$udb/core/au" +
-      "thz/entity/v1/enums.proto\032*udb/core/auth" +
-      "z/entity/v1/policy_rule.proto\032#udb/core/" +
-      "authz/entity/v1/role.proto\032(udb/core/aut" +
-      "hz/entity/v1/user_role.proto\032\034udb/core/c" +
-      "ommon/v1/dto.proto\032!udb/core/common/v1/s" +
-      "ecurity.proto\"\317\004\n\tPrincipal\022!\n\014principal" +
-      "_id\030\001 \001(\tR\013principalId\022\030\n\007subject\030\002 \001(\tR" +
-      "\007subject\022\027\n\007user_id\030\003 \001(\tR\006userId\022)\n\020ser" +
-      "vice_identity\030\004 \001(\tR\017serviceIdentity\022\033\n\t" +
-      "tenant_id\030\005 \001(\tR\010tenantId\022\035\n\nproject_id\030" +
-      "\006 \001(\tR\tprojectId\022\026\n\006scopes\030\007 \003(\tR\006scopes" +
-      "\022\024\n\005roles\030\010 \003(\tR\005roles\022\037\n\013provider_id\030\t " +
-      "\001(\tR\nproviderId\022\037\n\013auth_method\030\n \001(\tR\nau" +
-      "thMethod\022&\n\017expires_at_unix\030\013 \001(\003R\rexpir" +
-      "esAtUnix\022!\n\014account_kind\030\014 \001(\tR\013accountK" +
-      "ind\022\026\n\006domain\030\r \001(\tR\006domain\022U\n\nattribute" +
-      "s\030\016 \003(\01325.udb.core.authz.services.v1.Pri" +
-      "ncipal.AttributesEntryR\nattributes\032=\n\017At" +
-      "tributesEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005value" +
-      "\030\002 \001(\tR\005value:\0028\001:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005" +
-      "authzP\001\"\351\004\n\013ResourceRef\022#\n\rresource_type" +
-      "\030\001 \001(\tR\014resourceType\022#\n\rresource_name\030\002 " +
-      "\001(\tR\014resourceName\022!\n\014message_type\030\003 \001(\tR" +
-      "\013messageType\022\026\n\006schema\030\004 \001(\tR\006schema\022\024\n\005" +
-      "table\030\005 \001(\tR\005table\022\030\n\007backend\030\006 \001(\tR\007bac" +
-      "kend\022\032\n\010instance\030\007 \001(\tR\010instance\022\037\n\013reso" +
-      "urce_id\030\010 \001(\tR\nresourceId\022\036\n\ncollection\030" +
-      "\t \001(\tR\ncollection\022\026\n\006bucket\030\n \001(\tR\006bucke" +
-      "t\022\022\n\004path\030\013 \001(\tR\004path\022\030\n\007service\030\014 \001(\tR\007" +
-      "service\022\020\n\003api\030\r \001(\tR\003api\022\033\n\ttenant_id\030\016" +
-      " \001(\tR\010tenantId\022\035\n\nproject_id\030\017 \001(\tR\tproj" +
-      "ectId\022W\n\nattributes\030\020 \003(\01327.udb.core.aut" +
-      "hz.services.v1.ResourceRef.AttributesEnt" +
-      "ryR\nattributes\032=\n\017AttributesEntry\022\020\n\003key" +
-      "\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005value:\0028\001:\034\232" +
-      "\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"\240\003\n\010Decision" +
-      "\022\037\n\013decision_id\030\001 \001(\tR\ndecisionId\022\030\n\007all" +
-      "owed\030\002 \001(\010R\007allowed\022\026\n\006effect\030\003 \001(\tR\006eff" +
-      "ect\022\037\n\013deny_reason\030\004 \001(\tR\ndenyReason\022,\n\022" +
-      "matched_policy_ids\030\005 \003(\tR\020matchedPolicyI" +
-      "ds\022\'\n\017required_scopes\030\006 \003(\tR\016requiredSco" +
-      "pes\022%\n\016policy_version\030\007 \001(\tR\rpolicyVersi" +
-      "on\0221\n\024relationship_version\030\010 \001(\tR\023relati" +
-      "onshipVersion\022*\n\021cache_ttl_seconds\030\t \001(\004" +
-      "R\017cacheTtlSeconds\022%\n\016audit_required\030\n \001(" +
-      "\010R\rauditRequired:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005a" +
-      "uthzP\001\"\334\002\n\rAccessContext\022\035\n\nip_address\030\001" +
-      " \001(\tR\tipAddress\022\035\n\nuser_agent\030\002 \001(\tR\tuse" +
-      "rAgent\022\033\n\tdevice_id\030\003 \001(\tR\010deviceId\022\031\n\010t" +
-      "oken_id\030\004 \001(\tR\007tokenId\022\035\n\nsession_id\030\005 \001" +
-      "(\tR\tsessionId\022Y\n\nattributes\030\006 \003(\01329.udb." +
-      "core.authz.services.v1.AccessContext.Att" +
-      "ributesEntryR\nattributes\032=\n\017AttributesEn" +
-      "try\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005va" +
-      "lue:\0028\001:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"\211\005" +
-      "\n\022CheckAccessRequest\022\034\n\007user_id\030\001 \001(\tB\003\340" +
-      "A\002R\006userId\022\033\n\006domain\030\002 \001(\tB\003\340A\002R\006domain\022" +
-      "\033\n\006object\030\003 \001(\tB\003\340A\002R\006object\022\033\n\006action\030\004" +
-      " \001(\tB\003\340A\002R\006action\022H\n\007context\030\005 \001(\0132).udb" +
-      ".core.authz.services.v1.AccessContextB\003\340" +
-      "A\001R\007context\022H\n\tprincipal\030\006 \001(\0132%.udb.cor" +
-      "e.authz.services.v1.PrincipalB\003\340A\001R\tprin" +
-      "cipal\022H\n\010resource\030\007 \001(\0132\'.udb.core.authz" +
-      ".services.v1.ResourceRefB\003\340A\001R\010resource\022" +
-      "\035\n\007purpose\030\010 \001(\tB\003\340A\001R\007purpose\022 \n\ttenant" +
-      "_id\030\t \001(\tB\003\340A\001R\010tenantId\022\"\n\nproject_id\030\n" +
-      " \001(\tB\003\340A\001R\tprojectId\022^\n\nattributes\030\013 \003(\013" +
-      "2>.udb.core.authz.services.v1.CheckAcces" +
-      "sRequest.AttributesEntryR\nattributes\032=\n\017" +
-      "AttributesEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005val" +
-      "ue\030\002 \001(\tR\005value:\0028\001:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001" +
-      "J\005authzP\001\"\212\002\n\023CheckAccessResponse\022\030\n\007all" +
-      "owed\030\001 \001(\010R\007allowed\022>\n\006effect\030\002 \001(\0162&.ud" +
-      "b.core.authz.entity.v1.PolicyEffectR\006eff" +
-      "ect\022!\n\014matched_rule\030\003 \001(\tR\013matchedRule\022\026" +
-      "\n\006reason\030\004 \001(\tR\006reason\022@\n\010decision\030\005 \001(\013" +
-      "2$.udb.core.authz.services.v1.DecisionR\010" +
-      "decision:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"\344" +
-      "\004\n\014AuthzRequest\022C\n\tprincipal\030\001 \001(\0132%.udb" +
-      ".core.authz.services.v1.PrincipalR\tprinc" +
-      "ipal\022\035\n\nsession_id\030\002 \001(\tR\tsessionId\022\033\n\tt" +
-      "enant_id\030\003 \001(\tR\010tenantId\022\035\n\nproject_id\030\004" +
-      " \001(\tR\tprojectId\022C\n\010resource\030\005 \001(\0132\'.udb." +
-      "core.authz.services.v1.ResourceRefR\010reso" +
-      "urce\022\026\n\006action\030\006 \001(\tR\006action\022\030\n\007purpose\030" +
-      "\007 \001(\tR\007purpose\022X\n\nattributes\030\010 \003(\01328.udb" +
-      ".core.authz.services.v1.AuthzRequest.Att" +
-      "ributesEntryR\nattributes\022C\n\007context\030\t \001(" +
-      "\0132).udb.core.authz.services.v1.AccessCon" +
-      "textR\007context\022)\n\020requested_scopes\030\n \003(\tR" +
-      "\017requestedScopes\022\026\n\006domain\030\013 \001(\tR\006domain" +
-      "\032=\n\017AttributesEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n" +
-      "\005value\030\002 \001(\tR\005value:\0028\001:\034\232\262\031\030\010\001\032\003udb(\260\352\001" +
-      "0\003@\001J\005authzP\001\"o\n\rAuthzResponse\022@\n\010decisi" +
-      "on\030\001 \001(\0132$.udb.core.authz.services.v1.De" +
-      "cisionR\010decision:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005a" +
-      "uthzP\001\"\251\004\n\021CreateRoleRequest\022\027\n\004name\030\001 \001" +
-      "(\tB\003\340A\002R\004name\022%\n\013description\030\002 \001(\tB\003\340A\001R" +
-      "\013description\022\"\n\ncreated_by\030\003 \001(\tB\003\340A\002R\tc" +
-      "reatedBy\022 \n\trole_code\030\004 \001(\tB\003\340A\001R\010roleCo" +
-      "de\022\033\n\006domain\030\005 \001(\tB\003\340A\001R\006domain\022 \n\ttenan" +
-      "t_id\030\006 \001(\tB\003\340A\001R\010tenantId\022\"\n\nproject_id\030" +
-      "\007 \001(\tB\003\340A\001R\tprojectId\022K\n\nscope_type\030\010 \001(" +
-      "\0162\'.udb.core.authz.entity.v1.RoleScopeTy" +
-      "peB\003\340A\001R\tscopeType\022*\n\016access_surface\030\t \001" +
-      "(\tB\003\340A\001R\raccessSurface\022W\n\010metadata\030\n \003(\013" +
-      "2;.udb.core.authz.services.v1.CreateRole" +
-      "Request.MetadataEntryR\010metadata\032;\n\rMetad" +
-      "ataEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(" +
-      "\tR\005value:\0028\001:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authz" +
-      "P\001\"f\n\022CreateRoleResponse\0222\n\004role\030\001 \001(\0132\036" +
-      ".udb.core.authz.entity.v1.RoleR\004role:\034\232\262" +
-      "\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"\263\003\n\021AssignRol" +
-      "eRequest\022\034\n\007user_id\030\001 \001(\tB\003\340A\002R\006userId\022\034" +
-      "\n\007role_id\030\002 \001(\tB\003\340A\002R\006roleId\022\033\n\006domain\030\003" +
-      " \001(\tB\003\340A\002R\006domain\022$\n\013assigned_by\030\004 \001(\tB\003" +
-      "\340A\002R\nassignedBy\022>\n\nexpires_at\030\005 \001(\0132\032.go" +
-      "ogle.protobuf.TimestampB\003\340A\001R\texpiresAt\022" +
-      "&\n\014principal_id\030\006 \001(\tB\003\340A\001R\013principalId\022" +
-      "S\n\016principal_kind\030\007 \001(\0162\'.udb.core.authz" +
-      ".entity.v1.PrincipalKindB\003\340A\001R\rprincipal" +
-      "Kind\022 \n\ttenant_id\030\010 \001(\tB\003\340A\001R\010tenantId\022\"" +
-      "\n\nproject_id\030\t \001(\tB\003\340A\001R\tprojectId:\034\232\262\031\030" +
-      "\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"s\n\022AssignRoleRe" +
-      "sponse\022?\n\tuser_role\030\001 \001(\0132\".udb.core.aut" +
-      "hz.entity.v1.UserRoleR\010userRole:\034\232\262\031\030\010\001\032" +
-      "\003udb(\260\352\0010\003@\001J\005authzP\001\"\364\004\n\027CreatePolicyRu" +
-      "leRequest\022\035\n\007subject\030\001 \001(\tB\003\340A\002R\007subject" +
-      "\022\033\n\006domain\030\002 \001(\tB\003\340A\002R\006domain\022\033\n\006object\030" +
-      "\003 \001(\tB\003\340A\002R\006object\022\033\n\006action\030\004 \001(\tB\003\340A\002R" +
-      "\006action\022C\n\006effect\030\005 \001(\0162&.udb.core.authz" +
-      ".entity.v1.PolicyEffectB\003\340A\002R\006effect\022!\n\t" +
-      "condition\030\006 \001(\tB\003\340A\001R\tcondition\022%\n\013descr" +
-      "iption\030\007 \001(\tB\003\340A\001R\013description\022\"\n\ncreate" +
-      "d_by\030\010 \001(\tB\003\340A\002R\tcreatedBy\022 \n\ttenant_id\030" +
-      "\t \001(\tB\003\340A\001R\010tenantId\022\"\n\nproject_id\030\n \001(\t" +
-      "B\003\340A\001R\tprojectId\022(\n\rresource_type\030\013 \001(\tB" +
-      "\003\340A\001R\014resourceType\022c\n\nattributes\030\014 \003(\0132C" +
-      ".udb.core.authz.services.v1.CreatePolicy" +
-      "RuleRequest.AttributesEntryR\nattributes\032" +
-      "=\n\017AttributesEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005" +
-      "value\030\002 \001(\tR\005value:\0028\001:\034\232\262\031\030\010\001\032\003udb(\260\352\0010" +
-      "\003@\001J\005authzP\001\"v\n\030CreatePolicyRuleResponse" +
-      "\022<\n\006policy\030\001 \001(\0132$.udb.core.authz.entity" +
-      ".v1.PolicyRuleR\006policy:\034\232\262\031\030\010\001\032\003udb(\260\352\0010" +
-      "\003@\001J\005authzP\001\"u\n\032ListUserPermissionsReque" +
-      "st\022\034\n\007user_id\030\001 \001(\tB\003\340A\002R\006userId\022\033\n\006doma" +
-      "in\030\002 \001(\tB\003\340A\002R\006domain:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003" +
-      "@\001J\005authzP\001\"\273\001\n\023EffectivePermission\022\026\n\006o" +
-      "bject\030\001 \001(\tR\006object\022\026\n\006action\030\002 \001(\tR\006act" +
-      "ion\022\031\n\010via_role\030\003 \001(\tR\007viaRole\022#\n\rresour" +
-      "ce_type\030\004 \001(\tR\014resourceType\022\026\n\006domain\030\005 " +
-      "\001(\tR\006domain:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP" +
-      "\001\"\216\001\n\033ListUserPermissionsResponse\022Q\n\013per" +
-      "missions\030\001 \003(\0132/.udb.core.authz.services" +
-      ".v1.EffectivePermissionR\013permissions:\034\232\262" +
-      "\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"\340\001\n\037ListAcces" +
-      "sDecisionAuditsRequest\022\034\n\007user_id\030\001 \001(\tB" +
-      "\003\340A\001R\006userId\022\033\n\006domain\030\002 \001(\tB\003\340A\001R\006domai" +
-      "n\022*\n\016correlation_id\030\003 \001(\tB\003\340A\001R\rcorrelat" +
-      "ionId\0228\n\004page\030\004 \001(\0132\037.udb.core.common.v1" +
-      ".PageRequestB\003\340A\001R\004page:\034\232\262\031\030\010\001\032\003udb(\260\352\001" +
-      "0\003@\001J\005authzP\001\"\275\001\n ListAccessDecisionAudi" +
-      "tsResponse\022E\n\006audits\030\001 \003(\0132-.udb.core.au" +
-      "thz.entity.v1.AccessDecisionAuditR\006audit" +
-      "s\0224\n\004page\030\002 \001(\0132 .udb.core.common.v1.Pag" +
-      "eResponseR\004page:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005au" +
-      "thzP\001\"\243\001\n\021RevokeRoleRequest\022\027\n\007user_id\030\001" +
-      " \001(\tR\006userId\022 \n\014user_role_id\030\002 \001(\tR\nuser" +
-      "RoleId\022\026\n\006reason\030\003 \001(\tR\006reason\022\035\n\nrevoke" +
-      "d_by\030\004 \001(\tR\trevokedBy:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003" +
-      "@\001J\005authzP\001\"L\n\022RevokeRoleResponse\022\030\n\007rev" +
-      "oked\030\001 \001(\010R\007revoked:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001" +
-      "J\005authzP\001\"\206\001\n\024ListUserRolesRequest\022\027\n\007us" +
-      "er_id\030\001 \001(\tR\006userId\022\026\n\006domain\030\002 \001(\tR\006dom" +
-      "ain\022\037\n\013active_only\030\003 \001(\010R\nactiveOnly:\034\232\262" +
-      "\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"x\n\025ListUserRo" +
-      "lesResponse\022A\n\nuser_roles\030\001 \003(\0132\".udb.co" +
-      "re.authz.entity.v1.UserRoleR\tuserRoles:\034" +
-      "\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"|\n\016GetRoleR" +
-      "equest\022\027\n\007role_id\030\001 \001(\tR\006roleId\022\033\n\trole_" +
-      "code\030\002 \001(\tR\010roleCode\022\026\n\006domain\030\003 \001(\tR\006do" +
-      "main:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"c\n\017Ge" +
-      "tRoleResponse\0222\n\004role\030\001 \001(\0132\036.udb.core.a" +
-      "uthz.entity.v1.RoleR\004role:\034\232\262\031\030\010\001\032\003udb(\260" +
-      "\352\0010\003@\001J\005authzP\001\"\236\001\n\020ListRolesRequest\022\026\n\006" +
-      "domain\030\001 \001(\tR\006domain\022\037\n\013active_only\030\002 \001(" +
-      "\010R\nactiveOnly\0223\n\004page\030\003 \001(\0132\037.udb.core.c" +
-      "ommon.v1.PageRequestR\004page:\034\232\262\031\030\010\001\032\003udb(" +
-      "\260\352\0010\003@\001J\005authzP\001\"\235\001\n\021ListRolesResponse\0224" +
-      "\n\005roles\030\001 \003(\0132\036.udb.core.authz.entity.v1" +
-      ".RoleR\005roles\0224\n\004page\030\002 \001(\0132 .udb.core.co" +
-      "mmon.v1.PageResponseR\004page:\034\232\262\031\030\010\001\032\003udb(" +
-      "\260\352\0010\003@\001J\005authzP\001\"_\n\017PermissionCheck\022\026\n\006o" +
-      "bject\030\001 \001(\tR\006object\022\026\n\006action\030\002 \001(\tR\006act" +
-      "ion:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"\367\001\n\034Ba" +
-      "tchCheckPermissionsRequest\022\027\n\007user_id\030\001 " +
-      "\001(\tR\006userId\022\026\n\006domain\030\002 \001(\tR\006domain\022C\n\006c" +
-      "hecks\030\003 \003(\0132+.udb.core.authz.services.v1" +
-      ".PermissionCheckR\006checks\022C\n\007context\030\004 \001(" +
-      "\0132).udb.core.authz.services.v1.AccessCon" +
-      "textR\007context:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005auth" +
-      "zP\001\"\333\001\n\035BatchCheckPermissionsResponse\022`\n" +
-      "\007results\030\001 \003(\0132F.udb.core.authz.services" +
-      ".v1.BatchCheckPermissionsResponse.Result" +
-      "sEntryR\007results\032:\n\014ResultsEntry\022\020\n\003key\030\001" +
-      " \001(\tR\003key\022\024\n\005value\030\002 \001(\010R\005value:\0028\001:\034\232\262\031" +
-      "\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"\350\001\n\021UpdateRole" +
-      "Request\022\034\n\007role_id\030\001 \001(\tB\003\340A\002R\006roleId\022\027\n" +
-      "\004name\030\002 \001(\tB\003\340A\001R\004name\022%\n\013description\030\003 " +
-      "\001(\tB\003\340A\001R\013description\022%\n\tis_active\030\004 \001(\010" +
-      "B\003\340A\001H\000R\010isActive\210\001\001\022\"\n\nupdated_by\030\005 \001(\t" +
-      "B\003\340A\002R\tupdatedBy:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005a" +
-      "uthzP\001B\014\n\n_is_active\"f\n\022UpdateRoleRespon" +
-      "se\0222\n\004role\030\001 \001(\0132\036.udb.core.authz.entity" +
-      ".v1.RoleR\004role:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005aut" +
-      "hzP\001\"s\n\021DeleteRoleRequest\022\034\n\007role_id\030\001 \001" +
-      "(\tB\003\340A\002R\006roleId\022\"\n\ndeleted_by\030\002 \001(\tB\003\340A\002" +
-      "R\tdeletedBy:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP" +
-      "\001\"L\n\022DeleteRoleResponse\022\030\n\007deleted\030\001 \001(\010" +
-      "R\007deleted:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"" +
-      "Q\n\024GetPolicyRuleRequest\022\033\n\tpolicy_id\030\001 \001" +
-      "(\tR\010policyId:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authz" +
-      "P\001\"s\n\025GetPolicyRuleResponse\022<\n\006policy\030\001 " +
-      "\001(\0132$.udb.core.authz.entity.v1.PolicyRul" +
-      "eR\006policy:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"" +
-      "\326\001\n\026ListPolicyRulesRequest\022\026\n\006domain\030\001 \001" +
-      "(\tR\006domain\022\030\n\007subject\030\002 \001(\tR\007subject\022\026\n\006" +
-      "object\030\003 \001(\tR\006object\022\037\n\013active_only\030\004 \001(" +
-      "\010R\nactiveOnly\0223\n\004page\030\005 \001(\0132\037.udb.core.c" +
-      "ommon.v1.PageRequestR\004page:\034\232\262\031\030\010\001\032\003udb(" +
-      "\260\352\0010\003@\001J\005authzP\001\"\257\001\n\027ListPolicyRulesResp" +
-      "onse\022@\n\010policies\030\001 \003(\0132$.udb.core.authz." +
-      "entity.v1.PolicyRuleR\010policies\0224\n\004page\030\002" +
-      " \001(\0132 .udb.core.common.v1.PageResponseR\004" +
-      "page:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"s\n\027De" +
-      "letePolicyRuleRequest\022\033\n\tpolicy_id\030\001 \001(\t" +
-      "R\010policyId\022\035\n\ndeleted_by\030\002 \001(\tR\tdeletedB" +
-      "y:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"R\n\030Delet" +
-      "ePolicyRuleResponse\022\030\n\007deleted\030\001 \001(\010R\007de" +
-      "leted:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"^\n\024A" +
-      "uthMutationResponse\022\016\n\002ok\030\001 \001(\010R\002ok\022\030\n\007m" +
-      "essage\030\002 \001(\tR\007message:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003" +
-      "@\001J\005authzP\001\"\313\001\n\013RoleBinding\022\030\n\007subject\030\001" +
-      " \001(\tR\007subject\022\022\n\004role\030\002 \001(\tR\004role\022\026\n\006ten" +
-      "ant\030\003 \001(\tR\006tenant\022\030\n\007project\030\004 \001(\tR\007proj" +
-      "ect\022&\n\017expires_at_unix\030\005 \001(\003R\rexpiresAtU" +
-      "nix\022\026\n\006source\030\006 \001(\tR\006source:\034\232\262\031\030\010\001\032\003udb" +
-      "(\260\352\0010\003@\001J\005authzP\001\"\213\002\n\021RelationshipTuple\022" +
-      "\030\n\007subject\030\001 \001(\tR\007subject\022\032\n\010relation\030\002 " +
-      "\001(\tR\010relation\022\026\n\006object\030\003 \001(\tR\006object\022\026\n" +
-      "\006tenant\030\004 \001(\tR\006tenant\022\030\n\007project\030\005 \001(\tR\007" +
-      "project\022\030\n\007version\030\006 \001(\003R\007version\022&\n\017exp" +
-      "ires_at_unix\030\007 \001(\003R\rexpiresAtUnix\022\026\n\006sou" +
-      "rce\030\010 \001(\tR\006source:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005" +
-      "authzP\001\"\250\004\n\021AuthzPolicyRecord\022\016\n\002id\030\001 \001(" +
-      "\tR\002id\022\032\n\010priority\030\002 \001(\005R\010priority\022\030\n\007ena" +
-      "bled\030\003 \001(\010R\007enabled\022\026\n\006effect\030\004 \001(\tR\006eff" +
-      "ect\022\026\n\006tenant\030\005 \001(\tR\006tenant\022\030\n\007project\030\006" +
-      " \001(\tR\007project\022\030\n\007subject\030\007 \001(\tR\007subject\022" +
-      "\022\n\004role\030\010 \001(\tR\004role\022\026\n\006action\030\t \001(\tR\006act" +
-      "ion\022\032\n\010resource\030\n \001(\tR\010resource\022\030\n\007purpo" +
-      "se\030\013 \001(\tR\007purpose\022\"\n\014relationship\030\014 \001(\tR" +
-      "\014relationship\022]\n\nconditions\030\r \003(\0132=.udb." +
-      "core.authz.services.v1.AuthzPolicyRecord" +
-      ".ConditionsEntryR\nconditions\022\'\n\017required" +
-      "_scopes\030\016 \003(\tR\016requiredScopes\032=\n\017Conditi" +
-      "onsEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(" +
-      "\tR\005value:\0028\001:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authz" +
-      "P\001\"x\n\025PutRoleBindingRequest\022A\n\007binding\030\001" +
-      " \001(\0132\'.udb.core.authz.services.v1.RoleBi" +
-      "ndingR\007binding:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005aut" +
-      "hzP\001\"{\n\026PutRelationshipRequest\022C\n\005tuple\030" +
-      "\001 \001(\0132-.udb.core.authz.services.v1.Relat" +
-      "ionshipTupleR\005tuple:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001" +
-      "J\005authzP\001\"|\n\025PutAuthzPolicyRequest\022E\n\006po" +
-      "licy\030\001 \001(\0132-.udb.core.authz.services.v1." +
-      "AuthzPolicyRecordR\006policy:\034\232\262\031\030\010\001\032\003udb(\260" +
-      "\352\0010\003@\001J\005authzP\001\"8\n\030LintAuthzPoliciesRequ" +
-      "est:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"U\n\031Lin" +
-      "tAuthzPoliciesResponse\022\032\n\010findings\030\001 \003(\t" +
-      "R\010findings:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001" +
-      "\"\364\004\n\023NativeAccessRequest\022C\n\tprincipal\030\001 " +
-      "\001(\0132%.udb.core.authz.services.v1.Princip" +
-      "alR\tprincipal\022\035\n\nsession_id\030\002 \001(\tR\tsessi" +
-      "onId\022\033\n\ttenant_id\030\003 \001(\tR\010tenantId\022\035\n\npro" +
-      "ject_id\030\004 \001(\tR\tprojectId\022C\n\010resource\030\005 \001" +
-      "(\0132\'.udb.core.authz.services.v1.Resource" +
-      "RefR\010resource\022\026\n\006action\030\006 \001(\tR\006action\022\030\n" +
-      "\007purpose\030\007 \001(\tR\007purpose\022)\n\020requested_sco" +
-      "pes\030\010 \003(\tR\017requestedScopes\022C\n\007context\030\t " +
-      "\001(\0132).udb.core.authz.services.v1.AccessC" +
-      "ontextR\007context\022\030\n\007backend\030\n \001(\tR\007backen" +
-      "d\022_\n\nattributes\030\013 \003(\0132?.udb.core.authz.s" +
-      "ervices.v1.NativeAccessRequest.Attribute" +
+      "field_behavior.proto\032 google/protobuf/fi" +
+      "eld_mask.proto\032\037google/protobuf/timestam" +
+      "p.proto\0324udb/core/authz/entity/v1/access" +
+      "_decision_audit.proto\032$udb/core/authz/en" +
+      "tity/v1/enums.proto\032*udb/core/authz/enti" +
+      "ty/v1/policy_rule.proto\032#udb/core/authz/" +
+      "entity/v1/role.proto\032(udb/core/authz/ent" +
+      "ity/v1/user_role.proto\032\034udb/core/common/" +
+      "v1/dto.proto\032!udb/core/common/v1/securit" +
+      "y.proto\"\317\004\n\tPrincipal\022!\n\014principal_id\030\001 " +
+      "\001(\tR\013principalId\022\030\n\007subject\030\002 \001(\tR\007subje" +
+      "ct\022\027\n\007user_id\030\003 \001(\tR\006userId\022)\n\020service_i" +
+      "dentity\030\004 \001(\tR\017serviceIdentity\022\033\n\ttenant" +
+      "_id\030\005 \001(\tR\010tenantId\022\035\n\nproject_id\030\006 \001(\tR" +
+      "\tprojectId\022\026\n\006scopes\030\007 \003(\tR\006scopes\022\024\n\005ro" +
+      "les\030\010 \003(\tR\005roles\022\037\n\013provider_id\030\t \001(\tR\np" +
+      "roviderId\022\037\n\013auth_method\030\n \001(\tR\nauthMeth" +
+      "od\022&\n\017expires_at_unix\030\013 \001(\003R\rexpiresAtUn" +
+      "ix\022!\n\014account_kind\030\014 \001(\tR\013accountKind\022\026\n" +
+      "\006domain\030\r \001(\tR\006domain\022U\n\nattributes\030\016 \003(" +
+      "\01325.udb.core.authz.services.v1.Principal" +
+      ".AttributesEntryR\nattributes\032=\n\017Attribut" +
+      "esEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\t" +
+      "R\005value:\0028\001:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP" +
+      "\001\"\351\004\n\013ResourceRef\022#\n\rresource_type\030\001 \001(\t" +
+      "R\014resourceType\022#\n\rresource_name\030\002 \001(\tR\014r" +
+      "esourceName\022!\n\014message_type\030\003 \001(\tR\013messa" +
+      "geType\022\026\n\006schema\030\004 \001(\tR\006schema\022\024\n\005table\030" +
+      "\005 \001(\tR\005table\022\030\n\007backend\030\006 \001(\tR\007backend\022\032" +
+      "\n\010instance\030\007 \001(\tR\010instance\022\037\n\013resource_i" +
+      "d\030\010 \001(\tR\nresourceId\022\036\n\ncollection\030\t \001(\tR" +
+      "\ncollection\022\026\n\006bucket\030\n \001(\tR\006bucket\022\022\n\004p" +
+      "ath\030\013 \001(\tR\004path\022\030\n\007service\030\014 \001(\tR\007servic" +
+      "e\022\020\n\003api\030\r \001(\tR\003api\022\033\n\ttenant_id\030\016 \001(\tR\010" +
+      "tenantId\022\035\n\nproject_id\030\017 \001(\tR\tprojectId\022" +
+      "W\n\nattributes\030\020 \003(\01327.udb.core.authz.ser" +
+      "vices.v1.ResourceRef.AttributesEntryR\nat" +
+      "tributes\032=\n\017AttributesEntry\022\020\n\003key\030\001 \001(\t" +
+      "R\003key\022\024\n\005value\030\002 \001(\tR\005value:\0028\001:\034\232\262\031\030\010\001\032" +
+      "\003udb(\260\352\0010\003@\001J\005authzP\001\"\240\003\n\010Decision\022\037\n\013de" +
+      "cision_id\030\001 \001(\tR\ndecisionId\022\030\n\007allowed\030\002" +
+      " \001(\010R\007allowed\022\026\n\006effect\030\003 \001(\tR\006effect\022\037\n" +
+      "\013deny_reason\030\004 \001(\tR\ndenyReason\022,\n\022matche" +
+      "d_policy_ids\030\005 \003(\tR\020matchedPolicyIds\022\'\n\017" +
+      "required_scopes\030\006 \003(\tR\016requiredScopes\022%\n" +
+      "\016policy_version\030\007 \001(\tR\rpolicyVersion\0221\n\024" +
+      "relationship_version\030\010 \001(\tR\023relationship" +
+      "Version\022*\n\021cache_ttl_seconds\030\t \001(\004R\017cach" +
+      "eTtlSeconds\022%\n\016audit_required\030\n \001(\010R\raud" +
+      "itRequired:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001" +
+      "\"\334\002\n\rAccessContext\022\035\n\nip_address\030\001 \001(\tR\t" +
+      "ipAddress\022\035\n\nuser_agent\030\002 \001(\tR\tuserAgent" +
+      "\022\033\n\tdevice_id\030\003 \001(\tR\010deviceId\022\031\n\010token_i" +
+      "d\030\004 \001(\tR\007tokenId\022\035\n\nsession_id\030\005 \001(\tR\tse" +
+      "ssionId\022Y\n\nattributes\030\006 \003(\01329.udb.core.a" +
+      "uthz.services.v1.AccessContext.Attribute" +
       "sEntryR\nattributes\032=\n\017AttributesEntry\022\020\n" +
       "\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005value:\0028" +
-      "\001:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"\245\003\n\021Nati" +
-      "veAccessGrant\022\020\n\003dsn\030\001 \001(\tR\003dsn\022\022\n\004role\030" +
-      "\002 \001(\tR\004role\022\030\n\007backend\030\003 \001(\tR\007backend\022\032\n" +
-      "\010database\030\004 \001(\tR\010database\022\026\n\006schema\030\005 \001(" +
-      "\tR\006schema\022p\n\021session_variables\030\006 \003(\0132C.u" +
-      "db.core.authz.services.v1.NativeAccessGr" +
-      "ant.SessionVariablesEntryR\020sessionVariab" +
-      "les\022&\n\017expires_at_unix\030\007 \001(\003R\rexpiresAtU" +
-      "nix\022\037\n\013ttl_seconds\030\010 \001(\004R\nttlSeconds\032C\n\025" +
-      "SessionVariablesEntry\022\020\n\003key\030\001 \001(\tR\003key\022" +
-      "\024\n\005value\030\002 \001(\tR\005value:\0028\001:\034\232\262\031\030\010\001\032\003udb(\260" +
-      "\352\0010\003@\001J\005authzP\001\"\273\001\n\024NativeAccessResponse" +
-      "\022@\n\010decision\030\001 \001(\0132$.udb.core.authz.serv" +
-      "ices.v1.DecisionR\010decision\022C\n\005grant\030\002 \001(" +
-      "\0132-.udb.core.authz.services.v1.NativeAcc" +
-      "essGrantR\005grant:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005au" +
-      "thzP\001\"\207\001\n\023PolicyBundleRequest\022\033\n\ttenant_" +
-      "id\030\001 \001(\tR\010tenantId\022\035\n\nproject_id\030\002 \001(\tR\t" +
-      "projectId\022\026\n\006domain\030\003 \001(\tR\006domain:\034\232\262\031\030\010" +
-      "\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"\346\002\n\022SignedPolicy" +
-      "Bundle\022\026\n\006bundle\030\001 \001(\014R\006bundle\022\034\n\tsignat" +
-      "ure\030\002 \001(\tR\tsignature\022\025\n\006key_id\030\003 \001(\tR\005ke" +
-      "yId\022\034\n\talgorithm\030\004 \001(\tR\talgorithm\022%\n\016pol" +
-      "icy_version\030\005 \001(\tR\rpolicyVersion\0221\n\024rela" +
-      "tionship_version\030\006 \001(\tR\023relationshipVers" +
-      "ion\022$\n\016issued_at_unix\030\007 \001(\003R\014issuedAtUni" +
-      "x\022&\n\017expires_at_unix\030\010 \001(\003R\rexpiresAtUni" +
-      "x\022\037\n\013ttl_seconds\030\t \001(\004R\nttlSeconds:\034\232\262\031\030" +
-      "\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"|\n\024PolicyBundle" +
-      "Response\022F\n\006bundle\030\001 \001(\0132..udb.core.auth" +
-      "z.services.v1.SignedPolicyBundleR\006bundle" +
-      ":\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001B\202\002\n\036com.u" +
-      "db.core.authz.services.v1B\tCoreProtoP\001ZH" +
-      "github.com/fahara02/udb/sdk/go/gen/udb/c" +
-      "ore/authz/services/v1;servicesv1\242\002\004UCAS\252" +
-      "\002\032udb.core.Authz.Services.V1\312\002\032Udb\\Core\\" +
-      "Authz\\Services\\V1\342\002&Udb\\GPBMetadata\\Core" +
-      "\\Authz\\Services\\V1\352\002\036Udb::Core::Authz::S" +
-      "ervices::V1b\006proto3"
+      "\001:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"\211\005\n\022Chec" +
+      "kAccessRequest\022\034\n\007user_id\030\001 \001(\tB\003\340A\002R\006us" +
+      "erId\022\033\n\006domain\030\002 \001(\tB\003\340A\002R\006domain\022\033\n\006obj" +
+      "ect\030\003 \001(\tB\003\340A\002R\006object\022\033\n\006action\030\004 \001(\tB\003" +
+      "\340A\002R\006action\022H\n\007context\030\005 \001(\0132).udb.core." +
+      "authz.services.v1.AccessContextB\003\340A\001R\007co" +
+      "ntext\022H\n\tprincipal\030\006 \001(\0132%.udb.core.auth" +
+      "z.services.v1.PrincipalB\003\340A\001R\tprincipal\022" +
+      "H\n\010resource\030\007 \001(\0132\'.udb.core.authz.servi" +
+      "ces.v1.ResourceRefB\003\340A\001R\010resource\022\035\n\007pur" +
+      "pose\030\010 \001(\tB\003\340A\001R\007purpose\022 \n\ttenant_id\030\t " +
+      "\001(\tB\003\340A\001R\010tenantId\022\"\n\nproject_id\030\n \001(\tB\003" +
+      "\340A\001R\tprojectId\022^\n\nattributes\030\013 \003(\0132>.udb" +
+      ".core.authz.services.v1.CheckAccessReque" +
+      "st.AttributesEntryR\nattributes\032=\n\017Attrib" +
+      "utesEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001" +
+      "(\tR\005value:\0028\001:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005auth" +
+      "zP\001\"\212\002\n\023CheckAccessResponse\022\030\n\007allowed\030\001" +
+      " \001(\010R\007allowed\022>\n\006effect\030\002 \001(\0162&.udb.core" +
+      ".authz.entity.v1.PolicyEffectR\006effect\022!\n" +
+      "\014matched_rule\030\003 \001(\tR\013matchedRule\022\026\n\006reas" +
+      "on\030\004 \001(\tR\006reason\022@\n\010decision\030\005 \001(\0132$.udb" +
+      ".core.authz.services.v1.DecisionR\010decisi" +
+      "on:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"\344\004\n\014Aut" +
+      "hzRequest\022C\n\tprincipal\030\001 \001(\0132%.udb.core." +
+      "authz.services.v1.PrincipalR\tprincipal\022\035" +
+      "\n\nsession_id\030\002 \001(\tR\tsessionId\022\033\n\ttenant_" +
+      "id\030\003 \001(\tR\010tenantId\022\035\n\nproject_id\030\004 \001(\tR\t" +
+      "projectId\022C\n\010resource\030\005 \001(\0132\'.udb.core.a" +
+      "uthz.services.v1.ResourceRefR\010resource\022\026" +
+      "\n\006action\030\006 \001(\tR\006action\022\030\n\007purpose\030\007 \001(\tR" +
+      "\007purpose\022X\n\nattributes\030\010 \003(\01328.udb.core." +
+      "authz.services.v1.AuthzRequest.Attribute" +
+      "sEntryR\nattributes\022C\n\007context\030\t \001(\0132).ud" +
+      "b.core.authz.services.v1.AccessContextR\007" +
+      "context\022)\n\020requested_scopes\030\n \003(\tR\017reque" +
+      "stedScopes\022\026\n\006domain\030\013 \001(\tR\006domain\032=\n\017At" +
+      "tributesEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005value" +
+      "\030\002 \001(\tR\005value:\0028\001:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005" +
+      "authzP\001\"o\n\rAuthzResponse\022@\n\010decision\030\001 \001" +
+      "(\0132$.udb.core.authz.services.v1.Decision" +
+      "R\010decision:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001" +
+      "\"\251\004\n\021CreateRoleRequest\022\027\n\004name\030\001 \001(\tB\003\340A" +
+      "\002R\004name\022%\n\013description\030\002 \001(\tB\003\340A\001R\013descr" +
+      "iption\022\"\n\ncreated_by\030\003 \001(\tB\003\340A\002R\tcreated" +
+      "By\022 \n\trole_code\030\004 \001(\tB\003\340A\001R\010roleCode\022\033\n\006" +
+      "domain\030\005 \001(\tB\003\340A\001R\006domain\022 \n\ttenant_id\030\006" +
+      " \001(\tB\003\340A\001R\010tenantId\022\"\n\nproject_id\030\007 \001(\tB" +
+      "\003\340A\001R\tprojectId\022K\n\nscope_type\030\010 \001(\0162\'.ud" +
+      "b.core.authz.entity.v1.RoleScopeTypeB\003\340A" +
+      "\001R\tscopeType\022*\n\016access_surface\030\t \001(\tB\003\340A" +
+      "\001R\raccessSurface\022W\n\010metadata\030\n \003(\0132;.udb" +
+      ".core.authz.services.v1.CreateRoleReques" +
+      "t.MetadataEntryR\010metadata\032;\n\rMetadataEnt" +
+      "ry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005val" +
+      "ue:\0028\001:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"f\n\022" +
+      "CreateRoleResponse\0222\n\004role\030\001 \001(\0132\036.udb.c" +
+      "ore.authz.entity.v1.RoleR\004role:\034\232\262\031\030\010\001\032\003" +
+      "udb(\260\352\0010\003@\001J\005authzP\001\"\263\003\n\021AssignRoleReque" +
+      "st\022\034\n\007user_id\030\001 \001(\tB\003\340A\002R\006userId\022\034\n\007role" +
+      "_id\030\002 \001(\tB\003\340A\002R\006roleId\022\033\n\006domain\030\003 \001(\tB\003" +
+      "\340A\002R\006domain\022$\n\013assigned_by\030\004 \001(\tB\003\340A\002R\na" +
+      "ssignedBy\022>\n\nexpires_at\030\005 \001(\0132\032.google.p" +
+      "rotobuf.TimestampB\003\340A\001R\texpiresAt\022&\n\014pri" +
+      "ncipal_id\030\006 \001(\tB\003\340A\001R\013principalId\022S\n\016pri" +
+      "ncipal_kind\030\007 \001(\0162\'.udb.core.authz.entit" +
+      "y.v1.PrincipalKindB\003\340A\001R\rprincipalKind\022 " +
+      "\n\ttenant_id\030\010 \001(\tB\003\340A\001R\010tenantId\022\"\n\nproj" +
+      "ect_id\030\t \001(\tB\003\340A\001R\tprojectId:\034\232\262\031\030\010\001\032\003ud" +
+      "b(\260\352\0010\003@\001J\005authzP\001\"s\n\022AssignRoleResponse" +
+      "\022?\n\tuser_role\030\001 \001(\0132\".udb.core.authz.ent" +
+      "ity.v1.UserRoleR\010userRole:\034\232\262\031\030\010\001\032\003udb(\260" +
+      "\352\0010\003@\001J\005authzP\001\"\364\004\n\027CreatePolicyRuleRequ" +
+      "est\022\035\n\007subject\030\001 \001(\tB\003\340A\002R\007subject\022\033\n\006do" +
+      "main\030\002 \001(\tB\003\340A\002R\006domain\022\033\n\006object\030\003 \001(\tB" +
+      "\003\340A\002R\006object\022\033\n\006action\030\004 \001(\tB\003\340A\002R\006actio" +
+      "n\022C\n\006effect\030\005 \001(\0162&.udb.core.authz.entit" +
+      "y.v1.PolicyEffectB\003\340A\002R\006effect\022!\n\tcondit" +
+      "ion\030\006 \001(\tB\003\340A\001R\tcondition\022%\n\013description" +
+      "\030\007 \001(\tB\003\340A\001R\013description\022\"\n\ncreated_by\030\010" +
+      " \001(\tB\003\340A\002R\tcreatedBy\022 \n\ttenant_id\030\t \001(\tB" +
+      "\003\340A\001R\010tenantId\022\"\n\nproject_id\030\n \001(\tB\003\340A\001R" +
+      "\tprojectId\022(\n\rresource_type\030\013 \001(\tB\003\340A\001R\014" +
+      "resourceType\022c\n\nattributes\030\014 \003(\0132C.udb.c" +
+      "ore.authz.services.v1.CreatePolicyRuleRe" +
+      "quest.AttributesEntryR\nattributes\032=\n\017Att" +
+      "ributesEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005value\030" +
+      "\002 \001(\tR\005value:\0028\001:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005a" +
+      "uthzP\001\"v\n\030CreatePolicyRuleResponse\022<\n\006po" +
+      "licy\030\001 \001(\0132$.udb.core.authz.entity.v1.Po" +
+      "licyRuleR\006policy:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005a" +
+      "uthzP\001\"\273\001\n\032ListUserPermissionsRequest\022\034\n" +
+      "\007user_id\030\001 \001(\tB\003\340A\002R\006userId\022\033\n\006domain\030\002 " +
+      "\001(\tB\003\340A\002R\006domain\022 \n\tpage_size\030\003 \001(\005B\003\340A\001" +
+      "R\010pageSize\022\"\n\npage_token\030\004 \001(\tB\003\340A\001R\tpag" +
+      "eToken:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"\273\001\n" +
+      "\023EffectivePermission\022\026\n\006object\030\001 \001(\tR\006ob" +
+      "ject\022\026\n\006action\030\002 \001(\tR\006action\022\031\n\010via_role" +
+      "\030\003 \001(\tR\007viaRole\022#\n\rresource_type\030\004 \001(\tR\014" +
+      "resourceType\022\026\n\006domain\030\005 \001(\tR\006domain:\034\232\262" +
+      "\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"\266\001\n\033ListUserP" +
+      "ermissionsResponse\022Q\n\013permissions\030\001 \003(\0132" +
+      "/.udb.core.authz.services.v1.EffectivePe" +
+      "rmissionR\013permissions\022&\n\017next_page_token" +
+      "\030\002 \001(\tR\rnextPageToken:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003" +
+      "@\001J\005authzP\001\"\340\001\n\037ListAccessDecisionAudits" +
+      "Request\022\034\n\007user_id\030\001 \001(\tB\003\340A\001R\006userId\022\033\n" +
+      "\006domain\030\002 \001(\tB\003\340A\001R\006domain\022*\n\016correlatio" +
+      "n_id\030\003 \001(\tB\003\340A\001R\rcorrelationId\0228\n\004page\030\004" +
+      " \001(\0132\037.udb.core.common.v1.PageRequestB\003\340" +
+      "A\001R\004page:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"\275" +
+      "\001\n ListAccessDecisionAuditsResponse\022E\n\006a" +
+      "udits\030\001 \003(\0132-.udb.core.authz.entity.v1.A" +
+      "ccessDecisionAuditR\006audits\0224\n\004page\030\002 \001(\013" +
+      "2 .udb.core.common.v1.PageResponseR\004page" +
+      ":\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"\243\001\n\021Revok" +
+      "eRoleRequest\022\027\n\007user_id\030\001 \001(\tR\006userId\022 \n" +
+      "\014user_role_id\030\002 \001(\tR\nuserRoleId\022\026\n\006reaso" +
+      "n\030\003 \001(\tR\006reason\022\035\n\nrevoked_by\030\004 \001(\tR\trev" +
+      "okedBy:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"L\n\022" +
+      "RevokeRoleResponse\022\030\n\007revoked\030\001 \001(\010R\007rev" +
+      "oked:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"\302\001\n\024L" +
+      "istUserRolesRequest\022\027\n\007user_id\030\001 \001(\tR\006us" +
+      "erId\022\026\n\006domain\030\002 \001(\tR\006domain\022\037\n\013active_o" +
+      "nly\030\003 \001(\010R\nactiveOnly\022\033\n\tpage_size\030\004 \001(\005" +
+      "R\010pageSize\022\035\n\npage_token\030\005 \001(\tR\tpageToke" +
+      "n:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"\240\001\n\025List" +
+      "UserRolesResponse\022A\n\nuser_roles\030\001 \003(\0132\"." +
+      "udb.core.authz.entity.v1.UserRoleR\tuserR" +
+      "oles\022&\n\017next_page_token\030\002 \001(\tR\rnextPageT" +
+      "oken:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"|\n\016Ge" +
+      "tRoleRequest\022\027\n\007role_id\030\001 \001(\tR\006roleId\022\033\n" +
+      "\trole_code\030\002 \001(\tR\010roleCode\022\026\n\006domain\030\003 \001" +
+      "(\tR\006domain:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001" +
+      "\"c\n\017GetRoleResponse\0222\n\004role\030\001 \001(\0132\036.udb." +
+      "core.authz.entity.v1.RoleR\004role:\034\232\262\031\030\010\001\032" +
+      "\003udb(\260\352\0010\003@\001J\005authzP\001\"\236\001\n\020ListRolesReque" +
+      "st\022\026\n\006domain\030\001 \001(\tR\006domain\022\037\n\013active_onl" +
+      "y\030\002 \001(\010R\nactiveOnly\0223\n\004page\030\003 \001(\0132\037.udb." +
+      "core.common.v1.PageRequestR\004page:\034\232\262\031\030\010\001" +
+      "\032\003udb(\260\352\0010\003@\001J\005authzP\001\"\235\001\n\021ListRolesResp" +
+      "onse\0224\n\005roles\030\001 \003(\0132\036.udb.core.authz.ent" +
+      "ity.v1.RoleR\005roles\0224\n\004page\030\002 \001(\0132 .udb.c" +
+      "ore.common.v1.PageResponseR\004page:\034\232\262\031\030\010\001" +
+      "\032\003udb(\260\352\0010\003@\001J\005authzP\001\"_\n\017PermissionChec" +
+      "k\022\026\n\006object\030\001 \001(\tR\006object\022\026\n\006action\030\002 \001(" +
+      "\tR\006action:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"" +
+      "\367\001\n\034BatchCheckPermissionsRequest\022\027\n\007user" +
+      "_id\030\001 \001(\tR\006userId\022\026\n\006domain\030\002 \001(\tR\006domai" +
+      "n\022C\n\006checks\030\003 \003(\0132+.udb.core.authz.servi" +
+      "ces.v1.PermissionCheckR\006checks\022C\n\007contex" +
+      "t\030\004 \001(\0132).udb.core.authz.services.v1.Acc" +
+      "essContextR\007context:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001" +
+      "J\005authzP\001\"\333\001\n\035BatchCheckPermissionsRespo" +
+      "nse\022`\n\007results\030\001 \003(\0132F.udb.core.authz.se" +
+      "rvices.v1.BatchCheckPermissionsResponse." +
+      "ResultsEntryR\007results\032:\n\014ResultsEntry\022\020\n" +
+      "\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\010R\005value:\0028" +
+      "\001:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"\245\002\n\021Upda" +
+      "teRoleRequest\022\034\n\007role_id\030\001 \001(\tB\003\340A\002R\006rol" +
+      "eId\022\027\n\004name\030\002 \001(\tB\003\340A\001R\004name\022%\n\013descript" +
+      "ion\030\003 \001(\tB\003\340A\001R\013description\022%\n\tis_active" +
+      "\030\004 \001(\010B\003\340A\001H\000R\010isActive\210\001\001\022\"\n\nupdated_by" +
+      "\030\005 \001(\tB\003\340A\002R\tupdatedBy\022;\n\013update_mask\030\006 " +
+      "\001(\0132\032.google.protobuf.FieldMaskR\nupdateM" +
+      "ask:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001B\014\n\n_is" +
+      "_active\"f\n\022UpdateRoleResponse\0222\n\004role\030\001 " +
+      "\001(\0132\036.udb.core.authz.entity.v1.RoleR\004rol" +
+      "e:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"s\n\021Delet" +
+      "eRoleRequest\022\034\n\007role_id\030\001 \001(\tB\003\340A\002R\006role" +
+      "Id\022\"\n\ndeleted_by\030\002 \001(\tB\003\340A\002R\tdeletedBy:\034" +
+      "\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"L\n\022DeleteRo" +
+      "leResponse\022\030\n\007deleted\030\001 \001(\010R\007deleted:\034\232\262" +
+      "\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"Q\n\024GetPolicyR" +
+      "uleRequest\022\033\n\tpolicy_id\030\001 \001(\tR\010policyId:" +
+      "\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"s\n\025GetPoli" +
+      "cyRuleResponse\022<\n\006policy\030\001 \001(\0132$.udb.cor" +
+      "e.authz.entity.v1.PolicyRuleR\006policy:\034\232\262" +
+      "\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"\326\001\n\026ListPolic" +
+      "yRulesRequest\022\026\n\006domain\030\001 \001(\tR\006domain\022\030\n" +
+      "\007subject\030\002 \001(\tR\007subject\022\026\n\006object\030\003 \001(\tR" +
+      "\006object\022\037\n\013active_only\030\004 \001(\010R\nactiveOnly" +
+      "\0223\n\004page\030\005 \001(\0132\037.udb.core.common.v1.Page" +
+      "RequestR\004page:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005auth" +
+      "zP\001\"\257\001\n\027ListPolicyRulesResponse\022@\n\010polic" +
+      "ies\030\001 \003(\0132$.udb.core.authz.entity.v1.Pol" +
+      "icyRuleR\010policies\0224\n\004page\030\002 \001(\0132 .udb.co" +
+      "re.common.v1.PageResponseR\004page:\034\232\262\031\030\010\001\032" +
+      "\003udb(\260\352\0010\003@\001J\005authzP\001\"s\n\027DeletePolicyRul" +
+      "eRequest\022\033\n\tpolicy_id\030\001 \001(\tR\010policyId\022\035\n" +
+      "\ndeleted_by\030\002 \001(\tR\tdeletedBy:\034\232\262\031\030\010\001\032\003ud" +
+      "b(\260\352\0010\003@\001J\005authzP\001\"R\n\030DeletePolicyRuleRe" +
+      "sponse\022\030\n\007deleted\030\001 \001(\010R\007deleted:\034\232\262\031\030\010\001" +
+      "\032\003udb(\260\352\0010\003@\001J\005authzP\001\"^\n\024AuthMutationRe" +
+      "sponse\022\016\n\002ok\030\001 \001(\010R\002ok\022\030\n\007message\030\002 \001(\tR" +
+      "\007message:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"\313" +
+      "\001\n\013RoleBinding\022\030\n\007subject\030\001 \001(\tR\007subject" +
+      "\022\022\n\004role\030\002 \001(\tR\004role\022\026\n\006tenant\030\003 \001(\tR\006te" +
+      "nant\022\030\n\007project\030\004 \001(\tR\007project\022&\n\017expire" +
+      "s_at_unix\030\005 \001(\003R\rexpiresAtUnix\022\026\n\006source" +
+      "\030\006 \001(\tR\006source:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005aut" +
+      "hzP\001\"\213\002\n\021RelationshipTuple\022\030\n\007subject\030\001 " +
+      "\001(\tR\007subject\022\032\n\010relation\030\002 \001(\tR\010relation" +
+      "\022\026\n\006object\030\003 \001(\tR\006object\022\026\n\006tenant\030\004 \001(\t" +
+      "R\006tenant\022\030\n\007project\030\005 \001(\tR\007project\022\030\n\007ve" +
+      "rsion\030\006 \001(\003R\007version\022&\n\017expires_at_unix\030" +
+      "\007 \001(\003R\rexpiresAtUnix\022\026\n\006source\030\010 \001(\tR\006so" +
+      "urce:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"\250\004\n\021A" +
+      "uthzPolicyRecord\022\016\n\002id\030\001 \001(\tR\002id\022\032\n\010prio" +
+      "rity\030\002 \001(\005R\010priority\022\030\n\007enabled\030\003 \001(\010R\007e" +
+      "nabled\022\026\n\006effect\030\004 \001(\tR\006effect\022\026\n\006tenant" +
+      "\030\005 \001(\tR\006tenant\022\030\n\007project\030\006 \001(\tR\007project" +
+      "\022\030\n\007subject\030\007 \001(\tR\007subject\022\022\n\004role\030\010 \001(\t" +
+      "R\004role\022\026\n\006action\030\t \001(\tR\006action\022\032\n\010resour" +
+      "ce\030\n \001(\tR\010resource\022\030\n\007purpose\030\013 \001(\tR\007pur" +
+      "pose\022\"\n\014relationship\030\014 \001(\tR\014relationship" +
+      "\022]\n\nconditions\030\r \003(\0132=.udb.core.authz.se" +
+      "rvices.v1.AuthzPolicyRecord.ConditionsEn" +
+      "tryR\nconditions\022\'\n\017required_scopes\030\016 \003(\t" +
+      "R\016requiredScopes\032=\n\017ConditionsEntry\022\020\n\003k" +
+      "ey\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005value:\0028\001:" +
+      "\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"x\n\025PutRole" +
+      "BindingRequest\022A\n\007binding\030\001 \001(\0132\'.udb.co" +
+      "re.authz.services.v1.RoleBindingR\007bindin" +
+      "g:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"{\n\026PutRe" +
+      "lationshipRequest\022C\n\005tuple\030\001 \001(\0132-.udb.c" +
+      "ore.authz.services.v1.RelationshipTupleR" +
+      "\005tuple:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"|\n\025" +
+      "PutAuthzPolicyRequest\022E\n\006policy\030\001 \001(\0132-." +
+      "udb.core.authz.services.v1.AuthzPolicyRe" +
+      "cordR\006policy:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authz" +
+      "P\001\"8\n\030LintAuthzPoliciesRequest:\034\232\262\031\030\010\001\032\003" +
+      "udb(\260\352\0010\003@\001J\005authzP\001\"U\n\031LintAuthzPolicie" +
+      "sResponse\022\032\n\010findings\030\001 \003(\tR\010findings:\034\232" +
+      "\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"\364\004\n\023NativeAc" +
+      "cessRequest\022C\n\tprincipal\030\001 \001(\0132%.udb.cor" +
+      "e.authz.services.v1.PrincipalR\tprincipal" +
+      "\022\035\n\nsession_id\030\002 \001(\tR\tsessionId\022\033\n\ttenan" +
+      "t_id\030\003 \001(\tR\010tenantId\022\035\n\nproject_id\030\004 \001(\t" +
+      "R\tprojectId\022C\n\010resource\030\005 \001(\0132\'.udb.core" +
+      ".authz.services.v1.ResourceRefR\010resource" +
+      "\022\026\n\006action\030\006 \001(\tR\006action\022\030\n\007purpose\030\007 \001(" +
+      "\tR\007purpose\022)\n\020requested_scopes\030\010 \003(\tR\017re" +
+      "questedScopes\022C\n\007context\030\t \001(\0132).udb.cor" +
+      "e.authz.services.v1.AccessContextR\007conte" +
+      "xt\022\030\n\007backend\030\n \001(\tR\007backend\022_\n\nattribut" +
+      "es\030\013 \003(\0132?.udb.core.authz.services.v1.Na" +
+      "tiveAccessRequest.AttributesEntryR\nattri" +
+      "butes\032=\n\017AttributesEntry\022\020\n\003key\030\001 \001(\tR\003k" +
+      "ey\022\024\n\005value\030\002 \001(\tR\005value:\0028\001:\034\232\262\031\030\010\001\032\003ud" +
+      "b(\260\352\0010\003@\001J\005authzP\001\"\245\003\n\021NativeAccessGrant" +
+      "\022\020\n\003dsn\030\001 \001(\tR\003dsn\022\022\n\004role\030\002 \001(\tR\004role\022\030" +
+      "\n\007backend\030\003 \001(\tR\007backend\022\032\n\010database\030\004 \001" +
+      "(\tR\010database\022\026\n\006schema\030\005 \001(\tR\006schema\022p\n\021" +
+      "session_variables\030\006 \003(\0132C.udb.core.authz" +
+      ".services.v1.NativeAccessGrant.SessionVa" +
+      "riablesEntryR\020sessionVariables\022&\n\017expire" +
+      "s_at_unix\030\007 \001(\003R\rexpiresAtUnix\022\037\n\013ttl_se" +
+      "conds\030\010 \001(\004R\nttlSeconds\032C\n\025SessionVariab" +
+      "lesEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(" +
+      "\tR\005value:\0028\001:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authz" +
+      "P\001\"\273\001\n\024NativeAccessResponse\022@\n\010decision\030" +
+      "\001 \001(\0132$.udb.core.authz.services.v1.Decis" +
+      "ionR\010decision\022C\n\005grant\030\002 \001(\0132-.udb.core." +
+      "authz.services.v1.NativeAccessGrantR\005gra" +
+      "nt:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"\207\001\n\023Pol" +
+      "icyBundleRequest\022\033\n\ttenant_id\030\001 \001(\tR\010ten" +
+      "antId\022\035\n\nproject_id\030\002 \001(\tR\tprojectId\022\026\n\006" +
+      "domain\030\003 \001(\tR\006domain:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@" +
+      "\001J\005authzP\001\"\346\002\n\022SignedPolicyBundle\022\026\n\006bun" +
+      "dle\030\001 \001(\014R\006bundle\022\034\n\tsignature\030\002 \001(\tR\tsi" +
+      "gnature\022\025\n\006key_id\030\003 \001(\tR\005keyId\022\034\n\talgori" +
+      "thm\030\004 \001(\tR\talgorithm\022%\n\016policy_version\030\005" +
+      " \001(\tR\rpolicyVersion\0221\n\024relationship_vers" +
+      "ion\030\006 \001(\tR\023relationshipVersion\022$\n\016issued" +
+      "_at_unix\030\007 \001(\003R\014issuedAtUnix\022&\n\017expires_" +
+      "at_unix\030\010 \001(\003R\rexpiresAtUnix\022\037\n\013ttl_seco" +
+      "nds\030\t \001(\004R\nttlSeconds:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003" +
+      "@\001J\005authzP\001\"|\n\024PolicyBundleResponse\022F\n\006b" +
+      "undle\030\001 \001(\0132..udb.core.authz.services.v1" +
+      ".SignedPolicyBundleR\006bundle:\034\232\262\031\030\010\001\032\003udb" +
+      "(\260\352\0010\003@\001J\005authzP\001B\202\002\n\036com.udb.core.authz" +
+      ".services.v1B\tCoreProtoP\001ZHgithub.com/fa" +
+      "hara02/udb/sdk/go/gen/udb/core/authz/ser" +
+      "vices/v1;servicesv1\242\002\004UCAS\252\002\032udb.core.Au" +
+      "thz.Services.V1\312\002\032Udb\\Core\\Authz\\Service" +
+      "s\\V1\342\002&Udb\\GPBMetadata\\Core\\Authz\\Servic" +
+      "es\\V1\352\002\036Udb::Core::Authz::Services::V1b\006" +
+      "proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
           com.google.api.FieldBehaviorProto.getDescriptor(),
+          com.google.protobuf.FieldMaskProto.getDescriptor(),
           com.google.protobuf.TimestampProto.getDescriptor(),
           com.udb.core.authz.entity.v1.AccessDecisionAuditProto.getDescriptor(),
           com.udb.core.authz.entity.v1.EnumsProto.getDescriptor(),
@@ -851,7 +860,7 @@ public final class CoreProto {
     internal_static_udb_core_authz_services_v1_ListUserPermissionsRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_authz_services_v1_ListUserPermissionsRequest_descriptor,
-        new java.lang.String[] { "UserId", "Domain", });
+        new java.lang.String[] { "UserId", "Domain", "PageSize", "PageToken", });
     internal_static_udb_core_authz_services_v1_EffectivePermission_descriptor =
       getDescriptor().getMessageTypes().get(15);
     internal_static_udb_core_authz_services_v1_EffectivePermission_fieldAccessorTable = new
@@ -863,7 +872,7 @@ public final class CoreProto {
     internal_static_udb_core_authz_services_v1_ListUserPermissionsResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_authz_services_v1_ListUserPermissionsResponse_descriptor,
-        new java.lang.String[] { "Permissions", });
+        new java.lang.String[] { "Permissions", "NextPageToken", });
     internal_static_udb_core_authz_services_v1_ListAccessDecisionAuditsRequest_descriptor =
       getDescriptor().getMessageTypes().get(17);
     internal_static_udb_core_authz_services_v1_ListAccessDecisionAuditsRequest_fieldAccessorTable = new
@@ -893,13 +902,13 @@ public final class CoreProto {
     internal_static_udb_core_authz_services_v1_ListUserRolesRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_authz_services_v1_ListUserRolesRequest_descriptor,
-        new java.lang.String[] { "UserId", "Domain", "ActiveOnly", });
+        new java.lang.String[] { "UserId", "Domain", "ActiveOnly", "PageSize", "PageToken", });
     internal_static_udb_core_authz_services_v1_ListUserRolesResponse_descriptor =
       getDescriptor().getMessageTypes().get(22);
     internal_static_udb_core_authz_services_v1_ListUserRolesResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_authz_services_v1_ListUserRolesResponse_descriptor,
-        new java.lang.String[] { "UserRoles", });
+        new java.lang.String[] { "UserRoles", "NextPageToken", });
     internal_static_udb_core_authz_services_v1_GetRoleRequest_descriptor =
       getDescriptor().getMessageTypes().get(23);
     internal_static_udb_core_authz_services_v1_GetRoleRequest_fieldAccessorTable = new
@@ -953,7 +962,7 @@ public final class CoreProto {
     internal_static_udb_core_authz_services_v1_UpdateRoleRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_authz_services_v1_UpdateRoleRequest_descriptor,
-        new java.lang.String[] { "RoleId", "Name", "Description", "IsActive", "UpdatedBy", });
+        new java.lang.String[] { "RoleId", "Name", "Description", "IsActive", "UpdatedBy", "UpdateMask", });
     internal_static_udb_core_authz_services_v1_UpdateRoleResponse_descriptor =
       getDescriptor().getMessageTypes().get(31);
     internal_static_udb_core_authz_services_v1_UpdateRoleResponse_fieldAccessorTable = new
@@ -1118,6 +1127,7 @@ public final class CoreProto {
         new java.lang.String[] { "Bundle", });
     descriptor.resolveAllFeaturesImmutable();
     com.google.api.FieldBehaviorProto.getDescriptor();
+    com.google.protobuf.FieldMaskProto.getDescriptor();
     com.google.protobuf.TimestampProto.getDescriptor();
     com.udb.core.authz.entity.v1.AccessDecisionAuditProto.getDescriptor();
     com.udb.core.authz.entity.v1.EnumsProto.getDescriptor();

@@ -60,6 +60,7 @@ private static final long serialVersionUID = 0L;
     lastGoodVersion_ = "";
     lastResponseNonce_ = "";
     nackErrorDetail_ = "";
+    servedSnapshots_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -486,6 +487,63 @@ private static final long serialVersionUID = 0L;
     return updatedAt_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : updatedAt_;
   }
 
+  public static final int SERVED_SNAPSHOTS_FIELD_NUMBER = 12;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object servedSnapshots_ = "";
+  /**
+   * <pre>
+   * Bounded ring (newest LAST) of the most recently SERVED snapshots for this
+   * (node, resource_type), capped at the control-plane retention depth. Each
+   * entry is {version, served_at_unix, resources:[{name, tenant_id, project_id,
+   * payload_json}]} — exactly what the push path served — so RollbackResources
+   * has a durable, known-good target to re-publish. Append-and-trim only; NOT
+   * part of the ACK/NACK state machine (a rollback re-serves a retained set).
+   * </pre>
+   *
+   * <code>string served_snapshots = 12 [json_name = "servedSnapshots", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The servedSnapshots.
+   */
+  @java.lang.Override
+  public java.lang.String getServedSnapshots() {
+    java.lang.Object ref = servedSnapshots_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      servedSnapshots_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Bounded ring (newest LAST) of the most recently SERVED snapshots for this
+   * (node, resource_type), capped at the control-plane retention depth. Each
+   * entry is {version, served_at_unix, resources:[{name, tenant_id, project_id,
+   * payload_json}]} — exactly what the push path served — so RollbackResources
+   * has a durable, known-good target to re-publish. Append-and-trim only; NOT
+   * part of the ACK/NACK state machine (a rollback re-serves a retained set).
+   * </pre>
+   *
+   * <code>string served_snapshots = 12 [json_name = "servedSnapshots", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for servedSnapshots.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getServedSnapshotsBytes() {
+    java.lang.Object ref = servedSnapshots_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      servedSnapshots_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -533,6 +591,9 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000002) != 0)) {
       output.writeMessage(11, getUpdatedAt());
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(servedSnapshots_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 12, servedSnapshots_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -579,6 +640,9 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(11, getUpdatedAt());
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(servedSnapshots_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(12, servedSnapshots_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -621,6 +685,8 @@ private static final long serialVersionUID = 0L;
       if (!getUpdatedAt()
           .equals(other.getUpdatedAt())) return false;
     }
+    if (!getServedSnapshots()
+        .equals(other.getServedSnapshots())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -659,6 +725,8 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + UPDATED_AT_FIELD_NUMBER;
       hash = (53 * hash) + getUpdatedAt().hashCode();
     }
+    hash = (37 * hash) + SERVED_SNAPSHOTS_FIELD_NUMBER;
+    hash = (53 * hash) + getServedSnapshots().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -840,6 +908,7 @@ private static final long serialVersionUID = 0L;
         updatedAtBuilder_.dispose();
         updatedAtBuilder_ = null;
       }
+      servedSnapshots_ = "";
       return this;
     }
 
@@ -913,6 +982,9 @@ private static final long serialVersionUID = 0L;
             : updatedAtBuilder_.build();
         to_bitField0_ |= 0x00000002;
       }
+      if (((from_bitField0_ & 0x00000800) != 0)) {
+        result.servedSnapshots_ = servedSnapshots_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -974,6 +1046,11 @@ private static final long serialVersionUID = 0L;
       }
       if (other.hasUpdatedAt()) {
         mergeUpdatedAt(other.getUpdatedAt());
+      }
+      if (!other.getServedSnapshots().isEmpty()) {
+        servedSnapshots_ = other.servedSnapshots_;
+        bitField0_ |= 0x00000800;
+        onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -1060,6 +1137,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000400;
               break;
             } // case 90
+            case 98: {
+              servedSnapshots_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000800;
+              break;
+            } // case 98
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -2046,6 +2128,123 @@ private static final long serialVersionUID = 0L;
         updatedAt_ = null;
       }
       return updatedAtBuilder_;
+    }
+
+    private java.lang.Object servedSnapshots_ = "";
+    /**
+     * <pre>
+     * Bounded ring (newest LAST) of the most recently SERVED snapshots for this
+     * (node, resource_type), capped at the control-plane retention depth. Each
+     * entry is {version, served_at_unix, resources:[{name, tenant_id, project_id,
+     * payload_json}]} — exactly what the push path served — so RollbackResources
+     * has a durable, known-good target to re-publish. Append-and-trim only; NOT
+     * part of the ACK/NACK state machine (a rollback re-serves a retained set).
+     * </pre>
+     *
+     * <code>string served_snapshots = 12 [json_name = "servedSnapshots", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The servedSnapshots.
+     */
+    public java.lang.String getServedSnapshots() {
+      java.lang.Object ref = servedSnapshots_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        servedSnapshots_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Bounded ring (newest LAST) of the most recently SERVED snapshots for this
+     * (node, resource_type), capped at the control-plane retention depth. Each
+     * entry is {version, served_at_unix, resources:[{name, tenant_id, project_id,
+     * payload_json}]} — exactly what the push path served — so RollbackResources
+     * has a durable, known-good target to re-publish. Append-and-trim only; NOT
+     * part of the ACK/NACK state machine (a rollback re-serves a retained set).
+     * </pre>
+     *
+     * <code>string served_snapshots = 12 [json_name = "servedSnapshots", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The bytes for servedSnapshots.
+     */
+    public com.google.protobuf.ByteString
+        getServedSnapshotsBytes() {
+      java.lang.Object ref = servedSnapshots_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        servedSnapshots_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Bounded ring (newest LAST) of the most recently SERVED snapshots for this
+     * (node, resource_type), capped at the control-plane retention depth. Each
+     * entry is {version, served_at_unix, resources:[{name, tenant_id, project_id,
+     * payload_json}]} — exactly what the push path served — so RollbackResources
+     * has a durable, known-good target to re-publish. Append-and-trim only; NOT
+     * part of the ACK/NACK state machine (a rollback re-serves a retained set).
+     * </pre>
+     *
+     * <code>string served_snapshots = 12 [json_name = "servedSnapshots", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The servedSnapshots to set.
+     * @return This builder for chaining.
+     */
+    public Builder setServedSnapshots(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      servedSnapshots_ = value;
+      bitField0_ |= 0x00000800;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Bounded ring (newest LAST) of the most recently SERVED snapshots for this
+     * (node, resource_type), capped at the control-plane retention depth. Each
+     * entry is {version, served_at_unix, resources:[{name, tenant_id, project_id,
+     * payload_json}]} — exactly what the push path served — so RollbackResources
+     * has a durable, known-good target to re-publish. Append-and-trim only; NOT
+     * part of the ACK/NACK state machine (a rollback re-serves a retained set).
+     * </pre>
+     *
+     * <code>string served_snapshots = 12 [json_name = "servedSnapshots", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearServedSnapshots() {
+      servedSnapshots_ = getDefaultInstance().getServedSnapshots();
+      bitField0_ = (bitField0_ & ~0x00000800);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Bounded ring (newest LAST) of the most recently SERVED snapshots for this
+     * (node, resource_type), capped at the control-plane retention depth. Each
+     * entry is {version, served_at_unix, resources:[{name, tenant_id, project_id,
+     * payload_json}]} — exactly what the push path served — so RollbackResources
+     * has a durable, known-good target to re-publish. Append-and-trim only; NOT
+     * part of the ACK/NACK state machine (a rollback re-serves a retained set).
+     * </pre>
+     *
+     * <code>string served_snapshots = 12 [json_name = "servedSnapshots", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The bytes for servedSnapshots to set.
+     * @return This builder for chaining.
+     */
+    public Builder setServedSnapshotsBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      servedSnapshots_ = value;
+      bitField0_ |= 0x00000800;
+      onChanged();
+      return this;
     }
 
     // @@protoc_insertion_point(builder_scope:udb.core.control.entity.v1.ControlPlaneNodeState)

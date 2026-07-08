@@ -58,11 +58,21 @@ public interface CreateProviderRequestOrBuilder extends
       getIssuerBytes();
 
   /**
+   * <pre>
+   * Stable public SAML entityID. Caller-chosen format follows the SAML entityID
+   * URI/string rules and is scoped by tenant/provider kind.
+   * </pre>
+   *
    * <code>string entity_id = 5 [json_name = "entityId"];</code>
    * @return The entityId.
    */
   java.lang.String getEntityId();
   /**
+   * <pre>
+   * Stable public SAML entityID. Caller-chosen format follows the SAML entityID
+   * URI/string rules and is scoped by tenant/provider kind.
+   * </pre>
+   *
    * <code>string entity_id = 5 [json_name = "entityId"];</code>
    * @return The bytes for entityId.
    */

@@ -93,6 +93,17 @@ class ControlPlaneNodeState extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>.google.protobuf.Timestamp updated_at = 11 [json_name = "updatedAt", (.udb.core.common.v1.pg_column) = {</code>
      */
     protected $updated_at = null;
+    /**
+     * Bounded ring (newest LAST) of the most recently SERVED snapshots for this
+     * (node, resource_type), capped at the control-plane retention depth. Each
+     * entry is {version, served_at_unix, resources:[{name, tenant_id, project_id,
+     * payload_json}]} — exactly what the push path served — so RollbackResources
+     * has a durable, known-good target to re-publish. Append-and-trim only; NOT
+     * part of the ACK/NACK state machine (a rollback re-serves a retained set).
+     *
+     * Generated from protobuf field <code>string served_snapshots = 12 [json_name = "servedSnapshots", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $served_snapshots = '';
 
     /**
      * Constructor.
@@ -120,6 +131,13 @@ class ControlPlaneNodeState extends \Google\Protobuf\Internal\Message
      *           Monotonic nonce generator for this (node, resource_type).
      *     @type \Google\Protobuf\Timestamp $created_at
      *     @type \Google\Protobuf\Timestamp $updated_at
+     *     @type string $served_snapshots
+     *           Bounded ring (newest LAST) of the most recently SERVED snapshots for this
+     *           (node, resource_type), capped at the control-plane retention depth. Each
+     *           entry is {version, served_at_unix, resources:[{name, tenant_id, project_id,
+     *           payload_json}]} — exactly what the push path served — so RollbackResources
+     *           has a durable, known-good target to re-publish. Append-and-trim only; NOT
+     *           part of the ACK/NACK state machine (a rollback re-serves a retained set).
      * }
      */
     public function __construct($data = NULL) {
@@ -417,6 +435,42 @@ class ControlPlaneNodeState extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->updated_at = $var;
+
+        return $this;
+    }
+
+    /**
+     * Bounded ring (newest LAST) of the most recently SERVED snapshots for this
+     * (node, resource_type), capped at the control-plane retention depth. Each
+     * entry is {version, served_at_unix, resources:[{name, tenant_id, project_id,
+     * payload_json}]} — exactly what the push path served — so RollbackResources
+     * has a durable, known-good target to re-publish. Append-and-trim only; NOT
+     * part of the ACK/NACK state machine (a rollback re-serves a retained set).
+     *
+     * Generated from protobuf field <code>string served_snapshots = 12 [json_name = "servedSnapshots", (.udb.core.common.v1.pg_column) = {</code>
+     * @return string
+     */
+    public function getServedSnapshots()
+    {
+        return $this->served_snapshots;
+    }
+
+    /**
+     * Bounded ring (newest LAST) of the most recently SERVED snapshots for this
+     * (node, resource_type), capped at the control-plane retention depth. Each
+     * entry is {version, served_at_unix, resources:[{name, tenant_id, project_id,
+     * payload_json}]} — exactly what the push path served — so RollbackResources
+     * has a durable, known-good target to re-publish. Append-and-trim only; NOT
+     * part of the ACK/NACK state machine (a rollback re-serves a retained set).
+     *
+     * Generated from protobuf field <code>string served_snapshots = 12 [json_name = "servedSnapshots", (.udb.core.common.v1.pg_column) = {</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setServedSnapshots($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->served_snapshots = $var;
 
         return $this;
     }

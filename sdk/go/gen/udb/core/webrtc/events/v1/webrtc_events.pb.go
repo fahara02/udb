@@ -315,6 +315,264 @@ func (x *PeerLeft) GetTimestamp() *timestamppb.Timestamp {
 	return nil
 }
 
+// Emitted when a recording/egress job starts (master-plan 5.5).
+type EgressStarted struct {
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	EventId  string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	EgressId string                 `protobuf:"bytes,2,opt,name=egress_id,json=egressId,proto3" json:"egress_id,omitempty"`
+	RoomId   string                 `protobuf:"bytes,3,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
+	// Empty for a room composite; set for a single-track egress.
+	TrackId  string `protobuf:"bytes,4,opt,name=track_id,json=trackId,proto3" json:"track_id,omitempty"`
+	TenantId string `protobuf:"bytes,5,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	// "room_composite" | "track".
+	Kind          string                 `protobuf:"bytes,6,opt,name=kind,proto3" json:"kind,omitempty"`
+	Timestamp     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EgressStarted) Reset() {
+	*x = EgressStarted{}
+	mi := &file_udb_core_webrtc_events_v1_webrtc_events_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EgressStarted) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EgressStarted) ProtoMessage() {}
+
+func (x *EgressStarted) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_webrtc_events_v1_webrtc_events_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EgressStarted.ProtoReflect.Descriptor instead.
+func (*EgressStarted) Descriptor() ([]byte, []int) {
+	return file_udb_core_webrtc_events_v1_webrtc_events_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *EgressStarted) GetEventId() string {
+	if x != nil {
+		return x.EventId
+	}
+	return ""
+}
+
+func (x *EgressStarted) GetEgressId() string {
+	if x != nil {
+		return x.EgressId
+	}
+	return ""
+}
+
+func (x *EgressStarted) GetRoomId() string {
+	if x != nil {
+		return x.RoomId
+	}
+	return ""
+}
+
+func (x *EgressStarted) GetTrackId() string {
+	if x != nil {
+		return x.TrackId
+	}
+	return ""
+}
+
+func (x *EgressStarted) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *EgressStarted) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *EgressStarted) GetTimestamp() *timestamppb.Timestamp {
+	if x != nil {
+		return x.Timestamp
+	}
+	return nil
+}
+
+// Emitted when a recording/egress job stops cleanly (master-plan 5.5).
+type EgressStopped struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	EventId       string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	EgressId      string                 `protobuf:"bytes,2,opt,name=egress_id,json=egressId,proto3" json:"egress_id,omitempty"`
+	RoomId        string                 `protobuf:"bytes,3,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
+	TenantId      string                 `protobuf:"bytes,4,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	Timestamp     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EgressStopped) Reset() {
+	*x = EgressStopped{}
+	mi := &file_udb_core_webrtc_events_v1_webrtc_events_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EgressStopped) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EgressStopped) ProtoMessage() {}
+
+func (x *EgressStopped) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_webrtc_events_v1_webrtc_events_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EgressStopped.ProtoReflect.Descriptor instead.
+func (*EgressStopped) Descriptor() ([]byte, []int) {
+	return file_udb_core_webrtc_events_v1_webrtc_events_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *EgressStopped) GetEventId() string {
+	if x != nil {
+		return x.EventId
+	}
+	return ""
+}
+
+func (x *EgressStopped) GetEgressId() string {
+	if x != nil {
+		return x.EgressId
+	}
+	return ""
+}
+
+func (x *EgressStopped) GetRoomId() string {
+	if x != nil {
+		return x.RoomId
+	}
+	return ""
+}
+
+func (x *EgressStopped) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *EgressStopped) GetTimestamp() *timestamppb.Timestamp {
+	if x != nil {
+		return x.Timestamp
+	}
+	return nil
+}
+
+// Emitted when a recording/egress job fails to start or aborts (master-plan 5.5).
+type EgressFailed struct {
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	EventId  string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	EgressId string                 `protobuf:"bytes,2,opt,name=egress_id,json=egressId,proto3" json:"egress_id,omitempty"`
+	RoomId   string                 `protobuf:"bytes,3,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
+	TenantId string                 `protobuf:"bytes,4,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	// Machine-readable failure reason (e.g. EGRESS_BACKEND_UNAVAILABLE).
+	Reason        string                 `protobuf:"bytes,5,opt,name=reason,proto3" json:"reason,omitempty"`
+	Timestamp     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EgressFailed) Reset() {
+	*x = EgressFailed{}
+	mi := &file_udb_core_webrtc_events_v1_webrtc_events_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EgressFailed) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EgressFailed) ProtoMessage() {}
+
+func (x *EgressFailed) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_webrtc_events_v1_webrtc_events_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EgressFailed.ProtoReflect.Descriptor instead.
+func (*EgressFailed) Descriptor() ([]byte, []int) {
+	return file_udb_core_webrtc_events_v1_webrtc_events_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *EgressFailed) GetEventId() string {
+	if x != nil {
+		return x.EventId
+	}
+	return ""
+}
+
+func (x *EgressFailed) GetEgressId() string {
+	if x != nil {
+		return x.EgressId
+	}
+	return ""
+}
+
+func (x *EgressFailed) GetRoomId() string {
+	if x != nil {
+		return x.RoomId
+	}
+	return ""
+}
+
+func (x *EgressFailed) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *EgressFailed) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *EgressFailed) GetTimestamp() *timestamppb.Timestamp {
+	if x != nil {
+		return x.Timestamp
+	}
+	return nil
+}
+
 // Emitted when a track is published.
 type TrackPublished struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -330,7 +588,7 @@ type TrackPublished struct {
 
 func (x *TrackPublished) Reset() {
 	*x = TrackPublished{}
-	mi := &file_udb_core_webrtc_events_v1_webrtc_events_proto_msgTypes[4]
+	mi := &file_udb_core_webrtc_events_v1_webrtc_events_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -342,7 +600,7 @@ func (x *TrackPublished) String() string {
 func (*TrackPublished) ProtoMessage() {}
 
 func (x *TrackPublished) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_webrtc_events_v1_webrtc_events_proto_msgTypes[4]
+	mi := &file_udb_core_webrtc_events_v1_webrtc_events_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -355,7 +613,7 @@ func (x *TrackPublished) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TrackPublished.ProtoReflect.Descriptor instead.
 func (*TrackPublished) Descriptor() ([]byte, []int) {
-	return file_udb_core_webrtc_events_v1_webrtc_events_proto_rawDescGZIP(), []int{4}
+	return file_udb_core_webrtc_events_v1_webrtc_events_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *TrackPublished) GetEventId() string {
@@ -432,7 +690,31 @@ const file_udb_core_webrtc_events_v1_webrtc_events_proto_rawDesc = "" +
 	"\apeer_id\x18\x03 \x01(\tR\x06peerId\x12\x1b\n" +
 	"\ttenant_id\x18\x04 \x01(\tR\btenantId\x128\n" +
 	"\ttimestamp\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp:m\x92\xb2\x19i\n" +
-	"\"udb.core.webrtc.events.v1.PeerLeft\x12\x17udb.webrtc.peer_left.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\xca\x02\n" +
+	"\"udb.core.webrtc.events.v1.PeerLeft\x12\x17udb.webrtc.peer_left.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\xdf\x02\n" +
+	"\rEgressStarted\x12\x19\n" +
+	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x1b\n" +
+	"\tegress_id\x18\x02 \x01(\tR\begressId\x12\x17\n" +
+	"\aroom_id\x18\x03 \x01(\tR\x06roomId\x12\x19\n" +
+	"\btrack_id\x18\x04 \x01(\tR\atrackId\x12\x1b\n" +
+	"\ttenant_id\x18\x05 \x01(\tR\btenantId\x12\x12\n" +
+	"\x04kind\x18\x06 \x01(\tR\x04kind\x128\n" +
+	"\ttimestamp\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp:w\x92\xb2\x19s\n" +
+	"'udb.core.webrtc.events.v1.EgressStarted\x12\x1cudb.webrtc.egress_started.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\xb0\x02\n" +
+	"\rEgressStopped\x12\x19\n" +
+	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x1b\n" +
+	"\tegress_id\x18\x02 \x01(\tR\begressId\x12\x17\n" +
+	"\aroom_id\x18\x03 \x01(\tR\x06roomId\x12\x1b\n" +
+	"\ttenant_id\x18\x04 \x01(\tR\btenantId\x128\n" +
+	"\ttimestamp\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp:w\x92\xb2\x19s\n" +
+	"'udb.core.webrtc.events.v1.EgressStopped\x12\x1cudb.webrtc.egress_stopped.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\xc5\x02\n" +
+	"\fEgressFailed\x12\x19\n" +
+	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x1b\n" +
+	"\tegress_id\x18\x02 \x01(\tR\begressId\x12\x17\n" +
+	"\aroom_id\x18\x03 \x01(\tR\x06roomId\x12\x1b\n" +
+	"\ttenant_id\x18\x04 \x01(\tR\btenantId\x12\x16\n" +
+	"\x06reason\x18\x05 \x01(\tR\x06reason\x128\n" +
+	"\ttimestamp\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp:u\x92\xb2\x19q\n" +
+	"&udb.core.webrtc.events.v1.EgressFailed\x12\x1budb.webrtc.egress_failed.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\xca\x02\n" +
 	"\x0eTrackPublished\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x17\n" +
 	"\aroom_id\x18\x02 \x01(\tR\x06roomId\x12\x17\n" +
@@ -455,26 +737,32 @@ func file_udb_core_webrtc_events_v1_webrtc_events_proto_rawDescGZIP() []byte {
 	return file_udb_core_webrtc_events_v1_webrtc_events_proto_rawDescData
 }
 
-var file_udb_core_webrtc_events_v1_webrtc_events_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_udb_core_webrtc_events_v1_webrtc_events_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_udb_core_webrtc_events_v1_webrtc_events_proto_goTypes = []any{
 	(*RoomCreated)(nil),           // 0: udb.core.webrtc.events.v1.RoomCreated
 	(*RoomClosed)(nil),            // 1: udb.core.webrtc.events.v1.RoomClosed
 	(*PeerJoined)(nil),            // 2: udb.core.webrtc.events.v1.PeerJoined
 	(*PeerLeft)(nil),              // 3: udb.core.webrtc.events.v1.PeerLeft
-	(*TrackPublished)(nil),        // 4: udb.core.webrtc.events.v1.TrackPublished
-	(*timestamppb.Timestamp)(nil), // 5: google.protobuf.Timestamp
+	(*EgressStarted)(nil),         // 4: udb.core.webrtc.events.v1.EgressStarted
+	(*EgressStopped)(nil),         // 5: udb.core.webrtc.events.v1.EgressStopped
+	(*EgressFailed)(nil),          // 6: udb.core.webrtc.events.v1.EgressFailed
+	(*TrackPublished)(nil),        // 7: udb.core.webrtc.events.v1.TrackPublished
+	(*timestamppb.Timestamp)(nil), // 8: google.protobuf.Timestamp
 }
 var file_udb_core_webrtc_events_v1_webrtc_events_proto_depIdxs = []int32{
-	5, // 0: udb.core.webrtc.events.v1.RoomCreated.timestamp:type_name -> google.protobuf.Timestamp
-	5, // 1: udb.core.webrtc.events.v1.RoomClosed.timestamp:type_name -> google.protobuf.Timestamp
-	5, // 2: udb.core.webrtc.events.v1.PeerJoined.timestamp:type_name -> google.protobuf.Timestamp
-	5, // 3: udb.core.webrtc.events.v1.PeerLeft.timestamp:type_name -> google.protobuf.Timestamp
-	5, // 4: udb.core.webrtc.events.v1.TrackPublished.timestamp:type_name -> google.protobuf.Timestamp
-	5, // [5:5] is the sub-list for method output_type
-	5, // [5:5] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	8, // 0: udb.core.webrtc.events.v1.RoomCreated.timestamp:type_name -> google.protobuf.Timestamp
+	8, // 1: udb.core.webrtc.events.v1.RoomClosed.timestamp:type_name -> google.protobuf.Timestamp
+	8, // 2: udb.core.webrtc.events.v1.PeerJoined.timestamp:type_name -> google.protobuf.Timestamp
+	8, // 3: udb.core.webrtc.events.v1.PeerLeft.timestamp:type_name -> google.protobuf.Timestamp
+	8, // 4: udb.core.webrtc.events.v1.EgressStarted.timestamp:type_name -> google.protobuf.Timestamp
+	8, // 5: udb.core.webrtc.events.v1.EgressStopped.timestamp:type_name -> google.protobuf.Timestamp
+	8, // 6: udb.core.webrtc.events.v1.EgressFailed.timestamp:type_name -> google.protobuf.Timestamp
+	8, // 7: udb.core.webrtc.events.v1.TrackPublished.timestamp:type_name -> google.protobuf.Timestamp
+	8, // [8:8] is the sub-list for method output_type
+	8, // [8:8] is the sub-list for method input_type
+	8, // [8:8] is the sub-list for extension type_name
+	8, // [8:8] is the sub-list for extension extendee
+	0, // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_udb_core_webrtc_events_v1_webrtc_events_proto_init() }
@@ -488,7 +776,7 @@ func file_udb_core_webrtc_events_v1_webrtc_events_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_udb_core_webrtc_events_v1_webrtc_events_proto_rawDesc), len(file_udb_core_webrtc_events_v1_webrtc_events_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   5,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -103,8 +103,13 @@ type CapabilitiesResponse struct {
 	// are available and which wire encodings that backend can emit.
 	BackendProtocolSupport []*BackendProtocolSupport `protobuf:"bytes,10,rep,name=backend_protocol_support,json=backendProtocolSupport,proto3" json:"backend_protocol_support,omitempty"`
 	NativeServices         []*NativeServiceStatus    `protobuf:"bytes,11,rep,name=native_services,json=nativeServices,proto3" json:"native_services,omitempty"`
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
+	// Operator-declared deployment tier (UDB_DEPLOYMENT_TIER), resolved once at
+	// startup (master-plan 3.5). One of "dev_single_node" / "system_store_capable"
+	// / "ha_canonical". Empty string means no tier was declared (the permissive
+	// dev default — the startup tier floor is not enforced). Additive (field 12).
+	DeploymentTier string `protobuf:"bytes,12,opt,name=deployment_tier,json=deploymentTier,proto3" json:"deployment_tier,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *CapabilitiesResponse) Reset() {
@@ -212,6 +217,13 @@ func (x *CapabilitiesResponse) GetNativeServices() []*NativeServiceStatus {
 		return x.NativeServices
 	}
 	return nil
+}
+
+func (x *CapabilitiesResponse) GetDeploymentTier() string {
+	if x != nil {
+		return x.DeploymentTier
+	}
+	return ""
 }
 
 // Server-advertised protocol capabilities. Returned inside
@@ -5987,7 +5999,7 @@ const file_udb_entity_v1_admin_proto_rawDesc = "" +
 	"\x13CapabilitiesRequest\x127\n" +
 	"\acontext\x18\x01 \x01(\v2\x1d.udb.entity.v1.RequestContextR\acontext\x12\x1d\n" +
 	"\n" +
-	"project_id\x18\x02 \x01(\tR\tprojectId\"\xce\x05\n" +
+	"project_id\x18\x02 \x01(\tR\tprojectId\"\xf7\x05\n" +
 	"\x14CapabilitiesResponse\x12'\n" +
 	"\x0fschema_checksum\x18\x01 \x01(\tR\x0eschemaChecksum\x12)\n" +
 	"\x10protocol_version\x18\x02 \x01(\tR\x0fprotocolVersion\x12)\n" +
@@ -6000,7 +6012,8 @@ const file_udb_entity_v1_admin_proto_rawDesc = "" +
 	"\x10protocol_support\x18\t \x01(\v2\x1e.udb.entity.v1.ProtocolSupportR\x0fprotocolSupport\x12_\n" +
 	"\x18backend_protocol_support\x18\n" +
 	" \x03(\v2%.udb.entity.v1.BackendProtocolSupportR\x16backendProtocolSupport\x12K\n" +
-	"\x0fnative_services\x18\v \x03(\v2\".udb.entity.v1.NativeServiceStatusR\x0enativeServices\"\xbc\x03\n" +
+	"\x0fnative_services\x18\v \x03(\v2\".udb.entity.v1.NativeServiceStatusR\x0enativeServices\x12'\n" +
+	"\x0fdeployment_tier\x18\f \x01(\tR\x0edeploymentTier\"\xbc\x03\n" +
 	"\x0fProtocolSupport\x120\n" +
 	"\x14min_protocol_version\x18\x01 \x01(\tR\x12minProtocolVersion\x120\n" +
 	"\x14max_protocol_version\x18\x02 \x01(\tR\x12maxProtocolVersion\x12\x1c\n" +

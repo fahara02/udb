@@ -31,6 +31,11 @@ public final class NotificationLogProto {
   static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_notification_entity_v1_NotificationLog_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_notification_entity_v1_NotificationDeliveryAttempt_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_notification_entity_v1_NotificationDeliveryAttempt_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -116,15 +121,57 @@ public final class NotificationLogProto {
       "enant\032\ttenant_id*4tenant_id = current_se" +
       "tting(\'app.current_tenant_id\')2\004none:\030no" +
       "tification.operational@ZH\002R\006tenantZ\010stan" +
-      "dardr\025tenant.data_residencyB\251\002\n#com.udb." +
-      "core.notification.entity.v1B\024Notificatio" +
-      "nLogProtoP\001ZKgithub.com/fahara02/udb/sdk" +
-      "/go/gen/udb/core/notification/entity/v1;" +
-      "entityv1\242\002\004UCNE\252\002\037udb.core.Notification." +
-      "Entity.V1\312\002\037Udb\\Core\\Notification\\Entity" +
-      "\\V1\342\002+Udb\\GPBMetadata\\Core\\Notification\\" +
-      "Entity\\V1\352\002#Udb::Core::Notification::Ent" +
-      "ity::V1b\006proto3"
+      "dardr\025tenant.data_residency\"\245\r\n\033Notifica" +
+      "tionDeliveryAttempt\022L\n\nattempt_id\030\001 \001(\tB" +
+      "-\202\267\030)\n\nattempt_id\022\004UUID\030\001(\001:\021gen_random_" +
+      "uuid()R\tattemptId\022x\n\017notification_id\030\002 \001" +
+      "(\tBO\202\267\030K\n\017notification_id\022\004UUID\030\001R0\n\'idx" +
+      "_notif_delivery_attempt_notification\022\005BT" +
+      "REER\016notificationId\022?\n\ttenant_id\030\003 \001(\tB\"" +
+      "\202\267\030\036\n\ttenant_id\022\014VARCHAR(120)\030\001\230\002\001R\010tena" +
+      "ntId\022l\n\007channel\030\004 \001(\01624.udb.core.notific" +
+      "ation.entity.v1.NotificationChannelB\034\202\267\030" +
+      "\030\n\007channel\022\013VARCHAR(20)\030\001R\007channel\022=\n\010pr" +
+      "ovider\030\005 \001(\tB!\202\267\030\035\n\010provider\022\013VARCHAR(60" +
+      ")\030\001:\002\'\'R\010provider\022\237\001\n\006status\030\006 \001(\01623.udb" +
+      ".core.notification.entity.v1.Notificatio" +
+      "nStatusBR\202\267\030N\n\006status\022\013VARCHAR(20)\030\001:\t\'P" +
+      "ENDING\'R*\n!idx_notif_delivery_attempt_st" +
+      "atus\022\005BTREER\006status\022F\n\rattempt_count\030\007 \001" +
+      "(\005B!\202\267\030\035\n\rattempt_count\022\007INTEGER\030\001:\0010R\014a" +
+      "ttemptCount\0225\n\nlast_error\030\010 \001(\tB\026\202\267\030\022\n\nl" +
+      "ast_error\022\004TEXTR\tlastError\022W\n\023provider_m" +
+      "essage_id\030\t \001(\tB\'\202\267\030#\n\023provider_message_" +
+      "id\022\014VARCHAR(255)R\021providerMessageId\022q\n\nc" +
+      "reated_at\030\n \001(\0132\032.google.protobuf.Timest" +
+      "ampB6\202\267\0302\n\ncreated_at\022\013TIMESTAMPTZ\030\001:\021CU" +
+      "RRENT_TIMESTAMP`\001h\001R\tcreatedAt\022m\n\nupdate" +
+      "d_at\030\013 \001(\0132\032.google.protobuf.TimestampB2" +
+      "\202\267\030.\n\nupdated_at\022\013TIMESTAMPTZ\030\001:\021CURRENT" +
+      "_TIMESTAMPR\tupdatedAt:\363\004\372\266\030\323\003\n\036notificat" +
+      "ion_delivery_attempts\022\020udb_notification\030" +
+      "\004 \001*BPer-channel notification delivery-s" +
+      "tatus record (master-plan 9.13)8\001@\001b\227\001\n\020" +
+      "tenant_isolation\032\200\001(tenant_id::text = cu" +
+      "rrent_setting(\'app.current_tenant_id\', t" +
+      "rue)::text OR current_setting(\'app.platf" +
+      "orm_admin\', true) = \'true\')(\001h\001\212\001O\n uq_n" +
+      "otif_delivery_attempt_target\022\005BTREE\030\001Z\017n" +
+      "otification_idZ\007channelZ\010provider\212\001D\n(id" +
+      "x_notif_delivery_attempt_tenant_status\022\005" +
+      "BTREEZ\ttenant_idZ\006status\362\001\035udb.notificat" +
+      "ion.delivery.cdc\212\262\031\226\001\n\006tenant\032\ttenant_id" +
+      "*4tenant_id = current_setting(\'app.curre" +
+      "nt_tenant_id\')2\004none:\030notification.opera" +
+      "tional@ZH\002R\006tenantZ\010standardr\025tenant.dat" +
+      "a_residencyB\251\002\n#com.udb.core.notificatio" +
+      "n.entity.v1B\024NotificationLogProtoP\001ZKgit" +
+      "hub.com/fahara02/udb/sdk/go/gen/udb/core" +
+      "/notification/entity/v1;entityv1\242\002\004UCNE\252" +
+      "\002\037udb.core.Notification.Entity.V1\312\002\037Udb\\" +
+      "Core\\Notification\\Entity\\V1\342\002+Udb\\GPBMet" +
+      "adata\\Core\\Notification\\Entity\\V1\352\002#Udb:" +
+      ":Core::Notification::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -140,6 +187,12 @@ public final class NotificationLogProto {
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_notification_entity_v1_NotificationLog_descriptor,
         new java.lang.String[] { "LogId", "TemplateId", "EventType", "Channel", "RecipientId", "RecipientAddress", "TenantId", "ProjectId", "ResourceType", "ResourceId", "ResourceName", "CorrelationId", "Status", "ErrorMessage", "ProviderMessageId", "RetryCount", "SentAt", "DeliveredAt", "CreatedAt", "RenderedSubject", "RenderedBody", });
+    internal_static_udb_core_notification_entity_v1_NotificationDeliveryAttempt_descriptor =
+      getDescriptor().getMessageTypes().get(1);
+    internal_static_udb_core_notification_entity_v1_NotificationDeliveryAttempt_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_notification_entity_v1_NotificationDeliveryAttempt_descriptor,
+        new java.lang.String[] { "AttemptId", "NotificationId", "TenantId", "Channel", "Provider", "Status", "AttemptCount", "LastError", "ProviderMessageId", "CreatedAt", "UpdatedAt", });
     descriptor.resolveAllFeaturesImmutable();
     com.google.protobuf.TimestampProto.getDescriptor();
     com.udb.core.common.v1.DbProto.getDescriptor();

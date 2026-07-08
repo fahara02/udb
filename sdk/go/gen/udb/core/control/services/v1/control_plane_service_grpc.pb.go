@@ -19,11 +19,12 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ControlPlaneService_StreamResources_FullMethodName = "/udb.core.control.services.v1.ControlPlaneService/StreamResources"
-	ControlPlaneService_DeltaResources_FullMethodName  = "/udb.core.control.services.v1.ControlPlaneService/DeltaResources"
-	ControlPlaneService_GetResources_FullMethodName    = "/udb.core.control.services.v1.ControlPlaneService/GetResources"
-	ControlPlaneService_ListNodeStates_FullMethodName  = "/udb.core.control.services.v1.ControlPlaneService/ListNodeStates"
-	ControlPlaneService_AckStatus_FullMethodName       = "/udb.core.control.services.v1.ControlPlaneService/AckStatus"
+	ControlPlaneService_StreamResources_FullMethodName   = "/udb.core.control.services.v1.ControlPlaneService/StreamResources"
+	ControlPlaneService_DeltaResources_FullMethodName    = "/udb.core.control.services.v1.ControlPlaneService/DeltaResources"
+	ControlPlaneService_GetResources_FullMethodName      = "/udb.core.control.services.v1.ControlPlaneService/GetResources"
+	ControlPlaneService_ListNodeStates_FullMethodName    = "/udb.core.control.services.v1.ControlPlaneService/ListNodeStates"
+	ControlPlaneService_AckStatus_FullMethodName         = "/udb.core.control.services.v1.ControlPlaneService/AckStatus"
+	ControlPlaneService_RollbackResources_FullMethodName = "/udb.core.control.services.v1.ControlPlaneService/RollbackResources"
 )
 
 // ControlPlaneServiceClient is the client API for ControlPlaneService service.
@@ -45,14 +46,24 @@ const (
 // ---------------------------------------------------------------------------
 type ControlPlaneServiceClient interface {
 	// ── Aggregated state-of-the-world (ADS) ───────────────────────────────────
+	// Node↔broker push channel only: a data-plane PEP node opens this bidirectional
+	// stream to receive versioned resources and echo ACK/NACK nonces. It carries no
+	// human/session credential, no REST surface, and is never part of an application
+	// CRUD facade — so it is gated to internal callers (a loopback node or a node
+	// presenting a verified mTLS identity); an untrusted remote caller is rejected.
 	StreamResources(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[DiscoveryRequest, DiscoveryResponse], error)
 	// ── Incremental / delta discovery ─────────────────────────────────────────
+	// Same node↔broker push semantics as StreamResources (incremental form). Only a
+	// data-plane node should open it; restricted to internal callers for the same
+	// reasons (no session credential, no REST surface, not an application facade RPC).
 	DeltaResources(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[DeltaDiscoveryRequest, DeltaDiscoveryResponse], error)
 	// ── On-demand fetch (incl. by tenant) ─────────────────────────────────────
 	GetResources(ctx context.Context, in *GetResourcesRequest, opts ...grpc.CallOption) (*GetResourcesResponse, error)
 	// ── Admin visibility ──────────────────────────────────────────────────────
 	ListNodeStates(ctx context.Context, in *ListNodeStatesRequest, opts ...grpc.CallOption) (*ListNodeStatesResponse, error)
 	AckStatus(ctx context.Context, in *AckStatusRequest, opts ...grpc.CallOption) (*AckStatusResponse, error)
+	// ── Rollback a node/resource-type to a retained served snapshot ────────────
+	RollbackResources(ctx context.Context, in *RollbackResourcesRequest, opts ...grpc.CallOption) (*RollbackResourcesResponse, error)
 }
 
 type controlPlaneServiceClient struct {
@@ -119,6 +130,16 @@ func (c *controlPlaneServiceClient) AckStatus(ctx context.Context, in *AckStatus
 	return out, nil
 }
 
+func (c *controlPlaneServiceClient) RollbackResources(ctx context.Context, in *RollbackResourcesRequest, opts ...grpc.CallOption) (*RollbackResourcesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RollbackResourcesResponse)
+	err := c.cc.Invoke(ctx, ControlPlaneService_RollbackResources_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ControlPlaneServiceServer is the server API for ControlPlaneService service.
 // All implementations should embed UnimplementedControlPlaneServiceServer
 // for forward compatibility.
@@ -138,14 +159,24 @@ func (c *controlPlaneServiceClient) AckStatus(ctx context.Context, in *AckStatus
 // ---------------------------------------------------------------------------
 type ControlPlaneServiceServer interface {
 	// ── Aggregated state-of-the-world (ADS) ───────────────────────────────────
+	// Node↔broker push channel only: a data-plane PEP node opens this bidirectional
+	// stream to receive versioned resources and echo ACK/NACK nonces. It carries no
+	// human/session credential, no REST surface, and is never part of an application
+	// CRUD facade — so it is gated to internal callers (a loopback node or a node
+	// presenting a verified mTLS identity); an untrusted remote caller is rejected.
 	StreamResources(grpc.BidiStreamingServer[DiscoveryRequest, DiscoveryResponse]) error
 	// ── Incremental / delta discovery ─────────────────────────────────────────
+	// Same node↔broker push semantics as StreamResources (incremental form). Only a
+	// data-plane node should open it; restricted to internal callers for the same
+	// reasons (no session credential, no REST surface, not an application facade RPC).
 	DeltaResources(grpc.BidiStreamingServer[DeltaDiscoveryRequest, DeltaDiscoveryResponse]) error
 	// ── On-demand fetch (incl. by tenant) ─────────────────────────────────────
 	GetResources(context.Context, *GetResourcesRequest) (*GetResourcesResponse, error)
 	// ── Admin visibility ──────────────────────────────────────────────────────
 	ListNodeStates(context.Context, *ListNodeStatesRequest) (*ListNodeStatesResponse, error)
 	AckStatus(context.Context, *AckStatusRequest) (*AckStatusResponse, error)
+	// ── Rollback a node/resource-type to a retained served snapshot ────────────
+	RollbackResources(context.Context, *RollbackResourcesRequest) (*RollbackResourcesResponse, error)
 }
 
 // UnimplementedControlPlaneServiceServer should be embedded to have
@@ -169,6 +200,9 @@ func (UnimplementedControlPlaneServiceServer) ListNodeStates(context.Context, *L
 }
 func (UnimplementedControlPlaneServiceServer) AckStatus(context.Context, *AckStatusRequest) (*AckStatusResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AckStatus not implemented")
+}
+func (UnimplementedControlPlaneServiceServer) RollbackResources(context.Context, *RollbackResourcesRequest) (*RollbackResourcesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RollbackResources not implemented")
 }
 func (UnimplementedControlPlaneServiceServer) testEmbeddedByValue() {}
 
@@ -258,6 +292,24 @@ func _ControlPlaneService_AckStatus_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ControlPlaneService_RollbackResources_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RollbackResourcesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ControlPlaneServiceServer).RollbackResources(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ControlPlaneService_RollbackResources_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ControlPlaneServiceServer).RollbackResources(ctx, req.(*RollbackResourcesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ControlPlaneService_ServiceDesc is the grpc.ServiceDesc for ControlPlaneService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -276,6 +328,10 @@ var ControlPlaneService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AckStatus",
 			Handler:    _ControlPlaneService_AckStatus_Handler,
+		},
+		{
+			MethodName: "RollbackResources",
+			Handler:    _ControlPlaneService_RollbackResources_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

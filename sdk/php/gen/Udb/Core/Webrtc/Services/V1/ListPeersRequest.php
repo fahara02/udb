@@ -26,6 +26,18 @@ class ListPeersRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string state = 3 [json_name = "state"];</code>
      */
     protected $state = '';
+    /**
+     * Requested page size. Defaults to 50 and is capped at the native list maximum.
+     *
+     * Generated from protobuf field <code>int32 page_size = 4 [json_name = "pageSize"];</code>
+     */
+    protected $page_size = 0;
+    /**
+     * Opaque pagination token returned by ListPeersResponse.next_page_token.
+     *
+     * Generated from protobuf field <code>string page_token = 5 [json_name = "pageToken"];</code>
+     */
+    protected $page_token = '';
 
     /**
      * Constructor.
@@ -36,6 +48,10 @@ class ListPeersRequest extends \Google\Protobuf\Internal\Message
      *     @type string $tenant_id
      *     @type string $room_id
      *     @type string $state
+     *     @type int $page_size
+     *           Requested page size. Defaults to 50 and is capped at the native list maximum.
+     *     @type string $page_token
+     *           Opaque pagination token returned by ListPeersResponse.next_page_token.
      * }
      */
     public function __construct($data = NULL) {
@@ -105,6 +121,58 @@ class ListPeersRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, True);
         $this->state = $var;
+
+        return $this;
+    }
+
+    /**
+     * Requested page size. Defaults to 50 and is capped at the native list maximum.
+     *
+     * Generated from protobuf field <code>int32 page_size = 4 [json_name = "pageSize"];</code>
+     * @return int
+     */
+    public function getPageSize()
+    {
+        return $this->page_size;
+    }
+
+    /**
+     * Requested page size. Defaults to 50 and is capped at the native list maximum.
+     *
+     * Generated from protobuf field <code>int32 page_size = 4 [json_name = "pageSize"];</code>
+     * @param int $var
+     * @return $this
+     */
+    public function setPageSize($var)
+    {
+        GPBUtil::checkInt32($var);
+        $this->page_size = $var;
+
+        return $this;
+    }
+
+    /**
+     * Opaque pagination token returned by ListPeersResponse.next_page_token.
+     *
+     * Generated from protobuf field <code>string page_token = 5 [json_name = "pageToken"];</code>
+     * @return string
+     */
+    public function getPageToken()
+    {
+        return $this->page_token;
+    }
+
+    /**
+     * Opaque pagination token returned by ListPeersResponse.next_page_token.
+     *
+     * Generated from protobuf field <code>string page_token = 5 [json_name = "pageToken"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setPageToken($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->page_token = $var;
 
         return $this;
     }

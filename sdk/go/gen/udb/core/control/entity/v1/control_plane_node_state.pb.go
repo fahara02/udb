@@ -63,11 +63,18 @@ type ControlPlaneNodeState struct {
 	// Structured NACK error from the last rejection; cleared on the next ACK.
 	NackErrorDetail string `protobuf:"bytes,8,opt,name=nack_error_detail,json=nackErrorDetail,proto3" json:"nack_error_detail,omitempty"`
 	// Monotonic nonce generator for this (node, resource_type).
-	NonceCounter  int64                  `protobuf:"varint,9,opt,name=nonce_counter,json=nonceCounter,proto3" json:"nonce_counter,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	NonceCounter int64                  `protobuf:"varint,9,opt,name=nonce_counter,json=nonceCounter,proto3" json:"nonce_counter,omitempty"`
+	CreatedAt    *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt    *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	// Bounded ring (newest LAST) of the most recently SERVED snapshots for this
+	// (node, resource_type), capped at the control-plane retention depth. Each
+	// entry is {version, served_at_unix, resources:[{name, tenant_id, project_id,
+	// payload_json}]} — exactly what the push path served — so RollbackResources
+	// has a durable, known-good target to re-publish. Append-and-trim only; NOT
+	// part of the ACK/NACK state machine (a rollback re-serves a retained set).
+	ServedSnapshots string `protobuf:"bytes,12,opt,name=served_snapshots,json=servedSnapshots,proto3" json:"served_snapshots,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *ControlPlaneNodeState) Reset() {
@@ -177,11 +184,18 @@ func (x *ControlPlaneNodeState) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *ControlPlaneNodeState) GetServedSnapshots() string {
+	if x != nil {
+		return x.ServedSnapshots
+	}
+	return ""
+}
+
 var File_udb_core_control_entity_v1_control_plane_node_state_proto protoreflect.FileDescriptor
 
 const file_udb_core_control_entity_v1_control_plane_node_state_proto_rawDesc = "" +
 	"\n" +
-	"9udb/core/control/entity/v1/control_plane_node_state.proto\x12\x1audb.core.control.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a&udb/core/control/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xef\f\n" +
+	"9udb/core/control/entity/v1/control_plane_node_state.proto\x12\x1audb.core.control.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a&udb/core/control/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\x89\x0e\n" +
 	"\x15ControlPlaneNodeState\x12T\n" +
 	"\rnode_state_id\x18\x01 \x01(\tB0\x82\xb7\x18,\n" +
 	"\rnode_state_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\vnodeStateId\x126\n" +
@@ -209,7 +223,9 @@ const file_udb_core_control_entity_v1_control_plane_node_state_proto_rawDesc = "
 	"\n" +
 	"updated_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampB2\x82\xb7\x18.\n" +
 	"\n" +
-	"updated_at\x12\vTIMESTAMPTZ\x18\x01:\x11CURRENT_TIMESTAMPR\tupdatedAt:\xf4\x02\xfa\xb6\x18\xb7\x02\n" +
+	"updated_at\x12\vTIMESTAMPTZ\x18\x01:\x11CURRENT_TIMESTAMPR\tupdatedAt\x12\x97\x01\n" +
+	"\x10served_snapshots\x18\f \x01(\tBl\x82\xb7\x18h\n" +
+	"\x10served_snapshots\x12\x05JSONB\x18\x01:\v'[]'::jsonbZ<Bounded ring of recently-served snapshots (rollback targets)x\x01R\x0fservedSnapshots:\xf4\x02\xfa\xb6\x18\xb7\x02\n" +
 	"\x19control_plane_node_states\x12\vudb_control\x18= \x01*APer-node ACK/NACK/last-good ledger for control-plane distribution\x8a\x01C\n" +
 	" uq_control_node_states_node_type\x12\x05BTREE\x18\x01Z\anode_idZ\rresource_type\x8a\x01.\n" +
 	"\x1cidx_control_node_states_node\x12\x05BTREEZ\anode_id\xea\x01\aprimary\xf2\x01)udb.control.control_plane_node_states.cdc\xfa\x01\x18control:node-states:read\x8a\xb2\x194\n" +

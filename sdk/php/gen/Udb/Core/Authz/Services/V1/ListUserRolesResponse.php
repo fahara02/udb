@@ -18,6 +18,12 @@ class ListUserRolesResponse extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>repeated .udb.core.authz.entity.v1.UserRole user_roles = 1 [json_name = "userRoles"];</code>
      */
     private $user_roles;
+    /**
+     * Opaque token for the next page; empty when no more user roles are available.
+     *
+     * Generated from protobuf field <code>string next_page_token = 2 [json_name = "nextPageToken"];</code>
+     */
+    protected $next_page_token = '';
 
     /**
      * Constructor.
@@ -26,6 +32,8 @@ class ListUserRolesResponse extends \Google\Protobuf\Internal\Message
      *     Optional. Data for populating the Message object.
      *
      *     @type \Udb\Core\Authz\Entity\V1\UserRole[] $user_roles
+     *     @type string $next_page_token
+     *           Opaque token for the next page; empty when no more user roles are available.
      * }
      */
     public function __construct($data = NULL) {
@@ -51,6 +59,32 @@ class ListUserRolesResponse extends \Google\Protobuf\Internal\Message
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Authz\Entity\V1\UserRole::class);
         $this->user_roles = $arr;
+
+        return $this;
+    }
+
+    /**
+     * Opaque token for the next page; empty when no more user roles are available.
+     *
+     * Generated from protobuf field <code>string next_page_token = 2 [json_name = "nextPageToken"];</code>
+     * @return string
+     */
+    public function getNextPageToken()
+    {
+        return $this->next_page_token;
+    }
+
+    /**
+     * Opaque token for the next page; empty when no more user roles are available.
+     *
+     * Generated from protobuf field <code>string next_page_token = 2 [json_name = "nextPageToken"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setNextPageToken($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->next_page_token = $var;
 
         return $this;
     }

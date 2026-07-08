@@ -137,127 +137,131 @@ public final class CoreProto {
     java.lang.String[] descriptorData = {
       "\n&udb/core/apikey/services/v1/core.proto" +
       "\022\033udb.core.apikey.services.v1\032\037google/pr" +
-      "otobuf/timestamp.proto\032\'udb/core/apikey/" +
-      "entity/v1/api_key.proto\032%udb/core/apikey" +
-      "/entity/v1/enums.proto\032\034udb/core/common/" +
-      "v1/dto.proto\032\036udb/core/common/v1/types.p" +
-      "roto\032!udb/core/common/v1/security.proto\"" +
-      "\344\003\n\023CreateApiKeyRequest\022\022\n\004name\030\001 \001(\tR\004n" +
-      "ame\022 \n\013description\030\002 \001(\tR\013description\022I\n" +
-      "\nowner_type\030\003 \001(\0162*.udb.core.apikey.enti" +
-      "ty.v1.ApiKeyOwnerTypeR\townerType\022\031\n\010owne" +
-      "r_id\030\004 \001(\tR\007ownerId\022\026\n\006scopes\030\005 \003(\tR\006sco" +
-      "pes\022!\n\014ip_allowlist\030\006 \003(\tR\013ipAllowlist\0221" +
-      "\n\025rate_limit_per_minute\030\007 \001(\005R\022rateLimit" +
-      "PerMinute\022+\n\022rate_limit_per_day\030\010 \001(\003R\017r" +
-      "ateLimitPerDay\0229\n\nexpires_at\030\t \001(\0132\032.goo" +
-      "gle.protobuf.TimestampR\texpiresAt\022<\n\007con" +
-      "text\030\n \001(\0132\".udb.core.common.v1.RequestC" +
-      "ontextR\007context:\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006ap" +
-      "ikeyP\001\"\207\001\n\024CreateApiKeyResponse\0223\n\003key\030\001" +
-      " \001(\0132!.udb.core.apikey.entity.v1.ApiKeyR" +
-      "\003key\022\033\n\tplain_key\030\002 \001(\tR\010plainKey:\035\232\262\031\031\010" +
-      "\001\032\003udb(\260\352\0010\003@\001J\006apikeyP\001\"H\n\020GetApiKeyReq" +
-      "uest\022\025\n\006key_id\030\001 \001(\tR\005keyId:\035\232\262\031\031\010\001\032\003udb" +
-      "(\260\352\0010\003@\001J\006apikeyP\001\"g\n\021GetApiKeyResponse\022" +
-      "3\n\003key\030\001 \001(\0132!.udb.core.apikey.entity.v1" +
-      ".ApiKeyR\003key:\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006apike" +
-      "yP\001\"\217\002\n\022ListApiKeysRequest\022\031\n\010owner_id\030\001" +
-      " \001(\tR\007ownerId\022I\n\nowner_type\030\002 \001(\0162*.udb." +
-      "core.apikey.entity.v1.ApiKeyOwnerTypeR\to" +
-      "wnerType\022?\n\006status\030\003 \001(\0162\'.udb.core.apik" +
-      "ey.entity.v1.ApiKeyStatusR\006status\0223\n\004pag" +
-      "e\030\004 \001(\0132\037.udb.core.common.v1.PageRequest" +
-      "R\004page:\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006apikeyP\001\"\241\001" +
-      "\n\023ListApiKeysResponse\0225\n\004keys\030\001 \003(\0132!.ud" +
-      "b.core.apikey.entity.v1.ApiKeyR\004keys\0224\n\004" +
-      "page\030\002 \001(\0132 .udb.core.common.v1.PageResp" +
-      "onseR\004page:\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006apikeyP" +
-      "\001\"\256\001\n\023RevokeApiKeyRequest\022\025\n\006key_id\030\001 \001(" +
-      "\tR\005keyId\022#\n\rrevoke_reason\030\002 \001(\tR\014revokeR" +
-      "eason\022<\n\007context\030\003 \001(\0132\".udb.core.common" +
-      ".v1.RequestContextR\007context:\035\232\262\031\031\010\001\032\003udb" +
-      "(\260\352\0010\003@\001J\006apikeyP\001\"\252\001\n\024RevokeApiKeyRespo" +
-      "nse\022\025\n\006key_id\030\001 \001(\tR\005keyId\0229\n\nrevoked_at" +
-      "\030\002 \001(\0132\032.google.protobuf.TimestampR\trevo" +
-      "kedAt\022!\n\014operation_id\030\003 \001(\tR\013operationId" +
-      ":\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006apikeyP\001\"\225\003\n\023Upda" +
-      "teApiKeyRequest\022\025\n\006key_id\030\001 \001(\tR\005keyId\022\022" +
-      "\n\004name\030\002 \001(\tR\004name\022 \n\013description\030\003 \001(\tR" +
-      "\013description\022\026\n\006scopes\030\004 \003(\tR\006scopes\022!\n\014" +
-      "ip_allowlist\030\005 \003(\tR\013ipAllowlist\0221\n\025rate_" +
-      "limit_per_minute\030\006 \001(\005R\022rateLimitPerMinu" +
-      "te\022+\n\022rate_limit_per_day\030\007 \001(\003R\017rateLimi" +
-      "tPerDay\0229\n\nexpires_at\030\010 \001(\0132\032.google.pro" +
-      "tobuf.TimestampR\texpiresAt\022<\n\007context\030\t " +
+      "otobuf/timestamp.proto\032 google/protobuf/" +
+      "field_mask.proto\032\'udb/core/apikey/entity" +
+      "/v1/api_key.proto\032%udb/core/apikey/entit" +
+      "y/v1/enums.proto\032\034udb/core/common/v1/dto" +
+      ".proto\032\036udb/core/common/v1/types.proto\032!" +
+      "udb/core/common/v1/security.proto\"\344\003\n\023Cr" +
+      "eateApiKeyRequest\022\022\n\004name\030\001 \001(\tR\004name\022 \n" +
+      "\013description\030\002 \001(\tR\013description\022I\n\nowner" +
+      "_type\030\003 \001(\0162*.udb.core.apikey.entity.v1." +
+      "ApiKeyOwnerTypeR\townerType\022\031\n\010owner_id\030\004" +
+      " \001(\tR\007ownerId\022\026\n\006scopes\030\005 \003(\tR\006scopes\022!\n" +
+      "\014ip_allowlist\030\006 \003(\tR\013ipAllowlist\0221\n\025rate" +
+      "_limit_per_minute\030\007 \001(\005R\022rateLimitPerMin" +
+      "ute\022+\n\022rate_limit_per_day\030\010 \001(\003R\017rateLim" +
+      "itPerDay\0229\n\nexpires_at\030\t \001(\0132\032.google.pr" +
+      "otobuf.TimestampR\texpiresAt\022<\n\007context\030\n" +
+      " \001(\0132\".udb.core.common.v1.RequestContext" +
+      "R\007context:\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006apikeyP\001" +
+      "\"\207\001\n\024CreateApiKeyResponse\0223\n\003key\030\001 \001(\0132!" +
+      ".udb.core.apikey.entity.v1.ApiKeyR\003key\022\033" +
+      "\n\tplain_key\030\002 \001(\tR\010plainKey:\035\232\262\031\031\010\001\032\003udb" +
+      "(\260\352\0010\003@\001J\006apikeyP\001\"H\n\020GetApiKeyRequest\022\025" +
+      "\n\006key_id\030\001 \001(\tR\005keyId:\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003" +
+      "@\001J\006apikeyP\001\"g\n\021GetApiKeyResponse\0223\n\003key" +
+      "\030\001 \001(\0132!.udb.core.apikey.entity.v1.ApiKe" +
+      "yR\003key:\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006apikeyP\001\"\217\002" +
+      "\n\022ListApiKeysRequest\022\031\n\010owner_id\030\001 \001(\tR\007" +
+      "ownerId\022I\n\nowner_type\030\002 \001(\0162*.udb.core.a" +
+      "pikey.entity.v1.ApiKeyOwnerTypeR\townerTy" +
+      "pe\022?\n\006status\030\003 \001(\0162\'.udb.core.apikey.ent" +
+      "ity.v1.ApiKeyStatusR\006status\0223\n\004page\030\004 \001(" +
+      "\0132\037.udb.core.common.v1.PageRequestR\004page" +
+      ":\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006apikeyP\001\"\241\001\n\023List" +
+      "ApiKeysResponse\0225\n\004keys\030\001 \003(\0132!.udb.core" +
+      ".apikey.entity.v1.ApiKeyR\004keys\0224\n\004page\030\002" +
+      " \001(\0132 .udb.core.common.v1.PageResponseR\004" +
+      "page:\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006apikeyP\001\"\256\001\n\023" +
+      "RevokeApiKeyRequest\022\025\n\006key_id\030\001 \001(\tR\005key" +
+      "Id\022#\n\rrevoke_reason\030\002 \001(\tR\014revokeReason\022" +
+      "<\n\007context\030\003 \001(\0132\".udb.core.common.v1.Re" +
+      "questContextR\007context:\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003" +
+      "@\001J\006apikeyP\001\"\252\001\n\024RevokeApiKeyResponse\022\025\n" +
+      "\006key_id\030\001 \001(\tR\005keyId\0229\n\nrevoked_at\030\002 \001(\013" +
+      "2\032.google.protobuf.TimestampR\trevokedAt\022" +
+      "!\n\014operation_id\030\003 \001(\tR\013operationId:\035\232\262\031\031" +
+      "\010\001\032\003udb(\260\352\0010\003@\001J\006apikeyP\001\"\322\003\n\023UpdateApiK" +
+      "eyRequest\022\025\n\006key_id\030\001 \001(\tR\005keyId\022\022\n\004name" +
+      "\030\002 \001(\tR\004name\022 \n\013description\030\003 \001(\tR\013descr" +
+      "iption\022\026\n\006scopes\030\004 \003(\tR\006scopes\022!\n\014ip_all" +
+      "owlist\030\005 \003(\tR\013ipAllowlist\0221\n\025rate_limit_" +
+      "per_minute\030\006 \001(\005R\022rateLimitPerMinute\022+\n\022" +
+      "rate_limit_per_day\030\007 \001(\003R\017rateLimitPerDa" +
+      "y\0229\n\nexpires_at\030\010 \001(\0132\032.google.protobuf." +
+      "TimestampR\texpiresAt\022<\n\007context\030\t \001(\0132\"." +
+      "udb.core.common.v1.RequestContextR\007conte" +
+      "xt\022;\n\013update_mask\030\n \001(\0132\032.google.protobu" +
+      "f.FieldMaskR\nupdateMask:\035\232\262\031\031\010\001\032\003udb(\260\352\001" +
+      "0\003@\001J\006apikeyP\001\"j\n\024UpdateApiKeyResponse\0223" +
+      "\n\003key\030\001 \001(\0132!.udb.core.apikey.entity.v1." +
+      "ApiKeyR\003key:\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006apikey" +
+      "P\001\"\262\001\n\023RotateApiKeyRequest\022\025\n\006key_id\030\001 \001" +
+      "(\tR\005keyId\022\'\n\017rotation_reason\030\002 \001(\tR\016rota" +
+      "tionReason\022<\n\007context\030\003 \001(\0132\".udb.core.c" +
+      "ommon.v1.RequestContextR\007context:\035\232\262\031\031\010\001" +
+      "\032\003udb(\260\352\0010\003@\001J\006apikeyP\001\"\257\001\n\024RotateApiKey" +
+      "Response\0223\n\003key\030\001 \001(\0132!.udb.core.apikey." +
+      "entity.v1.ApiKeyR\003key\022\033\n\tplain_key\030\002 \001(\t" +
+      "R\010plainKey\022&\n\017previous_key_id\030\003 \001(\tR\rpre" +
+      "viousKeyId:\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006apikeyP" +
+      "\001\"\343\002\n\035EmergencyRevokeApiKeysRequest\022\035\n\nk" +
+      "ey_prefix\030\001 \001(\tR\tkeyPrefix\022\031\n\010owner_id\030\002" +
+      " \001(\tR\007ownerId\022\033\n\ttenant_id\030\003 \001(\tR\010tenant" +
+      "Id\022\035\n\nproject_id\030\004 \001(\tR\tprojectId\022\024\n\005sco" +
+      "pe\030\005 \001(\tR\005scope\022A\n\016created_before\030\006 \001(\0132" +
+      "\032.google.protobuf.TimestampR\rcreatedBefo" +
+      "re\022\026\n\006reason\030\007 \001(\tR\006reason\022<\n\007context\030\010 " +
       "\001(\0132\".udb.core.common.v1.RequestContextR" +
       "\007context:\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006apikeyP\001\"" +
-      "j\n\024UpdateApiKeyResponse\0223\n\003key\030\001 \001(\0132!.u" +
-      "db.core.apikey.entity.v1.ApiKeyR\003key:\035\232\262" +
-      "\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006apikeyP\001\"\262\001\n\023RotateAp" +
-      "iKeyRequest\022\025\n\006key_id\030\001 \001(\tR\005keyId\022\'\n\017ro" +
-      "tation_reason\030\002 \001(\tR\016rotationReason\022<\n\007c" +
-      "ontext\030\003 \001(\0132\".udb.core.common.v1.Reques" +
-      "tContextR\007context:\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006" +
-      "apikeyP\001\"\257\001\n\024RotateApiKeyResponse\0223\n\003key" +
-      "\030\001 \001(\0132!.udb.core.apikey.entity.v1.ApiKe" +
-      "yR\003key\022\033\n\tplain_key\030\002 \001(\tR\010plainKey\022&\n\017p" +
-      "revious_key_id\030\003 \001(\tR\rpreviousKeyId:\035\232\262\031" +
-      "\031\010\001\032\003udb(\260\352\0010\003@\001J\006apikeyP\001\"\343\002\n\035Emergency" +
-      "RevokeApiKeysRequest\022\035\n\nkey_prefix\030\001 \001(\t" +
-      "R\tkeyPrefix\022\031\n\010owner_id\030\002 \001(\tR\007ownerId\022\033" +
-      "\n\ttenant_id\030\003 \001(\tR\010tenantId\022\035\n\nproject_i" +
-      "d\030\004 \001(\tR\tprojectId\022\024\n\005scope\030\005 \001(\tR\005scope" +
-      "\022A\n\016created_before\030\006 \001(\0132\032.google.protob" +
-      "uf.TimestampR\rcreatedBefore\022\026\n\006reason\030\007 " +
-      "\001(\tR\006reason\022<\n\007context\030\010 \001(\0132\".udb.core." +
-      "common.v1.RequestContextR\007context:\035\232\262\031\031\010" +
-      "\001\032\003udb(\260\352\0010\003@\001J\006apikeyP\001\"\257\001\n\036EmergencyRe" +
-      "vokeApiKeysResponse\022#\n\rrevoked_count\030\001 \001" +
-      "(\003R\014revokedCount\022&\n\017revoked_key_ids\030\002 \003(" +
-      "\tR\rrevokedKeyIds\022!\n\014operation_id\030\003 \001(\tR\013" +
-      "operationId:\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006apikey" +
-      "P\001\"\265\001\n\025ValidateApiKeyRequest\022\033\n\tplain_ke" +
-      "y\030\001 \001(\tR\010plainKey\022\032\n\010endpoint\030\002 \001(\tR\010end" +
-      "point\022%\n\016required_scope\030\003 \001(\tR\rrequiredS" +
-      "cope\022\035\n\nip_address\030\004 \001(\tR\tipAddress:\035\232\262\031" +
-      "\031\010\001\032\003udb(\260\352\0010\003@\001J\006apikeyP\001\"\205\002\n\026ValidateA" +
-      "piKeyResponse\022\024\n\005valid\030\001 \001(\010R\005valid\022\025\n\006k" +
-      "ey_id\030\002 \001(\tR\005keyId\022\031\n\010owner_id\030\003 \001(\tR\007ow" +
-      "nerId\022I\n\nowner_type\030\004 \001(\0162*.udb.core.api" +
-      "key.entity.v1.ApiKeyOwnerTypeR\townerType" +
-      "\022\026\n\006scopes\030\005 \003(\tR\006scopes\022!\n\014rate_limited" +
-      "\030\006 \001(\010R\013rateLimited:\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003@\001" +
-      "J\006apikeyP\001\"\256\001\n\032GetApiKeyUsageStatsReques" +
-      "t\022\025\n\006key_id\030\001 \001(\tR\005keyId\022.\n\004from\030\002 \001(\0132\032" +
-      ".google.protobuf.TimestampR\004from\022*\n\002to\030\003" +
-      " \001(\0132\032.google.protobuf.TimestampR\002to:\035\232\262" +
-      "\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006apikeyP\001\"\345\002\n\017ApiKeyDa" +
-      "ilyStat\022\022\n\004date\030\001 \001(\tR\004date\022%\n\016total_req" +
-      "uests\030\002 \001(\003R\rtotalRequests\022,\n\022rate_limit" +
-      "ed_count\030\003 \001(\003R\020rateLimitedCount\022$\n\016avg_" +
-      "latency_ms\030\004 \001(\001R\014avgLatencyMs\022c\n\rstatus" +
-      "_counts\030\005 \003(\0132>.udb.core.apikey.services" +
-      ".v1.ApiKeyDailyStat.StatusCountsEntryR\014s" +
-      "tatusCounts\032?\n\021StatusCountsEntry\022\020\n\003key\030" +
-      "\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\003R\005value:\0028\001:\035\232\262" +
-      "\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006apikeyP\001\"\247\001\n\033GetApiKe" +
-      "yUsageStatsResponse\022B\n\005stats\030\001 \003(\0132,.udb" +
-      ".core.apikey.services.v1.ApiKeyDailyStat" +
-      "R\005stats\022%\n\016total_requests\030\002 \001(\003R\rtotalRe" +
-      "quests:\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006apikeyP\001B\210\002" +
-      "\n\037com.udb.core.apikey.services.v1B\tCoreP" +
-      "rotoP\001ZIgithub.com/fahara02/udb/sdk/go/g" +
-      "en/udb/core/apikey/services/v1;servicesv" +
-      "1\242\002\004UCAS\252\002\033udb.core.Apikey.Services.V1\312\002" +
-      "\033Udb\\Core\\Apikey\\Services\\V1\342\002\'Udb\\GPBMe" +
-      "tadata\\Core\\Apikey\\Services\\V1\352\002\037Udb::Co" +
-      "re::Apikey::Services::V1b\006proto3"
+      "\257\001\n\036EmergencyRevokeApiKeysResponse\022#\n\rre" +
+      "voked_count\030\001 \001(\003R\014revokedCount\022&\n\017revok" +
+      "ed_key_ids\030\002 \003(\tR\rrevokedKeyIds\022!\n\014opera" +
+      "tion_id\030\003 \001(\tR\013operationId:\035\232\262\031\031\010\001\032\003udb(" +
+      "\260\352\0010\003@\001J\006apikeyP\001\"\265\001\n\025ValidateApiKeyRequ" +
+      "est\022\033\n\tplain_key\030\001 \001(\tR\010plainKey\022\032\n\010endp" +
+      "oint\030\002 \001(\tR\010endpoint\022%\n\016required_scope\030\003" +
+      " \001(\tR\rrequiredScope\022\035\n\nip_address\030\004 \001(\tR" +
+      "\tipAddress:\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006apikeyP" +
+      "\001\"\205\002\n\026ValidateApiKeyResponse\022\024\n\005valid\030\001 " +
+      "\001(\010R\005valid\022\025\n\006key_id\030\002 \001(\tR\005keyId\022\031\n\010own" +
+      "er_id\030\003 \001(\tR\007ownerId\022I\n\nowner_type\030\004 \001(\016" +
+      "2*.udb.core.apikey.entity.v1.ApiKeyOwner" +
+      "TypeR\townerType\022\026\n\006scopes\030\005 \003(\tR\006scopes\022" +
+      "!\n\014rate_limited\030\006 \001(\010R\013rateLimited:\035\232\262\031\031" +
+      "\010\001\032\003udb(\260\352\0010\003@\001J\006apikeyP\001\"\256\001\n\032GetApiKeyU" +
+      "sageStatsRequest\022\025\n\006key_id\030\001 \001(\tR\005keyId\022" +
+      ".\n\004from\030\002 \001(\0132\032.google.protobuf.Timestam" +
+      "pR\004from\022*\n\002to\030\003 \001(\0132\032.google.protobuf.Ti" +
+      "mestampR\002to:\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006apikey" +
+      "P\001\"\345\002\n\017ApiKeyDailyStat\022\022\n\004date\030\001 \001(\tR\004da" +
+      "te\022%\n\016total_requests\030\002 \001(\003R\rtotalRequest" +
+      "s\022,\n\022rate_limited_count\030\003 \001(\003R\020rateLimit" +
+      "edCount\022$\n\016avg_latency_ms\030\004 \001(\001R\014avgLate" +
+      "ncyMs\022c\n\rstatus_counts\030\005 \003(\0132>.udb.core." +
+      "apikey.services.v1.ApiKeyDailyStat.Statu" +
+      "sCountsEntryR\014statusCounts\032?\n\021StatusCoun" +
+      "tsEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\003" +
+      "R\005value:\0028\001:\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006apikey" +
+      "P\001\"\247\001\n\033GetApiKeyUsageStatsResponse\022B\n\005st" +
+      "ats\030\001 \003(\0132,.udb.core.apikey.services.v1." +
+      "ApiKeyDailyStatR\005stats\022%\n\016total_requests" +
+      "\030\002 \001(\003R\rtotalRequests:\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003" +
+      "@\001J\006apikeyP\001B\210\002\n\037com.udb.core.apikey.ser" +
+      "vices.v1B\tCoreProtoP\001ZIgithub.com/fahara" +
+      "02/udb/sdk/go/gen/udb/core/apikey/servic" +
+      "es/v1;servicesv1\242\002\004UCAS\252\002\033udb.core.Apike" +
+      "y.Services.V1\312\002\033Udb\\Core\\Apikey\\Services" +
+      "\\V1\342\002\'Udb\\GPBMetadata\\Core\\Apikey\\Servic" +
+      "es\\V1\352\002\037Udb::Core::Apikey::Services::V1b" +
+      "\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
           com.google.protobuf.TimestampProto.getDescriptor(),
+          com.google.protobuf.FieldMaskProto.getDescriptor(),
           com.udb.core.apikey.entity.v1.ApiKeyProto.getDescriptor(),
           com.udb.core.apikey.entity.v1.EnumsProto.getDescriptor(),
           com.udb.core.common.v1.DtoProto.getDescriptor(),
@@ -317,7 +321,7 @@ public final class CoreProto {
     internal_static_udb_core_apikey_services_v1_UpdateApiKeyRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_apikey_services_v1_UpdateApiKeyRequest_descriptor,
-        new java.lang.String[] { "KeyId", "Name", "Description", "Scopes", "IpAllowlist", "RateLimitPerMinute", "RateLimitPerDay", "ExpiresAt", "Context", });
+        new java.lang.String[] { "KeyId", "Name", "Description", "Scopes", "IpAllowlist", "RateLimitPerMinute", "RateLimitPerDay", "ExpiresAt", "Context", "UpdateMask", });
     internal_static_udb_core_apikey_services_v1_UpdateApiKeyResponse_descriptor =
       getDescriptor().getMessageTypes().get(9);
     internal_static_udb_core_apikey_services_v1_UpdateApiKeyResponse_fieldAccessorTable = new
@@ -386,6 +390,7 @@ public final class CoreProto {
         new java.lang.String[] { "Stats", "TotalRequests", });
     descriptor.resolveAllFeaturesImmutable();
     com.google.protobuf.TimestampProto.getDescriptor();
+    com.google.protobuf.FieldMaskProto.getDescriptor();
     com.udb.core.apikey.entity.v1.ApiKeyProto.getDescriptor();
     com.udb.core.apikey.entity.v1.EnumsProto.getDescriptor();
     com.udb.core.common.v1.DtoProto.getDescriptor();

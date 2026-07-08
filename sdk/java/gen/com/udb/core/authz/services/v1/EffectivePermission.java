@@ -52,6 +52,11 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object object_ = "";
   /**
+   * <pre>
+   * Canonical public permission object. Combined with action/domain/resource_type
+   * it forms the stable permission identity returned by ListUserPermissions.
+   * </pre>
+   *
    * <code>string object = 1 [json_name = "object"];</code>
    * @return The object.
    */
@@ -69,6 +74,11 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
+   * <pre>
+   * Canonical public permission object. Combined with action/domain/resource_type
+   * it forms the stable permission identity returned by ListUserPermissions.
+   * </pre>
+   *
    * <code>string object = 1 [json_name = "object"];</code>
    * @return The bytes for object.
    */
@@ -635,6 +645,11 @@ private static final long serialVersionUID = 0L;
 
     private java.lang.Object object_ = "";
     /**
+     * <pre>
+     * Canonical public permission object. Combined with action/domain/resource_type
+     * it forms the stable permission identity returned by ListUserPermissions.
+     * </pre>
+     *
      * <code>string object = 1 [json_name = "object"];</code>
      * @return The object.
      */
@@ -651,6 +666,11 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
+     * <pre>
+     * Canonical public permission object. Combined with action/domain/resource_type
+     * it forms the stable permission identity returned by ListUserPermissions.
+     * </pre>
+     *
      * <code>string object = 1 [json_name = "object"];</code>
      * @return The bytes for object.
      */
@@ -668,6 +688,11 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
+     * <pre>
+     * Canonical public permission object. Combined with action/domain/resource_type
+     * it forms the stable permission identity returned by ListUserPermissions.
+     * </pre>
+     *
      * <code>string object = 1 [json_name = "object"];</code>
      * @param value The object to set.
      * @return This builder for chaining.
@@ -681,6 +706,11 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * Canonical public permission object. Combined with action/domain/resource_type
+     * it forms the stable permission identity returned by ListUserPermissions.
+     * </pre>
+     *
      * <code>string object = 1 [json_name = "object"];</code>
      * @return This builder for chaining.
      */
@@ -691,6 +721,11 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * Canonical public permission object. Combined with action/domain/resource_type
+     * it forms the stable permission identity returned by ListUserPermissions.
+     * </pre>
+     *
      * <code>string object = 1 [json_name = "object"];</code>
      * @param value The bytes for object to set.
      * @return This builder for chaining.

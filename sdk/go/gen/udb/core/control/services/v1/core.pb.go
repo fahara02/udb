@@ -1016,6 +1016,147 @@ func (x *AckStatusResponse) GetNacked() bool {
 	return false
 }
 
+// Roll a (node, resource_type) back to a retained prior snapshot. The named
+// node's bounded `served_snapshots` ring supplies the target payloads; the
+// server re-publishes them through the SAME content-addressed registry the push
+// path serves from, so every subscribing node converges back onto the retained
+// version. Fails closed (FAILED_PRECONDITION) when no matching snapshot is
+// retained — a rollback never silently no-ops.
+type RollbackResourcesRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The node whose retained served snapshots provide the rollback target set.
+	NodeId       string          `protobuf:"bytes,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
+	ResourceType v1.ResourceType `protobuf:"varint,2,opt,name=resource_type,json=resourceType,proto3,enum=udb.core.control.entity.v1.ResourceType" json:"resource_type,omitempty"`
+	// Optional explicit retained version to roll back to. Empty == the most recent
+	// retained snapshot whose version differs from the current world (prior good).
+	TargetVersion string              `protobuf:"bytes,3,opt,name=target_version,json=targetVersion,proto3" json:"target_version,omitempty"`
+	Context       *v11.RequestContext `protobuf:"bytes,4,opt,name=context,proto3" json:"context,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RollbackResourcesRequest) Reset() {
+	*x = RollbackResourcesRequest{}
+	mi := &file_udb_core_control_services_v1_core_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RollbackResourcesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RollbackResourcesRequest) ProtoMessage() {}
+
+func (x *RollbackResourcesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_control_services_v1_core_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RollbackResourcesRequest.ProtoReflect.Descriptor instead.
+func (*RollbackResourcesRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_control_services_v1_core_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *RollbackResourcesRequest) GetNodeId() string {
+	if x != nil {
+		return x.NodeId
+	}
+	return ""
+}
+
+func (x *RollbackResourcesRequest) GetResourceType() v1.ResourceType {
+	if x != nil {
+		return x.ResourceType
+	}
+	return v1.ResourceType(0)
+}
+
+func (x *RollbackResourcesRequest) GetTargetVersion() string {
+	if x != nil {
+		return x.TargetVersion
+	}
+	return ""
+}
+
+func (x *RollbackResourcesRequest) GetContext() *v11.RequestContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
+type RollbackResourcesResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The retained version the resources were rolled back to (re-published).
+	RolledBackToVersion string `protobuf:"bytes,1,opt,name=rolled_back_to_version,json=rolledBackToVersion,proto3" json:"rolled_back_to_version,omitempty"`
+	// The aggregate world version after re-publishing (content-addressed, so it
+	// equals `rolled_back_to_version` once the retained payloads are restored).
+	CurrentVersion string `protobuf:"bytes,2,opt,name=current_version,json=currentVersion,proto3" json:"current_version,omitempty"`
+	// Number of resources re-published from the retained snapshot.
+	ResourcesRestored int32 `protobuf:"varint,3,opt,name=resources_restored,json=resourcesRestored,proto3" json:"resources_restored,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *RollbackResourcesResponse) Reset() {
+	*x = RollbackResourcesResponse{}
+	mi := &file_udb_core_control_services_v1_core_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RollbackResourcesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RollbackResourcesResponse) ProtoMessage() {}
+
+func (x *RollbackResourcesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_control_services_v1_core_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RollbackResourcesResponse.ProtoReflect.Descriptor instead.
+func (*RollbackResourcesResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_control_services_v1_core_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *RollbackResourcesResponse) GetRolledBackToVersion() string {
+	if x != nil {
+		return x.RolledBackToVersion
+	}
+	return ""
+}
+
+func (x *RollbackResourcesResponse) GetCurrentVersion() string {
+	if x != nil {
+		return x.CurrentVersion
+	}
+	return ""
+}
+
+func (x *RollbackResourcesResponse) GetResourcesRestored() int32 {
+	if x != nil {
+		return x.ResourcesRestored
+	}
+	return 0
+}
+
 var File_udb_core_control_services_v1_core_proto protoreflect.FileDescriptor
 
 const file_udb_core_control_services_v1_core_proto_rawDesc = "" +
@@ -1100,7 +1241,16 @@ const file_udb_core_control_services_v1_core_proto_rawDesc = "" +
 	"node_state\x18\x01 \x01(\v2*.udb.core.control.services.v1.NodeAckStateR\tnodeState\x12'\n" +
 	"\x0fcurrent_version\x18\x02 \x01(\tR\x0ecurrentVersion\x12\"\n" +
 	"\facknowledged\x18\x03 \x01(\bR\facknowledged\x12\x16\n" +
-	"\x06nacked\x18\x04 \x01(\bR\x06nackedB\x8e\x02\n" +
+	"\x06nacked\x18\x04 \x01(\bR\x06nacked\"\xe7\x01\n" +
+	"\x18RollbackResourcesRequest\x12\x17\n" +
+	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12M\n" +
+	"\rresource_type\x18\x02 \x01(\x0e2(.udb.core.control.entity.v1.ResourceTypeR\fresourceType\x12%\n" +
+	"\x0etarget_version\x18\x03 \x01(\tR\rtargetVersion\x12<\n" +
+	"\acontext\x18\x04 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\"\xa8\x01\n" +
+	"\x19RollbackResourcesResponse\x123\n" +
+	"\x16rolled_back_to_version\x18\x01 \x01(\tR\x13rolledBackToVersion\x12'\n" +
+	"\x0fcurrent_version\x18\x02 \x01(\tR\x0ecurrentVersion\x12-\n" +
+	"\x12resources_restored\x18\x03 \x01(\x05R\x11resourcesRestoredB\x8e\x02\n" +
 	" com.udb.core.control.services.v1B\tCoreProtoP\x01ZJgithub.com/fahara02/udb/sdk/go/gen/udb/core/control/services/v1;servicesv1\xa2\x02\x04UCCS\xaa\x02\x1cudb.core.Control.Services.V1\xca\x02\x1cUdb\\Core\\Control\\Services\\V1\xe2\x02(Udb\\GPBMetadata\\Core\\Control\\Services\\V1\xea\x02 Udb::Core::Control::Services::V1b\x06proto3"
 
 var (
@@ -1115,61 +1265,65 @@ func file_udb_core_control_services_v1_core_proto_rawDescGZIP() []byte {
 	return file_udb_core_control_services_v1_core_proto_rawDescData
 }
 
-var file_udb_core_control_services_v1_core_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_udb_core_control_services_v1_core_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_udb_core_control_services_v1_core_proto_goTypes = []any{
-	(*Resource)(nil),               // 0: udb.core.control.services.v1.Resource
-	(*ErrorDetail)(nil),            // 1: udb.core.control.services.v1.ErrorDetail
-	(*DiscoveryRequest)(nil),       // 2: udb.core.control.services.v1.DiscoveryRequest
-	(*DiscoveryResponse)(nil),      // 3: udb.core.control.services.v1.DiscoveryResponse
-	(*DeltaDiscoveryRequest)(nil),  // 4: udb.core.control.services.v1.DeltaDiscoveryRequest
-	(*DeltaDiscoveryResponse)(nil), // 5: udb.core.control.services.v1.DeltaDiscoveryResponse
-	(*GetResourcesRequest)(nil),    // 6: udb.core.control.services.v1.GetResourcesRequest
-	(*GetResourcesResponse)(nil),   // 7: udb.core.control.services.v1.GetResourcesResponse
-	(*ListNodeStatesRequest)(nil),  // 8: udb.core.control.services.v1.ListNodeStatesRequest
-	(*NodeAckState)(nil),           // 9: udb.core.control.services.v1.NodeAckState
-	(*ListNodeStatesResponse)(nil), // 10: udb.core.control.services.v1.ListNodeStatesResponse
-	(*AckStatusRequest)(nil),       // 11: udb.core.control.services.v1.AckStatusRequest
-	(*AckStatusResponse)(nil),      // 12: udb.core.control.services.v1.AckStatusResponse
-	nil,                            // 13: udb.core.control.services.v1.DeltaDiscoveryRequest.InitialResourceVersionsEntry
-	(v1.ResourceType)(0),           // 14: udb.core.control.entity.v1.ResourceType
-	(*v11.RequestContext)(nil),     // 15: udb.core.common.v1.RequestContext
-	(*v11.PageRequest)(nil),        // 16: udb.core.common.v1.PageRequest
-	(*v11.PageResponse)(nil),       // 17: udb.core.common.v1.PageResponse
-	(*timestamppb.Timestamp)(nil),  // 18: google.protobuf.Timestamp
+	(*Resource)(nil),                  // 0: udb.core.control.services.v1.Resource
+	(*ErrorDetail)(nil),               // 1: udb.core.control.services.v1.ErrorDetail
+	(*DiscoveryRequest)(nil),          // 2: udb.core.control.services.v1.DiscoveryRequest
+	(*DiscoveryResponse)(nil),         // 3: udb.core.control.services.v1.DiscoveryResponse
+	(*DeltaDiscoveryRequest)(nil),     // 4: udb.core.control.services.v1.DeltaDiscoveryRequest
+	(*DeltaDiscoveryResponse)(nil),    // 5: udb.core.control.services.v1.DeltaDiscoveryResponse
+	(*GetResourcesRequest)(nil),       // 6: udb.core.control.services.v1.GetResourcesRequest
+	(*GetResourcesResponse)(nil),      // 7: udb.core.control.services.v1.GetResourcesResponse
+	(*ListNodeStatesRequest)(nil),     // 8: udb.core.control.services.v1.ListNodeStatesRequest
+	(*NodeAckState)(nil),              // 9: udb.core.control.services.v1.NodeAckState
+	(*ListNodeStatesResponse)(nil),    // 10: udb.core.control.services.v1.ListNodeStatesResponse
+	(*AckStatusRequest)(nil),          // 11: udb.core.control.services.v1.AckStatusRequest
+	(*AckStatusResponse)(nil),         // 12: udb.core.control.services.v1.AckStatusResponse
+	(*RollbackResourcesRequest)(nil),  // 13: udb.core.control.services.v1.RollbackResourcesRequest
+	(*RollbackResourcesResponse)(nil), // 14: udb.core.control.services.v1.RollbackResourcesResponse
+	nil,                               // 15: udb.core.control.services.v1.DeltaDiscoveryRequest.InitialResourceVersionsEntry
+	(v1.ResourceType)(0),              // 16: udb.core.control.entity.v1.ResourceType
+	(*v11.RequestContext)(nil),        // 17: udb.core.common.v1.RequestContext
+	(*v11.PageRequest)(nil),           // 18: udb.core.common.v1.PageRequest
+	(*v11.PageResponse)(nil),          // 19: udb.core.common.v1.PageResponse
+	(*timestamppb.Timestamp)(nil),     // 20: google.protobuf.Timestamp
 }
 var file_udb_core_control_services_v1_core_proto_depIdxs = []int32{
-	14, // 0: udb.core.control.services.v1.Resource.resource_type:type_name -> udb.core.control.entity.v1.ResourceType
-	14, // 1: udb.core.control.services.v1.DiscoveryRequest.resource_type:type_name -> udb.core.control.entity.v1.ResourceType
+	16, // 0: udb.core.control.services.v1.Resource.resource_type:type_name -> udb.core.control.entity.v1.ResourceType
+	16, // 1: udb.core.control.services.v1.DiscoveryRequest.resource_type:type_name -> udb.core.control.entity.v1.ResourceType
 	1,  // 2: udb.core.control.services.v1.DiscoveryRequest.error_detail:type_name -> udb.core.control.services.v1.ErrorDetail
-	15, // 3: udb.core.control.services.v1.DiscoveryRequest.context:type_name -> udb.core.common.v1.RequestContext
-	14, // 4: udb.core.control.services.v1.DiscoveryResponse.resource_type:type_name -> udb.core.control.entity.v1.ResourceType
+	17, // 3: udb.core.control.services.v1.DiscoveryRequest.context:type_name -> udb.core.common.v1.RequestContext
+	16, // 4: udb.core.control.services.v1.DiscoveryResponse.resource_type:type_name -> udb.core.control.entity.v1.ResourceType
 	0,  // 5: udb.core.control.services.v1.DiscoveryResponse.resources:type_name -> udb.core.control.services.v1.Resource
-	14, // 6: udb.core.control.services.v1.DeltaDiscoveryRequest.resource_type:type_name -> udb.core.control.entity.v1.ResourceType
-	13, // 7: udb.core.control.services.v1.DeltaDiscoveryRequest.initial_resource_versions:type_name -> udb.core.control.services.v1.DeltaDiscoveryRequest.InitialResourceVersionsEntry
+	16, // 6: udb.core.control.services.v1.DeltaDiscoveryRequest.resource_type:type_name -> udb.core.control.entity.v1.ResourceType
+	15, // 7: udb.core.control.services.v1.DeltaDiscoveryRequest.initial_resource_versions:type_name -> udb.core.control.services.v1.DeltaDiscoveryRequest.InitialResourceVersionsEntry
 	1,  // 8: udb.core.control.services.v1.DeltaDiscoveryRequest.error_detail:type_name -> udb.core.control.services.v1.ErrorDetail
-	15, // 9: udb.core.control.services.v1.DeltaDiscoveryRequest.context:type_name -> udb.core.common.v1.RequestContext
-	14, // 10: udb.core.control.services.v1.DeltaDiscoveryResponse.resource_type:type_name -> udb.core.control.entity.v1.ResourceType
+	17, // 9: udb.core.control.services.v1.DeltaDiscoveryRequest.context:type_name -> udb.core.common.v1.RequestContext
+	16, // 10: udb.core.control.services.v1.DeltaDiscoveryResponse.resource_type:type_name -> udb.core.control.entity.v1.ResourceType
 	0,  // 11: udb.core.control.services.v1.DeltaDiscoveryResponse.resources:type_name -> udb.core.control.services.v1.Resource
-	14, // 12: udb.core.control.services.v1.GetResourcesRequest.resource_type:type_name -> udb.core.control.entity.v1.ResourceType
-	16, // 13: udb.core.control.services.v1.GetResourcesRequest.page:type_name -> udb.core.common.v1.PageRequest
-	15, // 14: udb.core.control.services.v1.GetResourcesRequest.context:type_name -> udb.core.common.v1.RequestContext
+	16, // 12: udb.core.control.services.v1.GetResourcesRequest.resource_type:type_name -> udb.core.control.entity.v1.ResourceType
+	18, // 13: udb.core.control.services.v1.GetResourcesRequest.page:type_name -> udb.core.common.v1.PageRequest
+	17, // 14: udb.core.control.services.v1.GetResourcesRequest.context:type_name -> udb.core.common.v1.RequestContext
 	0,  // 15: udb.core.control.services.v1.GetResourcesResponse.resources:type_name -> udb.core.control.services.v1.Resource
-	17, // 16: udb.core.control.services.v1.GetResourcesResponse.page:type_name -> udb.core.common.v1.PageResponse
-	14, // 17: udb.core.control.services.v1.ListNodeStatesRequest.resource_type:type_name -> udb.core.control.entity.v1.ResourceType
-	16, // 18: udb.core.control.services.v1.ListNodeStatesRequest.page:type_name -> udb.core.common.v1.PageRequest
-	15, // 19: udb.core.control.services.v1.ListNodeStatesRequest.context:type_name -> udb.core.common.v1.RequestContext
-	14, // 20: udb.core.control.services.v1.NodeAckState.resource_type:type_name -> udb.core.control.entity.v1.ResourceType
-	18, // 21: udb.core.control.services.v1.NodeAckState.updated_at:type_name -> google.protobuf.Timestamp
+	19, // 16: udb.core.control.services.v1.GetResourcesResponse.page:type_name -> udb.core.common.v1.PageResponse
+	16, // 17: udb.core.control.services.v1.ListNodeStatesRequest.resource_type:type_name -> udb.core.control.entity.v1.ResourceType
+	18, // 18: udb.core.control.services.v1.ListNodeStatesRequest.page:type_name -> udb.core.common.v1.PageRequest
+	17, // 19: udb.core.control.services.v1.ListNodeStatesRequest.context:type_name -> udb.core.common.v1.RequestContext
+	16, // 20: udb.core.control.services.v1.NodeAckState.resource_type:type_name -> udb.core.control.entity.v1.ResourceType
+	20, // 21: udb.core.control.services.v1.NodeAckState.updated_at:type_name -> google.protobuf.Timestamp
 	9,  // 22: udb.core.control.services.v1.ListNodeStatesResponse.node_states:type_name -> udb.core.control.services.v1.NodeAckState
-	17, // 23: udb.core.control.services.v1.ListNodeStatesResponse.page:type_name -> udb.core.common.v1.PageResponse
-	14, // 24: udb.core.control.services.v1.AckStatusRequest.resource_type:type_name -> udb.core.control.entity.v1.ResourceType
-	15, // 25: udb.core.control.services.v1.AckStatusRequest.context:type_name -> udb.core.common.v1.RequestContext
+	19, // 23: udb.core.control.services.v1.ListNodeStatesResponse.page:type_name -> udb.core.common.v1.PageResponse
+	16, // 24: udb.core.control.services.v1.AckStatusRequest.resource_type:type_name -> udb.core.control.entity.v1.ResourceType
+	17, // 25: udb.core.control.services.v1.AckStatusRequest.context:type_name -> udb.core.common.v1.RequestContext
 	9,  // 26: udb.core.control.services.v1.AckStatusResponse.node_state:type_name -> udb.core.control.services.v1.NodeAckState
-	27, // [27:27] is the sub-list for method output_type
-	27, // [27:27] is the sub-list for method input_type
-	27, // [27:27] is the sub-list for extension type_name
-	27, // [27:27] is the sub-list for extension extendee
-	0,  // [0:27] is the sub-list for field type_name
+	16, // 27: udb.core.control.services.v1.RollbackResourcesRequest.resource_type:type_name -> udb.core.control.entity.v1.ResourceType
+	17, // 28: udb.core.control.services.v1.RollbackResourcesRequest.context:type_name -> udb.core.common.v1.RequestContext
+	29, // [29:29] is the sub-list for method output_type
+	29, // [29:29] is the sub-list for method input_type
+	29, // [29:29] is the sub-list for extension type_name
+	29, // [29:29] is the sub-list for extension extendee
+	0,  // [0:29] is the sub-list for field type_name
 }
 
 func init() { file_udb_core_control_services_v1_core_proto_init() }
@@ -1183,7 +1337,7 @@ func file_udb_core_control_services_v1_core_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_udb_core_control_services_v1_core_proto_rawDesc), len(file_udb_core_control_services_v1_core_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   14,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

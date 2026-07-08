@@ -45,4 +45,34 @@ public interface ListPeersRequestOrBuilder extends
    */
   com.google.protobuf.ByteString
       getStateBytes();
+
+  /**
+   * <pre>
+   * Requested page size. Defaults to 50 and is capped at the native list maximum.
+   * </pre>
+   *
+   * <code>int32 page_size = 4 [json_name = "pageSize"];</code>
+   * @return The pageSize.
+   */
+  int getPageSize();
+
+  /**
+   * <pre>
+   * Opaque pagination token returned by ListPeersResponse.next_page_token.
+   * </pre>
+   *
+   * <code>string page_token = 5 [json_name = "pageToken"];</code>
+   * @return The pageToken.
+   */
+  java.lang.String getPageToken();
+  /**
+   * <pre>
+   * Opaque pagination token returned by ListPeersResponse.next_page_token.
+   * </pre>
+   *
+   * <code>string page_token = 5 [json_name = "pageToken"];</code>
+   * @return The bytes for pageToken.
+   */
+  com.google.protobuf.ByteString
+      getPageTokenBytes();
 }

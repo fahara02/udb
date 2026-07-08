@@ -40,6 +40,11 @@ class NotificationServiceStub(object):
                 request_serializer=udb_dot_core_dot_notification_dot_services_dot_v1_dot_core__pb2.RetryNotificationRequest.SerializeToString,
                 response_deserializer=udb_dot_core_dot_notification_dot_services_dot_v1_dot_core__pb2.RetryNotificationResponse.FromString,
                 _registered_method=True)
+        self.ReportDelivery = channel.unary_unary(
+                '/udb.core.notification.services.v1.NotificationService/ReportDelivery',
+                request_serializer=udb_dot_core_dot_notification_dot_services_dot_v1_dot_core__pb2.ReportDeliveryRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_notification_dot_services_dot_v1_dot_core__pb2.ReportDeliveryResponse.FromString,
+                _registered_method=True)
         self.UpsertTemplate = channel.unary_unary(
                 '/udb.core.notification.services.v1.NotificationService/UpsertTemplate',
                 request_serializer=udb_dot_core_dot_notification_dot_services_dot_v1_dot_core__pb2.UpsertTemplateRequest.SerializeToString,
@@ -109,6 +114,18 @@ class NotificationServiceServicer(object):
 
     def RetryNotification(self, request, context):
         """Retry a failed notification.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ReportDelivery(self, request, context):
+        """── Delivery reporting (master-plan 9.13) ───────────────────────────────
+
+        Report the terminal per-channel delivery outcome for a sent notification.
+        Internal seam: the leader-elected delivery worker — or a provider webhook
+        bridge — reports queued/sent/delivered/failed; the handler upserts the
+        NotificationDeliveryAttempt row and emits `udb.notification.delivery.<status>.v1`.
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -189,6 +206,11 @@ def add_NotificationServiceServicer_to_server(servicer, server):
                     servicer.RetryNotification,
                     request_deserializer=udb_dot_core_dot_notification_dot_services_dot_v1_dot_core__pb2.RetryNotificationRequest.FromString,
                     response_serializer=udb_dot_core_dot_notification_dot_services_dot_v1_dot_core__pb2.RetryNotificationResponse.SerializeToString,
+            ),
+            'ReportDelivery': grpc.unary_unary_rpc_method_handler(
+                    servicer.ReportDelivery,
+                    request_deserializer=udb_dot_core_dot_notification_dot_services_dot_v1_dot_core__pb2.ReportDeliveryRequest.FromString,
+                    response_serializer=udb_dot_core_dot_notification_dot_services_dot_v1_dot_core__pb2.ReportDeliveryResponse.SerializeToString,
             ),
             'UpsertTemplate': grpc.unary_unary_rpc_method_handler(
                     servicer.UpsertTemplate,
@@ -340,6 +362,33 @@ class NotificationService(object):
             '/udb.core.notification.services.v1.NotificationService/RetryNotification',
             udb_dot_core_dot_notification_dot_services_dot_v1_dot_core__pb2.RetryNotificationRequest.SerializeToString,
             udb_dot_core_dot_notification_dot_services_dot_v1_dot_core__pb2.RetryNotificationResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ReportDelivery(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.notification.services.v1.NotificationService/ReportDelivery',
+            udb_dot_core_dot_notification_dot_services_dot_v1_dot_core__pb2.ReportDeliveryRequest.SerializeToString,
+            udb_dot_core_dot_notification_dot_services_dot_v1_dot_core__pb2.ReportDeliveryResponse.FromString,
             options,
             channel_credentials,
             insecure,

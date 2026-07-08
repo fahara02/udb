@@ -30,16 +30,22 @@ type PipelineStep struct {
 	InstanceId string                 `protobuf:"bytes,2,opt,name=instance_id,json=instanceId,proto3" json:"instance_id,omitempty"` // @inject_tag: gorm:"column:instance_id;not null"
 	// Denormalized from the owning pipeline_instance so the tenant RLS policy can
 	// filter steps directly (steps are created by the service from the instance).
-	TenantId      string                 `protobuf:"bytes,12,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`                                        // @inject_tag: gorm:"column:tenant_id;not null"
-	StepName      string                 `protobuf:"bytes,3,opt,name=step_name,json=stepName,proto3" json:"step_name,omitempty"`                                         // @inject_tag: gorm:"column:step_name;not null"
-	StepType      StepType               `protobuf:"varint,4,opt,name=step_type,json=stepType,proto3,enum=udb.core.asset.entity.v1.StepType" json:"step_type,omitempty"` // @inject_tag: gorm:"column:step_type;not null;serializer:proto_enum"
-	Status        StepStatus             `protobuf:"varint,5,opt,name=status,proto3,enum=udb.core.asset.entity.v1.StepStatus" json:"status,omitempty"`                   // @inject_tag: gorm:"column:status;not null;serializer:proto_enum"
-	Result        string                 `protobuf:"bytes,6,opt,name=result,proto3" json:"result,omitempty"`                                                             // @inject_tag: gorm:"column:result"
-	Error         string                 `protobuf:"bytes,7,opt,name=error,proto3" json:"error,omitempty"`                                                               // @inject_tag: gorm:"column:error"
-	RetryCount    int32                  `protobuf:"varint,8,opt,name=retry_count,json=retryCount,proto3" json:"retry_count,omitempty"`                                  // @inject_tag: gorm:"column:retry_count;not null"
-	StartedAt     *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=started_at,json=startedAt,proto3" json:"started_at,omitempty"`                                      // @inject_tag: gorm:"column:started_at"
-	CompletedAt   *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=completed_at,json=completedAt,proto3" json:"completed_at,omitempty"`                               // @inject_tag: gorm:"column:completed_at"
-	AuditInfo     *v1.AuditInfo          `protobuf:"bytes,11,opt,name=audit_info,json=auditInfo,proto3" json:"audit_info,omitempty"`                                     // @inject_tag: gorm:"column:audit_info;not null"
+	TenantId string     `protobuf:"bytes,12,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`                                        // @inject_tag: gorm:"column:tenant_id;not null"
+	StepName string     `protobuf:"bytes,3,opt,name=step_name,json=stepName,proto3" json:"step_name,omitempty"`                                         // @inject_tag: gorm:"column:step_name;not null"
+	StepType StepType   `protobuf:"varint,4,opt,name=step_type,json=stepType,proto3,enum=udb.core.asset.entity.v1.StepType" json:"step_type,omitempty"` // @inject_tag: gorm:"column:step_type;not null;serializer:proto_enum"
+	Status   StepStatus `protobuf:"varint,5,opt,name=status,proto3,enum=udb.core.asset.entity.v1.StepStatus" json:"status,omitempty"`                   // @inject_tag: gorm:"column:status;not null;serializer:proto_enum"
+	Result   string     `protobuf:"bytes,6,opt,name=result,proto3" json:"result,omitempty"`                                                             // @inject_tag: gorm:"column:result"
+	// Transform parameters applied to a byte/image step, as a JSON object, e.g.
+	// {"width":800,"height":600,"format":"jpeg"}. RESIZE reads width/height;
+	// CONVERT (format-only RESIZE) reads format. Empty `{}` for steps that take no
+	// parameters. Additive: lets RESIZE/CONVERT be parameterized instead of a
+	// hardcoded 256x256/png, and surfaces the applied params on read.
+	Params        string                 `protobuf:"bytes,13,opt,name=params,proto3" json:"params,omitempty"`                              // @inject_tag: gorm:"column:params;not null"
+	Error         string                 `protobuf:"bytes,7,opt,name=error,proto3" json:"error,omitempty"`                                 // @inject_tag: gorm:"column:error"
+	RetryCount    int32                  `protobuf:"varint,8,opt,name=retry_count,json=retryCount,proto3" json:"retry_count,omitempty"`    // @inject_tag: gorm:"column:retry_count;not null"
+	StartedAt     *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=started_at,json=startedAt,proto3" json:"started_at,omitempty"`        // @inject_tag: gorm:"column:started_at"
+	CompletedAt   *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=completed_at,json=completedAt,proto3" json:"completed_at,omitempty"` // @inject_tag: gorm:"column:completed_at"
+	AuditInfo     *v1.AuditInfo          `protobuf:"bytes,11,opt,name=audit_info,json=auditInfo,proto3" json:"audit_info,omitempty"`       // @inject_tag: gorm:"column:audit_info;not null"
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -123,6 +129,13 @@ func (x *PipelineStep) GetResult() string {
 	return ""
 }
 
+func (x *PipelineStep) GetParams() string {
+	if x != nil {
+		return x.Params
+	}
+	return ""
+}
+
 func (x *PipelineStep) GetError() string {
 	if x != nil {
 		return x.Error
@@ -162,7 +175,7 @@ var File_udb_core_asset_entity_v1_pipeline_step_proto protoreflect.FileDescripto
 
 const file_udb_core_asset_entity_v1_pipeline_step_proto_rawDesc = "" +
 	"\n" +
-	",udb/core/asset/entity/v1/pipeline_step.proto\x12\x18udb.core.asset.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a$udb/core/asset/entity/v1/enums.proto\"\xe5\v\n" +
+	",udb/core/asset/entity/v1/pipeline_step.proto\x12\x18udb.core.asset.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a$udb/core/asset/entity/v1/enums.proto\"\xc6\f\n" +
 	"\fPipelineStep\x12C\n" +
 	"\astep_id\x18\x01 \x01(\tB*\x82\xb7\x18&\n" +
 	"\astep_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x06stepId\x12:\n" +
@@ -178,7 +191,9 @@ const file_udb_core_asset_entity_v1_pipeline_step_proto_rawDesc = "" +
 	"\x06status\x18\x05 \x01(\x0e2$.udb.core.asset.entity.v1.StepStatusB&\x82\xb7\x18\"\n" +
 	"\x06status\x12\vVARCHAR(20)\x18\x01:\t'PENDING'R\x06status\x12B\n" +
 	"\x06result\x18\x06 \x01(\tB*\x82\xb7\x18&\n" +
-	"\x06result\x12\x05JSONBZ\x13Step result payloadx\x01R\x06result\x12'\n" +
+	"\x06result\x12\x05JSONBZ\x13Step result payloadx\x01R\x06result\x12_\n" +
+	"\x06params\x18\r \x01(\tBG\x82\xb7\x18C\n" +
+	"\x06params\x12\x05JSONB\x18\x01:\v'{}'::jsonbZ!Step transform parameters as JSONx\x01R\x06params\x12'\n" +
 	"\x05error\x18\a \x01(\tB\x11\x82\xb7\x18\r\n" +
 	"\x05error\x12\x04TEXTR\x05error\x12@\n" +
 	"\vretry_count\x18\b \x01(\x05B\x1f\x82\xb7\x18\x1b\n" +

@@ -13,7 +13,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file udb/core/webrtc/events/v1/webrtc_events.proto.
  */
 export const file_udb_core_webrtc_events_v1_webrtc_events: GenFile = /*@__PURE__*/
-  fileDesc("Ci11ZGIvY29yZS93ZWJydGMvZXZlbnRzL3YxL3dlYnJ0Y19ldmVudHMucHJvdG8SGXVkYi5jb3JlLndlYnJ0Yy5ldmVudHMudjEi5wEKC1Jvb21DcmVhdGVkEhAKCGV2ZW50X2lkGAEgASgJEg8KB3Jvb21faWQYAiABKAkSEQoJdGVuYW50X2lkGAMgASgJEi0KCXRpbWVzdGFtcBgEIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXA6c5KyGW8KJXVkYi5jb3JlLndlYnJ0Yy5ldmVudHMudjEuUm9vbUNyZWF0ZWQSGnVkYi53ZWJydGMucm9vbV9jcmVhdGVkLnYxGgl0ZW5hbnRfaWQiCHN0YW5kYXJkKg1hdF9sZWFzdF9vbmNlMgZzdGFibGUi5AEKClJvb21DbG9zZWQSEAoIZXZlbnRfaWQYASABKAkSDwoHcm9vbV9pZBgCIAEoCRIRCgl0ZW5hbnRfaWQYAyABKAkSLQoJdGltZXN0YW1wGAQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcDpxkrIZbQokdWRiLmNvcmUud2VicnRjLmV2ZW50cy52MS5Sb29tQ2xvc2VkEhl1ZGIud2VicnRjLnJvb21fY2xvc2VkLnYxGgl0ZW5hbnRfaWQiCHN0YW5kYXJkKg1hdF9sZWFzdF9vbmNlMgZzdGFibGUi9QEKClBlZXJKb2luZWQSEAoIZXZlbnRfaWQYASABKAkSDwoHcm9vbV9pZBgCIAEoCRIPCgdwZWVyX2lkGAMgASgJEhEKCXRlbmFudF9pZBgEIAEoCRItCgl0aW1lc3RhbXAYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wOnGSshltCiR1ZGIuY29yZS53ZWJydGMuZXZlbnRzLnYxLlBlZXJKb2luZWQSGXVkYi53ZWJydGMucGVlcl9qb2luZWQudjEaCXRlbmFudF9pZCIIc3RhbmRhcmQqDWF0X2xlYXN0X29uY2UyBnN0YWJsZSLvAQoIUGVlckxlZnQSEAoIZXZlbnRfaWQYASABKAkSDwoHcm9vbV9pZBgCIAEoCRIPCgdwZWVyX2lkGAMgASgJEhEKCXRlbmFudF9pZBgEIAEoCRItCgl0aW1lc3RhbXAYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wOm2SshlpCiJ1ZGIuY29yZS53ZWJydGMuZXZlbnRzLnYxLlBlZXJMZWZ0Ehd1ZGIud2VicnRjLnBlZXJfbGVmdC52MRoJdGVuYW50X2lkIghzdGFuZGFyZCoNYXRfbGVhc3Rfb25jZTIGc3RhYmxlIpMCCg5UcmFja1B1Ymxpc2hlZBIQCghldmVudF9pZBgBIAEoCRIPCgdyb29tX2lkGAIgASgJEg8KB3BlZXJfaWQYAyABKAkSEAoIdHJhY2tfaWQYBCABKAkSEQoJdGVuYW50X2lkGAUgASgJEi0KCXRpbWVzdGFtcBgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXA6eZKyGXUKKHVkYi5jb3JlLndlYnJ0Yy5ldmVudHMudjEuVHJhY2tQdWJsaXNoZWQSHXVkYi53ZWJydGMudHJhY2tfcHVibGlzaGVkLnYxGgl0ZW5hbnRfaWQiCHN0YW5kYXJkKg1hdF9sZWFzdF9vbmNlMgZzdGFibGVCggIKHWNvbS51ZGIuY29yZS53ZWJydGMuZXZlbnRzLnYxQhFXZWJydGNFdmVudHNQcm90b1ABWkVnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9jb3JlL3dlYnJ0Yy9ldmVudHMvdjE7ZXZlbnRzdjGiAgRVQ1dFqgIZdWRiLmNvcmUuV2VicnRjLkV2ZW50cy5WMcoCGVVkYlxDb3JlXFdlYnJ0Y1xFdmVudHNcVjHiAiVVZGJcR1BCTWV0YWRhdGFcQ29yZVxXZWJydGNcRXZlbnRzXFYx6gIdVWRiOjpDb3JlOjpXZWJydGM6OkV2ZW50czo6VjFiBnByb3RvMw", [file_google_protobuf_timestamp, file_udb_core_common_v1_security]);
+  fileDesc("Ci11ZGIvY29yZS93ZWJydGMvZXZlbnRzL3YxL3dlYnJ0Y19ldmVudHMucHJvdG8SGXVkYi5jb3JlLndlYnJ0Yy5ldmVudHMudjEi5wEKC1Jvb21DcmVhdGVkEhAKCGV2ZW50X2lkGAEgASgJEg8KB3Jvb21faWQYAiABKAkSEQoJdGVuYW50X2lkGAMgASgJEi0KCXRpbWVzdGFtcBgEIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXA6c5KyGW8KJXVkYi5jb3JlLndlYnJ0Yy5ldmVudHMudjEuUm9vbUNyZWF0ZWQSGnVkYi53ZWJydGMucm9vbV9jcmVhdGVkLnYxGgl0ZW5hbnRfaWQiCHN0YW5kYXJkKg1hdF9sZWFzdF9vbmNlMgZzdGFibGUi5AEKClJvb21DbG9zZWQSEAoIZXZlbnRfaWQYASABKAkSDwoHcm9vbV9pZBgCIAEoCRIRCgl0ZW5hbnRfaWQYAyABKAkSLQoJdGltZXN0YW1wGAQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcDpxkrIZbQokdWRiLmNvcmUud2VicnRjLmV2ZW50cy52MS5Sb29tQ2xvc2VkEhl1ZGIud2VicnRjLnJvb21fY2xvc2VkLnYxGgl0ZW5hbnRfaWQiCHN0YW5kYXJkKg1hdF9sZWFzdF9vbmNlMgZzdGFibGUi9QEKClBlZXJKb2luZWQSEAoIZXZlbnRfaWQYASABKAkSDwoHcm9vbV9pZBgCIAEoCRIPCgdwZWVyX2lkGAMgASgJEhEKCXRlbmFudF9pZBgEIAEoCRItCgl0aW1lc3RhbXAYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wOnGSshltCiR1ZGIuY29yZS53ZWJydGMuZXZlbnRzLnYxLlBlZXJKb2luZWQSGXVkYi53ZWJydGMucGVlcl9qb2luZWQudjEaCXRlbmFudF9pZCIIc3RhbmRhcmQqDWF0X2xlYXN0X29uY2UyBnN0YWJsZSLvAQoIUGVlckxlZnQSEAoIZXZlbnRfaWQYASABKAkSDwoHcm9vbV9pZBgCIAEoCRIPCgdwZWVyX2lkGAMgASgJEhEKCXRlbmFudF9pZBgEIAEoCRItCgl0aW1lc3RhbXAYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wOm2SshlpCiJ1ZGIuY29yZS53ZWJydGMuZXZlbnRzLnYxLlBlZXJMZWZ0Ehd1ZGIud2VicnRjLnBlZXJfbGVmdC52MRoJdGVuYW50X2lkIghzdGFuZGFyZCoNYXRfbGVhc3Rfb25jZTIGc3RhYmxlIqACCg1FZ3Jlc3NTdGFydGVkEhAKCGV2ZW50X2lkGAEgASgJEhEKCWVncmVzc19pZBgCIAEoCRIPCgdyb29tX2lkGAMgASgJEhAKCHRyYWNrX2lkGAQgASgJEhEKCXRlbmFudF9pZBgFIAEoCRIMCgRraW5kGAYgASgJEi0KCXRpbWVzdGFtcBgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXA6d5KyGXMKJ3VkYi5jb3JlLndlYnJ0Yy5ldmVudHMudjEuRWdyZXNzU3RhcnRlZBIcdWRiLndlYnJ0Yy5lZ3Jlc3Nfc3RhcnRlZC52MRoJdGVuYW50X2lkIghzdGFuZGFyZCoNYXRfbGVhc3Rfb25jZTIGc3RhYmxlIoACCg1FZ3Jlc3NTdG9wcGVkEhAKCGV2ZW50X2lkGAEgASgJEhEKCWVncmVzc19pZBgCIAEoCRIPCgdyb29tX2lkGAMgASgJEhEKCXRlbmFudF9pZBgEIAEoCRItCgl0aW1lc3RhbXAYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wOneSshlzCid1ZGIuY29yZS53ZWJydGMuZXZlbnRzLnYxLkVncmVzc1N0b3BwZWQSHHVkYi53ZWJydGMuZWdyZXNzX3N0b3BwZWQudjEaCXRlbmFudF9pZCIIc3RhbmRhcmQqDWF0X2xlYXN0X29uY2UyBnN0YWJsZSKNAgoMRWdyZXNzRmFpbGVkEhAKCGV2ZW50X2lkGAEgASgJEhEKCWVncmVzc19pZBgCIAEoCRIPCgdyb29tX2lkGAMgASgJEhEKCXRlbmFudF9pZBgEIAEoCRIOCgZyZWFzb24YBSABKAkSLQoJdGltZXN0YW1wGAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcDp1krIZcQomdWRiLmNvcmUud2VicnRjLmV2ZW50cy52MS5FZ3Jlc3NGYWlsZWQSG3VkYi53ZWJydGMuZWdyZXNzX2ZhaWxlZC52MRoJdGVuYW50X2lkIghzdGFuZGFyZCoNYXRfbGVhc3Rfb25jZTIGc3RhYmxlIpMCCg5UcmFja1B1Ymxpc2hlZBIQCghldmVudF9pZBgBIAEoCRIPCgdyb29tX2lkGAIgASgJEg8KB3BlZXJfaWQYAyABKAkSEAoIdHJhY2tfaWQYBCABKAkSEQoJdGVuYW50X2lkGAUgASgJEi0KCXRpbWVzdGFtcBgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXA6eZKyGXUKKHVkYi5jb3JlLndlYnJ0Yy5ldmVudHMudjEuVHJhY2tQdWJsaXNoZWQSHXVkYi53ZWJydGMudHJhY2tfcHVibGlzaGVkLnYxGgl0ZW5hbnRfaWQiCHN0YW5kYXJkKg1hdF9sZWFzdF9vbmNlMgZzdGFibGVCggIKHWNvbS51ZGIuY29yZS53ZWJydGMuZXZlbnRzLnYxQhFXZWJydGNFdmVudHNQcm90b1ABWkVnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9jb3JlL3dlYnJ0Yy9ldmVudHMvdjE7ZXZlbnRzdjGiAgRVQ1dFqgIZdWRiLmNvcmUuV2VicnRjLkV2ZW50cy5WMcoCGVVkYlxDb3JlXFdlYnJ0Y1xFdmVudHNcVjHiAiVVZGJcR1BCTWV0YWRhdGFcQ29yZVxXZWJydGNcRXZlbnRzXFYx6gIdVWRiOjpDb3JlOjpXZWJydGM6OkV2ZW50czo6VjFiBnByb3RvMw", [file_google_protobuf_timestamp, file_udb_core_common_v1_security]);
 
 /**
  * Emitted when a room is created.
@@ -162,6 +162,144 @@ export const PeerLeftSchema: GenMessage<PeerLeft> = /*@__PURE__*/
   messageDesc(file_udb_core_webrtc_events_v1_webrtc_events, 3);
 
 /**
+ * Emitted when a recording/egress job starts (master-plan 5.5).
+ *
+ * @generated from message udb.core.webrtc.events.v1.EgressStarted
+ */
+export type EgressStarted = Message<"udb.core.webrtc.events.v1.EgressStarted"> & {
+  /**
+   * @generated from field: string event_id = 1;
+   */
+  eventId: string;
+
+  /**
+   * @generated from field: string egress_id = 2;
+   */
+  egressId: string;
+
+  /**
+   * @generated from field: string room_id = 3;
+   */
+  roomId: string;
+
+  /**
+   * Empty for a room composite; set for a single-track egress.
+   *
+   * @generated from field: string track_id = 4;
+   */
+  trackId: string;
+
+  /**
+   * @generated from field: string tenant_id = 5;
+   */
+  tenantId: string;
+
+  /**
+   * "room_composite" | "track".
+   *
+   * @generated from field: string kind = 6;
+   */
+  kind: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp timestamp = 7;
+   */
+  timestamp?: Timestamp | undefined;
+};
+
+/**
+ * Describes the message udb.core.webrtc.events.v1.EgressStarted.
+ * Use `create(EgressStartedSchema)` to create a new message.
+ */
+export const EgressStartedSchema: GenMessage<EgressStarted> = /*@__PURE__*/
+  messageDesc(file_udb_core_webrtc_events_v1_webrtc_events, 4);
+
+/**
+ * Emitted when a recording/egress job stops cleanly (master-plan 5.5).
+ *
+ * @generated from message udb.core.webrtc.events.v1.EgressStopped
+ */
+export type EgressStopped = Message<"udb.core.webrtc.events.v1.EgressStopped"> & {
+  /**
+   * @generated from field: string event_id = 1;
+   */
+  eventId: string;
+
+  /**
+   * @generated from field: string egress_id = 2;
+   */
+  egressId: string;
+
+  /**
+   * @generated from field: string room_id = 3;
+   */
+  roomId: string;
+
+  /**
+   * @generated from field: string tenant_id = 4;
+   */
+  tenantId: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp timestamp = 5;
+   */
+  timestamp?: Timestamp | undefined;
+};
+
+/**
+ * Describes the message udb.core.webrtc.events.v1.EgressStopped.
+ * Use `create(EgressStoppedSchema)` to create a new message.
+ */
+export const EgressStoppedSchema: GenMessage<EgressStopped> = /*@__PURE__*/
+  messageDesc(file_udb_core_webrtc_events_v1_webrtc_events, 5);
+
+/**
+ * Emitted when a recording/egress job fails to start or aborts (master-plan 5.5).
+ *
+ * @generated from message udb.core.webrtc.events.v1.EgressFailed
+ */
+export type EgressFailed = Message<"udb.core.webrtc.events.v1.EgressFailed"> & {
+  /**
+   * @generated from field: string event_id = 1;
+   */
+  eventId: string;
+
+  /**
+   * @generated from field: string egress_id = 2;
+   */
+  egressId: string;
+
+  /**
+   * @generated from field: string room_id = 3;
+   */
+  roomId: string;
+
+  /**
+   * @generated from field: string tenant_id = 4;
+   */
+  tenantId: string;
+
+  /**
+   * Machine-readable failure reason (e.g. EGRESS_BACKEND_UNAVAILABLE).
+   *
+   * @generated from field: string reason = 5;
+   */
+  reason: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp timestamp = 6;
+   */
+  timestamp?: Timestamp | undefined;
+};
+
+/**
+ * Describes the message udb.core.webrtc.events.v1.EgressFailed.
+ * Use `create(EgressFailedSchema)` to create a new message.
+ */
+export const EgressFailedSchema: GenMessage<EgressFailed> = /*@__PURE__*/
+  messageDesc(file_udb_core_webrtc_events_v1_webrtc_events, 6);
+
+/**
  * Emitted when a track is published.
  *
  * @generated from message udb.core.webrtc.events.v1.TrackPublished
@@ -203,4 +341,4 @@ export type TrackPublished = Message<"udb.core.webrtc.events.v1.TrackPublished">
  * Use `create(TrackPublishedSchema)` to create a new message.
  */
 export const TrackPublishedSchema: GenMessage<TrackPublished> = /*@__PURE__*/
-  messageDesc(file_udb_core_webrtc_events_v1_webrtc_events, 4);
+  messageDesc(file_udb_core_webrtc_events_v1_webrtc_events, 7);

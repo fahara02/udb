@@ -19,11 +19,15 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	RoomService_CreateRoom_FullMethodName = "/udb.core.webrtc.services.v1.RoomService/CreateRoom"
-	RoomService_GetRoom_FullMethodName    = "/udb.core.webrtc.services.v1.RoomService/GetRoom"
-	RoomService_UpdateRoom_FullMethodName = "/udb.core.webrtc.services.v1.RoomService/UpdateRoom"
-	RoomService_CloseRoom_FullMethodName  = "/udb.core.webrtc.services.v1.RoomService/CloseRoom"
-	RoomService_ListRooms_FullMethodName  = "/udb.core.webrtc.services.v1.RoomService/ListRooms"
+	RoomService_CreateRoom_FullMethodName         = "/udb.core.webrtc.services.v1.RoomService/CreateRoom"
+	RoomService_GetRoom_FullMethodName            = "/udb.core.webrtc.services.v1.RoomService/GetRoom"
+	RoomService_UpdateRoom_FullMethodName         = "/udb.core.webrtc.services.v1.RoomService/UpdateRoom"
+	RoomService_CloseRoom_FullMethodName          = "/udb.core.webrtc.services.v1.RoomService/CloseRoom"
+	RoomService_ListRooms_FullMethodName          = "/udb.core.webrtc.services.v1.RoomService/ListRooms"
+	RoomService_StartRoomComposite_FullMethodName = "/udb.core.webrtc.services.v1.RoomService/StartRoomComposite"
+	RoomService_StartTrackEgress_FullMethodName   = "/udb.core.webrtc.services.v1.RoomService/StartTrackEgress"
+	RoomService_StopEgress_FullMethodName         = "/udb.core.webrtc.services.v1.RoomService/StopEgress"
+	RoomService_ListEgress_FullMethodName         = "/udb.core.webrtc.services.v1.RoomService/ListEgress"
 )
 
 // RoomServiceClient is the client API for RoomService service.
@@ -40,6 +44,14 @@ type RoomServiceClient interface {
 	CloseRoom(ctx context.Context, in *CloseRoomRequest, opts ...grpc.CallOption) (*CloseRoomResponse, error)
 	// List rooms
 	ListRooms(ctx context.Context, in *ListRoomsRequest, opts ...grpc.CallOption) (*ListRoomsResponse, error)
+	// Start a composite recording/egress of a whole room.
+	StartRoomComposite(ctx context.Context, in *StartRoomCompositeRequest, opts ...grpc.CallOption) (*StartRoomCompositeResponse, error)
+	// Start an egress of a single published track.
+	StartTrackEgress(ctx context.Context, in *StartTrackEgressRequest, opts ...grpc.CallOption) (*StartTrackEgressResponse, error)
+	// Stop a running egress. `egress_id` must belong to the verified tenant.
+	StopEgress(ctx context.Context, in *StopEgressRequest, opts ...grpc.CallOption) (*StopEgressResponse, error)
+	// List egress jobs for the verified tenant.
+	ListEgress(ctx context.Context, in *ListEgressRequest, opts ...grpc.CallOption) (*ListEgressResponse, error)
 }
 
 type roomServiceClient struct {
@@ -100,6 +112,46 @@ func (c *roomServiceClient) ListRooms(ctx context.Context, in *ListRoomsRequest,
 	return out, nil
 }
 
+func (c *roomServiceClient) StartRoomComposite(ctx context.Context, in *StartRoomCompositeRequest, opts ...grpc.CallOption) (*StartRoomCompositeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(StartRoomCompositeResponse)
+	err := c.cc.Invoke(ctx, RoomService_StartRoomComposite_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *roomServiceClient) StartTrackEgress(ctx context.Context, in *StartTrackEgressRequest, opts ...grpc.CallOption) (*StartTrackEgressResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(StartTrackEgressResponse)
+	err := c.cc.Invoke(ctx, RoomService_StartTrackEgress_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *roomServiceClient) StopEgress(ctx context.Context, in *StopEgressRequest, opts ...grpc.CallOption) (*StopEgressResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(StopEgressResponse)
+	err := c.cc.Invoke(ctx, RoomService_StopEgress_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *roomServiceClient) ListEgress(ctx context.Context, in *ListEgressRequest, opts ...grpc.CallOption) (*ListEgressResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListEgressResponse)
+	err := c.cc.Invoke(ctx, RoomService_ListEgress_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // RoomServiceServer is the server API for RoomService service.
 // All implementations should embed UnimplementedRoomServiceServer
 // for forward compatibility.
@@ -114,6 +166,14 @@ type RoomServiceServer interface {
 	CloseRoom(context.Context, *CloseRoomRequest) (*CloseRoomResponse, error)
 	// List rooms
 	ListRooms(context.Context, *ListRoomsRequest) (*ListRoomsResponse, error)
+	// Start a composite recording/egress of a whole room.
+	StartRoomComposite(context.Context, *StartRoomCompositeRequest) (*StartRoomCompositeResponse, error)
+	// Start an egress of a single published track.
+	StartTrackEgress(context.Context, *StartTrackEgressRequest) (*StartTrackEgressResponse, error)
+	// Stop a running egress. `egress_id` must belong to the verified tenant.
+	StopEgress(context.Context, *StopEgressRequest) (*StopEgressResponse, error)
+	// List egress jobs for the verified tenant.
+	ListEgress(context.Context, *ListEgressRequest) (*ListEgressResponse, error)
 }
 
 // UnimplementedRoomServiceServer should be embedded to have
@@ -137,6 +197,18 @@ func (UnimplementedRoomServiceServer) CloseRoom(context.Context, *CloseRoomReque
 }
 func (UnimplementedRoomServiceServer) ListRooms(context.Context, *ListRoomsRequest) (*ListRoomsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListRooms not implemented")
+}
+func (UnimplementedRoomServiceServer) StartRoomComposite(context.Context, *StartRoomCompositeRequest) (*StartRoomCompositeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method StartRoomComposite not implemented")
+}
+func (UnimplementedRoomServiceServer) StartTrackEgress(context.Context, *StartTrackEgressRequest) (*StartTrackEgressResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method StartTrackEgress not implemented")
+}
+func (UnimplementedRoomServiceServer) StopEgress(context.Context, *StopEgressRequest) (*StopEgressResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method StopEgress not implemented")
+}
+func (UnimplementedRoomServiceServer) ListEgress(context.Context, *ListEgressRequest) (*ListEgressResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListEgress not implemented")
 }
 func (UnimplementedRoomServiceServer) testEmbeddedByValue() {}
 
@@ -248,6 +320,78 @@ func _RoomService_ListRooms_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _RoomService_StartRoomComposite_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StartRoomCompositeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RoomServiceServer).StartRoomComposite(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RoomService_StartRoomComposite_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RoomServiceServer).StartRoomComposite(ctx, req.(*StartRoomCompositeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _RoomService_StartTrackEgress_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StartTrackEgressRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RoomServiceServer).StartTrackEgress(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RoomService_StartTrackEgress_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RoomServiceServer).StartTrackEgress(ctx, req.(*StartTrackEgressRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _RoomService_StopEgress_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StopEgressRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RoomServiceServer).StopEgress(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RoomService_StopEgress_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RoomServiceServer).StopEgress(ctx, req.(*StopEgressRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _RoomService_ListEgress_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListEgressRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RoomServiceServer).ListEgress(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RoomService_ListEgress_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RoomServiceServer).ListEgress(ctx, req.(*ListEgressRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // RoomService_ServiceDesc is the grpc.ServiceDesc for RoomService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -274,6 +418,22 @@ var RoomService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListRooms",
 			Handler:    _RoomService_ListRooms_Handler,
+		},
+		{
+			MethodName: "StartRoomComposite",
+			Handler:    _RoomService_StartRoomComposite_Handler,
+		},
+		{
+			MethodName: "StartTrackEgress",
+			Handler:    _RoomService_StartTrackEgress_Handler,
+		},
+		{
+			MethodName: "StopEgress",
+			Handler:    _RoomService_StopEgress_Handler,
+		},
+		{
+			MethodName: "ListEgress",
+			Handler:    _RoomService_ListEgress_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
