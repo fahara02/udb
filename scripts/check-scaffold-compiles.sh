@@ -70,8 +70,8 @@ ln -s "$REPO/proto" "$TS_DIR/proto"
   npm init -y >/dev/null 2>&1
   npm install --no-audit --no-fund --silent \
     typescript @types/node @grpc/grpc-js @grpc/proto-loader >/dev/null 2>&1
-  npx --yes tsc --noEmit --esModuleInterop --skipLibCheck --moduleResolution node \
-    --target ES2020 --module commonjs examples/typescript/client.ts )
+  npx --yes tsc --noEmit --esModuleInterop --skipLibCheck --moduleResolution node16 \
+    --target ES2020 --module Node16 examples/typescript/client.ts )
 echo "    TypeScript scaffold example type-checked OK"
 
 # ── Python: syntax-compile and import the generated UDB stubs it references ───

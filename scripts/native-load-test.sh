@@ -31,7 +31,7 @@ fi
 
 # Import paths so protos that import sibling udb/** files and vendored google/api
 # annotations resolve (the control-plane + data_broker protos pull both in).
-IMPORTS=(-i proto -i third_party/googleapis)
+IMPORTS=(-i "proto,third_party/googleapis")
 COMMON=(-c "$CONCURRENCY" -n "$TOTAL" --format summary "${IMPORTS[@]}" --call)
 if [[ "$INSECURE" == "true" || "$INSECURE" == "1" ]]; then
   COMMON=(--insecure "${COMMON[@]}")
