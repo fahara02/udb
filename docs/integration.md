@@ -63,7 +63,9 @@ Every request should carry:
 - scopes;
 - service identity;
 - user id when an end user exists;
-- client catalog/protocol version.
+- client catalog/protocol version;
+- optionally, a read fence and consistency mode for read-your-writes reads
+  (see [native-services.md](native-services.md#consistency-write-receipts-and-read-fences)).
 
 SDKs attach these fields for you.
 

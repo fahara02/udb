@@ -2,9 +2,11 @@
 
 A self-contained, multi-page marketing/docs site for UDB — light theme derived
 from the brand logo (`docs/assets/udb_logo.svg`): `#f8fafc` base, warm orange
-actions, darker cyan/blue accents, Inter. No framework, no build
-step; just static HTML/CSS and a sprinkle of vanilla JS for progressive
-enhancement.
+actions, darker cyan/blue accents, Inter. The authoring surface is static
+HTML/CSS plus vanilla JS; the GitHub Pages workflow performs the publish-time
+contract work: rebuilds `udb.wasm`, syncs shared assets and Swagger JSON, pulls
+the latest benchmark artifact when available, and validates the complete site
+artifact before deploy.
 
 ## Pages
 
@@ -12,8 +14,8 @@ enhancement.
 |---|---|
 | `index.html` | Landing — product positioning, descriptor-to-SDK flow, stats, request pipeline, tabbed code, backend marquee |
 | `architecture.html` | Proto → manifest → runtime pipeline; descriptor-as-contract |
-| `data-plane.html` | DataBroker (77 RPCs): backends, 2PC/XA, sagas, CDC, migrations |
-| `control-plane.html` | 15 native services / 188 RPCs: auth, identity, tenancy, policy distribution |
+| `data-plane.html` | DataBroker: backends, 2PC/XA, sagas, CDC, migrations |
+| `control-plane.html` | Descriptor-rendered native service catalog: auth, identity, tenancy, policy distribution |
 | `security.html` | RLS, encryption, mTLS, fail-closed posture, compliance profiles |
 | `enterprise.html` | HA/leader election, recovery, backpressure, observability, runbooks |
 | `sdks.html` | Six SDKs, per-language quickstarts, conformance |
@@ -22,8 +24,9 @@ enhancement.
 | **`playground.html`** | **Interactive** — runs UDB's **real** proto parser, compiled to WebAssembly (`udb.wasm`), in the browser |
 
 Shared: `styles.css` (theme + components), `app.js` (scroll-reveal, count-up,
-mobile nav), `playground.js` (the WASM playground logic), `udb.wasm` (UDB's real
-parser/AST/checksum compiled to `wasm32-unknown-unknown`).
+mobile nav), `playground.js` (the WASM playground logic), `benchmarks.js` (the
+benchmark dashboard renderer), `udb.wasm` (UDB's real parser/AST/checksum
+compiled to `wasm32-unknown-unknown`).
 
 ## The live playground (real UDB, not a mock)
 
@@ -53,10 +56,13 @@ never drifts from the server's.
 ## Benchmark JSON
 
 `bench-results.json` is produced by `scripts/collect_sdk_bench_results.py` from
-SDK Markdown reports. Per-RPC rows prefer descriptor-derived `operation_id`, then
-`api_alias`, then the legacy `service/rpc` wire identity. The dashboard keeps the
-wire RPC as row detail so users can filter by canonical API identity without
-losing transport diagnostics.
+SDK Markdown reports. The post-release benchmark workflow uploads it as the
+`sdk-benchmark-results` artifact; `pages.yml` consumes that artifact on benchmark
+completion and falls back to the already-published dashboard JSON for
+non-benchmark publishes. Per-RPC rows prefer descriptor-derived `operation_id`,
+then `api_alias`, then the legacy `service/rpc` wire identity. The dashboard
+keeps the wire RPC as row detail so users can filter by canonical API identity
+without losing transport diagnostics.
 
 ## Assets
 
@@ -67,10 +73,12 @@ git (`docs/site/assets/` is `.gitignore`d).
 
 ## Deploy (GitHub Pages → GitHub Actions)
 
-This repo ships `.github/workflows/pages.yml`, which syncs the brand assets and
-publishes `docs/site/` as the Pages root. The workflow also copies
-`api/*.json` into `docs/site/api/` so the Swagger UI can load the generated API
-contract from the same origin.
+This repo ships `.github/workflows/pages.yml`, which publishes `docs/site/` as
+the Pages root. The workflow syncs the brand assets, copies `api/*.json` into
+`docs/site/api/`, pulls benchmark JSON, rebuilds `udb.wasm`, runs the
+current-editor WASM smoke, verifies every first-class page/script/data artifact,
+parses the Swagger and benchmark JSON, and crawls local HTML `href`/`src`
+references before upload.
 
 1. Repo **Settings → Pages → Source: GitHub Actions**.
 2. Push to `main` (or run the workflow manually) — the site deploys to

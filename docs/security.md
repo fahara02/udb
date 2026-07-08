@@ -33,6 +33,12 @@ Every non-health request should include:
 - `x-user-id` when an end user exists
 - `x-udb-client-catalog-version`
 
+An optional read may also carry consistency controls: a read fence
+(`RequestContext.read_fence`, header `x-udb-read-fence`) and a consistency mode
+(`RequestContext.consistency_mode`, header `x-udb-consistency`) so a read is
+read-your-writes rather than eventual. See "Consistency, Write Receipts, And Read
+Fences" in [native-services.md](native-services.md).
+
 SDKs attach these values from language-native metadata objects.
 
 Project id chooses the active application catalog. Tenant id remains the

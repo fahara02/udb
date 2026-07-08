@@ -172,9 +172,9 @@ behind capability checks.
 
 ## Native Control Plane
 
-The native control plane is served on a separate listener. It contains 15
-services and 187 native RPCs for identity, access control, storage, assets,
-WebRTC, tenancy, notifications, analytics, and policy distribution.
+The native control plane is served on a separate listener. Its descriptor-rendered
+service catalog covers identity, access control, storage, assets, WebRTC,
+tenancy, notifications, analytics, and policy distribution.
 
 See [native-services.md](native-services.md).
 

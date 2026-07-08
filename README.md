@@ -49,44 +49,117 @@ CDC, and backend-specific execution.
 
 ## Current Surface
 
+The service surface below is generated from the embedded descriptor — do not
+edit the counts by hand. Run `udb native docs` (which also regenerates
+[docs/generated/native-services.md](docs/generated/native-services.md)) and
+commit the refreshed block; the `readme_services_block_matches_embedded_descriptor`
+staleness test fails if it drifts.
+
+<!-- BEGIN GENERATED:services -->
 | Area | Surface |
 |---|---|
 | Data plane | 77 `DataBroker` RPCs |
-| Native control plane | 15 services, 188 RPCs |
+| Native control plane | 27 services, 267 RPCs |
+
+Per-service RPC counts (native control plane):
+
+| Service | RPCs |
+|---|---|
+| `analytics` | 7 |
+| `apikey` | 9 |
+| `asset` | 8 |
+| `authn` | 50 |
+| `authz` | 41 |
+| `backup` | 8 |
+| `cache` | 7 |
+| `config` | 5 |
+| `control` | 6 |
+| `embedding` | 6 |
+| `idp` | 27 |
+| `livequery` | 1 |
+| `lock` | 3 |
+| `metering` | 6 |
+| `notification` | 12 |
+| `scheduler` | 6 |
+| `search` | 5 |
+| `storage` | 8 |
+| `tenant` | 7 |
+| `vault` | 14 |
+| `webhook` | 6 |
+| `webrtc_peer` | 5 |
+| `webrtc_room` | 9 |
+| `webrtc_signaling` | 1 |
+| `webrtc_track` | 4 |
+| `webrtc_turn` | 1 |
+| `workflow` | 5 |
+<!-- END GENERATED:services -->
+
+| Area | Surface |
+|---|---|
 | Contract manifest | 733 messages, 49 table-backed models, 192 event contracts |
 | Backends | 18 backend kinds across SQL, cache, vector, object, document, graph, and column stores |
 | SDKs | Go, Python, TypeScript/Node, Java, C#, PHP/Laravel |
 | Release | crate/SDK version `0.3.7`, wire protocol `1.0.0` |
 
-The native-service table is generated from the embedded descriptor:
-[docs/generated/native-services.md](docs/generated/native-services.md).
+## 0.3.7 Release Focus
 
-## 0.3.6 Release Focus
-
-UDB 0.3.6 builds on the 0.3.5 native-store release with a workflow-oriented
-simple-client SDK layer over the full 265-RPC surface, so normal application code
-stays short without hiding correctness rules — read-after-write, idempotency,
-tenant binding, and typed errors stay explicit or broker-owned.
+UDB 0.3.7 is the current release. It carries the workflow-oriented simple-client
+SDK layer over the full **344-RPC surface** (77 `DataBroker` RPCs plus 267 native
+control-plane RPCs) and folds in the post-v0.3.2 native-service wave, so normal
+application code stays short without hiding correctness rules — read-after-write,
+idempotency, tenant binding, and typed errors stay explicit or broker-owned.
 
 - Simple-client facade across all SDKs: one `connect` + `loginAndAdoptTenant`,
   then `storage.uploadFile` / `downloadFileBytes`, `data.table(...).select(...)`,
   `authz.allowRole(...)`, `metadata.afterWrite(receipt)`, and replay-safe typed
   retries with automatic idempotency keys.
-- New first-class `StorageService.DownloadFile` server-streaming RPC (the 265th
-  RPC), with a presigned-default + streaming-fallback client helper.
-- Go, Python, TypeScript, and PHP each run the full-surface live perf bench green
-  (0 failures / 265 RPCs) against real Postgres/Mongo/MinIO/Kafka/Redis/Qdrant/
-  Neo4j backends.
-- The 0.3.5 native-store base: notification and analytics flows run through the
-  native entity store path instead of hand-built SQL call sites.
-- Storage, asset, WebRTC, tenant, auth, IdP, and control services share the same
-  native runtime/store binding and generated contract checks.
-- SDKs were regenerated for Go, Python, TypeScript, Java, C#, and PHP, with
+- `StorageService.DownloadFile` server-streaming RPC with a presigned-default +
+  streaming-fallback client helper, so file bytes never transit the broker on the
+  common path.
+- The full native-service wave is in source and service wiring: Vault, Lock,
+  Scheduler, Webhook, Search, Cache, LiveQuery, Config, Metering, Backup,
+  Embedding, and Workflow join the earlier Authn/Authz/IdP/Tenant/Notification/
+  Analytics/Storage/Asset/WebRTC/Control surfaces.
+- Notification and analytics flows run through the native entity store path
+  instead of hand-built SQL call sites; storage, asset, WebRTC, tenant, auth, IdP,
+  and control services share the same native runtime/store binding and generated
+  contract checks.
+- SDKs are regenerated for Go, Python, TypeScript, Java, C#, and PHP, with
   cross-language conformance plus deep live coverage for the broker-backed SDK
   harnesses.
-- CI release gates now cover version consistency, native contract drift, SDK
-  service coverage, MinIO-backed live SDK startup, and native-service live
-  integration assumptions.
+- CI release gates cover version consistency, native contract drift, SDK service
+  coverage, MinIO-backed live SDK startup, the six-language `scaffold-compiles`
+  job, and native-service live integration assumptions.
+
+### Since 0.3.7: Master Plan 2026 hardening
+
+`UDB_MASTERPLAN_2026.md` re-grounded every tracked item in real v0.3.7 source and
+adversarially verified it against code anchors. The hardening wave (82 of the
+tracked items landed) includes:
+
+- **Verification depth** — live backend-by-backend conformance for all nine
+  canonical stores, with two real store bugs fixed (a promoted-primary read fence
+  in Postgres `wait_for_token`, and SQL Server migration-audit backfill deferral).
+- **IR mediation by default** — raw dispatch is gated, compiler classification is
+  single-sourced, SDK IR builders ship in templates and committed SDKs, and served
+  `GenericDispatch` cross-language byte parity plus the PG planner/IR merge oracle
+  were observed green.
+- **Distributed correctness** — Keeper-backed ClickHouse canonical CAS and
+  Elasticsearch native CAS observed green; Qdrant fail-closed proof green;
+  Weaviate/Pinecone terminally fail-closed (no usable CAS primitive); MySQL XA
+  crash-recovery `XA RECOVER` fixed to the text protocol.
+- **Identity and compliance** — SAML HTTP, internal-only listener gating, evidence
+  export, and WebAuthn attestation-statement crypto (fixing a base64 ErrorDetail
+  decode bug); enterprise token/key lifecycle, IdP/SAML/SCIM, and policy
+  governance.
+- **Media plane** — vendored ffmpeg transcode and the LiveKit SFU served WebRTC
+  smoke observed green over the broker's three-listener topology.
+- **Native services** — Metering `QueryUsage` RLS-GUC under-report fixed, and the
+  Embedding backfill worker fixed (project-isolation filter plus two CDC
+  journal-envelope read bugs) and proven live.
+- **Typed error and idempotency contract** — a public `udb.entity.v1.ErrorDetail`
+  wire trailer decoded across all six SDKs, and durable broker-side idempotency
+  dedup with `was_duplicate` replay for keyed Upsert/Delete and BatchUpsert.
 
 ## How It Feels
 
@@ -223,9 +296,18 @@ it to an internal interface or place it behind a trusted gateway.
 | Control distribution | Versioned policy/resource distribution with ACK/NACK |
 | Tenant, notification, analytics | Tenant config, messages, templates, metrics, SLA views |
 | Storage and asset | Object metadata, presigned URLs, asset pipelines, vector-ready workflows |
-| WebRTC | Rooms, peers, tracks, TURN credentials, signaling |
+| WebRTC | Rooms, peers, tracks, TURN credentials, signaling, egress/SFU |
+| Vault | Secrets, transit encrypt/sign/HMAC, dynamic database credentials |
+| Metering | Usage recording and per-tenant quotas |
+| Scheduler, workflow, lock | Cron/one-shot jobs, durable sagas, distributed locks with fencing tokens |
+| Search, embedding | Managed search indexes, vector retrieval, and backfill enumeration |
+| Webhook | SSRF-guarded outbound webhook endpoints and delivery tracking |
+| Config, live query | Feature flags and server-streaming live-query subscriptions |
+| Backup | Tenant-scoped backup and restore |
 
-Details: [docs/native-services.md](docs/native-services.md).
+Details, including the read-your-writes consistency contract (write receipts,
+read fences, consistency modes) and idempotency `was_duplicate` replay:
+[docs/native-services.md](docs/native-services.md).
 
 ## SDKs
 

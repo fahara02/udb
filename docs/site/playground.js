@@ -13,6 +13,7 @@
   var enc = new TextEncoder(), dec = new TextDecoder();
   var ex = null; // wasm exports
   var runTimer = null;
+  var WASM_ASSET_VERSION = "20260701-current-editor";
 
   var EXAMPLES = {
     invoice:
@@ -77,6 +78,17 @@
 
   function badge(label, cls) { return '<span class="cbadge ' + (cls || "") + '">' + label + "</span>"; }
 
+  function sourceFingerprint(proto) {
+    // Tiny deterministic UI fingerprint; the manifest checksum below remains
+    // the authoritative parser/catalog checksum returned by UDB itself.
+    var h = 2166136261;
+    for (var i = 0; i < proto.length; i++) {
+      h ^= proto.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return ("00000000" + (h >>> 0).toString(16)).slice(-8);
+  }
+
   function render(res) {
     var body = $("out");
     if (!res.ok) {
@@ -88,6 +100,12 @@
       (diags.length ? '<span class="warn">⚠ ' + diags.length + " diagnostic" + (diags.length === 1 ? "" : "s") + "</span>" : '<span class="ok">✓ parsed</span>') +
       " · <b>" + res.table_count + "</b> table" + (res.table_count === 1 ? "" : "s") +
       ' · annotation v' + esc(res.annotation_version) + "</div>";
+
+    if (res.input_hash) {
+      html += '<div class="checksum">current editor source <code>' +
+        esc(res.input_chars) + " chars / " + esc(res.input_hash) +
+        "</code></div>";
+    }
 
     if (res.checksum) {
       html += '<div class="checksum">manifest checksum (sha-256) <code>' + esc(res.checksum) + "</code></div>";
@@ -160,7 +178,10 @@
   function run() {
     var proto = $("proto").value;
     try {
-      render(udbParse(proto, nsFromProto(proto)));
+      var res = udbParse(proto, nsFromProto(proto));
+      res.input_chars = proto.length;
+      res.input_hash = sourceFingerprint(proto);
+      render(res);
     } catch (e) {
       $("out").innerHTML = '<div class="rmeta"><span class="err">✗ wasm error</span> ' + esc(e.message) + "</div>";
     }
@@ -204,12 +225,14 @@
   function boot() {
     if (typeof WebAssembly === "undefined") { fail("This browser has no WebAssembly support."); return; }
     var imports = wasmImports();
+    var wasmUrl = "./udb.wasm?v=" + encodeURIComponent(WASM_ASSET_VERSION);
+    var fetchWasm = function () { return fetch(wasmUrl, { cache: "no-store" }); };
     var load = WebAssembly.instantiateStreaming
-      ? WebAssembly.instantiateStreaming(fetch("./udb.wasm"), imports).catch(function () {
-          return fetch("./udb.wasm").then(function (r) { return r.arrayBuffer(); })
+      ? WebAssembly.instantiateStreaming(fetchWasm(), imports).catch(function () {
+          return fetchWasm().then(function (r) { return r.arrayBuffer(); })
             .then(function (b) { return WebAssembly.instantiate(b, imports); });
         })
-      : fetch("./udb.wasm").then(function (r) { return r.arrayBuffer(); })
+      : fetchWasm().then(function (r) { return r.arrayBuffer(); })
           .then(function (b) { return WebAssembly.instantiate(b, imports); });
 
     load.then(function (res) {

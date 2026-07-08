@@ -23,6 +23,22 @@ cargo test --no-default-features --features postgres --lib
 The default suite is intended to run without a `.env` file or live databases.
 Feature sweeps compile and exercise optional backend code.
 
+### Windows build (rdkafka / CMake)
+
+`rdkafka-sys` compiles native code with CMake at build time. A stray PATH CMake
+(e.g. 3.29) cannot drive the Visual Studio 2026 generator and fails with
+`Could not create named generator Visual Studio 18 2026`, causing random build
+failures. Fix once, user-wide, by pointing `CMAKE` at the VS-bundled cmake:
+
+```powershell
+[Environment]::SetEnvironmentVariable("CMAKE",
+  "C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe",
+  "User")
+```
+
+(Adjust the edition path — `Community`/`Professional`/`Enterprise` — and VS major
+version to match your install.) CI is unaffected; it installs its own cmake/ninja.
+
 ## Protobuf Contract
 
 ```bash

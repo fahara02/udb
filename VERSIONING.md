@@ -60,6 +60,8 @@ not be added for every beta route or SDK method name unless a specific release
 requires a temporary bridge.
 
 The normative API/SDK rules are in [docs/api-rules.md](docs/api-rules.md).
+The current beta route and SDK alias migration fixture is
+[docs/api-sdk-beta-migration.md](docs/api-sdk-beta-migration.md).
 
 ### Beta Breaking-Change Note Template
 

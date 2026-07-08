@@ -188,3 +188,31 @@ full path.
   a readiness probe for the data plane.)
 - Fatal startup failures (migration / advisory-lock) now log each error on its
   own line (not one opaque JSON blob) and exit non-zero.
+
+## 9. Single-node deployments without Kafka (CDC)
+
+If the deployment has no Kafka but `KAFKA_BROKERS` is set (e.g. inherited from a
+shared compose env), the change-data-capture tailer and the storage→asset
+consumer keep trying to reach the broker. Set **`UDB_CDC_ENABLED=false`** to make
+this a clean full-stop: the tailer and consumer never start, **and** mutations
+stop writing transactional-outbox rows (so `udb_system.outbox_events` no longer
+grows unbounded with no consumer to drain it). Default is enabled.
+
+- When CDC stays enabled but Kafka is briefly unreachable, the broker no longer
+  floods the log: the "failed to publish to kafka" and consumer recv-error lines
+  are collapsed to one per cooldown (carrying a suppressed count). Tune the CDC
+  cooldown with `UDB_CDC_PUBLISH_FAIL_LOG_COOLDOWN_SECS` (default 30).
+- CDC publish is fully decoupled from the write path: an unreachable broker
+  **never** rolls back or fails a data mutation — the outbox row commits with the
+  write, and delivery is retried asynchronously by the tailer.
+
+## 10. Diagnosing an opaque `INTERNAL` on a write
+
+An unexpected database failure on a write (e.g. `PostgreSQL upsert failed`) now
+logs the full detail at ERROR server-side — SQLSTATE, the driver message, and the
+violated constraint/relation, plus the failing SQL statement — so the cause
+(an RLS `WITH CHECK`, a `BEFORE UPDATE` trigger on audit columns, a CHECK
+constraint, …) is visible in the broker log. The client status additionally
+carries the SQLSTATE and constraint/relation. To also surface the raw driver
+message to the client, set `UDB_VERBOSE_DB_ERRORS=true` (off by default, since a
+few driver messages can quote row values).

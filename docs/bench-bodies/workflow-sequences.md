@@ -6,10 +6,12 @@ Guardrails (`private/masterplan/simple_client_code.md`) require every workflow h
 to declare its exact RPC sequence and fail if it grows a hidden `Get`/`List`/proof-read
 or fallback round trip.
 
-The TypeScript (`facade.test.ts`), Go (`upload_test.go` / `media_test.go`), and Python
-(`test_simple_client.py` / `test_media_facade.py`) mock-transport gates each read THIS
-file rather than carrying their own inline ordered list, so a drift in the contract
-fails every language identically.
+The TypeScript (`facade.test.ts`), Go (`upload_test.go` / `media_test.go`), Python
+(`test_simple_client.py` / `test_media_facade.py`), PHP (`MediaServiceWiringTest.php`),
+C# (`UdbMediaFacadeTests.cs`), and Java (`UdbMediaFacadeTest.java`) mock-transport
+gates each read THIS file rather than carrying their own inline ordered list, so a
+drift in the contract fails every language identically. Java Maven runs remain
+CI-owned.
 
 ## Column contract
 

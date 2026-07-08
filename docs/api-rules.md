@@ -1,6 +1,6 @@
 # UDB API Rules
 
-UDB `0.3.6` is beta and pre-1.0. The purpose of this guide is to settle the
+UDB `0.3.7` is beta and pre-1.0. The purpose of this guide is to settle the
 HTTP/JSON API, OpenAPI, and SDK naming rules before the product reaches `1.0.0`.
 Until `1.0.0`, UDB may make breaking API and SDK changes when they simplify the
 contract and are documented with migration notes. After `1.0.0`, these rules
@@ -244,11 +244,12 @@ List and search rules:
 
 ## Errors
 
-- The canonical server error model is gRPC `google.rpc.Status`: a numeric status
-  code, a developer-facing message, and a `details` list of typed `Any`
-  payloads. HTTP/JSON and SDK errors are MAPPED from this single model — never a
-  second, bespoke error contract, and never a body-level envelope on the gRPC
-  wire.
+- The canonical server error model is gRPC status code/message plus UDB-native
+  typed detail: a developer-facing `tonic::Status` message and an optional
+  prost-encoded `udb.entity.v1.ErrorDetail` attached under the binary trailer
+  key `udb-error-detail-bin`. HTTP/JSON and SDK errors are MAPPED from this
+  single model — never a second, bespoke error contract, and never a body-level
+  envelope on the gRPC wire.
 - Use canonical status codes consistently:
   - `INVALID_ARGUMENT` for malformed input.
   - `FAILED_PRECONDITION` for valid input blocked by current state/config.
@@ -267,25 +268,72 @@ List and search rules:
 
 ### Rich Error Details (v1 target)
 
-The baseline gRPC error — code plus a human message — is the floor, and the
-current default. The v1 target is the RICH model: machine-actionable
-information rides in `google.rpc.Status.details` as typed `Any` payloads, NOT
-parsed out of the message string. Standard payloads and their public mapping:
+The baseline gRPC error — code plus a human message — is the floor. The current
+rich model is machine-actionable `udb.entity.v1.ErrorDetail` in the
+`udb-error-detail-bin` trailer, NOT parsed out of the message string. Public
+mapping:
 
-| `google.rpc` detail | Carries | Public field |
+| `ErrorDetail` field | Carries | Public field |
 | --- | --- | --- |
-| `BadRequest.FieldViolation` | per-field validation failures | `field_violations[]` `{field, description}` |
-| `ErrorInfo` | stable machine `reason` + `domain` + metadata | `code` (the reason), `error_id` (from metadata) |
-| `RetryInfo` | server-advised retry delay | `retryable` (+ retry-after) |
-| `QuotaFailure` | quota/rate-limit subject | `code` + violation subject |
-| `PreconditionFailure` | the unmet state/config precondition | `code` + precondition type |
-| `ResourceInfo` | the missing/conflicting resource | resource type/name |
+| `kind` | coarse failure family (`CAPABILITY`, `POLICY`, `QUOTA`, `SCHEMA`, `RETRYABLE`, `INTERNAL`, `VALIDATION`) | `kind` / language-native enum |
+| `backend` + `operation` | component and operation that failed | diagnostic metadata |
+| `capability_required` | missing capability or schema/compile code | `code` when applicable |
+| `retryable` + `retry_after_ms` | server-advised retryability/backoff | `retryable` and retry-after |
+| `policy_decision_id` | authorization/audit correlation | `error_id` / decision id |
+| `correlation_id` | request correlation | request/error correlation |
+| `field_violations[]` | invalid request field paths and descriptions | `field_violations` / language-native validation errors |
 
 Adopting rich details is additive and non-breaking: clients that read only
 code+message keep working, and a site that does not yet emit typed details
 falls back to the message string. `retryable` must agree with the descriptor
 idempotency/retry-safe contract; do not advertise a mutation as retryable until
 its dedup/transaction/outbox behavior is proven through the served path.
+Quota/rate-limit and admission backpressure failures should attach
+`kind=QUOTA`, `retryable=true`, and `retry_after_ms` when the broker has a
+server-computed retry window. Hard quota/capacity refusals should still attach
+`kind=QUOTA`, but set `retryable=false` and `retry_after_ms=0` when retrying
+cannot succeed until the caller frees capacity or changes quota. Validation
+failures should attach `kind=VALIDATION` and `field_violations`, with
+`retry_after_ms=0`; field-fix errors must not advertise backoff metadata.
+Optimistic
+concurrency and transaction conflicts should preserve `ABORTED` while attaching
+`kind=RETRYABLE`; SDKs may surface the conflict as retryable metadata, but must
+still apply the descriptor replay-safe/idempotency gate before automatically
+retrying any mutation. SDKs should synthesize the same `ErrorDetail` shape for
+local transport failures that never reach the broker (`UNAVAILABLE`,
+`DEADLINE_EXCEEDED`, and `CANCELLED`): use `backend=transport`, an operation
+derived from the gRPC code, `kind=RETRYABLE`, and set `retryable=false` for
+caller cancellation.
+
+### Stable String Reason Registry
+
+`udb.entity.v1.ErrorDetail.kind` is the primary cross-service classification.
+Some existing native-service branches also expose a stable string reason through
+`ApiError.code`, the `error-reason` gRPC metadata trailer, or a documented
+response field on an OK-with-existing-resource branch. Those strings are public
+API once emitted. They are UPPER_SNAKE_CASE and must be added here before a new
+public branch emits them.
+
+| Reason | Service | Public surface |
+| --- | --- | --- |
+| `ALREADY_FINALIZED` | StorageService | `error-reason` trailer |
+| `EGRESS_BACKEND_UNAVAILABLE` | RoomService | `error-reason` trailer |
+| `EGRESS_NOT_ENABLED` | RoomService | `error-reason` trailer |
+| `NOT_RETRYABLE_STATE` | NotificationService | `error-reason` trailer |
+| `OBJECT_NOT_PRESENT` | StorageService | `error-reason` trailer |
+| `PEER_NOT_ACTIVE` | RoomService | `error-reason` trailer |
+| `PIPELINE_ALREADY_STARTED` | AssetService | response message on existing pipeline |
+| `PIPELINE_DEFINITION_INVALID` | AssetService | `error-reason` trailer |
+| `ROOM_FULL` | RoomService | `error-reason` trailer |
+| `SFU_BACKEND_UNAVAILABLE` | RoomService | `error-reason` trailer |
+| `STEP_TYPE_UNSUPPORTED` | AssetService | `error-reason` trailer |
+| `STORAGE_QUOTA_EXCEEDED` | StorageService | `error-reason` trailer plus typed quota detail |
+| `TEMPLATE_NOT_FOUND` | NotificationService | `error-reason` trailer |
+| `TURN_NOT_CONFIGURED` | RoomService | `error-reason` trailer |
+| `UNSUPPORTED_OBJECT_BACKEND` | StorageService | `error-reason` trailer |
+| `UPLOAD_SIZE_MISMATCH` | StorageService | `error-reason` trailer |
+| `UPLOAD_URL_UNAVAILABLE` | StorageService | `ApiError.code` on degraded upload registration |
+| `VARIABLE_MISSING` | NotificationService | `error-reason` trailer |
 
 ### Response And Error Shape At Boundaries
 
@@ -302,8 +350,10 @@ mature gRPC-first stacks return bare bodies (AIP-193, Connect, Stripe).
   status (`NOT_FOUND`→404, `PERMISSION_DENIED`→403, `INVALID_ARGUMENT`→400,
   `RESOURCE_EXHAUSTED`→429, `UNAVAILABLE`→503, `DEADLINE_EXCEEDED`→504, …), but
   PRESERVE the canonical gRPC code/reason in the body — HTTP codes alone are
-  lossy. The error body is `ApiError` mapped from `google.rpc.Status` + its
-  typed details (above).
+  lossy. The error body is `ApiError` mapped from the gRPC status plus
+  `udb.entity.v1.ErrorDetail` when present. `INVALID_ARGUMENT` error bodies
+  must include non-empty `fieldViolations`; non-validation error bodies must
+  leave `fieldViolations` empty.
 - Metadata is **inline**, not a wrapper: `request_id` rides response headers,
   pagination rides the list body (`next_page_token`/page fields per AIP-158).
 - A typed SDK maps the gRPC status + details into a language-native error
@@ -377,7 +427,7 @@ status mapping (`https://connectrpc.com/docs/protocol/`).
   - Java/C#: `SendOtp` or the language's existing public style if documented
   - Go metadata: preserve wire names while exposing alias metadata for docs and
     future helpers
-- Alias casing must be acronym-safe. `send_otp` must not become `send_o_t_p`.
+- Alias casing must be acronym-safe. `send_otp` must not split the `OTP` acronym.
 - SDKs should expose the same operation set, same retry classification, same
   typed errors, and same tenant/project metadata behavior.
 - SDK examples in docs must use the canonical alias names from generated output.

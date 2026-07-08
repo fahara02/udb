@@ -16,9 +16,12 @@
 │    crate v0.3.7 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
-UDB includes a native control plane for identity, access, storage metadata,
+UDB 0.3.7 includes a native control plane for identity, access, storage metadata,
 asset workflows, realtime coordination, tenancy, notifications, analytics, and
 policy distribution.
+
+The exact native service surface is descriptor-owned and published in the
+generated native-service docs.
 
 <p align="center">
   <img src="assets/control-plane.svg" alt="UDB public data-plane listener and separate native control-plane listener" width="940">
@@ -70,31 +73,90 @@ code should never hand-build a raw RPC request body.
 
 ## Service Table
 
-UDB 0.3.7 exposes 15 native services with 188 native RPCs.
+The native service surface is descriptor-rendered. The table below names each
+service and what it covers; the exact per-service RPC counts and listeners are
+descriptor-owned — read them from the generated table rather than any
+hand-maintained number.
 
-| Service | RPCs | Purpose |
-|---|---:|---|
-| `AuthnService` | 50 | Login, sessions, JWT/JWKS, refresh tokens, MFA, OTP, devices, WebAuthn, user admin |
-| `AuthzService` | 41 | RBAC, ABAC, ReBAC, access checks, policy bundles, native access, governance |
-| `ApiKeyService` | 9 | API key creation, validation, rotation, revocation, usage stats |
-| `IdentityProviderService` | 27 | OIDC, SAML, SCIM, JIT, external identity links |
-| `ControlPlaneService` | 5 | Versioned policy/resource distribution with ACK/NACK |
-| `TenantService` | 6 | Tenant and tenant config CRUD |
-| `NotificationService` | 11 | Notifications, templates, preferences, delivery stats |
-| `AnalyticsService` | 7 | Pipeline, executor, reconciliation, throughput, and SLA metrics |
-| `StorageService` | 7 | Upload registration, finalize, download URLs, file metadata and lifecycle |
-| `AssetService` | 8 | Asset records, pipeline definitions, pipeline runs, step completion |
-| `RoomService` | 5 | WebRTC room lifecycle |
-| `PeerService` | 5 | WebRTC peer lifecycle |
-| `TrackService` | 4 | WebRTC track lifecycle |
-| `TurnService` | 1 | TURN credential issuance |
-| `SignalingService` | 1 | Bidirectional WebRTC signaling bridge |
+| Service | Purpose |
+|---|---|
+| `AuthnService` | Login, sessions, JWT/JWKS, refresh tokens, MFA, OTP, devices, WebAuthn, user admin |
+| `AuthzService` | RBAC, ABAC, ReBAC, access checks, policy bundles, native access, governance |
+| `ApiKeyService` | API key creation, validation, rotation, revocation, usage stats |
+| `IdentityProviderService` | OIDC, SAML, SCIM, JIT, external identity links |
+| `ControlPlaneService` | Versioned policy/resource distribution with ACK/NACK |
+| `TenantService` | Tenant and tenant config CRUD |
+| `NotificationService` | Notifications, templates, preferences, delivery stats |
+| `AnalyticsService` | Pipeline, executor, reconciliation, throughput, and SLA metrics |
+| `StorageService` | Upload registration, finalize, download URLs, file metadata and lifecycle |
+| `AssetService` | Asset records, pipeline definitions, pipeline runs, step completion |
+| `VaultService` | Secret storage, transit encrypt/decrypt/sign/verify/HMAC, dynamic DB credential leases, seal status |
+| `MeteringService` | Usage recording, quota policy, and usage/quota queries |
+| `SchedulerService` | Cron and one-shot scheduled jobs (create, pause, resume, delete) |
+| `SearchService` | Search index lifecycle, reindex, and query |
+| `WebhookService` | SSRF-guarded outbound webhook endpoints and delivery tracking |
+| `WorkflowService` | Durable workflows/sagas: start, signal, cancel, compensation |
+| `LockService` | Distributed advisory locks with fencing tokens (acquire, renew, release) |
+| `LiveQueryService` | Server-streaming subscriptions to live data-plane changes |
+| `ConfigService` | Feature flags and flag evaluation |
+| `BackupService` | Tenant backup/restore and backup policies |
+| `EmbeddingService` | Embedding sources, backfill enumeration, and vector retrieval |
+| `RoomService` / `PeerService` / `TrackService` | WebRTC room, peer, and track lifecycle (incl. egress/SFU) |
+| `TurnService` / `SignalingService` | TURN credential issuance and the bidirectional signaling bridge |
 
-Generated table: [generated/native-services.md](generated/native-services.md).
+Generated table with exact counts: [generated/native-services.md](generated/native-services.md).
 
-## 0.3.6 Native Store Path
+## Platform Services
 
-The native-store control-plane work (0.3.5) aligns native services with UDB's
+Beyond auth, identity, storage, and WebRTC, the native control plane ships a set
+of platform services that back common application infrastructure. Each is a
+first-class gRPC service on the native listener with the same tenant/project
+scope guard, typed errors, and native-store persistence as the rest of the
+control plane.
+
+| Service | What it does | Representative RPCs |
+|---|---|---|
+| `VaultService` | Encrypted secrets, transit crypto, and short-lived database credentials | `PutSecret`, `GetSecret`, `Encrypt`/`Decrypt`, `Sign`/`Verify`, `Hmac`, `GenerateDatabaseCredentials`, `SealStatus` |
+| `MeteringService` | Records usage events and enforces per-tenant quotas | `RecordUsage`, `QueryUsage`, `PutQuota`, `GetQuota`, `CheckQuota` |
+| `SchedulerService` | Durable cron / one-shot job scheduling | `CreateJob`, `GetJob`, `ListJobs`, `PauseJob`, `ResumeJob`, `DeleteJob` |
+| `SearchService` | Managed search indexes over app data | `CreateIndex`, `Reindex`, `Search`, `ListIndexes`, `DeleteIndex` |
+| `WebhookService` | Outbound webhooks with SSRF-guarded endpoints and delivery logs | `CreateEndpoint`, `UpdateEndpoint`, `DeleteEndpoint`, `ListDeliveries` |
+| `WorkflowService` | Long-running workflows / sagas with signals and compensation | `StartWorkflow`, `SignalWorkflow`, `CancelWorkflow`, `GetWorkflow`, `ListWorkflows` |
+| `LockService` | Distributed advisory locks with monotonic fencing tokens | `AcquireLock`, `RenewLock`, `ReleaseLock` |
+| `LiveQueryService` | Streams live changes to a subscribed query | `Subscribe` (server-streaming) |
+| `ConfigService` | Feature flags and evaluation | `PutFlag`, `GetFlag`, `ListFlags`, `EvaluateFlags`, `DeleteFlag` |
+| `BackupService` | Tenant-scoped backup and restore | `StartTenantBackup`, `RestoreTenant`, `ListBackups`, `PutBackupPolicy` |
+| `EmbeddingService` | Embedding sources and vector retrieval, with a leader-driven backfill enumerator | `RegisterSource`, `ReportEmbedding`, `Backfill`, `Retrieve`, `ListSources` |
+
+These services do not yet have `UdbProject` workflow facades. Until they do, call
+them through the **thin generated client** — the generated robustness layer
+(`generatedClient.ts`, `generated_client.go`, `generated_client.py`,
+`Generated/GeneratedClient.php`) reaches every RPC. Python exposes a per-service
+stub (`VaultServiceClient`, `MeteringServiceClient`, …); every language also
+supports the generic unary-by-full-method-path escape hatch. For example:
+
+```python
+# Python — per-service generated stub, verified identity flows from the token.
+vault = VaultServiceClient(channel)
+vault.create_transit_key(CreateTransitKeyRequest(tenant_id=tid, key_name="docs"))
+enc = vault.encrypt(EncryptRequest(tenant_id=tid, key_name="docs", plaintext=b"..."))
+```
+
+```ts
+// TypeScript / Go — generic unary by full method path (same auth + retry path):
+core.unary("udb.core.vault.services.v1.VaultService", "Encrypt", request, call);
+// Go: gc.InvokeUnary(ctx, "/udb.core.vault.services.v1.VaultService/Encrypt", req, &reply)
+```
+
+The generated per-RPC contract (`operation_kind`/`read_only`, idempotency key
+field, replay safety, and typed error detail) for each of these is carried in
+[`docs/generated/udb-native-contract.json`](generated/udb-native-contract.json).
+These are native-service RPCs — this is **not** the banned `GenericDispatch`
+against internal `udb_*` schemas; you are calling the service's own public API.
+
+## Native Store Path
+
+The native-store control-plane work (introduced in 0.3.5) aligns native services with UDB's
 canonical descriptor pipeline. Native services should persist through typed
 native entity stores and native runtime bindings, not through one-off SQL strings
 or a separate KV-only shortcut.
@@ -119,6 +181,65 @@ For operators, this means native-service startup should fail closed when a
 declared backend is missing, and release branches should keep
 `docs/generated/udb-native-contract.json` synchronized with
 `udb native manifest`.
+
+## Consistency, Write Receipts, And Read Fences
+
+UDB makes read-after-write correctness explicit instead of hoping a replica or a
+projection has caught up. A mutation returns a **write receipt**; a later read can
+carry a **read fence** built from that receipt, and/or request a **consistency
+mode**. The SDK workflow helpers wire this for you, but the contract is public so
+advanced callers can drive it directly.
+
+**Consistency mode** (`RequestContext.consistency_mode`, enum `ConsistencyMode`)
+tells the broker how fresh a read must be:
+
+| Mode | Meaning |
+|---|---|
+| `STRONG` | Read the primary; never a replica or projection |
+| `READ_YOUR_WRITES` | Honor a read fence so the caller sees its own prior write |
+| `BOUNDED_STALENESS` | Replica read within a bounded lag |
+| `REPLICA_BOUNDED` | Replica read with an explicit max-lag budget |
+| `EVENTUAL` | Any replica |
+| `PROJECTION_OK` / `CACHE_OK` | A projection or cache may serve the read |
+
+**Write receipt** (`MutationResponse.write_receipt`, message `WriteReceipt`) is the
+durability proof a mutation returns:
+
+| Field | Meaning |
+|---|---|
+| `source_lsn` | Backend log position of the commit |
+| `outbox_seq` | Monotonic outbox sequence for the emitted event |
+| `projection_task_ids` | Projection tasks that must finish for the write to be visible in a projection |
+| `manifest_checksum` | Catalog manifest the write was validated against |
+| `written_at_unix_ms` | Commit timestamp |
+
+**Read fence** (`RequestContext.read_fence`, message `ReadFence`) is what a
+follow-up read carries so the broker waits for the write to be visible:
+
+| Field | Meaning |
+|---|---|
+| `min_outbox_lsn` | Minimum log position the read must observe |
+| `projection_task_ids` | Projection tasks that must complete before the read returns |
+| `max_wait_ms` | How long the read may block waiting for the fence |
+
+**Durable idempotency and `was_duplicate`.** A keyed `Upsert`/`Delete` (a
+non-empty idempotency key on a replay-safe mutation) is deduplicated in the same
+transaction as the write. A replay returns the stored first-writer response with
+`MutationResponse.was_duplicate = true` — so a client retry (or a duplicate send)
+never double-applies the write. Keyed BatchUpsert dedups per item the same way.
+
+**SDK helpers.** The canonical ergonomic surface (per-language method names vary
+by language convention) is:
+
+- `metadata.afterWrite(receipt)` — stamp the next request's read fence from a
+  receipt (alias `withReadFence`), so the following read is read-your-writes.
+- `readFenceFromReceipt(receipt)` — build a `ReadFence` without mutating metadata.
+- the mutation result exposes `was_duplicate` so a caller can tell a replay from a
+  fresh write.
+- a replay-safe mutation is retried on a transient error **only when the caller
+  supplies an idempotency key**. Without a key the SDK fails closed (no retry)
+  rather than risk a double-apply — supply an idempotency key to make a mutation
+  safely retryable.
 
 ## Authn And Authz
 
