@@ -10,11 +10,14 @@ import io.grpc.Metadata;
 import io.grpc.MethodDescriptor;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+import java.util.List;
+import com.udb.entity.v1.DeleteRequest;
 import com.udb.entity.v1.MutationResponse;
 import com.udb.entity.v1.RecordSet;
 import com.udb.entity.v1.SelectRequest;
 import com.udb.entity.v1.UpsertRequest;
 import com.udb.services.v1.DataBrokerGrpc;
+import dev.udb.client.generated.GeneratedUdbClient;
 
 public final class UdbClient implements AutoCloseable {
   public static final String PROTOCOL_VERSION = "1.0.0";
@@ -39,34 +42,50 @@ public final class UdbClient implements AutoCloseable {
       Metadata.Key.of("authorization", Metadata.ASCII_STRING_MARSHALLER);
   private static final Metadata.Key<String> API_KEY =
       Metadata.Key.of("x-api-key", Metadata.ASCII_STRING_MARSHALLER);
+  private static final Metadata.Key<String> CONSISTENCY =
+      Metadata.Key.of("x-udb-consistency", Metadata.ASCII_STRING_MARSHALLER);
+  private static final Metadata.Key<String> PRIMARY_READ =
+      Metadata.Key.of("x-udb-primary-read", Metadata.ASCII_STRING_MARSHALLER);
+  private static final Metadata.Key<String> MAX_REPLICA_LAG_MS =
+      Metadata.Key.of("x-udb-max-replica-lag-ms", Metadata.ASCII_STRING_MARSHALLER);
+  private static final Metadata.Key<String> EVENTUAL_CONSISTENCY_ALLOWED =
+      Metadata.Key.of("x-udb-eventual-consistency-allowed", Metadata.ASCII_STRING_MARSHALLER);
+  private static final Metadata.Key<String> READ_FENCE =
+      Metadata.Key.of("x-udb-read-fence", Metadata.ASCII_STRING_MARSHALLER);
 
   private final ManagedChannel managedChannel;
   private final DataBrokerGrpc.DataBrokerBlockingStub broker;
+  private final UdbMetadataRef metadata;
 
   public UdbClient(String target, UdbMetadata metadata) {
     this(
         UdbChannels.forTarget(target, false),
-        metadata,
+        new UdbMetadataRef(metadata),
         UdbCredentials.fromMetadata(metadata),
         true);
   }
 
   public UdbClient(Channel channel, UdbMetadata metadata) {
-    this(channel, metadata, UdbCredentials.fromMetadata(metadata), false);
+    this(channel, new UdbMetadataRef(metadata), UdbCredentials.fromMetadata(metadata), false);
   }
 
   /** Build over a shared, mutable credentials holder so a refreshed token reaches
    *  this stub without rebuilding the channel. */
   public UdbClient(Channel channel, UdbMetadata metadata, UdbCredentials credentials) {
+    this(channel, new UdbMetadataRef(metadata), credentials, false);
+  }
+
+  UdbClient(Channel channel, UdbMetadataRef metadata, UdbCredentials credentials) {
     this(channel, metadata, credentials, false);
   }
 
   private UdbClient(
-      Channel channel, UdbMetadata metadata, UdbCredentials credentials, boolean ownsChannel) {
+      Channel channel, UdbMetadataRef metadata, UdbCredentials credentials, boolean ownsChannel) {
     Objects.requireNonNull(channel, "channel");
     Objects.requireNonNull(metadata, "metadata");
     Objects.requireNonNull(credentials, "credentials");
     this.managedChannel = ownsChannel && channel instanceof ManagedChannel managed ? managed : null;
+    this.metadata = metadata;
     this.broker =
         DataBrokerGrpc.newBlockingStub(channel)
             .withInterceptors(credentialInterceptor(metadata, credentials));
@@ -82,6 +101,45 @@ public final class UdbClient implements AutoCloseable {
 
   public MutationResponse upsert(UpsertRequest request) {
     return broker.upsert(request);
+  }
+
+  public MutationResponse delete(DeleteRequest request) {
+    return broker.delete(request);
+  }
+
+  public UdbEntityHandle entity(String messageType, String... key) {
+    return new UdbEntityHandle(this, messageType, resolveEntityKey(messageType, key));
+  }
+
+  public UdbEntityHandle table(String name, String... key) {
+    GeneratedUdbClient.EntityBinding binding = resolveTable(name);
+    String messageType = binding == null ? name : binding.messageType();
+    List<String> resolvedKey = key == null || key.length == 0 ? defaultKey(binding) : List.of(key);
+    return new UdbEntityHandle(this, messageType, resolvedKey);
+  }
+
+  UdbMetadata metadata() {
+    return metadata.current();
+  }
+
+  private static List<String> resolveEntityKey(String messageType, String... key) {
+    if (key != null && key.length > 0) {
+      return List.of(key);
+    }
+    return defaultKey(GeneratedUdbClient.entities().get(messageType));
+  }
+
+  private static GeneratedUdbClient.EntityBinding resolveTable(String name) {
+    for (GeneratedUdbClient.EntityBinding binding : GeneratedUdbClient.entities().values()) {
+      if (binding.table().equals(name)) {
+        return binding;
+      }
+    }
+    return null;
+  }
+
+  private static List<String> defaultKey(GeneratedUdbClient.EntityBinding binding) {
+    return binding == null ? List.of() : binding.primaryKeys();
   }
 
   public static Metadata headers(UdbMetadata meta) {
@@ -110,6 +168,21 @@ public final class UdbClient implements AutoCloseable {
     if (apiKey != null && !apiKey.isBlank()) {
       headers.put(API_KEY, apiKey);
     }
+    if (meta.consistency() != null && !meta.consistency().isBlank()) {
+      headers.put(CONSISTENCY, meta.consistency());
+    }
+    if (meta.primaryRead()) {
+      headers.put(PRIMARY_READ, "true");
+    }
+    if (meta.maxReplicaLagMs() > 0) {
+      headers.put(MAX_REPLICA_LAG_MS, Long.toString(meta.maxReplicaLagMs()));
+    }
+    if (meta.eventualConsistencyAllowed()) {
+      headers.put(EVENTUAL_CONSISTENCY_ALLOWED, "true");
+    }
+    if (meta.readFenceJson() != null && !meta.readFenceJson().isBlank()) {
+      headers.put(READ_FENCE, meta.readFenceJson());
+    }
     return headers;
   }
 
@@ -121,6 +194,11 @@ public final class UdbClient implements AutoCloseable {
    */
   public static ClientInterceptor credentialInterceptor(
       UdbMetadata metadata, UdbCredentials credentials) {
+    return credentialInterceptor(new UdbMetadataRef(metadata), credentials);
+  }
+
+  static ClientInterceptor credentialInterceptor(
+      UdbMetadataRef metadata, UdbCredentials credentials) {
     return new ClientInterceptor() {
       @Override
       public <ReqT, RespT> ClientCall<ReqT, RespT> interceptCall(
@@ -130,7 +208,7 @@ public final class UdbClient implements AutoCloseable {
           @Override
           public void start(Listener<RespT> responseListener, Metadata headers) {
             headers.merge(
-                headers(metadata, credentials.bearerToken(), credentials.apiKey()));
+                headers(metadata.current(), credentials.bearerToken(), credentials.apiKey()));
             super.start(responseListener, headers);
           }
         };

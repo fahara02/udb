@@ -195,6 +195,62 @@ with UdbAuthClient("127.0.0.1:50051", meta) as auth:
     )
 ```
 
+## Consistency, Idempotency Replay, And Typed Errors
+
+A mutation returns a `WriteReceipt`; a follow-up read can carry a read fence
+built from it, or request an explicit consistency mode. A keyed replay-safe
+mutation the broker deduplicated reports `was_duplicate` (full contract:
+[docs/native-services.md](../../docs/native-services.md)).
+
+```python
+from udb_client import ConsistencyMode, was_duplicate
+
+resp, receipt = udb.upsert_with_receipt(
+    message_type="acme.billing.v1.Invoice",
+    record={"invoice_id": "inv-1", "total_cents": 100},
+    conflict_fields=("invoice_id",),
+    idempotency_key="inv-1-create",
+)
+if was_duplicate(resp):
+    ...  # broker replayed a prior identical keyed write
+
+# Read-your-writes: metadata carrying a fence derived from the receipt.
+fenced = meta.after_write(receipt)
+rows = udb.select(message_type="acme.billing.v1.Invoice", metadata=fenced)
+
+# Or pin a typed consistency mode (strong / read-your-writes / bounded / eventual …).
+eventual = meta.with_consistency(ConsistencyMode.EVENTUAL)
+```
+
+Retry contract: a replay-safe mutation is retried on transient errors **only
+when the request carries a non-empty `idempotency_key`** — keyless mutations
+fail closed rather than risk a double apply. Typed error details decode from
+the `udb-error-detail-bin` trailer onto `UdbDetailedError`
+(`kind` / `retryable` / `field_violations`).
+
+## Platform Services (Vault, Metering, Scheduler, …)
+
+Vault, Metering, Scheduler, Search, Webhook, Workflow, Lock, LiveQuery, Config,
+Backup, and Embedding have no workflow facade yet — call them through the
+generated per-service robustness clients (native services ride the native
+listener when your deployment separates it):
+
+```python
+from udb_client.generated_client import GeneratedClient
+from udb.core.vault.services.v1 import vault_service_pb2 as vault
+
+gen = GeneratedClient("127.0.0.1:50051", meta)
+key = gen.VaultService.create_transit_key(
+    vault.CreateTransitKeyRequest(tenant_id=tenant, key_name="docs")
+)
+enc = gen.VaultService.encrypt(
+    vault.EncryptRequest(tenant_id=tenant, key_name="docs", plaintext="secret")
+)
+```
+
+The per-RPC retry class and idempotency contract live in
+[docs/generated/udb-native-contract.json](../../docs/generated/udb-native-contract.json).
+
 ## Full API Access
 
 For broker APIs without a convenience method, use `client.call("RpcName",

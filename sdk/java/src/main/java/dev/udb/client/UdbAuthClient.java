@@ -3,6 +3,8 @@ package dev.udb.client;
 import com.udb.core.authn.services.v1.AuthnRequest;
 import com.udb.core.authn.services.v1.AuthnResponse;
 import com.udb.core.authn.services.v1.AuthnServiceGrpc;
+import com.udb.core.authn.services.v1.LoginRequest;
+import com.udb.core.authn.services.v1.LoginResponse;
 import com.udb.core.authz.services.v1.AuthzRequest;
 import com.udb.core.authz.services.v1.AuthzServiceGrpc;
 import com.udb.core.authz.services.v1.BatchCheckPermissionsRequest;
@@ -34,7 +36,7 @@ import javax.crypto.spec.SecretKeySpec;
  */
 public class UdbAuthClient implements AutoCloseable {
   private final ManagedChannel channel;
-  private final UdbMetadata metadata;
+  private final UdbMetadataRef metadata;
   private final UdbCredentials credentials;
   private final AuthnServiceGrpc.AuthnServiceBlockingStub authn;
   private final AuthzServiceGrpc.AuthzServiceBlockingStub authz;
@@ -57,6 +59,10 @@ public class UdbAuthClient implements AutoCloseable {
   /** Build over a shared, mutable credentials holder so a refreshed token is sent
    *  on the next authn/authz call without rebuilding the channel. */
   public UdbAuthClient(ManagedChannel channel, UdbMetadata metadata, UdbCredentials credentials) {
+    this(channel, new UdbMetadataRef(metadata), credentials);
+  }
+
+  UdbAuthClient(ManagedChannel channel, UdbMetadataRef metadata, UdbCredentials credentials) {
     this.channel = channel;
     this.metadata = metadata;
     this.credentials = credentials;
@@ -72,14 +78,14 @@ public class UdbAuthClient implements AutoCloseable {
    */
   protected UdbAuthClient(UdbMetadata metadata) {
     this.channel = null;
-    this.metadata = metadata;
+    this.metadata = new UdbMetadataRef(metadata);
     this.credentials = UdbCredentials.fromMetadata(metadata);
     this.authn = null;
     this.authz = null;
   }
 
   private Metadata headers() {
-    return UdbClient.headers(metadata, credentials.bearerToken(), credentials.apiKey());
+    return UdbClient.headers(metadata.current(), credentials.bearerToken(), credentials.apiKey());
   }
 
   /** The shared credentials holder backing this client's outbound auth headers. */
@@ -92,27 +98,34 @@ public class UdbAuthClient implements AutoCloseable {
     return authn.withInterceptors(MetadataUtils.newAttachHeadersInterceptor(headers())).authenticate(request);
   }
 
+  public LoginResponse login(LoginRequest request) {
+    return authn.withInterceptors(MetadataUtils.newAttachHeadersInterceptor(headers())).login(request);
+  }
+
   public AuthnResponse authenticateBearer(String token) {
+    UdbMetadata current = metadata.current();
     return authenticate(AuthnRequest.newBuilder()
         .setBearerToken(token)
-        .setTenantHint(metadata.tenantId())
-        .setProjectHint(metadata.projectId())
+        .setTenantHint(current.tenantId())
+        .setProjectHint(current.projectId())
         .build());
   }
 
   public AuthnResponse authenticateApiKey(String apiKey) {
+    UdbMetadata current = metadata.current();
     return authenticate(AuthnRequest.newBuilder()
         .setApiKey(apiKey)
-        .setTenantHint(metadata.tenantId())
-        .setProjectHint(metadata.projectId())
+        .setTenantHint(current.tenantId())
+        .setProjectHint(current.projectId())
         .build());
   }
 
   public AuthnResponse authenticateSession(String sessionId) {
+    UdbMetadata current = metadata.current();
     return authenticate(AuthnRequest.newBuilder()
         .setSessionId(sessionId)
-        .setTenantHint(metadata.tenantId())
-        .setProjectHint(metadata.projectId())
+        .setTenantHint(current.tenantId())
+        .setProjectHint(current.projectId())
         .build());
   }
 
@@ -129,15 +142,16 @@ public class UdbAuthClient implements AutoCloseable {
    * scope-narrowing exactly as the Go/Python/TS SDKs do.
    */
   public Decision can(ResourceRef resource, String action, String purpose) {
+    UdbMetadata current = metadata.current();
     Principal principal = boundPrincipal();
     AuthzRequest request = AuthzRequest.newBuilder()
         .setPrincipal(principal)
-        .setTenantId(metadata.tenantId())
-        .setProjectId(metadata.projectId())
+        .setTenantId(current.tenantId())
+        .setProjectId(current.projectId())
         .setResource(resource)
         .setAction(action)
-        .setPurpose(purpose == null || purpose.isEmpty() ? metadata.purpose() : purpose)
-        .addAllRequestedScopes(metadata.scopes())
+        .setPurpose(purpose == null || purpose.isEmpty() ? current.purpose() : purpose)
+        .addAllRequestedScopes(current.scopes())
         .build();
     return authorize(request);
   }
@@ -178,9 +192,10 @@ public class UdbAuthClient implements AutoCloseable {
    * {@code object:action -> allowed} result map.
    */
   public Map<String, Boolean> batchCan(List<PermissionCheck> checks) {
+    UdbMetadata current = metadata.current();
     BatchCheckPermissionsRequest request = BatchCheckPermissionsRequest.newBuilder()
-        .setUserId(metadata.userId())
-        .setDomain(metadata.tenantId())
+        .setUserId(current.userId())
+        .setDomain(current.tenantId())
         .addAllChecks(checks)
         .build();
     BatchCheckPermissionsResponse resp =
@@ -195,18 +210,19 @@ public class UdbAuthClient implements AutoCloseable {
   }
 
   private Principal boundPrincipal() {
+    UdbMetadata current = metadata.current();
     return Principal.newBuilder()
-        .setUserId(metadata.userId())
-        .setServiceIdentity(metadata.serviceIdentity())
-        .setTenantId(metadata.tenantId())
-        .setProjectId(metadata.projectId())
-        .addAllScopes(metadata.scopes())
+        .setUserId(current.userId())
+        .setServiceIdentity(current.serviceIdentity())
+        .setTenantId(current.tenantId())
+        .setProjectId(current.projectId())
+        .addAllScopes(current.scopes())
         .build();
   }
 
   /** The metadata identity bound to this client (used by {@link AuthzCache}). */
   public UdbMetadata metadata() {
-    return metadata;
+    return metadata.current();
   }
 
   /** Raw AuthnService stub with caller headers attached. */
@@ -226,15 +242,16 @@ public class UdbAuthClient implements AutoCloseable {
    * allowed but no grant was minted; throws when the decision denies access.
    */
   public NativeAccessGrant nativeAccess(ResourceRef resource, String action, String purpose) {
+    UdbMetadata current = metadata.current();
     Principal principal = boundPrincipal();
     NativeAccessRequest request = NativeAccessRequest.newBuilder()
         .setPrincipal(principal)
-        .setTenantId(metadata.tenantId())
-        .setProjectId(metadata.projectId())
+        .setTenantId(current.tenantId())
+        .setProjectId(current.projectId())
         .setResource(resource)
         .setAction(action)
-        .setPurpose(purpose == null || purpose.isEmpty() ? metadata.purpose() : purpose)
-        .addAllRequestedScopes(metadata.scopes())
+        .setPurpose(purpose == null || purpose.isEmpty() ? current.purpose() : purpose)
+        .addAllRequestedScopes(current.scopes())
         .build();
     NativeAccessResponse resp = authz.withInterceptors(MetadataUtils.newAttachHeadersInterceptor(headers()))
         .getNativeAccess(request);
@@ -264,9 +281,10 @@ public class UdbAuthClient implements AutoCloseable {
    * {@link UdbPolicyBundleSignatureException}.
    */
   public SignedPolicyBundle getPolicyBundle() {
+    UdbMetadata current = metadata.current();
     PolicyBundleRequest request = PolicyBundleRequest.newBuilder()
-        .setTenantId(metadata.tenantId())
-        .setProjectId(metadata.projectId())
+        .setTenantId(current.tenantId())
+        .setProjectId(current.projectId())
         .build();
     SignedPolicyBundle bundle =
         authz.withInterceptors(MetadataUtils.newAttachHeadersInterceptor(headers()))

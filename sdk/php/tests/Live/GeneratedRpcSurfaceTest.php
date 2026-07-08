@@ -550,17 +550,28 @@ function liveUuidV4(): string
 
 // Whether to field-populate an RPC's probe request: every RPC except those
 // classified DESTRUCTIVE by the proto-derived GeneratedClient::OPERATION_KIND map
-// (keyed by the globally-unique method name) — never a hardcoded name list. A
-// populated destructive RPC (PutPolicy, RollbackCatalog, the revoke-all/emergency/
-// reset family, DropResource, …) could corrupt shared/global broker state.
-function shouldPopulatePhp(string $name): bool
+// (keyed by Service/Method) — never a hardcoded name list. A populated
+// destructive RPC (PutPolicy, RollbackCatalog, the revoke-all/emergency/reset
+// family, DropResource, ...) could corrupt shared/global broker state.
+function shouldPopulatePhp(string $name, string $service = ''): bool
 {
-    return operationKindPhp($name) !== 'destructive';
+    return operationKindPhp($name, $service) !== 'destructive';
 }
 
-function operationKindPhp(string $name): string
+function operationKindPhp(string $name, string $service = ''): string
 {
-    return \Fahara02\UdbLaravel\Generated\GeneratedClient::OPERATION_KIND[$name] ?? 'read_only';
+    $kinds = \Fahara02\UdbLaravel\Generated\GeneratedClient::OPERATION_KIND;
+    $key = $service !== '' ? "{$service}/{$name}" : $name;
+    if (array_key_exists($key, $kinds)) {
+        return $kinds[$key];
+    }
+    $matches = [];
+    foreach ($kinds as $candidate => $kind) {
+        if (str_ends_with($candidate, "/{$name}")) {
+            $matches[] = $kind;
+        }
+    }
+    return count($matches) === 1 ? $matches[0] : 'read_only';
 }
 
 // Name-aware probe string, mirroring the Go/Python descriptor probes: tenant/
@@ -1173,16 +1184,16 @@ it('covers the live generated RPC surface', function () {
 
     // Per-RPC surface probing now lives in the data-driven test below
     // ("reaches live RPC … with (<stub>/<rpc>)") so the runner reports granular
-    // per-RPC pass/fail (265 cases) instead of one opaque test — matching Go's
+    // per-RPC pass/fail for the generated surface instead of one opaque test — matching Go's
     // sub-tests and Python's parametrized cases. The deep create→read→assert
     // e2e above stays in this test.
-});
+})->skip(! extension_loaded('grpc'), 'requires grpc PHP extension');
 
 // --- Per-RPC surface coverage (granular: one Pest case per RPC) ---------------
 
-// Memoized live session: log in ONCE and reuse the authed clients across all 265
+// Memoized live session: log in ONCE and reuse the authed clients across all generated
 // data-driven cases. A dataset re-runs the test closure per case, so a
-// non-memoized login would re-authenticate 265 times.
+// non-memoized login would re-authenticate once per RPC.
 function phpLiveSession(): array
 {
     static $session = null;
@@ -1220,6 +1231,9 @@ function phpLiveSession(): array
 // dataset is available at Pest collection time without a broker connection.
 function phpLiveRpcCatalog(): array
 {
+    if (! extension_loaded('grpc')) {
+        return [];
+    }
     $probe = new GeneratedClient(['endpoint' => '127.0.0.1:1', 'deadline_ms' => 1_000, 'retry' => ['max_attempts' => 1]]);
     $out = [];
     foreach (stubAccessors($probe, $probe) as $stubName => $stub) {
@@ -1231,7 +1245,7 @@ function phpLiveRpcCatalog(): array
     return $out;
 }
 
-dataset('liveRpcs', fn () => phpLiveRpcCatalog());
+dataset('liveRpcs', fn () => extension_loaded('grpc') ? phpLiveRpcCatalog() : [['__grpc_missing__', '__grpc_missing__']]);
 
 it('reaches live RPC', function (string $stubName, string $methodName) {
     $s = phpLiveSession();
@@ -1256,7 +1270,7 @@ it('reaches live RPC', function (string $stubName, string $methodName) {
         $probeRequest = null;
         if ($hasRequest) {
             $probeRequest = requestFor($method);
-            if (shouldPopulatePhp($methodName)) {
+            if (shouldPopulatePhp($methodName, preg_replace('/Stub$/', '', $stubName))) {
                 populateProbeRequest($probeRequest, $meta->tenantId, $meta->projectId);
             }
         }
@@ -1283,12 +1297,12 @@ it('reaches live RPC', function (string $stubName, string $methodName) {
     } catch (\Fahara02\UdbLaravel\Exceptions\UdbRpcException $e) {
         expect(isFatalLiveStatus($e->status))->toBeFalse("{$label} did not reach an implemented live RPC: {$e->getMessage()}");
     }
-})->with('liveRpcs');
+})->with('liveRpcs')->skip(! extension_loaded('grpc'), 'requires grpc PHP extension');
 
-// Coverage guard: the per-RPC dataset must enumerate exactly the full surface.
-it('enumerates exactly 265 live RPCs', function () {
-    expect(count(phpLiveRpcCatalog()))->toBe(265);
-});
+// Coverage guard: the per-RPC dataset must enumerate exactly the generated surface.
+it('enumerates the full generated live RPC surface', function () {
+    expect(count(phpLiveRpcCatalog()))->toBe(count(phpBenchBodyRows()));
+})->skip(! extension_loaded('grpc'), 'requires grpc PHP extension for generated stub reflection');
 
 /**
  * Read the shared bench-body manifest (docs/bench-bodies/<svc>.md) the way the
@@ -1325,6 +1339,182 @@ function phpBenchBodyRows(): array
 }
 
 /**
+ * @return list<array{rpc:string,service:string,request_msg:string,body:string,api_alias:string}>
+ */
+function phpBenchBodyEntries(): array
+{
+    static $entries = null;
+    if ($entries !== null) {
+        return $entries;
+    }
+    $json = dirname(__DIR__, 4).'/docs/generated/bench-bodies.json';
+    $entries = json_decode((string) file_get_contents($json), true) ?: [];
+
+    return $entries;
+}
+
+/**
+ * @return array<string,array{rpc:string,service:string,request_msg:string,body:string,api_alias:string}>
+ */
+function phpBenchBodyEntriesByAlias(): array
+{
+    static $byAlias = null;
+    if ($byAlias !== null) {
+        return $byAlias;
+    }
+    $byAlias = [];
+    foreach (phpBenchBodyEntries() as $e) {
+        $alias = (string) ($e['api_alias'] ?? '');
+        if ($alias === '') {
+            continue;
+        }
+        $entry = [
+            'rpc' => (string) ($e['rpc'] ?? ''),
+            'service' => (string) ($e['service'] ?? ''),
+            'request_msg' => (string) ($e['request_msg'] ?? ''),
+            'body' => (string) ($e['body'] ?? ''),
+            'api_alias' => $alias,
+        ];
+        $byAlias[$alias] = $entry;
+        $service = strtolower((string) ($e['service'] ?? ''));
+        if ($service !== '') {
+            $byAlias[$service.'.'.$alias] = $entry;
+        }
+    }
+
+    return $byAlias;
+}
+
+function phpStrictManifestJsonCell(string $body): ?string
+{
+    $body = trim($body);
+    if (! preg_match('/^`(\{.*\})`$/s', $body, $m)) {
+        return null;
+    }
+    $probe = preg_replace('/"<seed:[^>]+>"/', '"__seed__"', $m[1]);
+    $probe = preg_replace('/<seed:[^>]+>/', '0', (string) $probe);
+    json_decode((string) $probe, true);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        return null;
+    }
+
+    return $m[1];
+}
+
+function phpResolveManifestSeeds(string $json, PerfFixturesPhp $fix, string $tenant, string $project): string
+{
+    return preg_replace_callback('/<seed:([^>]+)>/', function (array $m) use ($fix, $tenant, $project): string {
+        $key = strtolower((string) $m[1]);
+        $value = match ($key) {
+            'tenant_id' => $tenant,
+            'project', 'project_id' => $project,
+            default => $fix->lookup($key),
+        };
+        if ($value === null || $value === '') {
+            throw new RuntimeException("missing PHP bench manifest seed '{$key}'");
+        }
+
+        return addcslashes((string) $value, "\\\"");
+    }, $json);
+}
+
+/**
+ * @return array<string,list<string>>
+ */
+function phpGeneratedRequestClassIndex(): array
+{
+    static $index = null;
+    if ($index !== null) {
+        return $index;
+    }
+    $index = [];
+    $root = dirname(__DIR__, 2).'/gen';
+    $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS));
+    foreach ($it as $file) {
+        if (! $file->isFile() || $file->getExtension() !== 'php') {
+            continue;
+        }
+        $path = $file->getPathname();
+        if (str_contains($path, DIRECTORY_SEPARATOR.'GPBMetadata'.DIRECTORY_SEPARATOR)) {
+            continue;
+        }
+        $base = $file->getBasename('.php');
+        if (! str_ends_with($base, 'Request') && ! in_array($base, ['ViewDefinition', 'Mutation', 'Chunk'], true)) {
+            continue;
+        }
+        $rel = substr($path, strlen($root) + 1, -4);
+        $class = '\\'.str_replace(DIRECTORY_SEPARATOR, '\\', $rel);
+        if (class_exists($class)) {
+            $index[$base][] = $class;
+        }
+    }
+
+    return $index;
+}
+
+function phpRequestClassForManifestEntry(array $entry): ?string
+{
+    $requestMsg = trim((string) ($entry['request_msg'] ?? ''));
+    $requestMsg = preg_replace('/^stream\s+/i', '', $requestMsg) ?? $requestMsg;
+    if ($requestMsg === '') {
+        return null;
+    }
+    $candidates = phpGeneratedRequestClassIndex()[$requestMsg] ?? [];
+    if (count($candidates) === 1) {
+        return $candidates[0];
+    }
+    if (($entry['service'] ?? '') === 'DataBroker') {
+        foreach ($candidates as $class) {
+            if (str_starts_with($class, '\\Udb\\Entity\\V1\\') || str_starts_with($class, '\\Udb\\Services\\V1\\')) {
+                return $class;
+            }
+        }
+    }
+    if (($entry['service'] ?? '') === 'CacheService' && $requestMsg === 'DeleteRequest') {
+        $class = '\\Udb\\Core\\Cache\\Services\\V1\\DeleteRequest';
+        if (class_exists($class)) {
+            return $class;
+        }
+    }
+    $serviceHint = strtolower(preg_replace('/service$/i', '', (string) ($entry['service'] ?? '')));
+    $serviceHint = preg_replace('/[^a-z0-9]/', '', $serviceHint);
+    foreach ($candidates as $class) {
+        $normalized = strtolower(preg_replace('/[^a-z0-9]/', '', $class));
+        if ($serviceHint !== '' && str_contains($normalized, $serviceHint)) {
+            return $class;
+        }
+    }
+
+    return null;
+}
+
+function phpManifestJsonBody(string $name, PerfFixturesPhp $fix, string $tenant, string $project, ?string $serviceName = null): ?object
+{
+    $n = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $name));
+    $rows = phpBenchBodyEntriesByAlias();
+    $entry = null;
+    if ($serviceName !== null && $serviceName !== '') {
+        $entry = $rows[strtolower($serviceName).'.'.$n] ?? null;
+    }
+    $entry ??= $rows[$n] ?? null;
+    if ($entry === null) {
+        return null;
+    }
+    $json = phpStrictManifestJsonCell($entry['body']);
+    if ($json === null) {
+        return null;
+    }
+    $class = phpRequestClassForManifestEntry($entry);
+    if ($class === null) {
+        throw new RuntimeException("PHP bench manifest request class missing: {$entry['request_msg']}");
+    }
+    $request = new $class();
+    $request->mergeFromJsonString(phpResolveManifestSeeds($json, $fix, $tenant, $project));
+
+    return $request;
+}
+
+/**
  * LEGACY markdown parse, retained ONLY to power the drift test that proves the
  * generated JSON still equals a fresh parse of the human-editable markdown.
  *
@@ -1352,17 +1542,16 @@ function phpBenchBodyMarkdownRows(): array
     return $rows;
 }
 
-// The bench-body manifest is the shared source of truth (265 rows). PHP reads it
-// like the other SDKs; adding an RPC needs only a manifest row. The 265-row count
-// is the ASSERTED cross-SDK contract; the typed perfBodyPhp switch below is PHP's
-// realization of those bodies. The full generic JSON-merge hydrator (BENCH §11.1.4.2/.3,
+// The bench-body manifest is the shared source of truth. PHP reads it like the
+// other SDKs; adding an RPC needs a manifest row and a generated catalog entry.
+// The full generic JSON-merge hydrator (BENCH §11.1.4.2/.3,
 // the descriptor-driven consumer Go/Python use) stays DEFERRED for PHP: the protobuf
 // PHP extension exposes no usable descriptor reflection in this env
 // (DescriptorPool::getDescriptorByClassName -> null), so a like-for-like generic
 // hydrator is not portable. The typed switch + this row-count contract are the
 // honest PHP equivalent.
-it('reads exactly 265 rows from the shared bench-body manifest', function () {
-    expect(count(phpBenchBodyRows()))->toBe(265);
+it('reads one shared bench-body row per generated live RPC', function () {
+    expect(count(phpBenchBodyRows()))->toBe(count(phpLiveRpcCatalog()));
 });
 
 // R6.1 DRIFT gate: docs/generated/bench-bodies.json must equal a fresh parse of
@@ -1371,28 +1560,1471 @@ it('reads exactly 265 rows from the shared bench-body manifest', function () {
 it('bench-bodies.json matches a fresh markdown parse', function () {
     $fromJson = phpBenchBodyRows();
     $fromMd = phpBenchBodyMarkdownRows();
-    expect(count($fromJson))->toBe(265);
-    expect(count($fromMd))->toBe(265);
+    $expected = count(phpLiveRpcCatalog());
+    expect(count($fromJson))->toBe($expected);
+    expect(count($fromMd))->toBe($expected);
     ksort($fromJson);
     ksort($fromMd);
     expect($fromJson)->toBe($fromMd);
 });
 
-// Manifest↔catalog parity is enforced by COUNT: the 265-row manifest assertion
-// above and the "enumerates exactly 265 live RPCs" reflection assertion both pin
-// the same number, so a drift on either side trips a test. A name-by-name cross-
+// Manifest↔catalog parity is enforced by COUNT: the manifest assertion above and
+// the generated live-RPC reflection assertion both pin the same number, so a
+// drift on either side trips a test. A name-by-name cross-
 // check is intentionally NOT done here because the two key shapes don't map 1:1:
 // the catalog keys are "<stub>/<Method>" (e.g. "data/EnsureBaseline") while the
 // manifest mixes bare method names ("EnsureBaseline") with "Service.Method" forms
 // ("PeerService.JoinSession", which disambiguates the webrtc Join* overloads) —
 // reconciling them cleanly needs the descriptor reflection PHP doesn't expose
 // (see the deferral note above). What we CAN assert offline (no ext-grpc, no
-// broker) is that the manifest carries the two RPCs added in the 262->264 bump,
-// keyed exactly as phpBenchBodyRows() stores them.
-it('manifest carries the two newly-added RPCs (EnsureBaseline, JoinSession)', function () {
+// broker) is that the manifest carries representative service-qualified keys.
+it('manifest carries representative service-qualified RPC keys', function () {
     $rows = phpBenchBodyRows();
-    expect($rows)->toHaveKey('EnsureBaseline');          // data_broker.md, bare name
-    expect($rows)->toHaveKey('PeerService.JoinSession'); // webrtc.md, Service.Method form
+    expect($rows)->toHaveKey('DataBroker.Delete')
+        ->and($rows)->toHaveKey('CacheService.Delete')
+        ->and($rows)->toHaveKey('PeerService.JoinSession');
+});
+
+function phpManifestFixtureValue(string $key): string
+{
+    return match ($key) {
+        'catalog_manifest_b64' => base64_encode('{"resources":[]}'),
+        'ds_policy_id' => '42',
+        'fencing_token' => '17',
+        'gov_exp' => (string) (time() + 900),
+        'plain_key' => 'udb_live_key_test',
+        'tenant_id', 'tenant' => 'tenant-php',
+        'project', 'project_id' => 'project-php',
+        'token', 'refresh_token', 'csrf_token' => 'token-php',
+        'vault_ciphertext', 'vault_signature' => base64_encode('perf'),
+        default => str_ends_with($key, '_id') || $key === 'id'
+            ? '11111111-1111-4111-8111-'.str_pad((string) (crc32($key) % 1000000000000), 12, '0', STR_PAD_LEFT)
+            : 'seed-'.$key,
+    };
+}
+
+function phpFullSurfaceManifestFixtures(): PerfFixturesPhp
+{
+    $fix = new PerfFixturesPhp();
+    foreach (phpBenchBodyEntries() as $entry) {
+        foreach (preg_match_all('/<seed:([^>]+)>/', (string) ($entry['body'] ?? ''), $m) ? $m[1] : [] as $key) {
+            $key = strtolower((string) $key);
+            $fix->set($key, phpManifestFixtureValue($key));
+        }
+    }
+
+    return $fix;
+}
+
+it('manifest-only perf body hydrates every generated RPC request', function () {
+    $fix = phpFullSurfaceManifestFixtures();
+    $failures = [];
+    foreach (phpBenchBodyEntries() as $entry) {
+        try {
+            $body = phpManifestJsonBody(
+                (string) $entry['api_alias'],
+                $fix,
+                'tenant-php',
+                'project-php',
+                (string) $entry['service'],
+            );
+            if (! is_object($body)) {
+                $failures[] = "{$entry['service']}.{$entry['rpc']} did not hydrate";
+            }
+        } catch (Throwable $e) {
+            $failures[] = "{$entry['service']}.{$entry['rpc']}: {$e->getMessage()}";
+        }
+    }
+
+    expect($failures)->toBe([], implode("\n", $failures));
+    expect(count(phpBenchBodyEntries()))->toBe(count(phpBenchBodyRows()));
+});
+
+it('manifest JSON body hydrates AnalyticsService requests with seed refs', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $fix->set('stage_name', 'ingest');
+    $body = phpManifestJsonBody('get_pipeline_summary', $fix, 'tenant-php', 'project-php');
+    expect($body)->toBeInstanceOf(\Udb\Core\Analytics\Services\V1\GetPipelineSummaryRequest::class)
+        ->and($body->getStageName())->toBe('ingest')
+        ->and($body->getTenantId())->toBe('tenant-php')
+        ->and($body->getPage()->getPageSize())->toBe(50);
+});
+
+it('manifest JSON body hydrates TenantService requests', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $fix->set('tenant_code', 'tenant-code-php');
+    $fix->set('purge_tenant_id', 'tenant-purge-php');
+    $created = phpManifestJsonBody('create_tenant', $fix, 'tenant-php', 'project-php', 'TenantService');
+    $tenant = phpManifestJsonBody('get_tenant', $fix, 'tenant-php', 'project-php', 'TenantService');
+    $config = phpManifestJsonBody('get_tenant_config', $fix, 'tenant-php', 'project-php', 'TenantService');
+    $list = phpManifestJsonBody('list_tenants', $fix, 'tenant-php', 'project-php', 'TenantService');
+    $purged = phpManifestJsonBody('purge_tenant', $fix, 'tenant-php', 'project-php', 'TenantService');
+    $updated = phpManifestJsonBody('update_tenant', $fix, 'tenant-php', 'project-php', 'TenantService');
+    $updatedConfig = phpManifestJsonBody('update_tenant_config', $fix, 'tenant-php', 'project-php', 'TenantService');
+    expect($created)->toBeInstanceOf(\Udb\Core\Tenant\Services\V1\CreateTenantRequest::class)
+        ->and($created->getCode())->toBe('tenant-code-php')
+        ->and($created->getConfig())->toBe('{}')
+        ->and($created->getBranding())->toBe('{}')
+        ->and($tenant)->toBeInstanceOf(\Udb\Core\Tenant\Services\V1\GetTenantRequest::class)
+        ->and($tenant->getTenantId())->toBe('tenant-php')
+        ->and($config)->toBeInstanceOf(\Udb\Core\Tenant\Services\V1\GetTenantConfigRequest::class)
+        ->and($config->getTenantId())->toBe('tenant-php')
+        ->and($list)->toBeInstanceOf(\Udb\Core\Tenant\Services\V1\ListTenantsRequest::class)
+        ->and($list->getPage())->toBe(1)
+        ->and($list->getPageSize())->toBe(20)
+        ->and($purged)->toBeInstanceOf(\Udb\Core\Tenant\Services\V1\PurgeTenantRequest::class)
+        ->and($purged->getTenantId())->toBe('tenant-purge-php')
+        ->and($purged->getConfirmationToken())->toBe('sdk-perf-confirm-purge')
+        ->and($updated)->toBeInstanceOf(\Udb\Core\Tenant\Services\V1\UpdateTenantRequest::class)
+        ->and($updated->getStatus())->toBe('active')
+        ->and($updated->getConfig())->toBe('{}')
+        ->and($updatedConfig)->toBeInstanceOf(\Udb\Core\Tenant\Services\V1\UpdateTenantConfigRequest::class)
+        ->and($updatedConfig->getConfigKey())->toBe('feature.flag')
+        ->and($updatedConfig->getConfigValue())->toBe('on');
+});
+
+it('manifest JSON body hydrates DataBroker scalar read-only requests', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $fix->set('project', 'project-php');
+    $fix->set('message_type', 'myapp.v1.Invoice');
+    $fix->set('dlq_id', 'dlq-php');
+    $fix->set('saga_id', 'saga-php');
+    $fix->set('migration_id', 'migration-php');
+    $fix->set('object_key', 'cache-key-php');
+    $fix->set('mongo_collection', 'invoices');
+    $fix->set('document_id', 'document-php');
+    $fix->set('record_id', 'record-php');
+    $fix->set('bucket', 'bucket-php');
+    $fix->set('ts_table', 'metrics_php');
+    $fix->set('event_type', 'invoice.updated');
+    $capabilities = phpManifestJsonBody('get_capabilities', $fix, 'tenant-php', 'project-php');
+    $catalog = phpManifestJsonBody('get_catalog_manifest', $fix, 'tenant-php', 'project-php');
+    $health = phpManifestJsonBody('get_health_report', $fix, 'tenant-php', 'project-php');
+    $schemas = phpManifestJsonBody('lookup_message_schema', $fix, 'tenant-php', 'project-php');
+    $dlq = phpManifestJsonBody('get_dlq_event', $fix, 'tenant-php', 'project-php');
+    $dlqs = phpManifestJsonBody('list_dlq_events', $fix, 'tenant-php', 'project-php');
+    $saga = phpManifestJsonBody('get_saga', $fix, 'tenant-php', 'project-php');
+    $sagas = phpManifestJsonBody('list_sagas', $fix, 'tenant-php', 'project-php');
+    $policies = phpManifestJsonBody('list_policies', $fix, 'tenant-php', 'project-php');
+    $lint = phpManifestJsonBody('lint_policies', $fix, 'tenant-php', 'project-php');
+    $admin = phpManifestJsonBody('get_admin_summary', $fix, 'tenant-php', 'project-php');
+    $catalogVersion = phpManifestJsonBody('get_catalog_version', $fix, 'tenant-php', 'project-php');
+    $catalogVersions = phpManifestJsonBody('get_catalog_versions', $fix, 'tenant-php', 'project-php');
+    $cdc = phpManifestJsonBody('get_cdc_status', $fix, 'tenant-php', 'project-php');
+    $migration = phpManifestJsonBody('get_migration_status', $fix, 'tenant-php', 'project-php');
+    $migrationRuns = phpManifestJsonBody('list_migration_runs', $fix, 'tenant-php', 'project-php');
+    $projects = phpManifestJsonBody('list_projects', $fix, 'tenant-php', 'project-php');
+    $resources = phpManifestJsonBody('list_resources', $fix, 'tenant-php', 'project-php');
+    $audit = phpManifestJsonBody('list_admin_audit_logs', $fix, 'tenant-php', 'project-php');
+    $verify = phpManifestJsonBody('verify_admin_audit_log', $fix, 'tenant-php', 'project-php');
+    $vector = phpManifestJsonBody('vector_search', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $hybrid = phpManifestJsonBody('vector_hybrid_search', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $cacheGet = phpManifestJsonBody('cache_get', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $cacheScan = phpManifestJsonBody('cache_scan', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $documentGet = phpManifestJsonBody('document_get', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $documentFind = phpManifestJsonBody('document_find', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $graph = phpManifestJsonBody('graph_query', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $analytical = phpManifestJsonBody('analytical_query', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $select = phpManifestJsonBody('select', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $selectV2 = phpManifestJsonBody('select_v_2', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $object = phpManifestJsonBody('get_object', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $timeSeries = phpManifestJsonBody('time_series_query', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $preview = phpManifestJsonBody('preview_cdc_redaction', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $drift = phpManifestJsonBody('scan_projection_drift', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    expect($capabilities)->toBeInstanceOf(\Udb\Entity\V1\CapabilitiesRequest::class)
+        ->and($capabilities->getContext()->getTenantId())->toBe('tenant-php')
+        ->and($capabilities->getProjectId())->toBe('project-php')
+        ->and($catalog)->toBeInstanceOf(\Udb\Entity\V1\CatalogManifestRequest::class)
+        ->and($catalog->getRedact())->toBeFalse()
+        ->and($health)->toBeInstanceOf(\Udb\Entity\V1\HealthReportRequest::class)
+        ->and($health->getWithProbes())->toBeFalse()
+        ->and($schemas)->toBeInstanceOf(\Udb\Entity\V1\MessageSchemaLookupRequest::class)
+        ->and($schemas->getMessageType())->toBe('myapp.v1.Invoice')
+        ->and($dlq)->toBeInstanceOf(\Udb\Entity\V1\DlqEventRequest::class)
+        ->and($dlq->getDlqId())->toBe('dlq-php')
+        ->and($dlqs)->toBeInstanceOf(\Udb\Entity\V1\DlqListRequest::class)
+        ->and($dlqs->getLimit())->toBe(50)
+        ->and($saga)->toBeInstanceOf(\Udb\Entity\V1\SagaRequest::class)
+        ->and($saga->getSagaId())->toBe('saga-php')
+        ->and($sagas)->toBeInstanceOf(\Udb\Entity\V1\SagaListRequest::class)
+        ->and($sagas->getLimit())->toBe(50)
+        ->and($policies)->toBeInstanceOf(\Udb\Entity\V1\PolicyListRequest::class)
+        ->and($policies->getIncludeDisabled())->toBeFalse()
+        ->and($lint)->toBeInstanceOf(\Udb\Entity\V1\CapabilitiesRequest::class)
+        ->and($lint->getProjectId())->toBe('project-php')
+        ->and($admin)->toBeInstanceOf(\Udb\Entity\V1\AdminSummaryRequest::class)
+        ->and(iterator_to_array($admin->getContext()->getScopes()))->toBe(['udb:admin'])
+        ->and($admin->getWithProbes())->toBeFalse()
+        ->and($catalogVersion)->toBeInstanceOf(\Udb\Entity\V1\CatalogVersionRequest::class)
+        ->and($catalogVersion->getVersion())->toBe('')
+        ->and($catalogVersions)->toBeInstanceOf(\Udb\Entity\V1\CatalogManifestRequest::class)
+        ->and($catalogVersions->getRedact())->toBeFalse()
+        ->and($cdc)->toBeInstanceOf(\Udb\Entity\V1\CdcControlRequest::class)
+        ->and($cdc->getSlotName())->toBe('udb_cdc')
+        ->and($migration)->toBeInstanceOf(\Udb\Entity\V1\MigrationRunRequest::class)
+        ->and($migration->getRunId())->toBe('migration-php')
+        ->and($migrationRuns)->toBeInstanceOf(\Udb\Entity\V1\MigrationRunListRequest::class)
+        ->and($migrationRuns->getLimit())->toBe(50)
+        ->and($projects)->toBeInstanceOf(\Udb\Entity\V1\ProjectListRequest::class)
+        ->and($projects->getLimit())->toBe(50)
+        ->and($resources)->toBeInstanceOf(\Udb\Entity\V1\ResourceAdminRequest::class)
+        ->and($resources->getBackend())->toBe('mongodb')
+        ->and($audit)->toBeInstanceOf(\Udb\Entity\V1\AdminAuditLogRequest::class)
+        ->and($audit->getRedact())->toBeFalse()
+        ->and($verify)->toBeInstanceOf(\Udb\Entity\V1\AdminAuditVerifyRequest::class)
+        ->and($verify->getLimit())->toBe(0)
+        ->and($vector)->toBeInstanceOf(\Udb\Entity\V1\VectorSearchRequest::class)
+        ->and($vector->getCollection())->toBe('sdk_live_records')
+        ->and(count($vector->getVector()))->toBe(3)
+        ->and($hybrid)->toBeInstanceOf(\Udb\Entity\V1\VectorHybridSearchRequest::class)
+        ->and($hybrid->getTextQuery())->toBe('hello')
+        ->and($cacheGet)->toBeInstanceOf(\Udb\Entity\V1\CacheGetRequest::class)
+        ->and($cacheGet->getResource()->getBackend())->toBe('redis')
+        ->and($cacheGet->getKey())->toBe('cache-key-php')
+        ->and($cacheScan)->toBeInstanceOf(\Udb\Entity\V1\CacheScanRequest::class)
+        ->and($cacheScan->getLimit())->toBe(50)
+        ->and($documentGet)->toBeInstanceOf(\Udb\Entity\V1\DocumentGetRequest::class)
+        ->and($documentGet->getResource()->getResourceName())->toBe('invoices')
+        ->and($documentGet->getDocumentId())->toBe('document-php')
+        ->and($documentFind)->toBeInstanceOf(\Udb\Entity\V1\DocumentFindRequest::class)
+        ->and($documentFind->getLimit())->toBe(10)
+        ->and($graph)->toBeInstanceOf(\Udb\Entity\V1\GraphQueryRequest::class)
+        ->and($graph->getReadOnly())->toBeTrue()
+        ->and($analytical)->toBeInstanceOf(\Udb\Entity\V1\AnalyticalQueryRequest::class)
+        ->and($analytical->getQuery())->toBe('SELECT 1')
+        ->and($select)->toBeInstanceOf(\Udb\Entity\V1\SelectRequest::class)
+        ->and($select->getMessageType())->toBe('myapp.v1.Invoice')
+        ->and($select->getLimit())->toBe(10)
+        ->and($selectV2)->toBeInstanceOf(\Udb\Entity\V1\SelectRequest::class)
+        ->and($selectV2->getLimit())->toBe(10)
+        ->and($object)->toBeInstanceOf(\Udb\Entity\V1\ObjectRequest::class)
+        ->and($object->getBucket())->toBe('bucket-php')
+        ->and($timeSeries)->toBeInstanceOf(\Udb\Entity\V1\TimeSeriesQueryRequest::class)
+        ->and($timeSeries->getResource()->getResourceName())->toBe('metrics_php')
+        ->and($preview)->toBeInstanceOf(\Udb\Entity\V1\CdcRedactionPreviewRequest::class)
+        ->and($preview->getPayloadJson())->toBe('{}')
+        ->and($drift)->toBeInstanceOf(\Udb\Entity\V1\ProjectionDriftScanRequest::class)
+        ->and($drift->getRowsPerTarget())->toBe(100);
+});
+
+it('manifest JSON body hydrates DataBroker CDC control mutation requests', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $pause = phpManifestJsonBody('pause_cdc', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $resume = phpManifestJsonBody('resume_cdc', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $stepDown = phpManifestJsonBody('step_down_cdc_leader', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    expect($pause)->toBeInstanceOf(\Udb\Entity\V1\CdcControlRequest::class)
+        ->and($pause->getSlotName())->toBe('udb_cdc')
+        ->and($pause->getReason())->toBe('maintenance')
+        ->and($resume)->toBeInstanceOf(\Udb\Entity\V1\CdcControlRequest::class)
+        ->and($resume->getReason())->toBe('resume')
+        ->and($stepDown)->toBeInstanceOf(\Udb\Entity\V1\CdcControlRequest::class)
+        ->and($stepDown->getReason())->toBe('failover');
+});
+
+it('manifest JSON body hydrates DataBroker unary mutation requests', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $fix->set('record_id', 'record-php');
+    $fix->set('bucket', 'bucket-php');
+    $fix->set('object_key', 'object-php');
+    $fix->set('mongo_collection', 'invoices');
+    $fix->set('document_id', 'document-php');
+    $url = phpManifestJsonBody('generate_presigned_url', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $multipart = phpManifestJsonBody('initiate_multipart_upload', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $doc = phpManifestJsonBody('document_upsert', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $graph = phpManifestJsonBody('graph_mutate', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $vector = phpManifestJsonBody('vector_upsert', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $view = phpManifestJsonBody('create_materialized_view', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $plan = phpManifestJsonBody('plan_migration', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    expect($url)->toBeInstanceOf(\Udb\Entity\V1\UrlRequest::class)
+        ->and($url->getMethod())->toBe('GET')
+        ->and($url->getTtlSeconds())->toBe(300)
+        ->and($multipart)->toBeInstanceOf(\Udb\Entity\V1\MultipartUploadRequest::class)
+        ->and($multipart->getPartCount())->toBe(1)
+        ->and($doc)->toBeInstanceOf(\Udb\Entity\V1\DocumentUpsertRequest::class)
+        ->and($doc->getDocumentId())->toBe('document-php')
+        ->and($graph)->toBeInstanceOf(\Udb\Entity\V1\GraphMutationRequest::class)
+        ->and($graph->getQuery())->toBe('CREATE (n:Node {id:$id})')
+        ->and($vector)->toBeInstanceOf(\Udb\Entity\V1\VectorUpsertRequest::class)
+        ->and(count($vector->getPoints()))->toBe(1)
+        ->and($view)->toBeInstanceOf(\Udb\Entity\V1\ViewDefinition::class)
+        ->and($view->getWithData())->toBeTrue()
+        ->and($plan)->toBeInstanceOf(\Udb\Entity\V1\MigrationPlanRequest::class)
+        ->and(iterator_to_array($plan->getContext()->getScopes()))->toBe(['udb:admin'])
+        ->and($plan->getDryRun())->toBeTrue();
+});
+
+it('manifest JSON body hydrates DataBroker scalar action requests', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $fix->set('object_key', 'cache-key-php');
+    $fix->set('replay_dlq_id', 'replay-dlq-php');
+    $fix->set('dismiss_dlq_id', 'dismiss-dlq-php');
+    $fix->set('quarantine_dlq_id', 'quarantine-dlq-php');
+    $fix->set('retry_saga_id', 'retry-saga-php');
+    $fix->set('mark_saga_id', 'mark-saga-php');
+    $fix->set('ds_policy_id', '42');
+    $cacheDelete = phpManifestJsonBody('cache_delete', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $replay = phpManifestJsonBody('replay_dlq_event', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $dismiss = phpManifestJsonBody('dismiss_dlq_event', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $quarantine = phpManifestJsonBody('quarantine_dlq_event', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $retry = phpManifestJsonBody('retry_saga_compensation', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $reviewed = phpManifestJsonBody('mark_saga_reviewed', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $deletePolicy = phpManifestJsonBody('delete_policy', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $reload = phpManifestJsonBody('reload_policies', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    expect($cacheDelete)->toBeInstanceOf(\Udb\Entity\V1\CacheDeleteRequest::class)
+        ->and($cacheDelete->getKey())->toBe('cache-key-php')
+        ->and($replay)->toBeInstanceOf(\Udb\Entity\V1\DlqActionRequest::class)
+        ->and($replay->getDlqId())->toBe('replay-dlq-php')
+        ->and($replay->getPreserveEventId())->toBeFalse()
+        ->and($dismiss)->toBeInstanceOf(\Udb\Entity\V1\DlqActionRequest::class)
+        ->and($dismiss->getDlqId())->toBe('dismiss-dlq-php')
+        ->and($quarantine)->toBeInstanceOf(\Udb\Entity\V1\DlqActionRequest::class)
+        ->and($quarantine->getDlqId())->toBe('quarantine-dlq-php')
+        ->and($retry)->toBeInstanceOf(\Udb\Entity\V1\SagaRequest::class)
+        ->and($retry->getReason())->toBe('retry')
+        ->and($reviewed)->toBeInstanceOf(\Udb\Entity\V1\SagaRequest::class)
+        ->and($reviewed->getReason())->toBe('reviewed')
+        ->and($deletePolicy)->toBeInstanceOf(\Udb\Entity\V1\PolicyRequest::class)
+        ->and($deletePolicy->getPolicyId())->toBe(42)
+        ->and($reload)->toBeInstanceOf(\Udb\Entity\V1\CapabilitiesRequest::class)
+        ->and($reload->getProjectId())->toBe('project-php');
+});
+
+it('manifest JSON body hydrates DataBroker mutation and admin requests', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $fix->set('message_type', 'myapp.v1.Invoice');
+    $fix->set('record_id', 'record-php');
+    $fix->set('object_key', 'cache-key-php');
+    $fix->set('mongo_collection', 'invoices');
+    $fix->set('document_id', 'document-php');
+    $fix->set('apply_run_id', 'apply-run-php');
+    $fix->set('approve_run_id', 'approve-run-php');
+    $fix->set('approval_token', 'approval-token-php');
+    $apply = phpManifestJsonBody('apply_migration', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $approve = phpManifestJsonBody('approve_migration_plan', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $batchSelect = phpManifestJsonBody('batch_select', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $batchUpsert = phpManifestJsonBody('batch_upsert', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $cacheSet = phpManifestJsonBody('cache_set', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $delete = phpManifestJsonBody('delete', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $documentDelete = phpManifestJsonBody('document_delete', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $baseline = phpManifestJsonBody('ensure_baseline', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $project = phpManifestJsonBody('ensure_project', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $ensureResource = phpManifestJsonBody('ensure_resource', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $dropResource = phpManifestJsonBody('drop_resource', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $generic = phpManifestJsonBody('generic_dispatch', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $publish = phpManifestJsonBody('publish_cdc', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $upsert = phpManifestJsonBody('upsert', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $vectorBatch = phpManifestJsonBody('vector_batch_upsert', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    expect($apply)->toBeInstanceOf(\Udb\Entity\V1\MigrationApplyRequest::class)
+        ->and($apply->getApprovalToken())->toBe('approval-token-php')
+        ->and($approve)->toBeInstanceOf(\Udb\Entity\V1\MigrationRunRequest::class)
+        ->and($approve->getRunId())->toBe('approve-run-php')
+        ->and($batchSelect)->toBeInstanceOf(\Udb\Entity\V1\SelectRequest::class)
+        ->and($batchSelect->getLimit())->toBe(10)
+        ->and($batchUpsert)->toBeInstanceOf(\Udb\Entity\V1\UpsertRequest::class)
+        ->and($batchUpsert->getReturnRecord())->toBeTrue()
+        ->and($cacheSet)->toBeInstanceOf(\Udb\Entity\V1\CacheSetRequest::class)
+        ->and($cacheSet->getValue())->toBe('perf')
+        ->and($delete)->toBeInstanceOf(\Udb\Entity\V1\DeleteRequest::class)
+        ->and($delete->getMessageType())->toBe('myapp.v1.Invoice')
+        ->and($documentDelete)->toBeInstanceOf(\Udb\Entity\V1\DocumentDeleteRequest::class)
+        ->and($documentDelete->getDocumentId())->toBe('document-php')
+        ->and($baseline)->toBeInstanceOf(\Udb\Services\V1\EnsureBaselineRequest::class)
+        ->and(iterator_to_array($baseline->getContext()->getScopes()))->toBe(['udb:admin'])
+        ->and($project)->toBeInstanceOf(\Udb\Entity\V1\EnsureProjectRequest::class)
+        ->and($project->getCdcTopicPrefix())->toBe('project-php.')
+        ->and($ensureResource)->toBeInstanceOf(\Udb\Entity\V1\ResourceAdminRequest::class)
+        ->and($ensureResource->getResourceName())->toBe('invoices')
+        ->and($dropResource)->toBeInstanceOf(\Udb\Entity\V1\ResourceAdminRequest::class)
+        ->and($dropResource->getSpecJson())->toBe('{"udb_allow_rls_bypass":true}')
+        ->and($generic)->toBeInstanceOf(\Udb\Entity\V1\GenericDispatchRequest::class)
+        ->and($generic->getOperation())->toBe('ping')
+        ->and($publish)->toBeInstanceOf(\Udb\Entity\V1\CDCSubscriptionRequest::class)
+        ->and($publish->getTopicPattern())->toBe('*')
+        ->and($upsert)->toBeInstanceOf(\Udb\Entity\V1\UpsertRequest::class)
+        ->and($upsert->getReturnRecord())->toBeTrue()
+        ->and($vectorBatch)->toBeInstanceOf(\Udb\Entity\V1\VectorUpsertRequest::class)
+        ->and(count($vectorBatch->getPoints()))->toBe(1);
+});
+
+it('manifest JSON body hydrates every remaining DataBroker request', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $fix->set('message_type', 'myapp.v1.Invoice');
+    $fix->set('document_id', 'document-php');
+    $fix->set('bucket', 'bucket-php');
+    $fix->set('object_key', 'object-php');
+    $fix->set('event_type', 'invoice.updated');
+    $fix->set('ts_table', 'metrics_php');
+    $fix->set('catalog_manifest_b64', 'e30=');
+    $activate = phpManifestJsonBody('activate_catalog', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $begin = phpManifestJsonBody('begin_tx', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $enqueue = phpManifestJsonBody('enqueue_outbox_event', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $putObject = phpManifestJsonBody('put_object', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $putPolicy = phpManifestJsonBody('put_policy', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $rollback = phpManifestJsonBody('rollback_catalog', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $stage = phpManifestJsonBody('stage_catalog', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $timeSeries = phpManifestJsonBody('time_series_write', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    $validate = phpManifestJsonBody('validate_catalog', $fix, 'tenant-php', 'project-php', 'DataBroker');
+    expect($activate)->toBeInstanceOf(\Udb\Entity\V1\CatalogVersionRequest::class)
+        ->and($activate->getProjectId())->toBe('project-php')
+        ->and($begin)->toBeInstanceOf(\Udb\Entity\V1\Mutation::class)
+        ->and($begin->getOperation())->toBe('upsert')
+        ->and($enqueue)->toBeInstanceOf(\Udb\Entity\V1\EnqueueOutboxEventRequest::class)
+        ->and($enqueue->getTopic())->toBe('invoice.updated')
+        ->and($putObject)->toBeInstanceOf(\Udb\Entity\V1\Chunk::class)
+        ->and($putObject->getData())->toBe('perf')
+        ->and($putObject->getFinalChunk())->toBeTrue()
+        ->and($putPolicy)->toBeInstanceOf(\Udb\Entity\V1\PutPolicyRequest::class)
+        ->and($putPolicy->getPolicy()->getEffect())->toBe('allow')
+        ->and($putPolicy->getPolicy()->getEnabled())->toBeTrue()
+        ->and($rollback)->toBeInstanceOf(\Udb\Entity\V1\CatalogVersionRequest::class)
+        ->and($rollback->getProjectId())->toBe('project-php')
+        ->and($stage)->toBeInstanceOf(\Udb\Entity\V1\StageCatalogRequest::class)
+        ->and($stage->getManifestJson())->toBe('{}')
+        ->and($stage->getReason())->toBe('stage')
+        ->and($timeSeries)->toBeInstanceOf(\Udb\Entity\V1\TimeSeriesWriteRequest::class)
+        ->and(count($timeSeries->getPoints()))->toBe(1)
+        ->and($validate)->toBeInstanceOf(\Udb\Entity\V1\StageCatalogRequest::class)
+        ->and($validate->getManifestJson())->toBe('{}')
+        ->and($validate->getReason())->toBe('validate');
+});
+
+it('manifest JSON body hydrates StorageService read-only requests', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $fix->set('file_id', 'file-php');
+    $fix->set('user_id', 'user-php');
+    $get = phpManifestJsonBody('get_file', $fix, 'tenant-php', 'project-php');
+    $download = phpManifestJsonBody('download_file', $fix, 'tenant-php', 'project-php');
+    $list = phpManifestJsonBody('list_files', $fix, 'tenant-php', 'project-php');
+    expect($get)->toBeInstanceOf(\Udb\Core\Storage\Services\V1\GetFileRequest::class)
+        ->and($get->getTenantId())->toBe('tenant-php')
+        ->and($get->getFileId())->toBe('file-php')
+        ->and($download)->toBeInstanceOf(\Udb\Core\Storage\Services\V1\DownloadFileRequest::class)
+        ->and($download->getChunkSizeBytes())->toBe(65536)
+        ->and($list)->toBeInstanceOf(\Udb\Core\Storage\Services\V1\ListFilesRequest::class)
+        ->and($list->getUploadedBy())->toBe('user-php')
+        ->and($list->getPageSize())->toBe(20);
+});
+
+it('manifest JSON body hydrates ApiKeyService requests', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('key_id', 'key-php');
+    $fix->set('plain_key', 'plain-php');
+    $fix->set('owner_id', 'owner-php');
+    $fix->set('project', 'project-php');
+    $fix->set('update_key_id', 'update-key-php');
+    $fix->set('revoke_key_id', 'revoke-key-php');
+    $created = phpManifestJsonBody('create_api_key', $fix, 'tenant-php', 'project-php', 'ApiKeyService');
+    $get = phpManifestJsonBody('get_api_key', $fix, 'tenant-php', 'project-php');
+    $usage = phpManifestJsonBody('get_api_key_usage_stats', $fix, 'tenant-php', 'project-php');
+    $list = phpManifestJsonBody('list_api_keys', $fix, 'tenant-php', 'project-php');
+    $updated = phpManifestJsonBody('update_api_key', $fix, 'tenant-php', 'project-php', 'ApiKeyService');
+    $revoked = phpManifestJsonBody('revoke_api_key', $fix, 'tenant-php', 'project-php', 'ApiKeyService');
+    $rotated = phpManifestJsonBody('rotate_api_key', $fix, 'tenant-php', 'project-php', 'ApiKeyService');
+    $emergency = phpManifestJsonBody('emergency_revoke_api_keys', $fix, 'tenant-php', 'project-php', 'ApiKeyService');
+    $validate = phpManifestJsonBody('validate_api_key', $fix, 'tenant-php', 'project-php');
+    expect($created)->toBeInstanceOf(\Udb\Core\Apikey\Services\V1\CreateApiKeyRequest::class)
+        ->and($created->getOwnerId())->toBe('owner-php')
+        ->and(count($created->getScopes()))->toBe(1)
+        ->and($created->getContext()->getTenant()->getProjectId())->toBe('project-php')
+        ->and($created->getContext()->getUserId())->toBe('owner-php')
+        ->and($get)->toBeInstanceOf(\Udb\Core\Apikey\Services\V1\GetApiKeyRequest::class)
+        ->and($get->getKeyId())->toBe('key-php')
+        ->and($usage)->toBeInstanceOf(\Udb\Core\Apikey\Services\V1\GetApiKeyUsageStatsRequest::class)
+        ->and($usage->getKeyId())->toBe('key-php')
+        ->and($list)->toBeInstanceOf(\Udb\Core\Apikey\Services\V1\ListApiKeysRequest::class)
+        ->and($list->getOwnerId())->toBe('owner-php')
+        ->and($list->getPage()->getPageSize())->toBe(50)
+        ->and($updated)->toBeInstanceOf(\Udb\Core\Apikey\Services\V1\UpdateApiKeyRequest::class)
+        ->and($updated->getKeyId())->toBe('update-key-php')
+        ->and($updated->getName())->toBe('bench-key-2')
+        ->and(count($updated->getIpAllowlist()))->toBe(0)
+        ->and($revoked)->toBeInstanceOf(\Udb\Core\Apikey\Services\V1\RevokeApiKeyRequest::class)
+        ->and($revoked->getKeyId())->toBe('revoke-key-php')
+        ->and($revoked->getRevokeReason())->toBe('bench cleanup')
+        ->and($rotated)->toBeInstanceOf(\Udb\Core\Apikey\Services\V1\RotateApiKeyRequest::class)
+        ->and($rotated->getKeyId())->toBe('key-php')
+        ->and($rotated->getRotationReason())->toBe('bench rotate')
+        ->and($emergency)->toBeInstanceOf(\Udb\Core\Apikey\Services\V1\EmergencyRevokeApiKeysRequest::class)
+        ->and($emergency->getTenantId())->toBe('tenant-php')
+        ->and($emergency->getProjectId())->toBe('project-php')
+        ->and($emergency->getScope())->toBe('resource:read')
+        ->and($validate)->toBeInstanceOf(\Udb\Core\Apikey\Services\V1\ValidateApiKeyRequest::class)
+        ->and($validate->getPlainKey())->toBe('plain-php')
+        ->and($validate->getRequiredScope())->toBe('resource:read');
+});
+
+it('manifest JSON body hydrates AuthnService read-only requests', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $fix->set('user_id', 'user-php');
+    $fix->set('session_id', 'session-php');
+    $fix->set('token', 'token-php');
+    $fix->set('csrf_token', 'csrf-php');
+    $fix->set('otp_id', 'otp-php');
+    $fix->set('otp_code', '654321');
+    $fix->set('challenge_id', 'challenge-php');
+    $get = phpManifestJsonBody('get_user', $fix, 'tenant-php', 'project-php');
+    $sessions = phpManifestJsonBody('list_sessions', $fix, 'tenant-php', 'project-php');
+    $validate = phpManifestJsonBody('validate_token', $fix, 'tenant-php', 'project-php');
+    $authenticate = phpManifestJsonBody('authenticate', $fix, 'tenant-php', 'project-php');
+    $csrf = phpManifestJsonBody('validate_csrf', $fix, 'tenant-php', 'project-php');
+    $otp = phpManifestJsonBody('verify_otp', $fix, 'tenant-php', 'project-php');
+    $mfa = phpManifestJsonBody('verify_mfa_challenge', $fix, 'tenant-php', 'project-php');
+    expect($get)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\GetUserRequest::class)
+        ->and($get->getUserId())->toBe('user-php')
+        ->and($sessions)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\ListSessionsRequest::class)
+        ->and($sessions->getUserId())->toBe('user-php')
+        ->and($sessions->getActiveOnly())->toBeTrue()
+        ->and($sessions->getPage()->getPageSize())->toBe(20)
+        ->and($validate)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\ValidateTokenRequest::class)
+        ->and($validate->getToken())->toBe('token-php')
+        ->and($authenticate)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\AuthnRequest::class)
+        ->and($authenticate->getBearerToken())->toBe('token-php')
+        ->and($csrf)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\ValidateCSRFRequest::class)
+        ->and($csrf->getCsrfToken())->toBe('csrf-php')
+        ->and($otp)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\VerifyOTPRequest::class)
+        ->and($otp->getOtpId())->toBe('otp-php')
+        ->and($otp->getCode())->toBe('654321')
+        ->and($mfa)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\VerifyMfaChallengeRequest::class)
+        ->and($mfa->getChallengeId())->toBe('challenge-php');
+});
+
+it('manifest JSON body hydrates AuthnService session and MFA setup requests', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $fix->set('project', 'project-php');
+    $fix->set('username', 'bench-user');
+    $fix->set('user_id', 'user-php');
+    $fix->set('subject', 'subject-php');
+    $fix->set('refresh_token', 'refresh-php');
+    $fix->set('refresh_session_id', 'refresh-session-php');
+    $fix->set('otp_id', 'otp-php');
+    $login = phpManifestJsonBody('login', $fix, 'tenant-php', 'project-php', 'AuthnService');
+    $refreshToken = phpManifestJsonBody('refresh_token', $fix, 'tenant-php', 'project-php', 'AuthnService');
+    $refreshSession = phpManifestJsonBody('refresh_session', $fix, 'tenant-php', 'project-php', 'AuthnService');
+    $session = phpManifestJsonBody('create_session', $fix, 'tenant-php', 'project-php', 'AuthnService');
+    $created = phpManifestJsonBody('create_user', $fix, 'tenant-php', 'project-php', 'AuthnService');
+    $updated = phpManifestJsonBody('update_user', $fix, 'tenant-php', 'project-php', 'AuthnService');
+    $sentOtp = phpManifestJsonBody('send_otp', $fix, 'tenant-php', 'project-php', 'AuthnService');
+    $resentOtp = phpManifestJsonBody('resend_otp', $fix, 'tenant-php', 'project-php', 'AuthnService');
+    $enrolled = phpManifestJsonBody('enroll_mfa', $fix, 'tenant-php', 'project-php', 'AuthnService');
+    $recovery = phpManifestJsonBody('generate_recovery_codes', $fix, 'tenant-php', 'project-php', 'AuthnService');
+    $policy = phpManifestJsonBody('put_mfa_policy', $fix, 'tenant-php', 'project-php', 'AuthnService');
+    $forgot = phpManifestJsonBody('forgot_password', $fix, 'tenant-php', 'project-php', 'AuthnService');
+    $phone = phpManifestJsonBody('send_phone_verification', $fix, 'tenant-php', 'project-php', 'AuthnService');
+    $challenge = phpManifestJsonBody('issue_mfa_challenge', $fix, 'tenant-php', 'project-php', 'AuthnService');
+    expect($login)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\LoginRequest::class)
+        ->and($login->getUsername())->toBe('bench-user')
+        ->and($login->getPassword())->toBe('CorrectHorse1!')
+        ->and($login->getDeviceType())->not->toBe(0)
+        ->and($login->getProjectHint())->toBe('project-php')
+        ->and($refreshToken)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\RefreshTokenRequest::class)
+        ->and($refreshToken->getRefreshToken())->toBe('refresh-php')
+        ->and($refreshSession)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\RefreshSessionRequest::class)
+        ->and($refreshSession->getSessionId())->toBe('refresh-session-php')
+        ->and($refreshSession->getTtlSeconds())->toBe(3600)
+        ->and($session)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\CreateSessionRequest::class)
+        ->and($session->getPrincipal()->getSubject())->toBe('subject-php')
+        ->and($session->getTtlSeconds())->toBe(3600)
+        ->and($created)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\CreateUserRequest::class)
+        ->and($created->getUsername())->toBe('perf-u')
+        ->and($created->getAccountKind())->not->toBe(0)
+        ->and($updated)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\UpdateUserRequest::class)
+        ->and($updated->getFullName())->toBe('Perf U2')
+        ->and($updated->getEmail())->toBe('perf-u2@acme.test')
+        ->and($sentOtp)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\SendOTPRequest::class)
+        ->and($sentOtp->getOtpType())->not->toBe(0)
+        ->and($resentOtp)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\ResendOTPRequest::class)
+        ->and($resentOtp->getOriginalOtpId())->toBe('otp-php')
+        ->and($enrolled)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\EnrollMFARequest::class)
+        ->and($enrolled->getMfaType())->not->toBe(0)
+        ->and($recovery)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\GenerateRecoveryCodesRequest::class)
+        ->and($recovery->getCount())->toBe(10)
+        ->and($policy)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\PutMfaPolicyRequest::class)
+        ->and($policy->getRequireMfa())->toBeFalse()
+        ->and($forgot)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\ForgotPasswordRequest::class)
+        ->and($forgot->getIdentifier())->toBe('perf-u@acme.test')
+        ->and($phone)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\SendPhoneVerificationRequest::class)
+        ->and($phone->getPhone())->toBe('+15551234567')
+        ->and($challenge)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\IssueMfaChallengeRequest::class)
+        ->and($challenge->getPurpose())->not->toBe(0);
+});
+
+it('manifest JSON body hydrates AuthnService terminal and WebAuthn requests', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $fix->set('user_id', 'user-php');
+    $fix->set('session_id', 'session-php');
+    $fix->set('subject', 'subject-php');
+    $fix->set('code', 'code-php');
+    $fix->set('reset_otp_id', 'reset-otp-php');
+    $fix->set('reset_otp_code', '135790');
+    $fix->set('device_id', 'device-php');
+    $fix->set('record_id', 'credential-php');
+    $fix->set('reg_challenge_id', 'reg-challenge-php');
+    $fix->set('auth_challenge_id', 'auth-challenge-php');
+    $logout = phpManifestJsonBody('logout', $fix, 'tenant-php', 'project-php', 'AuthnService');
+    $revoked = phpManifestJsonBody('revoke_session', $fix, 'tenant-php', 'project-php', 'AuthnService');
+    $adminRevoked = phpManifestJsonBody('admin_revoke_session', $fix, 'tenant-php', 'project-php', 'AuthnService');
+    $adminAllUsers = phpManifestJsonBody('admin_revoke_all_user_sessions', $fix, 'tenant-php', 'project-php', 'AuthnService');
+    $adminAllTenant = phpManifestJsonBody('admin_revoke_all_tenant_sessions', $fix, 'tenant-php', 'project-php', 'AuthnService');
+    $emergency = phpManifestJsonBody('emergency_revoke', $fix, 'tenant-php', 'project-php', 'AuthnService');
+    $changedPassword = phpManifestJsonBody('change_password', $fix, 'tenant-php', 'project-php', 'AuthnService');
+    $resetPassword = phpManifestJsonBody('reset_password', $fix, 'tenant-php', 'project-php', 'AuthnService');
+    $changedStatus = phpManifestJsonBody('change_user_status', $fix, 'tenant-php', 'project-php', 'AuthnService');
+    $adminResetPassword = phpManifestJsonBody('admin_reset_password', $fix, 'tenant-php', 'project-php', 'AuthnService');
+    $confirmedMfa = phpManifestJsonBody('confirm_mfaenrollment', $fix, 'tenant-php', 'project-php', 'AuthnService');
+    $disabledMfa = phpManifestJsonBody('disable_mfa_factor', $fix, 'tenant-php', 'project-php', 'AuthnService');
+    $renamed = phpManifestJsonBody('rename_passkey', $fix, 'tenant-php', 'project-php', 'AuthnService');
+    $revokedRecovery = phpManifestJsonBody('revoke_recovery_codes', $fix, 'tenant-php', 'project-php', 'AuthnService');
+    $adminResetMfa = phpManifestJsonBody('admin_reset_mfa', $fix, 'tenant-php', 'project-php', 'AuthnService');
+    $revokedDevice = phpManifestJsonBody('revoke_device', $fix, 'tenant-php', 'project-php', 'AuthnService');
+    $deletedWebAuthn = phpManifestJsonBody('delete_web_authn_credential', $fix, 'tenant-php', 'project-php', 'AuthnService');
+    $startedReg = phpManifestJsonBody('start_web_authn_registration', $fix, 'tenant-php', 'project-php', 'AuthnService');
+    $finishedReg = phpManifestJsonBody('finish_web_authn_registration', $fix, 'tenant-php', 'project-php', 'AuthnService');
+    $startedAuth = phpManifestJsonBody('start_web_authn_authentication', $fix, 'tenant-php', 'project-php', 'AuthnService');
+    $finishedAuth = phpManifestJsonBody('finish_web_authn_authentication', $fix, 'tenant-php', 'project-php', 'AuthnService');
+    expect($logout)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\LogoutRequest::class)
+        ->and($logout->getSessionId())->toBe('session-php')
+        ->and($revoked)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\RevokeSessionRequest::class)
+        ->and($revoked->getRevokeReason())->toBe('perf')
+        ->and($adminRevoked)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\AdminRevokeSessionRequest::class)
+        ->and($adminRevoked->getReason())->toBe('perf')
+        ->and($adminAllUsers)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\AdminRevokeAllUserSessionsRequest::class)
+        ->and($adminAllUsers->getUserId())->toBe('user-php')
+        ->and($adminAllTenant)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\AdminRevokeAllTenantSessionsRequest::class)
+        ->and($adminAllTenant->getTenantId())->toBe('tenant-php')
+        ->and($emergency)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\EmergencyRevokeRequest::class)
+        ->and($emergency->getPrincipalId())->toBe('subject-php')
+        ->and($changedPassword)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\ChangePasswordRequest::class)
+        ->and($changedPassword->getCurrentPassword())->toBe('CorrectHorse1!')
+        ->and($changedPassword->getOtpId())->toBe('')
+        ->and($resetPassword)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\ResetPasswordRequest::class)
+        ->and($resetPassword->getCode())->toBe('135790')
+        ->and($changedStatus)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\ChangeUserStatusRequest::class)
+        ->and($changedStatus->getNewStatus())->not->toBe(0)
+        ->and($adminResetPassword)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\AdminResetPasswordRequest::class)
+        ->and($adminResetPassword->getUserId())->toBe('user-php')
+        ->and($confirmedMfa)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\ConfirmMFAEnrollmentRequest::class)
+        ->and($confirmedMfa->getOtpId())->toBe('code-php')
+        ->and($disabledMfa)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\DisableMfaFactorRequest::class)
+        ->and($disabledMfa->getFactorKind())->not->toBe(0)
+        ->and($renamed)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\RenamePasskeyRequest::class)
+        ->and($renamed->getNewLabel())->toBe('perf-key2')
+        ->and($revokedRecovery)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\RevokeRecoveryCodesRequest::class)
+        ->and($revokedRecovery->getUserId())->toBe('user-php')
+        ->and($adminResetMfa)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\AdminResetMfaRequest::class)
+        ->and($adminResetMfa->getReason())->toBe('perf')
+        ->and($revokedDevice)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\RevokeDeviceRequest::class)
+        ->and($revokedDevice->getDeviceId())->toBe('device-php')
+        ->and($deletedWebAuthn)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\DeleteWebAuthnCredentialRequest::class)
+        ->and($deletedWebAuthn->getCredentialId())->toBe('credential-php')
+        ->and($startedReg)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\StartWebAuthnRegistrationRequest::class)
+        ->and($startedReg->getLabel())->toBe('perf-key')
+        ->and($finishedReg)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\FinishWebAuthnRegistrationRequest::class)
+        ->and($finishedReg->getChallengeId())->toBe('reg-challenge-php')
+        ->and($finishedReg->getPublicKeyCredentialJson())->toBe('__UDB_WEBAUTHN_TEST__')
+        ->and($startedAuth)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\StartWebAuthnAuthenticationRequest::class)
+        ->and($startedAuth->getTenantId())->toBe('tenant-php')
+        ->and($finishedAuth)->toBeInstanceOf(\Udb\Core\Authn\Services\V1\FinishWebAuthnAuthenticationRequest::class)
+        ->and($finishedAuth->getChallengeId())->toBe('auth-challenge-php')
+        ->and($finishedAuth->getPublicKeyCredentialJson())->toBe('__UDB_WEBAUTHN_TEST__');
+});
+
+it('manifest JSON body hydrates IdentityProviderService read-only requests', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $fix->set('provider_id', 'provider-php');
+    $get = phpManifestJsonBody('get_provider', $fix, 'tenant-php', 'project-php');
+    $list = phpManifestJsonBody('list_providers', $fix, 'tenant-php', 'project-php');
+    $claims = phpManifestJsonBody('preview_claim_mapping', $fix, 'tenant-php', 'project-php');
+    $groups = phpManifestJsonBody('preview_group_mapping', $fix, 'tenant-php', 'project-php');
+    expect($get)->toBeInstanceOf(\Udb\Core\Idp\Services\V1\GetProviderRequest::class)
+        ->and($get->getProviderId())->toBe('provider-php')
+        ->and($get->getTenantId())->toBe('tenant-php')
+        ->and($list)->toBeInstanceOf(\Udb\Core\Idp\Services\V1\ListProvidersRequest::class)
+        ->and($list->getPage()->getPageSize())->toBe(20)
+        ->and($claims)->toBeInstanceOf(\Udb\Core\Idp\Services\V1\PreviewClaimMappingRequest::class)
+        ->and($claims->getClaimsJson())->toBe('{"sub":"abc","email":"a@x.com"}')
+        ->and($groups)->toBeInstanceOf(\Udb\Core\Idp\Services\V1\PreviewGroupMappingRequest::class)
+        ->and(iterator_to_array($groups->getGroups()))->toBe(['admins']);
+});
+
+it('manifest JSON body hydrates AssetService requests', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $fix->set('asset_id', 'asset-php');
+    $fix->set('definition_id', 'definition-php');
+    $fix->set('file_id', 'file-php');
+    $fix->set('instance_id', 'instance-php');
+    $fix->set('project', 'project-php');
+    $fix->set('step_id', 'step-php');
+    $complete = phpManifestJsonBody('complete_step', $fix, 'tenant-php', 'project-php', 'AssetService');
+    $created = phpManifestJsonBody('create_pipeline_definition', $fix, 'tenant-php', 'project-php', 'AssetService');
+    $asset = phpManifestJsonBody('get_asset', $fix, 'tenant-php', 'project-php', 'AssetService');
+    $definition = phpManifestJsonBody('get_pipeline_definition', $fix, 'tenant-php', 'project-php', 'AssetService');
+    $pipeline = phpManifestJsonBody('get_pipeline', $fix, 'tenant-php', 'project-php', 'AssetService');
+    $list = phpManifestJsonBody('list_assets', $fix, 'tenant-php', 'project-php', 'AssetService');
+    $registered = phpManifestJsonBody('register_asset', $fix, 'tenant-php', 'project-php', 'AssetService');
+    $started = phpManifestJsonBody('start_pipeline', $fix, 'tenant-php', 'project-php', 'AssetService');
+    expect($complete)->toBeInstanceOf(\Udb\Core\Asset\Services\V1\CompleteStepRequest::class)
+        ->and($complete->getStepId())->toBe('step-php')
+        ->and($complete->getStatus())->toBe('COMPLETED')
+        ->and($complete->getResult())->toBe('{}')
+        ->and($created)->toBeInstanceOf(\Udb\Core\Asset\Services\V1\CreatePipelineDefinitionRequest::class)
+        ->and($created->getSteps())->toBe('[{"name":"resize","type":"TRANSFORM"}]')
+        ->and($created->getVersion())->toBe(1)
+        ->and($asset)->toBeInstanceOf(\Udb\Core\Asset\Services\V1\GetAssetRequest::class)
+        ->and($asset->getAssetId())->toBe('asset-php')
+        ->and($definition)->toBeInstanceOf(\Udb\Core\Asset\Services\V1\GetPipelineDefinitionRequest::class)
+        ->and($definition->getDefinitionId())->toBe('definition-php')
+        ->and($pipeline)->toBeInstanceOf(\Udb\Core\Asset\Services\V1\GetPipelineRequest::class)
+        ->and($pipeline->getInstanceId())->toBe('instance-php')
+        ->and($list)->toBeInstanceOf(\Udb\Core\Asset\Services\V1\ListAssetsRequest::class)
+        ->and($list->getMediaType())->toBe('image/png')
+        ->and($list->getPageSize())->toBe(20)
+        ->and($registered)->toBeInstanceOf(\Udb\Core\Asset\Services\V1\RegisterAssetRequest::class)
+        ->and($registered->getProjectId())->toBe('project-php')
+        ->and($registered->getFileId())->toBe('file-php')
+        ->and($registered->getMetadata())->toBe('{"source":"upload"}')
+        ->and($started)->toBeInstanceOf(\Udb\Core\Asset\Services\V1\StartPipelineRequest::class)
+        ->and($started->getDefinitionId())->toBe('definition-php')
+        ->and($started->getAssetId())->toBe('asset-php')
+        ->and($started->getCorrelationId())->toBe('run-001');
+});
+
+it('manifest JSON body hydrates WebRTC read-only requests', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $fix->set('room_id', 'room-php');
+    $fix->set('peer_id', 'peer-php');
+    $fix->set('track_id', 'track-php');
+    $room = phpManifestJsonBody('get_room', $fix, 'tenant-php', 'project-php');
+    $rooms = phpManifestJsonBody('list_rooms', $fix, 'tenant-php', 'project-php');
+    $egress = phpManifestJsonBody('list_egress', $fix, 'tenant-php', 'project-php');
+    $peer = phpManifestJsonBody('get_peer', $fix, 'tenant-php', 'project-php');
+    $peers = phpManifestJsonBody('list_peers', $fix, 'tenant-php', 'project-php');
+    $tracks = phpManifestJsonBody('list_tracks', $fix, 'tenant-php', 'project-php');
+    expect($room)->toBeInstanceOf(\Udb\Core\Webrtc\Services\V1\GetRoomRequest::class)
+        ->and($room->getRoomId())->toBe('room-php')
+        ->and($rooms)->toBeInstanceOf(\Udb\Core\Webrtc\Services\V1\ListRoomsRequest::class)
+        ->and($rooms->getState())->toBe('active')
+        ->and($rooms->getPageSize())->toBe(20)
+        ->and($egress)->toBeInstanceOf(\Udb\Core\Webrtc\Services\V1\ListEgressRequest::class)
+        ->and($egress->getRoomId())->toBe('room-php')
+        ->and($peer)->toBeInstanceOf(\Udb\Core\Webrtc\Services\V1\GetPeerRequest::class)
+        ->and($peer->getPeerId())->toBe('peer-php')
+        ->and($peers)->toBeInstanceOf(\Udb\Core\Webrtc\Services\V1\ListPeersRequest::class)
+        ->and($peers->getState())->toBe('connected')
+        ->and($tracks)->toBeInstanceOf(\Udb\Core\Webrtc\Services\V1\ListTracksRequest::class)
+        ->and($tracks->getKind())->toBe('audio')
+        ->and($tracks->getPageSize())->toBe(20);
+});
+
+it('manifest JSON body hydrates RoomService mutation requests', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $fix->set('room_id', 'room-php');
+    $fix->set('close_room_id', 'close-room-php');
+    $fix->set('track_id', 'track-php');
+    $fix->set('object_key', 'object-php');
+    $fix->set('egress_id', 'egress-php');
+    $fix->set('user_id', 'user-php');
+    $created = phpManifestJsonBody('create_room', $fix, 'tenant-php', 'project-php', 'RoomService');
+    $updated = phpManifestJsonBody('update_room', $fix, 'tenant-php', 'project-php', 'RoomService');
+    $closed = phpManifestJsonBody('close_room', $fix, 'tenant-php', 'project-php', 'RoomService');
+    $composite = phpManifestJsonBody('start_room_composite', $fix, 'tenant-php', 'project-php', 'RoomService');
+    $trackEgress = phpManifestJsonBody('start_track_egress', $fix, 'tenant-php', 'project-php', 'RoomService');
+    $stopped = phpManifestJsonBody('stop_egress', $fix, 'tenant-php', 'project-php', 'RoomService');
+    expect($created)->toBeInstanceOf(\Udb\Core\Webrtc\Services\V1\CreateRoomRequest::class)
+        ->and($created->getCreatedBy())->toBe('user-php')
+        ->and($created->getMaxParticipants())->toBe(10)
+        ->and($created->getConfig())->toBe('{}')
+        ->and($updated)->toBeInstanceOf(\Udb\Core\Webrtc\Services\V1\UpdateRoomRequest::class)
+        ->and($updated->getName())->toBe('bench-room-2')
+        ->and($updated->getState())->toBe('active')
+        ->and($closed)->toBeInstanceOf(\Udb\Core\Webrtc\Services\V1\CloseRoomRequest::class)
+        ->and($closed->getRoomId())->toBe('close-room-php')
+        ->and($composite)->toBeInstanceOf(\Udb\Core\Webrtc\Services\V1\StartRoomCompositeRequest::class)
+        ->and($composite->getDestination())->toBe('object-php')
+        ->and($composite->getOptions())->toBe('{}')
+        ->and($trackEgress)->toBeInstanceOf(\Udb\Core\Webrtc\Services\V1\StartTrackEgressRequest::class)
+        ->and($trackEgress->getTrackId())->toBe('track-php')
+        ->and($trackEgress->getFormat())->toBe('mp4')
+        ->and($stopped)->toBeInstanceOf(\Udb\Core\Webrtc\Services\V1\StopEgressRequest::class)
+        ->and($stopped->getEgressId())->toBe('egress-php');
+});
+
+it('manifest JSON body hydrates PeerService mutation requests', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $fix->set('room_id', 'room-php');
+    $fix->set('join_session_room_id', 'join-session-room-php');
+    $fix->set('leave_peer_id', 'leave-peer-php');
+    $joined = phpManifestJsonBody('join_room', $fix, 'tenant-php', 'project-php', 'PeerService');
+    $session = phpManifestJsonBody('join_session', $fix, 'tenant-php', 'project-php', 'PeerService');
+    $left = phpManifestJsonBody('leave_room', $fix, 'tenant-php', 'project-php', 'PeerService');
+    expect($joined)->toBeInstanceOf(\Udb\Core\Webrtc\Services\V1\JoinRoomRequest::class)
+        ->and($joined->getDisplayName())->toBe('Bench User')
+        ->and($joined->getMetadata())->toBe('{}')
+        ->and($joined->getUserAgent())->toBe('bench/1.0')
+        ->and($session)->toBeInstanceOf(\Udb\Core\Webrtc\Services\V1\JoinSessionRequest::class)
+        ->and($session->getRoomId())->toBe('join-session-room-php')
+        ->and($session->getTtlSeconds())->toBe(3600)
+        ->and($left)->toBeInstanceOf(\Udb\Core\Webrtc\Services\V1\LeaveRoomRequest::class)
+        ->and($left->getPeerId())->toBe('leave-peer-php');
+});
+
+it('manifest JSON body hydrates TrackService mutation requests', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $fix->set('room_id', 'room-php');
+    $fix->set('peer_id', 'peer-php');
+    $fix->set('track_id', 'track-php');
+    $fix->set('unpublish_track_id', 'track-disposable-php');
+    $published = phpManifestJsonBody('publish_track', $fix, 'tenant-php', 'project-php', 'TrackService');
+    $muted = phpManifestJsonBody('mute_track', $fix, 'tenant-php', 'project-php', 'TrackService');
+    $unpublished = phpManifestJsonBody('unpublish_track', $fix, 'tenant-php', 'project-php', 'TrackService');
+    expect($published)->toBeInstanceOf(\Udb\Core\Webrtc\Services\V1\PublishTrackRequest::class)
+        ->and($published->getKind())->toBe('audio')
+        ->and($published->getLabel())->toBe('mic')
+        ->and($published->getSettings())->toBe('{}')
+        ->and($published->getMetadata())->toBe('{}')
+        ->and($muted)->toBeInstanceOf(\Udb\Core\Webrtc\Services\V1\MuteTrackRequest::class)
+        ->and($muted->getTrackId())->toBe('track-php')
+        ->and($muted->getMuted())->toBeTrue()
+        ->and($unpublished)->toBeInstanceOf(\Udb\Core\Webrtc\Services\V1\UnpublishTrackRequest::class)
+        ->and($unpublished->getTrackId())->toBe('track-disposable-php');
+});
+
+it('manifest JSON body hydrates NotificationService read-only requests', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $fix->set('user_id', 'user-php');
+    $fix->set('event_type', 'event-php');
+    $fix->set('log_id', 'log-php');
+    $stats = phpManifestJsonBody('get_delivery_stats', $fix, 'tenant-php', 'project-php');
+    $notification = phpManifestJsonBody('get_notification', $fix, 'tenant-php', 'project-php');
+    $preference = phpManifestJsonBody('get_preference', $fix, 'tenant-php', 'project-php');
+    $template = phpManifestJsonBody('get_template', $fix, 'tenant-php', 'project-php');
+    $notifications = phpManifestJsonBody('list_notifications', $fix, 'tenant-php', 'project-php');
+    $preferences = phpManifestJsonBody('list_preferences', $fix, 'tenant-php', 'project-php');
+    $templates = phpManifestJsonBody('list_templates', $fix, 'tenant-php', 'project-php');
+    expect($stats)->toBeInstanceOf(\Udb\Core\Notification\Services\V1\GetDeliveryStatsRequest::class)
+        ->and($stats->getEventType())->toBe('event-php')
+        ->and($stats->getDateTo())->toBe('2026-12-31')
+        ->and($notification)->toBeInstanceOf(\Udb\Core\Notification\Services\V1\GetNotificationRequest::class)
+        ->and($notification->getLogId())->toBe('log-php')
+        ->and($preference)->toBeInstanceOf(\Udb\Core\Notification\Services\V1\GetPreferenceRequest::class)
+        ->and($preference->getUserId())->toBe('user-php')
+        ->and($template)->toBeInstanceOf(\Udb\Core\Notification\Services\V1\GetTemplateRequest::class)
+        ->and($template->getLocale())->toBe('en')
+        ->and($notifications)->toBeInstanceOf(\Udb\Core\Notification\Services\V1\ListNotificationsRequest::class)
+        ->and($notifications->getPage()->getPageSize())->toBe(20)
+        ->and($preferences)->toBeInstanceOf(\Udb\Core\Notification\Services\V1\ListPreferencesRequest::class)
+        ->and($preferences->getUserId())->toBe('user-php')
+        ->and($templates)->toBeInstanceOf(\Udb\Core\Notification\Services\V1\ListTemplatesRequest::class)
+        ->and($templates->getPage()->getPageSize())->toBe(20);
+});
+
+it('manifest JSON body hydrates NotificationService mutation requests', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $fix->set('project', 'project-php');
+    $fix->set('user_id', 'user-php');
+    $fix->set('event_type', 'event-php');
+    $fix->set('log_id', 'log-php');
+    $sent = phpManifestJsonBody('send_notification', $fix, 'tenant-php', 'project-php', 'NotificationService');
+    $reported = phpManifestJsonBody('report_delivery', $fix, 'tenant-php', 'project-php', 'NotificationService');
+    $retried = phpManifestJsonBody('retry_notification', $fix, 'tenant-php', 'project-php', 'NotificationService');
+    $preference = phpManifestJsonBody('set_preference', $fix, 'tenant-php', 'project-php', 'NotificationService');
+    $template = phpManifestJsonBody('upsert_template', $fix, 'tenant-php', 'project-php', 'NotificationService');
+    $sendVariables = $sent ? iterator_to_array($sent->getVariables()) : [];
+    expect($sent)->toBeInstanceOf(\Udb\Core\Notification\Services\V1\SendNotificationRequest::class)
+        ->and($sent->getProjectId())->toBe('project-php')
+        ->and($sendVariables['name'] ?? null)->toBe('SDK')
+        ->and(count($sent->getChannels()))->toBe(1)
+        ->and($sent->getContext()->getPurpose())->toBe('go.live.perf')
+        ->and($reported)->toBeInstanceOf(\Udb\Core\Notification\Services\V1\ReportDeliveryRequest::class)
+        ->and($reported->getProvider())->toBe('sdk-perf')
+        ->and($reported->getProviderMessageId())->toBe('sdk-perf-delivery')
+        ->and($reported->getContext()->getTenant()->getProjectId())->toBe('project-php')
+        ->and($retried)->toBeInstanceOf(\Udb\Core\Notification\Services\V1\RetryNotificationRequest::class)
+        ->and($retried->getLogId())->toBe('log-php')
+        ->and($retried->getContext()->getPurpose())->toBe('go.live.perf')
+        ->and($preference)->toBeInstanceOf(\Udb\Core\Notification\Services\V1\SetPreferenceRequest::class)
+        ->and($preference->getIsOptedOut())->toBeTrue()
+        ->and($preference->getEventType())->toBe('')
+        ->and($template)->toBeInstanceOf(\Udb\Core\Notification\Services\V1\UpsertTemplateRequest::class)
+        ->and($template->getSubjectTemplate())->toBe('Hello {name}')
+        ->and($template->getBodyTemplate())->toBe('Body {name}')
+        ->and($template->getIsActive())->toBeTrue();
+});
+
+it('manifest JSON body hydrates CacheService read-only requests', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $fix->set('object_key', 'cache-key-php');
+    $get = phpManifestJsonBody('cache_get', $fix, 'tenant-php', 'project-php', 'CacheService');
+    $stats = phpManifestJsonBody('get_cache_namespace_stats', $fix, 'tenant-php', 'project-php', 'CacheService');
+    $scan = phpManifestJsonBody('cache_scan', $fix, 'tenant-php', 'project-php', 'CacheService');
+    expect($get)->toBeInstanceOf(\Udb\Core\Cache\Services\V1\GetRequest::class)
+        ->and($get->getTenantId())->toBe('tenant-php')
+        ->and($get->getKey())->toBe('cache-key-php')
+        ->and($stats)->toBeInstanceOf(\Udb\Core\Cache\Services\V1\GetNamespaceStatsRequest::class)
+        ->and($stats->getNamespace())->toBe('sdk-perf-cache')
+        ->and($scan)->toBeInstanceOf(\Udb\Core\Cache\Services\V1\ScanRequest::class)
+        ->and($scan->getLimit())->toBe(50)
+        ->and($scan->getPageToken())->toBe('0');
+});
+
+it('manifest JSON body hydrates CacheService mutation requests', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $fix->set('object_key', 'cache-key-php');
+    $created = phpManifestJsonBody('create_cache_namespace', $fix, 'tenant-php', 'project-php', 'CacheService');
+    $set = phpManifestJsonBody('cache_set', $fix, 'tenant-php', 'project-php', 'CacheService');
+    $deleted = phpManifestJsonBody('cache_delete', $fix, 'tenant-php', 'project-php', 'CacheService');
+    $dropped = phpManifestJsonBody('delete_cache_namespace', $fix, 'tenant-php', 'project-php', 'CacheService');
+    expect($created)->toBeInstanceOf(\Udb\Core\Cache\Services\V1\CreateNamespaceRequest::class)
+        ->and($created->getNamespace())->toBe('sdk-perf-cache')
+        ->and($created->getMaxBytes())->toBe(1048576)
+        ->and($created->getDefaultTtlSeconds())->toBe(300)
+        ->and($set)->toBeInstanceOf(\Udb\Core\Cache\Services\V1\SetRequest::class)
+        ->and($set->getKey())->toBe('cache-key-php')
+        ->and($set->getValue())->toBe('perf')
+        ->and($set->getTtlSeconds())->toBe(300)
+        ->and($deleted)->toBeInstanceOf(\Udb\Core\Cache\Services\V1\DeleteRequest::class)
+        ->and($deleted->getKey())->toBe('cache-key-php')
+        ->and($dropped)->toBeInstanceOf(\Udb\Core\Cache\Services\V1\DeleteNamespaceRequest::class)
+        ->and($dropped->getConfirmationToken())->toBe('sdk-perf-cache');
+});
+
+it('manifest JSON body hydrates MeteringService read-only requests', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $check = phpManifestJsonBody('check_quota', $fix, 'tenant-php', 'project-php');
+    $quota = phpManifestJsonBody('get_quota', $fix, 'tenant-php', 'project-php');
+    $list = phpManifestJsonBody('list_quotas', $fix, 'tenant-php', 'project-php');
+    $usage = phpManifestJsonBody('query_usage', $fix, 'tenant-php', 'project-php');
+    expect($check)->toBeInstanceOf(\Udb\Core\Metering\Services\V1\CheckQuotaRequest::class)
+        ->and($check->getMetric())->toBe('sdk.perf.request')
+        ->and($quota)->toBeInstanceOf(\Udb\Core\Metering\Services\V1\GetQuotaRequest::class)
+        ->and($quota->getProjectId())->toBe('project-php')
+        ->and($list)->toBeInstanceOf(\Udb\Core\Metering\Services\V1\ListQuotasRequest::class)
+        ->and($list->getLimit())->toBe(50)
+        ->and($list->getPageSize())->toBe(50)
+           ->and($usage)->toBeInstanceOf(\Udb\Core\Metering\Services\V1\QueryUsageRequest::class)
+           ->and($usage->getWindowSeconds())->toBe(86400);
+});
+
+it('manifest JSON body hydrates MeteringService mutation requests', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $fix->set('project', 'project-php');
+    $fix->set('user_id', 'user-php');
+    $quota = phpManifestJsonBody('put_quota', $fix, 'tenant-php', 'project-php');
+    $usage = phpManifestJsonBody('record_usage', $fix, 'tenant-php', 'project-php');
+    expect($quota)->toBeInstanceOf(\Udb\Core\Metering\Services\V1\PutQuotaRequest::class)
+        ->and($quota->getLimitValue())->toBe(1000000)
+        ->and($quota->getEnabled())->toBeTrue()
+        ->and($quota->getMetadataJson())->toBe('{}')
+        ->and($usage)->toBeInstanceOf(\Udb\Core\Metering\Services\V1\RecordUsageRequest::class)
+        ->and($usage->getPrincipalId())->toBe('user-php')
+        ->and($usage->getQuantity())->toBe(1)
+        ->and($usage->getUnit())->toBe('request');
+});
+
+it('manifest JSON body hydrates LockService requests', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $fix->set('user_id', 'user-php');
+    $fix->set('fencing_token', '77');
+    $acquired = phpManifestJsonBody('acquire_lock', $fix, 'tenant-php', 'project-php', 'LockService');
+    $renewed = phpManifestJsonBody('renew_lock', $fix, 'tenant-php', 'project-php', 'LockService');
+    $released = phpManifestJsonBody('release_lock', $fix, 'tenant-php', 'project-php', 'LockService');
+    expect($acquired)->toBeInstanceOf(\Udb\Core\Lock\Services\V1\AcquireLockRequest::class)
+        ->and($acquired->getLeaseTtlSeconds())->toBe(60)
+        ->and($acquired->getMetadataJson())->toBe('{}')
+        ->and($renewed)->toBeInstanceOf(\Udb\Core\Lock\Services\V1\RenewLockRequest::class)
+        ->and($renewed->getFencingToken())->toBe(77)
+        ->and($released)->toBeInstanceOf(\Udb\Core\Lock\Services\V1\ReleaseLockRequest::class)
+        ->and($released->getOwnerId())->toBe('user-php')
+        ->and($released->getFencingToken())->toBe(77);
+});
+
+it('manifest JSON body hydrates SchedulerService read-only requests', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $fix->set('job_id', 'job-php');
+    $job = phpManifestJsonBody('get_job', $fix, 'tenant-php', 'project-php');
+    $jobs = phpManifestJsonBody('list_jobs', $fix, 'tenant-php', 'project-php');
+    expect($job)->toBeInstanceOf(\Udb\Core\Scheduler\Services\V1\GetJobRequest::class)
+        ->and($job->getJobId())->toBe('job-php')
+        ->and($jobs)->toBeInstanceOf(\Udb\Core\Scheduler\Services\V1\ListJobsRequest::class)
+        ->and($jobs->getTenantId())->toBe('tenant-php')
+        ->and($jobs->getPageSize())->toBe(20);
+});
+
+it('manifest JSON body hydrates SchedulerService mutation requests', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $fix->set('project', 'project-php');
+    $fix->set('job_id', 'job-php');
+    $created = phpManifestJsonBody('create_job', $fix, 'tenant-php', 'project-php');
+    $paused = phpManifestJsonBody('pause_job', $fix, 'tenant-php', 'project-php');
+    $resumed = phpManifestJsonBody('resume_job', $fix, 'tenant-php', 'project-php');
+    $deleted = phpManifestJsonBody('delete_job', $fix, 'tenant-php', 'project-php');
+    expect($created)->toBeInstanceOf(\Udb\Core\Scheduler\Services\V1\CreateJobRequest::class)
+        ->and($created->getProjectId())->toBe('project-php')
+        ->and($created->getName())->toBe('sdk-perf-job')
+        ->and($created->getScheduleType())->toBe('CRON')
+        ->and($created->getCronExpression())->toBe('*/5 * * * *')
+        ->and($created->getPayload())->toBe('{}')
+        ->and($created->getTargetTopic())->toBe('sdk.perf.scheduler')
+        ->and($created->getMaxAttempts())->toBe(3)
+        ->and($created->getBackoffSeconds())->toBe(30)
+        ->and($paused)->toBeInstanceOf(\Udb\Core\Scheduler\Services\V1\PauseJobRequest::class)
+        ->and($paused->getJobId())->toBe('job-php')
+        ->and($resumed)->toBeInstanceOf(\Udb\Core\Scheduler\Services\V1\ResumeJobRequest::class)
+        ->and($resumed->getJobId())->toBe('job-php')
+        ->and($deleted)->toBeInstanceOf(\Udb\Core\Scheduler\Services\V1\DeleteJobRequest::class)
+        ->and($deleted->getJobId())->toBe('job-php');
+});
+
+it('manifest JSON body hydrates WebhookService read-only requests', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $fix->set('endpoint_id', 'endpoint-php');
+    $endpoint = phpManifestJsonBody('get_endpoint', $fix, 'tenant-php', 'project-php');
+    $deliveries = phpManifestJsonBody('list_deliveries', $fix, 'tenant-php', 'project-php');
+    $endpoints = phpManifestJsonBody('list_endpoints', $fix, 'tenant-php', 'project-php');
+    expect($endpoint)->toBeInstanceOf(\Udb\Core\Webhook\Services\V1\GetEndpointRequest::class)
+        ->and($endpoint->getEndpointId())->toBe('endpoint-php')
+        ->and($deliveries)->toBeInstanceOf(\Udb\Core\Webhook\Services\V1\ListDeliveriesRequest::class)
+        ->and($deliveries->getPageSize())->toBe(20)
+        ->and($endpoints)->toBeInstanceOf(\Udb\Core\Webhook\Services\V1\ListEndpointsRequest::class)
+        ->and($endpoints->getActiveOnly())->toBeTrue();
+});
+
+it('manifest JSON body hydrates WebhookService mutation requests', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $fix->set('endpoint_id', 'endpoint-php');
+    $fix->set('delete_endpoint_id', 'endpoint-delete-php');
+    $fix->set('topic_pattern', 'tenant-php.*');
+    $created = phpManifestJsonBody('create_endpoint', $fix, 'tenant-php', 'project-php');
+    $updated = phpManifestJsonBody('update_endpoint', $fix, 'tenant-php', 'project-php');
+    $deleted = phpManifestJsonBody('delete_endpoint', $fix, 'tenant-php', 'project-php');
+    expect($created)->toBeInstanceOf(\Udb\Core\Webhook\Services\V1\CreateEndpointRequest::class)
+        ->and($created->getUrl())->toBe('https://example.com/udb-webhook')
+        ->and($created->getTopicPattern())->toBe('tenant-php.*')
+        ->and($created->getMetadataJson())->toBe('{}')
+        ->and($created->getMaxAttempts())->toBe(3)
+        ->and($updated)->toBeInstanceOf(\Udb\Core\Webhook\Services\V1\UpdateEndpointRequest::class)
+        ->and($updated->getEndpointId())->toBe('endpoint-php')
+        ->and($updated->getDescription())->toBe('sdk perf webhook updated')
+        ->and($updated->getActive())->toBeTrue()
+        ->and($deleted)->toBeInstanceOf(\Udb\Core\Webhook\Services\V1\DeleteEndpointRequest::class)
+        ->and($deleted->getEndpointId())->toBe('endpoint-delete-php');
+});
+
+it('manifest JSON body hydrates BackupService requests', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $fix->set('backup_id', 'backup-php');
+    $fix->set('restore_tenant_id', 'restore-tenant-php');
+    $backup = phpManifestJsonBody('get_backup', $fix, 'tenant-php', 'project-php');
+    $policy = phpManifestJsonBody('get_backup_policy', $fix, 'tenant-php', 'project-php');
+    $policies = phpManifestJsonBody('list_backup_policies', $fix, 'tenant-php', 'project-php');
+    $backups = phpManifestJsonBody('list_backups', $fix, 'tenant-php', 'project-php');
+    $putPolicy = phpManifestJsonBody('put_backup_policy', $fix, 'tenant-php', 'project-php');
+    $started = phpManifestJsonBody('start_tenant_backup', $fix, 'tenant-php', 'project-php');
+    $restored = phpManifestJsonBody('restore_tenant', $fix, 'tenant-php', 'project-php');
+    $deleted = phpManifestJsonBody('delete_backup_policy', $fix, 'tenant-php', 'project-php');
+    expect($backup)->toBeInstanceOf(\Udb\Core\Backup\Services\V1\GetBackupRequest::class)
+        ->and($backup->getBackupId())->toBe('backup-php')
+        ->and($policy)->toBeInstanceOf(\Udb\Core\Backup\Services\V1\GetBackupPolicyRequest::class)
+        ->and($policy->getPolicyName())->toBe('sdk-perf-default')
+        ->and($policies)->toBeInstanceOf(\Udb\Core\Backup\Services\V1\ListBackupPoliciesRequest::class)
+        ->and($policies->getPageSize())->toBe(20)
+        ->and($backups)->toBeInstanceOf(\Udb\Core\Backup\Services\V1\ListBackupsRequest::class)
+        ->and($backups->getTenantId())->toBe('tenant-php')
+        ->and($putPolicy)->toBeInstanceOf(\Udb\Core\Backup\Services\V1\PutBackupPolicyRequest::class)
+        ->and($putPolicy->getScheduleCron())->toBe('0 3 * * *')
+        ->and($putPolicy->getRetentionDays())->toBe(7)
+        ->and($putPolicy->getMaxRetainedBackups())->toBe(3)
+        ->and($putPolicy->getEnabled())->toBeTrue()
+        ->and($started)->toBeInstanceOf(\Udb\Core\Backup\Services\V1\StartTenantBackupRequest::class)
+        ->and($started->getTenantId())->toBe('tenant-php')
+        ->and($restored)->toBeInstanceOf(\Udb\Core\Backup\Services\V1\RestoreTenantRequest::class)
+        ->and($restored->getTargetTenantId())->toBe('restore-tenant-php')
+        ->and($restored->getConfirmationToken())->toBe('yes')
+        ->and($restored->getAllowCrossTenant())->toBeFalse()
+        ->and($deleted)->toBeInstanceOf(\Udb\Core\Backup\Services\V1\DeleteBackupPolicyRequest::class)
+        ->and($deleted->getPolicyName())->toBe('sdk-perf-default');
+});
+
+it('manifest JSON body hydrates ConfigService read-only requests', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $fix->set('project', 'project-php');
+    $evaluated = phpManifestJsonBody('evaluate_flags', $fix, 'tenant-php', 'project-php');
+    $flag = phpManifestJsonBody('get_flag', $fix, 'tenant-php', 'project-php');
+    $flags = phpManifestJsonBody('list_flags', $fix, 'tenant-php', 'project-php');
+    expect($evaluated)->toBeInstanceOf(\Udb\Core\Config\Services\V1\EvaluateFlagsRequest::class)
+        ->and(iterator_to_array($evaluated->getKeys()))->toBe(['sdk.perf.enabled'])
+        ->and($evaluated->getContext()->getProjectId())->toBe('project-php')
+        ->and($flag)->toBeInstanceOf(\Udb\Core\Config\Services\V1\GetFlagRequest::class)
+        ->and($flag->getFlagKey())->toBe('sdk.perf.enabled')
+        ->and($flags)->toBeInstanceOf(\Udb\Core\Config\Services\V1\ListFlagsRequest::class)
+        ->and($flags->getLimit())->toBe(50);
+});
+
+it('manifest JSON body hydrates ConfigService mutation requests', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $fix->set('project', 'project-php');
+    $put = phpManifestJsonBody('put_flag', $fix, 'tenant-php', 'project-php');
+    $delete = phpManifestJsonBody('delete_flag', $fix, 'tenant-php', 'project-php');
+    expect($put)->toBeInstanceOf(\Udb\Core\Config\Services\V1\PutFlagRequest::class)
+        ->and($put->getValue()->getBoolValue())->toBeTrue()
+        ->and($put->getRolloutPercentage())->toBe(100)
+        ->and($put->getMetadataJson())->toBe('{}')
+        ->and($delete)->toBeInstanceOf(\Udb\Core\Config\Services\V1\DeleteFlagRequest::class)
+        ->and($delete->getFlagKey())->toBe('sdk.perf.enabled')
+        ->and($delete->getProjectId())->toBe('project-php');
+});
+
+it('manifest JSON body hydrates WorkflowService read-only requests', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $fix->set('workflow_id', 'workflow-php');
+    $workflow = phpManifestJsonBody('get_workflow', $fix, 'tenant-php', 'project-php');
+    $workflows = phpManifestJsonBody('list_workflows', $fix, 'tenant-php', 'project-php');
+    expect($workflow)->toBeInstanceOf(\Udb\Core\Workflow\Services\V1\GetWorkflowRequest::class)
+        ->and($workflow->getWorkflowId())->toBe('workflow-php')
+        ->and($workflows)->toBeInstanceOf(\Udb\Core\Workflow\Services\V1\ListWorkflowsRequest::class)
+        ->and($workflows->getStatus())->toBe('RUNNING')
+        ->and($workflows->getPageSize())->toBe(20);
+});
+
+it('manifest JSON body hydrates WorkflowService mutation requests', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $fix->set('project', 'project-php');
+    $fix->set('record_id', 'record-php');
+    $fix->set('workflow_id', 'workflow-php');
+    $fix->set('cancel_workflow_id', 'workflow-cancel-php');
+    $started = phpManifestJsonBody('start_workflow', $fix, 'tenant-php', 'project-php');
+    $cancelled = phpManifestJsonBody('cancel_workflow', $fix, 'tenant-php', 'project-php');
+    $signalled = phpManifestJsonBody('signal_workflow', $fix, 'tenant-php', 'project-php');
+    expect($started)->toBeInstanceOf(\Udb\Core\Workflow\Services\V1\StartWorkflowRequest::class)
+        ->and($started->getProjectId())->toBe('project-php')
+        ->and($started->getWorkflowType())->toBe('sdk.perf.workflow')
+        ->and($started->getTotalSteps())->toBe(1)
+        ->and($started->getPayload())->toBe('{}')
+        ->and($started->getCompensations())->toBe('[]')
+        ->and($started->getCorrelationId())->toBe('record-php')
+        ->and($cancelled)->toBeInstanceOf(\Udb\Core\Workflow\Services\V1\CancelWorkflowRequest::class)
+        ->and($cancelled->getWorkflowId())->toBe('workflow-cancel-php')
+        ->and($cancelled->getReason())->toBe('sdk perf cancel')
+        ->and($signalled)->toBeInstanceOf(\Udb\Core\Workflow\Services\V1\SignalWorkflowRequest::class)
+        ->and($signalled->getWorkflowId())->toBe('workflow-php')
+        ->and($signalled->getSignalName())->toBe('continue')
+        ->and($signalled->getSignalPayload())->toBe('{"ok":true}');
+});
+
+it('manifest JSON body hydrates SearchService read-only requests', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $indexes = phpManifestJsonBody('list_indexes', $fix, 'tenant-php', 'project-php');
+    $search = phpManifestJsonBody('search', $fix, 'tenant-php', 'project-php');
+    expect($indexes)->toBeInstanceOf(\Udb\Core\Search\Services\V1\ListIndexesRequest::class)
+        ->and($indexes->getPageSize())->toBe(50)
+        ->and($search)->toBeInstanceOf(\Udb\Core\Search\Services\V1\SearchRequest::class)
+        ->and(array_map(fn ($v) => round((float) $v, 1), iterator_to_array($search->getQueryVector())))->toBe([0.1, 0.2, 0.3])
+        ->and($search->getTopK())->toBe(5)
+        ->and($search->getMode())->toBe(\Udb\Core\Search\Services\V1\SearchMode::SEARCH_MODE_HYBRID);
+});
+
+it('manifest JSON body hydrates SearchService mutation requests', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $fix->set('message_type', 'myapp.v1.Invoice');
+    $created = phpManifestJsonBody('create_index', $fix, 'tenant-php', 'project-php');
+    $reindex = phpManifestJsonBody('reindex', $fix, 'tenant-php', 'project-php');
+    $deleted = phpManifestJsonBody('delete_index', $fix, 'tenant-php', 'project-php');
+    expect($created)->toBeInstanceOf(\Udb\Core\Search\Services\V1\CreateIndexRequest::class)
+        ->and($created->getSourceMessageType())->toBe('myapp.v1.Invoice')
+        ->and($created->getBackend())->toBe('qdrant')
+        ->and($created->getVectorDims())->toBe(3)
+        ->and($created->getMetadataJson())->toBe('{}')
+        ->and($reindex)->toBeInstanceOf(\Udb\Core\Search\Services\V1\ReindexRequest::class)
+        ->and($reindex->getIndexName())->toBe('sdk_live_records')
+        ->and($deleted)->toBeInstanceOf(\Udb\Core\Search\Services\V1\DeleteIndexRequest::class)
+        ->and($deleted->getIndexName())->toBe('sdk_live_records');
+});
+
+it('manifest JSON body hydrates EmbeddingService read-only requests', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $sources = phpManifestJsonBody('list_sources', $fix, 'tenant-php', 'project-php');
+    $retrieve = phpManifestJsonBody('retrieve', $fix, 'tenant-php', 'project-php');
+    expect($sources)->toBeInstanceOf(\Udb\Core\Embedding\Services\V1\ListSourcesRequest::class)
+        ->and($sources->getPageSize())->toBe(50)
+        ->and($retrieve)->toBeInstanceOf(\Udb\Core\Embedding\Services\V1\RetrieveRequest::class)
+        ->and(array_map(fn ($v) => round((float) $v, 1), iterator_to_array($retrieve->getQueryVector())))->toBe([0.1, 0.2, 0.3])
+        ->and($retrieve->getSourceName())->toBe('sdk_live_records')
+        ->and($retrieve->getTopK())->toBe(5);
+});
+
+it('manifest JSON body hydrates EmbeddingService mutation requests', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $fix->set('message_type', 'myapp.v1.Invoice');
+    $fix->set('record_id', 'record-php');
+    $registered = phpManifestJsonBody('register_source', $fix, 'tenant-php', 'project-php');
+    $reported = phpManifestJsonBody('report_embedding', $fix, 'tenant-php', 'project-php');
+    $backfill = phpManifestJsonBody('backfill', $fix, 'tenant-php', 'project-php');
+    $deleted = phpManifestJsonBody('delete_source', $fix, 'tenant-php', 'project-php');
+    expect($registered)->toBeInstanceOf(\Udb\Core\Embedding\Services\V1\RegisterSourceRequest::class)
+        ->and($registered->getSourceMessageType())->toBe('myapp.v1.Invoice')
+        ->and(iterator_to_array($registered->getTextFields()))->toBe(['payload'])
+        ->and($registered->getMetadataJson())->toBe('{}')
+        ->and($reported)->toBeInstanceOf(\Udb\Core\Embedding\Services\V1\ReportEmbeddingRequest::class)
+        ->and($reported->getRowPk())->toBe('record-php')
+        ->and(array_map(fn ($v) => round((float) $v, 1), iterator_to_array($reported->getVector())))->toBe([0.1, 0.2, 0.3])
+        ->and($reported->getDims())->toBe(3)
+        ->and($backfill)->toBeInstanceOf(\Udb\Core\Embedding\Services\V1\BackfillRequest::class)
+        ->and($backfill->getSourceName())->toBe('sdk_live_records')
+        ->and($deleted)->toBeInstanceOf(\Udb\Core\Embedding\Services\V1\DeleteSourceRequest::class)
+        ->and($deleted->getSourceName())->toBe('sdk_live_records');
+});
+
+it('manifest JSON body hydrates LiveQueryService subscribe request', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $fix->set('project', 'project-php');
+    $fix->set('message_type', 'myapp.v1.Invoice');
+    $fix->set('record_id', 'record-php');
+    $subscribe = phpManifestJsonBody('subscribe', $fix, 'tenant-php', 'project-php', 'LiveQueryService');
+    $filters = iterator_to_array($subscribe->getFilters());
+    expect($subscribe)->toBeInstanceOf(\Udb\Core\Livequery\Services\V1\SubscribeRequest::class)
+        ->and($subscribe->getMessageType())->toBe('myapp.v1.Invoice')
+        ->and($subscribe->getProjectId())->toBe('project-php')
+        ->and($subscribe->getSnapshotLimit())->toBe(10)
+        ->and(count($filters))->toBe(1)
+        ->and($filters[0]->getField())->toBe('record_id')
+        ->and($filters[0]->getOp())->toBe(\Udb\Core\Livequery\Services\V1\LiveQueryComparison::LIVE_QUERY_COMPARISON_EQ)
+        ->and($filters[0]->getValue())->toBe('record-php');
+});
+
+it('manifest JSON body hydrates WebRTC turn and signaling requests', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $fix->set('room_id', 'room-php');
+    $fix->set('peer_id', 'peer-php');
+    $fix->set('signal_peer_id', 'signal-peer-php');
+    $turn = phpManifestJsonBody('issue_credentials', $fix, 'tenant-php', 'project-php', 'TurnService');
+    $signal = phpManifestJsonBody('signal', $fix, 'tenant-php', 'project-php', 'SignalingService');
+    expect($turn)->toBeInstanceOf(\Udb\Core\Webrtc\Services\V1\IssueCredentialsRequest::class)
+        ->and($turn->getTtlSeconds())->toBe(3600)
+        ->and($turn->getPeerId())->toBe('peer-php')
+        ->and($signal)->toBeInstanceOf(\Udb\Core\Webrtc\Services\V1\SignalRequest::class)
+        ->and($signal->getPeerId())->toBe('signal-peer-php')
+        ->and($signal->getPing())->toBeTrue();
+});
+
+it('manifest JSON body hydrates VaultService requests', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $fix->set('vault_key_name', 'vault-key-php');
+    $fix->set('vault_ciphertext', 'udb-vault:v1:php');
+    $fix->set('vault_secret_path', 'app/config');
+    $fix->set('vault_signature', 'udb-vault-sig:v1:php');
+    $fix->set('vault_delete_secret_path', 'app/delete');
+    $fix->set('vault_destroy_secret_path', 'app/destroy');
+    $fix->set('vault_db_role', 'sdk-readonly');
+    $created = phpManifestJsonBody('create_transit_key', $fix, 'tenant-php', 'project-php', 'VaultService');
+    $decrypt = phpManifestJsonBody('decrypt', $fix, 'tenant-php', 'project-php', 'VaultService');
+    $deleted = phpManifestJsonBody('delete_secret', $fix, 'tenant-php', 'project-php', 'VaultService');
+    $destroyed = phpManifestJsonBody('destroy_secret', $fix, 'tenant-php', 'project-php', 'VaultService');
+    $encrypted = phpManifestJsonBody('encrypt', $fix, 'tenant-php', 'project-php', 'VaultService');
+    $dbCreds = phpManifestJsonBody('generate_database_credentials', $fix, 'tenant-php', 'project-php', 'VaultService');
+    $secret = phpManifestJsonBody('get_secret', $fix, 'tenant-php', 'project-php', 'VaultService');
+    $hmac = phpManifestJsonBody('hmac', $fix, 'tenant-php', 'project-php', 'VaultService');
+    $secrets = phpManifestJsonBody('list_secrets', $fix, 'tenant-php', 'project-php', 'VaultService');
+    $put = phpManifestJsonBody('put_secret', $fix, 'tenant-php', 'project-php', 'VaultService');
+    $rotated = phpManifestJsonBody('rotate_transit_key', $fix, 'tenant-php', 'project-php', 'VaultService');
+    $seal = phpManifestJsonBody('seal_status', $fix, 'tenant-php', 'project-php', 'VaultService');
+    $signed = phpManifestJsonBody('sign', $fix, 'tenant-php', 'project-php', 'VaultService');
+    $verify = phpManifestJsonBody('verify', $fix, 'tenant-php', 'project-php', 'VaultService');
+    expect($created)->toBeInstanceOf(\Udb\Core\Vault\Services\V1\CreateTransitKeyRequest::class)
+        ->and($created->getAlgorithm())->toBe('aes256-gcm-siv')
+        ->and($decrypt)->toBeInstanceOf(\Udb\Core\Vault\Services\V1\DecryptRequest::class)
+        ->and($decrypt->getCiphertext())->toBe('udb-vault:v1:php')
+        ->and($deleted)->toBeInstanceOf(\Udb\Core\Vault\Services\V1\DeleteSecretRequest::class)
+        ->and($deleted->getSecretPath())->toBe('app/delete')
+        ->and($destroyed)->toBeInstanceOf(\Udb\Core\Vault\Services\V1\DestroySecretRequest::class)
+        ->and($destroyed->getConfirmationToken())->toBe('destroy')
+        ->and($encrypted)->toBeInstanceOf(\Udb\Core\Vault\Services\V1\EncryptRequest::class)
+        ->and($encrypted->getPlaintext())->toBe('perf')
+        ->and($dbCreds)->toBeInstanceOf(\Udb\Core\Vault\Services\V1\GenerateDatabaseCredentialsRequest::class)
+        ->and($dbCreds->getRoleName())->toBe('sdk-readonly')
+        ->and($dbCreds->getTtlSeconds())->toBe(900)
+        ->and($secret)->toBeInstanceOf(\Udb\Core\Vault\Services\V1\GetSecretRequest::class)
+        ->and($secret->getSecretPath())->toBe('app/config')
+        ->and($hmac)->toBeInstanceOf(\Udb\Core\Vault\Services\V1\HmacRequest::class)
+        ->and($hmac->getInput())->toBe('perf')
+        ->and($secrets)->toBeInstanceOf(\Udb\Core\Vault\Services\V1\ListSecretsRequest::class)
+        ->and($secrets->getPageSize())->toBe(50)
+        ->and($put)->toBeInstanceOf(\Udb\Core\Vault\Services\V1\PutSecretRequest::class)
+        ->and($put->getSecretValue())->toBe('perf-secret')
+        ->and($put->getExpectedVersion())->toBe(0)
+        ->and($rotated)->toBeInstanceOf(\Udb\Core\Vault\Services\V1\RotateTransitKeyRequest::class)
+        ->and($rotated->getKeyName())->toBe('vault-key-php')
+        ->and($seal)->toBeInstanceOf(\Udb\Core\Vault\Services\V1\SealStatusRequest::class)
+        ->and($seal->getTenantId())->toBe('tenant-php')
+        ->and($signed)->toBeInstanceOf(\Udb\Core\Vault\Services\V1\SignRequest::class)
+        ->and($signed->getInput())->toBe('perf')
+        ->and($verify)->toBeInstanceOf(\Udb\Core\Vault\Services\V1\VerifyRequest::class)
+        ->and($verify->getSignature())->toBe('udb-vault-sig:v1:php');
+});
+
+it('manifest JSON body hydrates ControlPlaneService requests', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $fix->set('project', 'project-php');
+    $fix->set('node_id', 'node-php');
+    $fix->set('resource_name', 'backend-target-php');
+    $ack = phpManifestJsonBody('ack_status', $fix, 'tenant-php', 'project-php', 'ControlPlaneService');
+    $delta = phpManifestJsonBody('delta_resources', $fix, 'tenant-php', 'project-php', 'ControlPlaneService');
+    $resources = phpManifestJsonBody('get_resources', $fix, 'tenant-php', 'project-php', 'ControlPlaneService');
+    $nodes = phpManifestJsonBody('list_node_states', $fix, 'tenant-php', 'project-php', 'ControlPlaneService');
+    $rollback = phpManifestJsonBody('rollback_resources', $fix, 'tenant-php', 'project-php', 'ControlPlaneService');
+    $stream = phpManifestJsonBody('stream_resources', $fix, 'tenant-php', 'project-php', 'ControlPlaneService');
+    expect($ack)->toBeInstanceOf(\Udb\Core\Control\Services\V1\AckStatusRequest::class)
+        ->and($ack->getNodeId())->toBe('node-php')
+        ->and($ack->getResourceType())->toBe(5)
+        ->and($ack->getContext()->getTenant()->getTenantId())->toBe('tenant-php')
+        ->and($delta)->toBeInstanceOf(\Udb\Core\Control\Services\V1\DeltaDiscoveryRequest::class)
+        ->and($delta->getNodeId())->toBe('node-php')
+        ->and(iterator_to_array($delta->getResourceNamesSubscribe()))->toBe(['backend-target-php'])
+        ->and(iterator_to_array($delta->getInitialResourceVersions()))->toBe([])
+        ->and($resources)->toBeInstanceOf(\Udb\Core\Control\Services\V1\GetResourcesRequest::class)
+        ->and($resources->getTenantId())->toBe('tenant-php')
+        ->and($resources->getPage()->getPageSize())->toBe(50)
+        ->and($resources->getContext()->getTenant()->getTenantId())->toBe('tenant-php')
+        ->and($nodes)->toBeInstanceOf(\Udb\Core\Control\Services\V1\ListNodeStatesRequest::class)
+        ->and($nodes->getPage()->getPage())->toBe(1)
+        ->and($nodes->getPage()->getPageSize())->toBe(50)
+        ->and($rollback)->toBeInstanceOf(\Udb\Core\Control\Services\V1\RollbackResourcesRequest::class)
+        ->and($rollback->getTargetVersion())->toBe('')
+        ->and($rollback->getContext()->getTenant()->getProjectId())->toBe('project-php')
+        ->and($stream)->toBeInstanceOf(\Udb\Core\Control\Services\V1\DiscoveryRequest::class)
+        ->and($stream->getNodeId())->toBe('node-php')
+        ->and(iterator_to_array($stream->getResourceNames()))->toBe([])
+        ->and($stream->getVersionInfo())->toBe('');
+});
+
+it('manifest JSON body hydrates AuthzService core read-only requests', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $fix->set('project', 'project-php');
+    $fix->set('user_id', 'user-php');
+    $fix->set('object', 'ledger');
+    $fix->set('action', 'data.select');
+    $fix->set('subject', 'subject-php');
+    $fix->set('policy_id', 'policy-php');
+    $fix->set('resource', 'invoice');
+    $fix->set('role_id', 'role-php');
+    $fix->set('policy_draft_id', 'draft-php');
+    $fix->set('canary_id', 'canary-php');
+    $fix->set('gov_exp', '1893456000');
+    $authorize = phpManifestJsonBody('authorize', $fix, 'tenant-php', 'project-php');
+    $batch = phpManifestJsonBody('batch_check_permissions', $fix, 'tenant-php', 'project-php');
+    $check = phpManifestJsonBody('check_access', $fix, 'tenant-php', 'project-php');
+    $revision = phpManifestJsonBody('get_authz_revision', $fix, 'tenant-php', 'project-php');
+    $native = phpManifestJsonBody('get_native_access', $fix, 'tenant-php', 'project-php');
+    $bundle = phpManifestJsonBody('get_policy_bundle', $fix, 'tenant-php', 'project-php');
+    $policy = phpManifestJsonBody('get_policy_rule', $fix, 'tenant-php', 'project-php');
+    $role = phpManifestJsonBody('get_role', $fix, 'tenant-php', 'project-php');
+    $audits = phpManifestJsonBody('list_access_decision_audits', $fix, 'tenant-php', 'project-php');
+    $lint = phpManifestJsonBody('lint_authz_policies', $fix, 'tenant-php', 'project-php');
+    $roles = phpManifestJsonBody('list_roles', $fix, 'tenant-php', 'project-php');
+    $rules = phpManifestJsonBody('list_policy_rules', $fix, 'tenant-php', 'project-php');
+    $permissions = phpManifestJsonBody('list_user_permissions', $fix, 'tenant-php', 'project-php');
+    $userRoles = phpManifestJsonBody('list_user_roles', $fix, 'tenant-php', 'project-php');
+    $diff = phpManifestJsonBody('diff_policy_draft', $fix, 'tenant-php', 'project-php');
+    $explain = phpManifestJsonBody('explain_policy', $fix, 'tenant-php', 'project-php');
+    $canary = phpManifestJsonBody('get_canary_status', $fix, 'tenant-php', 'project-php');
+    $versions = phpManifestJsonBody('list_policy_versions', $fix, 'tenant-php', 'project-php');
+    expect($authorize)->toBeInstanceOf(\Udb\Core\Authz\Services\V1\AuthzRequest::class)
+        ->and($authorize->getPrincipal()->getUserId())->toBe('user-php')
+        ->and($authorize->getResource()->getTable())->toBe('sdk_live_records')
+        ->and(iterator_to_array($authorize->getRequestedScopes()))->toBe(['udb:read'])
+        ->and($batch)->toBeInstanceOf(\Udb\Core\Authz\Services\V1\BatchCheckPermissionsRequest::class)
+        ->and($batch->getChecks()[0]->getAction())->toBe('data.select')
+        ->and($check)->toBeInstanceOf(\Udb\Core\Authz\Services\V1\CheckAccessRequest::class)
+        ->and($check->getObject())->toBe('ledger')
+        ->and($revision)->toBeInstanceOf(\Udb\Core\Authz\Services\V1\GetAuthzRevisionRequest::class)
+        ->and($revision->getProjectId())->toBe('project-php')
+        ->and($native)->toBeInstanceOf(\Udb\Core\Authz\Services\V1\NativeAccessRequest::class)
+        ->and($native->getBackend())->toBe('postgres')
+        ->and($bundle)->toBeInstanceOf(\Udb\Core\Authz\Services\V1\PolicyBundleRequest::class)
+        ->and($bundle->getDomain())->toBe('tenant-php')
+        ->and($policy)->toBeInstanceOf(\Udb\Core\Authz\Services\V1\GetPolicyRuleRequest::class)
+        ->and($policy->getPolicyId())->toBe('policy-php')
+        ->and($role)->toBeInstanceOf(\Udb\Core\Authz\Services\V1\GetRoleRequest::class)
+        ->and($role->getRoleId())->toBe('role-php')
+        ->and($audits)->toBeInstanceOf(\Udb\Core\Authz\Services\V1\ListAccessDecisionAuditsRequest::class)
+        ->and($audits->getPage()->getPageSize())->toBe(50)
+        ->and($lint)->toBeInstanceOf(\Udb\Core\Authz\Services\V1\LintAuthzPoliciesRequest::class)
+        ->and($roles)->toBeInstanceOf(\Udb\Core\Authz\Services\V1\ListRolesRequest::class)
+        ->and($roles->getPage()->getPageSize())->toBe(50)
+        ->and($rules)->toBeInstanceOf(\Udb\Core\Authz\Services\V1\ListPolicyRulesRequest::class)
+        ->and($rules->getActiveOnly())->toBeTrue()
+        ->and($permissions)->toBeInstanceOf(\Udb\Core\Authz\Services\V1\ListUserPermissionsRequest::class)
+        ->and($permissions->getUserId())->toBe('user-php')
+        ->and($userRoles)->toBeInstanceOf(\Udb\Core\Authz\Services\V1\ListUserRolesRequest::class)
+        ->and($userRoles->getActiveOnly())->toBeTrue()
+        ->and($diff)->toBeInstanceOf(\Udb\Core\Authz\Services\V1\DiffPolicyDraftRequest::class)
+        ->and($diff->getActor()->getBreakGlassExpiresAtUnix())->toBe(1893456000)
+        ->and($explain)->toBeInstanceOf(\Udb\Core\Authz\Services\V1\ExplainPolicyRequest::class)
+        ->and($explain->getTestCase()->getResource()->getResourceType())->toBe('invoice')
+        ->and($canary)->toBeInstanceOf(\Udb\Core\Authz\Services\V1\GetCanaryStatusRequest::class)
+        ->and($canary->getCanaryId())->toBe('canary-php')
+        ->and($versions)->toBeInstanceOf(\Udb\Core\Authz\Services\V1\ListPolicyVersionsRequest::class)
+        ->and($versions->getPolicySetId())->toBe('policy-php');
+});
+
+it('manifest JSON body hydrates AuthzService create-policy-draft request', function () {
+    $fix = new PerfFixturesPhp();
+    $fix->set('tenant_id', 'tenant-php');
+    $fix->set('project', 'project-php');
+    $fix->set('subject', 'subject-php');
+    $fix->set('gov_exp', '1893456000');
+    $draft = phpManifestJsonBody('create_policy_draft', $fix, 'tenant-php', 'project-php');
+    expect($draft)->toBeInstanceOf(\Udb\Core\Authz\Services\V1\CreatePolicyDraftRequest::class)
+        ->and($draft->getTenantId())->toBe('tenant-php')
+        ->and($draft->getProjectId())->toBe('project-php')
+        ->and($draft->getPolicySetName())->toBe('default')
+        ->and($draft->getTitle())->toBe('draft 1')
+        ->and($draft->getChangeReason())->toBe('init')
+        ->and($draft->getActor()->getSubject())->toBe('subject-php')
+        ->and(iterator_to_array($draft->getActor()->getScopes()))->toBe(['authz:policy:write'])
+        ->and($draft->getActor()->getBreakGlass())->toBeTrue()
+        ->and($draft->getDocument())->toBeInstanceOf(\Udb\Core\Authz\Services\V1\PolicyDocument::class);
 });
 
 // gRPC status code -> NAME (BENCH_RPC_BODIES.md #1/#3: a failing RPC must be recorded
@@ -1456,673 +3088,20 @@ class PerfFixturesPhp
 }
 
 /**
- * perfBodyPhp returns the DOCUMENTED request body (docs/bench-bodies/<svc>.md) for a
- * given RPC, with every `<seed:...>` reference resolved from the seed fixtures so the
- * RPC drives its real SUCCESS path. There is NO generic fallback: an RPC not covered
- * here returns null and the caller sends the typed-empty request (never a generically
- * populated one). $name is the snake_case generated method name.
+ * perfBodyPhp returns the manifest-documented typed request body for a generated
+ * RPC. The benchmark harness is manifest-only: missing rows, non-JSON cells, or
+ * unresolved request classes fail the bench instead of falling back to a hand-
+ * coded body or an empty placeholder.
  */
-function perfBodyPhp(string $name, PerfFixturesPhp $fix, string $tenant, string $project): ?object
+function perfBodyPhp(string $name, PerfFixturesPhp $fix, string $tenant, string $project, ?string $serviceName = null): object
 {
-    $g = fn (string $k, string $d = '') => $fix->lookup($k) ?? $d;
-    $sub = $fix->lookup('subject') ?? ('user:'.($fix->lookup('user_id') ?? ''));
-    // created_by / assigned_by / deleted_by / … are audit columns the broker validates
-    // as bare UUIDs — the casbin $sub ("user:<uuid>") is NOT a valid UUID there.
-    $byId = $fix->lookup('user_id') ?? liveUuidV4();
-    // data-plane (udb.entity.v1) context
-    $ctxE = fn () => (new \Udb\Entity\V1\RequestContext())->setTenantId($tenant)->setProjectId($project)->setPurpose('php.live.perf');
-    // control-plane (udb.core.common.v1) context with nested tenant
-    $ctxC = fn () => (new \Udb\Core\Common\V1\RequestContext())
-        ->setTenant((new \Udb\Core\Common\V1\TenantContext())->setTenantId($tenant)->setProjectId($project))
-        ->setPurpose('php.live.perf');
-    $A = fn (string $c) => "\\Udb\\Core\\Authn\\Services\\V1\\$c";
-    $Z = fn (string $c) => "\\Udb\\Core\\Authz\\Services\\V1\\$c";
-    $K = fn (string $c) => "\\Udb\\Core\\Apikey\\Services\\V1\\$c";
-    $AN = fn (string $c) => "\\Udb\\Core\\Analytics\\Services\\V1\\$c";
-    $N = fn (string $c) => "\\Udb\\Core\\Notification\\Services\\V1\\$c";
-    $S = fn (string $c) => "\\Udb\\Core\\Storage\\Services\\V1\\$c";
-    $AS = fn (string $c) => "\\Udb\\Core\\Asset\\Services\\V1\\$c";
-    $W = fn (string $c) => "\\Udb\\Core\\Webrtc\\Services\\V1\\$c";
-    $T = fn (string $c) => "\\Udb\\Core\\Tenant\\Services\\V1\\$c";
-    $C = fn (string $c) => "\\Udb\\Core\\Control\\Services\\V1\\$c";
-    $I = fn (string $c) => "\\Udb\\Core\\Idp\\Services\\V1\\$c";
-    $E = fn (string $c) => "\\Udb\\Entity\\V1\\$c";
-    $DB = fn (string $c) => "\\Udb\\Services\\V1\\$c";
-    $page = fn (string $cls = '', int $sz = 20) => (new \Udb\Core\Common\V1\PageRequest())->setPage(1)->setPageSize($sz);
-    // Authz nested-message builders (shared across many authz RPCs).
-    $principal = fn () => (new ($Z('Principal'))())->setSubject($sub)->setUserId($g('user_id'))->setTenantId($tenant)->setProjectId($project)->setScopes(['udb:read']);
-    $resourceRef = fn () => (new ($Z('ResourceRef'))())->setResourceType($g('resource', 'invoice'))->setTable('records');
-    // GovernanceActor: the `$sc` scope arg is kept for doc parity, but the live
-    // D1/D2 governance gate evaluates scopes from the VERIFIED claim, NOT request-
-    // body actor.scopes, and no role projects to authz:* (tokens.rs
-    // ROLE_SCOPE_PROJECTIONS). So body scopes can never satisfy the gate; use the
-    // body-authoritative break-glass bypass instead (≤900s, reason-bearing,
-    // audited). gov_exp is seeded to now+900 in perfSeedPhp.
-    $actor = fn (array $sc) => (new ($Z('GovernanceActor'))())->setSubject($sub)->setTenantId($tenant)->setProjectId($project)
-        ->setBreakGlass(true)->setBreakGlassReason('sdk perf bench')->setBreakGlassExpiresAtUnix((int) ($g('gov_exp') ?: (time() + 900)));
-    // DataBroker StoreResource for a given backend.
-    $store = fn (string $backend, string $rn = '') => (new ($E('StoreResource'))())->setBackend($backend)->setResourceName($rn);
-    $ts = fn () => (new \Google\Protobuf\Timestamp())->setSeconds(1748736000);
-
-    // Normalize the generated method name to snake_case so the switch matches
-    // regardless of whether the stub exposes PascalCase (Upsert, CreateUser,
-    // SendOTP -> send_o_t_p) or already-snake names. No-op for snake input.
-    $n = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $name));
-
-    switch ($n) {
-        // ── AuthnService — auth flow first (login / refresh_token), then the rest ──
-        case 'login':
-            return (new ($A('LoginRequest'))())->setUsername(liveEnv('UDB_LIVE_USERNAME'))->setPassword(liveEnv('UDB_LIVE_PASSWORD'))
-                ->setDeviceType(2)->setDeviceName('cli')->setTenantHint($tenant)->setProjectHint($project); // DEVICE_TYPE_API=2
-        case 'refresh_token':
-            return (new ($A('RefreshTokenRequest'))())->setRefreshToken($g('refresh_token'));
-        case 'authenticate':
-            return (new ($A('AuthnRequest'))())->setBearerToken($g('token'))->setCredentialType(1); // BEARER_TOKEN
-        case 'logout':
-            return (new ($A('LogoutRequest'))())->setSessionId($g('session_id'));
-        case 'validate_token':
-            return (new ($A('ValidateTokenRequest'))())->setToken($g('token'))->setTokenType(1); // JWT_ACCESS
-        case 'introspect_token':
-            return (new ($A('IntrospectTokenRequest'))())->setToken($g('token'));
-        case 'get_jwks':
-            return new ($A('GetJwksRequest'))();
-        case 'create_user':
-            return (new ($A('CreateUserRequest'))())->setUsername('alice-'.bin2hex(random_bytes(4)))->setEmail('alice-'.bin2hex(random_bytes(4)).'@acme.test')
-                ->setPassword('Str0ng!Passw0rd')->setTenantId($tenant)->setFullName('Alice A')->setAccountKind(1); // PERSON=1
-        case 'get_user':
-            return (new ($A('GetUserRequest'))())->setUserId($g('user_id'));
-        case 'list_users':
-            return (new ($A('ListUsersRequest'))())->setTenantId($tenant);
-        case 'update_user':
-            return (new ($A('UpdateUserRequest'))())->setUserId($g('user_id'))->setFullName('Alice B')->setEmail('alice2@acme.test')->setTenantId($tenant);
-        case 'change_user_status':
-            return (new ($A('ChangeUserStatusRequest'))())->setUserId($g('user_id'))->setNewStatus(3)->setReason('admin action'); // SUSPENDED=3
-        case 'admin_reset_password':
-            return (new ($A('AdminResetPasswordRequest'))())->setUserId($g('user_id'));
-        case 'send_o_t_p':
-        case 'send_otp':
-            return (new ($A('SendOTPRequest'))())->setUserId($g('user_id'))->setOtpType(1); // EMAIL_VERIFICATION=1
-        case 'verify_o_t_p':
-        case 'verify_otp':
-            return (new ($A('VerifyOTPRequest'))())->setOtpId($g('otp_id'))->setCode($g('otp_code') ?: '123456');
-        case 'resend_o_t_p':
-        case 'resend_otp':
-            return (new ($A('ResendOTPRequest'))())->setOriginalOtpId($g('otp_id'))->setReason('not_received');
-        case 'change_password':
-            // current_password MUST be the exact password the seed user was created with.
-            return (new ($A('ChangePasswordRequest'))())->setUserId($g('user_id'))->setCurrentPassword('CorrectHorse1!')->setNewPassword('N3w!Passw0rd9');
-        case 'create_session':
-            return (new ($A('CreateSessionRequest'))())->setPrincipal((new ($A('Principal'))())->setPrincipalId($g('user_id'))->setSubject($sub)->setUserId($g('user_id'))->setTenantId($tenant))->setTtlSeconds(3600);
-        case 'refresh_session':
-            return (new ($A('RefreshSessionRequest'))())->setSessionId($g('session_id'))->setTtlSeconds(3600);
-        case 'get_session':
-            return (new ($A('GetSessionRequest'))())->setSessionId($g('session_id'));
-        case 'list_sessions':
-            return (new ($A('ListSessionsRequest'))())->setUserId($g('user_id'));
-        case 'revoke_session':
-            return (new ($A('RevokeSessionRequest'))())->setSessionId($g('session_id'))->setRevokeReason('user logout');
-        case 'validate_c_s_r_f':
-        case 'validate_csrf':
-            return (new ($A('ValidateCSRFRequest'))())->setSessionId($g('session_id'))->setCsrfToken($g('csrf_token'));
-        case 'enroll_m_f_a':
-        case 'enroll_mfa':
-            return (new ($A('EnrollMFARequest'))())->setUserId($g('user_id'))->setMfaType(1); // TOTP=1
-        case 'confirm_m_f_a_enrollment':
-            return (new ($A('ConfirmMFAEnrollmentRequest'))())->setUserId($g('user_id'))->setOtpId($g('code'))->setCode('123456');
-        case 'generate_recovery_codes':
-            return (new ($A('GenerateRecoveryCodesRequest'))())->setUserId($g('user_id'))->setCount(10);
-        case 'put_mfa_policy':
-            // require_mfa MUST stay false on the live login tenant: setting it true
-            // makes every later Login fail FAILED_PRECONDITION "MFA enrollment required
-            // by tenant policy" and poisons the whole bench (the admin has no 2nd factor).
-            return (new ($A('PutMfaPolicyRequest'))())->setTenantId($tenant)->setRequireMfa(false);
-        case 'get_mfa_policy':
-            return (new ($A('GetMfaPolicyRequest'))())->setTenantId($tenant);
-        case 'forgot_password':
-            return (new ($A('ForgotPasswordRequest'))())->setIdentifier('alice@acme.test');
-        case 'reset_password':
-            // Real dev-echoed code only (UDB_OTP_DEV_ECHO=1 echoes it unconditionally —
-            // mfa.rs:208). No '123456' fallback: a wrong code denies and masks an empty
-            // reset_otp_code (BENCH_TS_PHP_ADVISORY.md).
-            return (new ($A('ResetPasswordRequest'))())->setOtpId($g('reset_otp_id'))->setCode($g('reset_otp_code'))->setNewPassword('N3w!Passw0rd9');
-        case 'send_phone_verification':
-            return (new ($A('SendPhoneVerificationRequest'))())->setUserId($g('user_id'))->setPhone('+15551234567');
-        case 'start_web_authn_registration':
-            return (new ($A('StartWebAuthnRegistrationRequest'))())->setUserId($g('user_id'))->setLabel('yubikey')->setTenantId($tenant);
-        case 'finish_web_authn_registration':
-            return (new ($A('FinishWebAuthnRegistrationRequest'))())->setChallengeId($g('reg_challenge_id'))->setPublicKeyCredentialJson('__UDB_WEBAUTHN_TEST__')->setLabel('perf-key');
-        case 'start_web_authn_authentication':
-            return (new ($A('StartWebAuthnAuthenticationRequest'))())->setUserId($g('user_id'))->setTenantId($tenant);
-        case 'finish_web_authn_authentication':
-            return (new ($A('FinishWebAuthnAuthenticationRequest'))())->setChallengeId($g('auth_challenge_id'))->setPublicKeyCredentialJson('__UDB_WEBAUTHN_TEST__');
-        case 'list_devices':
-            return (new ($A('ListDevicesRequest'))())->setUserId($g('user_id'));
-        case 'revoke_device':
-            return (new ($A('RevokeDeviceRequest'))())->setDeviceId($g('device_id'))->setReason('lost device');
-        case 'admin_revoke_session':
-            return (new ($A('AdminRevokeSessionRequest'))())->setUserId($g('user_id'))->setSessionId($g('session_id'))->setReason('compromised');
-        case 'admin_revoke_all_user_sessions':
-            return (new ($A('AdminRevokeAllUserSessionsRequest'))())->setUserId($g('user_id'))->setReason('compromised');
-        case 'admin_revoke_all_tenant_sessions':
-            return (new ($A('AdminRevokeAllTenantSessionsRequest'))())->setTenantId($tenant)->setReason('incident');
-        case 'emergency_revoke':
-            return (new ($A('EmergencyRevokeRequest'))())->setTenantId($tenant)->setReason('incident');
-        case 'issue_mfa_challenge':
-            return (new ($A('IssueMfaChallengeRequest'))())->setUserId($g('user_id'))->setFactorKind(1)->setPurpose(1); // TOTP=1, SENSITIVE_OP=1
-        case 'verify_mfa_challenge':
-            return (new ($A('VerifyMfaChallengeRequest'))())->setChallengeId($g('challenge_id'))->setCode($g('otp_code') ?: '123456');
-        case 'list_mfa_factors':
-            return (new ($A('ListMfaFactorsRequest'))())->setUserId($g('user_id'));
-        case 'disable_mfa_factor':
-            return (new ($A('DisableMfaFactorRequest'))())->setUserId($g('user_id'))->setFactorKind(1);
-        case 'rename_passkey':
-            return (new ($A('RenamePasskeyRequest'))())->setUserId($g('user_id'))->setCredentialId($g('record_id'))->setNewLabel('work key');
-        case 'revoke_recovery_codes':
-            return (new ($A('RevokeRecoveryCodesRequest'))())->setUserId($g('user_id'));
-        case 'admin_reset_mfa':
-            return (new ($A('AdminResetMfaRequest'))())->setUserId($g('user_id'))->setReason('lost device');
-        case 'list_web_authn_credentials':
-            return (new ($A('ListWebAuthnCredentialsRequest'))())->setUserId($g('user_id'));
-        case 'delete_web_authn_credential':
-            return (new ($A('DeleteWebAuthnCredentialRequest'))())->setUserId($g('user_id'))->setCredentialId($g('record_id'));
-
-        // ── ApiKeyService ──
-        case 'create_api_key':
-            return (new ($K('CreateApiKeyRequest'))())->setName('bench-key')->setDescription('bench')->setOwnerType(6)->setOwnerId($g('owner_id'))->setScopes(['resource:read'])->setContext($ctxC()); // SERVICE_ACCOUNT=6
-        case 'get_api_key':
-            return (new ($K('GetApiKeyRequest'))())->setKeyId($g('key_id'));
-        case 'list_api_keys':
-            return (new ($K('ListApiKeysRequest'))())->setOwnerId($g('owner_id'));
-        case 'update_api_key':
-            // revoke/rotate/update resolve the key by PREFIX (get_by_prefix), not key_id UUID.
-            return (new ($K('UpdateApiKeyRequest'))())->setKeyId($g('update_key_prefix') ?: $g('key_prefix'))->setName('bench-key-2')->setDescription('updated')->setScopes(['resource:read'])->setContext($ctxC());
-        case 'revoke_api_key':
-            // the SEPARATE disposable key seeded for revocation (real 200); the primary
-            // key survives for rotate/update/get/validate. Lookup is by key_prefix.
-            return (new ($K('RevokeApiKeyRequest'))())->setKeyId($g('revoke_key_prefix') ?: $g('key_prefix'))->setRevokeReason('bench cleanup')->setContext($ctxC());
-        case 'rotate_api_key':
-            return (new ($K('RotateApiKeyRequest'))())->setKeyId($g('key_prefix'))->setRotationReason('bench rotate')->setContext($ctxC());
-        case 'emergency_revoke_api_keys':
-            return (new ($K('EmergencyRevokeApiKeysRequest'))())->setOwnerId($g('owner_id'))->setReason('bench emergency')->setContext($ctxC());
-        case 'validate_api_key':
-            return (new ($K('ValidateApiKeyRequest'))())->setPlainKey($g('plain_key'))->setEndpoint('/v1/test')->setRequiredScope('resource:read')->setIpAddress('127.0.0.1');
-        case 'get_api_key_usage_stats':
-            return (new ($K('GetApiKeyUsageStatsRequest'))())->setKeyId($g('key_id'));
-
-        // ── AnalyticsService ──
-        case 'record_pipeline_metric':
-            return (new ($AN('RecordPipelineMetricRequest'))())->setStageName($g('stage_name'))->setTenantId($tenant)->setLatencyMs(12.5)->setIsSuccess(true)->setContext($ctxC());
-        case 'get_pipeline_summary':
-            return (new ($AN('GetPipelineSummaryRequest'))())->setStageName($g('stage_name'))->setTenantId($tenant)->setHourFrom('2026-06-01T00:00:00Z')->setHourTo('2026-06-14T23:00:00Z');
-        case 'get_executor_performance':
-            return (new ($AN('GetExecutorPerformanceRequest'))())->setDateFrom('2026-06-01')->setDateTo('2026-06-14');
-        case 'get_reconciliation_analytics':
-            return (new ($AN('GetReconciliationAnalyticsRequest'))())->setDateFrom('2026-06-01')->setDateTo('2026-06-14');
-        case 'get_throughput':
-            return (new ($AN('GetThroughputRequest'))())->setTenantId($tenant)->setHourFrom('2026-06-01T00:00:00Z')->setHourTo('2026-06-14T23:00:00Z');
-        case 'get_sla_compliance':
-            return (new ($AN('GetSlaComplianceRequest'))())->setStageName($g('stage_name'))->setDateFrom('2026-06-01')->setDateTo('2026-06-14')->setP99ThresholdMs(250.0)->setErrorRateThreshold(0.01);
-        case 'trigger_snapshot':
-            return (new ($AN('TriggerSnapshotRequest'))())->setStageName($g('stage_name'))->setHour('2026-06-14T10:00:00Z')->setContext($ctxC());
-
-        // ── NotificationService ──
-        case 'send_notification':
-            return (new ($N('SendNotificationRequest'))())->setEventType($g('event_type'))->setRecipientId($g('user_id'))->setRecipientAddress('user@example.com')->setTenantId($tenant)->setProjectId($project)->setLocale('en')->setChannels([1]);
-        case 'get_notification':
-            return (new ($N('GetNotificationRequest'))())->setLogId($g('log_id'));
-        case 'list_notifications':
-            return (new ($N('ListNotificationsRequest'))())->setTenantId($tenant)->setPage($page($N('PageRequest') ?? '\\Udb\\Core\\Common\\V1\\PageRequest'));
-        case 'retry_notification':
-            return (new ($N('RetryNotificationRequest'))())->setLogId($g('log_id'));
-        case 'upsert_template':
-            return (new ($N('UpsertTemplateRequest'))())->setEventType($g('event_type'))->setChannel(1)->setLocale('en')->setSubjectTemplate('Hello {name}')->setBodyTemplate('Body {name}')->setIsActive(true);
-        case 'get_template':
-            return (new ($N('GetTemplateRequest'))())->setEventType($g('event_type'))->setChannel(1)->setLocale('en');
-        case 'list_templates':
-            return new ($N('ListTemplatesRequest'))();
-        case 'get_delivery_stats':
-            return (new ($N('GetDeliveryStatsRequest'))())->setTenantId($tenant)->setEventType($g('event_type'))->setDateFrom('2026-01-01')->setDateTo('2026-12-31');
-        case 'set_preference':
-            return (new ($N('SetPreferenceRequest'))())->setUserId($g('user_id'))->setTenantId($tenant)->setChannel(1)->setIsOptedOut(true);
-        case 'get_preference':
-            return (new ($N('GetPreferenceRequest'))())->setUserId($g('user_id'))->setTenantId($tenant)->setChannel(1);
-        case 'list_preferences':
-            return (new ($N('ListPreferencesRequest'))())->setUserId($g('user_id'))->setTenantId($tenant);
-
-        // ── StorageService ──
-        case 'register_upload':
-            // project_id must be empty (the broker parses a non-empty project_id as a UUID;
-            // "default" fails "uuid params must be UUID strings"). reference_id is a fresh UUID.
-            return (new ($S('RegisterUploadRequest'))())->setTenantId($tenant)->setProjectId('')->setFilename('report.pdf')->setContentType('application/pdf')->setFileType('document')->setReferenceId(liveUuidV4())->setReferenceType('document')->setExpiresInMinutes(15)->setSizeBytes(1024);
-        case 'finalize_upload':
-            // A SEPARATE registered+uploaded but NOT finalized file (finalize_file_id):
-            // finalizing the primary file_id again fails "upload already finalized".
-            return (new ($S('FinalizeUploadRequest'))())->setTenantId($tenant)->setFileId($g('finalize_file_id') ?: $g('file_id'))->setContentType('application/pdf')->setFileType('document')->setReferenceId($g('finalize_file_id') ?: $g('file_id'))->setReferenceType('document')->setSizeBytes(1024);
-        case 'get_download_url':
-            return (new ($S('GetDownloadUrlRequest'))())->setTenantId($tenant)->setFileId($g('file_id'))->setExpiresInMinutes(15);
-        case 'download_file':
-            // Server-streaming: the primary file_id is finalized with object bytes
-            // present (seeded), so the first DownloadFileChunk delivers.
-            return (new ($S('DownloadFileRequest'))())->setTenantId($tenant)->setFileId($g('file_id'))->setChunkSizeBytes(65536);
-        case 'get_file':
-            return (new ($S('GetFileRequest'))())->setTenantId($tenant)->setFileId($g('file_id'));
-        case 'update_file':
-            return (new ($S('UpdateFileRequest'))())->setTenantId($tenant)->setFileId($g('file_id'))->setFilename('renamed.pdf')->setContentType('application/pdf')->setFileType('document')->setReferenceId($g('file_id'))->setReferenceType('document');
-        case 'delete_file':
-            // destructive — the SEPARATE disposable file seeded for deletion (real 200).
-            return (new ($S('DeleteFileRequest'))())->setTenantId($tenant)->setFileId($g('delete_file_id') ?: liveUuidV4());
-        case 'list_files':
-            return (new ($S('ListFilesRequest'))())->setTenantId($tenant)->setPage(1)->setPageSize(20);
-
-        // ── AssetService ──
-        case 'create_pipeline_definition':
-            return (new ($AS('CreatePipelineDefinitionRequest'))())->setTenantId($tenant)->setName('thumbnail-pipeline')->setDescription('Generate thumbnails')->setMediaType('image/png')->setSteps('[{"name":"resize","type":"TRANSFORM"}]')->setVersion(1);
-        case 'get_pipeline_definition':
-            return (new ($AS('GetPipelineDefinitionRequest'))())->setTenantId($tenant)->setDefinitionId($g('definition_id'));
-        case 'register_asset':
-            // project_id must be empty (non-empty is parsed as a UUID and "default" fails).
-            return (new ($AS('RegisterAssetRequest'))())->setTenantId($tenant)->setProjectId('')->setFileId($g('file_id'))->setName('logo.png')->setMediaType('image/png')->setMetadata('{"source":"upload"}');
-        case 'start_pipeline':
-            return (new ($AS('StartPipelineRequest'))())->setTenantId($tenant)->setDefinitionId($g('definition_id'))->setAssetId($g('asset_id'))->setContext('{}')->setCorrelationId('run-001');
-        case 'get_pipeline':
-            return (new ($AS('GetPipelineRequest'))())->setTenantId($tenant)->setInstanceId($g('instance_id'));
-        case 'complete_step':
-            return (new ($AS('CompleteStepRequest'))())->setTenantId($tenant)->setStepId($g('step_id'))->setStatus('COMPLETED')->setResult('{}');
-        case 'list_assets':
-            return (new ($AS('ListAssetsRequest'))())->setTenantId($tenant)->setPage(1)->setPageSize(20);
-        case 'get_asset':
-            return (new ($AS('GetAssetRequest'))())->setTenantId($tenant)->setAssetId($g('asset_id'));
-
-        // ── WebRTC (Room/Peer/Track/Turn) ──
-        case 'create_room':
-            return (new ($W('CreateRoomRequest'))())->setTenantId($tenant)->setName('bench-room')->setMaxParticipants(10)->setConfig('{}')->setCreatedBy($g('user_id'));
-        case 'get_room':
-            return (new ($W('GetRoomRequest'))())->setTenantId($tenant)->setRoomId($g('room_id'));
-        case 'update_room':
-            return (new ($W('UpdateRoomRequest'))())->setTenantId($tenant)->setRoomId($g('room_id'))->setName('bench-room-2')->setState('active')->setConfig('{}');
-        case 'close_room':
-            // the SEPARATE disposable room seeded for closing (real 200); the main room survives.
-            return (new ($W('CloseRoomRequest'))())->setTenantId($tenant)->setRoomId($g('close_room_id') ?: liveUuidV4());
-        case 'list_rooms':
-            return (new ($W('ListRoomsRequest'))())->setTenantId($tenant)->setState('active')->setPage(1)->setPageSize(20);
-        case 'join_room':
-            return (new ($W('JoinRoomRequest'))())->setTenantId($tenant)->setRoomId($g('room_id'))->setDisplayName('Bench User')->setMetadata('{}')->setUserAgent('bench/1.0');
-        case 'join_session':
-            // PeerService.JoinSession: atomic join-room + mint TURN credentials in one RPC.
-            // Uses its OWN high-capacity room (join_session_room_id, maxParticipants=64):
-            // the main room_id is filled to capacity (cap 8) by JoinRoom's iters, so
-            // JoinSession against it would hit "room ... at capacity".
-            return (new ($W('JoinSessionRequest'))())->setTenantId($tenant)->setRoomId($g('join_session_room_id') ?: $g('room_id'))->setDisplayName('Bench Session')->setMetadata('{}')->setUserAgent('bench/1.0')->setTtlSeconds(3600);
-        case 'leave_room':
-            return (new ($W('LeaveRoomRequest'))())->setTenantId($tenant)->setRoomId($g('room_id'))->setPeerId($g('leave_peer_id') ?: liveUuidV4());
-        case 'get_peer':
-            return (new ($W('GetPeerRequest'))())->setTenantId($tenant)->setPeerId($g('peer_id'));
-        case 'list_peers':
-            return (new ($W('ListPeersRequest'))())->setTenantId($tenant)->setRoomId($g('room_id'));
-        case 'publish_track':
-            return (new ($W('PublishTrackRequest'))())->setTenantId($tenant)->setRoomId($g('room_id'))->setPeerId($g('peer_id'))->setKind('audio')->setLabel('mic')->setSettings('{}')->setMetadata('{}');
-        case 'unpublish_track':
-            return (new ($W('UnpublishTrackRequest'))())->setTenantId($tenant)->setTrackId($g('unpublish_track_id') ?: liveUuidV4());
-        case 'mute_track':
-            return (new ($W('MuteTrackRequest'))())->setTenantId($tenant)->setTrackId($g('track_id'))->setMuted(true);
-        case 'list_tracks':
-            return (new ($W('ListTracksRequest'))())->setTenantId($tenant)->setRoomId($g('room_id'));
-        case 'issue_credentials':
-            return (new ($W('IssueCredentialsRequest'))())->setTenantId($tenant)->setRoomId($g('room_id'))->setPeerId($g('peer_id'))->setTtlSeconds(3600);
-
-        // ── TenantService ──
-        case 'create_tenant':
-            return (new ($T('CreateTenantRequest'))())->setCode('acme-bench-'.bin2hex(random_bytes(4)))->setName('Acme Bench')->setType('organization')->setConfig('{}')->setBranding('{}');
-        case 'get_tenant':
-            return (new ($T('GetTenantRequest'))())->setTenantId($tenant);
-        case 'list_tenants':
-            return (new ($T('ListTenantsRequest'))())->setPage(1)->setPageSize(20);
-        case 'update_tenant':
-            return (new ($T('UpdateTenantRequest'))())->setTenantId($tenant)->setName('Acme Bench')->setStatus('active')->setConfig('{}')->setBranding('{}');
-        case 'get_tenant_config':
-            return (new ($T('GetTenantConfigRequest'))())->setTenantId($tenant);
-        case 'update_tenant_config':
-            return (new ($T('UpdateTenantConfigRequest'))())->setTenantId($tenant)->setConfigKey('feature.flag')->setConfigValue('on')->setType('string');
-
-        // ── IdentityProviderService ──
-        case 'create_provider':
-            return (new ($I('CreateProviderRequest'))())->setTenantId($tenant)->setKind(2)->setDisplayName('Acme OIDC '.bin2hex(random_bytes(3)))->setIssuer('https://idp.example.com')->setJwksUrl('https://idp.example.com/jwks')->setClientIds(['client-1'])->setAudiences(['udb'])->setClaimMappingJson('{}')->setGroupMappingJson('{}')->setJitPolicyJson('{"require_verified_email":false}')->setAccountLinkingPolicy('explicit')->setEnabled(true)->setCreatedBy($g('user_id'))->setContext($ctxC()); // OIDC=2
-        case 'update_provider':
-            // PRESERVE the seeded group_mapping key — UpdateProvider overwrites the provider's
-            // group_mapping_json, and ScimGetGroup resolves scim_group_id against those KEYS
-            // (idp/mod.rs group_keys). Wiping to '{}' makes a later/earlier ScimGetGroup
-            // NOT_FOUND regardless of phase ordering. Mirror Python's postprocess (keep the key).
-            return (new ($I('UpdateProviderRequest'))())->setProviderId($g('provider_id'))->setTenantId($tenant)->setDisplayName('Acme OIDC '.bin2hex(random_bytes(4)))->setClaimMappingJson('{}')->setGroupMappingJson('{"sdk-perf-group":"reader"}')->setJitPolicyJson('{"require_verified_email":false}')->setAccountLinkingPolicy('explicit')->setUpdatedBy($g('user_id'))->setContext($ctxC());
-        case 'disable_provider':
-            return (new ($I('DisableProviderRequest'))())->setProviderId($g('disable_provider_id') ?: $g('provider_id'))->setTenantId($tenant)->setUpdatedBy($g('user_id'))->setContext($ctxC());
-        case 'get_provider':
-            return (new ($I('GetProviderRequest'))())->setProviderId($g('provider_id'))->setTenantId($tenant);
-        case 'list_providers':
-            return (new ($I('ListProvidersRequest'))())->setTenantId($tenant)->setPage($page($I('PageRequest') ?? '\\Udb\\Core\\Common\\V1\\PageRequest'));
-        case 'test_provider_discovery':
-            return (new ($I('TestProviderDiscoveryRequest'))())->setProviderId($g('provider_id'))->setTenantId($tenant);
-        case 'force_jwks_refresh':
-            return (new ($I('ForceJwksRefreshRequest'))())->setProviderId($g('provider_id'))->setTenantId($tenant);
-        case 'preview_claim_mapping':
-            return (new ($I('PreviewClaimMappingRequest'))())->setProviderId($g('provider_id'))->setTenantId($tenant)->setClaimsJson('{"sub":"abc","email":"a@x.com"}');
-        case 'preview_group_mapping':
-            return (new ($I('PreviewGroupMappingRequest'))())->setProviderId($g('provider_id'))->setTenantId($tenant)->setGroups(['admins']);
-        case 'list_external_identities':
-            return (new ($I('ListExternalIdentitiesRequest'))())->setTenantId($tenant)->setPage($page($I('PageRequest') ?? '\\Udb\\Core\\Common\\V1\\PageRequest'));
-        case 'link_identity':
-            return (new ($I('LinkIdentityRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setSubject('ext-subject-1')->setUserId($g('user_id'))->setEmail('a@x.com')->setEmailVerified(true)->setContext($ctxC());
-        case 'resolve_external_identity':
-            return (new ($I('ResolveExternalIdentityRequest'))())->setProviderId($g('provider_id'))->setTenantId($tenant)->setClaimsJson('{"sub":"abc","email":"a@x.com","email_verified":true}');
-
-        // ── DataBroker (the high-value CRUD; reads/admin) ──
-        case 'upsert':
-            return (new ($E('UpsertRequest'))())->setContext($ctxE())->setMessageType('udb.sdk.live.v1.SdkLiveRecord')
-                ->setRecordJson(liveRecordJson($g('record_id'), $tenant, $project, 'php-perf-lk', 'php-perf', 1))->setConflictFields(['record_id']);
-        case 'select':
-            return (new ($E('SelectRequest'))())->setContext($ctxE())->setMessageType('udb.sdk.live.v1.SdkLiveRecord')->setFilter(liveStruct(['record_id' => $g('record_id'), 'tenant_id' => $tenant, 'project_id' => $project]))->setLimit(10);
-        case 'ensure_baseline':
-            // DataBroker.EnsureBaseline carries ONLY context (field 1); the udb:admin
-            // scope rides the bearer. Idempotently seeds a baseline saga + DLQ row.
-            return (new ($DB('EnsureBaselineRequest'))())->setContext($ctxE());
-        case 'delete':
-            return (new ($E('DeleteRequest'))())->setContext($ctxE())->setMessageType('udb.sdk.live.v1.SdkLiveRecord')->setFilter(liveStruct(['record_id' => 'php-perf-delete-noop', 'tenant_id' => $tenant, 'project_id' => $project]));
-        case 'get_capabilities':
-            return (new ($E('CapabilitiesRequest'))())->setContext($ctxE())->setProjectId($project);
-        case 'get_catalog_manifest':
-            return (new ($E('CatalogManifestRequest'))())->setContext($ctxE());
-        case 'get_catalog_versions':
-            return (new ($E('CatalogManifestRequest'))())->setContext($ctxE());
-        case 'list_message_schemas':
-            return (new ($E('MessageSchemaListRequest'))())->setContext($ctxE())->setProjectId($project);
-        case 'lookup_message_schema':
-            return (new ($E('MessageSchemaLookupRequest'))())->setContext($ctxE())->setProjectId($project)->setMessageType('udb.sdk.live.v1.SdkLiveRecord');
-        case 'get_health_report':
-            return (new ($E('HealthReportRequest'))())->setContext($ctxE())->setProjectId($project);
-        case 'get_admin_summary':
-            return (new ($E('AdminSummaryRequest'))())->setContext($ctxE())->setProjectId($project);
-        case 'ensure_project':
-            return (new ($E('EnsureProjectRequest'))())->setContext($ctxE())->setProjectId($project)->setName('My Project')->setCdcTopicPrefix($project.'.');
-        case 'list_projects':
-            return (new ($E('ProjectListRequest'))())->setContext($ctxE())->setLimit(50);
-        case 'list_sagas':
-            return (new ($E('SagaListRequest'))())->setContext($ctxE())->setLimit(50);
-        case 'list_dlq_events':
-            return (new ($E('DlqListRequest'))())->setContext($ctxE())->setLimit(50);
-        case 'list_migration_runs':
-            return (new ($E('MigrationRunListRequest'))())->setContext($ctxE())->setProjectId($project)->setLimit(50);
-        case 'list_admin_audit_logs':
-            return (new ($E('AdminAuditLogRequest'))())->setContext($ctxE())->setLimit(50);
-        case 'verify_admin_audit_log':
-            return (new ($E('AdminAuditVerifyRequest'))())->setContext($ctxE())->setLimit(0);
-        case 'list_policies':
-            return (new ($E('PolicyListRequest'))())->setContext($ctxE())->setLimit(50);
-        case 'generic_dispatch':
-            return (new ($E('GenericDispatchRequest'))())->setContext($ctxE())->setBackend('postgres')->setOperation('query')->setSpecJson('{"sql":"SELECT 1 AS live_probe"}');
-        case 'ensure_resource':
-            return (new ($E('ResourceAdminRequest'))())->setContext($ctxE())->setBackend('mongodb')->setResourceName($g('mongo_collection', 'sdk_perf'));
-        case 'list_resources':
-            return (new ($E('ResourceAdminRequest'))())->setContext($ctxE())->setBackend('mongodb');
-
-        // ── AuthzService ──
-        case 'authorize':
-            return (new ($Z('AuthzRequest'))())->setPrincipal($principal())->setTenantId($tenant)->setProjectId($project)->setResource($resourceRef())->setAction($g('action', 'data.select'))->setDomain($tenant)->setRequestedScopes(['udb:read']);
-        case 'check_access':
-            return (new ($Z('CheckAccessRequest'))())->setUserId($g('user_id'))->setDomain($tenant)->setObject($g('object', 'group:sdk'))->setAction($g('action', 'data.select'));
-        case 'create_role':
-            // random name/role_code so per-iteration rebuilds don't collide on the
-            // unique (name,domain) constraint; created_by must be a bare UUID.
-            return (new ($Z('CreateRoleRequest'))())->setName('reader-'.bin2hex(random_bytes(4)))->setCreatedBy($byId)->setRoleCode('reader_'.bin2hex(random_bytes(4)))->setDomain($tenant)->setTenantId($tenant)->setScopeType(2);
-        case 'assign_role':
-            return (new ($Z('AssignRoleRequest'))())->setUserId($g('user_id'))->setRoleId($g('role_id'))->setDomain($tenant)->setAssignedBy($byId)->setPrincipalKind(1)->setTenantId($tenant);
-        case 'create_policy_rule':
-            return (new ($Z('CreatePolicyRuleRequest'))())->setSubject($sub)->setDomain($tenant)->setObject($g('object', 'group:sdk'))->setAction($g('action', 'data.update'))->setEffect(1)->setCreatedBy($byId)->setTenantId($tenant);
-        case 'list_user_permissions':
-            return (new ($Z('ListUserPermissionsRequest'))())->setUserId($g('user_id'))->setDomain($tenant);
-        case 'list_access_decision_audits':
-            return (new ($Z('ListAccessDecisionAuditsRequest'))())->setUserId($g('user_id'))->setDomain($tenant)->setPage($page());
-        case 'revoke_role':
-            return (new ($Z('RevokeRoleRequest'))())->setUserId($g('user_id'))->setUserRoleId($g('user_role_id'))->setReason('rotation')->setRevokedBy($byId);
-        case 'list_user_roles':
-            return (new ($Z('ListUserRolesRequest'))())->setUserId($g('user_id'))->setDomain($tenant)->setActiveOnly(true);
-        case 'get_role':
-            return (new ($Z('GetRoleRequest'))())->setRoleId($g('role_id'));
-        case 'list_roles':
-            return (new ($Z('ListRolesRequest'))())->setDomain($tenant)->setActiveOnly(true)->setPage($page());
-        case 'batch_check_permissions':
-            return (new ($Z('BatchCheckPermissionsRequest'))())->setUserId($g('user_id'))->setDomain($tenant)->setChecks([(new ($Z('PermissionCheck'))())->setObject($g('object', 'group:sdk'))->setAction($g('action', 'data.select'))]);
-        case 'update_role':
-            return (new ($Z('UpdateRoleRequest'))())->setRoleId($g('role_id'))->setUpdatedBy($byId)->setName('reader-'.bin2hex(random_bytes(4)))->setDescription('x')->setIsActive(true);
-        case 'delete_role':
-            // destructive — the SEPARATE disposable role seeded for deletion (real 200).
-            return (new ($Z('DeleteRoleRequest'))())->setRoleId($g('delete_role_id') ?: liveUuidV4())->setDeletedBy($byId);
-        case 'get_policy_rule':
-            return (new ($Z('GetPolicyRuleRequest'))())->setPolicyId($g('policy_id'));
-        case 'list_policy_rules':
-            return (new ($Z('ListPolicyRulesRequest'))())->setDomain($tenant)->setActiveOnly(true)->setPage($page());
-        case 'delete_policy_rule':
-            // destructive — the SEPARATE disposable policy rule seeded for deletion (real 200).
-            return (new ($Z('DeletePolicyRuleRequest'))())->setPolicyId($g('delete_policy_id') ?: liveUuidV4())->setDeletedBy($byId);
-        case 'put_role_binding':
-            return (new ($Z('PutRoleBindingRequest'))())->setBinding((new ($Z('RoleBinding'))())->setSubject($sub)->setRole($g('role', 'reader'))->setTenant($tenant)->setProject($project)->setSource('manual'));
-        case 'put_relationship':
-            return (new ($Z('PutRelationshipRequest'))())->setTuple((new ($Z('RelationshipTuple'))())->setSubject($sub)->setRelation($g('relation', 'member'))->setObject($g('object', 'group:sdk'))->setTenant($tenant)->setProject($project)->setSource('manual'));
-        case 'put_authz_policy':
-            return (new ($Z('PutAuthzPolicyRequest'))())->setPolicy((new ($Z('AuthzPolicyRecord'))())->setId($g('policy_id', 'p1'))->setPriority(100)->setEnabled(true)->setEffect('allow')->setTenant($tenant)->setSubject($sub)->setAction($g('action', 'data.select'))->setResource($g('resource', 'invoice'))->setRequiredScopes(['udb:read']));
-        case 'lint_authz_policies':
-            return new ($Z('LintAuthzPoliciesRequest'))();
-        case 'get_native_access':
-            return (new ($Z('NativeAccessRequest'))())->setPrincipal($principal())->setTenantId($tenant)->setProjectId($project)->setResource($resourceRef())->setAction($g('action', 'data.select'))->setBackend('postgres')->setRequestedScopes(['udb:read']);
-        case 'get_policy_bundle':
-            return (new ($Z('PolicyBundleRequest'))())->setTenantId($tenant)->setProjectId($project)->setDomain($tenant);
-        case 'create_policy_draft':
-            return (new ($Z('CreatePolicyDraftRequest'))())->setActor($actor(['authz:policy:write']))->setTenantId($tenant)->setProjectId($project)->setPolicySetName('default')->setTitle('draft 1')->setChangeReason('init')->setDocument(new ($Z('PolicyDocument'))());
-        case 'update_policy_draft':
-            return (new ($Z('UpdatePolicyDraftRequest'))())->setActor($actor(['authz:policy:write']))->setDraftId($g('update_draft_id') ?: $g('policy_draft_id'))->setDocument(new ($Z('PolicyDocument'))())->setChangeReason('edit')->setTitle('draft 1');
-        case 'diff_policy_draft':
-            return (new ($Z('DiffPolicyDraftRequest'))())->setActor($actor(['authz:policy:read']))->setDraftId($g('policy_draft_id'));
-        case 'submit_policy_draft':
-            return (new ($Z('SubmitPolicyDraftRequest'))())->setActor($actor(['authz:policy:write']))->setDraftId($g('policy_draft_id'));
-        case 'approve_policy_draft':
-            return (new ($Z('ApprovePolicyDraftRequest'))())->setActor($actor(['authz:policy:approve']))->setDraftId($g('approve_draft_id'))->setReviewer($sub)->setReason('ok');
-        case 'reject_policy_draft':
-            return (new ($Z('RejectPolicyDraftRequest'))())->setActor($actor(['authz:policy:approve']))->setDraftId($g('reject_draft_id'))->setReviewer($sub)->setReason('nack');
-        case 'activate_policy_version':
-            return (new ($Z('ActivatePolicyVersionRequest'))())->setActor($actor(['authz:admin']))->setPolicyVersionId($g('policy_version_id') ?: liveUuidV4());
-        case 'rollback_policy_version':
-            return (new ($Z('RollbackPolicyVersionRequest'))())->setActor($actor(['authz:admin']))->setPolicySetId($g('rollback_policy_set_id') ?: liveUuidV4())->setTargetVersionId($g('rollback_target_version_id') ?: liveUuidV4())->setChangeReason('revert');
-        case 'activate_canary':
-            return (new ($Z('ActivateCanaryRequest'))())->setActor($actor(['authz:admin']))->setPolicyVersionId($g('canary_version_id') ?: liveUuidV4())->setScopeKind(3)->setScopeValues(['10'])->setSuccessWindowSecs(0)->setMetricThreshold(0.99)->setMinSamples(0);
-        case 'promote_canary':
-            return (new ($Z('PromoteCanaryRequest'))())->setActor($actor(['authz:admin']))->setCanaryId($g('canary_id') ?: liveUuidV4());
-        case 'get_canary_status':
-            return (new ($Z('GetCanaryStatusRequest'))())->setActor($actor(['authz:policy:read']))->setCanaryId($g('canary_id') ?: liveUuidV4());
-        case 'list_policy_versions':
-            return (new ($Z('ListPolicyVersionsRequest'))())->setActor($actor(['authz:policy:read']))->setTenantId($tenant)->setProjectId($project)->setPolicySetId($g('policy_id'))->setState(4)->setPage($page());
-        case 'simulate_policy':
-            return (new ($Z('SimulatePolicyRequest'))())->setActor($actor(['authz:policy:read']))->setTenantId($tenant)->setProjectId($project)->setCases([(new ($Z('SimulationCase'))())->setPrincipal($principal())->setResource($resourceRef())->setAction($g('action', 'data.select'))->setLabel('c1')])->setPersist(false);
-        case 'explain_policy':
-            return (new ($Z('ExplainPolicyRequest'))())->setActor($actor(['authz:policy:read']))->setTenantId($tenant)->setProjectId($project)->setTestCase((new ($Z('SimulationCase'))())->setPrincipal($principal())->setResource($resourceRef())->setAction($g('action', 'data.select')));
-        case 'get_authz_revision':
-            return (new ($Z('GetAuthzRevisionRequest'))())->setTenantId($tenant)->setProjectId($project);
-        case 'invalidate_policy_bundles':
-            return (new ($Z('InvalidatePolicyBundlesRequest'))())->setActor($actor(['authz:admin']))->setTenantId($tenant)->setProjectId($project)->setReason('rotate');
-        case 'seed_builtin_roles':
-            return (new ($Z('SeedBuiltinRolesRequest'))())->setActor($actor(['authz:admin']))->setTenantId($tenant)->setProjectId($project);
-        case 'migrate_legacy_policies':
-            return (new ($Z('MigrateLegacyPoliciesRequest'))())->setActor($actor(['authz:admin']))->setTenantId($tenant)->setProjectId($project)->setApply(false)->setPolicySetName('default');
-
-        // ── DataBroker (vector / object / cache / document / graph / timeseries / tx / cdc / catalog / migration / dlq / saga / policy) ──
-        case 'batch_select':
-        case 'select_v2':
-            return (new ($E('SelectRequest'))())->setContext($ctxE())->setMessageType('udb.sdk.live.v1.SdkLiveRecord')->setFilter(liveStruct(['record_id' => $g('record_id'), 'tenant_id' => $tenant, 'project_id' => $project]))->setLimit(10);
-        case 'batch_upsert':
-            return (new ($E('UpsertRequest'))())->setContext($ctxE())->setMessageType('udb.sdk.live.v1.SdkLiveRecord')->setRecordJson(liveRecordJson($g('record_id'), $tenant, $project, 'php-perf-lk', 'php-perf', 1))->setConflictFields(['record_id']);
-        case 'vector_search':
-            return (new ($E('VectorSearchRequest'))())->setContext($ctxE())->setCollection('sdk_live_records')->setVector([0.1, 0.2, 0.3])->setLimit(5)->setWithPayload(true);
-        case 'vector_hybrid_search':
-            return (new ($E('VectorHybridSearchRequest'))())->setContext($ctxE())->setCollection('sdk_live_records')->setVector([0.1, 0.2, 0.3])->setTextQuery('hello')->setLimit(5)->setWithPayload(true);
-        case 'vector_upsert':
-        case 'vector_batch_upsert':
-            return (new ($E('VectorUpsertRequest'))())->setContext($ctxE())->setCollection('sdk_live_records')->setPoints([(new ($E('VectorPointMutation'))())->setId($g('record_id'))->setVector([0.1, 0.2, 0.3])]);
-        case 'put_object':
-            return (new ($E('Chunk'))())->setContext($ctxE())->setBucket($g('bucket', 'udb-live-sdk'))->setObjectKey($g('object_key', 'perf.txt'))->setData('x')->setContentType('application/octet-stream')->setFinalChunk(true);
-        case 'get_object':
-            return (new ($E('ObjectRequest'))())->setContext($ctxE())->setBucket($g('bucket', 'udb-live-sdk'))->setObjectKey($g('object_key', 'perf.txt'));
-        case 'generate_presigned_url':
-            return (new ($E('UrlRequest'))())->setContext($ctxE())->setBucket($g('bucket', 'udb-live-sdk'))->setObjectKey($g('object_key', 'perf.txt'))->setMethod('GET')->setTtlSeconds(300);
-        case 'initiate_multipart_upload':
-            return (new ($E('MultipartUploadRequest'))())->setContext($ctxE())->setBucket($g('bucket', 'udb-live-sdk'))->setObjectKey($g('object_key', 'perf.txt'))->setContentType('application/octet-stream')->setPartCount(1)->setTtlSeconds(300);
-        case 'cache_get':
-            return (new ($E('CacheGetRequest'))())->setContext($ctxE())->setResource($store('redis'))->setKey($g('object_key', 'perf-key'))->setTouch(false);
-        case 'cache_set':
-            return (new ($E('CacheSetRequest'))())->setContext($ctxE())->setResource($store('redis'))->setKey($g('object_key', 'perf-key'))->setValue('v')->setContentType('text/plain')->setTtlSeconds(60);
-        case 'cache_delete':
-            return (new ($E('CacheDeleteRequest'))())->setContext($ctxE())->setResource($store('redis'))->setKey($g('object_key', 'perf-key'));
-        case 'cache_scan':
-            return (new ($E('CacheScanRequest'))())->setContext($ctxE())->setResource($store('redis'))->setKeyPattern('*')->setLimit(50);
-        case 'document_get':
-            return (new ($E('DocumentGetRequest'))())->setContext($ctxE())->setResource($store('mongodb', $g('mongo_collection', 'sdk_perf')))->setDocumentId($g('document_id', 'doc-1'));
-        case 'document_find':
-            return (new ($E('DocumentFindRequest'))())->setContext($ctxE())->setResource($store('mongodb', $g('mongo_collection', 'sdk_perf')))->setFilter(liveStruct([]))->setLimit(10);
-        case 'document_upsert':
-            return (new ($E('DocumentUpsertRequest'))())->setContext($ctxE())->setResource($store('mongodb', $g('mongo_collection', 'sdk_perf')))->setDocumentId($g('document_id', 'doc-1'))->setDocument(liveStruct(['name' => 'x']));
-        case 'document_delete':
-            return (new ($E('DocumentDeleteRequest'))())->setContext($ctxE())->setResource($store('mongodb', $g('mongo_collection', 'sdk_perf')))->setDocumentId($g('document_id', 'doc-1'));
-        case 'graph_query':
-            return (new ($E('GraphQueryRequest'))())->setContext($ctxE())->setResource($store('neo4j'))->setQuery('MATCH (n) RETURN n LIMIT 1')->setReadOnly(true)->setLimit(10);
-        case 'graph_mutate':
-            return (new ($E('GraphMutationRequest'))())->setContext($ctxE())->setResource($store('neo4j'))->setQuery('CREATE (n:Node {id:$id})')->setParameters(liveStruct(['id' => $g('record_id')]));
-        case 'time_series_write':
-            // No points (matches Go) — TimeSeriesPoint.timestamp is a Timestamp message; the empty write resolves.
-            return (new ($E('TimeSeriesWriteRequest'))())->setContext($ctxE())->setResource($store('clickhouse', $g('ts_table', 'sdk_perf_ts')));
-        case 'time_series_query':
-            // No from/to (matches Go) — they are Timestamp messages; resource_name + limit is a valid query.
-            return (new ($E('TimeSeriesQueryRequest'))())->setContext($ctxE())->setResource($store('clickhouse', $g('ts_table', 'sdk_perf_ts')))->setLimit(100);
-        case 'analytical_query':
-            return (new ($E('AnalyticalQueryRequest'))())->setContext($ctxE())->setResource($store('clickhouse'))->setQuery('SELECT 1')->setLimit(100);
-        case 'begin_tx':
-            return (new ($E('Mutation'))())->setContext($ctxE())->setOperation('upsert')->setMessageType('udb.sdk.live.v1.SdkLiveRecord')->setPayload(liveStruct(['record_id' => $g('record_id')]));
-        case 'publish_cdc':
-        case 'publish_c_d_c':
-            return (new ($E('CDCSubscriptionRequest'))())->setContext($ctxE())->setTopicPattern($project.'.*');
-        case 'create_materialized_view':
-            return (new ($E('ViewDefinition'))())->setContext($ctxE())->setSchema('public')->setName('mv_test')->setQuery('SELECT 1')->setWithData(true);
-        case 'enqueue_outbox_event':
-            return (new ($E('EnqueueOutboxEventRequest'))())->setContext($ctxE())->setTopic($g('event_type', 'sdk.perf'))->setPartitionKey($g('document_id', 'doc-1'))->setPayload(liveStruct(['event_id' => liveUuidV4(), 'event_type' => $g('event_type', 'sdk.perf'), 'correlation_id' => liveUuidV4(), 'document_id' => $g('document_id', 'doc-1')]));
-        case 'drop_resource':
-            // destructive — throwaway name + explicit RLS-bypass ack (a drop spans tenants,
-            // so the broker fail-closes unless udb_allow_rls_bypass is set).
-            return (new ($E('ResourceAdminRequest'))())->setContext($ctxE())->setBackend('mongodb')->setResourceName('php_perf_drop_noop')->setSpecJson(json_encode(['udb_allow_rls_bypass' => true]));
-        case 'stage_catalog':
-        case 'validate_catalog':
-            // manifest_json captured live in the seed (the new binary doesn't poison on stage).
-            return (new ($E('StageCatalogRequest'))())->setContext($ctxE())->setManifestJson($g('catalog_manifest'))->setProjectId($project)->setReason('stage');
-        case 'activate_catalog':
-        case 'rollback_catalog':
-        case 'get_catalog_version':
-            return (new ($E('CatalogVersionRequest'))())->setContext($ctxE())->setProjectId($project);
-        case 'plan_migration':
-            return (new ($E('MigrationPlanRequest'))())->setContext($ctxE())->setProjectId($project)->setDryRun(true);
-        case 'apply_migration':
-            // Token is a BODY field (handlers_catalog.rs:694 reads req.approval_token); it was
-            // returned in the ApproveMigrationPlan response HEADER x-udb-approval-token and
-            // captured into 'approval_token' (BENCH_TS_PHP_ADVISORY.md).
-            return (new ($E('MigrationApplyRequest'))())->setContext($ctxE())->setRunId($g('apply_run_id') ?: $g('migration_id'))->setProjectId($project)->setApprovalToken($g('approval_token'));
-        case 'get_migration_status':
-        case 'approve_migration_plan':
-            return (new ($E('MigrationRunRequest'))())->setContext($ctxE())->setRunId($g('approve_run_id') ?: $g('migration_id'))->setProjectId($project);
-        case 'get_dlq_event':
-            return (new ($E('DlqEventRequest'))())->setContext($ctxE())->setDlqId($g('dlq_id') ?: liveUuidV4());
-        case 'replay_dlq_event':
-            return (new ($E('DlqActionRequest'))())->setContext($ctxE())->setDlqId($g('replay_dlq_id') ?: liveUuidV4())->setPreserveEventId(false);
-        case 'dismiss_dlq_event':
-            return (new ($E('DlqActionRequest'))())->setContext($ctxE())->setDlqId($g('dismiss_dlq_id') ?: liveUuidV4());
-        case 'quarantine_dlq_event':
-            return (new ($E('DlqActionRequest'))())->setContext($ctxE())->setDlqId($g('quarantine_dlq_id') ?: liveUuidV4());
-        case 'get_cdc_status':
-            return (new ($E('CdcControlRequest'))())->setContext($ctxE())->setSlotName('udb_cdc');
-        case 'pause_cdc':
-            return (new ($E('CdcControlRequest'))())->setContext($ctxE())->setSlotName('udb_cdc')->setReason('maintenance');
-        case 'resume_cdc':
-            return (new ($E('CdcControlRequest'))())->setContext($ctxE())->setSlotName('udb_cdc')->setReason('resume');
-        case 'step_down_cdc_leader':
-            return (new ($E('CdcControlRequest'))())->setContext($ctxE())->setSlotName('udb_cdc')->setReason('failover');
-        case 'preview_cdc_redaction':
-            return (new ($E('CdcRedactionPreviewRequest'))())->setContext($ctxE())->setMessageType('udb.sdk.live.v1.SdkLiveRecord')->setTopic($g('event_type', 'sdk.perf'))->setPayloadJson('{"record_id":"x"}')->setRedactionMode('mask')->setRedactionVersion(1);
-        case 'scan_projection_drift':
-            return (new ($E('ProjectionDriftScanRequest'))())->setContext($ctxE())->setProjectId($project)->setMessageType('udb.sdk.live.v1.SdkLiveRecord')->setScanMode('sample')->setRowsPerTarget(100)->setLimit(10);
-        case 'get_saga':
-            return (new ($E('SagaRequest'))())->setContext($ctxE())->setSagaId($g('saga_id') ?: liveUuidV4());
-        case 'retry_saga_compensation':
-            return (new ($E('SagaRequest'))())->setContext($ctxE())->setSagaId($g('retry_saga_id') ?: liveUuidV4())->setReason('retry');
-        case 'mark_saga_reviewed':
-            return (new ($E('SagaRequest'))())->setContext($ctxE())->setSagaId($g('mark_saga_id') ?: liveUuidV4())->setReason('reviewed');
-        case 'put_policy':
-            // ALLOW-ALL (empty selectors = match-any): a narrow policy would flip the
-            // data plane to deny-by-default (snapshot non-empty) and deny the admin's
-            // own Upsert/Select/Vector*/TimeSeries* once reload_policies runs. An
-            // allow-all keeps the data plane open while still exercising the write path.
-            return (new ($E('PutPolicyRequest'))())->setContext($ctxE())->setPolicy((new ($E('PolicyRecord'))())->setEffect('allow')->setServiceIdentity('')->setTenantId($tenant)->setMessageType('')->setOperation('')->setRequiredScope('')->setPriority(1)->setEnabled(true));
-        case 'delete_policy':
-            return (new ($E('PolicyRequest'))())->setContext($ctxE())->setPolicyId((int) ($g('ds_policy_id') ?: 0));
-        case 'reload_policies':
-        case 'lint_policies':
-            return (new ($E('CapabilitiesRequest'))())->setContext($ctxE())->setProjectId($project);
-
-        // ── IdentityProviderService — SCIM / SAML / unlink ──
-        case 'unlink_identity':
-            return (new ($I('UnlinkIdentityRequest'))())->setTenantId($tenant)->setExternalIdentityId($g('external_identity_id') ?: liveUuidV4())->setContext($ctxC());
-        case 'import_saml_metadata':
-            return (new ($I('ImportSamlMetadataRequest'))())->setProviderId($g('saml_provider_id') ?: $g('provider_id'))->setTenantId($tenant)->setMetadataXml('<md:EntityDescriptor xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata" entityID="https://idp.example.com/perf-saml"><md:IDPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol"><md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://idp.example.com/sso"/><md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://idp.example.com/sso"/></md:IDPSSODescriptor></md:EntityDescriptor>')->setUpdatedBy($g('user_id'))->setContext($ctxC());
-        case 'start_saml_login':
-            // Must target the SAML-kind provider with an imported SSO URL, not the OIDC one.
-            return (new ($I('StartSamlLoginRequest'))())->setProviderId($g('saml_provider_id') ?: $g('provider_id'))->setTenantId($tenant)->setRelayState('state-1');
-        case 'saml_acs':
-            return (new ($I('SamlAcsRequest'))())->setProviderId($g('provider_id'))->setTenantId($tenant)->setSamlResponse('__UDB_SAML_TEST__')->setRelayState('state-1')->setContext($ctxC());
-        case 'scim_create_user':
-            return (new ($I('ScimCreateUserRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setScimUserJson(json_encode(['userName' => 'scim-'.bin2hex(random_bytes(6)).'@x.com', 'active' => true]))->setContext($ctxC());
-        case 'scim_get_user':
-            return (new ($I('ScimGetUserRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setScimUserId($g('scim_user_id') ?: $g('record_id'));
-        case 'scim_list_users':
-            return (new ($I('ScimListUsersRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setPage($page());
-        case 'scim_replace_user':
-            return (new ($I('ScimReplaceUserRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setScimUserId($g('scim_user_id') ?: $g('record_id'))->setScimUserJson('{"userName":"a@x.com","active":true}')->setContext($ctxC());
-        case 'scim_patch_user':
-            return (new ($I('ScimPatchUserRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setScimUserId($g('scim_user_id') ?: $g('record_id'))->setOperations([(new ($I('ScimPatchOp'))())->setOp('replace')->setPath('active')->setValueJson('false')])->setContext($ctxC());
-        case 'scim_delete_user':
-            return (new ($I('ScimDeleteUserRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setScimUserId($g('delete_scim_user_id') ?: $g('record_id'))->setContext($ctxC());
-        case 'scim_create_group':
-            // displayName MUST equal a seeded provider group_mapping_json key
-            // (perfSeedPhp maps sdk-perf-group -> admin) or ScimCreateGroup fails.
-            return (new ($I('ScimCreateGroupRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setScimGroupJson(json_encode(['displayName' => 'sdk-perf-group']))->setContext($ctxC());
-        case 'scim_get_group':
-            return (new ($I('ScimGetGroupRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setScimGroupId($g('scim_group_id') ?: $g('record_id'));
-        case 'scim_list_groups':
-            return (new ($I('ScimListGroupsRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setPage($page());
-        case 'scim_patch_group':
-            return (new ($I('ScimPatchGroupRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setScimGroupId($g('scim_group_id') ?: $g('record_id'))->setOperations([(new ($I('ScimPatchOp'))())->setOp('add')->setPath('members')->setValueJson('["x"]')])->setContext($ctxC());
-        case 'scim_delete_group':
-            return (new ($I('ScimDeleteGroupRequest'))())->setTenantId($tenant)->setProviderId($g('provider_id'))->setScimGroupId($g('scim_group_id') ?: $g('record_id'))->setContext($ctxC());
-
-        // ── WebRTC SignalingService ──
-        case 'signal':
-            return (new ($W('SignalRequest'))())->setTenantId($tenant)->setRoomId($g('room_id'))->setPeerId($g('peer_id'))->setPing(true);
-
-        // ── ControlPlaneService (xDS-style; context = common.v1, resource_type BACKEND_TARGET_DEFINITION=5) ──
-        case 'stream_resources':
-            return (new ($C('DiscoveryRequest'))())->setNodeId($g('node_id', 'php-perf-node'))->setResourceType(5)->setVersionInfo('')->setResponseNonce('')->setContext($ctxC());
-        case 'delta_resources':
-            return (new ($C('DeltaDiscoveryRequest'))())->setNodeId($g('node_id', 'php-perf-node'))->setResourceType(5)->setResponseNonce('')->setResourceNamesSubscribe([])->setContext($ctxC());
-        case 'get_resources':
-            return (new ($C('GetResourcesRequest'))())->setResourceType(5)->setTenantId($tenant)->setPage($page('', 50))->setContext($ctxC());
-        case 'list_node_states':
-            return (new ($C('ListNodeStatesRequest'))())->setResourceType(0)->setPage($page('', 50))->setContext($ctxC());
-        case 'ack_status':
-            return (new ($C('AckStatusRequest'))())->setNodeId($g('node_id', 'php-perf-node'))->setResourceType(5)->setContext($ctxC());
-
-        default:
-            return null; // not yet covered → caller sends typed-empty (NEVER generic)
+    $manifestBody = phpManifestJsonBody($name, $fix, $tenant, $project, $serviceName);
+    if ($manifestBody !== null) {
+        return $manifestBody;
     }
+
+    $label = ($serviceName !== null && $serviceName !== '') ? "{$serviceName}.{$name}" : $name;
+    throw new RuntimeException("PHP bench manifest body missing or non-hydratable for {$label}");
 }
 
 /**
@@ -2148,6 +3127,7 @@ function perfSeedPhp(array $s): array
     foreach ([
         'tenant_id' => $tenant, 'tenant' => $tenant, 'project_id' => $project, 'project' => $project,
         'domain' => $tenant, 'message_type' => 'udb.sdk.live.v1.SdkLiveRecord', 'locale' => 'en',
+        'tenant_code' => "sdk-perf-tenant-$suffix",
         'name' => "sdk-perf-$suffix", 'filename' => "sdk-perf-$suffix.txt", 'content_type' => 'text/plain',
         'file_type' => 'DOCUMENT', 'kind' => 'audio',
     ] as $k => $v) {
@@ -2575,6 +3555,7 @@ function perfSeedPhp(array $s): array
     $cm = $try('CaptureCatalogManifest', fn () => $data->get_catalog_manifest((new \Udb\Entity\V1\CatalogManifestRequest())->setContext($rcSeed)->setRedact(false), $meta));
     if ($cm && $cm->getManifestJson() !== '') {
         $fix->set('catalog_manifest', $cm->getManifestJson());
+        $fix->set('catalog_manifest_b64', base64_encode($cm->getManifestJson()));
     }
 
     // AnalyticsService: a recorded metric.
@@ -2593,16 +3574,14 @@ function perfSeedPhp(array $s): array
     $fix->set('event_type', $event);
     if ($uid !== '') {
         $sent = $try('SendNotification', fn () => $authGen->send_notification((new \Udb\Core\Notification\Services\V1\SendNotificationRequest())
-            ->setEventType($event)->setRecipientId($uid)->setRecipientAddress("sdk+$suffix@example.com")->setTenantId($tenant)->setChannels([1]), $meta));
+            ->setEventType($event)->setRecipientId($uid)->setRecipientAddress("sdk+$suffix@example.com")->setTenantId($tenant)
+            ->setResourceType('__perf_force_failed__')->setChannels([1]), $meta));
         if ($sent && count($sent->getLogs()) > 0) {
             $logId = $sent->getLogs()[0]->getLogId();
             $fix->set('log_id', $logId);
             $fix->set('notification_id', $logId);
-            // RetryNotification is status-gated to FAILED rows — mark this log FAILED via
-            // GenericDispatch operation="mutate" (query only allows SELECT). Go pattern.
-            $try('MarkNotificationFailed', fn () => $data->generic_dispatch((new \Udb\Entity\V1\GenericDispatchRequest())
-                ->setContext($rcSeed)->setBackend('postgres')->setOperation('mutate')
-                ->setSpecJson(json_encode(['sql' => "UPDATE udb_notification.notification_logs SET status = 'FAILED', error_message = 'perf seed failure' WHERE log_id = \$1::UUID AND tenant_id = \$2 RETURNING log_id", 'params' => [$logId, $tenant], 'param_types' => ['uuid', 'string'], 'return_rows' => true])), $meta));
+            // UDB_NOTIFICATION_TEST_MODE + ResourceType sentinel makes this served
+            // send produce a real FAILED row for RetryNotification.
         }
         // An EMAIL preference row so GetPreference resolves.
         $try('SetPreference', fn () => $authGen->set_preference((new \Udb\Core\Notification\Services\V1\SetPreferenceRequest())
@@ -2621,15 +3600,20 @@ function perfSeedPhp(array $s): array
         $stream->read();
         $stream->cancel();
     });
-    // Saga + DLQ rows: pre-seeded out-of-band into udb_system (fixed UUIDs, one per
-    // mutating RPC). The SQL insert runs before the test (scoped to the run's tenant).
-    $fix->set('saga_id', '11111111-1111-4111-8111-111111111101');
-    $fix->set('retry_saga_id', '11111111-1111-4111-8111-111111111102');
-    $fix->set('mark_saga_id', '11111111-1111-4111-8111-111111111103');
-    $fix->set('dlq_id', '22222222-2222-4222-8222-222222222201');
-    $fix->set('dismiss_dlq_id', '22222222-2222-4222-8222-222222222202');
-    $fix->set('quarantine_dlq_id', '22222222-2222-4222-8222-222222222203');
-    $fix->set('replay_dlq_id', '22222222-2222-4222-8222-222222222204');
+    // Saga + DLQ rows: create recovery state through the served, admin-gated
+    // EnsureBaseline RPC instead of raw udb_system inserts. Each mutating RPC gets
+    // its own disposable row because the op transitions status.
+    foreach ([['saga_id', 'dlq_id'], ['retry_saga_id', 'dismiss_dlq_id'], ['mark_saga_id', 'quarantine_dlq_id'], ['', 'replay_dlq_id']] as [$sagaKey, $dlqKey]) {
+        $baseline = $try("EnsureBaseline:$dlqKey", fn () => $data->ensure_baseline((new \Udb\Services\V1\EnsureBaselineRequest())->setContext($rcSeed), $meta));
+        if ($baseline) {
+            if ($sagaKey !== '' && count($baseline->getSagaIds()) > 0) {
+                $fix->set($sagaKey, $baseline->getSagaIds()[0]);
+            }
+            if (count($baseline->getDlqIds()) > 0) {
+                $fix->set($dlqKey, $baseline->getDlqIds()[0]);
+            }
+        }
+    }
 
     // StorageService (UUID tenant): a registered file -> file_id, + Asset pipeline.
     $reg = $try('RegisterUpload', fn () => $authGen->register_upload((new \Udb\Core\Storage\Services\V1\RegisterUploadRequest())
@@ -2820,6 +3804,145 @@ function perfSeedPhp(array $s): array
         }
     }
 
+    // ── New-service fixtures (Vault / Lock / Workflow / Scheduler / Webhook /
+    //    Backup / Embedding / Search / Metering / Config) ──────────────────────────
+    // These services have NO generated method wrappers in the PHP client, so the
+    // reflective full-surface sweep drives them through their RAW gRPC stubs and
+    // hydrates each probe body from the shared bench-body manifest. Those bodies
+    // read <seed:...> refs (phpResolveManifestSeeds THROWS on a missing ref), and
+    // the read/mutation RPCs need a pre-existing row/id/token — neither of which
+    // any earlier seed produced. Populate the exact ref names the Go seeds use
+    // (sdk/go/udbclient/live_perf_seed_test.go) and create the backing rows.
+    $lockOwner = $uid !== '' ? $uid : liveUuidV4();
+    $seedStub = function (string $label, object $stub, string $rpc, string $reqClass, array $body) use ($meta, $try): ?object {
+        return $try($label, function () use ($stub, $rpc, $reqClass, $body, $meta) {
+            /** @var \Google\Protobuf\Internal\Message $req */
+            $req = new $reqClass();
+            $req->mergeFromJsonString((string) json_encode($body));
+            /** @var \Grpc\UnaryCall $call */
+            $call = $stub->{$rpc}($req, $meta->toGrpcMetadata(), ['timeout' => 20_000_000]);
+            [$resp, $status] = $call->wait();
+            $code = is_object($status) ? (int) ($status->code ?? 0) : (is_array($status) ? (int) ($status['code'] ?? 0) : 0);
+
+            return $code === 0 ? $resp : null;
+        });
+    };
+
+    // VaultService: a preseeded transit key + real ciphertext/signature (for the
+    // measured Decrypt/Verify), plus preseeded secret paths for Get/Delete/Destroy.
+    // The measured CreateTransitKey/PutSecret write DISTINCT names/paths so they do
+    // not collide with these read fixtures.
+    $vault = $authGen->VaultServiceStub();
+    $fix->set('vault_key_name', "sdk-perf-key-$suffix");
+    $fix->set('vault_create_key_name', "sdk-perf-create-key-$suffix");
+    $fix->set('vault_secret_path', "app/config-$suffix");
+    $fix->set('vault_put_secret_path', "app/put-$suffix");
+    $fix->set('vault_delete_secret_path', "app/delete-$suffix");
+    $fix->set('vault_destroy_secret_path', "app/destroy-$suffix");
+    $fix->set('vault_db_role', "sdk-perf-db-role-$suffix");
+    // Fallbacks so the Decrypt/Verify bodies always resolve even if Encrypt/Sign fail.
+    $fix->set('vault_ciphertext', base64_encode('perf'));
+    $fix->set('vault_signature', base64_encode('perf'));
+    $seedStub('CreateTransitKey', $vault, 'CreateTransitKey', \Udb\Core\Vault\Services\V1\CreateTransitKeyRequest::class,
+        ['tenant_id' => $tenant, 'key_name' => $fix->lookup('vault_key_name'), 'algorithm' => 'aes256-gcm-siv']);
+    $enc = $seedStub('VaultEncrypt', $vault, 'Encrypt', \Udb\Core\Vault\Services\V1\EncryptRequest::class,
+        ['tenant_id' => $tenant, 'key_name' => $fix->lookup('vault_key_name'), 'plaintext' => 'perf']);
+    if ($enc && $enc->getCiphertext() !== '') {
+        $fix->set('vault_ciphertext', $enc->getCiphertext());
+    }
+    $sig = $seedStub('VaultSign', $vault, 'Sign', \Udb\Core\Vault\Services\V1\SignRequest::class,
+        ['tenant_id' => $tenant, 'key_name' => $fix->lookup('vault_key_name'), 'input' => 'perf']);
+    if ($sig && $sig->getSignature() !== '') {
+        $fix->set('vault_signature', $sig->getSignature());
+    }
+    foreach (['vault_secret_path' => 'perf-secret', 'vault_delete_secret_path' => 'delete-secret', 'vault_destroy_secret_path' => 'destroy-secret'] as $ref => $val) {
+        $seedStub("VaultPutSecret:$ref", $vault, 'PutSecret', \Udb\Core\Vault\Services\V1\PutSecretRequest::class,
+            ['tenant_id' => $tenant, 'secret_path' => $fix->lookup($ref), 'secret_value' => $val, 'expected_version' => 0, 'metadata_json' => '{}']);
+    }
+
+    // LockService: two independent locks whose captured fencing tokens back the
+    // measured RenewLock / ReleaseLock (each keyed by its exact seeded lock name).
+    $locks = $authGen->LockServiceStub();
+    $renew = $seedStub('AcquireLock:renew', $locks, 'AcquireLock', \Udb\Core\Lock\Services\V1\AcquireLockRequest::class,
+        ['tenant_id' => $tenant, 'lock_name' => 'sdk-perf-renew-lock', 'owner_id' => $lockOwner, 'lease_ttl_seconds' => 60, 'metadata_json' => '{}']);
+    if ($renew) {
+        $fix->set('renew_fencing_token', (string) $renew->getFencingToken());
+    }
+    $release = $seedStub('AcquireLock:release', $locks, 'AcquireLock', \Udb\Core\Lock\Services\V1\AcquireLockRequest::class,
+        ['tenant_id' => $tenant, 'lock_name' => 'sdk-perf-release-lock', 'owner_id' => $lockOwner, 'lease_ttl_seconds' => 60, 'metadata_json' => '{}']);
+    if ($release) {
+        $fix->set('release_fencing_token', (string) $release->getFencingToken());
+    }
+
+    // WorkflowService: a primary + a disposable (cancel) workflow instance.
+    $workflow = $authGen->WorkflowServiceStub();
+    $wf = $seedStub('StartWorkflow', $workflow, 'StartWorkflow', \Udb\Core\Workflow\Services\V1\StartWorkflowRequest::class,
+        ['tenant_id' => $tenant, 'project_id' => '', 'workflow_type' => 'sdk.perf.workflow', 'total_steps' => 20, 'payload' => '{}', 'compensations' => '[]', 'correlation_id' => $recordId]);
+    if ($wf) {
+        $fix->set('workflow_id', $wf->getWorkflowId());
+    }
+    $cwf = $seedStub('StartWorkflow:cancel', $workflow, 'StartWorkflow', \Udb\Core\Workflow\Services\V1\StartWorkflowRequest::class,
+        ['tenant_id' => $tenant, 'project_id' => '', 'workflow_type' => 'sdk.perf.cancel', 'total_steps' => 20, 'payload' => '{}', 'compensations' => '[]', 'correlation_id' => "cancel-$recordId"]);
+    if ($cwf) {
+        $fix->set('cancel_workflow_id', $cwf->getWorkflowId());
+    }
+
+    // SchedulerService: a stable job for the read/pause/resume/delete fixtures.
+    $scheduler = $authGen->SchedulerServiceStub();
+    $job = $seedStub('CreateJob', $scheduler, 'CreateJob', \Udb\Core\Scheduler\Services\V1\CreateJobRequest::class,
+        ['tenant_id' => $tenant, 'project_id' => '', 'name' => "sdk-perf-seed-job-$suffix", 'schedule_type' => 'CRON', 'cron_expression' => '*/5 * * * *', 'payload' => '{}', 'target_topic' => 'sdk.perf.scheduler', 'max_attempts' => 3, 'backoff_seconds' => 30]);
+    if ($job) {
+        $fix->set('job_id', $job->getJobId());
+    }
+
+    // WebhookService: a primary + a disposable endpoint (topic_pattern = "*" mirrors Go).
+    $webhooks = $authGen->WebhookServiceStub();
+    $fix->set('topic_pattern', '*');
+    $ep = $seedStub('CreateEndpoint', $webhooks, 'CreateEndpoint', \Udb\Core\Webhook\Services\V1\CreateEndpointRequest::class,
+        ['tenant_id' => $tenant, 'url' => 'https://example.com/udb-webhook-seed', 'topic_pattern' => '*', 'description' => 'sdk perf seed webhook', 'max_attempts' => 3, 'metadata_json' => '{}']);
+    if ($ep) {
+        $fix->set('endpoint_id', $ep->getEndpointId());
+    }
+    $dep = $seedStub('CreateEndpoint:delete', $webhooks, 'CreateEndpoint', \Udb\Core\Webhook\Services\V1\CreateEndpointRequest::class,
+        ['tenant_id' => $tenant, 'url' => 'https://example.com/udb-webhook-delete', 'topic_pattern' => '*', 'description' => 'sdk perf delete webhook', 'max_attempts' => 3, 'metadata_json' => '{}']);
+    if ($dep) {
+        $fix->set('delete_endpoint_id', $dep->getEndpointId());
+    }
+
+    // BackupService: a policy row + a started backup id (+ a restore target tenant).
+    $backup = $authGen->BackupServiceStub();
+    $fix->set('restore_tenant_id', liveUuidV4());
+    $seedStub('PutBackupPolicy', $backup, 'PutBackupPolicy', \Udb\Core\Backup\Services\V1\PutBackupPolicyRequest::class,
+        ['tenant_id' => $tenant, 'policy_name' => 'sdk-perf-default', 'schedule_cron' => '0 3 * * *', 'retention_days' => 7, 'max_retained_backups' => 3, 'enabled' => true, 'metadata_json' => '{}']);
+    $bk = $seedStub('StartTenantBackup', $backup, 'StartTenantBackup', \Udb\Core\Backup\Services\V1\StartTenantBackupRequest::class,
+        ['tenant_id' => $tenant]);
+    if ($bk) {
+        $fix->set('backup_id', $bk->getBackupId());
+    }
+
+    // EmbeddingService: register the seeded record as a source + report one vector,
+    // so the embedding read RPCs resolve a real source/row.
+    $embedding = $authGen->EmbeddingServiceStub();
+    $seedStub('RegisterSource', $embedding, 'RegisterSource', \Udb\Core\Embedding\Services\V1\RegisterSourceRequest::class,
+        ['tenant_id' => $tenant, 'source_name' => 'sdk_live_records', 'source_message_type' => 'udb.sdk.live.v1.SdkLiveRecord', 'text_fields' => ['payload'], 'target_collection' => 'sdk_live_records', 'model_id' => 'text-embedding-3-small', 'metadata_json' => '{}']);
+    $seedStub('ReportEmbedding', $embedding, 'ReportEmbedding', \Udb\Core\Embedding\Services\V1\ReportEmbeddingRequest::class,
+        ['tenant_id' => $tenant, 'source_name' => 'sdk_live_records', 'row_pk' => $recordId, 'vector' => [0.1, 0.2, 0.3], 'model' => 'text-embedding-3-small', 'dims' => 3]);
+
+    // SearchService: create the seeded index so the search read RPCs resolve.
+    $search = $authGen->SearchServiceStub();
+    $seedStub('CreateIndex', $search, 'CreateIndex', \Udb\Core\Search\Services\V1\CreateIndexRequest::class,
+        ['tenant_id' => $tenant, 'index_name' => 'sdk_live_records', 'source_message_type' => 'udb.sdk.live.v1.SdkLiveRecord', 'backend' => 'qdrant', 'resource_name' => 'sdk_live_records', 'vector_dims' => 3, 'metadata_json' => '{}']);
+
+    // MeteringService: upsert a quota rule so GetQuota/QueryUsage resolve a row.
+    $metering = $authGen->MeteringServiceStub();
+    $seedStub('PutQuota', $metering, 'PutQuota', \Udb\Core\Metering\Services\V1\PutQuotaRequest::class,
+        ['tenant_id' => $tenant, 'project_id' => $project, 'metric' => 'sdk.perf.request', 'limit_value' => 1000000, 'window_seconds' => 86400, 'enabled' => true, 'metadata_json' => '{}']);
+
+    // ConfigService: upsert a project flag so GetFlag/ListFlags resolve a row.
+    $config = $authGen->ConfigServiceStub();
+    $seedStub('PutFlag', $config, 'PutFlag', \Udb\Core\Config\Services\V1\PutFlagRequest::class,
+        ['tenant_id' => $tenant, 'project_id' => $project, 'environment' => 'prod', 'flag_key' => 'sdk.perf.enabled', 'value' => ['bool_value' => true], 'enabled' => true, 'rollout_percentage' => 100, 'rollout_context_key' => 'user_id', 'metadata_json' => '{}']);
+
     $cleanup = function () use ($cleanups) {
         foreach (array_reverse($cleanups) as $fn) {
             $fn();
@@ -2899,7 +4022,10 @@ it('measures per-RPC latency', function () {
     $PHASE1_AUTHN = ['login', 'refresh_session', 'authenticate', 'validate_token', 'introspect_token', 'refresh_token', 'get_jwks'];
     $PHASE3_AUTHN = ['logout', 'revoke_session', 'admin_revoke_session', 'admin_revoke_all_user_sessions', 'admin_revoke_all_tenant_sessions', 'emergency_revoke', 'change_password', 'reset_password', 'admin_reset_password', 'change_user_status', 'admin_reset_mfa', 'revoke_recovery_codes', 'revoke_device', 'delete_web_authn_credential', 'disable_mfa_factor'];
     $okRank = ['read_only' => 0, 'mutation' => 1, 'destructive' => 2];
-    $kindOf = fn (string $n) => \Fahara02\UdbLaravel\Generated\GeneratedClient::OPERATION_KIND[$n] ?? 'read_only';
+    $apiKeyOf = fn (string $svc, string $name) => "$svc/$name";
+    $kindOf = fn (array $u) => operationKindPhp($u['name'], $u['svc']);
+    $aliasOf = fn (string $svc, string $name) => \Fahara02\UdbLaravel\Generated\GeneratedClient::API_ALIAS[$apiKeyOf($svc, $name)] ?? rpcSnake($name);
+    $operationIdOf = fn (string $svc, string $name) => \Fahara02\UdbLaravel\Generated\GeneratedClient::OPERATION_ID[$apiKeyOf($svc, $name)] ?? lcfirst($name);
     // Collect every (stub, method) unit, then sort into phases before measuring.
     $units = [];
     foreach (stubAccessors($s['data'], $s['authGenerated']) as $stubName => $stub) {
@@ -2922,7 +4048,7 @@ it('measures per-RPC latency', function () {
         $pa = $phaseOf($a); $pb = $phaseOf($b);
         if ($pa !== $pb) { return $pa <=> $pb; }
         if ($pa === 1) { return array_search(rpcSnake($a['name']), $PHASE1_AUTHN, true) <=> array_search(rpcSnake($b['name']), $PHASE1_AUTHN, true); }
-        if ($pa === 2) { return ($okRank[$kindOf($a['name'])] ?? 0) <=> ($okRank[$kindOf($b['name'])] ?? 0); }
+        if ($pa === 2) { return ($okRank[$kindOf($a)] ?? 0) <=> ($okRank[$kindOf($b)] ?? 0); }
         return 0;
     });
     foreach ($units as $u) {
@@ -2982,9 +4108,9 @@ it('measures per-RPC latency', function () {
                 // a factory and rebuilt PER ITERATION so create-style RPCs (random unique
                 // username/role_code/name) don't collide on a reused body (iters 2+ would
                 // hit the unique constraint and the broker leaks it as INTERNAL).
-                $mkBody = fn () => perfBodyPhp($name, $fix, $authedMeta->tenantId, $authedMeta->projectId) ?? requestFor($method);
+                $mkBody = fn () => perfBodyPhp($name, $fix, $authedMeta->tenantId, $authedMeta->projectId, $svc);
                 $probeRequest = $mkBody();
-                $kind = operationKindPhp($name);
+                $kind = operationKindPhp($name, $svc);
             }
             $iters = $itersFor($kind);
             if ($rpcName === 'approve_migration_plan') {
@@ -3013,7 +4139,8 @@ it('measures per-RPC latency', function () {
                 // Stream-open latency (initiate + cancel, no response drain).
                 $openMs = (microtime(true) - $openStart) * 1000.0;
                 $samples[] = [
-                    'service' => $svc, 'rpc' => $name, 'kind' => 'stream_open', 'err' => 'OK',
+                    'service' => $svc, 'rpc' => $name, 'api_alias' => $aliasOf($svc, $name),
+                    'operation_id' => $operationIdOf($svc, $name), 'kind' => 'stream_open', 'err' => 'OK',
                     'p50' => $openMs, 'p99' => $openMs, 'mean' => $openMs, 'iters' => 1,
                 ];
 
@@ -3051,7 +4178,8 @@ it('measures per-RPC latency', function () {
             sort($durs);
             $pct = fn (int $p) => $durs[min(count($durs) - 1, intdiv($p * (count($durs) - 1), 100))];
             $samples[] = [
-                'service' => $svc, 'rpc' => $name, 'kind' => $kind, 'err' => $errCode,
+                'service' => $svc, 'rpc' => $name, 'api_alias' => $aliasOf($svc, $name),
+                'operation_id' => $operationIdOf($svc, $name), 'kind' => $kind, 'err' => $errCode,
                 'p50' => $pct(50), 'p99' => $pct(99), 'mean' => array_sum($durs) / count($durs),
                 'iters' => count($durs),
             ];
@@ -3095,21 +4223,21 @@ it('measures per-RPC latency', function () {
     } else {
         $lines[] = 'These RPCs returned a non-OK gRPC status and are FAILURES, not latency samples.';
         $lines[] = '';
-        $lines[] = '| RPC | kind | err | p99 ms |';
-        $lines[] = '|---|---|---|--:|';
+        $lines[] = '| RPC | api_alias | operation_id | kind | err | p99 ms |';
+        $lines[] = '|---|---|---|---|---|--:|';
         foreach ($failed as $row) {
-            $lines[] = sprintf('| %s/%s | %s | %s | %.2f |', $row['service'], $row['rpc'], $row['kind'], $row['err'], $row['p99']);
+            $lines[] = sprintf('| %s/%s | %s | %s | %s | %s | %.2f |', $row['service'], $row['rpc'], $row['api_alias'], $row['operation_id'], $row['kind'], $row['err'], $row['p99']);
         }
     }
     usort($samples, fn ($a, $b) => $b['p99'] <=> $a['p99']);
-    $lines = array_merge($lines, ['', '## Slowest 20 by p99', '', '| RPC | kind | err | p50 ms | p99 ms | mean ms |', '|---|---|---|--:|--:|--:|']);
+    $lines = array_merge($lines, ['', '## Slowest 20 by p99', '', '| RPC | api_alias | operation_id | kind | err | p50 ms | p99 ms | mean ms |', '|---|---|---|---|---|--:|--:|--:|']);
     foreach (array_slice($samples, 0, 20) as $row) {
-        $lines[] = sprintf('| %s/%s | %s | %s | %.2f | %.2f | %.2f |', $row['service'], $row['rpc'], $row['kind'], $row['err'] ?? 'OK', $row['p50'], $row['p99'], $row['mean']);
+        $lines[] = sprintf('| %s/%s | %s | %s | %s | %s | %.2f | %.2f | %.2f |', $row['service'], $row['rpc'], $row['api_alias'], $row['operation_id'], $row['kind'], $row['err'] ?? 'OK', $row['p50'], $row['p99'], $row['mean']);
     }
     usort($samples, fn ($a, $b) => ($a['service'] === $b['service']) ? ($a['rpc'] <=> $b['rpc']) : ($a['service'] <=> $b['service']));
-    $lines = array_merge($lines, ['', '## Full per-RPC table (sorted by service, then RPC)', '', '| Service | RPC | kind | err | p50 ms | p99 ms | mean ms | iters |', '|---|---|---|---|--:|--:|--:|--:|']);
+    $lines = array_merge($lines, ['', '## Full per-RPC table (sorted by service, then RPC)', '', '| Service | RPC | api_alias | operation_id | kind | err | p50 ms | p99 ms | mean ms | iters |', '|---|---|---|---|---|---|--:|--:|--:|--:|']);
     foreach ($samples as $row) {
-        $lines[] = sprintf('| %s | %s | %s | %s | %.2f | %.2f | %.2f | %d |', $row['service'], $row['rpc'], $row['kind'], $row['err'] ?? 'OK', $row['p50'], $row['p99'], $row['mean'], $row['iters'] ?? 0);
+        $lines[] = sprintf('| %s | %s | %s | %s | %s | %s | %.2f | %.2f | %.2f | %d |', $row['service'], $row['rpc'], $row['api_alias'], $row['operation_id'], $row['kind'], $row['err'] ?? 'OK', $row['p50'], $row['p99'], $row['mean'], $row['iters'] ?? 0);
     }
     file_put_contents('perf_report_php.md', implode("\n", $lines)."\n");
     $seedCleanup();

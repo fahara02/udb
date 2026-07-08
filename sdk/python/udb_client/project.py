@@ -1521,6 +1521,11 @@ class UdbProject:
     # ── lifecycle ─────────────────────────────────────────────────────────
     @property
     def metadata(self) -> Metadata:
+        """The shared bound :class:`Metadata` — also the naming-contract fence
+        accessor: ``project.metadata.after_write(receipt)`` (read-your-writes,
+        mirrors TS's ``udb.metadata.afterWrite``) and
+        ``project.metadata.read_fence_from_receipt(receipt)`` both operate on the
+        bound tenant/identity/scope context."""
         return self._metadata
 
     def bind_metadata(self, metadata: Metadata) -> None:

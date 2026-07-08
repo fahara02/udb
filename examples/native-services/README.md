@@ -70,7 +70,7 @@ UDB_API_KEY=udbk_... php main.php   # requires the grpc PHP extension
 
 ## The wire/identity contract
 
-All four SDKs attach the same eight metadata headers (tenant, user, purpose,
+All six SDKs attach the same eight metadata headers (tenant, user, purpose,
 correlation, scopes, service-identity, project, catalog-version) to every call,
 so the broker sees one consistent identity/scope context regardless of language.
 The native auth events these calls produce (`udb.authn.*`, `udb.authz.*`,

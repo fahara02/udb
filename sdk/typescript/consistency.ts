@@ -94,6 +94,129 @@ export function receiptFromResponse(resp: any): WriteReceipt | null {
   return parseWriteReceipt(json);
 }
 
+/** Read the durable-idempotency replay flag off a mutation response body,
+ *  reading `was_duplicate` (MutationResponse field 3). Returns `true` when the
+ *  broker collapsed this call as a REPLAY of a prior write carrying the same
+ *  idempotency key (no new row was written), and `false` for a fresh durable
+ *  write. Mirrors {@link receiptFromResponse}'s body-reading shape so a caller
+ *  that retried (or re-sent) an upsert/delete can tell "my write landed just now"
+ *  from "the broker already had this and returned the earlier result".
+ *
+ *  Accepts either the keepCase wire object (`was_duplicate`) or a camelCase
+ *  message (`wasDuplicate`). */
+export function wasDuplicate(resp: any): boolean {
+  if (!resp || typeof resp !== "object") return false;
+  const flag = resp.was_duplicate ?? resp.wasDuplicate;
+  return flag === true;
+}
+
+// ── Consistency-mode selection (RequestContext.consistency / x-udb-consistency) ─
+//
+// TS callers had no ergonomic way to declare a read consistency mode (the request
+// context only carried `read_fence_json`). These helpers mirror the Python
+// selector: they map a friendly mode name to the pinned wire token the broker
+// reads at `security.rs` (`x-udb-consistency` header, field 18 `consistency`
+// string) and the typed `consistency_mode` enum (field 22). The tokens are PUBLIC
+// CONTRACT with `udb::runtime::consistency::ConsistencyMode::as_str` — do not
+// rename them.
+
+/** The pinned consistency-mode wire tokens. */
+export type ConsistencyModeToken =
+  | "strong"
+  | "read_your_writes"
+  | "bounded_staleness"
+  | "replica_bounded"
+  | "eventual"
+  | "projection_ok"
+  | "cache_ok";
+
+/** Friendly, discoverable consistency-mode constants (token-valued, so
+ *  `ConsistencyMode.Strong === "strong"`). Pass any of these — or a friendly
+ *  alias like `"read-your-writes"` / `"bounded"` — to {@link withConsistency} /
+ *  {@link consistencyContext}. */
+export const ConsistencyMode = {
+  /** Read the primary, no replica fallback (linearizable). */
+  Strong: "strong",
+  /** Read your own writes — primary or a replica fenced past your write LSN. */
+  ReadYourWrites: "read_your_writes",
+  /** Any replica caught up within `max_replica_lag_ms` (bounded staleness). */
+  BoundedStaleness: "bounded_staleness",
+  /** A physical read replica within a lag budget, failing over to the primary. */
+  ReplicaBounded: "replica_bounded",
+  /** Any healthy replica/projection; no fence, cheapest. */
+  Eventual: "eventual",
+  /** Projection-backed targets (Mongo/Qdrant/ClickHouse) acceptable. */
+  ProjectionOk: "projection_ok",
+  /** Redis cache hits acceptable (cache verifies manifest checksum). */
+  CacheOk: "cache_ok",
+} as const;
+
+// Friendly aliases → canonical token. Mirrors the broker's lenient `parse`
+// (consistency.rs) plus the short spec names ("bounded" → bounded_staleness).
+const CONSISTENCY_ALIASES: Record<string, ConsistencyModeToken> = {
+  strong: "strong",
+  linearizable: "strong",
+  primary: "strong",
+  read_your_writes: "read_your_writes",
+  "read-your-writes": "read_your_writes",
+  ryw: "read_your_writes",
+  bounded: "bounded_staleness",
+  bounded_staleness: "bounded_staleness",
+  "bounded-staleness": "bounded_staleness",
+  replica_bounded: "replica_bounded",
+  "replica-bounded": "replica_bounded",
+  eventual: "eventual",
+  eventual_consistency: "eventual",
+  projection_ok: "projection_ok",
+  "projection-ok": "projection_ok",
+  cache_ok: "cache_ok",
+  "cache-ok": "cache_ok",
+};
+
+// Canonical token → proto enum NAME (context.proto field 22). Under the keepCase
+// / `enums: String` loader the wire carries the enum NAME string, not the number.
+const CONSISTENCY_MODE_ENUM_NAME: Record<ConsistencyModeToken, string> = {
+  strong: "CONSISTENCY_MODE_STRONG",
+  read_your_writes: "CONSISTENCY_MODE_READ_YOUR_WRITES",
+  bounded_staleness: "CONSISTENCY_MODE_BOUNDED_STALENESS",
+  replica_bounded: "CONSISTENCY_MODE_REPLICA_BOUNDED",
+  eventual: "CONSISTENCY_MODE_EVENTUAL",
+  projection_ok: "CONSISTENCY_MODE_PROJECTION_OK",
+  cache_ok: "CONSISTENCY_MODE_CACHE_OK",
+};
+
+/** Resolve a mode name/alias to its canonical wire token. Throws on an unknown
+ *  mode so a typo fails loudly rather than silently defaulting to strong. */
+export function consistencyToken(mode: ConsistencyModeToken | string): ConsistencyModeToken {
+  const token = CONSISTENCY_ALIASES[String(mode).trim().toLowerCase()];
+  if (!token) {
+    throw new Error(
+      `udb: unknown consistency mode "${mode}" (expected one of ` +
+        `strong | read_your_writes | bounded_staleness | replica_bounded | eventual | projection_ok | cache_ok)`,
+    );
+  }
+  return token;
+}
+
+/** Returns a {@link CallOptions} that declares the read consistency `mode` on
+ *  exactly this one call via the `x-udb-consistency` header (the header the
+ *  broker reads at `security.rs`; it WINS over the body `consistency` field when
+ *  both are present). Mirrors the Python `x-udb-consistency` selector. */
+export function withConsistency(mode: ConsistencyModeToken | string): CallOptions {
+  return { headers: { "x-udb-consistency": consistencyToken(mode) } };
+}
+
+/** For body-context callers: returns a partial `RequestContext` setting both the
+ *  legacy `consistency` string (context.proto field 18) and the typed
+ *  `consistency_mode` enum name (field 22). Spread into the request `context`.
+ *  The `x-udb-consistency` header still wins server-side when both are supplied. */
+export function consistencyContext(
+  mode: ConsistencyModeToken | string,
+): { consistency: ConsistencyModeToken; consistency_mode: string } {
+  const token = consistencyToken(mode);
+  return { consistency: token, consistency_mode: CONSISTENCY_MODE_ENUM_NAME[token] };
+}
+
 /** Returns a {@link CallOptions} that attaches `fence` to exactly the one
  *  follow-up read via the `x-udb-read-fence` header (the broker reads it at
  *  security.rs / service/mod.rs). The fence rides this single call only — it is
@@ -138,4 +261,14 @@ export const consistencyMetadata = {
   readFenceFromReceipt,
   /** Alias of {@link receiptFromResponse}. */
   receiptFromResponse,
+  /** Alias of {@link wasDuplicate} — durable-idempotency replay flag off a mutation. */
+  wasDuplicate,
+  /** Alias of {@link withConsistency} — attach a consistency mode to the next call. */
+  withConsistency,
+  /** Alias of {@link consistencyContext} — body-context consistency-mode fields. */
+  consistencyContext,
+  /** Alias of {@link consistencyToken} — resolve a mode name to its wire token. */
+  consistencyToken,
+  /** The friendly consistency-mode constants ({@link ConsistencyMode}). */
+  ConsistencyMode,
 };

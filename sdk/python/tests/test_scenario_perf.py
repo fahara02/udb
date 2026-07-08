@@ -1,7 +1,8 @@
 """Scenario perf bench — Python (R6.2 scenario-vs-surface split).
 
-This is the SCENARIO counterpart to ``test_live_perf`` (the full 265-RPC coverage
-sweep, which stays in ``test_live_conformance.py`` and writes ``perf_report_python.md``).
+This is the SCENARIO counterpart to ``test_live_perf`` (the full current generated
+RPC-surface coverage sweep, which stays in ``test_live_conformance.py`` and writes
+``perf_report_python.md``).
 Where the full sweep answers "is every RPC reachable and how fast", this answers
 "how fast is the user-facing facade path the simple-client docs tell people to call":
 
@@ -112,7 +113,7 @@ def _write_report(samples: list[_Sample], tenant: str) -> None:
         "This is the SCENARIO bench: it times the user-facing WORKFLOW HELPERS the "
         "simple-client docs prescribe (uploadFile, downloadFile, bound entity "
         "upsert/select/delete, loginAndAdoptTenant, events subscribe-ready/publish-and-wait, "
-        "webrtc joinSession) — measured as end-to-end facade calls, NOT the raw 265-RPC "
+        "webrtc joinSession) — measured as end-to-end facade calls, NOT the raw generated RPC "
         "surface (that stays in perf_report_python.md, test_live_perf). Each `seq` is the "
         "documented helper RPC sequence (docs/bench-bodies/workflow-sequences.md)."
     )

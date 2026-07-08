@@ -23,7 +23,7 @@ from udb_client import (
     UdbProject,
     WriteReceipt,
 )
-from udb_client.generated_client import UdbDetailedRpcError
+from udb_client.generated_client import UdbDetailedRpcError, _map_error
 
 # Skip cleanly if the generated stubs are not present in this checkout.
 _storage = pytest.importorskip("udb.core.storage.services.v1.storage_service_pb2")
@@ -304,15 +304,70 @@ def test_upsert_with_receipt_parses_field7(project: UdbProject) -> None:
 
 # ── 10.3.2.1: typed ErrorDetail decode + is_retryable()/kind() ──────────────
 def test_error_detail_decoded_typed() -> None:
-    from udb.entity.v1.error_pb2 import ErrorDetail, ErrorKind
+    from udb.entity.v1.error_pb2 import ErrorDetail, ErrorFieldViolation, ErrorKind
 
-    ed = ErrorDetail(retryable=True, kind=ErrorKind.ERROR_KIND_CAPABILITY, capability_required="cap.x")
+    ed = ErrorDetail(
+        retryable=False,
+        retry_after_ms=0,
+        kind=ErrorKind.ERROR_KIND_VALIDATION,
+        field_violations=[
+            ErrorFieldViolation(field="email", description="must be a valid email")
+        ],
+    )
     err = _FakeRpcError(grpc.StatusCode.FAILED_PRECONDITION, ed.SerializeToString())
     wrapped = UdbDetailedRpcError("X", err, ed.SerializeToString())
-    assert wrapped.is_retryable() is True
-    assert wrapped.kind() == "ERROR_KIND_CAPABILITY"
-    assert wrapped.capability_required == "cap.x"
+    assert wrapped.is_retryable() is False
+    assert wrapped.retry_after_ms == 0
+    assert wrapped.kind() == "ERROR_KIND_VALIDATION"
+    assert wrapped.field_violations == [
+        {"field": "email", "description": "must be a valid email"}
+    ]
     assert wrapped.detail == ed.SerializeToString()  # raw bytes preserved
+
+
+def test_error_detail_quota_retry_after_decoded_typed() -> None:
+    from udb.entity.v1.error_pb2 import ErrorDetail, ErrorKind
+
+    ed = ErrorDetail(
+        backend="admission",
+        operation="tenant budget",
+        retryable=True,
+        retry_after_ms=250,
+        kind=ErrorKind.ERROR_KIND_QUOTA,
+    )
+    err = _FakeRpcError(grpc.StatusCode.RESOURCE_EXHAUSTED, ed.SerializeToString())
+    wrapped = UdbDetailedRpcError("X", err, ed.SerializeToString())
+    assert wrapped.is_retryable() is True
+    assert wrapped.retry_after_ms == 250
+    assert wrapped.kind() == "ERROR_KIND_QUOTA"
+    assert wrapped.field_violations == []
+    assert wrapped.detail == ed.SerializeToString()
+
+
+def test_transport_error_detail_synthesized_typed() -> None:
+    err = _FakeRpcError(grpc.StatusCode.DEADLINE_EXCEEDED)
+    wrapped = _map_error("X", err)
+    assert isinstance(wrapped, UdbDetailedRpcError)
+    assert wrapped.error_detail is not None
+    assert wrapped.error_detail.backend == "transport"
+    assert wrapped.error_detail.operation == "deadline_exceeded"
+    assert wrapped.is_retryable() is True
+    assert wrapped.retry_after_ms == 0
+    assert wrapped.kind() == "ERROR_KIND_RETRYABLE"
+    assert wrapped.field_violations == []
+
+
+def test_cancelled_transport_error_detail_synthesized_not_retryable() -> None:
+    err = _FakeRpcError(grpc.StatusCode.CANCELLED)
+    wrapped = _map_error("X", err)
+    assert isinstance(wrapped, UdbDetailedRpcError)
+    assert wrapped.error_detail is not None
+    assert wrapped.error_detail.backend == "transport"
+    assert wrapped.error_detail.operation == "cancelled"
+    assert wrapped.is_retryable() is False
+    assert wrapped.retry_after_ms == 0
+    assert wrapped.kind() == "ERROR_KIND_RETRYABLE"
+    assert wrapped.field_violations == []
 
 
 # ── 10.4.1.x: optional is_public stays unset when omitted ───────────────────

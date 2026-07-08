@@ -5,8 +5,8 @@
 //   Language:         csharp
 //   UDB version:      0.3.7
 //   Protocol version: 1.0.0
-//   Services:         16
-//   RPCs:             265
+//   Services:         28
+//   RPCs:             344
 //
 // This file is RENDERED by `udb sdk generate` from
 //   sdk-templates/csharp/Udb.Client/GeneratedClient.cs.tmpl
@@ -30,8 +30,386 @@
 // hand-written UdbClient / UdbAuthClient / UdbMetadata; it never redefines them.
 // </auto-generated>
 using Grpc.Core;
+using Google.Protobuf;
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+using System.Text;
+using System.Text.Encodings.Web;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Udb.Client.Generated;
+
+/// <summary>Descriptor-derived public API identity for one generated RPC.</summary>
+public sealed record RpcIdentity(
+    string Path,
+    string Service,
+    string WireName,
+    string ApiAlias,
+    string OperationId,
+    string OperationKind,
+    string HttpMethod,
+    string HttpPath);
+
+/// <summary>Generated public API identity table shared by all service wrappers.</summary>
+public static class GeneratedRpcIdentities
+{
+    public static IReadOnlyDictionary<string, RpcIdentity> All { get; } = Build();
+
+    private static IReadOnlyDictionary<string, RpcIdentity> Build()
+    {
+        var map = new Dictionary<string, RpcIdentity>(StringComparer.Ordinal);
+        map["/udb.core.analytics.services.v1.AnalyticsService/GetExecutorPerformance"] = new RpcIdentity("/udb.core.analytics.services.v1.AnalyticsService/GetExecutorPerformance", "AnalyticsService", "GetExecutorPerformance", "get_executor_performance", "getExecutorPerformance", "read_only", "get", "/v1/analytics/executor-performance");
+        map["/udb.core.analytics.services.v1.AnalyticsService/GetPipelineSummary"] = new RpcIdentity("/udb.core.analytics.services.v1.AnalyticsService/GetPipelineSummary", "AnalyticsService", "GetPipelineSummary", "get_pipeline_summary", "getPipelineSummary", "read_only", "get", "/v1/analytics/pipeline-summaries");
+        map["/udb.core.analytics.services.v1.AnalyticsService/GetReconciliationAnalytics"] = new RpcIdentity("/udb.core.analytics.services.v1.AnalyticsService/GetReconciliationAnalytics", "AnalyticsService", "GetReconciliationAnalytics", "get_reconciliation_analytics", "getReconciliationAnalytics", "read_only", "get", "/v1/analytics/reconciliation-stats");
+        map["/udb.core.analytics.services.v1.AnalyticsService/GetSlaCompliance"] = new RpcIdentity("/udb.core.analytics.services.v1.AnalyticsService/GetSlaCompliance", "AnalyticsService", "GetSlaCompliance", "get_sla_compliance", "getSlaCompliance", "read_only", "get", "/v1/analytics/sla-compliance");
+        map["/udb.core.analytics.services.v1.AnalyticsService/GetThroughput"] = new RpcIdentity("/udb.core.analytics.services.v1.AnalyticsService/GetThroughput", "AnalyticsService", "GetThroughput", "get_throughput", "getThroughput", "read_only", "get", "/v1/analytics/throughput");
+        map["/udb.core.analytics.services.v1.AnalyticsService/RecordPipelineMetric"] = new RpcIdentity("/udb.core.analytics.services.v1.AnalyticsService/RecordPipelineMetric", "AnalyticsService", "RecordPipelineMetric", "record_pipeline_metric", "recordPipelineMetric", "mutation", "post", "/v1/analytics/pipeline-metrics");
+        map["/udb.core.analytics.services.v1.AnalyticsService/TriggerSnapshot"] = new RpcIdentity("/udb.core.analytics.services.v1.AnalyticsService/TriggerSnapshot", "AnalyticsService", "TriggerSnapshot", "trigger_snapshot", "triggerSnapshot", "mutation", "post", "/v1/analytics/snapshots:trigger");
+        map["/udb.core.apikey.services.v1.ApiKeyService/CreateApiKey"] = new RpcIdentity("/udb.core.apikey.services.v1.ApiKeyService/CreateApiKey", "ApiKeyService", "CreateApiKey", "create_api_key", "createApiKey", "mutation", "post", "/v1/api-keys");
+        map["/udb.core.apikey.services.v1.ApiKeyService/EmergencyRevokeApiKeys"] = new RpcIdentity("/udb.core.apikey.services.v1.ApiKeyService/EmergencyRevokeApiKeys", "ApiKeyService", "EmergencyRevokeApiKeys", "emergency_revoke_api_keys", "emergencyRevokeApiKeys", "destructive", "post", "/v1/api-keys:emergencyRevoke");
+        map["/udb.core.apikey.services.v1.ApiKeyService/GetApiKey"] = new RpcIdentity("/udb.core.apikey.services.v1.ApiKeyService/GetApiKey", "ApiKeyService", "GetApiKey", "get_api_key", "getApiKey", "read_only", "get", "/v1/api-keys/{key_id}");
+        map["/udb.core.apikey.services.v1.ApiKeyService/GetApiKeyUsageStats"] = new RpcIdentity("/udb.core.apikey.services.v1.ApiKeyService/GetApiKeyUsageStats", "ApiKeyService", "GetApiKeyUsageStats", "get_api_key_usage_stats", "getApiKeyUsageStats", "read_only", "get", "/v1/api-keys/{key_id}/stats");
+        map["/udb.core.apikey.services.v1.ApiKeyService/ListApiKeys"] = new RpcIdentity("/udb.core.apikey.services.v1.ApiKeyService/ListApiKeys", "ApiKeyService", "ListApiKeys", "list_api_keys", "listApiKeys", "read_only", "get", "/v1/api-keys");
+        map["/udb.core.apikey.services.v1.ApiKeyService/RevokeApiKey"] = new RpcIdentity("/udb.core.apikey.services.v1.ApiKeyService/RevokeApiKey", "ApiKeyService", "RevokeApiKey", "revoke_api_key", "revokeApiKey", "mutation", "delete", "/v1/api-keys/{key_id}");
+        map["/udb.core.apikey.services.v1.ApiKeyService/RotateApiKey"] = new RpcIdentity("/udb.core.apikey.services.v1.ApiKeyService/RotateApiKey", "ApiKeyService", "RotateApiKey", "rotate_api_key", "rotateApiKey", "mutation", "post", "/v1/api-keys/{key_id}:rotate");
+        map["/udb.core.apikey.services.v1.ApiKeyService/UpdateApiKey"] = new RpcIdentity("/udb.core.apikey.services.v1.ApiKeyService/UpdateApiKey", "ApiKeyService", "UpdateApiKey", "update_api_key", "updateApiKey", "mutation", "patch", "/v1/api-keys/{key_id}");
+        map["/udb.core.apikey.services.v1.ApiKeyService/ValidateApiKey"] = new RpcIdentity("/udb.core.apikey.services.v1.ApiKeyService/ValidateApiKey", "ApiKeyService", "ValidateApiKey", "validate_api_key", "validateApiKey", "read_only", "post", "/v1/api-keys:validate");
+        map["/udb.core.asset.services.v1.AssetService/CompleteStep"] = new RpcIdentity("/udb.core.asset.services.v1.AssetService/CompleteStep", "AssetService", "CompleteStep", "complete_step", "completeStep", "mutation", "post", "/v1/assets/steps/{step_id}:complete");
+        map["/udb.core.asset.services.v1.AssetService/CreatePipelineDefinition"] = new RpcIdentity("/udb.core.asset.services.v1.AssetService/CreatePipelineDefinition", "AssetService", "CreatePipelineDefinition", "create_pipeline_definition", "createPipelineDefinition", "mutation", "post", "/v1/assets/pipeline-definitions");
+        map["/udb.core.asset.services.v1.AssetService/GetAsset"] = new RpcIdentity("/udb.core.asset.services.v1.AssetService/GetAsset", "AssetService", "GetAsset", "get_asset", "getAsset", "read_only", "get", "/v1/assets/{asset_id}");
+        map["/udb.core.asset.services.v1.AssetService/GetPipeline"] = new RpcIdentity("/udb.core.asset.services.v1.AssetService/GetPipeline", "AssetService", "GetPipeline", "get_pipeline", "getPipeline", "read_only", "get", "/v1/assets/pipelines/{instance_id}");
+        map["/udb.core.asset.services.v1.AssetService/GetPipelineDefinition"] = new RpcIdentity("/udb.core.asset.services.v1.AssetService/GetPipelineDefinition", "AssetService", "GetPipelineDefinition", "get_pipeline_definition", "getPipelineDefinition", "read_only", "get", "/v1/assets/pipeline-definitions/{definition_id}");
+        map["/udb.core.asset.services.v1.AssetService/ListAssets"] = new RpcIdentity("/udb.core.asset.services.v1.AssetService/ListAssets", "AssetService", "ListAssets", "list_assets", "listAssets", "read_only", "get", "/v1/assets");
+        map["/udb.core.asset.services.v1.AssetService/RegisterAsset"] = new RpcIdentity("/udb.core.asset.services.v1.AssetService/RegisterAsset", "AssetService", "RegisterAsset", "register_asset", "registerAsset", "mutation", "post", "/v1/assets");
+        map["/udb.core.asset.services.v1.AssetService/StartPipeline"] = new RpcIdentity("/udb.core.asset.services.v1.AssetService/StartPipeline", "AssetService", "StartPipeline", "start_pipeline", "startPipeline", "mutation", "post", "/v1/assets/pipelines");
+        map["/udb.core.authn.services.v1.AuthnService/AdminResetMfa"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/AdminResetMfa", "AuthnService", "AdminResetMfa", "admin_reset_mfa", "adminResetMfa", "destructive", "post", "/v1/auth/admin/users/{user_id}/mfa:reset");
+        map["/udb.core.authn.services.v1.AuthnService/AdminResetPassword"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/AdminResetPassword", "AuthnService", "AdminResetPassword", "admin_reset_password", "adminResetPassword", "destructive", "post", "/v1/auth/users/{user_id}/passwords:reset");
+        map["/udb.core.authn.services.v1.AuthnService/AdminRevokeAllTenantSessions"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/AdminRevokeAllTenantSessions", "AuthnService", "AdminRevokeAllTenantSessions", "admin_revoke_all_tenant_sessions", "adminRevokeAllTenantSessions", "destructive", "post", "/v1/auth/admin/tenants/{tenant_id}/sessions:revokeAll");
+        map["/udb.core.authn.services.v1.AuthnService/AdminRevokeAllUserSessions"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/AdminRevokeAllUserSessions", "AuthnService", "AdminRevokeAllUserSessions", "admin_revoke_all_user_sessions", "adminRevokeAllUserSessions", "destructive", "post", "/v1/auth/admin/users/{user_id}/sessions:revokeAll");
+        map["/udb.core.authn.services.v1.AuthnService/AdminRevokeSession"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/AdminRevokeSession", "AuthnService", "AdminRevokeSession", "admin_revoke_session", "adminRevokeSession", "destructive", "post", "/v1/auth/admin/users/{user_id}/sessions:revoke");
+        map["/udb.core.authn.services.v1.AuthnService/Authenticate"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/Authenticate", "AuthnService", "Authenticate", "authenticate", "authenticate", "read_only", "post", "/v1/auth/credentials:authenticate");
+        map["/udb.core.authn.services.v1.AuthnService/ChangePassword"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/ChangePassword", "AuthnService", "ChangePassword", "change_password", "changePassword", "mutation", "post", "/v1/auth/passwords:change");
+        map["/udb.core.authn.services.v1.AuthnService/ChangeUserStatus"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/ChangeUserStatus", "AuthnService", "ChangeUserStatus", "change_user_status", "changeUserStatus", "destructive", "post", "/v1/auth/users/{user_id}:changeStatus");
+        map["/udb.core.authn.services.v1.AuthnService/ConfirmMFAEnrollment"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/ConfirmMFAEnrollment", "AuthnService", "ConfirmMFAEnrollment", "confirm_mfaenrollment", "confirmMfaenrollment", "mutation", "post", "/v1/auth/users/{user_id}/mfa:confirm");
+        map["/udb.core.authn.services.v1.AuthnService/CreateSession"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/CreateSession", "AuthnService", "CreateSession", "create_session", "createSession", "mutation", "post", "/v1/auth/sessions");
+        map["/udb.core.authn.services.v1.AuthnService/CreateUser"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/CreateUser", "AuthnService", "CreateUser", "create_user", "createUser", "mutation", "post", "/v1/auth/users");
+        map["/udb.core.authn.services.v1.AuthnService/DeleteWebAuthnCredential"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/DeleteWebAuthnCredential", "AuthnService", "DeleteWebAuthnCredential", "delete_web_authn_credential", "deleteWebAuthnCredential", "mutation", "delete", "/v1/auth/users/{user_id}/webauthn/credentials/{credential_id}");
+        map["/udb.core.authn.services.v1.AuthnService/DisableMfaFactor"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/DisableMfaFactor", "AuthnService", "DisableMfaFactor", "disable_mfa_factor", "disableMfaFactor", "mutation", "post", "/v1/auth/users/{user_id}/mfa/factors:disable");
+        map["/udb.core.authn.services.v1.AuthnService/EmergencyRevoke"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/EmergencyRevoke", "AuthnService", "EmergencyRevoke", "emergency_revoke", "emergencyRevoke", "destructive", "post", "/v1/auth/admin:emergencyRevoke");
+        map["/udb.core.authn.services.v1.AuthnService/EnrollMFA"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/EnrollMFA", "AuthnService", "EnrollMFA", "enroll_mfa", "enrollMfa", "mutation", "post", "/v1/auth/users/{user_id}/mfa:enroll");
+        map["/udb.core.authn.services.v1.AuthnService/FinishWebAuthnAuthentication"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/FinishWebAuthnAuthentication", "AuthnService", "FinishWebAuthnAuthentication", "finish_web_authn_authentication", "finishWebAuthnAuthentication", "mutation", "post", "/v1/auth/webauthn/authentication:finish");
+        map["/udb.core.authn.services.v1.AuthnService/FinishWebAuthnRegistration"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/FinishWebAuthnRegistration", "AuthnService", "FinishWebAuthnRegistration", "finish_web_authn_registration", "finishWebAuthnRegistration", "mutation", "post", "/v1/auth/webauthn/registration:finish");
+        map["/udb.core.authn.services.v1.AuthnService/ForgotPassword"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/ForgotPassword", "AuthnService", "ForgotPassword", "forgot_password", "forgotPassword", "mutation", "post", "/v1/auth/passwords:forgot");
+        map["/udb.core.authn.services.v1.AuthnService/GenerateRecoveryCodes"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/GenerateRecoveryCodes", "AuthnService", "GenerateRecoveryCodes", "generate_recovery_codes", "generateRecoveryCodes", "mutation", "post", "/v1/auth/users/{user_id}/recovery-codes:generate");
+        map["/udb.core.authn.services.v1.AuthnService/GetJwks"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/GetJwks", "AuthnService", "GetJwks", "get_jwks", "getJwks", "read_only", "get", "/v1/auth/.well-known/jwks.json");
+        map["/udb.core.authn.services.v1.AuthnService/GetMfaPolicy"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/GetMfaPolicy", "AuthnService", "GetMfaPolicy", "get_mfa_policy", "getMfaPolicy", "read_only", "get", "/v1/auth/tenants/{tenant_id}/mfa-policy");
+        map["/udb.core.authn.services.v1.AuthnService/GetSession"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/GetSession", "AuthnService", "GetSession", "get_session", "getSession", "read_only", "get", "/v1/auth/sessions/{session_id}");
+        map["/udb.core.authn.services.v1.AuthnService/GetUser"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/GetUser", "AuthnService", "GetUser", "get_user", "getUser", "read_only", "get", "/v1/auth/users/{user_id}");
+        map["/udb.core.authn.services.v1.AuthnService/IntrospectToken"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/IntrospectToken", "AuthnService", "IntrospectToken", "introspect_token", "introspectToken", "read_only", "post", "/v1/auth/tokens:introspect");
+        map["/udb.core.authn.services.v1.AuthnService/IssueMfaChallenge"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/IssueMfaChallenge", "AuthnService", "IssueMfaChallenge", "issue_mfa_challenge", "issueMfaChallenge", "mutation", "post", "/v1/auth/mfa/challenges:issue");
+        map["/udb.core.authn.services.v1.AuthnService/ListDevices"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/ListDevices", "AuthnService", "ListDevices", "list_devices", "listDevices", "read_only", "get", "/v1/auth/users/{user_id}/devices");
+        map["/udb.core.authn.services.v1.AuthnService/ListMfaFactors"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/ListMfaFactors", "AuthnService", "ListMfaFactors", "list_mfa_factors", "listMfaFactors", "read_only", "get", "/v1/auth/users/{user_id}/mfa/factors");
+        map["/udb.core.authn.services.v1.AuthnService/ListSessions"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/ListSessions", "AuthnService", "ListSessions", "list_sessions", "listSessions", "read_only", "get", "/v1/auth/users/{user_id}/sessions");
+        map["/udb.core.authn.services.v1.AuthnService/ListUsers"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/ListUsers", "AuthnService", "ListUsers", "list_users", "listUsers", "read_only", "get", "/v1/auth/users");
+        map["/udb.core.authn.services.v1.AuthnService/ListWebAuthnCredentials"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/ListWebAuthnCredentials", "AuthnService", "ListWebAuthnCredentials", "list_web_authn_credentials", "listWebAuthnCredentials", "read_only", "get", "/v1/auth/users/{user_id}/webauthn/credentials");
+        map["/udb.core.authn.services.v1.AuthnService/Login"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/Login", "AuthnService", "Login", "login", "login", "mutation", "post", "/v1/auth/password-sessions");
+        map["/udb.core.authn.services.v1.AuthnService/Logout"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/Logout", "AuthnService", "Logout", "logout", "logout", "mutation", "post", "/v1/auth/sessions:logout");
+        map["/udb.core.authn.services.v1.AuthnService/PutMfaPolicy"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/PutMfaPolicy", "AuthnService", "PutMfaPolicy", "put_mfa_policy", "putMfaPolicy", "mutation", "put", "/v1/auth/tenants/{tenant_id}/mfa-policy");
+        map["/udb.core.authn.services.v1.AuthnService/RefreshSession"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/RefreshSession", "AuthnService", "RefreshSession", "refresh_session", "refreshSession", "mutation", "post", "/v1/auth/sessions/{session_id}:refresh");
+        map["/udb.core.authn.services.v1.AuthnService/RefreshToken"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/RefreshToken", "AuthnService", "RefreshToken", "refresh_token", "refreshToken", "mutation", "post", "/v1/auth/tokens:refresh");
+        map["/udb.core.authn.services.v1.AuthnService/RenamePasskey"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/RenamePasskey", "AuthnService", "RenamePasskey", "rename_passkey", "renamePasskey", "mutation", "post", "/v1/auth/users/{user_id}/webauthn/credentials:rename");
+        map["/udb.core.authn.services.v1.AuthnService/ResendOTP"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/ResendOTP", "AuthnService", "ResendOTP", "resend_otp", "resendOtp", "mutation", "post", "/v1/auth/otps:resend");
+        map["/udb.core.authn.services.v1.AuthnService/ResetPassword"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/ResetPassword", "AuthnService", "ResetPassword", "reset_password", "resetPassword", "mutation", "post", "/v1/auth/passwords:reset");
+        map["/udb.core.authn.services.v1.AuthnService/RevokeDevice"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/RevokeDevice", "AuthnService", "RevokeDevice", "revoke_device", "revokeDevice", "mutation", "delete", "/v1/auth/devices/{device_id}");
+        map["/udb.core.authn.services.v1.AuthnService/RevokeRecoveryCodes"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/RevokeRecoveryCodes", "AuthnService", "RevokeRecoveryCodes", "revoke_recovery_codes", "revokeRecoveryCodes", "mutation", "post", "/v1/auth/users/{user_id}/recovery-codes:revoke");
+        map["/udb.core.authn.services.v1.AuthnService/RevokeSession"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/RevokeSession", "AuthnService", "RevokeSession", "revoke_session", "revokeSession", "mutation", "delete", "/v1/auth/sessions/{session_id}");
+        map["/udb.core.authn.services.v1.AuthnService/SendOTP"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/SendOTP", "AuthnService", "SendOTP", "send_otp", "sendOtp", "mutation", "post", "/v1/auth/otps:send");
+        map["/udb.core.authn.services.v1.AuthnService/SendPhoneVerification"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/SendPhoneVerification", "AuthnService", "SendPhoneVerification", "send_phone_verification", "sendPhoneVerification", "mutation", "post", "/v1/auth/users/{user_id}/phones:verify");
+        map["/udb.core.authn.services.v1.AuthnService/StartWebAuthnAuthentication"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/StartWebAuthnAuthentication", "AuthnService", "StartWebAuthnAuthentication", "start_web_authn_authentication", "startWebAuthnAuthentication", "mutation", "post", "/v1/auth/webauthn/authentication:start");
+        map["/udb.core.authn.services.v1.AuthnService/StartWebAuthnRegistration"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/StartWebAuthnRegistration", "AuthnService", "StartWebAuthnRegistration", "start_web_authn_registration", "startWebAuthnRegistration", "mutation", "post", "/v1/auth/users/{user_id}/webauthn/registration:start");
+        map["/udb.core.authn.services.v1.AuthnService/UpdateUser"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/UpdateUser", "AuthnService", "UpdateUser", "update_user", "updateUser", "mutation", "patch", "/v1/auth/users/{user_id}");
+        map["/udb.core.authn.services.v1.AuthnService/ValidateCSRF"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/ValidateCSRF", "AuthnService", "ValidateCSRF", "validate_csrf", "validateCsrf", "read_only", "post", "/v1/auth/csrf-tokens:validate");
+        map["/udb.core.authn.services.v1.AuthnService/ValidateToken"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/ValidateToken", "AuthnService", "ValidateToken", "validate_token", "validateToken", "read_only", "post", "/v1/auth/tokens:validate");
+        map["/udb.core.authn.services.v1.AuthnService/VerifyMfaChallenge"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/VerifyMfaChallenge", "AuthnService", "VerifyMfaChallenge", "verify_mfa_challenge", "verifyMfaChallenge", "read_only", "post", "/v1/auth/mfa/challenges:verify");
+        map["/udb.core.authn.services.v1.AuthnService/VerifyOTP"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/VerifyOTP", "AuthnService", "VerifyOTP", "verify_otp", "verifyOtp", "read_only", "post", "/v1/auth/otps:verify");
+        map["/udb.core.authz.services.v1.AuthzService/ActivateCanary"] = new RpcIdentity("/udb.core.authz.services.v1.AuthzService/ActivateCanary", "AuthzService", "ActivateCanary", "activate_canary", "activateCanary", "destructive", "post", "/v1/authz/governance/canaries:activate");
+        map["/udb.core.authz.services.v1.AuthzService/ActivatePolicyVersion"] = new RpcIdentity("/udb.core.authz.services.v1.AuthzService/ActivatePolicyVersion", "AuthzService", "ActivatePolicyVersion", "activate_policy_version", "activatePolicyVersion", "destructive", "post", "/v1/authz/governance/versions:activate");
+        map["/udb.core.authz.services.v1.AuthzService/ApprovePolicyDraft"] = new RpcIdentity("/udb.core.authz.services.v1.AuthzService/ApprovePolicyDraft", "AuthzService", "ApprovePolicyDraft", "approve_policy_draft", "approvePolicyDraft", "mutation", "post", "/v1/authz/governance/drafts:approve");
+        map["/udb.core.authz.services.v1.AuthzService/AssignRole"] = new RpcIdentity("/udb.core.authz.services.v1.AuthzService/AssignRole", "AuthzService", "AssignRole", "assign_role", "assignRole", "mutation", "post", "/v1/authz/users/{user_id}/roles");
+        map["/udb.core.authz.services.v1.AuthzService/Authorize"] = new RpcIdentity("/udb.core.authz.services.v1.AuthzService/Authorize", "AuthzService", "Authorize", "authorize", "authorize", "read_only", "post", "/v1/authz/authorize");
+        map["/udb.core.authz.services.v1.AuthzService/BatchCheckPermissions"] = new RpcIdentity("/udb.core.authz.services.v1.AuthzService/BatchCheckPermissions", "AuthzService", "BatchCheckPermissions", "batch_check_permissions", "batchCheckPermissions", "read_only", "post", "/v1/authz/checks:batch");
+        map["/udb.core.authz.services.v1.AuthzService/CheckAccess"] = new RpcIdentity("/udb.core.authz.services.v1.AuthzService/CheckAccess", "AuthzService", "CheckAccess", "check_access", "checkAccess", "read_only", "post", "/v1/authz/checks");
+        map["/udb.core.authz.services.v1.AuthzService/CreatePolicyDraft"] = new RpcIdentity("/udb.core.authz.services.v1.AuthzService/CreatePolicyDraft", "AuthzService", "CreatePolicyDraft", "create_policy_draft", "createPolicyDraft", "mutation", "post", "/v1/authz/governance/drafts");
+        map["/udb.core.authz.services.v1.AuthzService/CreatePolicyRule"] = new RpcIdentity("/udb.core.authz.services.v1.AuthzService/CreatePolicyRule", "AuthzService", "CreatePolicyRule", "create_policy_rule", "createPolicyRule", "mutation", "post", "/v1/authz/policies");
+        map["/udb.core.authz.services.v1.AuthzService/CreateRole"] = new RpcIdentity("/udb.core.authz.services.v1.AuthzService/CreateRole", "AuthzService", "CreateRole", "create_role", "createRole", "mutation", "post", "/v1/authz/roles");
+        map["/udb.core.authz.services.v1.AuthzService/DeletePolicyRule"] = new RpcIdentity("/udb.core.authz.services.v1.AuthzService/DeletePolicyRule", "AuthzService", "DeletePolicyRule", "delete_policy_rule", "deletePolicyRule", "mutation", "delete", "/v1/authz/policies/{policy_id}");
+        map["/udb.core.authz.services.v1.AuthzService/DeleteRole"] = new RpcIdentity("/udb.core.authz.services.v1.AuthzService/DeleteRole", "AuthzService", "DeleteRole", "delete_role", "deleteRole", "mutation", "delete", "/v1/authz/roles/{role_id}");
+        map["/udb.core.authz.services.v1.AuthzService/DiffPolicyDraft"] = new RpcIdentity("/udb.core.authz.services.v1.AuthzService/DiffPolicyDraft", "AuthzService", "DiffPolicyDraft", "diff_policy_draft", "diffPolicyDraft", "read_only", "post", "/v1/authz/governance/drafts:diff");
+        map["/udb.core.authz.services.v1.AuthzService/ExplainPolicy"] = new RpcIdentity("/udb.core.authz.services.v1.AuthzService/ExplainPolicy", "AuthzService", "ExplainPolicy", "explain_policy", "explainPolicy", "read_only", "post", "/v1/authz/governance/policy-explanations");
+        map["/udb.core.authz.services.v1.AuthzService/GetAuthzRevision"] = new RpcIdentity("/udb.core.authz.services.v1.AuthzService/GetAuthzRevision", "AuthzService", "GetAuthzRevision", "get_authz_revision", "getAuthzRevision", "read_only", "get", "/v1/authz/governance/revisions/current");
+        map["/udb.core.authz.services.v1.AuthzService/GetCanaryStatus"] = new RpcIdentity("/udb.core.authz.services.v1.AuthzService/GetCanaryStatus", "AuthzService", "GetCanaryStatus", "get_canary_status", "getCanaryStatus", "read_only", "get", "/v1/authz/governance/canaries/{canary_id}");
+        map["/udb.core.authz.services.v1.AuthzService/GetNativeAccess"] = new RpcIdentity("/udb.core.authz.services.v1.AuthzService/GetNativeAccess", "AuthzService", "GetNativeAccess", "get_native_access", "getNativeAccess", "read_only", "post", "/v1/authz/native-access");
+        map["/udb.core.authz.services.v1.AuthzService/GetPolicyBundle"] = new RpcIdentity("/udb.core.authz.services.v1.AuthzService/GetPolicyBundle", "AuthzService", "GetPolicyBundle", "get_policy_bundle", "getPolicyBundle", "read_only", "post", "/v1/authz/policy-bundle");
+        map["/udb.core.authz.services.v1.AuthzService/GetPolicyRule"] = new RpcIdentity("/udb.core.authz.services.v1.AuthzService/GetPolicyRule", "AuthzService", "GetPolicyRule", "get_policy_rule", "getPolicyRule", "read_only", "get", "/v1/authz/policies/{policy_id}");
+        map["/udb.core.authz.services.v1.AuthzService/GetRole"] = new RpcIdentity("/udb.core.authz.services.v1.AuthzService/GetRole", "AuthzService", "GetRole", "get_role", "getRole", "read_only", "get", "/v1/authz/roles/{role_id}");
+        map["/udb.core.authz.services.v1.AuthzService/InvalidatePolicyBundles"] = new RpcIdentity("/udb.core.authz.services.v1.AuthzService/InvalidatePolicyBundles", "AuthzService", "InvalidatePolicyBundles", "invalidate_policy_bundles", "invalidatePolicyBundles", "destructive", "post", "/v1/authz/governance/bundles:invalidate");
+        map["/udb.core.authz.services.v1.AuthzService/LintAuthzPolicies"] = new RpcIdentity("/udb.core.authz.services.v1.AuthzService/LintAuthzPolicies", "AuthzService", "LintAuthzPolicies", "lint_authz_policies", "lintAuthzPolicies", "read_only", "post", "/v1/authz/policies:lint");
+        map["/udb.core.authz.services.v1.AuthzService/ListAccessDecisionAudits"] = new RpcIdentity("/udb.core.authz.services.v1.AuthzService/ListAccessDecisionAudits", "AuthzService", "ListAccessDecisionAudits", "list_access_decision_audits", "listAccessDecisionAudits", "read_only", "get", "/v1/authz/audits");
+        map["/udb.core.authz.services.v1.AuthzService/ListPolicyRules"] = new RpcIdentity("/udb.core.authz.services.v1.AuthzService/ListPolicyRules", "AuthzService", "ListPolicyRules", "list_policy_rules", "listPolicyRules", "read_only", "get", "/v1/authz/policies");
+        map["/udb.core.authz.services.v1.AuthzService/ListPolicyVersions"] = new RpcIdentity("/udb.core.authz.services.v1.AuthzService/ListPolicyVersions", "AuthzService", "ListPolicyVersions", "list_policy_versions", "listPolicyVersions", "read_only", "get", "/v1/authz/governance/versions");
+        map["/udb.core.authz.services.v1.AuthzService/ListRoles"] = new RpcIdentity("/udb.core.authz.services.v1.AuthzService/ListRoles", "AuthzService", "ListRoles", "list_roles", "listRoles", "read_only", "get", "/v1/authz/roles");
+        map["/udb.core.authz.services.v1.AuthzService/ListUserPermissions"] = new RpcIdentity("/udb.core.authz.services.v1.AuthzService/ListUserPermissions", "AuthzService", "ListUserPermissions", "list_user_permissions", "listUserPermissions", "read_only", "get", "/v1/authz/users/{user_id}/permissions");
+        map["/udb.core.authz.services.v1.AuthzService/ListUserRoles"] = new RpcIdentity("/udb.core.authz.services.v1.AuthzService/ListUserRoles", "AuthzService", "ListUserRoles", "list_user_roles", "listUserRoles", "read_only", "get", "/v1/authz/users/{user_id}/roles");
+        map["/udb.core.authz.services.v1.AuthzService/MigrateLegacyPolicies"] = new RpcIdentity("/udb.core.authz.services.v1.AuthzService/MigrateLegacyPolicies", "AuthzService", "MigrateLegacyPolicies", "migrate_legacy_policies", "migrateLegacyPolicies", "destructive", "post", "/v1/authz/governance/legacy:migrate");
+        map["/udb.core.authz.services.v1.AuthzService/PromoteCanary"] = new RpcIdentity("/udb.core.authz.services.v1.AuthzService/PromoteCanary", "AuthzService", "PromoteCanary", "promote_canary", "promoteCanary", "destructive", "post", "/v1/authz/governance/canaries:promote");
+        map["/udb.core.authz.services.v1.AuthzService/PutAuthzPolicy"] = new RpcIdentity("/udb.core.authz.services.v1.AuthzService/PutAuthzPolicy", "AuthzService", "PutAuthzPolicy", "put_authz_policy", "putAuthzPolicy", "mutation", "put", "/v1/authz/policies");
+        map["/udb.core.authz.services.v1.AuthzService/PutRelationship"] = new RpcIdentity("/udb.core.authz.services.v1.AuthzService/PutRelationship", "AuthzService", "PutRelationship", "put_relationship", "putRelationship", "mutation", "put", "/v1/authz/relationships");
+        map["/udb.core.authz.services.v1.AuthzService/PutRoleBinding"] = new RpcIdentity("/udb.core.authz.services.v1.AuthzService/PutRoleBinding", "AuthzService", "PutRoleBinding", "put_role_binding", "putRoleBinding", "mutation", "put", "/v1/authz/role-bindings");
+        map["/udb.core.authz.services.v1.AuthzService/RejectPolicyDraft"] = new RpcIdentity("/udb.core.authz.services.v1.AuthzService/RejectPolicyDraft", "AuthzService", "RejectPolicyDraft", "reject_policy_draft", "rejectPolicyDraft", "mutation", "post", "/v1/authz/governance/drafts:reject");
+        map["/udb.core.authz.services.v1.AuthzService/RevokeRole"] = new RpcIdentity("/udb.core.authz.services.v1.AuthzService/RevokeRole", "AuthzService", "RevokeRole", "revoke_role", "revokeRole", "mutation", "post", "/v1/authz/users/{user_id}/roles/{user_role_id}:revoke");
+        map["/udb.core.authz.services.v1.AuthzService/RollbackPolicyVersion"] = new RpcIdentity("/udb.core.authz.services.v1.AuthzService/RollbackPolicyVersion", "AuthzService", "RollbackPolicyVersion", "rollback_policy_version", "rollbackPolicyVersion", "destructive", "post", "/v1/authz/governance/versions:rollback");
+        map["/udb.core.authz.services.v1.AuthzService/SeedBuiltinRoles"] = new RpcIdentity("/udb.core.authz.services.v1.AuthzService/SeedBuiltinRoles", "AuthzService", "SeedBuiltinRoles", "seed_builtin_roles", "seedBuiltinRoles", "mutation", "post", "/v1/authz/governance/roles:seed");
+        map["/udb.core.authz.services.v1.AuthzService/SimulatePolicy"] = new RpcIdentity("/udb.core.authz.services.v1.AuthzService/SimulatePolicy", "AuthzService", "SimulatePolicy", "simulate_policy", "simulatePolicy", "mutation", "post", "/v1/authz/governance/policy-simulations");
+        map["/udb.core.authz.services.v1.AuthzService/SubmitPolicyDraft"] = new RpcIdentity("/udb.core.authz.services.v1.AuthzService/SubmitPolicyDraft", "AuthzService", "SubmitPolicyDraft", "submit_policy_draft", "submitPolicyDraft", "mutation", "post", "/v1/authz/governance/drafts:submit");
+        map["/udb.core.authz.services.v1.AuthzService/UpdatePolicyDraft"] = new RpcIdentity("/udb.core.authz.services.v1.AuthzService/UpdatePolicyDraft", "AuthzService", "UpdatePolicyDraft", "update_policy_draft", "updatePolicyDraft", "mutation", "post", "/v1/authz/governance/drafts:update");
+        map["/udb.core.authz.services.v1.AuthzService/UpdateRole"] = new RpcIdentity("/udb.core.authz.services.v1.AuthzService/UpdateRole", "AuthzService", "UpdateRole", "update_role", "updateRole", "mutation", "patch", "/v1/authz/roles/{role_id}");
+        map["/udb.core.backup.services.v1.BackupService/DeleteBackupPolicy"] = new RpcIdentity("/udb.core.backup.services.v1.BackupService/DeleteBackupPolicy", "BackupService", "DeleteBackupPolicy", "delete_backup_policy", "deleteBackupPolicy", "mutation", "delete", "/v1/backups/policies/{policy_name}");
+        map["/udb.core.backup.services.v1.BackupService/GetBackup"] = new RpcIdentity("/udb.core.backup.services.v1.BackupService/GetBackup", "BackupService", "GetBackup", "get_backup", "getBackup", "read_only", "get", "/v1/backups/{backup_id}");
+        map["/udb.core.backup.services.v1.BackupService/GetBackupPolicy"] = new RpcIdentity("/udb.core.backup.services.v1.BackupService/GetBackupPolicy", "BackupService", "GetBackupPolicy", "get_backup_policy", "getBackupPolicy", "read_only", "get", "/v1/backups/policies/{policy_name}");
+        map["/udb.core.backup.services.v1.BackupService/ListBackupPolicies"] = new RpcIdentity("/udb.core.backup.services.v1.BackupService/ListBackupPolicies", "BackupService", "ListBackupPolicies", "list_backup_policies", "listBackupPolicies", "read_only", "get", "/v1/backups/policies");
+        map["/udb.core.backup.services.v1.BackupService/ListBackups"] = new RpcIdentity("/udb.core.backup.services.v1.BackupService/ListBackups", "BackupService", "ListBackups", "list_backups", "listBackups", "read_only", "get", "/v1/backups");
+        map["/udb.core.backup.services.v1.BackupService/PutBackupPolicy"] = new RpcIdentity("/udb.core.backup.services.v1.BackupService/PutBackupPolicy", "BackupService", "PutBackupPolicy", "put_backup_policy", "putBackupPolicy", "mutation", "post", "/v1/backups/policies");
+        map["/udb.core.backup.services.v1.BackupService/RestoreTenant"] = new RpcIdentity("/udb.core.backup.services.v1.BackupService/RestoreTenant", "BackupService", "RestoreTenant", "restore_tenant", "restoreTenant", "destructive", "post", "/v1/backups:restore");
+        map["/udb.core.backup.services.v1.BackupService/StartTenantBackup"] = new RpcIdentity("/udb.core.backup.services.v1.BackupService/StartTenantBackup", "BackupService", "StartTenantBackup", "start_tenant_backup", "startTenantBackup", "mutation", "post", "/v1/backups:start");
+        map["/udb.core.cache.services.v1.CacheService/CreateNamespace"] = new RpcIdentity("/udb.core.cache.services.v1.CacheService/CreateNamespace", "CacheService", "CreateNamespace", "create_cache_namespace", "createCacheNamespace", "mutation", "post", "/v1/cache/namespaces");
+        map["/udb.core.cache.services.v1.CacheService/Delete"] = new RpcIdentity("/udb.core.cache.services.v1.CacheService/Delete", "CacheService", "Delete", "cache_delete", "cacheNamespaceDelete", "mutation", "delete", "/v1/cache/{namespace}/{key}");
+        map["/udb.core.cache.services.v1.CacheService/DeleteNamespace"] = new RpcIdentity("/udb.core.cache.services.v1.CacheService/DeleteNamespace", "CacheService", "DeleteNamespace", "delete_cache_namespace", "deleteCacheNamespace", "destructive", "post", "/v1/cache/namespaces/{namespace}:flush");
+        map["/udb.core.cache.services.v1.CacheService/Get"] = new RpcIdentity("/udb.core.cache.services.v1.CacheService/Get", "CacheService", "Get", "cache_get", "cacheNamespaceGet", "read_only", "get", "/v1/cache/{namespace}/{key}");
+        map["/udb.core.cache.services.v1.CacheService/GetNamespaceStats"] = new RpcIdentity("/udb.core.cache.services.v1.CacheService/GetNamespaceStats", "CacheService", "GetNamespaceStats", "get_cache_namespace_stats", "getCacheNamespaceStats", "read_only", "get", "/v1/cache/namespaces/{namespace}/stats");
+        map["/udb.core.cache.services.v1.CacheService/Scan"] = new RpcIdentity("/udb.core.cache.services.v1.CacheService/Scan", "CacheService", "Scan", "cache_scan", "cacheNamespaceScan", "read_only", "get", "/v1/cache/{namespace}:scan");
+        map["/udb.core.cache.services.v1.CacheService/Set"] = new RpcIdentity("/udb.core.cache.services.v1.CacheService/Set", "CacheService", "Set", "cache_set", "cacheNamespaceSet", "mutation", "put", "/v1/cache/{namespace}/{key}");
+        map["/udb.core.config.services.v1.ConfigService/DeleteFlag"] = new RpcIdentity("/udb.core.config.services.v1.ConfigService/DeleteFlag", "ConfigService", "DeleteFlag", "delete_flag", "deleteFlag", "destructive", "post", "/v1/config/flags:delete");
+        map["/udb.core.config.services.v1.ConfigService/EvaluateFlags"] = new RpcIdentity("/udb.core.config.services.v1.ConfigService/EvaluateFlags", "ConfigService", "EvaluateFlags", "evaluate_flags", "evaluateFlags", "read_only", "post", "/v1/config/flags:evaluate");
+        map["/udb.core.config.services.v1.ConfigService/GetFlag"] = new RpcIdentity("/udb.core.config.services.v1.ConfigService/GetFlag", "ConfigService", "GetFlag", "get_flag", "getFlag", "read_only", "get", "/v1/config/flags/{flag_key}");
+        map["/udb.core.config.services.v1.ConfigService/ListFlags"] = new RpcIdentity("/udb.core.config.services.v1.ConfigService/ListFlags", "ConfigService", "ListFlags", "list_flags", "listFlags", "read_only", "get", "/v1/config/flags");
+        map["/udb.core.config.services.v1.ConfigService/PutFlag"] = new RpcIdentity("/udb.core.config.services.v1.ConfigService/PutFlag", "ConfigService", "PutFlag", "put_flag", "putFlag", "mutation", "post", "/v1/config/flags:put");
+        map["/udb.core.control.services.v1.ControlPlaneService/AckStatus"] = new RpcIdentity("/udb.core.control.services.v1.ControlPlaneService/AckStatus", "ControlPlaneService", "AckStatus", "ack_status", "ackStatus", "mutation", "post", "/v1/control/node-states/{node_id}:ackStatus");
+        map["/udb.core.control.services.v1.ControlPlaneService/DeltaResources"] = new RpcIdentity("/udb.core.control.services.v1.ControlPlaneService/DeltaResources", "ControlPlaneService", "DeltaResources", "delta_resources", "deltaResources", "mutation", "", "");
+        map["/udb.core.control.services.v1.ControlPlaneService/GetResources"] = new RpcIdentity("/udb.core.control.services.v1.ControlPlaneService/GetResources", "ControlPlaneService", "GetResources", "get_resources", "getResources", "read_only", "get", "/v1/control/resources");
+        map["/udb.core.control.services.v1.ControlPlaneService/ListNodeStates"] = new RpcIdentity("/udb.core.control.services.v1.ControlPlaneService/ListNodeStates", "ControlPlaneService", "ListNodeStates", "list_node_states", "listNodeStates", "read_only", "get", "/v1/control/node-states");
+        map["/udb.core.control.services.v1.ControlPlaneService/RollbackResources"] = new RpcIdentity("/udb.core.control.services.v1.ControlPlaneService/RollbackResources", "ControlPlaneService", "RollbackResources", "rollback_resources", "rollbackResources", "mutation", "post", "/v1/control/node-states/{node_id}:rollbackResources");
+        map["/udb.core.control.services.v1.ControlPlaneService/StreamResources"] = new RpcIdentity("/udb.core.control.services.v1.ControlPlaneService/StreamResources", "ControlPlaneService", "StreamResources", "stream_resources", "streamResources", "mutation", "", "");
+        map["/udb.core.embedding.services.v1.EmbeddingService/Backfill"] = new RpcIdentity("/udb.core.embedding.services.v1.EmbeddingService/Backfill", "EmbeddingService", "Backfill", "backfill", "backfillEmbeddingSource", "mutation", "post", "/v1/embedding/sources:backfill");
+        map["/udb.core.embedding.services.v1.EmbeddingService/DeleteSource"] = new RpcIdentity("/udb.core.embedding.services.v1.EmbeddingService/DeleteSource", "EmbeddingService", "DeleteSource", "delete_source", "deleteEmbeddingSource", "destructive", "post", "/v1/embedding/sources:delete");
+        map["/udb.core.embedding.services.v1.EmbeddingService/ListSources"] = new RpcIdentity("/udb.core.embedding.services.v1.EmbeddingService/ListSources", "EmbeddingService", "ListSources", "list_sources", "listEmbeddingSources", "read_only", "get", "/v1/embedding/sources");
+        map["/udb.core.embedding.services.v1.EmbeddingService/RegisterSource"] = new RpcIdentity("/udb.core.embedding.services.v1.EmbeddingService/RegisterSource", "EmbeddingService", "RegisterSource", "register_source", "registerEmbeddingSource", "mutation", "post", "/v1/embedding/sources:register");
+        map["/udb.core.embedding.services.v1.EmbeddingService/ReportEmbedding"] = new RpcIdentity("/udb.core.embedding.services.v1.EmbeddingService/ReportEmbedding", "EmbeddingService", "ReportEmbedding", "report_embedding", "reportEmbedding", "mutation", "", "");
+        map["/udb.core.embedding.services.v1.EmbeddingService/Retrieve"] = new RpcIdentity("/udb.core.embedding.services.v1.EmbeddingService/Retrieve", "EmbeddingService", "Retrieve", "retrieve", "retrieveEmbedding", "read_only", "post", "/v1/embedding:retrieve");
+        map["/udb.core.idp.services.v1.IdentityProviderService/CreateProvider"] = new RpcIdentity("/udb.core.idp.services.v1.IdentityProviderService/CreateProvider", "IdentityProviderService", "CreateProvider", "create_provider", "createProvider", "mutation", "post", "/v1/idp/providers");
+        map["/udb.core.idp.services.v1.IdentityProviderService/DisableProvider"] = new RpcIdentity("/udb.core.idp.services.v1.IdentityProviderService/DisableProvider", "IdentityProviderService", "DisableProvider", "disable_provider", "disableProvider", "mutation", "post", "/v1/idp/providers/{provider_id}:disable");
+        map["/udb.core.idp.services.v1.IdentityProviderService/ForceJwksRefresh"] = new RpcIdentity("/udb.core.idp.services.v1.IdentityProviderService/ForceJwksRefresh", "IdentityProviderService", "ForceJwksRefresh", "force_jwks_refresh", "forceJwksRefresh", "mutation", "post", "/v1/idp/providers/{provider_id}:refreshJwks");
+        map["/udb.core.idp.services.v1.IdentityProviderService/GetProvider"] = new RpcIdentity("/udb.core.idp.services.v1.IdentityProviderService/GetProvider", "IdentityProviderService", "GetProvider", "get_provider", "getProvider", "read_only", "get", "/v1/idp/providers/{provider_id}");
+        map["/udb.core.idp.services.v1.IdentityProviderService/ImportSamlMetadata"] = new RpcIdentity("/udb.core.idp.services.v1.IdentityProviderService/ImportSamlMetadata", "IdentityProviderService", "ImportSamlMetadata", "import_saml_metadata", "importSamlMetadata", "mutation", "post", "/v1/idp/providers/{provider_id}:importSamlMetadata");
+        map["/udb.core.idp.services.v1.IdentityProviderService/LinkIdentity"] = new RpcIdentity("/udb.core.idp.services.v1.IdentityProviderService/LinkIdentity", "IdentityProviderService", "LinkIdentity", "link_identity", "linkIdentity", "mutation", "post", "/v1/idp/external-identities:link");
+        map["/udb.core.idp.services.v1.IdentityProviderService/ListExternalIdentities"] = new RpcIdentity("/udb.core.idp.services.v1.IdentityProviderService/ListExternalIdentities", "IdentityProviderService", "ListExternalIdentities", "list_external_identities", "listExternalIdentities", "read_only", "get", "/v1/idp/external-identities");
+        map["/udb.core.idp.services.v1.IdentityProviderService/ListProviders"] = new RpcIdentity("/udb.core.idp.services.v1.IdentityProviderService/ListProviders", "IdentityProviderService", "ListProviders", "list_providers", "listProviders", "read_only", "get", "/v1/idp/providers");
+        map["/udb.core.idp.services.v1.IdentityProviderService/PreviewClaimMapping"] = new RpcIdentity("/udb.core.idp.services.v1.IdentityProviderService/PreviewClaimMapping", "IdentityProviderService", "PreviewClaimMapping", "preview_claim_mapping", "previewClaimMapping", "read_only", "post", "/v1/idp/providers/{provider_id}:previewClaimMapping");
+        map["/udb.core.idp.services.v1.IdentityProviderService/PreviewGroupMapping"] = new RpcIdentity("/udb.core.idp.services.v1.IdentityProviderService/PreviewGroupMapping", "IdentityProviderService", "PreviewGroupMapping", "preview_group_mapping", "previewGroupMapping", "read_only", "post", "/v1/idp/providers/{provider_id}:previewGroupMapping");
+        map["/udb.core.idp.services.v1.IdentityProviderService/ResolveExternalIdentity"] = new RpcIdentity("/udb.core.idp.services.v1.IdentityProviderService/ResolveExternalIdentity", "IdentityProviderService", "ResolveExternalIdentity", "resolve_external_identity", "resolveExternalIdentity", "mutation", "post", "/v1/idp/providers/{provider_id}:resolveIdentity");
+        map["/udb.core.idp.services.v1.IdentityProviderService/SamlAcs"] = new RpcIdentity("/udb.core.idp.services.v1.IdentityProviderService/SamlAcs", "IdentityProviderService", "SamlAcs", "saml_acs", "samlAcs", "mutation", "post", "/v1/idp/providers/{provider_id}:samlAcs");
+        map["/udb.core.idp.services.v1.IdentityProviderService/ScimCreateGroup"] = new RpcIdentity("/udb.core.idp.services.v1.IdentityProviderService/ScimCreateGroup", "IdentityProviderService", "ScimCreateGroup", "scim_create_group", "scimCreateGroup", "mutation", "post", "/v1/idp/scim/{provider_id}/Groups");
+        map["/udb.core.idp.services.v1.IdentityProviderService/ScimCreateUser"] = new RpcIdentity("/udb.core.idp.services.v1.IdentityProviderService/ScimCreateUser", "IdentityProviderService", "ScimCreateUser", "scim_create_user", "scimCreateUser", "mutation", "post", "/v1/idp/scim/{provider_id}/Users");
+        map["/udb.core.idp.services.v1.IdentityProviderService/ScimDeleteGroup"] = new RpcIdentity("/udb.core.idp.services.v1.IdentityProviderService/ScimDeleteGroup", "IdentityProviderService", "ScimDeleteGroup", "scim_delete_group", "scimDeleteGroup", "mutation", "delete", "/v1/idp/scim/{provider_id}/Groups/{scim_group_id}");
+        map["/udb.core.idp.services.v1.IdentityProviderService/ScimDeleteUser"] = new RpcIdentity("/udb.core.idp.services.v1.IdentityProviderService/ScimDeleteUser", "IdentityProviderService", "ScimDeleteUser", "scim_delete_user", "scimDeleteUser", "mutation", "delete", "/v1/idp/scim/{provider_id}/Users/{scim_user_id}");
+        map["/udb.core.idp.services.v1.IdentityProviderService/ScimGetGroup"] = new RpcIdentity("/udb.core.idp.services.v1.IdentityProviderService/ScimGetGroup", "IdentityProviderService", "ScimGetGroup", "scim_get_group", "scimGetGroup", "mutation", "get", "/v1/idp/scim/{provider_id}/Groups/{scim_group_id}");
+        map["/udb.core.idp.services.v1.IdentityProviderService/ScimGetUser"] = new RpcIdentity("/udb.core.idp.services.v1.IdentityProviderService/ScimGetUser", "IdentityProviderService", "ScimGetUser", "scim_get_user", "scimGetUser", "mutation", "get", "/v1/idp/scim/{provider_id}/Users/{scim_user_id}");
+        map["/udb.core.idp.services.v1.IdentityProviderService/ScimListGroups"] = new RpcIdentity("/udb.core.idp.services.v1.IdentityProviderService/ScimListGroups", "IdentityProviderService", "ScimListGroups", "scim_list_groups", "scimListGroups", "mutation", "get", "/v1/idp/scim/{provider_id}/Groups");
+        map["/udb.core.idp.services.v1.IdentityProviderService/ScimListUsers"] = new RpcIdentity("/udb.core.idp.services.v1.IdentityProviderService/ScimListUsers", "IdentityProviderService", "ScimListUsers", "scim_list_users", "scimListUsers", "mutation", "get", "/v1/idp/scim/{provider_id}/Users");
+        map["/udb.core.idp.services.v1.IdentityProviderService/ScimPatchGroup"] = new RpcIdentity("/udb.core.idp.services.v1.IdentityProviderService/ScimPatchGroup", "IdentityProviderService", "ScimPatchGroup", "scim_patch_group", "scimPatchGroup", "mutation", "patch", "/v1/idp/scim/{provider_id}/Groups/{scim_group_id}");
+        map["/udb.core.idp.services.v1.IdentityProviderService/ScimPatchUser"] = new RpcIdentity("/udb.core.idp.services.v1.IdentityProviderService/ScimPatchUser", "IdentityProviderService", "ScimPatchUser", "scim_patch_user", "scimPatchUser", "mutation", "patch", "/v1/idp/scim/{provider_id}/Users/{scim_user_id}");
+        map["/udb.core.idp.services.v1.IdentityProviderService/ScimReplaceUser"] = new RpcIdentity("/udb.core.idp.services.v1.IdentityProviderService/ScimReplaceUser", "IdentityProviderService", "ScimReplaceUser", "scim_replace_user", "scimReplaceUser", "mutation", "put", "/v1/idp/scim/{provider_id}/Users/{scim_user_id}");
+        map["/udb.core.idp.services.v1.IdentityProviderService/StartSamlLogin"] = new RpcIdentity("/udb.core.idp.services.v1.IdentityProviderService/StartSamlLogin", "IdentityProviderService", "StartSamlLogin", "start_saml_login", "startSamlLogin", "mutation", "post", "/v1/idp/providers/{provider_id}:startSamlLogin");
+        map["/udb.core.idp.services.v1.IdentityProviderService/TestProviderDiscovery"] = new RpcIdentity("/udb.core.idp.services.v1.IdentityProviderService/TestProviderDiscovery", "IdentityProviderService", "TestProviderDiscovery", "test_provider_discovery", "testProviderDiscovery", "read_only", "post", "/v1/idp/providers/{provider_id}:testDiscovery");
+        map["/udb.core.idp.services.v1.IdentityProviderService/UnlinkIdentity"] = new RpcIdentity("/udb.core.idp.services.v1.IdentityProviderService/UnlinkIdentity", "IdentityProviderService", "UnlinkIdentity", "unlink_identity", "unlinkIdentity", "mutation", "post", "/v1/idp/external-identities/{external_identity_id}:unlink");
+        map["/udb.core.idp.services.v1.IdentityProviderService/UpdateProvider"] = new RpcIdentity("/udb.core.idp.services.v1.IdentityProviderService/UpdateProvider", "IdentityProviderService", "UpdateProvider", "update_provider", "updateProvider", "mutation", "patch", "/v1/idp/providers/{provider_id}");
+        map["/udb.core.livequery.services.v1.LiveQueryService/Subscribe"] = new RpcIdentity("/udb.core.livequery.services.v1.LiveQueryService/Subscribe", "LiveQueryService", "Subscribe", "subscribe", "liveQuerySubscribe", "read_only", "post", "/v1/livequery:subscribe");
+        map["/udb.core.lock.services.v1.LockService/AcquireLock"] = new RpcIdentity("/udb.core.lock.services.v1.LockService/AcquireLock", "LockService", "AcquireLock", "acquire_lock", "acquireLock", "mutation", "post", "/v1/locks:acquire");
+        map["/udb.core.lock.services.v1.LockService/ReleaseLock"] = new RpcIdentity("/udb.core.lock.services.v1.LockService/ReleaseLock", "LockService", "ReleaseLock", "release_lock", "releaseLock", "mutation", "post", "/v1/locks:release");
+        map["/udb.core.lock.services.v1.LockService/RenewLock"] = new RpcIdentity("/udb.core.lock.services.v1.LockService/RenewLock", "LockService", "RenewLock", "renew_lock", "renewLock", "mutation", "post", "/v1/locks:renew");
+        map["/udb.core.metering.services.v1.MeteringService/CheckQuota"] = new RpcIdentity("/udb.core.metering.services.v1.MeteringService/CheckQuota", "MeteringService", "CheckQuota", "check_quota", "checkQuota", "read_only", "post", "/v1/metering/quotas:check");
+        map["/udb.core.metering.services.v1.MeteringService/GetQuota"] = new RpcIdentity("/udb.core.metering.services.v1.MeteringService/GetQuota", "MeteringService", "GetQuota", "get_quota", "getQuota", "read_only", "get", "/v1/metering/quotas/{metric}");
+        map["/udb.core.metering.services.v1.MeteringService/ListQuotas"] = new RpcIdentity("/udb.core.metering.services.v1.MeteringService/ListQuotas", "MeteringService", "ListQuotas", "list_quotas", "listQuotas", "read_only", "get", "/v1/metering/quotas");
+        map["/udb.core.metering.services.v1.MeteringService/PutQuota"] = new RpcIdentity("/udb.core.metering.services.v1.MeteringService/PutQuota", "MeteringService", "PutQuota", "put_quota", "putQuota", "mutation", "post", "/v1/metering/quotas:put");
+        map["/udb.core.metering.services.v1.MeteringService/QueryUsage"] = new RpcIdentity("/udb.core.metering.services.v1.MeteringService/QueryUsage", "MeteringService", "QueryUsage", "query_usage", "queryUsage", "read_only", "post", "/v1/metering/usage:query");
+        map["/udb.core.metering.services.v1.MeteringService/RecordUsage"] = new RpcIdentity("/udb.core.metering.services.v1.MeteringService/RecordUsage", "MeteringService", "RecordUsage", "record_usage", "recordUsage", "mutation", "post", "/v1/metering/usage:record");
+        map["/udb.core.notification.services.v1.NotificationService/GetDeliveryStats"] = new RpcIdentity("/udb.core.notification.services.v1.NotificationService/GetDeliveryStats", "NotificationService", "GetDeliveryStats", "get_delivery_stats", "getDeliveryStats", "read_only", "get", "/v1/notifications/stats");
+        map["/udb.core.notification.services.v1.NotificationService/GetNotification"] = new RpcIdentity("/udb.core.notification.services.v1.NotificationService/GetNotification", "NotificationService", "GetNotification", "get_notification", "getNotification", "read_only", "get", "/v1/notifications/{log_id}");
+        map["/udb.core.notification.services.v1.NotificationService/GetPreference"] = new RpcIdentity("/udb.core.notification.services.v1.NotificationService/GetPreference", "NotificationService", "GetPreference", "get_preference", "getPreference", "read_only", "get", "/v1/notifications/preferences/{user_id}/{channel}");
+        map["/udb.core.notification.services.v1.NotificationService/GetTemplate"] = new RpcIdentity("/udb.core.notification.services.v1.NotificationService/GetTemplate", "NotificationService", "GetTemplate", "get_template", "getTemplate", "read_only", "get", "/v1/notifications/templates/{event_type}/{channel}");
+        map["/udb.core.notification.services.v1.NotificationService/ListNotifications"] = new RpcIdentity("/udb.core.notification.services.v1.NotificationService/ListNotifications", "NotificationService", "ListNotifications", "list_notifications", "listNotifications", "read_only", "get", "/v1/notifications");
+        map["/udb.core.notification.services.v1.NotificationService/ListPreferences"] = new RpcIdentity("/udb.core.notification.services.v1.NotificationService/ListPreferences", "NotificationService", "ListPreferences", "list_preferences", "listPreferences", "read_only", "get", "/v1/notifications/preferences/{user_id}");
+        map["/udb.core.notification.services.v1.NotificationService/ListTemplates"] = new RpcIdentity("/udb.core.notification.services.v1.NotificationService/ListTemplates", "NotificationService", "ListTemplates", "list_templates", "listTemplates", "read_only", "get", "/v1/notifications/templates");
+        map["/udb.core.notification.services.v1.NotificationService/ReportDelivery"] = new RpcIdentity("/udb.core.notification.services.v1.NotificationService/ReportDelivery", "NotificationService", "ReportDelivery", "report_delivery", "reportDelivery", "mutation", "post", "/v1/notifications/{log_id}:report-delivery");
+        map["/udb.core.notification.services.v1.NotificationService/RetryNotification"] = new RpcIdentity("/udb.core.notification.services.v1.NotificationService/RetryNotification", "NotificationService", "RetryNotification", "retry_notification", "retryNotification", "mutation", "post", "/v1/notifications/{log_id}:retry");
+        map["/udb.core.notification.services.v1.NotificationService/SendNotification"] = new RpcIdentity("/udb.core.notification.services.v1.NotificationService/SendNotification", "NotificationService", "SendNotification", "send_notification", "sendNotification", "mutation", "post", "/v1/notifications");
+        map["/udb.core.notification.services.v1.NotificationService/SetPreference"] = new RpcIdentity("/udb.core.notification.services.v1.NotificationService/SetPreference", "NotificationService", "SetPreference", "set_preference", "setPreference", "mutation", "put", "/v1/notifications/preferences/{user_id}/{channel}");
+        map["/udb.core.notification.services.v1.NotificationService/UpsertTemplate"] = new RpcIdentity("/udb.core.notification.services.v1.NotificationService/UpsertTemplate", "NotificationService", "UpsertTemplate", "upsert_template", "upsertTemplate", "mutation", "put", "/v1/notifications/templates/{event_type}/{channel}");
+        map["/udb.core.scheduler.services.v1.SchedulerService/CreateJob"] = new RpcIdentity("/udb.core.scheduler.services.v1.SchedulerService/CreateJob", "SchedulerService", "CreateJob", "create_job", "createJob", "mutation", "post", "/v1/scheduler/jobs");
+        map["/udb.core.scheduler.services.v1.SchedulerService/DeleteJob"] = new RpcIdentity("/udb.core.scheduler.services.v1.SchedulerService/DeleteJob", "SchedulerService", "DeleteJob", "delete_job", "deleteJob", "destructive", "delete", "/v1/scheduler/jobs/{job_id}");
+        map["/udb.core.scheduler.services.v1.SchedulerService/GetJob"] = new RpcIdentity("/udb.core.scheduler.services.v1.SchedulerService/GetJob", "SchedulerService", "GetJob", "get_job", "getJob", "read_only", "get", "/v1/scheduler/jobs/{job_id}");
+        map["/udb.core.scheduler.services.v1.SchedulerService/ListJobs"] = new RpcIdentity("/udb.core.scheduler.services.v1.SchedulerService/ListJobs", "SchedulerService", "ListJobs", "list_jobs", "listJobs", "read_only", "get", "/v1/scheduler/jobs");
+        map["/udb.core.scheduler.services.v1.SchedulerService/PauseJob"] = new RpcIdentity("/udb.core.scheduler.services.v1.SchedulerService/PauseJob", "SchedulerService", "PauseJob", "pause_job", "pauseJob", "mutation", "post", "/v1/scheduler/jobs/{job_id}:pause");
+        map["/udb.core.scheduler.services.v1.SchedulerService/ResumeJob"] = new RpcIdentity("/udb.core.scheduler.services.v1.SchedulerService/ResumeJob", "SchedulerService", "ResumeJob", "resume_job", "resumeJob", "mutation", "post", "/v1/scheduler/jobs/{job_id}:resume");
+        map["/udb.core.search.services.v1.SearchService/CreateIndex"] = new RpcIdentity("/udb.core.search.services.v1.SearchService/CreateIndex", "SearchService", "CreateIndex", "create_index", "createSearchIndex", "mutation", "post", "/v1/search/indexes:create");
+        map["/udb.core.search.services.v1.SearchService/DeleteIndex"] = new RpcIdentity("/udb.core.search.services.v1.SearchService/DeleteIndex", "SearchService", "DeleteIndex", "delete_index", "deleteSearchIndex", "destructive", "post", "/v1/search/indexes:delete");
+        map["/udb.core.search.services.v1.SearchService/ListIndexes"] = new RpcIdentity("/udb.core.search.services.v1.SearchService/ListIndexes", "SearchService", "ListIndexes", "list_indexes", "listSearchIndexes", "read_only", "get", "/v1/search/indexes");
+        map["/udb.core.search.services.v1.SearchService/Reindex"] = new RpcIdentity("/udb.core.search.services.v1.SearchService/Reindex", "SearchService", "Reindex", "reindex", "reindexSearchIndex", "mutation", "post", "/v1/search/indexes:reindex");
+        map["/udb.core.search.services.v1.SearchService/Search"] = new RpcIdentity("/udb.core.search.services.v1.SearchService/Search", "SearchService", "Search", "search", "search", "read_only", "post", "/v1/search:query");
+        map["/udb.core.storage.services.v1.StorageService/DeleteFile"] = new RpcIdentity("/udb.core.storage.services.v1.StorageService/DeleteFile", "StorageService", "DeleteFile", "delete_file", "deleteFile", "mutation", "delete", "/v1/storage/files/{file_id}");
+        map["/udb.core.storage.services.v1.StorageService/DownloadFile"] = new RpcIdentity("/udb.core.storage.services.v1.StorageService/DownloadFile", "StorageService", "DownloadFile", "download_file", "downloadFile", "read_only", "get", "/v1/storage/files/{file_id}:download");
+        map["/udb.core.storage.services.v1.StorageService/FinalizeUpload"] = new RpcIdentity("/udb.core.storage.services.v1.StorageService/FinalizeUpload", "StorageService", "FinalizeUpload", "finalize_upload", "finalizeUpload", "mutation", "post", "/v1/storage/uploads/{file_id}:finalize");
+        map["/udb.core.storage.services.v1.StorageService/GetDownloadUrl"] = new RpcIdentity("/udb.core.storage.services.v1.StorageService/GetDownloadUrl", "StorageService", "GetDownloadUrl", "get_download_url", "getDownloadUrl", "read_only", "get", "/v1/storage/files/{file_id}:getDownloadUrl");
+        map["/udb.core.storage.services.v1.StorageService/GetFile"] = new RpcIdentity("/udb.core.storage.services.v1.StorageService/GetFile", "StorageService", "GetFile", "get_file", "getFile", "read_only", "get", "/v1/storage/files/{file_id}");
+        map["/udb.core.storage.services.v1.StorageService/ListFiles"] = new RpcIdentity("/udb.core.storage.services.v1.StorageService/ListFiles", "StorageService", "ListFiles", "list_files", "listFiles", "read_only", "get", "/v1/storage/files");
+        map["/udb.core.storage.services.v1.StorageService/RegisterUpload"] = new RpcIdentity("/udb.core.storage.services.v1.StorageService/RegisterUpload", "StorageService", "RegisterUpload", "register_upload", "registerUpload", "mutation", "post", "/v1/storage/uploads");
+        map["/udb.core.storage.services.v1.StorageService/UpdateFile"] = new RpcIdentity("/udb.core.storage.services.v1.StorageService/UpdateFile", "StorageService", "UpdateFile", "update_file", "updateFile", "mutation", "patch", "/v1/storage/files/{file_id}");
+        map["/udb.core.tenant.services.v1.TenantService/CreateTenant"] = new RpcIdentity("/udb.core.tenant.services.v1.TenantService/CreateTenant", "TenantService", "CreateTenant", "create_tenant", "createTenant", "mutation", "post", "/v1/tenants");
+        map["/udb.core.tenant.services.v1.TenantService/GetTenant"] = new RpcIdentity("/udb.core.tenant.services.v1.TenantService/GetTenant", "TenantService", "GetTenant", "get_tenant", "getTenant", "read_only", "get", "/v1/tenants/{tenant_id}");
+        map["/udb.core.tenant.services.v1.TenantService/GetTenantConfig"] = new RpcIdentity("/udb.core.tenant.services.v1.TenantService/GetTenantConfig", "TenantService", "GetTenantConfig", "get_tenant_config", "getTenantConfig", "read_only", "get", "/v1/tenants/{tenant_id}/config");
+        map["/udb.core.tenant.services.v1.TenantService/ListTenants"] = new RpcIdentity("/udb.core.tenant.services.v1.TenantService/ListTenants", "TenantService", "ListTenants", "list_tenants", "listTenants", "read_only", "get", "/v1/tenants");
+        map["/udb.core.tenant.services.v1.TenantService/PurgeTenant"] = new RpcIdentity("/udb.core.tenant.services.v1.TenantService/PurgeTenant", "TenantService", "PurgeTenant", "purge_tenant", "purgeTenant", "destructive", "post", "/v1/tenants/{tenant_id}:purge");
+        map["/udb.core.tenant.services.v1.TenantService/UpdateTenant"] = new RpcIdentity("/udb.core.tenant.services.v1.TenantService/UpdateTenant", "TenantService", "UpdateTenant", "update_tenant", "updateTenant", "mutation", "patch", "/v1/tenants/{tenant_id}");
+        map["/udb.core.tenant.services.v1.TenantService/UpdateTenantConfig"] = new RpcIdentity("/udb.core.tenant.services.v1.TenantService/UpdateTenantConfig", "TenantService", "UpdateTenantConfig", "update_tenant_config", "updateTenantConfig", "mutation", "put", "/v1/tenants/{tenant_id}/config");
+        map["/udb.core.vault.services.v1.VaultService/CreateTransitKey"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/CreateTransitKey", "VaultService", "CreateTransitKey", "create_transit_key", "createTransitKey", "mutation", "post", "/v1/vault/transit/keys");
+        map["/udb.core.vault.services.v1.VaultService/Decrypt"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/Decrypt", "VaultService", "Decrypt", "decrypt", "vaultDecrypt", "read_only", "post", "/v1/vault/transit:decrypt");
+        map["/udb.core.vault.services.v1.VaultService/DeleteSecret"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/DeleteSecret", "VaultService", "DeleteSecret", "delete_secret", "deleteSecret", "mutation", "post", "/v1/vault/secrets:delete");
+        map["/udb.core.vault.services.v1.VaultService/DestroySecret"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/DestroySecret", "VaultService", "DestroySecret", "destroy_secret", "destroySecret", "destructive", "post", "/v1/vault/secrets:destroy");
+        map["/udb.core.vault.services.v1.VaultService/Encrypt"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/Encrypt", "VaultService", "Encrypt", "encrypt", "vaultEncrypt", "mutation", "post", "/v1/vault/transit:encrypt");
+        map["/udb.core.vault.services.v1.VaultService/GenerateDatabaseCredentials"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/GenerateDatabaseCredentials", "VaultService", "GenerateDatabaseCredentials", "generate_database_credentials", "generateDatabaseCredentials", "mutation", "post", "/v1/vault/database/credentials");
+        map["/udb.core.vault.services.v1.VaultService/GetSecret"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/GetSecret", "VaultService", "GetSecret", "get_secret", "getSecret", "read_only", "get", "/v1/vault/secrets/{secret_path=**}");
+        map["/udb.core.vault.services.v1.VaultService/Hmac"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/Hmac", "VaultService", "Hmac", "hmac", "vaultHmac", "mutation", "post", "/v1/vault/transit:hmac");
+        map["/udb.core.vault.services.v1.VaultService/ListSecrets"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/ListSecrets", "VaultService", "ListSecrets", "list_secrets", "listSecrets", "read_only", "get", "/v1/vault/secrets");
+        map["/udb.core.vault.services.v1.VaultService/PutSecret"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/PutSecret", "VaultService", "PutSecret", "put_secret", "putSecret", "mutation", "post", "/v1/vault/secrets:put");
+        map["/udb.core.vault.services.v1.VaultService/RotateTransitKey"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/RotateTransitKey", "VaultService", "RotateTransitKey", "rotate_transit_key", "rotateTransitKey", "mutation", "post", "/v1/vault/transit/keys:rotate");
+        map["/udb.core.vault.services.v1.VaultService/SealStatus"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/SealStatus", "VaultService", "SealStatus", "seal_status", "vaultSealStatus", "read_only", "get", "/v1/vault/seal-status");
+        map["/udb.core.vault.services.v1.VaultService/Sign"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/Sign", "VaultService", "Sign", "sign", "vaultSign", "mutation", "post", "/v1/vault/transit:sign");
+        map["/udb.core.vault.services.v1.VaultService/Verify"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/Verify", "VaultService", "Verify", "verify", "vaultVerify", "read_only", "post", "/v1/vault/transit:verify");
+        map["/udb.core.webhook.services.v1.WebhookService/CreateEndpoint"] = new RpcIdentity("/udb.core.webhook.services.v1.WebhookService/CreateEndpoint", "WebhookService", "CreateEndpoint", "create_endpoint", "createWebhookEndpoint", "mutation", "post", "/v1/webhook/endpoints");
+        map["/udb.core.webhook.services.v1.WebhookService/DeleteEndpoint"] = new RpcIdentity("/udb.core.webhook.services.v1.WebhookService/DeleteEndpoint", "WebhookService", "DeleteEndpoint", "delete_endpoint", "deleteWebhookEndpoint", "destructive", "delete", "/v1/webhook/endpoints/{endpoint_id}");
+        map["/udb.core.webhook.services.v1.WebhookService/GetEndpoint"] = new RpcIdentity("/udb.core.webhook.services.v1.WebhookService/GetEndpoint", "WebhookService", "GetEndpoint", "get_endpoint", "getWebhookEndpoint", "read_only", "get", "/v1/webhook/endpoints/{endpoint_id}");
+        map["/udb.core.webhook.services.v1.WebhookService/ListDeliveries"] = new RpcIdentity("/udb.core.webhook.services.v1.WebhookService/ListDeliveries", "WebhookService", "ListDeliveries", "list_deliveries", "listWebhookDeliveries", "read_only", "get", "/v1/webhook/deliveries");
+        map["/udb.core.webhook.services.v1.WebhookService/ListEndpoints"] = new RpcIdentity("/udb.core.webhook.services.v1.WebhookService/ListEndpoints", "WebhookService", "ListEndpoints", "list_endpoints", "listWebhookEndpoints", "read_only", "get", "/v1/webhook/endpoints");
+        map["/udb.core.webhook.services.v1.WebhookService/UpdateEndpoint"] = new RpcIdentity("/udb.core.webhook.services.v1.WebhookService/UpdateEndpoint", "WebhookService", "UpdateEndpoint", "update_endpoint", "updateWebhookEndpoint", "mutation", "patch", "/v1/webhook/endpoints/{endpoint_id}");
+        map["/udb.core.webrtc.services.v1.PeerService/GetPeer"] = new RpcIdentity("/udb.core.webrtc.services.v1.PeerService/GetPeer", "PeerService", "GetPeer", "get_peer", "getPeer", "read_only", "get", "/v1/webrtc/peers/{peer_id}");
+        map["/udb.core.webrtc.services.v1.PeerService/JoinRoom"] = new RpcIdentity("/udb.core.webrtc.services.v1.PeerService/JoinRoom", "PeerService", "JoinRoom", "join_room", "joinRoom", "mutation", "post", "/v1/webrtc/rooms/{room_id}/peers");
+        map["/udb.core.webrtc.services.v1.PeerService/JoinSession"] = new RpcIdentity("/udb.core.webrtc.services.v1.PeerService/JoinSession", "PeerService", "JoinSession", "join_session", "joinSession", "mutation", "", "");
+        map["/udb.core.webrtc.services.v1.PeerService/LeaveRoom"] = new RpcIdentity("/udb.core.webrtc.services.v1.PeerService/LeaveRoom", "PeerService", "LeaveRoom", "leave_room", "leaveRoom", "mutation", "post", "/v1/webrtc/rooms/{room_id}/peers/{peer_id}:leave");
+        map["/udb.core.webrtc.services.v1.PeerService/ListPeers"] = new RpcIdentity("/udb.core.webrtc.services.v1.PeerService/ListPeers", "PeerService", "ListPeers", "list_peers", "listPeers", "read_only", "get", "/v1/webrtc/rooms/{room_id}/peers");
+        map["/udb.core.webrtc.services.v1.RoomService/CloseRoom"] = new RpcIdentity("/udb.core.webrtc.services.v1.RoomService/CloseRoom", "RoomService", "CloseRoom", "close_room", "closeRoom", "mutation", "post", "/v1/webrtc/rooms/{room_id}:close");
+        map["/udb.core.webrtc.services.v1.RoomService/CreateRoom"] = new RpcIdentity("/udb.core.webrtc.services.v1.RoomService/CreateRoom", "RoomService", "CreateRoom", "create_room", "createRoom", "mutation", "post", "/v1/webrtc/rooms");
+        map["/udb.core.webrtc.services.v1.RoomService/GetRoom"] = new RpcIdentity("/udb.core.webrtc.services.v1.RoomService/GetRoom", "RoomService", "GetRoom", "get_room", "getRoom", "read_only", "get", "/v1/webrtc/rooms/{room_id}");
+        map["/udb.core.webrtc.services.v1.RoomService/ListEgress"] = new RpcIdentity("/udb.core.webrtc.services.v1.RoomService/ListEgress", "RoomService", "ListEgress", "list_egress", "listEgress", "read_only", "get", "/v1/webrtc/egress");
+        map["/udb.core.webrtc.services.v1.RoomService/ListRooms"] = new RpcIdentity("/udb.core.webrtc.services.v1.RoomService/ListRooms", "RoomService", "ListRooms", "list_rooms", "listRooms", "read_only", "get", "/v1/webrtc/rooms");
+        map["/udb.core.webrtc.services.v1.RoomService/StartRoomComposite"] = new RpcIdentity("/udb.core.webrtc.services.v1.RoomService/StartRoomComposite", "RoomService", "StartRoomComposite", "start_room_composite", "startRoomComposite", "mutation", "post", "/v1/webrtc/rooms/{room_id}/egress:composite");
+        map["/udb.core.webrtc.services.v1.RoomService/StartTrackEgress"] = new RpcIdentity("/udb.core.webrtc.services.v1.RoomService/StartTrackEgress", "RoomService", "StartTrackEgress", "start_track_egress", "startTrackEgress", "mutation", "post", "/v1/webrtc/tracks/{track_id}:startEgress");
+        map["/udb.core.webrtc.services.v1.RoomService/StopEgress"] = new RpcIdentity("/udb.core.webrtc.services.v1.RoomService/StopEgress", "RoomService", "StopEgress", "stop_egress", "stopEgress", "mutation", "post", "/v1/webrtc/egress/{egress_id}:stop");
+        map["/udb.core.webrtc.services.v1.RoomService/UpdateRoom"] = new RpcIdentity("/udb.core.webrtc.services.v1.RoomService/UpdateRoom", "RoomService", "UpdateRoom", "update_room", "updateRoom", "mutation", "patch", "/v1/webrtc/rooms/{room_id}");
+        map["/udb.core.webrtc.services.v1.SignalingService/Signal"] = new RpcIdentity("/udb.core.webrtc.services.v1.SignalingService/Signal", "SignalingService", "Signal", "signal", "signal", "mutation", "", "");
+        map["/udb.core.webrtc.services.v1.TrackService/ListTracks"] = new RpcIdentity("/udb.core.webrtc.services.v1.TrackService/ListTracks", "TrackService", "ListTracks", "list_tracks", "listTracks", "read_only", "get", "/v1/webrtc/rooms/{room_id}/tracks");
+        map["/udb.core.webrtc.services.v1.TrackService/MuteTrack"] = new RpcIdentity("/udb.core.webrtc.services.v1.TrackService/MuteTrack", "TrackService", "MuteTrack", "mute_track", "muteTrack", "mutation", "post", "/v1/webrtc/tracks/{track_id}:mute");
+        map["/udb.core.webrtc.services.v1.TrackService/PublishTrack"] = new RpcIdentity("/udb.core.webrtc.services.v1.TrackService/PublishTrack", "TrackService", "PublishTrack", "publish_track", "publishTrack", "mutation", "post", "/v1/webrtc/tracks");
+        map["/udb.core.webrtc.services.v1.TrackService/UnpublishTrack"] = new RpcIdentity("/udb.core.webrtc.services.v1.TrackService/UnpublishTrack", "TrackService", "UnpublishTrack", "unpublish_track", "unpublishTrack", "mutation", "post", "/v1/webrtc/tracks/{track_id}:unpublish");
+        map["/udb.core.webrtc.services.v1.TurnService/IssueCredentials"] = new RpcIdentity("/udb.core.webrtc.services.v1.TurnService/IssueCredentials", "TurnService", "IssueCredentials", "issue_credentials", "issueCredentials", "mutation", "post", "/v1/webrtc/turn/credentials");
+        map["/udb.core.workflow.services.v1.WorkflowService/CancelWorkflow"] = new RpcIdentity("/udb.core.workflow.services.v1.WorkflowService/CancelWorkflow", "WorkflowService", "CancelWorkflow", "cancel_workflow", "cancelWorkflow", "destructive", "post", "/v1/workflows/{workflow_id}:cancel");
+        map["/udb.core.workflow.services.v1.WorkflowService/GetWorkflow"] = new RpcIdentity("/udb.core.workflow.services.v1.WorkflowService/GetWorkflow", "WorkflowService", "GetWorkflow", "get_workflow", "getWorkflow", "read_only", "get", "/v1/workflows/{workflow_id}");
+        map["/udb.core.workflow.services.v1.WorkflowService/ListWorkflows"] = new RpcIdentity("/udb.core.workflow.services.v1.WorkflowService/ListWorkflows", "WorkflowService", "ListWorkflows", "list_workflows", "listWorkflows", "read_only", "get", "/v1/workflows");
+        map["/udb.core.workflow.services.v1.WorkflowService/SignalWorkflow"] = new RpcIdentity("/udb.core.workflow.services.v1.WorkflowService/SignalWorkflow", "WorkflowService", "SignalWorkflow", "signal_workflow", "signalWorkflow", "mutation", "post", "/v1/workflows/{workflow_id}:signal");
+        map["/udb.core.workflow.services.v1.WorkflowService/StartWorkflow"] = new RpcIdentity("/udb.core.workflow.services.v1.WorkflowService/StartWorkflow", "WorkflowService", "StartWorkflow", "start_workflow", "startWorkflow", "mutation", "post", "/v1/workflows:start");
+        map["/udb.services.v1.DataBroker/ActivateCatalog"] = new RpcIdentity("/udb.services.v1.DataBroker/ActivateCatalog", "DataBroker", "ActivateCatalog", "activate_catalog", "activateCatalog", "destructive", "", "");
+        map["/udb.services.v1.DataBroker/AnalyticalQuery"] = new RpcIdentity("/udb.services.v1.DataBroker/AnalyticalQuery", "DataBroker", "AnalyticalQuery", "analytical_query", "analyticalQuery", "read_only", "", "");
+        map["/udb.services.v1.DataBroker/ApplyMigration"] = new RpcIdentity("/udb.services.v1.DataBroker/ApplyMigration", "DataBroker", "ApplyMigration", "apply_migration", "applyMigration", "mutation", "", "");
+        map["/udb.services.v1.DataBroker/ApproveMigrationPlan"] = new RpcIdentity("/udb.services.v1.DataBroker/ApproveMigrationPlan", "DataBroker", "ApproveMigrationPlan", "approve_migration_plan", "approveMigrationPlan", "mutation", "", "");
+        map["/udb.services.v1.DataBroker/BatchSelect"] = new RpcIdentity("/udb.services.v1.DataBroker/BatchSelect", "DataBroker", "BatchSelect", "batch_select", "batchSelect", "mutation", "", "");
+        map["/udb.services.v1.DataBroker/BatchUpsert"] = new RpcIdentity("/udb.services.v1.DataBroker/BatchUpsert", "DataBroker", "BatchUpsert", "batch_upsert", "batchUpsert", "mutation", "", "");
+        map["/udb.services.v1.DataBroker/BeginTx"] = new RpcIdentity("/udb.services.v1.DataBroker/BeginTx", "DataBroker", "BeginTx", "begin_tx", "beginTx", "mutation", "", "");
+        map["/udb.services.v1.DataBroker/CacheDelete"] = new RpcIdentity("/udb.services.v1.DataBroker/CacheDelete", "DataBroker", "CacheDelete", "cache_delete", "cacheDelete", "mutation", "", "");
+        map["/udb.services.v1.DataBroker/CacheGet"] = new RpcIdentity("/udb.services.v1.DataBroker/CacheGet", "DataBroker", "CacheGet", "cache_get", "cacheGet", "read_only", "", "");
+        map["/udb.services.v1.DataBroker/CacheScan"] = new RpcIdentity("/udb.services.v1.DataBroker/CacheScan", "DataBroker", "CacheScan", "cache_scan", "cacheScan", "read_only", "", "");
+        map["/udb.services.v1.DataBroker/CacheSet"] = new RpcIdentity("/udb.services.v1.DataBroker/CacheSet", "DataBroker", "CacheSet", "cache_set", "cacheSet", "mutation", "", "");
+        map["/udb.services.v1.DataBroker/CreateMaterializedView"] = new RpcIdentity("/udb.services.v1.DataBroker/CreateMaterializedView", "DataBroker", "CreateMaterializedView", "create_materialized_view", "createMaterializedView", "mutation", "", "");
+        map["/udb.services.v1.DataBroker/Delete"] = new RpcIdentity("/udb.services.v1.DataBroker/Delete", "DataBroker", "Delete", "delete", "delete", "mutation", "", "");
+        map["/udb.services.v1.DataBroker/DeletePolicy"] = new RpcIdentity("/udb.services.v1.DataBroker/DeletePolicy", "DataBroker", "DeletePolicy", "delete_policy", "deletePolicy", "mutation", "", "");
+        map["/udb.services.v1.DataBroker/DismissDlqEvent"] = new RpcIdentity("/udb.services.v1.DataBroker/DismissDlqEvent", "DataBroker", "DismissDlqEvent", "dismiss_dlq_event", "dismissDlqEvent", "mutation", "", "");
+        map["/udb.services.v1.DataBroker/DocumentDelete"] = new RpcIdentity("/udb.services.v1.DataBroker/DocumentDelete", "DataBroker", "DocumentDelete", "document_delete", "documentDelete", "mutation", "", "");
+        map["/udb.services.v1.DataBroker/DocumentFind"] = new RpcIdentity("/udb.services.v1.DataBroker/DocumentFind", "DataBroker", "DocumentFind", "document_find", "documentFind", "read_only", "", "");
+        map["/udb.services.v1.DataBroker/DocumentGet"] = new RpcIdentity("/udb.services.v1.DataBroker/DocumentGet", "DataBroker", "DocumentGet", "document_get", "documentGet", "read_only", "", "");
+        map["/udb.services.v1.DataBroker/DocumentUpsert"] = new RpcIdentity("/udb.services.v1.DataBroker/DocumentUpsert", "DataBroker", "DocumentUpsert", "document_upsert", "documentUpsert", "mutation", "", "");
+        map["/udb.services.v1.DataBroker/DropResource"] = new RpcIdentity("/udb.services.v1.DataBroker/DropResource", "DataBroker", "DropResource", "drop_resource", "dropResource", "destructive", "", "");
+        map["/udb.services.v1.DataBroker/EnqueueOutboxEvent"] = new RpcIdentity("/udb.services.v1.DataBroker/EnqueueOutboxEvent", "DataBroker", "EnqueueOutboxEvent", "enqueue_outbox_event", "enqueueOutboxEvent", "mutation", "", "");
+        map["/udb.services.v1.DataBroker/EnsureBaseline"] = new RpcIdentity("/udb.services.v1.DataBroker/EnsureBaseline", "DataBroker", "EnsureBaseline", "ensure_baseline", "ensureBaseline", "mutation", "", "");
+        map["/udb.services.v1.DataBroker/EnsureProject"] = new RpcIdentity("/udb.services.v1.DataBroker/EnsureProject", "DataBroker", "EnsureProject", "ensure_project", "ensureProject", "mutation", "", "");
+        map["/udb.services.v1.DataBroker/EnsureResource"] = new RpcIdentity("/udb.services.v1.DataBroker/EnsureResource", "DataBroker", "EnsureResource", "ensure_resource", "ensureResource", "mutation", "", "");
+        map["/udb.services.v1.DataBroker/GeneratePresignedUrl"] = new RpcIdentity("/udb.services.v1.DataBroker/GeneratePresignedUrl", "DataBroker", "GeneratePresignedUrl", "generate_presigned_url", "generatePresignedUrl", "mutation", "", "");
+        map["/udb.services.v1.DataBroker/GenericDispatch"] = new RpcIdentity("/udb.services.v1.DataBroker/GenericDispatch", "DataBroker", "GenericDispatch", "generic_dispatch", "genericDispatch", "mutation", "", "");
+        map["/udb.services.v1.DataBroker/GetAdminSummary"] = new RpcIdentity("/udb.services.v1.DataBroker/GetAdminSummary", "DataBroker", "GetAdminSummary", "get_admin_summary", "getAdminSummary", "read_only", "", "");
+        map["/udb.services.v1.DataBroker/GetCapabilities"] = new RpcIdentity("/udb.services.v1.DataBroker/GetCapabilities", "DataBroker", "GetCapabilities", "get_capabilities", "getCapabilities", "read_only", "", "");
+        map["/udb.services.v1.DataBroker/GetCatalogManifest"] = new RpcIdentity("/udb.services.v1.DataBroker/GetCatalogManifest", "DataBroker", "GetCatalogManifest", "get_catalog_manifest", "getCatalogManifest", "read_only", "", "");
+        map["/udb.services.v1.DataBroker/GetCatalogVersion"] = new RpcIdentity("/udb.services.v1.DataBroker/GetCatalogVersion", "DataBroker", "GetCatalogVersion", "get_catalog_version", "getCatalogVersion", "read_only", "", "");
+        map["/udb.services.v1.DataBroker/GetCatalogVersions"] = new RpcIdentity("/udb.services.v1.DataBroker/GetCatalogVersions", "DataBroker", "GetCatalogVersions", "get_catalog_versions", "getCatalogVersions", "read_only", "", "");
+        map["/udb.services.v1.DataBroker/GetCdcStatus"] = new RpcIdentity("/udb.services.v1.DataBroker/GetCdcStatus", "DataBroker", "GetCdcStatus", "get_cdc_status", "getCdcStatus", "read_only", "", "");
+        map["/udb.services.v1.DataBroker/GetDlqEvent"] = new RpcIdentity("/udb.services.v1.DataBroker/GetDlqEvent", "DataBroker", "GetDlqEvent", "get_dlq_event", "getDlqEvent", "read_only", "", "");
+        map["/udb.services.v1.DataBroker/GetHealthReport"] = new RpcIdentity("/udb.services.v1.DataBroker/GetHealthReport", "DataBroker", "GetHealthReport", "get_health_report", "getHealthReport", "read_only", "", "");
+        map["/udb.services.v1.DataBroker/GetMigrationStatus"] = new RpcIdentity("/udb.services.v1.DataBroker/GetMigrationStatus", "DataBroker", "GetMigrationStatus", "get_migration_status", "getMigrationStatus", "read_only", "", "");
+        map["/udb.services.v1.DataBroker/GetObject"] = new RpcIdentity("/udb.services.v1.DataBroker/GetObject", "DataBroker", "GetObject", "get_object", "getObject", "read_only", "", "");
+        map["/udb.services.v1.DataBroker/GetSaga"] = new RpcIdentity("/udb.services.v1.DataBroker/GetSaga", "DataBroker", "GetSaga", "get_saga", "getSaga", "read_only", "", "");
+        map["/udb.services.v1.DataBroker/GraphMutate"] = new RpcIdentity("/udb.services.v1.DataBroker/GraphMutate", "DataBroker", "GraphMutate", "graph_mutate", "graphMutate", "mutation", "", "");
+        map["/udb.services.v1.DataBroker/GraphQuery"] = new RpcIdentity("/udb.services.v1.DataBroker/GraphQuery", "DataBroker", "GraphQuery", "graph_query", "graphQuery", "read_only", "", "");
+        map["/udb.services.v1.DataBroker/InitiateMultipartUpload"] = new RpcIdentity("/udb.services.v1.DataBroker/InitiateMultipartUpload", "DataBroker", "InitiateMultipartUpload", "initiate_multipart_upload", "initiateMultipartUpload", "mutation", "", "");
+        map["/udb.services.v1.DataBroker/LintPolicies"] = new RpcIdentity("/udb.services.v1.DataBroker/LintPolicies", "DataBroker", "LintPolicies", "lint_policies", "lintPolicies", "read_only", "", "");
+        map["/udb.services.v1.DataBroker/ListAdminAuditLogs"] = new RpcIdentity("/udb.services.v1.DataBroker/ListAdminAuditLogs", "DataBroker", "ListAdminAuditLogs", "list_admin_audit_logs", "listAdminAuditLogs", "read_only", "", "");
+        map["/udb.services.v1.DataBroker/ListDlqEvents"] = new RpcIdentity("/udb.services.v1.DataBroker/ListDlqEvents", "DataBroker", "ListDlqEvents", "list_dlq_events", "listDlqEvents", "read_only", "", "");
+        map["/udb.services.v1.DataBroker/ListMessageSchemas"] = new RpcIdentity("/udb.services.v1.DataBroker/ListMessageSchemas", "DataBroker", "ListMessageSchemas", "list_message_schemas", "listMessageSchemas", "read_only", "", "");
+        map["/udb.services.v1.DataBroker/ListMigrationRuns"] = new RpcIdentity("/udb.services.v1.DataBroker/ListMigrationRuns", "DataBroker", "ListMigrationRuns", "list_migration_runs", "listMigrationRuns", "read_only", "", "");
+        map["/udb.services.v1.DataBroker/ListPolicies"] = new RpcIdentity("/udb.services.v1.DataBroker/ListPolicies", "DataBroker", "ListPolicies", "list_policies", "listPolicies", "read_only", "", "");
+        map["/udb.services.v1.DataBroker/ListProjects"] = new RpcIdentity("/udb.services.v1.DataBroker/ListProjects", "DataBroker", "ListProjects", "list_projects", "listProjects", "read_only", "", "");
+        map["/udb.services.v1.DataBroker/ListResources"] = new RpcIdentity("/udb.services.v1.DataBroker/ListResources", "DataBroker", "ListResources", "list_resources", "listResources", "read_only", "", "");
+        map["/udb.services.v1.DataBroker/ListSagas"] = new RpcIdentity("/udb.services.v1.DataBroker/ListSagas", "DataBroker", "ListSagas", "list_sagas", "listSagas", "read_only", "", "");
+        map["/udb.services.v1.DataBroker/LookupMessageSchema"] = new RpcIdentity("/udb.services.v1.DataBroker/LookupMessageSchema", "DataBroker", "LookupMessageSchema", "lookup_message_schema", "lookupMessageSchema", "read_only", "", "");
+        map["/udb.services.v1.DataBroker/MarkSagaReviewed"] = new RpcIdentity("/udb.services.v1.DataBroker/MarkSagaReviewed", "DataBroker", "MarkSagaReviewed", "mark_saga_reviewed", "markSagaReviewed", "mutation", "", "");
+        map["/udb.services.v1.DataBroker/PauseCdc"] = new RpcIdentity("/udb.services.v1.DataBroker/PauseCdc", "DataBroker", "PauseCdc", "pause_cdc", "pauseCdc", "mutation", "", "");
+        map["/udb.services.v1.DataBroker/PlanMigration"] = new RpcIdentity("/udb.services.v1.DataBroker/PlanMigration", "DataBroker", "PlanMigration", "plan_migration", "planMigration", "mutation", "", "");
+        map["/udb.services.v1.DataBroker/PreviewCdcRedaction"] = new RpcIdentity("/udb.services.v1.DataBroker/PreviewCdcRedaction", "DataBroker", "PreviewCdcRedaction", "preview_cdc_redaction", "previewCdcRedaction", "read_only", "", "");
+        map["/udb.services.v1.DataBroker/PublishCDC"] = new RpcIdentity("/udb.services.v1.DataBroker/PublishCDC", "DataBroker", "PublishCDC", "publish_cdc", "publishCdc", "mutation", "", "");
+        map["/udb.services.v1.DataBroker/PutObject"] = new RpcIdentity("/udb.services.v1.DataBroker/PutObject", "DataBroker", "PutObject", "put_object", "putObject", "mutation", "", "");
+        map["/udb.services.v1.DataBroker/PutPolicy"] = new RpcIdentity("/udb.services.v1.DataBroker/PutPolicy", "DataBroker", "PutPolicy", "put_policy", "putPolicy", "destructive", "", "");
+        map["/udb.services.v1.DataBroker/QuarantineDlqEvent"] = new RpcIdentity("/udb.services.v1.DataBroker/QuarantineDlqEvent", "DataBroker", "QuarantineDlqEvent", "quarantine_dlq_event", "quarantineDlqEvent", "mutation", "", "");
+        map["/udb.services.v1.DataBroker/ReloadPolicies"] = new RpcIdentity("/udb.services.v1.DataBroker/ReloadPolicies", "DataBroker", "ReloadPolicies", "reload_policies", "reloadPolicies", "destructive", "", "");
+        map["/udb.services.v1.DataBroker/ReplayDlqEvent"] = new RpcIdentity("/udb.services.v1.DataBroker/ReplayDlqEvent", "DataBroker", "ReplayDlqEvent", "replay_dlq_event", "replayDlqEvent", "mutation", "", "");
+        map["/udb.services.v1.DataBroker/ResumeCdc"] = new RpcIdentity("/udb.services.v1.DataBroker/ResumeCdc", "DataBroker", "ResumeCdc", "resume_cdc", "resumeCdc", "mutation", "", "");
+        map["/udb.services.v1.DataBroker/RetrySagaCompensation"] = new RpcIdentity("/udb.services.v1.DataBroker/RetrySagaCompensation", "DataBroker", "RetrySagaCompensation", "retry_saga_compensation", "retrySagaCompensation", "mutation", "", "");
+        map["/udb.services.v1.DataBroker/RollbackCatalog"] = new RpcIdentity("/udb.services.v1.DataBroker/RollbackCatalog", "DataBroker", "RollbackCatalog", "rollback_catalog", "rollbackCatalog", "destructive", "", "");
+        map["/udb.services.v1.DataBroker/ScanProjectionDrift"] = new RpcIdentity("/udb.services.v1.DataBroker/ScanProjectionDrift", "DataBroker", "ScanProjectionDrift", "scan_projection_drift", "scanProjectionDrift", "read_only", "", "");
+        map["/udb.services.v1.DataBroker/Select"] = new RpcIdentity("/udb.services.v1.DataBroker/Select", "DataBroker", "Select", "select", "select", "read_only", "", "");
+        map["/udb.services.v1.DataBroker/SelectV2"] = new RpcIdentity("/udb.services.v1.DataBroker/SelectV2", "DataBroker", "SelectV2", "select_v_2", "selectV2", "read_only", "", "");
+        map["/udb.services.v1.DataBroker/StageCatalog"] = new RpcIdentity("/udb.services.v1.DataBroker/StageCatalog", "DataBroker", "StageCatalog", "stage_catalog", "stageCatalog", "destructive", "", "");
+        map["/udb.services.v1.DataBroker/StepDownCdcLeader"] = new RpcIdentity("/udb.services.v1.DataBroker/StepDownCdcLeader", "DataBroker", "StepDownCdcLeader", "step_down_cdc_leader", "stepDownCdcLeader", "mutation", "", "");
+        map["/udb.services.v1.DataBroker/TimeSeriesQuery"] = new RpcIdentity("/udb.services.v1.DataBroker/TimeSeriesQuery", "DataBroker", "TimeSeriesQuery", "time_series_query", "timeSeriesQuery", "read_only", "", "");
+        map["/udb.services.v1.DataBroker/TimeSeriesWrite"] = new RpcIdentity("/udb.services.v1.DataBroker/TimeSeriesWrite", "DataBroker", "TimeSeriesWrite", "time_series_write", "timeSeriesWrite", "mutation", "", "");
+        map["/udb.services.v1.DataBroker/Upsert"] = new RpcIdentity("/udb.services.v1.DataBroker/Upsert", "DataBroker", "Upsert", "upsert", "upsert", "mutation", "", "");
+        map["/udb.services.v1.DataBroker/ValidateCatalog"] = new RpcIdentity("/udb.services.v1.DataBroker/ValidateCatalog", "DataBroker", "ValidateCatalog", "validate_catalog", "validateCatalog", "destructive", "", "");
+        map["/udb.services.v1.DataBroker/VectorBatchUpsert"] = new RpcIdentity("/udb.services.v1.DataBroker/VectorBatchUpsert", "DataBroker", "VectorBatchUpsert", "vector_batch_upsert", "vectorBatchUpsert", "mutation", "", "");
+        map["/udb.services.v1.DataBroker/VectorHybridSearch"] = new RpcIdentity("/udb.services.v1.DataBroker/VectorHybridSearch", "DataBroker", "VectorHybridSearch", "vector_hybrid_search", "vectorHybridSearch", "read_only", "", "");
+        map["/udb.services.v1.DataBroker/VectorSearch"] = new RpcIdentity("/udb.services.v1.DataBroker/VectorSearch", "DataBroker", "VectorSearch", "vector_search", "vectorSearch", "read_only", "", "");
+        map["/udb.services.v1.DataBroker/VectorUpsert"] = new RpcIdentity("/udb.services.v1.DataBroker/VectorUpsert", "DataBroker", "VectorUpsert", "vector_upsert", "vectorUpsert", "mutation", "", "");
+        map["/udb.services.v1.DataBroker/VerifyAdminAuditLog"] = new RpcIdentity("/udb.services.v1.DataBroker/VerifyAdminAuditLog", "DataBroker", "VerifyAdminAuditLog", "verify_admin_audit_log", "verifyAdminAuditLog", "read_only", "", "");
+        return map;
+    }
+}
 
 // ── Per-service robustness wrappers ─────────────────────────────────────────
 // One partial wrapper class per gRPC service. The per-service block below
@@ -175,8 +553,89 @@ public sealed partial class GeneratedAuthzServiceClient : GeneratedServiceBase
     public const string ServiceFullName = "udb.core.authz.services.v1.AuthzService";
 }
 /// <summary>
-/// Robustness wrapper for the <c>udb.core.control.services.v1.ControlPlaneService</c> service
+/// Robustness wrapper for the <c>udb.core.backup.services.v1.BackupService</c> service
+/// (8 RPCs). Forwards to the buf-generated
+/// <c>BackupServiceClient</c> stub.
+/// </summary>
+public sealed partial class GeneratedBackupServiceClient : GeneratedServiceBase
+{
+    private readonly dynamic _stub;
+
+    /// <summary>
+    /// Wrap an already-constructed buf stub (e.g.
+    /// <c>new BackupServiceClient(channel)</c>) with the shared robustness
+    /// layer. <paramref name="headers"/> supplies per-call metadata (reuse
+    /// <c>UdbClient.Headers()</c> / <c>UdbMetadata</c>).
+    /// </summary>
+    public GeneratedBackupServiceClient(object stub, Func<Metadata> headers, UdbCallOptions? options = null)
+        : base(headers, options)
+    {
+        _stub = stub ?? throw new ArgumentNullException(nameof(stub));
+    }
+
+    /// <summary>The proto package this service lives in (<c>udb.core.backup.services.v1</c>).</summary>
+    public const string ServicePackage = "udb.core.backup.services.v1";
+
+    /// <summary>The fully-qualified service name (<c>udb.core.backup.services.v1.BackupService</c>).</summary>
+    public const string ServiceFullName = "udb.core.backup.services.v1.BackupService";
+}
+/// <summary>
+/// Robustness wrapper for the <c>udb.core.cache.services.v1.CacheService</c> service
+/// (7 RPCs). Forwards to the buf-generated
+/// <c>CacheServiceClient</c> stub.
+/// </summary>
+public sealed partial class GeneratedCacheServiceClient : GeneratedServiceBase
+{
+    private readonly dynamic _stub;
+
+    /// <summary>
+    /// Wrap an already-constructed buf stub (e.g.
+    /// <c>new CacheServiceClient(channel)</c>) with the shared robustness
+    /// layer. <paramref name="headers"/> supplies per-call metadata (reuse
+    /// <c>UdbClient.Headers()</c> / <c>UdbMetadata</c>).
+    /// </summary>
+    public GeneratedCacheServiceClient(object stub, Func<Metadata> headers, UdbCallOptions? options = null)
+        : base(headers, options)
+    {
+        _stub = stub ?? throw new ArgumentNullException(nameof(stub));
+    }
+
+    /// <summary>The proto package this service lives in (<c>udb.core.cache.services.v1</c>).</summary>
+    public const string ServicePackage = "udb.core.cache.services.v1";
+
+    /// <summary>The fully-qualified service name (<c>udb.core.cache.services.v1.CacheService</c>).</summary>
+    public const string ServiceFullName = "udb.core.cache.services.v1.CacheService";
+}
+/// <summary>
+/// Robustness wrapper for the <c>udb.core.config.services.v1.ConfigService</c> service
 /// (5 RPCs). Forwards to the buf-generated
+/// <c>ConfigServiceClient</c> stub.
+/// </summary>
+public sealed partial class GeneratedConfigServiceClient : GeneratedServiceBase
+{
+    private readonly dynamic _stub;
+
+    /// <summary>
+    /// Wrap an already-constructed buf stub (e.g.
+    /// <c>new ConfigServiceClient(channel)</c>) with the shared robustness
+    /// layer. <paramref name="headers"/> supplies per-call metadata (reuse
+    /// <c>UdbClient.Headers()</c> / <c>UdbMetadata</c>).
+    /// </summary>
+    public GeneratedConfigServiceClient(object stub, Func<Metadata> headers, UdbCallOptions? options = null)
+        : base(headers, options)
+    {
+        _stub = stub ?? throw new ArgumentNullException(nameof(stub));
+    }
+
+    /// <summary>The proto package this service lives in (<c>udb.core.config.services.v1</c>).</summary>
+    public const string ServicePackage = "udb.core.config.services.v1";
+
+    /// <summary>The fully-qualified service name (<c>udb.core.config.services.v1.ConfigService</c>).</summary>
+    public const string ServiceFullName = "udb.core.config.services.v1.ConfigService";
+}
+/// <summary>
+/// Robustness wrapper for the <c>udb.core.control.services.v1.ControlPlaneService</c> service
+/// (6 RPCs). Forwards to the buf-generated
 /// <c>ControlPlaneServiceClient</c> stub.
 /// </summary>
 public sealed partial class GeneratedControlPlaneServiceClient : GeneratedServiceBase
@@ -200,6 +659,33 @@ public sealed partial class GeneratedControlPlaneServiceClient : GeneratedServic
 
     /// <summary>The fully-qualified service name (<c>udb.core.control.services.v1.ControlPlaneService</c>).</summary>
     public const string ServiceFullName = "udb.core.control.services.v1.ControlPlaneService";
+}
+/// <summary>
+/// Robustness wrapper for the <c>udb.core.embedding.services.v1.EmbeddingService</c> service
+/// (6 RPCs). Forwards to the buf-generated
+/// <c>EmbeddingServiceClient</c> stub.
+/// </summary>
+public sealed partial class GeneratedEmbeddingServiceClient : GeneratedServiceBase
+{
+    private readonly dynamic _stub;
+
+    /// <summary>
+    /// Wrap an already-constructed buf stub (e.g.
+    /// <c>new EmbeddingServiceClient(channel)</c>) with the shared robustness
+    /// layer. <paramref name="headers"/> supplies per-call metadata (reuse
+    /// <c>UdbClient.Headers()</c> / <c>UdbMetadata</c>).
+    /// </summary>
+    public GeneratedEmbeddingServiceClient(object stub, Func<Metadata> headers, UdbCallOptions? options = null)
+        : base(headers, options)
+    {
+        _stub = stub ?? throw new ArgumentNullException(nameof(stub));
+    }
+
+    /// <summary>The proto package this service lives in (<c>udb.core.embedding.services.v1</c>).</summary>
+    public const string ServicePackage = "udb.core.embedding.services.v1";
+
+    /// <summary>The fully-qualified service name (<c>udb.core.embedding.services.v1.EmbeddingService</c>).</summary>
+    public const string ServiceFullName = "udb.core.embedding.services.v1.EmbeddingService";
 }
 /// <summary>
 /// Robustness wrapper for the <c>udb.core.idp.services.v1.IdentityProviderService</c> service
@@ -229,8 +715,89 @@ public sealed partial class GeneratedIdentityProviderServiceClient : GeneratedSe
     public const string ServiceFullName = "udb.core.idp.services.v1.IdentityProviderService";
 }
 /// <summary>
+/// Robustness wrapper for the <c>udb.core.livequery.services.v1.LiveQueryService</c> service
+/// (1 RPCs). Forwards to the buf-generated
+/// <c>LiveQueryServiceClient</c> stub.
+/// </summary>
+public sealed partial class GeneratedLiveQueryServiceClient : GeneratedServiceBase
+{
+    private readonly dynamic _stub;
+
+    /// <summary>
+    /// Wrap an already-constructed buf stub (e.g.
+    /// <c>new LiveQueryServiceClient(channel)</c>) with the shared robustness
+    /// layer. <paramref name="headers"/> supplies per-call metadata (reuse
+    /// <c>UdbClient.Headers()</c> / <c>UdbMetadata</c>).
+    /// </summary>
+    public GeneratedLiveQueryServiceClient(object stub, Func<Metadata> headers, UdbCallOptions? options = null)
+        : base(headers, options)
+    {
+        _stub = stub ?? throw new ArgumentNullException(nameof(stub));
+    }
+
+    /// <summary>The proto package this service lives in (<c>udb.core.livequery.services.v1</c>).</summary>
+    public const string ServicePackage = "udb.core.livequery.services.v1";
+
+    /// <summary>The fully-qualified service name (<c>udb.core.livequery.services.v1.LiveQueryService</c>).</summary>
+    public const string ServiceFullName = "udb.core.livequery.services.v1.LiveQueryService";
+}
+/// <summary>
+/// Robustness wrapper for the <c>udb.core.lock.services.v1.LockService</c> service
+/// (3 RPCs). Forwards to the buf-generated
+/// <c>LockServiceClient</c> stub.
+/// </summary>
+public sealed partial class GeneratedLockServiceClient : GeneratedServiceBase
+{
+    private readonly dynamic _stub;
+
+    /// <summary>
+    /// Wrap an already-constructed buf stub (e.g.
+    /// <c>new LockServiceClient(channel)</c>) with the shared robustness
+    /// layer. <paramref name="headers"/> supplies per-call metadata (reuse
+    /// <c>UdbClient.Headers()</c> / <c>UdbMetadata</c>).
+    /// </summary>
+    public GeneratedLockServiceClient(object stub, Func<Metadata> headers, UdbCallOptions? options = null)
+        : base(headers, options)
+    {
+        _stub = stub ?? throw new ArgumentNullException(nameof(stub));
+    }
+
+    /// <summary>The proto package this service lives in (<c>udb.core.lock.services.v1</c>).</summary>
+    public const string ServicePackage = "udb.core.lock.services.v1";
+
+    /// <summary>The fully-qualified service name (<c>udb.core.lock.services.v1.LockService</c>).</summary>
+    public const string ServiceFullName = "udb.core.lock.services.v1.LockService";
+}
+/// <summary>
+/// Robustness wrapper for the <c>udb.core.metering.services.v1.MeteringService</c> service
+/// (6 RPCs). Forwards to the buf-generated
+/// <c>MeteringServiceClient</c> stub.
+/// </summary>
+public sealed partial class GeneratedMeteringServiceClient : GeneratedServiceBase
+{
+    private readonly dynamic _stub;
+
+    /// <summary>
+    /// Wrap an already-constructed buf stub (e.g.
+    /// <c>new MeteringServiceClient(channel)</c>) with the shared robustness
+    /// layer. <paramref name="headers"/> supplies per-call metadata (reuse
+    /// <c>UdbClient.Headers()</c> / <c>UdbMetadata</c>).
+    /// </summary>
+    public GeneratedMeteringServiceClient(object stub, Func<Metadata> headers, UdbCallOptions? options = null)
+        : base(headers, options)
+    {
+        _stub = stub ?? throw new ArgumentNullException(nameof(stub));
+    }
+
+    /// <summary>The proto package this service lives in (<c>udb.core.metering.services.v1</c>).</summary>
+    public const string ServicePackage = "udb.core.metering.services.v1";
+
+    /// <summary>The fully-qualified service name (<c>udb.core.metering.services.v1.MeteringService</c>).</summary>
+    public const string ServiceFullName = "udb.core.metering.services.v1.MeteringService";
+}
+/// <summary>
 /// Robustness wrapper for the <c>udb.core.notification.services.v1.NotificationService</c> service
-/// (11 RPCs). Forwards to the buf-generated
+/// (12 RPCs). Forwards to the buf-generated
 /// <c>NotificationServiceClient</c> stub.
 /// </summary>
 public sealed partial class GeneratedNotificationServiceClient : GeneratedServiceBase
@@ -254,6 +821,60 @@ public sealed partial class GeneratedNotificationServiceClient : GeneratedServic
 
     /// <summary>The fully-qualified service name (<c>udb.core.notification.services.v1.NotificationService</c>).</summary>
     public const string ServiceFullName = "udb.core.notification.services.v1.NotificationService";
+}
+/// <summary>
+/// Robustness wrapper for the <c>udb.core.scheduler.services.v1.SchedulerService</c> service
+/// (6 RPCs). Forwards to the buf-generated
+/// <c>SchedulerServiceClient</c> stub.
+/// </summary>
+public sealed partial class GeneratedSchedulerServiceClient : GeneratedServiceBase
+{
+    private readonly dynamic _stub;
+
+    /// <summary>
+    /// Wrap an already-constructed buf stub (e.g.
+    /// <c>new SchedulerServiceClient(channel)</c>) with the shared robustness
+    /// layer. <paramref name="headers"/> supplies per-call metadata (reuse
+    /// <c>UdbClient.Headers()</c> / <c>UdbMetadata</c>).
+    /// </summary>
+    public GeneratedSchedulerServiceClient(object stub, Func<Metadata> headers, UdbCallOptions? options = null)
+        : base(headers, options)
+    {
+        _stub = stub ?? throw new ArgumentNullException(nameof(stub));
+    }
+
+    /// <summary>The proto package this service lives in (<c>udb.core.scheduler.services.v1</c>).</summary>
+    public const string ServicePackage = "udb.core.scheduler.services.v1";
+
+    /// <summary>The fully-qualified service name (<c>udb.core.scheduler.services.v1.SchedulerService</c>).</summary>
+    public const string ServiceFullName = "udb.core.scheduler.services.v1.SchedulerService";
+}
+/// <summary>
+/// Robustness wrapper for the <c>udb.core.search.services.v1.SearchService</c> service
+/// (5 RPCs). Forwards to the buf-generated
+/// <c>SearchServiceClient</c> stub.
+/// </summary>
+public sealed partial class GeneratedSearchServiceClient : GeneratedServiceBase
+{
+    private readonly dynamic _stub;
+
+    /// <summary>
+    /// Wrap an already-constructed buf stub (e.g.
+    /// <c>new SearchServiceClient(channel)</c>) with the shared robustness
+    /// layer. <paramref name="headers"/> supplies per-call metadata (reuse
+    /// <c>UdbClient.Headers()</c> / <c>UdbMetadata</c>).
+    /// </summary>
+    public GeneratedSearchServiceClient(object stub, Func<Metadata> headers, UdbCallOptions? options = null)
+        : base(headers, options)
+    {
+        _stub = stub ?? throw new ArgumentNullException(nameof(stub));
+    }
+
+    /// <summary>The proto package this service lives in (<c>udb.core.search.services.v1</c>).</summary>
+    public const string ServicePackage = "udb.core.search.services.v1";
+
+    /// <summary>The fully-qualified service name (<c>udb.core.search.services.v1.SearchService</c>).</summary>
+    public const string ServiceFullName = "udb.core.search.services.v1.SearchService";
 }
 /// <summary>
 /// Robustness wrapper for the <c>udb.core.storage.services.v1.StorageService</c> service
@@ -284,7 +905,7 @@ public sealed partial class GeneratedStorageServiceClient : GeneratedServiceBase
 }
 /// <summary>
 /// Robustness wrapper for the <c>udb.core.tenant.services.v1.TenantService</c> service
-/// (6 RPCs). Forwards to the buf-generated
+/// (7 RPCs). Forwards to the buf-generated
 /// <c>TenantServiceClient</c> stub.
 /// </summary>
 public sealed partial class GeneratedTenantServiceClient : GeneratedServiceBase
@@ -308,6 +929,60 @@ public sealed partial class GeneratedTenantServiceClient : GeneratedServiceBase
 
     /// <summary>The fully-qualified service name (<c>udb.core.tenant.services.v1.TenantService</c>).</summary>
     public const string ServiceFullName = "udb.core.tenant.services.v1.TenantService";
+}
+/// <summary>
+/// Robustness wrapper for the <c>udb.core.vault.services.v1.VaultService</c> service
+/// (14 RPCs). Forwards to the buf-generated
+/// <c>VaultServiceClient</c> stub.
+/// </summary>
+public sealed partial class GeneratedVaultServiceClient : GeneratedServiceBase
+{
+    private readonly dynamic _stub;
+
+    /// <summary>
+    /// Wrap an already-constructed buf stub (e.g.
+    /// <c>new VaultServiceClient(channel)</c>) with the shared robustness
+    /// layer. <paramref name="headers"/> supplies per-call metadata (reuse
+    /// <c>UdbClient.Headers()</c> / <c>UdbMetadata</c>).
+    /// </summary>
+    public GeneratedVaultServiceClient(object stub, Func<Metadata> headers, UdbCallOptions? options = null)
+        : base(headers, options)
+    {
+        _stub = stub ?? throw new ArgumentNullException(nameof(stub));
+    }
+
+    /// <summary>The proto package this service lives in (<c>udb.core.vault.services.v1</c>).</summary>
+    public const string ServicePackage = "udb.core.vault.services.v1";
+
+    /// <summary>The fully-qualified service name (<c>udb.core.vault.services.v1.VaultService</c>).</summary>
+    public const string ServiceFullName = "udb.core.vault.services.v1.VaultService";
+}
+/// <summary>
+/// Robustness wrapper for the <c>udb.core.webhook.services.v1.WebhookService</c> service
+/// (6 RPCs). Forwards to the buf-generated
+/// <c>WebhookServiceClient</c> stub.
+/// </summary>
+public sealed partial class GeneratedWebhookServiceClient : GeneratedServiceBase
+{
+    private readonly dynamic _stub;
+
+    /// <summary>
+    /// Wrap an already-constructed buf stub (e.g.
+    /// <c>new WebhookServiceClient(channel)</c>) with the shared robustness
+    /// layer. <paramref name="headers"/> supplies per-call metadata (reuse
+    /// <c>UdbClient.Headers()</c> / <c>UdbMetadata</c>).
+    /// </summary>
+    public GeneratedWebhookServiceClient(object stub, Func<Metadata> headers, UdbCallOptions? options = null)
+        : base(headers, options)
+    {
+        _stub = stub ?? throw new ArgumentNullException(nameof(stub));
+    }
+
+    /// <summary>The proto package this service lives in (<c>udb.core.webhook.services.v1</c>).</summary>
+    public const string ServicePackage = "udb.core.webhook.services.v1";
+
+    /// <summary>The fully-qualified service name (<c>udb.core.webhook.services.v1.WebhookService</c>).</summary>
+    public const string ServiceFullName = "udb.core.webhook.services.v1.WebhookService";
 }
 /// <summary>
 /// Robustness wrapper for the <c>udb.core.webrtc.services.v1.PeerService</c> service
@@ -338,7 +1013,7 @@ public sealed partial class GeneratedPeerServiceClient : GeneratedServiceBase
 }
 /// <summary>
 /// Robustness wrapper for the <c>udb.core.webrtc.services.v1.RoomService</c> service
-/// (5 RPCs). Forwards to the buf-generated
+/// (9 RPCs). Forwards to the buf-generated
 /// <c>RoomServiceClient</c> stub.
 /// </summary>
 public sealed partial class GeneratedRoomServiceClient : GeneratedServiceBase
@@ -445,6 +1120,33 @@ public sealed partial class GeneratedTurnServiceClient : GeneratedServiceBase
     public const string ServiceFullName = "udb.core.webrtc.services.v1.TurnService";
 }
 /// <summary>
+/// Robustness wrapper for the <c>udb.core.workflow.services.v1.WorkflowService</c> service
+/// (5 RPCs). Forwards to the buf-generated
+/// <c>WorkflowServiceClient</c> stub.
+/// </summary>
+public sealed partial class GeneratedWorkflowServiceClient : GeneratedServiceBase
+{
+    private readonly dynamic _stub;
+
+    /// <summary>
+    /// Wrap an already-constructed buf stub (e.g.
+    /// <c>new WorkflowServiceClient(channel)</c>) with the shared robustness
+    /// layer. <paramref name="headers"/> supplies per-call metadata (reuse
+    /// <c>UdbClient.Headers()</c> / <c>UdbMetadata</c>).
+    /// </summary>
+    public GeneratedWorkflowServiceClient(object stub, Func<Metadata> headers, UdbCallOptions? options = null)
+        : base(headers, options)
+    {
+        _stub = stub ?? throw new ArgumentNullException(nameof(stub));
+    }
+
+    /// <summary>The proto package this service lives in (<c>udb.core.workflow.services.v1</c>).</summary>
+    public const string ServicePackage = "udb.core.workflow.services.v1";
+
+    /// <summary>The fully-qualified service name (<c>udb.core.workflow.services.v1.WorkflowService</c>).</summary>
+    public const string ServiceFullName = "udb.core.workflow.services.v1.WorkflowService";
+}
+/// <summary>
 /// Robustness wrapper for the <c>udb.services.v1.DataBroker</c> service
 /// (77 RPCs). Forwards to the buf-generated
 /// <c>DataBrokerClient</c> stub.
@@ -491,7 +1193,9 @@ public sealed partial class GeneratedAnalyticsServiceClient
             co => (object)_stub.GetExecutorPerformanceAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAnalyticsServiceClient
@@ -512,7 +1216,9 @@ public sealed partial class GeneratedAnalyticsServiceClient
             co => (object)_stub.GetPipelineSummaryAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAnalyticsServiceClient
@@ -533,7 +1239,9 @@ public sealed partial class GeneratedAnalyticsServiceClient
             co => (object)_stub.GetReconciliationAnalyticsAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAnalyticsServiceClient
@@ -554,7 +1262,9 @@ public sealed partial class GeneratedAnalyticsServiceClient
             co => (object)_stub.GetSlaComplianceAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAnalyticsServiceClient
@@ -575,7 +1285,9 @@ public sealed partial class GeneratedAnalyticsServiceClient
             co => (object)_stub.GetThroughputAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAnalyticsServiceClient
@@ -596,7 +1308,9 @@ public sealed partial class GeneratedAnalyticsServiceClient
             co => (object)_stub.RecordPipelineMetricAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAnalyticsServiceClient
@@ -617,7 +1331,9 @@ public sealed partial class GeneratedAnalyticsServiceClient
             co => (object)_stub.TriggerSnapshotAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedApiKeyServiceClient
@@ -638,7 +1354,9 @@ public sealed partial class GeneratedApiKeyServiceClient
             co => (object)_stub.CreateApiKeyAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedApiKeyServiceClient
@@ -659,7 +1377,9 @@ public sealed partial class GeneratedApiKeyServiceClient
             co => (object)_stub.EmergencyRevokeApiKeysAsync(request, co),
             deadline,
             cancellationToken,
-            "destructive" == "read_only");
+            "destructive" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedApiKeyServiceClient
@@ -680,7 +1400,9 @@ public sealed partial class GeneratedApiKeyServiceClient
             co => (object)_stub.GetApiKeyAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedApiKeyServiceClient
@@ -701,7 +1423,9 @@ public sealed partial class GeneratedApiKeyServiceClient
             co => (object)_stub.GetApiKeyUsageStatsAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedApiKeyServiceClient
@@ -722,7 +1446,9 @@ public sealed partial class GeneratedApiKeyServiceClient
             co => (object)_stub.ListApiKeysAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedApiKeyServiceClient
@@ -743,7 +1469,9 @@ public sealed partial class GeneratedApiKeyServiceClient
             co => (object)_stub.RevokeApiKeyAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedApiKeyServiceClient
@@ -764,7 +1492,9 @@ public sealed partial class GeneratedApiKeyServiceClient
             co => (object)_stub.RotateApiKeyAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedApiKeyServiceClient
@@ -785,7 +1515,9 @@ public sealed partial class GeneratedApiKeyServiceClient
             co => (object)_stub.UpdateApiKeyAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedApiKeyServiceClient
@@ -806,7 +1538,9 @@ public sealed partial class GeneratedApiKeyServiceClient
             co => (object)_stub.ValidateApiKeyAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAssetServiceClient
@@ -827,7 +1561,9 @@ public sealed partial class GeneratedAssetServiceClient
             co => (object)_stub.CompleteStepAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAssetServiceClient
@@ -848,7 +1584,9 @@ public sealed partial class GeneratedAssetServiceClient
             co => (object)_stub.CreatePipelineDefinitionAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAssetServiceClient
@@ -869,7 +1607,9 @@ public sealed partial class GeneratedAssetServiceClient
             co => (object)_stub.GetAssetAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAssetServiceClient
@@ -890,7 +1630,9 @@ public sealed partial class GeneratedAssetServiceClient
             co => (object)_stub.GetPipelineAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAssetServiceClient
@@ -911,7 +1653,9 @@ public sealed partial class GeneratedAssetServiceClient
             co => (object)_stub.GetPipelineDefinitionAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAssetServiceClient
@@ -932,7 +1676,9 @@ public sealed partial class GeneratedAssetServiceClient
             co => (object)_stub.ListAssetsAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAssetServiceClient
@@ -953,7 +1699,9 @@ public sealed partial class GeneratedAssetServiceClient
             co => (object)_stub.RegisterAssetAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAssetServiceClient
@@ -974,7 +1722,9 @@ public sealed partial class GeneratedAssetServiceClient
             co => (object)_stub.StartPipelineAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "true" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -995,7 +1745,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.AdminResetMfaAsync(request, co),
             deadline,
             cancellationToken,
-            "destructive" == "read_only");
+            "destructive" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1016,7 +1768,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.AdminResetPasswordAsync(request, co),
             deadline,
             cancellationToken,
-            "destructive" == "read_only");
+            "destructive" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1037,7 +1791,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.AdminRevokeAllTenantSessionsAsync(request, co),
             deadline,
             cancellationToken,
-            "destructive" == "read_only");
+            "destructive" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1058,7 +1814,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.AdminRevokeAllUserSessionsAsync(request, co),
             deadline,
             cancellationToken,
-            "destructive" == "read_only");
+            "destructive" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1079,7 +1837,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.AdminRevokeSessionAsync(request, co),
             deadline,
             cancellationToken,
-            "destructive" == "read_only");
+            "destructive" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1100,7 +1860,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.AuthenticateAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1121,7 +1883,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.ChangePasswordAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1142,7 +1906,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.ChangeUserStatusAsync(request, co),
             deadline,
             cancellationToken,
-            "destructive" == "read_only");
+            "destructive" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1163,7 +1929,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.ConfirmMFAEnrollmentAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1184,7 +1952,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.CreateSessionAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1205,7 +1975,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.CreateUserAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1226,7 +1998,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.DeleteWebAuthnCredentialAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1247,7 +2021,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.DisableMfaFactorAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1268,7 +2044,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.EmergencyRevokeAsync(request, co),
             deadline,
             cancellationToken,
-            "destructive" == "read_only");
+            "destructive" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1289,7 +2067,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.EnrollMFAAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1310,7 +2090,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.FinishWebAuthnAuthenticationAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1331,7 +2113,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.FinishWebAuthnRegistrationAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1352,7 +2136,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.ForgotPasswordAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1373,7 +2159,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.GenerateRecoveryCodesAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1394,7 +2182,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.GetJwksAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1415,7 +2205,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.GetMfaPolicyAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1436,7 +2228,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.GetSessionAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1457,7 +2251,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.GetUserAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1478,7 +2274,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.IntrospectTokenAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1499,7 +2297,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.IssueMfaChallengeAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1520,7 +2320,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.ListDevicesAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1541,7 +2343,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.ListMfaFactorsAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1562,7 +2366,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.ListSessionsAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1583,7 +2389,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.ListUsersAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1604,7 +2412,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.ListWebAuthnCredentialsAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1625,7 +2435,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.LoginAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1646,7 +2458,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.LogoutAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1667,7 +2481,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.PutMfaPolicyAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1688,7 +2504,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.RefreshSessionAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1709,7 +2527,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.RefreshTokenAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1730,7 +2550,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.RenamePasskeyAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1751,7 +2573,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.ResendOTPAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1772,7 +2596,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.ResetPasswordAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1793,7 +2619,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.RevokeDeviceAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1814,7 +2642,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.RevokeRecoveryCodesAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1835,7 +2665,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.RevokeSessionAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1856,7 +2688,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.SendOTPAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1877,7 +2711,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.SendPhoneVerificationAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1898,7 +2734,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.StartWebAuthnAuthenticationAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1919,7 +2757,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.StartWebAuthnRegistrationAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1940,7 +2780,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.UpdateUserAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1961,7 +2803,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.ValidateCSRFAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -1982,7 +2826,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.ValidateTokenAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -2003,7 +2849,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.VerifyMfaChallengeAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthnServiceClient
@@ -2024,7 +2872,9 @@ public sealed partial class GeneratedAuthnServiceClient
             co => (object)_stub.VerifyOTPAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2045,7 +2895,9 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.ActivateCanaryAsync(request, co),
             deadline,
             cancellationToken,
-            "destructive" == "read_only");
+            "destructive" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2066,7 +2918,9 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.ActivatePolicyVersionAsync(request, co),
             deadline,
             cancellationToken,
-            "destructive" == "read_only");
+            "destructive" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2087,7 +2941,9 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.ApprovePolicyDraftAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2108,7 +2964,9 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.AssignRoleAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2129,7 +2987,9 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.AuthorizeAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2150,7 +3010,9 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.BatchCheckPermissionsAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2171,7 +3033,9 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.CheckAccessAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2192,7 +3056,9 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.CreatePolicyDraftAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2213,7 +3079,9 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.CreatePolicyRuleAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2234,7 +3102,9 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.CreateRoleAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2255,7 +3125,9 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.DeletePolicyRuleAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2276,7 +3148,9 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.DeleteRoleAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2297,7 +3171,9 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.DiffPolicyDraftAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2318,7 +3194,9 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.ExplainPolicyAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2339,7 +3217,9 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.GetAuthzRevisionAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2360,7 +3240,9 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.GetCanaryStatusAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2381,7 +3263,9 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.GetNativeAccessAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2402,7 +3286,9 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.GetPolicyBundleAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2423,7 +3309,9 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.GetPolicyRuleAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2444,7 +3332,9 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.GetRoleAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2465,7 +3355,9 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.InvalidatePolicyBundlesAsync(request, co),
             deadline,
             cancellationToken,
-            "destructive" == "read_only");
+            "destructive" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2486,7 +3378,9 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.LintAuthzPoliciesAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2507,7 +3401,9 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.ListAccessDecisionAuditsAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2528,7 +3424,9 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.ListPolicyRulesAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2549,7 +3447,9 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.ListPolicyVersionsAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2570,7 +3470,9 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.ListRolesAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2591,7 +3493,9 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.ListUserPermissionsAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2612,7 +3516,9 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.ListUserRolesAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2633,7 +3539,9 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.MigrateLegacyPoliciesAsync(request, co),
             deadline,
             cancellationToken,
-            "destructive" == "read_only");
+            "destructive" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2654,7 +3562,9 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.PromoteCanaryAsync(request, co),
             deadline,
             cancellationToken,
-            "destructive" == "read_only");
+            "destructive" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2675,7 +3585,9 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.PutAuthzPolicyAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2696,7 +3608,9 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.PutRelationshipAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2717,7 +3631,9 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.PutRoleBindingAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2738,7 +3654,9 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.RejectPolicyDraftAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2759,7 +3677,9 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.RevokeRoleAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2780,7 +3700,9 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.RollbackPolicyVersionAsync(request, co),
             deadline,
             cancellationToken,
-            "destructive" == "read_only");
+            "destructive" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2801,7 +3723,9 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.SeedBuiltinRolesAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2822,7 +3746,9 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.SimulatePolicyAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2843,7 +3769,9 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.SubmitPolicyDraftAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2864,7 +3792,9 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.UpdatePolicyDraftAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedAuthzServiceClient
@@ -2885,7 +3815,469 @@ public sealed partial class GeneratedAuthzServiceClient
             co => (object)_stub.UpdateRoleAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedBackupServiceClient
+{
+    /// <summary>
+    /// <c>delete_backup_policy</c> (unary) — forwards to <c>BackupServiceClient.DeleteBackupPolicyAsync</c>.
+    /// gRPC path: <c>/udb.core.backup.services.v1.BackupService/DeleteBackupPolicy</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> DeleteBackupPolicyAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.DeleteBackupPolicyAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.backup.services.v1.BackupService/DeleteBackupPolicy",
+            co => (object)_stub.DeleteBackupPolicyAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedBackupServiceClient
+{
+    /// <summary>
+    /// <c>get_backup</c> (unary) — forwards to <c>BackupServiceClient.GetBackupAsync</c>.
+    /// gRPC path: <c>/udb.core.backup.services.v1.BackupService/GetBackup</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> GetBackupAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.GetBackupAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.backup.services.v1.BackupService/GetBackup",
+            co => (object)_stub.GetBackupAsync(request, co),
+            deadline,
+            cancellationToken,
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedBackupServiceClient
+{
+    /// <summary>
+    /// <c>get_backup_policy</c> (unary) — forwards to <c>BackupServiceClient.GetBackupPolicyAsync</c>.
+    /// gRPC path: <c>/udb.core.backup.services.v1.BackupService/GetBackupPolicy</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> GetBackupPolicyAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.GetBackupPolicyAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.backup.services.v1.BackupService/GetBackupPolicy",
+            co => (object)_stub.GetBackupPolicyAsync(request, co),
+            deadline,
+            cancellationToken,
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedBackupServiceClient
+{
+    /// <summary>
+    /// <c>list_backup_policies</c> (unary) — forwards to <c>BackupServiceClient.ListBackupPoliciesAsync</c>.
+    /// gRPC path: <c>/udb.core.backup.services.v1.BackupService/ListBackupPolicies</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> ListBackupPoliciesAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.ListBackupPoliciesAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.backup.services.v1.BackupService/ListBackupPolicies",
+            co => (object)_stub.ListBackupPoliciesAsync(request, co),
+            deadline,
+            cancellationToken,
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedBackupServiceClient
+{
+    /// <summary>
+    /// <c>list_backups</c> (unary) — forwards to <c>BackupServiceClient.ListBackupsAsync</c>.
+    /// gRPC path: <c>/udb.core.backup.services.v1.BackupService/ListBackups</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> ListBackupsAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.ListBackupsAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.backup.services.v1.BackupService/ListBackups",
+            co => (object)_stub.ListBackupsAsync(request, co),
+            deadline,
+            cancellationToken,
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedBackupServiceClient
+{
+    /// <summary>
+    /// <c>put_backup_policy</c> (unary) — forwards to <c>BackupServiceClient.PutBackupPolicyAsync</c>.
+    /// gRPC path: <c>/udb.core.backup.services.v1.BackupService/PutBackupPolicy</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> PutBackupPolicyAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.PutBackupPolicyAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.backup.services.v1.BackupService/PutBackupPolicy",
+            co => (object)_stub.PutBackupPolicyAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedBackupServiceClient
+{
+    /// <summary>
+    /// <c>restore_tenant</c> (unary) — forwards to <c>BackupServiceClient.RestoreTenantAsync</c>.
+    /// gRPC path: <c>/udb.core.backup.services.v1.BackupService/RestoreTenant</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> RestoreTenantAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.RestoreTenantAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.backup.services.v1.BackupService/RestoreTenant",
+            co => (object)_stub.RestoreTenantAsync(request, co),
+            deadline,
+            cancellationToken,
+            "destructive" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedBackupServiceClient
+{
+    /// <summary>
+    /// <c>start_tenant_backup</c> (unary) — forwards to <c>BackupServiceClient.StartTenantBackupAsync</c>.
+    /// gRPC path: <c>/udb.core.backup.services.v1.BackupService/StartTenantBackup</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> StartTenantBackupAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.StartTenantBackupAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.backup.services.v1.BackupService/StartTenantBackup",
+            co => (object)_stub.StartTenantBackupAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedCacheServiceClient
+{
+    /// <summary>
+    /// <c>create_cache_namespace</c> (unary) — forwards to <c>CacheServiceClient.CreateNamespaceAsync</c>.
+    /// gRPC path: <c>/udb.core.cache.services.v1.CacheService/CreateNamespace</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> CreateCacheNamespaceAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.CreateNamespaceAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.cache.services.v1.CacheService/CreateNamespace",
+            co => (object)_stub.CreateNamespaceAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedCacheServiceClient
+{
+    /// <summary>
+    /// <c>cache_delete</c> (unary) — forwards to <c>CacheServiceClient.DeleteAsync</c>.
+    /// gRPC path: <c>/udb.core.cache.services.v1.CacheService/Delete</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> CacheDeleteAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.DeleteAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.cache.services.v1.CacheService/Delete",
+            co => (object)_stub.DeleteAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedCacheServiceClient
+{
+    /// <summary>
+    /// <c>delete_cache_namespace</c> (unary) — forwards to <c>CacheServiceClient.DeleteNamespaceAsync</c>.
+    /// gRPC path: <c>/udb.core.cache.services.v1.CacheService/DeleteNamespace</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> DeleteCacheNamespaceAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.DeleteNamespaceAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.cache.services.v1.CacheService/DeleteNamespace",
+            co => (object)_stub.DeleteNamespaceAsync(request, co),
+            deadline,
+            cancellationToken,
+            "destructive" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedCacheServiceClient
+{
+    /// <summary>
+    /// <c>cache_get</c> (unary) — forwards to <c>CacheServiceClient.GetAsync</c>.
+    /// gRPC path: <c>/udb.core.cache.services.v1.CacheService/Get</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> CacheGetAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.GetAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.cache.services.v1.CacheService/Get",
+            co => (object)_stub.GetAsync(request, co),
+            deadline,
+            cancellationToken,
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedCacheServiceClient
+{
+    /// <summary>
+    /// <c>get_cache_namespace_stats</c> (unary) — forwards to <c>CacheServiceClient.GetNamespaceStatsAsync</c>.
+    /// gRPC path: <c>/udb.core.cache.services.v1.CacheService/GetNamespaceStats</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> GetCacheNamespaceStatsAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.GetNamespaceStatsAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.cache.services.v1.CacheService/GetNamespaceStats",
+            co => (object)_stub.GetNamespaceStatsAsync(request, co),
+            deadline,
+            cancellationToken,
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedCacheServiceClient
+{
+    /// <summary>
+    /// <c>cache_scan</c> (unary) — forwards to <c>CacheServiceClient.ScanAsync</c>.
+    /// gRPC path: <c>/udb.core.cache.services.v1.CacheService/Scan</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> CacheScanAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.ScanAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.cache.services.v1.CacheService/Scan",
+            co => (object)_stub.ScanAsync(request, co),
+            deadline,
+            cancellationToken,
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedCacheServiceClient
+{
+    /// <summary>
+    /// <c>cache_set</c> (unary) — forwards to <c>CacheServiceClient.SetAsync</c>.
+    /// gRPC path: <c>/udb.core.cache.services.v1.CacheService/Set</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> CacheSetAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.SetAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.cache.services.v1.CacheService/Set",
+            co => (object)_stub.SetAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedConfigServiceClient
+{
+    /// <summary>
+    /// <c>delete_flag</c> (unary) — forwards to <c>ConfigServiceClient.DeleteFlagAsync</c>.
+    /// gRPC path: <c>/udb.core.config.services.v1.ConfigService/DeleteFlag</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> DeleteFlagAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.DeleteFlagAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.config.services.v1.ConfigService/DeleteFlag",
+            co => (object)_stub.DeleteFlagAsync(request, co),
+            deadline,
+            cancellationToken,
+            "destructive" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedConfigServiceClient
+{
+    /// <summary>
+    /// <c>evaluate_flags</c> (unary) — forwards to <c>ConfigServiceClient.EvaluateFlagsAsync</c>.
+    /// gRPC path: <c>/udb.core.config.services.v1.ConfigService/EvaluateFlags</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> EvaluateFlagsAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.EvaluateFlagsAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.config.services.v1.ConfigService/EvaluateFlags",
+            co => (object)_stub.EvaluateFlagsAsync(request, co),
+            deadline,
+            cancellationToken,
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedConfigServiceClient
+{
+    /// <summary>
+    /// <c>get_flag</c> (unary) — forwards to <c>ConfigServiceClient.GetFlagAsync</c>.
+    /// gRPC path: <c>/udb.core.config.services.v1.ConfigService/GetFlag</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> GetFlagAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.GetFlagAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.config.services.v1.ConfigService/GetFlag",
+            co => (object)_stub.GetFlagAsync(request, co),
+            deadline,
+            cancellationToken,
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedConfigServiceClient
+{
+    /// <summary>
+    /// <c>list_flags</c> (unary) — forwards to <c>ConfigServiceClient.ListFlagsAsync</c>.
+    /// gRPC path: <c>/udb.core.config.services.v1.ConfigService/ListFlags</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> ListFlagsAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.ListFlagsAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.config.services.v1.ConfigService/ListFlags",
+            co => (object)_stub.ListFlagsAsync(request, co),
+            deadline,
+            cancellationToken,
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedConfigServiceClient
+{
+    /// <summary>
+    /// <c>put_flag</c> (unary) — forwards to <c>ConfigServiceClient.PutFlagAsync</c>.
+    /// gRPC path: <c>/udb.core.config.services.v1.ConfigService/PutFlag</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> PutFlagAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.PutFlagAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.config.services.v1.ConfigService/PutFlag",
+            co => (object)_stub.PutFlagAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedControlPlaneServiceClient
@@ -2906,7 +4298,9 @@ public sealed partial class GeneratedControlPlaneServiceClient
             co => (object)_stub.AckStatusAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedControlPlaneServiceClient
@@ -2927,7 +4321,9 @@ public sealed partial class GeneratedControlPlaneServiceClient
             co => (object)_stub.GetResourcesAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedControlPlaneServiceClient
@@ -2948,7 +4344,170 @@ public sealed partial class GeneratedControlPlaneServiceClient
             co => (object)_stub.ListNodeStatesAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedControlPlaneServiceClient
+{
+    /// <summary>
+    /// <c>rollback_resources</c> (unary) — forwards to <c>ControlPlaneServiceClient.RollbackResourcesAsync</c>.
+    /// gRPC path: <c>/udb.core.control.services.v1.ControlPlaneService/RollbackResources</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> RollbackResourcesAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.RollbackResourcesAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.control.services.v1.ControlPlaneService/RollbackResources",
+            co => (object)_stub.RollbackResourcesAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedEmbeddingServiceClient
+{
+    /// <summary>
+    /// <c>backfill</c> (unary) — forwards to <c>EmbeddingServiceClient.BackfillAsync</c>.
+    /// gRPC path: <c>/udb.core.embedding.services.v1.EmbeddingService/Backfill</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> BackfillAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.BackfillAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.embedding.services.v1.EmbeddingService/Backfill",
+            co => (object)_stub.BackfillAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedEmbeddingServiceClient
+{
+    /// <summary>
+    /// <c>delete_source</c> (unary) — forwards to <c>EmbeddingServiceClient.DeleteSourceAsync</c>.
+    /// gRPC path: <c>/udb.core.embedding.services.v1.EmbeddingService/DeleteSource</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> DeleteSourceAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.DeleteSourceAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.embedding.services.v1.EmbeddingService/DeleteSource",
+            co => (object)_stub.DeleteSourceAsync(request, co),
+            deadline,
+            cancellationToken,
+            "destructive" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedEmbeddingServiceClient
+{
+    /// <summary>
+    /// <c>list_sources</c> (unary) — forwards to <c>EmbeddingServiceClient.ListSourcesAsync</c>.
+    /// gRPC path: <c>/udb.core.embedding.services.v1.EmbeddingService/ListSources</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> ListSourcesAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.ListSourcesAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.embedding.services.v1.EmbeddingService/ListSources",
+            co => (object)_stub.ListSourcesAsync(request, co),
+            deadline,
+            cancellationToken,
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedEmbeddingServiceClient
+{
+    /// <summary>
+    /// <c>register_source</c> (unary) — forwards to <c>EmbeddingServiceClient.RegisterSourceAsync</c>.
+    /// gRPC path: <c>/udb.core.embedding.services.v1.EmbeddingService/RegisterSource</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> RegisterSourceAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.RegisterSourceAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.embedding.services.v1.EmbeddingService/RegisterSource",
+            co => (object)_stub.RegisterSourceAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedEmbeddingServiceClient
+{
+    /// <summary>
+    /// <c>report_embedding</c> (unary) — forwards to <c>EmbeddingServiceClient.ReportEmbeddingAsync</c>.
+    /// gRPC path: <c>/udb.core.embedding.services.v1.EmbeddingService/ReportEmbedding</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> ReportEmbeddingAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.ReportEmbeddingAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.embedding.services.v1.EmbeddingService/ReportEmbedding",
+            co => (object)_stub.ReportEmbeddingAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedEmbeddingServiceClient
+{
+    /// <summary>
+    /// <c>retrieve</c> (unary) — forwards to <c>EmbeddingServiceClient.RetrieveAsync</c>.
+    /// gRPC path: <c>/udb.core.embedding.services.v1.EmbeddingService/Retrieve</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> RetrieveAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.RetrieveAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.embedding.services.v1.EmbeddingService/Retrieve",
+            co => (object)_stub.RetrieveAsync(request, co),
+            deadline,
+            cancellationToken,
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -2969,7 +4528,9 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.CreateProviderAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -2990,7 +4551,9 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.DisableProviderAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3011,7 +4574,9 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.ForceJwksRefreshAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3032,7 +4597,9 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.GetProviderAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3053,7 +4620,9 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.ImportSamlMetadataAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3074,7 +4643,9 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.LinkIdentityAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3095,7 +4666,9 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.ListExternalIdentitiesAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3116,7 +4689,9 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.ListProvidersAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3137,7 +4712,9 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.PreviewClaimMappingAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3158,7 +4735,9 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.PreviewGroupMappingAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3179,7 +4758,9 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.ResolveExternalIdentityAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3200,7 +4781,9 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.SamlAcsAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3221,7 +4804,9 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.ScimCreateGroupAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3242,7 +4827,9 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.ScimCreateUserAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3263,7 +4850,9 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.ScimDeleteGroupAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3284,7 +4873,9 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.ScimDeleteUserAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3305,7 +4896,9 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.ScimGetGroupAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3326,7 +4919,9 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.ScimGetUserAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3347,7 +4942,9 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.ScimListGroupsAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3368,7 +4965,9 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.ScimListUsersAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3389,7 +4988,9 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.ScimPatchGroupAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3410,7 +5011,9 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.ScimPatchUserAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3431,7 +5034,9 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.ScimReplaceUserAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3452,7 +5057,9 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.StartSamlLoginAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3473,7 +5080,9 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.TestProviderDiscoveryAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3494,7 +5103,9 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.UnlinkIdentityAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedIdentityProviderServiceClient
@@ -3515,7 +5126,216 @@ public sealed partial class GeneratedIdentityProviderServiceClient
             co => (object)_stub.UpdateProviderAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedLockServiceClient
+{
+    /// <summary>
+    /// <c>acquire_lock</c> (unary) — forwards to <c>LockServiceClient.AcquireLockAsync</c>.
+    /// gRPC path: <c>/udb.core.lock.services.v1.LockService/AcquireLock</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> AcquireLockAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.AcquireLockAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.lock.services.v1.LockService/AcquireLock",
+            co => (object)_stub.AcquireLockAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedLockServiceClient
+{
+    /// <summary>
+    /// <c>release_lock</c> (unary) — forwards to <c>LockServiceClient.ReleaseLockAsync</c>.
+    /// gRPC path: <c>/udb.core.lock.services.v1.LockService/ReleaseLock</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> ReleaseLockAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.ReleaseLockAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.lock.services.v1.LockService/ReleaseLock",
+            co => (object)_stub.ReleaseLockAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedLockServiceClient
+{
+    /// <summary>
+    /// <c>renew_lock</c> (unary) — forwards to <c>LockServiceClient.RenewLockAsync</c>.
+    /// gRPC path: <c>/udb.core.lock.services.v1.LockService/RenewLock</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> RenewLockAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.RenewLockAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.lock.services.v1.LockService/RenewLock",
+            co => (object)_stub.RenewLockAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedMeteringServiceClient
+{
+    /// <summary>
+    /// <c>check_quota</c> (unary) — forwards to <c>MeteringServiceClient.CheckQuotaAsync</c>.
+    /// gRPC path: <c>/udb.core.metering.services.v1.MeteringService/CheckQuota</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> CheckQuotaAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.CheckQuotaAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.metering.services.v1.MeteringService/CheckQuota",
+            co => (object)_stub.CheckQuotaAsync(request, co),
+            deadline,
+            cancellationToken,
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedMeteringServiceClient
+{
+    /// <summary>
+    /// <c>get_quota</c> (unary) — forwards to <c>MeteringServiceClient.GetQuotaAsync</c>.
+    /// gRPC path: <c>/udb.core.metering.services.v1.MeteringService/GetQuota</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> GetQuotaAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.GetQuotaAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.metering.services.v1.MeteringService/GetQuota",
+            co => (object)_stub.GetQuotaAsync(request, co),
+            deadline,
+            cancellationToken,
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedMeteringServiceClient
+{
+    /// <summary>
+    /// <c>list_quotas</c> (unary) — forwards to <c>MeteringServiceClient.ListQuotasAsync</c>.
+    /// gRPC path: <c>/udb.core.metering.services.v1.MeteringService/ListQuotas</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> ListQuotasAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.ListQuotasAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.metering.services.v1.MeteringService/ListQuotas",
+            co => (object)_stub.ListQuotasAsync(request, co),
+            deadline,
+            cancellationToken,
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedMeteringServiceClient
+{
+    /// <summary>
+    /// <c>put_quota</c> (unary) — forwards to <c>MeteringServiceClient.PutQuotaAsync</c>.
+    /// gRPC path: <c>/udb.core.metering.services.v1.MeteringService/PutQuota</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> PutQuotaAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.PutQuotaAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.metering.services.v1.MeteringService/PutQuota",
+            co => (object)_stub.PutQuotaAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedMeteringServiceClient
+{
+    /// <summary>
+    /// <c>query_usage</c> (unary) — forwards to <c>MeteringServiceClient.QueryUsageAsync</c>.
+    /// gRPC path: <c>/udb.core.metering.services.v1.MeteringService/QueryUsage</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> QueryUsageAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.QueryUsageAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.metering.services.v1.MeteringService/QueryUsage",
+            co => (object)_stub.QueryUsageAsync(request, co),
+            deadline,
+            cancellationToken,
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedMeteringServiceClient
+{
+    /// <summary>
+    /// <c>record_usage</c> (unary) — forwards to <c>MeteringServiceClient.RecordUsageAsync</c>.
+    /// gRPC path: <c>/udb.core.metering.services.v1.MeteringService/RecordUsage</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> RecordUsageAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.RecordUsageAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.metering.services.v1.MeteringService/RecordUsage",
+            co => (object)_stub.RecordUsageAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedNotificationServiceClient
@@ -3536,7 +5356,9 @@ public sealed partial class GeneratedNotificationServiceClient
             co => (object)_stub.GetDeliveryStatsAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedNotificationServiceClient
@@ -3557,7 +5379,9 @@ public sealed partial class GeneratedNotificationServiceClient
             co => (object)_stub.GetNotificationAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedNotificationServiceClient
@@ -3578,7 +5402,9 @@ public sealed partial class GeneratedNotificationServiceClient
             co => (object)_stub.GetPreferenceAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedNotificationServiceClient
@@ -3599,7 +5425,9 @@ public sealed partial class GeneratedNotificationServiceClient
             co => (object)_stub.GetTemplateAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedNotificationServiceClient
@@ -3620,7 +5448,9 @@ public sealed partial class GeneratedNotificationServiceClient
             co => (object)_stub.ListNotificationsAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedNotificationServiceClient
@@ -3641,7 +5471,9 @@ public sealed partial class GeneratedNotificationServiceClient
             co => (object)_stub.ListPreferencesAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedNotificationServiceClient
@@ -3662,7 +5494,32 @@ public sealed partial class GeneratedNotificationServiceClient
             co => (object)_stub.ListTemplatesAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedNotificationServiceClient
+{
+    /// <summary>
+    /// <c>report_delivery</c> (unary) — forwards to <c>NotificationServiceClient.ReportDeliveryAsync</c>.
+    /// gRPC path: <c>/udb.core.notification.services.v1.NotificationService/ReportDelivery</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> ReportDeliveryAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.ReportDeliveryAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.notification.services.v1.NotificationService/ReportDelivery",
+            co => (object)_stub.ReportDeliveryAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedNotificationServiceClient
@@ -3683,7 +5540,9 @@ public sealed partial class GeneratedNotificationServiceClient
             co => (object)_stub.RetryNotificationAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedNotificationServiceClient
@@ -3704,7 +5563,9 @@ public sealed partial class GeneratedNotificationServiceClient
             co => (object)_stub.SendNotificationAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedNotificationServiceClient
@@ -3725,7 +5586,9 @@ public sealed partial class GeneratedNotificationServiceClient
             co => (object)_stub.SetPreferenceAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedNotificationServiceClient
@@ -3746,7 +5609,262 @@ public sealed partial class GeneratedNotificationServiceClient
             co => (object)_stub.UpsertTemplateAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedSchedulerServiceClient
+{
+    /// <summary>
+    /// <c>create_job</c> (unary) — forwards to <c>SchedulerServiceClient.CreateJobAsync</c>.
+    /// gRPC path: <c>/udb.core.scheduler.services.v1.SchedulerService/CreateJob</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> CreateJobAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.CreateJobAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.scheduler.services.v1.SchedulerService/CreateJob",
+            co => (object)_stub.CreateJobAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedSchedulerServiceClient
+{
+    /// <summary>
+    /// <c>delete_job</c> (unary) — forwards to <c>SchedulerServiceClient.DeleteJobAsync</c>.
+    /// gRPC path: <c>/udb.core.scheduler.services.v1.SchedulerService/DeleteJob</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> DeleteJobAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.DeleteJobAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.scheduler.services.v1.SchedulerService/DeleteJob",
+            co => (object)_stub.DeleteJobAsync(request, co),
+            deadline,
+            cancellationToken,
+            "destructive" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedSchedulerServiceClient
+{
+    /// <summary>
+    /// <c>get_job</c> (unary) — forwards to <c>SchedulerServiceClient.GetJobAsync</c>.
+    /// gRPC path: <c>/udb.core.scheduler.services.v1.SchedulerService/GetJob</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> GetJobAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.GetJobAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.scheduler.services.v1.SchedulerService/GetJob",
+            co => (object)_stub.GetJobAsync(request, co),
+            deadline,
+            cancellationToken,
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedSchedulerServiceClient
+{
+    /// <summary>
+    /// <c>list_jobs</c> (unary) — forwards to <c>SchedulerServiceClient.ListJobsAsync</c>.
+    /// gRPC path: <c>/udb.core.scheduler.services.v1.SchedulerService/ListJobs</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> ListJobsAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.ListJobsAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.scheduler.services.v1.SchedulerService/ListJobs",
+            co => (object)_stub.ListJobsAsync(request, co),
+            deadline,
+            cancellationToken,
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedSchedulerServiceClient
+{
+    /// <summary>
+    /// <c>pause_job</c> (unary) — forwards to <c>SchedulerServiceClient.PauseJobAsync</c>.
+    /// gRPC path: <c>/udb.core.scheduler.services.v1.SchedulerService/PauseJob</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> PauseJobAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.PauseJobAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.scheduler.services.v1.SchedulerService/PauseJob",
+            co => (object)_stub.PauseJobAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedSchedulerServiceClient
+{
+    /// <summary>
+    /// <c>resume_job</c> (unary) — forwards to <c>SchedulerServiceClient.ResumeJobAsync</c>.
+    /// gRPC path: <c>/udb.core.scheduler.services.v1.SchedulerService/ResumeJob</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> ResumeJobAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.ResumeJobAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.scheduler.services.v1.SchedulerService/ResumeJob",
+            co => (object)_stub.ResumeJobAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedSearchServiceClient
+{
+    /// <summary>
+    /// <c>create_index</c> (unary) — forwards to <c>SearchServiceClient.CreateIndexAsync</c>.
+    /// gRPC path: <c>/udb.core.search.services.v1.SearchService/CreateIndex</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> CreateIndexAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.CreateIndexAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.search.services.v1.SearchService/CreateIndex",
+            co => (object)_stub.CreateIndexAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedSearchServiceClient
+{
+    /// <summary>
+    /// <c>delete_index</c> (unary) — forwards to <c>SearchServiceClient.DeleteIndexAsync</c>.
+    /// gRPC path: <c>/udb.core.search.services.v1.SearchService/DeleteIndex</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> DeleteIndexAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.DeleteIndexAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.search.services.v1.SearchService/DeleteIndex",
+            co => (object)_stub.DeleteIndexAsync(request, co),
+            deadline,
+            cancellationToken,
+            "destructive" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedSearchServiceClient
+{
+    /// <summary>
+    /// <c>list_indexes</c> (unary) — forwards to <c>SearchServiceClient.ListIndexesAsync</c>.
+    /// gRPC path: <c>/udb.core.search.services.v1.SearchService/ListIndexes</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> ListIndexesAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.ListIndexesAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.search.services.v1.SearchService/ListIndexes",
+            co => (object)_stub.ListIndexesAsync(request, co),
+            deadline,
+            cancellationToken,
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedSearchServiceClient
+{
+    /// <summary>
+    /// <c>reindex</c> (unary) — forwards to <c>SearchServiceClient.ReindexAsync</c>.
+    /// gRPC path: <c>/udb.core.search.services.v1.SearchService/Reindex</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> ReindexAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.ReindexAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.search.services.v1.SearchService/Reindex",
+            co => (object)_stub.ReindexAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedSearchServiceClient
+{
+    /// <summary>
+    /// <c>search</c> (unary) — forwards to <c>SearchServiceClient.SearchAsync</c>.
+    /// gRPC path: <c>/udb.core.search.services.v1.SearchService/Search</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> SearchAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.SearchAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.search.services.v1.SearchService/Search",
+            co => (object)_stub.SearchAsync(request, co),
+            deadline,
+            cancellationToken,
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedStorageServiceClient
@@ -3767,7 +5885,9 @@ public sealed partial class GeneratedStorageServiceClient
             co => (object)_stub.DeleteFileAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedStorageServiceClient
@@ -3788,7 +5908,9 @@ public sealed partial class GeneratedStorageServiceClient
             co => (object)_stub.FinalizeUploadAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedStorageServiceClient
@@ -3809,7 +5931,9 @@ public sealed partial class GeneratedStorageServiceClient
             co => (object)_stub.GetDownloadUrlAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedStorageServiceClient
@@ -3830,7 +5954,9 @@ public sealed partial class GeneratedStorageServiceClient
             co => (object)_stub.GetFileAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedStorageServiceClient
@@ -3851,7 +5977,9 @@ public sealed partial class GeneratedStorageServiceClient
             co => (object)_stub.ListFilesAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedStorageServiceClient
@@ -3872,7 +6000,9 @@ public sealed partial class GeneratedStorageServiceClient
             co => (object)_stub.RegisterUploadAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedStorageServiceClient
@@ -3893,7 +6023,9 @@ public sealed partial class GeneratedStorageServiceClient
             co => (object)_stub.UpdateFileAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedTenantServiceClient
@@ -3914,7 +6046,9 @@ public sealed partial class GeneratedTenantServiceClient
             co => (object)_stub.CreateTenantAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedTenantServiceClient
@@ -3935,7 +6069,9 @@ public sealed partial class GeneratedTenantServiceClient
             co => (object)_stub.GetTenantAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedTenantServiceClient
@@ -3956,7 +6092,9 @@ public sealed partial class GeneratedTenantServiceClient
             co => (object)_stub.GetTenantConfigAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedTenantServiceClient
@@ -3977,7 +6115,32 @@ public sealed partial class GeneratedTenantServiceClient
             co => (object)_stub.ListTenantsAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedTenantServiceClient
+{
+    /// <summary>
+    /// <c>purge_tenant</c> (unary) — forwards to <c>TenantServiceClient.PurgeTenantAsync</c>.
+    /// gRPC path: <c>/udb.core.tenant.services.v1.TenantService/PurgeTenant</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> PurgeTenantAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.PurgeTenantAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.tenant.services.v1.TenantService/PurgeTenant",
+            co => (object)_stub.PurgeTenantAsync(request, co),
+            deadline,
+            cancellationToken,
+            "destructive" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedTenantServiceClient
@@ -3998,7 +6161,9 @@ public sealed partial class GeneratedTenantServiceClient
             co => (object)_stub.UpdateTenantAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedTenantServiceClient
@@ -4019,7 +6184,469 @@ public sealed partial class GeneratedTenantServiceClient
             co => (object)_stub.UpdateTenantConfigAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedVaultServiceClient
+{
+    /// <summary>
+    /// <c>create_transit_key</c> (unary) — forwards to <c>VaultServiceClient.CreateTransitKeyAsync</c>.
+    /// gRPC path: <c>/udb.core.vault.services.v1.VaultService/CreateTransitKey</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> CreateTransitKeyAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.CreateTransitKeyAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.vault.services.v1.VaultService/CreateTransitKey",
+            co => (object)_stub.CreateTransitKeyAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedVaultServiceClient
+{
+    /// <summary>
+    /// <c>decrypt</c> (unary) — forwards to <c>VaultServiceClient.DecryptAsync</c>.
+    /// gRPC path: <c>/udb.core.vault.services.v1.VaultService/Decrypt</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> DecryptAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.DecryptAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.vault.services.v1.VaultService/Decrypt",
+            co => (object)_stub.DecryptAsync(request, co),
+            deadline,
+            cancellationToken,
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedVaultServiceClient
+{
+    /// <summary>
+    /// <c>delete_secret</c> (unary) — forwards to <c>VaultServiceClient.DeleteSecretAsync</c>.
+    /// gRPC path: <c>/udb.core.vault.services.v1.VaultService/DeleteSecret</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> DeleteSecretAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.DeleteSecretAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.vault.services.v1.VaultService/DeleteSecret",
+            co => (object)_stub.DeleteSecretAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedVaultServiceClient
+{
+    /// <summary>
+    /// <c>destroy_secret</c> (unary) — forwards to <c>VaultServiceClient.DestroySecretAsync</c>.
+    /// gRPC path: <c>/udb.core.vault.services.v1.VaultService/DestroySecret</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> DestroySecretAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.DestroySecretAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.vault.services.v1.VaultService/DestroySecret",
+            co => (object)_stub.DestroySecretAsync(request, co),
+            deadline,
+            cancellationToken,
+            "destructive" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedVaultServiceClient
+{
+    /// <summary>
+    /// <c>encrypt</c> (unary) — forwards to <c>VaultServiceClient.EncryptAsync</c>.
+    /// gRPC path: <c>/udb.core.vault.services.v1.VaultService/Encrypt</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> EncryptAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.EncryptAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.vault.services.v1.VaultService/Encrypt",
+            co => (object)_stub.EncryptAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedVaultServiceClient
+{
+    /// <summary>
+    /// <c>generate_database_credentials</c> (unary) — forwards to <c>VaultServiceClient.GenerateDatabaseCredentialsAsync</c>.
+    /// gRPC path: <c>/udb.core.vault.services.v1.VaultService/GenerateDatabaseCredentials</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> GenerateDatabaseCredentialsAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.GenerateDatabaseCredentialsAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.vault.services.v1.VaultService/GenerateDatabaseCredentials",
+            co => (object)_stub.GenerateDatabaseCredentialsAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedVaultServiceClient
+{
+    /// <summary>
+    /// <c>get_secret</c> (unary) — forwards to <c>VaultServiceClient.GetSecretAsync</c>.
+    /// gRPC path: <c>/udb.core.vault.services.v1.VaultService/GetSecret</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> GetSecretAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.GetSecretAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.vault.services.v1.VaultService/GetSecret",
+            co => (object)_stub.GetSecretAsync(request, co),
+            deadline,
+            cancellationToken,
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedVaultServiceClient
+{
+    /// <summary>
+    /// <c>hmac</c> (unary) — forwards to <c>VaultServiceClient.HmacAsync</c>.
+    /// gRPC path: <c>/udb.core.vault.services.v1.VaultService/Hmac</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> HmacAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.HmacAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.vault.services.v1.VaultService/Hmac",
+            co => (object)_stub.HmacAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedVaultServiceClient
+{
+    /// <summary>
+    /// <c>list_secrets</c> (unary) — forwards to <c>VaultServiceClient.ListSecretsAsync</c>.
+    /// gRPC path: <c>/udb.core.vault.services.v1.VaultService/ListSecrets</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> ListSecretsAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.ListSecretsAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.vault.services.v1.VaultService/ListSecrets",
+            co => (object)_stub.ListSecretsAsync(request, co),
+            deadline,
+            cancellationToken,
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedVaultServiceClient
+{
+    /// <summary>
+    /// <c>put_secret</c> (unary) — forwards to <c>VaultServiceClient.PutSecretAsync</c>.
+    /// gRPC path: <c>/udb.core.vault.services.v1.VaultService/PutSecret</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> PutSecretAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.PutSecretAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.vault.services.v1.VaultService/PutSecret",
+            co => (object)_stub.PutSecretAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedVaultServiceClient
+{
+    /// <summary>
+    /// <c>rotate_transit_key</c> (unary) — forwards to <c>VaultServiceClient.RotateTransitKeyAsync</c>.
+    /// gRPC path: <c>/udb.core.vault.services.v1.VaultService/RotateTransitKey</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> RotateTransitKeyAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.RotateTransitKeyAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.vault.services.v1.VaultService/RotateTransitKey",
+            co => (object)_stub.RotateTransitKeyAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedVaultServiceClient
+{
+    /// <summary>
+    /// <c>seal_status</c> (unary) — forwards to <c>VaultServiceClient.SealStatusAsync</c>.
+    /// gRPC path: <c>/udb.core.vault.services.v1.VaultService/SealStatus</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> SealStatusAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.SealStatusAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.vault.services.v1.VaultService/SealStatus",
+            co => (object)_stub.SealStatusAsync(request, co),
+            deadline,
+            cancellationToken,
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedVaultServiceClient
+{
+    /// <summary>
+    /// <c>sign</c> (unary) — forwards to <c>VaultServiceClient.SignAsync</c>.
+    /// gRPC path: <c>/udb.core.vault.services.v1.VaultService/Sign</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> SignAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.SignAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.vault.services.v1.VaultService/Sign",
+            co => (object)_stub.SignAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedVaultServiceClient
+{
+    /// <summary>
+    /// <c>verify</c> (unary) — forwards to <c>VaultServiceClient.VerifyAsync</c>.
+    /// gRPC path: <c>/udb.core.vault.services.v1.VaultService/Verify</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> VerifyAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.VerifyAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.vault.services.v1.VaultService/Verify",
+            co => (object)_stub.VerifyAsync(request, co),
+            deadline,
+            cancellationToken,
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedWebhookServiceClient
+{
+    /// <summary>
+    /// <c>create_endpoint</c> (unary) — forwards to <c>WebhookServiceClient.CreateEndpointAsync</c>.
+    /// gRPC path: <c>/udb.core.webhook.services.v1.WebhookService/CreateEndpoint</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> CreateEndpointAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.CreateEndpointAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.webhook.services.v1.WebhookService/CreateEndpoint",
+            co => (object)_stub.CreateEndpointAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedWebhookServiceClient
+{
+    /// <summary>
+    /// <c>delete_endpoint</c> (unary) — forwards to <c>WebhookServiceClient.DeleteEndpointAsync</c>.
+    /// gRPC path: <c>/udb.core.webhook.services.v1.WebhookService/DeleteEndpoint</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> DeleteEndpointAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.DeleteEndpointAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.webhook.services.v1.WebhookService/DeleteEndpoint",
+            co => (object)_stub.DeleteEndpointAsync(request, co),
+            deadline,
+            cancellationToken,
+            "destructive" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedWebhookServiceClient
+{
+    /// <summary>
+    /// <c>get_endpoint</c> (unary) — forwards to <c>WebhookServiceClient.GetEndpointAsync</c>.
+    /// gRPC path: <c>/udb.core.webhook.services.v1.WebhookService/GetEndpoint</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> GetEndpointAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.GetEndpointAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.webhook.services.v1.WebhookService/GetEndpoint",
+            co => (object)_stub.GetEndpointAsync(request, co),
+            deadline,
+            cancellationToken,
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedWebhookServiceClient
+{
+    /// <summary>
+    /// <c>list_deliveries</c> (unary) — forwards to <c>WebhookServiceClient.ListDeliveriesAsync</c>.
+    /// gRPC path: <c>/udb.core.webhook.services.v1.WebhookService/ListDeliveries</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> ListDeliveriesAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.ListDeliveriesAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.webhook.services.v1.WebhookService/ListDeliveries",
+            co => (object)_stub.ListDeliveriesAsync(request, co),
+            deadline,
+            cancellationToken,
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedWebhookServiceClient
+{
+    /// <summary>
+    /// <c>list_endpoints</c> (unary) — forwards to <c>WebhookServiceClient.ListEndpointsAsync</c>.
+    /// gRPC path: <c>/udb.core.webhook.services.v1.WebhookService/ListEndpoints</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> ListEndpointsAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.ListEndpointsAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.webhook.services.v1.WebhookService/ListEndpoints",
+            co => (object)_stub.ListEndpointsAsync(request, co),
+            deadline,
+            cancellationToken,
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedWebhookServiceClient
+{
+    /// <summary>
+    /// <c>update_endpoint</c> (unary) — forwards to <c>WebhookServiceClient.UpdateEndpointAsync</c>.
+    /// gRPC path: <c>/udb.core.webhook.services.v1.WebhookService/UpdateEndpoint</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> UpdateEndpointAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.UpdateEndpointAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.webhook.services.v1.WebhookService/UpdateEndpoint",
+            co => (object)_stub.UpdateEndpointAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedPeerServiceClient
@@ -4040,7 +6667,9 @@ public sealed partial class GeneratedPeerServiceClient
             co => (object)_stub.GetPeerAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedPeerServiceClient
@@ -4061,7 +6690,9 @@ public sealed partial class GeneratedPeerServiceClient
             co => (object)_stub.JoinRoomAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedPeerServiceClient
@@ -4082,7 +6713,9 @@ public sealed partial class GeneratedPeerServiceClient
             co => (object)_stub.JoinSessionAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedPeerServiceClient
@@ -4103,7 +6736,9 @@ public sealed partial class GeneratedPeerServiceClient
             co => (object)_stub.LeaveRoomAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedPeerServiceClient
@@ -4124,7 +6759,9 @@ public sealed partial class GeneratedPeerServiceClient
             co => (object)_stub.ListPeersAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedRoomServiceClient
@@ -4145,7 +6782,9 @@ public sealed partial class GeneratedRoomServiceClient
             co => (object)_stub.CloseRoomAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedRoomServiceClient
@@ -4166,7 +6805,9 @@ public sealed partial class GeneratedRoomServiceClient
             co => (object)_stub.CreateRoomAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedRoomServiceClient
@@ -4187,7 +6828,32 @@ public sealed partial class GeneratedRoomServiceClient
             co => (object)_stub.GetRoomAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedRoomServiceClient
+{
+    /// <summary>
+    /// <c>list_egress</c> (unary) — forwards to <c>RoomServiceClient.ListEgressAsync</c>.
+    /// gRPC path: <c>/udb.core.webrtc.services.v1.RoomService/ListEgress</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> ListEgressAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.ListEgressAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.webrtc.services.v1.RoomService/ListEgress",
+            co => (object)_stub.ListEgressAsync(request, co),
+            deadline,
+            cancellationToken,
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedRoomServiceClient
@@ -4208,7 +6874,78 @@ public sealed partial class GeneratedRoomServiceClient
             co => (object)_stub.ListRoomsAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedRoomServiceClient
+{
+    /// <summary>
+    /// <c>start_room_composite</c> (unary) — forwards to <c>RoomServiceClient.StartRoomCompositeAsync</c>.
+    /// gRPC path: <c>/udb.core.webrtc.services.v1.RoomService/StartRoomComposite</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> StartRoomCompositeAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.StartRoomCompositeAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.webrtc.services.v1.RoomService/StartRoomComposite",
+            co => (object)_stub.StartRoomCompositeAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedRoomServiceClient
+{
+    /// <summary>
+    /// <c>start_track_egress</c> (unary) — forwards to <c>RoomServiceClient.StartTrackEgressAsync</c>.
+    /// gRPC path: <c>/udb.core.webrtc.services.v1.RoomService/StartTrackEgress</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> StartTrackEgressAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.StartTrackEgressAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.webrtc.services.v1.RoomService/StartTrackEgress",
+            co => (object)_stub.StartTrackEgressAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedRoomServiceClient
+{
+    /// <summary>
+    /// <c>stop_egress</c> (unary) — forwards to <c>RoomServiceClient.StopEgressAsync</c>.
+    /// gRPC path: <c>/udb.core.webrtc.services.v1.RoomService/StopEgress</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> StopEgressAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.StopEgressAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.webrtc.services.v1.RoomService/StopEgress",
+            co => (object)_stub.StopEgressAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedRoomServiceClient
@@ -4229,7 +6966,9 @@ public sealed partial class GeneratedRoomServiceClient
             co => (object)_stub.UpdateRoomAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedTrackServiceClient
@@ -4250,7 +6989,9 @@ public sealed partial class GeneratedTrackServiceClient
             co => (object)_stub.ListTracksAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedTrackServiceClient
@@ -4271,7 +7012,9 @@ public sealed partial class GeneratedTrackServiceClient
             co => (object)_stub.MuteTrackAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedTrackServiceClient
@@ -4292,7 +7035,9 @@ public sealed partial class GeneratedTrackServiceClient
             co => (object)_stub.PublishTrackAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedTrackServiceClient
@@ -4313,7 +7058,9 @@ public sealed partial class GeneratedTrackServiceClient
             co => (object)_stub.UnpublishTrackAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedTurnServiceClient
@@ -4334,7 +7081,124 @@ public sealed partial class GeneratedTurnServiceClient
             co => (object)_stub.IssueCredentialsAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedWorkflowServiceClient
+{
+    /// <summary>
+    /// <c>cancel_workflow</c> (unary) — forwards to <c>WorkflowServiceClient.CancelWorkflowAsync</c>.
+    /// gRPC path: <c>/udb.core.workflow.services.v1.WorkflowService/CancelWorkflow</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> CancelWorkflowAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.CancelWorkflowAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.workflow.services.v1.WorkflowService/CancelWorkflow",
+            co => (object)_stub.CancelWorkflowAsync(request, co),
+            deadline,
+            cancellationToken,
+            "destructive" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedWorkflowServiceClient
+{
+    /// <summary>
+    /// <c>get_workflow</c> (unary) — forwards to <c>WorkflowServiceClient.GetWorkflowAsync</c>.
+    /// gRPC path: <c>/udb.core.workflow.services.v1.WorkflowService/GetWorkflow</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> GetWorkflowAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.GetWorkflowAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.workflow.services.v1.WorkflowService/GetWorkflow",
+            co => (object)_stub.GetWorkflowAsync(request, co),
+            deadline,
+            cancellationToken,
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedWorkflowServiceClient
+{
+    /// <summary>
+    /// <c>list_workflows</c> (unary) — forwards to <c>WorkflowServiceClient.ListWorkflowsAsync</c>.
+    /// gRPC path: <c>/udb.core.workflow.services.v1.WorkflowService/ListWorkflows</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> ListWorkflowsAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.ListWorkflowsAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.workflow.services.v1.WorkflowService/ListWorkflows",
+            co => (object)_stub.ListWorkflowsAsync(request, co),
+            deadline,
+            cancellationToken,
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedWorkflowServiceClient
+{
+    /// <summary>
+    /// <c>signal_workflow</c> (unary) — forwards to <c>WorkflowServiceClient.SignalWorkflowAsync</c>.
+    /// gRPC path: <c>/udb.core.workflow.services.v1.WorkflowService/SignalWorkflow</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> SignalWorkflowAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.SignalWorkflowAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.workflow.services.v1.WorkflowService/SignalWorkflow",
+            co => (object)_stub.SignalWorkflowAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedWorkflowServiceClient
+{
+    /// <summary>
+    /// <c>start_workflow</c> (unary) — forwards to <c>WorkflowServiceClient.StartWorkflowAsync</c>.
+    /// gRPC path: <c>/udb.core.workflow.services.v1.WorkflowService/StartWorkflow</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> StartWorkflowAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.StartWorkflowAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.workflow.services.v1.WorkflowService/StartWorkflow",
+            co => (object)_stub.StartWorkflowAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4355,7 +7219,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.ActivateCatalogAsync(request, co),
             deadline,
             cancellationToken,
-            "destructive" == "read_only");
+            "destructive" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4376,7 +7242,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.AnalyticalQueryAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4397,7 +7265,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.ApplyMigrationAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4418,7 +7288,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.ApproveMigrationPlanAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4439,7 +7311,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.CacheDeleteAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4460,7 +7334,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.CacheGetAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4481,7 +7357,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.CacheScanAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4502,7 +7380,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.CacheSetAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4523,7 +7403,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.CreateMaterializedViewAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4544,7 +7426,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.DeleteAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "true" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4565,7 +7449,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.DeletePolicyAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4586,7 +7472,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.DismissDlqEventAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4607,7 +7495,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.DocumentDeleteAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4628,7 +7518,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.DocumentFindAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4649,7 +7541,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.DocumentGetAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4670,7 +7564,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.DocumentUpsertAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4691,7 +7587,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.DropResourceAsync(request, co),
             deadline,
             cancellationToken,
-            "destructive" == "read_only");
+            "destructive" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4712,7 +7610,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.EnqueueOutboxEventAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4733,7 +7633,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.EnsureBaselineAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4754,7 +7656,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.EnsureProjectAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4775,7 +7679,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.EnsureResourceAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4796,7 +7702,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.GeneratePresignedUrlAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4817,7 +7725,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.GenericDispatchAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4838,7 +7748,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.GetAdminSummaryAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4859,7 +7771,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.GetCapabilitiesAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4880,7 +7794,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.GetCatalogManifestAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4901,7 +7817,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.GetCatalogVersionAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4922,7 +7840,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.GetCatalogVersionsAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4943,7 +7863,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.GetCdcStatusAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4964,7 +7886,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.GetDlqEventAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -4985,7 +7909,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.GetHealthReportAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5006,7 +7932,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.GetMigrationStatusAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5027,7 +7955,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.GetSagaAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5048,7 +7978,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.GraphMutateAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5069,7 +8001,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.GraphQueryAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5090,7 +8024,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.InitiateMultipartUploadAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5111,7 +8047,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.LintPoliciesAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5132,7 +8070,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.ListAdminAuditLogsAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5153,7 +8093,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.ListDlqEventsAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5174,7 +8116,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.ListMessageSchemasAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5195,7 +8139,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.ListMigrationRunsAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5216,7 +8162,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.ListPoliciesAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5237,7 +8185,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.ListProjectsAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5258,7 +8208,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.ListResourcesAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5279,7 +8231,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.ListSagasAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5300,7 +8254,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.LookupMessageSchemaAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5321,7 +8277,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.MarkSagaReviewedAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5342,7 +8300,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.PauseCdcAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5363,7 +8323,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.PlanMigrationAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5384,7 +8346,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.PreviewCdcRedactionAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5405,7 +8369,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.PutPolicyAsync(request, co),
             deadline,
             cancellationToken,
-            "destructive" == "read_only");
+            "destructive" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5426,7 +8392,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.QuarantineDlqEventAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5447,7 +8415,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.ReloadPoliciesAsync(request, co),
             deadline,
             cancellationToken,
-            "destructive" == "read_only");
+            "destructive" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5468,7 +8438,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.ReplayDlqEventAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5489,7 +8461,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.ResumeCdcAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5510,7 +8484,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.RetrySagaCompensationAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5531,7 +8507,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.RollbackCatalogAsync(request, co),
             deadline,
             cancellationToken,
-            "destructive" == "read_only");
+            "destructive" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5552,7 +8530,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.ScanProjectionDriftAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5573,7 +8553,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.SelectAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5594,7 +8576,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.StageCatalogAsync(request, co),
             deadline,
             cancellationToken,
-            "destructive" == "read_only");
+            "destructive" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5615,7 +8599,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.StepDownCdcLeaderAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5636,7 +8622,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.TimeSeriesQueryAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5657,7 +8645,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.TimeSeriesWriteAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5678,7 +8668,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.UpsertAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "true" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5699,7 +8691,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.ValidateCatalogAsync(request, co),
             deadline,
             cancellationToken,
-            "destructive" == "read_only");
+            "destructive" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5720,7 +8714,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.VectorHybridSearchAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5741,7 +8737,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.VectorSearchAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5762,7 +8760,9 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.VectorUpsertAsync(request, co),
             deadline,
             cancellationToken,
-            "mutation" == "read_only");
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
     }
 }
 public sealed partial class GeneratedDataBrokerClient
@@ -5783,11 +8783,1702 @@ public sealed partial class GeneratedDataBrokerClient
             co => (object)_stub.VerifyAdminAuditLogAsync(request, co),
             deadline,
             cancellationToken,
-            "read_only" == "read_only");
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+
+// ── Neutral-IR typed query builder (master-plan items 2.5 / 10.1) ─────────────
+//
+// A thin, typed layer that emits the broker's CANONICAL neutral-IR envelope
+// ({"ir":{"op":...}}) and sends it through the EXISTING DataBroker.GenericDispatch
+// generated wrapper. It is NOT a second client engine: it only builds a
+// GenericDispatchRequest and hands it to the same RPC raw callers use. Tenant,
+// project, and auth scope stay in request metadata / verified claims; these
+// builders never set RequestContext on the request body.
+
+/// <summary>Neutral-IR query-builder entry points for the generated C# SDK.</summary>
+public static class UdbIr
+{
+    public const string DefaultBackend = "postgres";
+
+    public static IReadOnlyDictionary<string, string> BackendRoles { get; } =
+        JsonSerializer.Deserialize<Dictionary<string, string>>("{\"postgres\":\"canonical\",\"mysql\":\"canonical\",\"sqlite\":\"canonical\",\"sqlserver\":\"canonical\",\"clickhouse\":\"canonical\",\"redis\":\"canonical\",\"memcached\":\"projection\",\"qdrant\":\"projection\",\"weaviate\":\"projection\",\"pinecone\":\"projection\",\"minio\":\"projection\",\"s3\":\"projection\",\"azureblob\":\"projection\",\"gcs\":\"projection\",\"mongodb\":\"canonical\",\"elasticsearch\":\"projection\",\"neo4j\":\"canonical\",\"cassandra\":\"canonical\"}")
+        ?? new Dictionary<string, string>();
+
+    public static IReadOnlyDictionary<string, string> OrmTiers { get; } =
+        JsonSerializer.Deserialize<Dictionary<string, string>>("{\"postgres\":\"relational\",\"mysql\":\"relational\",\"sqlite\":\"relational\",\"sqlserver\":\"relational\",\"clickhouse\":\"relational\",\"redis\":\"kv\",\"memcached\":\"kv\",\"qdrant\":\"vector\",\"weaviate\":\"vector\",\"pinecone\":\"vector\",\"minio\":\"blob\",\"s3\":\"blob\",\"azureblob\":\"blob\",\"gcs\":\"blob\",\"mongodb\":\"document\",\"elasticsearch\":\"vector\",\"neo4j\":\"graph\",\"cassandra\":\"relational\"}")
+        ?? new Dictionary<string, string>();
+
+    public static IReadOnlyDictionary<string, EntityBinding> Entities { get; } = BuildEntityRegistry();
+
+    private static IReadOnlyDictionary<string, EntityBinding> BuildEntityRegistry()
+    {
+        var entities = new Dictionary<string, EntityBinding>(StringComparer.Ordinal);
+        entities["udb.core.analytics.entity.v1.ExecutorPerformanceSummary"] = new EntityBinding(
+            "udb.core.analytics.entity.v1.ExecutorPerformanceSummary",
+            "executor_performance_summaries",
+            new List<string> { "summary_id" },
+            new List<string> { "summary_id", "summary_date", "executor_identity", "workload_kind", "total_dispatches", "successful_results", "timeout_count", "error_count", "avg_execution_ms", "p99_execution_ms", "avg_confidence", "success_rate", "avg_capacity_utilisation", "recorded_at", "created_at", "updated_at", "created_by" },
+            "[]",
+            "",
+            "",
+            "",
+            "udb.core.Analytics.Entity.V1.ExecutorPerformanceSummary");
+        entities["udb.core.analytics.entity.v1.PipelineMetricSnapshot"] = new EntityBinding(
+            "udb.core.analytics.entity.v1.PipelineMetricSnapshot",
+            "pipeline_metric_snapshots",
+            new List<string> { "snapshot_id" },
+            new List<string> { "snapshot_id", "snapshot_hour", "stage_name", "tenant_id", "total_requests", "successful", "failed", "p50_latency_ms", "p95_latency_ms", "p99_latency_ms", "avg_latency_ms", "error_rate", "throughput_rps", "recorded_at", "created_at", "updated_at", "created_by" },
+            "[]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Analytics.Entity.V1.PipelineMetricSnapshot");
+        entities["udb.core.analytics.entity.v1.ReconciliationAnalyticsSummary"] = new EntityBinding(
+            "udb.core.analytics.entity.v1.ReconciliationAnalyticsSummary",
+            "reconciliation_analytics_summaries",
+            new List<string> { "summary_id" },
+            new List<string> { "summary_id", "summary_date", "total_reconciliations", "exact_matches", "partial_conflicts", "hard_conflicts", "low_confidence_flagged", "avg_reconciliation_ms", "resolution_rate", "avg_record_confidence", "recorded_at", "created_at", "updated_at", "created_by" },
+            "[]",
+            "",
+            "",
+            "",
+            "udb.core.Analytics.Entity.V1.ReconciliationAnalyticsSummary");
+        entities["udb.core.apikey.entity.v1.ApiKey"] = new EntityBinding(
+            "udb.core.apikey.entity.v1.ApiKey",
+            "api_keys",
+            new List<string> { "key_id" },
+            new List<string> { "key_id", "key_prefix", "key_hash", "name", "description", "owner_type", "owner_id", "scopes_json", "status", "ip_allowlist_json", "rate_limit_per_minute", "rate_limit_per_day", "created_by", "revoked_by", "revoke_reason", "expires_at", "last_used_at", "created_at", "updated_at", "deleted_at", "deleted_by", "tenant_id", "project_id", "allowed_resources_json", "metadata_json" },
+            "[{\"name\":\"api_key_usages\",\"kind\":\"has_many\",\"local_fields\":[\"key_id\"],\"target_message_type\":\"udb.core.apikey.entity.v1.ApiKeyUsage\",\"target_table\":\"udb_authn.api_key_usages\",\"target_fields\":[\"key_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Apikey.Entity.V1.ApiKey");
+        entities["udb.core.apikey.entity.v1.ApiKeyUsage"] = new EntityBinding(
+            "udb.core.apikey.entity.v1.ApiKeyUsage",
+            "api_key_usages",
+            new List<string> { "usage_id" },
+            new List<string> { "usage_id", "key_id", "endpoint", "ip_address", "http_status", "latency_ms", "rate_limited", "requested_at", "tenant_id", "created_at", "updated_at", "created_by" },
+            "[{\"name\":\"key\",\"kind\":\"belongs_to\",\"local_fields\":[\"key_id\"],\"target_message_type\":\"udb.core.apikey.entity.v1.ApiKey\",\"target_table\":\"udb_authn.api_keys\",\"target_fields\":[\"key_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Apikey.Entity.V1.ApiKeyUsage");
+        entities["udb.core.asset.entity.v1.Asset"] = new EntityBinding(
+            "udb.core.asset.entity.v1.Asset",
+            "assets",
+            new List<string> { "asset_id" },
+            new List<string> { "asset_id", "tenant_id", "project_id", "file_id", "name", "media_type", "status", "metadata", "audit_info", "deleted_at", "deleted_by", "created_at", "updated_at", "created_by" },
+            "[]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Asset.Entity.V1.Asset");
+        entities["udb.core.asset.entity.v1.PipelineDefinition"] = new EntityBinding(
+            "udb.core.asset.entity.v1.PipelineDefinition",
+            "pipeline_definitions",
+            new List<string> { "definition_id" },
+            new List<string> { "definition_id", "tenant_id", "name", "description", "media_type", "steps", "version", "status", "audit_info", "trigger_topic", "created_at", "updated_at", "created_by" },
+            "[]",
+            "version",
+            "tenant_id",
+            "",
+            "udb.core.Asset.Entity.V1.PipelineDefinition");
+        entities["udb.core.asset.entity.v1.PipelineInstance"] = new EntityBinding(
+            "udb.core.asset.entity.v1.PipelineInstance",
+            "pipeline_instances",
+            new List<string> { "instance_id" },
+            new List<string> { "instance_id", "definition_id", "asset_id", "tenant_id", "status", "current_step", "context", "correlation_id", "started_at", "completed_at", "audit_info", "created_at", "updated_at", "created_by" },
+            "[]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Asset.Entity.V1.PipelineInstance");
+        entities["udb.core.asset.entity.v1.PipelineStep"] = new EntityBinding(
+            "udb.core.asset.entity.v1.PipelineStep",
+            "pipeline_steps",
+            new List<string> { "step_id" },
+            new List<string> { "step_id", "instance_id", "step_name", "step_type", "status", "result", "error", "retry_count", "started_at", "completed_at", "audit_info", "tenant_id", "params", "created_at", "updated_at", "created_by" },
+            "[]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Asset.Entity.V1.PipelineStep");
+        entities["udb.core.authn.entity.v1.Device"] = new EntityBinding(
+            "udb.core.authn.entity.v1.Device",
+            "devices",
+            new List<string> { "device_id" },
+            new List<string> { "device_id", "user_id", "tenant_id", "project_id", "device_name", "device_type", "fingerprint_hash", "last_ip_masked", "last_user_agent_hash", "last_seen_at", "created_at", "revoked_at", "revoked_by", "updated_at", "created_by" },
+            "[]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Authn.Entity.V1.Device");
+        entities["udb.core.authn.entity.v1.MfaChallenge"] = new EntityBinding(
+            "udb.core.authn.entity.v1.MfaChallenge",
+            "mfa_challenges",
+            new List<string> { "challenge_id" },
+            new List<string> { "challenge_id", "user_id", "tenant_id", "project_id", "factor_kind", "purpose", "device_fingerprint_hash", "ip_address_masked", "attempt_count", "expires_at", "consumed_at", "created_at", "updated_at", "created_by" },
+            "[]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Authn.Entity.V1.MfaChallenge");
+        entities["udb.core.authn.entity.v1.MfaPolicy"] = new EntityBinding(
+            "udb.core.authn.entity.v1.MfaPolicy",
+            "mfa_policies",
+            new List<string> { "policy_id" },
+            new List<string> { "policy_id", "tenant_id", "require_mfa", "created_at", "updated_at", "created_by" },
+            "[]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Authn.Entity.V1.MfaPolicy");
+        entities["udb.core.authn.entity.v1.OTP"] = new EntityBinding(
+            "udb.core.authn.entity.v1.OTP",
+            "otps",
+            new List<string> { "otp_id" },
+            new List<string> { "otp_id", "user_id", "otp_type", "code_hash", "delivery_channel", "delivery_address", "status", "attempt_count", "superseded_by_id", "expires_at", "used_at", "created_at", "correlation_id", "tenant_id", "updated_at", "created_by" },
+            "[{\"name\":\"otps\",\"kind\":\"has_many\",\"local_fields\":[\"otp_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.OTP\",\"target_table\":\"udb_authn.otps\",\"target_fields\":[\"superseded_by_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"superseded_by\",\"kind\":\"belongs_to\",\"local_fields\":[\"superseded_by_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.OTP\",\"target_table\":\"udb_authn.otps\",\"target_fields\":[\"otp_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"user\",\"kind\":\"belongs_to\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Authn.Entity.V1.OTP");
+        entities["udb.core.authn.entity.v1.RecoveryCode"] = new EntityBinding(
+            "udb.core.authn.entity.v1.RecoveryCode",
+            "recovery_codes",
+            new List<string> { "recovery_code_id" },
+            new List<string> { "recovery_code_id", "user_id", "code_hash", "used_at", "created_at", "tenant_id", "updated_at", "created_by" },
+            "[{\"name\":\"user\",\"kind\":\"belongs_to\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Authn.Entity.V1.RecoveryCode");
+        entities["udb.core.authn.entity.v1.Session"] = new EntityBinding(
+            "udb.core.authn.entity.v1.Session",
+            "sessions",
+            new List<string> { "session_id" },
+            new List<string> { "session_id", "user_id", "session_type", "session_token_lookup", "session_token_hash", "csrf_token_hash", "access_token_jti", "refresh_token_jti", "device_type", "device_name", "ip_address", "user_agent", "is_active", "expires_at", "last_active_at", "revoked_by", "revoke_reason", "created_at", "tenant_id", "project_id", "principal_id", "provider_id", "auth_method", "scopes_json", "metadata_json", "updated_at", "created_by" },
+            "[{\"name\":\"revoked_by\",\"kind\":\"belongs_to\",\"local_fields\":[\"revoked_by\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"user_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"user\",\"kind\":\"belongs_to\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Authn.Entity.V1.Session");
+        entities["udb.core.authn.entity.v1.SigningKey"] = new EntityBinding(
+            "udb.core.authn.entity.v1.SigningKey",
+            "signing_keys",
+            new List<string> { "key_id" },
+            new List<string> { "key_id", "tenant_id", "algorithm", "public_material", "encrypted_private_material", "kms_key_ref", "state", "not_before", "not_after", "created_at", "retired_at", "created_by", "retired_by", "rotation_reason", "updated_at" },
+            "[]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Authn.Entity.V1.SigningKey");
+        entities["udb.core.authn.entity.v1.TokenFamily"] = new EntityBinding(
+            "udb.core.authn.entity.v1.TokenFamily",
+            "token_families",
+            new List<string> { "family_id" },
+            new List<string> { "family_id", "session_id", "user_id", "principal_id", "tenant_id", "project_id", "device_id", "current_refresh_jti_hash", "previous_refresh_jti_hash", "reuse_detected_at", "revoked_at", "revocation_reason", "created_at", "updated_at", "created_by" },
+            "[]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Authn.Entity.V1.TokenFamily");
+        entities["udb.core.authn.entity.v1.TokenRevocation"] = new EntityBinding(
+            "udb.core.authn.entity.v1.TokenRevocation",
+            "token_revocations",
+            new List<string> { "jti_hash" },
+            new List<string> { "jti_hash", "token_type", "tenant_id", "expires_at", "revoked_at", "revoked_by", "reason", "created_at", "updated_at", "created_by" },
+            "[]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Authn.Entity.V1.TokenRevocation");
+        entities["udb.core.authn.entity.v1.User"] = new EntityBinding(
+            "udb.core.authn.entity.v1.User",
+            "users",
+            new List<string> { "user_id" },
+            new List<string> { "user_id", "username", "email", "password_hash", "account_kind", "status", "tenant_id", "full_name", "totp_secret_enc", "mfa_enabled", "failed_login_count", "locked_until", "email_verified_at", "last_login_at", "created_by", "created_at", "updated_at", "deleted_at", "deleted_by", "project_id", "external_provider_id", "external_subject", "locale", "timezone", "profile_attributes_json", "external_references_json", "phone", "phone_verified_at" },
+            "[{\"name\":\"created_by\",\"kind\":\"belongs_to\",\"local_fields\":[\"created_by\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"user_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"notification_logs\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.notification.entity.v1.NotificationLog\",\"target_table\":\"udb_notification.notification_logs\",\"target_fields\":[\"recipient_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"otps\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.OTP\",\"target_table\":\"udb_authn.otps\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"recovery_codes\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.RecoveryCode\",\"target_table\":\"udb_authn.recovery_codes\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"role_permissions\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.RolePermission\",\"target_table\":\"udb_authz.role_permissions\",\"target_fields\":[\"granted_by\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"sessions\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.Session\",\"target_table\":\"udb_authn.sessions\",\"target_fields\":[\"revoked_by\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"sessions\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.Session\",\"target_table\":\"udb_authn.sessions\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"user_roles\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.UserRole\",\"target_table\":\"udb_authz.user_roles\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"users\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"created_by\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"webauthn_credentials\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.WebAuthnCredential\",\"target_table\":\"udb_authn.webauthn_credentials\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Authn.Entity.V1.User");
+        entities["udb.core.authn.entity.v1.WebAuthnCredential"] = new EntityBinding(
+            "udb.core.authn.entity.v1.WebAuthnCredential",
+            "webauthn_credentials",
+            new List<string> { "credential_id" },
+            new List<string> { "credential_id", "user_id", "passkey_json", "label", "tenant_id", "project_id", "created_at", "updated_at", "last_used_at", "created_by" },
+            "[{\"name\":\"user\",\"kind\":\"belongs_to\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Authn.Entity.V1.WebAuthnCredential");
+        entities["udb.core.authn.entity.v1.WebAuthnPolicy"] = new EntityBinding(
+            "udb.core.authn.entity.v1.WebAuthnPolicy",
+            "webauthn_policies",
+            new List<string> { "policy_id" },
+            new List<string> { "policy_id", "tenant_id", "required_user_verification", "required_resident_key", "allowed_attestation_conveyance", "created_at", "updated_at", "created_by" },
+            "[]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Authn.Entity.V1.WebAuthnPolicy");
+        entities["udb.core.authz.entity.v1.AccessDecisionAudit"] = new EntityBinding(
+            "udb.core.authz.entity.v1.AccessDecisionAudit",
+            "access_decision_audits",
+            new List<string> { "decision_audit_id" },
+            new List<string> { "decision_audit_id", "user_id", "domain", "object", "action", "effect", "decision_source", "matched_rule", "reason", "ip_address", "correlation_id", "decided_at", "tenant_id", "decision_id", "policy_version", "relationship_version", "purpose", "scopes", "matched_policy_ids", "project_id", "actor_kind", "resource_type", "trace_id", "span_id", "user_agent_hash", "decision_input", "created_at", "updated_at", "created_by" },
+            "[]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Authz.Entity.V1.AccessDecisionAudit");
+        entities["udb.core.authz.entity.v1.AuthzRevision"] = new EntityBinding(
+            "udb.core.authz.entity.v1.AuthzRevision",
+            "authz_revisions",
+            new List<string> { "revision_id" },
+            new List<string> { "revision_id", "tenant_id", "project_id", "policy_revision", "relationship_revision", "content_hash", "changed_by", "changed_at", "change_type", "created_at", "updated_at", "created_by" },
+            "[]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Authz.Entity.V1.AuthzRevision");
+        entities["udb.core.authz.entity.v1.PolicyApproval"] = new EntityBinding(
+            "udb.core.authz.entity.v1.PolicyApproval",
+            "policy_approvals",
+            new List<string> { "approval_id" },
+            new List<string> { "approval_id", "draft_id", "tenant_id", "actor", "role", "decision", "reason", "created_at", "updated_at", "created_by" },
+            "[{\"name\":\"draft\",\"kind\":\"belongs_to\",\"local_fields\":[\"draft_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.PolicyDraft\",\"target_table\":\"udb_authz.policy_drafts\",\"target_fields\":[\"draft_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Authz.Entity.V1.PolicyApproval");
+        entities["udb.core.authz.entity.v1.PolicyCanary"] = new EntityBinding(
+            "udb.core.authz.entity.v1.PolicyCanary",
+            "policy_canaries",
+            new List<string> { "canary_id" },
+            new List<string> { "canary_id", "policy_set_id", "policy_version_id", "scope_kind", "scope_values", "state", "started_at", "success_window_secs", "metric_threshold", "created_by", "tenant_id", "project_id", "min_samples", "rollback_version_id", "outcome_reason", "revision", "created_at", "updated_at" },
+            "[{\"name\":\"policy_set\",\"kind\":\"belongs_to\",\"local_fields\":[\"policy_set_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.PolicySet\",\"target_table\":\"udb_authz.policy_sets\",\"target_fields\":[\"policy_set_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"policy_version\",\"kind\":\"belongs_to\",\"local_fields\":[\"policy_version_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.PolicyVersion\",\"target_table\":\"udb_authz.policy_versions\",\"target_fields\":[\"policy_version_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]",
+            "revision",
+            "tenant_id",
+            "",
+            "udb.core.Authz.Entity.V1.PolicyCanary");
+        entities["udb.core.authz.entity.v1.PolicyDraft"] = new EntityBinding(
+            "udb.core.authz.entity.v1.PolicyDraft",
+            "policy_drafts",
+            new List<string> { "draft_id" },
+            new List<string> { "draft_id", "tenant_id", "project_id", "title", "description", "proposed_policies_json", "proposed_tuples_json", "base_version_id", "status", "author", "high_risk", "created_at", "updated_at", "created_by" },
+            "[{\"name\":\"policy_approvals\",\"kind\":\"has_many\",\"local_fields\":[\"draft_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.PolicyApproval\",\"target_table\":\"udb_authz.policy_approvals\",\"target_fields\":[\"draft_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Authz.Entity.V1.PolicyDraft");
+        entities["udb.core.authz.entity.v1.PolicyRule"] = new EntityBinding(
+            "udb.core.authz.entity.v1.PolicyRule",
+            "policy_rules",
+            new List<string> { "policy_id" },
+            new List<string> { "policy_id", "subject", "domain", "object", "action", "effect", "condition", "description", "is_active", "created_by", "created_at", "updated_at", "deleted_at", "tenant_id", "deleted_by", "project_id", "resource_type", "attributes_json" },
+            "[]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Authz.Entity.V1.PolicyRule");
+        entities["udb.core.authz.entity.v1.PolicySet"] = new EntityBinding(
+            "udb.core.authz.entity.v1.PolicySet",
+            "policy_sets",
+            new List<string> { "policy_set_id" },
+            new List<string> { "policy_set_id", "tenant_id", "project_id", "name", "active_version_id", "rollback_version_id", "description", "created_by", "created_at", "updated_at", "deleted_at" },
+            "[{\"name\":\"policy_canaries\",\"kind\":\"has_many\",\"local_fields\":[\"policy_set_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.PolicyCanary\",\"target_table\":\"udb_authz.policy_canaries\",\"target_fields\":[\"policy_set_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"policy_versions\",\"kind\":\"has_many\",\"local_fields\":[\"policy_set_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.PolicyVersion\",\"target_table\":\"udb_authz.policy_versions\",\"target_fields\":[\"policy_set_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Authz.Entity.V1.PolicySet");
+        entities["udb.core.authz.entity.v1.PolicySimulation"] = new EntityBinding(
+            "udb.core.authz.entity.v1.PolicySimulation",
+            "policy_simulations",
+            new List<string> { "simulation_id" },
+            new List<string> { "simulation_id", "policy_version_id", "principal_json", "resource_json", "action", "purpose", "active_decision_json", "draft_decision_json", "diff_json", "tenant_id", "project_id", "created_at", "updated_at", "created_by" },
+            "[]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Authz.Entity.V1.PolicySimulation");
+        entities["udb.core.authz.entity.v1.PolicyTuple"] = new EntityBinding(
+            "udb.core.authz.entity.v1.PolicyTuple",
+            "policy_tuples",
+            new List<string> { "policy_tuple_id" },
+            new List<string> { "policy_tuple_id", "tuple_kind", "subject", "domain", "object", "action", "effect", "condition", "tenant_id", "project_id", "created_at", "updated_at", "created_by" },
+            "[]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Authz.Entity.V1.PolicyTuple");
+        entities["udb.core.authz.entity.v1.PolicyVersion"] = new EntityBinding(
+            "udb.core.authz.entity.v1.PolicyVersion",
+            "policy_versions",
+            new List<string> { "policy_version_id" },
+            new List<string> { "policy_version_id", "policy_set_id", "version_number", "state", "snapshot_hash", "created_by", "created_at", "activated_by", "activated_at", "rollback_of", "change_reason", "revision", "content_hash", "tenant_id", "project_id", "payload_json", "high_risk", "submitted_by", "source_draft_id", "updated_at" },
+            "[{\"name\":\"policy_canaries\",\"kind\":\"has_many\",\"local_fields\":[\"policy_version_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.PolicyCanary\",\"target_table\":\"udb_authz.policy_canaries\",\"target_fields\":[\"policy_version_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"policy_set\",\"kind\":\"belongs_to\",\"local_fields\":[\"policy_set_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.PolicySet\",\"target_table\":\"udb_authz.policy_sets\",\"target_fields\":[\"policy_set_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]",
+            "revision",
+            "tenant_id",
+            "",
+            "udb.core.Authz.Entity.V1.PolicyVersion");
+        entities["udb.core.authz.entity.v1.Role"] = new EntityBinding(
+            "udb.core.authz.entity.v1.Role",
+            "roles",
+            new List<string> { "role_id" },
+            new List<string> { "role_id", "name", "description", "is_system", "is_active", "created_by", "created_at", "updated_at", "deleted_at", "tenant_id", "deleted_by", "role_code", "domain", "project_id", "scope_type", "access_surface", "metadata_json" },
+            "[{\"name\":\"role_permissions\",\"kind\":\"has_many\",\"local_fields\":[\"role_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.RolePermission\",\"target_table\":\"udb_authz.role_permissions\",\"target_fields\":[\"role_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"user_roles\",\"kind\":\"has_many\",\"local_fields\":[\"role_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.UserRole\",\"target_table\":\"udb_authz.user_roles\",\"target_fields\":[\"role_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Authz.Entity.V1.Role");
+        entities["udb.core.authz.entity.v1.RolePermission"] = new EntityBinding(
+            "udb.core.authz.entity.v1.RolePermission",
+            "role_permissions",
+            new List<string> { "role_permission_id" },
+            new List<string> { "role_permission_id", "role_id", "permission_code", "granted_by", "granted_at", "tenant_id", "created_at", "updated_at", "created_by" },
+            "[{\"name\":\"granted_by\",\"kind\":\"belongs_to\",\"local_fields\":[\"granted_by\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"user_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"role\",\"kind\":\"belongs_to\",\"local_fields\":[\"role_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.Role\",\"target_table\":\"udb_authz.roles\",\"target_fields\":[\"role_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Authz.Entity.V1.RolePermission");
+        entities["udb.core.authz.entity.v1.UserRole"] = new EntityBinding(
+            "udb.core.authz.entity.v1.UserRole",
+            "user_roles",
+            new List<string> { "user_role_id" },
+            new List<string> { "user_role_id", "user_id", "role_id", "domain", "assigned_by", "assigned_at", "expires_at", "created_at", "updated_at", "created_by", "tenant_id" },
+            "[{\"name\":\"role\",\"kind\":\"belongs_to\",\"local_fields\":[\"role_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.Role\",\"target_table\":\"udb_authz.roles\",\"target_fields\":[\"role_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"user\",\"kind\":\"belongs_to\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Authz.Entity.V1.UserRole");
+        entities["udb.core.backup.entity.v1.BackupPolicy"] = new EntityBinding(
+            "udb.core.backup.entity.v1.BackupPolicy",
+            "backup_policies",
+            new List<string> { "policy_id" },
+            new List<string> { "policy_id", "tenant_id", "policy_name", "schedule_cron", "retention_days", "max_retained_backups", "enabled", "object_backend", "object_bucket", "created_at", "updated_at", "metadata_json", "created_by" },
+            "[]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Backup.Entity.V1.BackupPolicy");
+        entities["udb.core.backup.entity.v1.BackupRun"] = new EntityBinding(
+            "udb.core.backup.entity.v1.BackupRun",
+            "backup_runs",
+            new List<string> { "backup_id" },
+            new List<string> { "backup_id", "tenant_id", "kind", "status", "object_prefix", "manifest_checksum", "table_count", "total_rows", "excluded_count", "source_tenant_id", "target_tenant_id", "error_message", "created_at", "completed_at", "metadata_json", "updated_at", "created_by" },
+            "[]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Backup.Entity.V1.BackupRun");
+        entities["udb.core.config.entity.v1.Flag"] = new EntityBinding(
+            "udb.core.config.entity.v1.Flag",
+            "flags",
+            new List<string> { "flag_id" },
+            new List<string> { "flag_id", "tenant_id", "project_id", "environment", "flag_key", "value_type", "value_json", "enabled", "rollout_percentage", "rollout_context_key", "revision", "metadata_json", "created_at", "updated_at", "created_by" },
+            "[]",
+            "revision",
+            "tenant_id",
+            "",
+            "udb.core.Config.Entity.V1.Flag");
+        entities["udb.core.control.entity.v1.ControlPlaneNodeState"] = new EntityBinding(
+            "udb.core.control.entity.v1.ControlPlaneNodeState",
+            "control_plane_node_states",
+            new List<string> { "node_state_id" },
+            new List<string> { "node_state_id", "node_id", "resource_type", "subscribed_names", "accepted_version", "last_good_version", "last_response_nonce", "nack_error_detail", "nonce_counter", "created_at", "updated_at", "served_snapshots", "created_by" },
+            "[]",
+            "",
+            "",
+            "",
+            "udb.core.Control.Entity.V1.ControlPlaneNodeState");
+        entities["udb.core.control.entity.v1.ControlPlaneResource"] = new EntityBinding(
+            "udb.core.control.entity.v1.ControlPlaneResource",
+            "control_plane_resources",
+            new List<string> { "resource_id" },
+            new List<string> { "resource_id", "resource_type", "name", "tenant_id", "project_id", "version", "content_hash", "payload_json", "updated_by", "created_at", "updated_at", "created_by" },
+            "[]",
+            "version",
+            "tenant_id",
+            "",
+            "udb.core.Control.Entity.V1.ControlPlaneResource");
+        entities["udb.core.embedding.entity.v1.EmbeddingSource"] = new EntityBinding(
+            "udb.core.embedding.entity.v1.EmbeddingSource",
+            "embedding_sources",
+            new List<string> { "source_id" },
+            new List<string> { "source_id", "tenant_id", "source_name", "source_message_type", "text_fields_json", "target_collection", "model_id", "tenant_column", "source_cdc_topic", "status", "created_at", "updated_at", "metadata_json", "created_by" },
+            "[]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Embedding.Entity.V1.EmbeddingSource");
+        entities["udb.core.idp.entity.v1.ExternalIdentity"] = new EntityBinding(
+            "udb.core.idp.entity.v1.ExternalIdentity",
+            "external_identities",
+            new List<string> { "external_identity_id" },
+            new List<string> { "external_identity_id", "tenant_id", "provider_id", "subject", "user_id", "email", "email_verified", "linked_at", "last_login_at", "deleted_at", "created_at", "updated_at", "created_by" },
+            "[{\"name\":\"provider\",\"kind\":\"belongs_to\",\"local_fields\":[\"provider_id\"],\"target_message_type\":\"udb.core.idp.entity.v1.IdentityProvider\",\"target_table\":\"udb_idp.identity_providers\",\"target_fields\":[\"provider_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Idp.Entity.V1.ExternalIdentity");
+        entities["udb.core.idp.entity.v1.IdentityProvider"] = new EntityBinding(
+            "udb.core.idp.entity.v1.IdentityProvider",
+            "identity_providers",
+            new List<string> { "provider_id" },
+            new List<string> { "provider_id", "tenant_id", "kind", "display_name", "issuer", "entity_id", "jwks_url", "saml_metadata_url", "client_ids_json", "audiences_json", "claim_mapping_json", "group_mapping_json", "jit_policy_json", "account_linking_policy", "enabled", "client_secret", "saml_signing_key_pem", "saml_idp_certs_json", "saml_sso_url", "health", "last_jwks_refresh_at", "last_jwks_refresh_status", "created_by", "updated_by", "created_at", "updated_at", "deleted_at" },
+            "[{\"name\":\"external_identities\",\"kind\":\"has_many\",\"local_fields\":[\"provider_id\"],\"target_message_type\":\"udb.core.idp.entity.v1.ExternalIdentity\",\"target_table\":\"udb_idp.external_identities\",\"target_fields\":[\"provider_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"scim_directory_state\",\"kind\":\"has_many\",\"local_fields\":[\"provider_id\"],\"target_message_type\":\"udb.core.idp.entity.v1.ScimDirectoryState\",\"target_table\":\"udb_idp.scim_directory_state\",\"target_fields\":[\"provider_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Idp.Entity.V1.IdentityProvider");
+        entities["udb.core.idp.entity.v1.SamlReplayEntry"] = new EntityBinding(
+            "udb.core.idp.entity.v1.SamlReplayEntry",
+            "saml_replay_entries",
+            new List<string> { "saml_replay_entry_id" },
+            new List<string> { "saml_replay_entry_id", "tenant_id", "provider_id", "assertion_id", "not_on_or_after", "consumed_at" },
+            "[]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Idp.Entity.V1.SamlReplayEntry");
+        entities["udb.core.idp.entity.v1.ScimDirectoryState"] = new EntityBinding(
+            "udb.core.idp.entity.v1.ScimDirectoryState",
+            "scim_directory_state",
+            new List<string> { "scim_directory_state_id" },
+            new List<string> { "scim_directory_state_id", "tenant_id", "provider_id", "cursor", "last_sync_at", "failure_count", "last_error", "deprovision_policy", "created_at", "updated_at", "created_by" },
+            "[{\"name\":\"provider\",\"kind\":\"belongs_to\",\"local_fields\":[\"provider_id\"],\"target_message_type\":\"udb.core.idp.entity.v1.IdentityProvider\",\"target_table\":\"udb_idp.identity_providers\",\"target_fields\":[\"provider_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Idp.Entity.V1.ScimDirectoryState");
+        entities["udb.core.lock.entity.v1.Lock"] = new EntityBinding(
+            "udb.core.lock.entity.v1.Lock",
+            "locks",
+            new List<string> { "lock_id" },
+            new List<string> { "lock_id", "tenant_id", "lock_name", "owner_id", "fencing_token", "lease_ttl_seconds", "status", "acquired_at", "expires_at", "metadata_json", "created_at", "updated_at", "created_by" },
+            "[]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Lock.Entity.V1.Lock");
+        entities["udb.core.metering.entity.v1.QuotaRule"] = new EntityBinding(
+            "udb.core.metering.entity.v1.QuotaRule",
+            "quota_rules",
+            new List<string> { "quota_id" },
+            new List<string> { "quota_id", "tenant_id", "project_id", "metric", "limit_value", "window_seconds", "enabled", "revision", "metadata_json", "created_at", "updated_at", "created_by" },
+            "[]",
+            "revision",
+            "tenant_id",
+            "",
+            "udb.core.Metering.Entity.V1.QuotaRule");
+        entities["udb.core.metering.entity.v1.UsageEvent"] = new EntityBinding(
+            "udb.core.metering.entity.v1.UsageEvent",
+            "usage_events",
+            new List<string> { "usage_id" },
+            new List<string> { "usage_id", "tenant_id", "principal_id", "method", "unit", "quantity", "occurred_at", "occurred_at_unix", "metadata_json", "created_at", "updated_at", "created_by" },
+            "[]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Metering.Entity.V1.UsageEvent");
+        entities["udb.core.notification.entity.v1.Notification"] = new EntityBinding(
+            "udb.core.notification.entity.v1.Notification",
+            "notifications",
+            new List<string> { "notification_id" },
+            new List<string> { "notification_id", "recipient_id", "type", "channel", "subject", "message", "template_data", "priority", "status", "scheduled_at", "sent_at", "delivered_at", "read_at", "created_at", "retry_count", "error_message", "tenant_id", "deleted_at", "deleted_by", "updated_at", "created_by" },
+            "[]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Notification.Entity.V1.Notification");
+        entities["udb.core.notification.entity.v1.NotificationDeliveryAttempt"] = new EntityBinding(
+            "udb.core.notification.entity.v1.NotificationDeliveryAttempt",
+            "notification_delivery_attempts",
+            new List<string> { "attempt_id" },
+            new List<string> { "attempt_id", "notification_id", "tenant_id", "channel", "provider", "status", "attempt_count", "last_error", "provider_message_id", "created_at", "updated_at", "created_by" },
+            "[]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Notification.Entity.V1.NotificationDeliveryAttempt");
+        entities["udb.core.notification.entity.v1.NotificationLog"] = new EntityBinding(
+            "udb.core.notification.entity.v1.NotificationLog",
+            "notification_logs",
+            new List<string> { "log_id" },
+            new List<string> { "log_id", "template_id", "event_type", "channel", "recipient_id", "recipient_address", "tenant_id", "project_id", "resource_type", "resource_id", "resource_name", "correlation_id", "status", "error_message", "provider_message_id", "retry_count", "sent_at", "delivered_at", "created_at", "rendered_subject", "rendered_body", "updated_at", "created_by" },
+            "[{\"name\":\"recipient\",\"kind\":\"belongs_to\",\"local_fields\":[\"recipient_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"user_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"template\",\"kind\":\"belongs_to\",\"local_fields\":[\"template_id\"],\"target_message_type\":\"udb.core.notification.entity.v1.NotificationTemplate\",\"target_table\":\"udb_notification.notification_templates\",\"target_fields\":[\"template_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"}]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Notification.Entity.V1.NotificationLog");
+        entities["udb.core.notification.entity.v1.NotificationPreference"] = new EntityBinding(
+            "udb.core.notification.entity.v1.NotificationPreference",
+            "notification_preferences",
+            new List<string> { "preference_id" },
+            new List<string> { "preference_id", "user_id", "tenant_id", "channel", "event_type", "is_opted_out", "created_at", "updated_at", "created_by" },
+            "[]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Notification.Entity.V1.NotificationPreference");
+        entities["udb.core.notification.entity.v1.NotificationTemplate"] = new EntityBinding(
+            "udb.core.notification.entity.v1.NotificationTemplate",
+            "notification_templates",
+            new List<string> { "template_id" },
+            new List<string> { "template_id", "event_type", "channel", "subject_template", "body_template", "locale", "is_active", "created_at", "updated_at", "deleted_at", "created_by", "deleted_by", "tenant_id" },
+            "[{\"name\":\"notification_logs\",\"kind\":\"has_many\",\"local_fields\":[\"template_id\"],\"target_message_type\":\"udb.core.notification.entity.v1.NotificationLog\",\"target_table\":\"udb_notification.notification_logs\",\"target_fields\":[\"template_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"}]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Notification.Entity.V1.NotificationTemplate");
+        entities["udb.core.scheduler.entity.v1.ScheduledJob"] = new EntityBinding(
+            "udb.core.scheduler.entity.v1.ScheduledJob",
+            "scheduled_jobs",
+            new List<string> { "job_id" },
+            new List<string> { "job_id", "tenant_id", "project_id", "name", "schedule_type", "cron_expression", "payload", "target_topic", "status", "next_fire_at", "last_fired_at", "max_attempts", "attempt_count", "backoff_seconds", "audit_info", "deleted_at", "deleted_by", "created_at", "updated_at", "created_by" },
+            "[]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Scheduler.Entity.V1.ScheduledJob");
+        entities["udb.core.search.entity.v1.SearchIndex"] = new EntityBinding(
+            "udb.core.search.entity.v1.SearchIndex",
+            "search_indexes",
+            new List<string> { "index_id" },
+            new List<string> { "index_id", "tenant_id", "index_name", "source_message_type", "backend", "resource_name", "vector_dims", "tenant_column", "source_cdc_topic", "status", "created_at", "updated_at", "metadata_json", "created_by" },
+            "[]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Search.Entity.V1.SearchIndex");
+        entities["udb.core.storage.entity.v1.File"] = new EntityBinding(
+            "udb.core.storage.entity.v1.File",
+            "files",
+            new List<string> { "file_id" },
+            new List<string> { "file_id", "tenant_id", "project_id", "filename", "content_type", "size_bytes", "backend", "bucket", "object_key", "url", "cdn_url", "file_type", "reference_id", "reference_type", "is_public", "status", "checksum", "expires_at", "uploaded_by", "audit_info", "deleted_at", "deleted_by", "created_at", "updated_at", "created_by" },
+            "[]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Storage.Entity.V1.File");
+        entities["udb.core.tenant.entity.v1.Tenant"] = new EntityBinding(
+            "udb.core.tenant.entity.v1.Tenant",
+            "tenants",
+            new List<string> { "tenant_id" },
+            new List<string> { "tenant_id", "code", "name", "type", "status", "parent_tenant_id", "config", "branding", "audit_info", "deleted_at", "deleted_by", "created_at", "updated_at", "created_by" },
+            "[{\"name\":\"parent_tenant\",\"kind\":\"belongs_to\",\"local_fields\":[\"parent_tenant_id\"],\"target_message_type\":\"udb.core.tenant.entity.v1.Tenant\",\"target_table\":\"udb_tenant.tenants\",\"target_fields\":[\"tenant_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"tenant_configs\",\"kind\":\"has_many\",\"local_fields\":[\"tenant_id\"],\"target_message_type\":\"udb.core.tenant.entity.v1.TenantConfig\",\"target_table\":\"udb_tenant.tenant_configs\",\"target_fields\":[\"tenant_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"tenants\",\"kind\":\"has_many\",\"local_fields\":[\"tenant_id\"],\"target_message_type\":\"udb.core.tenant.entity.v1.Tenant\",\"target_table\":\"udb_tenant.tenants\",\"target_fields\":[\"parent_tenant_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"}]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Tenant.Entity.V1.Tenant");
+        entities["udb.core.tenant.entity.v1.TenantConfig"] = new EntityBinding(
+            "udb.core.tenant.entity.v1.TenantConfig",
+            "tenant_configs",
+            new List<string> { "config_id" },
+            new List<string> { "id", "tenant_id", "config_key", "config_value", "type", "description", "audit_info", "created_at", "updated_at", "created_by" },
+            "[{\"name\":\"tenant\",\"kind\":\"belongs_to\",\"local_fields\":[\"tenant_id\"],\"target_message_type\":\"udb.core.tenant.entity.v1.Tenant\",\"target_table\":\"udb_tenant.tenants\",\"target_fields\":[\"tenant_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Tenant.Entity.V1.TenantConfig");
+        entities["udb.core.vault.entity.v1.VaultDbCredentialLease"] = new EntityBinding(
+            "udb.core.vault.entity.v1.VaultDbCredentialLease",
+            "vault_db_credential_leases",
+            new List<string> { "lease_id" },
+            new List<string> { "lease_id", "tenant_id", "role_name", "username", "parent_role", "backend", "issued_at", "expires_at", "revoked_at", "state", "metadata_json", "created_at", "updated_at", "created_by" },
+            "[]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Vault.Entity.V1.VaultDbCredentialLease");
+        entities["udb.core.vault.entity.v1.VaultSecret"] = new EntityBinding(
+            "udb.core.vault.entity.v1.VaultSecret",
+            "vault_secrets",
+            new List<string> { "secret_id" },
+            new List<string> { "secret_id", "tenant_id", "secret_path", "version", "ciphertext", "data_key_wrapped", "state", "metadata_json", "created_at", "updated_at", "created_by" },
+            "[]",
+            "version",
+            "tenant_id",
+            "",
+            "udb.core.Vault.Entity.V1.VaultSecret");
+        entities["udb.core.vault.entity.v1.VaultTransitKey"] = new EntityBinding(
+            "udb.core.vault.entity.v1.VaultTransitKey",
+            "vault_transit_keys",
+            new List<string> { "key_id" },
+            new List<string> { "key_id", "tenant_id", "key_name", "version", "algorithm", "wrapped_key_material", "state", "metadata_json", "created_at", "updated_at", "created_by" },
+            "[]",
+            "version",
+            "tenant_id",
+            "",
+            "udb.core.Vault.Entity.V1.VaultTransitKey");
+        entities["udb.core.webhook.entity.v1.WebhookDelivery"] = new EntityBinding(
+            "udb.core.webhook.entity.v1.WebhookDelivery",
+            "webhook_deliveries",
+            new List<string> { "delivery_id" },
+            new List<string> { "delivery_id", "tenant_id", "endpoint_id", "event_id", "topic", "status", "attempt_count", "response_status", "signature", "last_error", "payload_json", "delivered_at", "audit_info", "created_at", "updated_at", "created_by" },
+            "[]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Webhook.Entity.V1.WebhookDelivery");
+        entities["udb.core.webhook.entity.v1.WebhookEndpoint"] = new EntityBinding(
+            "udb.core.webhook.entity.v1.WebhookEndpoint",
+            "webhook_endpoints",
+            new List<string> { "endpoint_id" },
+            new List<string> { "endpoint_id", "tenant_id", "url", "topic_pattern", "signing_secret", "active", "description", "max_attempts", "metadata_json", "audit_info", "deleted_at", "deleted_by", "created_at", "updated_at", "created_by" },
+            "[]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Webhook.Entity.V1.WebhookEndpoint");
+        entities["udb.core.webrtc.entity.v1.Peer"] = new EntityBinding(
+            "udb.core.webrtc.entity.v1.Peer",
+            "peers",
+            new List<string> { "peer_id" },
+            new List<string> { "peer_id", "room_id", "tenant_id", "display_name", "state", "metadata", "user_agent", "joined_at", "left_at", "audit_info", "deleted_at", "deleted_by", "created_at", "updated_at", "created_by" },
+            "[]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Webrtc.Entity.V1.Peer");
+        entities["udb.core.webrtc.entity.v1.Room"] = new EntityBinding(
+            "udb.core.webrtc.entity.v1.Room",
+            "rooms",
+            new List<string> { "room_id" },
+            new List<string> { "room_id", "tenant_id", "name", "state", "max_participants", "participant_count", "config", "created_by", "audit_info", "deleted_at", "deleted_by", "created_at", "updated_at" },
+            "[]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Webrtc.Entity.V1.Room");
+        entities["udb.core.webrtc.entity.v1.Track"] = new EntityBinding(
+            "udb.core.webrtc.entity.v1.Track",
+            "tracks",
+            new List<string> { "track_id" },
+            new List<string> { "track_id", "room_id", "peer_id", "tenant_id", "kind", "label", "state", "settings", "metadata", "audit_info", "created_at", "updated_at", "created_by" },
+            "[]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Webrtc.Entity.V1.Track");
+        entities["udb.core.workflow.entity.v1.WorkflowInstance"] = new EntityBinding(
+            "udb.core.workflow.entity.v1.WorkflowInstance",
+            "workflow_instances",
+            new List<string> { "workflow_id" },
+            new List<string> { "workflow_id", "tenant_id", "project_id", "workflow_type", "status", "current_step", "total_steps", "payload", "compensations", "correlation_id", "saga_id", "pending_signal", "last_error", "next_run_at", "last_transition_at", "audit_info", "deleted_at", "deleted_by", "created_at", "updated_at", "created_by" },
+            "[]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Workflow.Entity.V1.WorkflowInstance");
+        return entities;
+    }
+
+    public static EntityRepository Repository(string messageType)
+    {
+        if (!Entities.TryGetValue(messageType, out var binding))
+        {
+            throw new ArgumentException($"udb: unknown entity message type {messageType}", nameof(messageType));
+        }
+        return new EntityRepository(binding);
+    }
+
+    public static EntityRepository ExecutorPerformanceSummaryRepository() => Repository("udb.core.analytics.entity.v1.ExecutorPerformanceSummary");
+    public static EntityRepository PipelineMetricSnapshotRepository() => Repository("udb.core.analytics.entity.v1.PipelineMetricSnapshot");
+    public static EntityRepository ReconciliationAnalyticsSummaryRepository() => Repository("udb.core.analytics.entity.v1.ReconciliationAnalyticsSummary");
+    public static EntityRepository ApiKeyRepository() => Repository("udb.core.apikey.entity.v1.ApiKey");
+    public static EntityRepository ApiKeyUsageRepository() => Repository("udb.core.apikey.entity.v1.ApiKeyUsage");
+    public static EntityRepository AssetRepository() => Repository("udb.core.asset.entity.v1.Asset");
+    public static EntityRepository PipelineDefinitionRepository() => Repository("udb.core.asset.entity.v1.PipelineDefinition");
+    public static EntityRepository PipelineInstanceRepository() => Repository("udb.core.asset.entity.v1.PipelineInstance");
+    public static EntityRepository PipelineStepRepository() => Repository("udb.core.asset.entity.v1.PipelineStep");
+    public static EntityRepository DeviceRepository() => Repository("udb.core.authn.entity.v1.Device");
+    public static EntityRepository MfaChallengeRepository() => Repository("udb.core.authn.entity.v1.MfaChallenge");
+    public static EntityRepository MfaPolicyRepository() => Repository("udb.core.authn.entity.v1.MfaPolicy");
+    public static EntityRepository OtpRepository() => Repository("udb.core.authn.entity.v1.OTP");
+    public static EntityRepository RecoveryCodeRepository() => Repository("udb.core.authn.entity.v1.RecoveryCode");
+    public static EntityRepository SessionRepository() => Repository("udb.core.authn.entity.v1.Session");
+    public static EntityRepository SigningKeyRepository() => Repository("udb.core.authn.entity.v1.SigningKey");
+    public static EntityRepository TokenFamilyRepository() => Repository("udb.core.authn.entity.v1.TokenFamily");
+    public static EntityRepository TokenRevocationRepository() => Repository("udb.core.authn.entity.v1.TokenRevocation");
+    public static EntityRepository UserRepository() => Repository("udb.core.authn.entity.v1.User");
+    public static EntityRepository WebAuthnCredentialRepository() => Repository("udb.core.authn.entity.v1.WebAuthnCredential");
+    public static EntityRepository WebAuthnPolicyRepository() => Repository("udb.core.authn.entity.v1.WebAuthnPolicy");
+    public static EntityRepository AccessDecisionAuditRepository() => Repository("udb.core.authz.entity.v1.AccessDecisionAudit");
+    public static EntityRepository AuthzRevisionRepository() => Repository("udb.core.authz.entity.v1.AuthzRevision");
+    public static EntityRepository PolicyApprovalRepository() => Repository("udb.core.authz.entity.v1.PolicyApproval");
+    public static EntityRepository PolicyCanaryRepository() => Repository("udb.core.authz.entity.v1.PolicyCanary");
+    public static EntityRepository PolicyDraftRepository() => Repository("udb.core.authz.entity.v1.PolicyDraft");
+    public static EntityRepository PolicyRuleRepository() => Repository("udb.core.authz.entity.v1.PolicyRule");
+    public static EntityRepository PolicySetRepository() => Repository("udb.core.authz.entity.v1.PolicySet");
+    public static EntityRepository PolicySimulationRepository() => Repository("udb.core.authz.entity.v1.PolicySimulation");
+    public static EntityRepository PolicyTupleRepository() => Repository("udb.core.authz.entity.v1.PolicyTuple");
+    public static EntityRepository PolicyVersionRepository() => Repository("udb.core.authz.entity.v1.PolicyVersion");
+    public static EntityRepository RoleRepository() => Repository("udb.core.authz.entity.v1.Role");
+    public static EntityRepository RolePermissionRepository() => Repository("udb.core.authz.entity.v1.RolePermission");
+    public static EntityRepository UserRoleRepository() => Repository("udb.core.authz.entity.v1.UserRole");
+    public static EntityRepository BackupPolicyRepository() => Repository("udb.core.backup.entity.v1.BackupPolicy");
+    public static EntityRepository BackupRunRepository() => Repository("udb.core.backup.entity.v1.BackupRun");
+    public static EntityRepository FlagRepository() => Repository("udb.core.config.entity.v1.Flag");
+    public static EntityRepository ControlPlaneNodeStateRepository() => Repository("udb.core.control.entity.v1.ControlPlaneNodeState");
+    public static EntityRepository ControlPlaneResourceRepository() => Repository("udb.core.control.entity.v1.ControlPlaneResource");
+    public static EntityRepository EmbeddingSourceRepository() => Repository("udb.core.embedding.entity.v1.EmbeddingSource");
+    public static EntityRepository ExternalIdentityRepository() => Repository("udb.core.idp.entity.v1.ExternalIdentity");
+    public static EntityRepository IdentityProviderRepository() => Repository("udb.core.idp.entity.v1.IdentityProvider");
+    public static EntityRepository SamlReplayEntryRepository() => Repository("udb.core.idp.entity.v1.SamlReplayEntry");
+    public static EntityRepository ScimDirectoryStateRepository() => Repository("udb.core.idp.entity.v1.ScimDirectoryState");
+    public static EntityRepository LockRepository() => Repository("udb.core.lock.entity.v1.Lock");
+    public static EntityRepository QuotaRuleRepository() => Repository("udb.core.metering.entity.v1.QuotaRule");
+    public static EntityRepository UsageEventRepository() => Repository("udb.core.metering.entity.v1.UsageEvent");
+    public static EntityRepository NotificationRepository() => Repository("udb.core.notification.entity.v1.Notification");
+    public static EntityRepository NotificationDeliveryAttemptRepository() => Repository("udb.core.notification.entity.v1.NotificationDeliveryAttempt");
+    public static EntityRepository NotificationLogRepository() => Repository("udb.core.notification.entity.v1.NotificationLog");
+    public static EntityRepository NotificationPreferenceRepository() => Repository("udb.core.notification.entity.v1.NotificationPreference");
+    public static EntityRepository NotificationTemplateRepository() => Repository("udb.core.notification.entity.v1.NotificationTemplate");
+    public static EntityRepository ScheduledJobRepository() => Repository("udb.core.scheduler.entity.v1.ScheduledJob");
+    public static EntityRepository SearchIndexRepository() => Repository("udb.core.search.entity.v1.SearchIndex");
+    public static EntityRepository FileRepository() => Repository("udb.core.storage.entity.v1.File");
+    public static EntityRepository TenantRepository() => Repository("udb.core.tenant.entity.v1.Tenant");
+    public static EntityRepository TenantConfigRepository() => Repository("udb.core.tenant.entity.v1.TenantConfig");
+    public static EntityRepository VaultDbCredentialLeaseRepository() => Repository("udb.core.vault.entity.v1.VaultDbCredentialLease");
+    public static EntityRepository VaultSecretRepository() => Repository("udb.core.vault.entity.v1.VaultSecret");
+    public static EntityRepository VaultTransitKeyRepository() => Repository("udb.core.vault.entity.v1.VaultTransitKey");
+    public static EntityRepository WebhookDeliveryRepository() => Repository("udb.core.webhook.entity.v1.WebhookDelivery");
+    public static EntityRepository WebhookEndpointRepository() => Repository("udb.core.webhook.entity.v1.WebhookEndpoint");
+    public static EntityRepository PeerRepository() => Repository("udb.core.webrtc.entity.v1.Peer");
+    public static EntityRepository RoomRepository() => Repository("udb.core.webrtc.entity.v1.Room");
+    public static EntityRepository TrackRepository() => Repository("udb.core.webrtc.entity.v1.Track");
+    public static EntityRepository WorkflowInstanceRepository() => Repository("udb.core.workflow.entity.v1.WorkflowInstance");
+
+    public static IrQuery Query(string messageType) => new(messageType);
+
+    public static IrWriteQuery WriteTo(string messageType) => new(messageType);
+
+    public static IrDeleteQuery DeleteFrom(string messageType) => new(messageType);
+
+    public static UnitOfWork UnitOfWork() => new();
+
+    /// <summary>
+    /// Escape hatch for advanced callers that need raw GenericDispatch. The
+    /// mediated builders above are preferred. No RequestContext is set here.
+    /// </summary>
+    public static Udb.Entity.V1.GenericDispatchRequest RawDispatchRequest(
+        string backend,
+        string operation,
+        string specJson,
+        string resourceName = "")
+    {
+        return new Udb.Entity.V1.GenericDispatchRequest
+        {
+            Backend = backend,
+            Operation = operation,
+            ResourceName = resourceName,
+            SpecJson = specJson,
+        };
+    }
+
+    internal static Udb.Entity.V1.GenericDispatchRequest DispatchRequest(
+        string backend,
+        string operation,
+        string specJson)
+    {
+        return RawDispatchRequest(backend, operation, specJson);
+    }
+
+    internal static void RequireEagerIncludeBackend(string backend)
+    {
+        OrmTiers.TryGetValue(backend, out var tier);
+        if (tier != "relational")
+        {
+            throw new EagerIncludeUnsupportedBackendException(backend, tier);
+        }
+    }
+}
+
+public sealed class EagerIncludeUnsupportedBackendException : Exception
+{
+    public EagerIncludeUnsupportedBackendException(string backend, string? tier)
+        : base($"udb: backend '{backend}' is {tier ?? "unknown"}; eager include requires a relational backend")
+    {
+        Backend = backend;
+        Tier = tier;
+    }
+
+    public string Backend { get; }
+    public string? Tier { get; }
+}
+
+public sealed class UnitOfWorkEntry
+{
+    internal UnitOfWorkEntry(EntityRepository repository, IReadOnlyDictionary<string, object?> record, string snapshot)
+    {
+        Repository = repository;
+        Record = record;
+        Snapshot = snapshot;
+    }
+
+    public EntityRepository Repository { get; }
+    public IReadOnlyDictionary<string, object?> Record { get; }
+    internal string Snapshot { get; set; }
+}
+
+public class UnitOfWorkTxException : Exception
+{
+    public UnitOfWorkTxException(string message, Udb.Entity.V1.TxStatus? status = null) : base(message)
+    {
+        Status = status;
+    }
+
+    public Udb.Entity.V1.TxStatus? Status { get; }
+}
+
+public sealed class UnitOfWorkConflictException : UnitOfWorkTxException
+{
+    public UnitOfWorkConflictException(string message, Udb.Entity.V1.TxStatus? status = null) : base(message, status) {}
+}
+
+public sealed class UnitOfWorkUnsupportedBackendException : Exception
+{
+    public UnitOfWorkUnsupportedBackendException(string backend, string? role)
+        : base($"udb: backend '{backend}' is {role ?? "unknown"}; UnitOfWork requires a canonical transactional backend")
+    {
+        Backend = backend;
+        Role = role;
+    }
+
+    public string Backend { get; }
+    public string? Role { get; }
+}
+
+public sealed class UnitOfWork
+{
+    private readonly Dictionary<string, UnitOfWorkEntry> _entries = new(StringComparer.Ordinal);
+
+    public IReadOnlyDictionary<string, UnitOfWorkEntry> Entries => _entries;
+
+    public IReadOnlyDictionary<string, object?> Attach(EntityRepository repository, IReadOnlyDictionary<string, object?> record)
+    {
+        ArgumentNullException.ThrowIfNull(repository);
+        RequireVersionForTrackedWrite(repository.Binding, record);
+        _entries[EntityIdentity(repository.Binding, record)] = new UnitOfWorkEntry(repository, record, StableRecordJson(record));
+        return record;
+    }
+
+    public IReadOnlyDictionary<string, object?> Track(EntityRepository repository, IReadOnlyDictionary<string, object?> record) =>
+        Attach(repository, record);
+
+    public IReadOnlyList<UnitOfWorkEntry> DirtyEntries() =>
+        _entries.Values.Where(entry => StableRecordJson(entry.Record) != entry.Snapshot).ToList();
+
+    public IReadOnlyList<Udb.Entity.V1.Mutation> TxMutations() =>
+        DirtyEntries()
+            .Select(entry => new Udb.Entity.V1.Mutation
+            {
+                Operation = "upsert",
+                MessageType = entry.Repository.Binding.MessageType,
+                RecordJson = ByteString.CopyFromUtf8(StableRecordJson(entry.Record)),
+            })
+            .ToList();
+
+    public Udb.Entity.V1.Mutation CommitMutation() => new() { Commit = true };
+
+    public Udb.Entity.V1.Mutation RollbackMutation() => new() { Rollback = true };
+
+    public IReadOnlyList<Udb.Entity.V1.Mutation> TxCommitBatch(string backend = UdbIr.DefaultBackend)
+    {
+        RequireTransactionalBackend(backend);
+        var mutations = TxMutations().ToList();
+        mutations.Add(CommitMutation());
+        return mutations;
+    }
+
+    public void RequireTransactionalBackend(string backend = UdbIr.DefaultBackend)
+    {
+        UdbIr.BackendRoles.TryGetValue(backend, out var role);
+        if (role is not ("canonical" or "both"))
+        {
+            throw new UnitOfWorkUnsupportedBackendException(backend, role);
+        }
+    }
+
+    public void ValidateTxStatuses(IEnumerable<Udb.Entity.V1.TxStatus> statuses)
+    {
+        foreach (var status in statuses)
+        {
+            if (!status.State.ToString().Contains("Error", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+            var message = string.IsNullOrEmpty(status.Message) ? "udb: unit-of-work transaction failed" : status.Message;
+            if (IsTxConflictMessage(message))
+            {
+                throw new UnitOfWorkConflictException(message, status);
+            }
+            throw new UnitOfWorkTxException(message, status);
+        }
+    }
+
+    public async Task<IReadOnlyList<Udb.Entity.V1.TxStatus>> FlushAsync(
+        GeneratedDataBrokerClient dataBroker,
+        string backend = UdbIr.DefaultBackend,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(dataBroker);
+        var call = (AsyncDuplexStreamingCall<Udb.Entity.V1.Mutation, Udb.Entity.V1.TxStatus>)
+            dataBroker.BeginTx(deadline, cancellationToken);
+        var statuses = new List<Udb.Entity.V1.TxStatus>();
+        try
+        {
+            foreach (var mutation in TxCommitBatch(backend))
+            {
+                await call.RequestStream.WriteAsync(mutation).ConfigureAwait(false);
+            }
+            await call.RequestStream.CompleteAsync().ConfigureAwait(false);
+            while (await call.ResponseStream.MoveNext(cancellationToken).ConfigureAwait(false))
+            {
+                statuses.Add(call.ResponseStream.Current);
+            }
+        }
+        catch (RpcException ex)
+        {
+            throw GeneratedServiceBase.MapStreamError("/udb.services.v1.DataBroker/BeginTx", ex);
+        }
+        finally
+        {
+            call.Dispose();
+        }
+        ValidateTxStatuses(statuses);
+        MarkClean();
+        return statuses;
+    }
+
+    public void MarkClean()
+    {
+        foreach (var entry in _entries.Values)
+        {
+            entry.Snapshot = StableRecordJson(entry.Record);
+        }
+    }
+
+    private static void RequireVersionForTrackedWrite(EntityBinding binding, IReadOnlyDictionary<string, object?> record)
+    {
+        if (!string.IsNullOrEmpty(binding.VersionField) && !record.ContainsKey(binding.VersionField))
+        {
+            throw new ArgumentException($"udb: unit-of-work record for {binding.MessageType} missing version field {binding.VersionField}", nameof(record));
+        }
+    }
+
+    private static string EntityIdentity(EntityBinding binding, IReadOnlyDictionary<string, object?> record)
+    {
+        var scopeParts = new List<string>();
+        foreach (var field in new[] { binding.TenantField, binding.ProjectField }.Where(field => !string.IsNullOrEmpty(field)))
+        {
+            if (!record.ContainsKey(field))
+            {
+                throw new ArgumentException($"udb: unit-of-work record for {binding.MessageType} missing scope field {field}", nameof(record));
+            }
+            scopeParts.Add($"{field}={JsonSerializer.Serialize(record[field])}");
+        }
+        var parts = new List<string>();
+        foreach (var field in binding.PrimaryKeys)
+        {
+            if (!record.ContainsKey(field))
+            {
+                throw new ArgumentException($"udb: unit-of-work record for {binding.MessageType} missing primary key field {field}", nameof(record));
+            }
+            parts.Add(JsonSerializer.Serialize(record[field]));
+        }
+        return $"{binding.MessageType}:{string.Join(":", scopeParts)}:{string.Join(":", parts)}";
+    }
+
+    private static string StableRecordJson(IReadOnlyDictionary<string, object?> record)
+    {
+        var sorted = new SortedDictionary<string, object?>(StringComparer.Ordinal);
+        foreach (var item in record)
+        {
+            sorted[item.Key] = item.Value;
+        }
+        return JsonSerializer.Serialize(sorted);
+    }
+
+    private static bool IsTxConflictMessage(string message)
+    {
+        var lower = message.ToLowerInvariant();
+        return lower.Contains("aborted") || lower.Contains("version") || lower.Contains("conflict");
+    }
+}
+
+internal static class IrJson
+{
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        WriteIndented = false,
+    };
+
+    private static readonly IReadOnlyDictionary<string, string> ComparisonTokens =
+        new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["eq"] = "eq",
+            ["ne"] = "ne",
+            ["gt"] = "gt",
+            ["ge"] = "ge",
+            ["lt"] = "lt",
+            ["le"] = "le",
+            ["like"] = "like",
+        };
+
+    public static string Quote(string value) => JsonSerializer.Serialize(value, JsonOptions);
+
+    public static void WriteLogicalValue(StringBuilder sb, object? value)
+    {
+        switch (value)
+        {
+            case null:
+                sb.Append("\"Null\"");
+                return;
+            case bool b:
+                sb.Append("{\"Bool\":").Append(b ? "true" : "false").Append('}');
+                return;
+            case byte or sbyte or short or ushort or int or uint or long or ulong:
+                sb.Append("{\"Int\":").Append(Convert.ToString(value, CultureInfo.InvariantCulture)).Append('}');
+                return;
+            case float or double or decimal:
+                sb.Append("{\"Float\":").Append(Convert.ToString(value, CultureInfo.InvariantCulture)).Append('}');
+                return;
+            case string s:
+                sb.Append("{\"String\":").Append(Quote(s)).Append('}');
+                return;
+            case byte[] bytes:
+                sb.Append("{\"Bytes\":[");
+                for (var i = 0; i < bytes.Length; i++)
+                {
+                    if (i > 0) sb.Append(',');
+                    sb.Append(bytes[i]);
+                }
+                sb.Append("]}");
+                return;
+            case DateTimeOffset dto:
+                sb.Append("{\"Timestamp\":").Append(Quote(dto.UtcDateTime.ToString("O", CultureInfo.InvariantCulture))).Append('}');
+                return;
+            case DateTime dt:
+                sb.Append("{\"Timestamp\":").Append(Quote(dt.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture))).Append('}');
+                return;
+            case System.Collections.IDictionary:
+                sb.Append("{\"Json\":").Append(JsonSerializer.Serialize(value, JsonOptions)).Append('}');
+                return;
+            case System.Collections.IEnumerable items when value is not string:
+                sb.Append("{\"Array\":[");
+                var first = true;
+                foreach (var item in items)
+                {
+                    if (!first) sb.Append(',');
+                    first = false;
+                    WriteLogicalValue(sb, item);
+                }
+                sb.Append("]}");
+                return;
+            default:
+                sb.Append("{\"Json\":").Append(JsonSerializer.Serialize(value, JsonOptions)).Append('}');
+                return;
+        }
+    }
+
+    public static string Comparison(string field, string op, object? value)
+    {
+        if (!ComparisonTokens.TryGetValue(op, out var token))
+        {
+            throw new ArgumentException($"udb: unsupported IR operator '{op}'", nameof(op));
+        }
+        var sb = new StringBuilder("{\"Comparison\":{\"field\":");
+        sb.Append(Quote(field)).Append(",\"op\":").Append(Quote(token)).Append(",\"value\":");
+        WriteLogicalValue(sb, value);
+        sb.Append("}}");
+        return sb.ToString();
+    }
+
+    public static string InList(string field, IEnumerable<object?> values)
+    {
+        var sb = new StringBuilder("{\"InList\":{\"field\":");
+        sb.Append(Quote(field)).Append(",\"values\":[");
+        var first = true;
+        foreach (var value in values)
+        {
+            if (!first) sb.Append(',');
+            first = false;
+            WriteLogicalValue(sb, value);
+        }
+        sb.Append("]}}");
+        return sb.ToString();
+    }
+
+    public static string Filter(IReadOnlyList<string> predicates)
+    {
+        if (predicates.Count == 0) return "";
+        if (predicates.Count == 1) return predicates[0];
+        return "{\"And\":[" + string.Join(",", predicates) + "]}";
+    }
+
+    public static string AndFilter(IReadOnlyList<string> predicates) =>
+        "{\"And\":[" + string.Join(",", predicates) + "]}";
+
+    public static string OrFilter(IReadOnlyList<string> predicates) =>
+        "{\"Or\":[" + string.Join(",", predicates) + "]}";
+
+    public static void WriteStringArray(StringBuilder sb, IReadOnlyList<string> values)
+    {
+        sb.Append('[');
+        for (var i = 0; i < values.Count; i++)
+        {
+            if (i > 0) sb.Append(',');
+            sb.Append(Quote(values[i]));
+        }
+        sb.Append(']');
+    }
+
+    public static void WriteLogicalRecord(StringBuilder sb, IReadOnlyDictionary<string, object?> row)
+    {
+        sb.Append('{');
+        var first = true;
+        foreach (var item in row.OrderBy(kv => kv.Key, StringComparer.Ordinal))
+        {
+            if (!first) sb.Append(',');
+            first = false;
+            sb.Append(Quote(item.Key)).Append(':');
+            WriteLogicalValue(sb, item.Value);
+        }
+        sb.Append('}');
+    }
+}
+
+/// <summary>Shared predicate accumulator for read/delete IR builders.</summary>
+public abstract class IrPredicateBuilder<TSelf>
+    where TSelf : IrPredicateBuilder<TSelf>
+{
+    protected readonly List<string> Predicates = new();
+
+    public TSelf Where(string field, string op, object? value)
+    {
+        if (op == "in")
+        {
+            return WhereIn(
+                field,
+                value is System.Collections.IEnumerable xs && value is not string
+                    ? xs.Cast<object?>()
+                    : new object?[] { value });
+        }
+        Predicates.Add(IrJson.Comparison(field, op, value));
+        return (TSelf)this;
+    }
+
+    public TSelf WhereIn(string field, params object?[] values) => WhereIn(field, (IEnumerable<object?>)values);
+
+    public TSelf WhereIn(string field, IEnumerable<object?> values)
+    {
+        Predicates.Add(IrJson.InList(field, values));
+        return (TSelf)this;
+    }
+
+    public TSelf WhereFilter(string filter)
+    {
+        Predicates.Add(filter);
+        return (TSelf)this;
+    }
+}
+
+/// <summary>Typed neutral-IR read builder emitting a LogicalRead envelope.</summary>
+public sealed class IrQuery : IrPredicateBuilder<IrQuery>
+{
+    private readonly string _messageType;
+    private readonly List<string> _projection = new();
+    private readonly List<(string Field, string Direction)> _sorts = new();
+    private readonly List<string> _includes = new();
+    private int? _limit;
+    private int? _offset;
+
+    internal IrQuery(string messageType) => _messageType = messageType;
+
+    public IrQuery Select(params string[] fields)
+    {
+        _projection.Clear();
+        _projection.AddRange(fields);
+        return this;
+    }
+
+    public IrQuery OrderBy(string field, string direction = "asc")
+    {
+        _sorts.Add((field, direction));
+        return this;
+    }
+
+    public IrQuery Include(string relation)
+    {
+        if (string.IsNullOrEmpty(relation))
+        {
+            throw new ArgumentException("udb: include relation name is required", nameof(relation));
+        }
+        _includes.Add(relation);
+        return this;
+    }
+
+    public IrQuery Limit(int n) { _limit = n; return this; }
+
+    public IrQuery Offset(int n) { _offset = n; return this; }
+
+    public string ToSpecJson()
+    {
+        var sb = new StringBuilder("{\"ir\":{\"op\":\"read\",\"message_type\":");
+        sb.Append(IrJson.Quote(_messageType));
+        var filter = IrJson.Filter(Predicates);
+        if (filter.Length > 0) sb.Append(",\"filter\":").Append(filter);
+        if (_projection.Count > 0)
+        {
+            sb.Append(",\"projection\":{\"fields\":");
+            IrJson.WriteStringArray(sb, _projection);
+            sb.Append('}');
+        }
+        if (_sorts.Count > 0)
+        {
+            sb.Append(",\"sort\":[");
+            for (var i = 0; i < _sorts.Count; i++)
+            {
+                if (i > 0) sb.Append(',');
+                sb.Append("{\"field\":").Append(IrJson.Quote(_sorts[i].Field))
+                    .Append(",\"direction\":").Append(IrJson.Quote(_sorts[i].Direction)).Append('}');
+            }
+            sb.Append(']');
+        }
+        if (_includes.Count > 0)
+        {
+            sb.Append(",\"include\":[");
+            for (var i = 0; i < _includes.Count; i++)
+            {
+                if (i > 0) sb.Append(',');
+                sb.Append("{\"relation\":").Append(IrJson.Quote(_includes[i])).Append('}');
+            }
+            sb.Append(']');
+        }
+        if (_limit.HasValue || _offset.HasValue)
+        {
+            sb.Append(",\"pagination\":{");
+            var wrote = false;
+            if (_limit.HasValue) { sb.Append("\"limit\":").Append(_limit.Value); wrote = true; }
+            if (_offset.HasValue)
+            {
+                if (wrote) sb.Append(',');
+                sb.Append("\"offset\":").Append(_offset.Value);
+            }
+            sb.Append('}');
+        }
+        sb.Append("}}");
+        return sb.ToString();
+    }
+
+    public Udb.Entity.V1.GenericDispatchRequest ToRequest(string backend = UdbIr.DefaultBackend)
+    {
+        if (_includes.Count > 0)
+        {
+            UdbIr.RequireEagerIncludeBackend(backend);
+        }
+        return UdbIr.DispatchRequest(backend, "query", ToSpecJson());
+    }
+
+    public Task<dynamic> ExecuteAsync(
+        GeneratedDataBrokerClient dataBroker,
+        string backend = UdbIr.DefaultBackend,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+        => dataBroker.GenericDispatchAsync(ToRequest(backend), deadline, cancellationToken);
+}
+
+/// <summary>Typed neutral-IR write builder emitting a LogicalWrite envelope.</summary>
+public sealed class IrWriteQuery
+{
+    private readonly string _messageType;
+    private readonly List<IReadOnlyDictionary<string, object?>> _rows = new();
+    private readonly List<string> _returnFields = new();
+    private string? _conflict;
+
+    internal IrWriteQuery(string messageType) => _messageType = messageType;
+
+    public IrWriteQuery Record(IReadOnlyDictionary<string, object?> row) { _rows.Add(row); return this; }
+
+    public IrWriteQuery Records(IEnumerable<IReadOnlyDictionary<string, object?>> rows)
+    {
+        _rows.AddRange(rows);
+        return this;
+    }
+
+    public IrWriteQuery Merge() { _conflict = "{\"kind\":\"replace\"}"; return this; }
+
+    public IrWriteQuery IgnoreConflicts() { _conflict = "{\"kind\":\"ignore\"}"; return this; }
+
+    public IrWriteQuery UpdateOnConflict(IEnumerable<string> fields, IEnumerable<string>? conflictOn = null)
+    {
+        var fieldList = fields.ToList();
+        var conflictList = conflictOn?.ToList() ?? new List<string>();
+        var sb = new StringBuilder("{\"kind\":\"update\",\"fields\":");
+        IrJson.WriteStringArray(sb, fieldList);
+        if (conflictList.Count > 0)
+        {
+            sb.Append(",\"conflict_on\":");
+            IrJson.WriteStringArray(sb, conflictList);
+        }
+        sb.Append('}');
+        _conflict = sb.ToString();
+        return this;
+    }
+
+    public IrWriteQuery Returning(params string[] fields) { _returnFields.AddRange(fields); return this; }
+
+    public string ToSpecJson()
+    {
+        if (_rows.Count == 0) throw new InvalidOperationException("udb: write requires at least one Record(...)");
+        var sb = new StringBuilder("{\"ir\":{\"op\":\"write\",\"message_type\":");
+        sb.Append(IrJson.Quote(_messageType)).Append(",\"records\":[");
+        for (var i = 0; i < _rows.Count; i++)
+        {
+            if (i > 0) sb.Append(',');
+            IrJson.WriteLogicalRecord(sb, _rows[i]);
+        }
+        sb.Append(']');
+        if (_conflict is not null) sb.Append(",\"conflict\":").Append(_conflict);
+        if (_returnFields.Count > 0)
+        {
+            sb.Append(",\"return_fields\":");
+            IrJson.WriteStringArray(sb, _returnFields);
+        }
+        sb.Append("}}");
+        return sb.ToString();
+    }
+
+    public Udb.Entity.V1.GenericDispatchRequest ToRequest(string backend = UdbIr.DefaultBackend)
+        => UdbIr.DispatchRequest(backend, "mutate", ToSpecJson());
+
+    public Task<dynamic> ExecuteAsync(
+        GeneratedDataBrokerClient dataBroker,
+        string backend = UdbIr.DefaultBackend,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+        => dataBroker.GenericDispatchAsync(ToRequest(backend), deadline, cancellationToken);
+}
+
+/// <summary>Typed neutral-IR delete builder. At least one predicate is required.</summary>
+public sealed class IrDeleteQuery : IrPredicateBuilder<IrDeleteQuery>
+{
+    private readonly string _messageType;
+    private readonly List<string> _returnFields = new();
+
+    internal IrDeleteQuery(string messageType) => _messageType = messageType;
+
+    public IrDeleteQuery Returning(params string[] fields) { _returnFields.AddRange(fields); return this; }
+
+    public string ToSpecJson()
+    {
+        var filter = IrJson.Filter(Predicates);
+        if (filter.Length == 0)
+        {
+            throw new InvalidOperationException("udb: delete requires at least one Where(...) predicate (no delete-everything path)");
+        }
+        var sb = new StringBuilder("{\"ir\":{\"op\":\"delete\",\"message_type\":");
+        sb.Append(IrJson.Quote(_messageType)).Append(",\"filter\":").Append(filter);
+        if (_returnFields.Count > 0)
+        {
+            sb.Append(",\"return_fields\":");
+            IrJson.WriteStringArray(sb, _returnFields);
+        }
+        sb.Append("}}");
+        return sb.ToString();
+    }
+
+    public Udb.Entity.V1.GenericDispatchRequest ToRequest(string backend = UdbIr.DefaultBackend)
+        => UdbIr.DispatchRequest(backend, "mutate", ToSpecJson());
+
+    public Task<dynamic> ExecuteAsync(
+        GeneratedDataBrokerClient dataBroker,
+        string backend = UdbIr.DefaultBackend,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+        => dataBroker.GenericDispatchAsync(ToRequest(backend), deadline, cancellationToken);
+}
+
+public sealed record EntityBinding(
+    string MessageType,
+    string Table,
+    IReadOnlyList<string> PrimaryKeys,
+    IReadOnlyList<string> Fields,
+    string RelationsJson,
+    string VersionField,
+    string TenantField,
+    string ProjectField,
+    string CsharpType);
+
+public sealed class EntityRelationBinding
+{
+    [JsonPropertyName("name")]
+    public string Name { get; init; } = "";
+
+    [JsonPropertyName("kind")]
+    public string Kind { get; init; } = "";
+
+    [JsonPropertyName("local_fields")]
+    public IReadOnlyList<string> LocalFields { get; init; } = Array.Empty<string>();
+
+    [JsonPropertyName("target_message_type")]
+    public string TargetMessageType { get; init; } = "";
+
+    [JsonPropertyName("target_table")]
+    public string TargetTable { get; init; } = "";
+
+    [JsonPropertyName("target_fields")]
+    public IReadOnlyList<string> TargetFields { get; init; } = Array.Empty<string>();
+
+    [JsonPropertyName("on_delete")]
+    public string? OnDelete { get; init; }
+
+    [JsonPropertyName("on_update")]
+    public string? OnUpdate { get; init; }
+}
+
+public sealed class EntityRepository
+{
+    private IReadOnlyList<EntityRelationBinding>? _relations;
+
+    public EntityRepository(EntityBinding binding)
+    {
+        Binding = binding ?? throw new ArgumentNullException(nameof(binding));
+        if (Binding.PrimaryKeys.Count == 0)
+        {
+            throw new ArgumentException($"udb: entity {Binding.MessageType} has no descriptor primary key", nameof(binding));
+        }
+    }
+
+    public EntityBinding Binding { get; }
+
+    public IrQuery Query() => UdbIr.Query(Binding.MessageType);
+
+    public IReadOnlyList<EntityRelationBinding> Relations()
+    {
+        _relations ??= string.IsNullOrWhiteSpace(Binding.RelationsJson)
+            ? Array.Empty<EntityRelationBinding>()
+            : JsonSerializer.Deserialize<List<EntityRelationBinding>>(Binding.RelationsJson) ?? new List<EntityRelationBinding>();
+        return _relations;
+    }
+
+    public EntityRelationBinding? Relation(string name) =>
+        Relations().FirstOrDefault(rel => rel.Name == name);
+
+    public EntityRelationBinding RequireRelation(string name)
+    {
+        var rel = Relation(name);
+        if (rel is null)
+        {
+            throw new ArgumentException($"udb: unknown relation {name} on entity {Binding.MessageType}", nameof(name));
+        }
+        if (rel.LocalFields.Count == 0 || rel.LocalFields.Count != rel.TargetFields.Count)
+        {
+            throw new InvalidOperationException($"udb: relation {name} on entity {Binding.MessageType} has invalid field mapping");
+        }
+        if (string.IsNullOrWhiteSpace(rel.TargetMessageType))
+        {
+            throw new InvalidOperationException($"udb: relation {name} on entity {Binding.MessageType} has no target entity");
+        }
+        return rel;
+    }
+
+    public IrQuery RelationQuery(string name, IReadOnlyDictionary<string, object?> parent)
+    {
+        var rel = RequireRelation(name);
+        var q = UdbIr.Query(rel.TargetMessageType);
+        for (var idx = 0; idx < rel.LocalFields.Count; idx++)
+        {
+            var localField = rel.LocalFields[idx];
+            if (!parent.ContainsKey(localField))
+            {
+                throw new ArgumentException($"udb: relation {name} missing parent field {localField}", nameof(parent));
+            }
+            q.Where(rel.TargetFields[idx], "eq", parent[localField]);
+        }
+        return q;
+    }
+
+    public IrQuery RelationBatchQuery(string name, IReadOnlyList<IReadOnlyDictionary<string, object?>> parents)
+    {
+        var rel = RequireRelation(name);
+        if (rel.LocalFields.Count != rel.TargetFields.Count)
+        {
+            throw new InvalidOperationException($"udb: relation {name} on entity {Binding.MessageType} has invalid field mapping");
+        }
+        if (parents.Count == 0)
+        {
+            throw new ArgumentException($"udb: relation {name} batch query requires at least one parent", nameof(parents));
+        }
+        if (rel.LocalFields.Count == 1)
+        {
+            var localField = rel.LocalFields[0];
+            var values = new List<object?>();
+            var seen = new HashSet<string>();
+            foreach (var parent in parents)
+            {
+                if (!parent.ContainsKey(localField))
+                {
+                    throw new ArgumentException($"udb: relation {name} missing parent field {localField}", nameof(parents));
+                }
+                var value = parent[localField];
+                var key = JsonSerializer.Serialize(value);
+                if (seen.Add(key))
+                {
+                    values.Add(value);
+                }
+            }
+            return UdbIr.Query(rel.TargetMessageType).WhereIn(rel.TargetFields[0], values);
+        }
+        var branches = new List<string>();
+        var seenBranches = new HashSet<string>();
+        foreach (var parent in parents)
+        {
+            var comparisons = new List<string>();
+            for (var idx = 0; idx < rel.LocalFields.Count; idx++)
+            {
+                var localField = rel.LocalFields[idx];
+                if (!parent.ContainsKey(localField))
+                {
+                    throw new ArgumentException($"udb: relation {name} missing parent field {localField}", nameof(parents));
+                }
+                comparisons.Add(IrJson.Comparison(rel.TargetFields[idx], "eq", parent[localField]));
+            }
+            var branch = IrJson.AndFilter(comparisons);
+            if (seenBranches.Add(branch))
+            {
+                branches.Add(branch);
+            }
+        }
+        return UdbIr.Query(rel.TargetMessageType).WhereFilter(IrJson.OrFilter(branches));
+    }
+
+
+
+    public Task<dynamic> FindAsync(
+        IReadOnlyDictionary<string, object?> key,
+        GeneratedDataBrokerClient dataBroker,
+        string backend = UdbIr.DefaultBackend,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        var q = Query().Limit(1);
+        foreach (var field in Binding.PrimaryKeys)
+        {
+            if (!key.ContainsKey(field))
+            {
+                throw new ArgumentException($"udb: missing primary key field {field}", nameof(key));
+            }
+            q.Where(field, "eq", key[field]);
+        }
+        return q.ExecuteAsync(dataBroker, backend, deadline, cancellationToken);
+    }
+
+    public Task<dynamic> FirstAsync(
+        IrQuery query,
+        GeneratedDataBrokerClient dataBroker,
+        string backend = UdbIr.DefaultBackend,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+        => query.Limit(1).ExecuteAsync(dataBroker, backend, deadline, cancellationToken);
+
+    public Task<dynamic> AllAsync(
+        IrQuery query,
+        GeneratedDataBrokerClient dataBroker,
+        string backend = UdbIr.DefaultBackend,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+        => query.ExecuteAsync(dataBroker, backend, deadline, cancellationToken);
+
+    public Task<dynamic> UpsertAsync(
+        IReadOnlyDictionary<string, object?> record,
+        GeneratedDataBrokerClient dataBroker,
+        string backend = UdbIr.DefaultBackend,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateRecord(record);
+        foreach (var field in Binding.PrimaryKeys)
+        {
+            if (!record.ContainsKey(field))
+            {
+                throw new ArgumentException($"udb: missing primary key field {field}", nameof(record));
+            }
+        }
+        var updateFields = record.Keys.Where(field => !Binding.PrimaryKeys.Contains(field)).ToList();
+        if (updateFields.Count == 0)
+        {
+            throw new ArgumentException("udb: upsert requires at least one non-primary-key field", nameof(record));
+        }
+        return UdbIr.WriteTo(Binding.MessageType)
+            .Record(record)
+            .UpdateOnConflict(updateFields, Binding.PrimaryKeys)
+            .ExecuteAsync(dataBroker, backend, deadline, cancellationToken);
+    }
+
+    public Task<dynamic> DeleteAsync(
+        IReadOnlyDictionary<string, object?> key,
+        GeneratedDataBrokerClient dataBroker,
+        string backend = UdbIr.DefaultBackend,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        var d = UdbIr.DeleteFrom(Binding.MessageType);
+        foreach (var field in Binding.PrimaryKeys)
+        {
+            if (!key.ContainsKey(field))
+            {
+                throw new ArgumentException($"udb: missing primary key field {field}", nameof(key));
+            }
+            d.Where(field, "eq", key[field]);
+        }
+        return d.ExecuteAsync(dataBroker, backend, deadline, cancellationToken);
+    }
+
+    private void ValidateRecord(IReadOnlyDictionary<string, object?> record)
+    {
+        if (Binding.Fields.Count == 0) return;
+        foreach (var field in record.Keys)
+        {
+            if (!Binding.Fields.Contains(field))
+            {
+                throw new ArgumentException($"udb: field {field} is not declared on entity {Binding.MessageType}", nameof(record));
+            }
+        }
     }
 }
 
 // ── Server-streaming RPC wrappers (single attempt) ──────────────────────────
+public sealed partial class GeneratedLiveQueryServiceClient
+{
+    /// <summary>
+    /// <c>subscribe</c> (server-streaming) — forwards to
+    /// <c>LiveQueryServiceClient.Subscribe</c>. gRPC path: <c>/udb.core.livequery.services.v1.LiveQueryService/Subscribe</c>.
+    /// Not retried mid-stream; drain the returned stream and map errors with
+    /// <see cref="GeneratedServiceBase.MapStreamError"/>.
+    /// </summary>
+    public dynamic Subscribe(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // Returns the concrete AsyncServerStreamingCall<TResp> as dynamic.
+        return InvokeStreaming(
+            "/udb.core.livequery.services.v1.LiveQueryService/Subscribe",
+            co => (object)_stub.Subscribe(request, co),
+            deadline,
+            cancellationToken);
+    }
+}
 public sealed partial class GeneratedStorageServiceClient
 {
     /// <summary>

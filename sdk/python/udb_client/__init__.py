@@ -1,5 +1,13 @@
 from ._channel import default_channel_options, merge_channel_options
-from .client import UdbAsyncClient, UdbClient, decode_records, to_record_json, to_struct
+from .client import (
+    UdbAsyncClient,
+    UdbClient,
+    decode_records,
+    receipt_from_response,
+    to_record_json,
+    to_struct,
+    was_duplicate,
+)
 from .exceptions import (
     UdbAuthzDenied,
     UdbConfigurationError,
@@ -9,6 +17,7 @@ from .exceptions import (
 )
 from .metadata import (
     DEFAULT_READ_FENCE_MAX_WAIT_MS,
+    ConsistencyMode,
     Metadata,
     ReadFence,
     UDB_PROTOCOL_VERSION,
@@ -73,6 +82,7 @@ __all__ = [
     "DEFAULT_READ_FENCE_MAX_WAIT_MS",
     "ENCODING_RECORD_BATCH_V2",
     "ENCODING_RECORD_SET_V1",
+    "ConsistencyMode",
     "Metadata",
     "Negotiator",
     "ReadFence",
@@ -90,8 +100,10 @@ __all__ = [
     "merge_channel_options",
     "decode_records",
     "read_fence_from_receipt",
+    "receipt_from_response",
     "to_record_json",
     "to_struct",
+    "was_duplicate",
 ]
 
 if _HAS_GENERATED:

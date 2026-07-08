@@ -78,6 +78,50 @@ var (allowed, decision) = await auth.CanAsync(
     "read");
 ```
 
+## Consistency, Idempotency Replay, And Platform Services
+
+A mutation returns a `WriteReceipt`; a follow-up read can carry a fence built
+from it. A keyed replay-safe mutation the broker deduplicated reports
+`was_duplicate` (full contract: [docs/native-services.md](../../docs/native-services.md)).
+
+```csharp
+var outcome = MutationOutcome.From(await udb.UpsertAsync(upsertRequest));
+if (outcome.WasDuplicate)
+{
+    // durable-idempotency replay — no new side effect occurred
+}
+
+// Read-your-writes: metadata carrying a fence derived from the receipt.
+var fenced = meta.AfterWrite(outcome.WriteReceipt);
+```
+
+Retry contract: a replay-safe mutation is retried on transient errors **only
+when the request carries a non-empty idempotency key** — keyless mutations fail
+closed rather than risk a double apply.
+
+Vault, Metering, Scheduler, Search, Webhook, Workflow, Lock, LiveQuery, Config,
+Backup, and Embedding have no workflow facade yet — wrap their buf-generated
+stubs with the generated robustness clients
+(`GeneratedVaultServiceClient`, `GeneratedMeteringServiceClient`, …):
+
+```csharp
+using udb.core.Vault.Services.V1; // buf-generated namespace
+
+var channel = UdbChannel.ForAddress("http://localhost:50051");
+var vault = new GeneratedVaultServiceClient(
+    new VaultService.VaultServiceClient(channel),
+    () => meta.Headers());
+var enc = await vault.EncryptAsync(new EncryptRequest
+{
+    TenantId = tenant,
+    KeyName = "docs",
+    Plaintext = "secret",
+});
+```
+
+The per-RPC retry class and idempotency contract are listed in
+[docs/generated/udb-native-contract.json](../../docs/generated/udb-native-contract.json).
+
 ## Performance
 
 Each `UdbClient` / `UdbAuthClient` / `UdbProject` holds a **single long-lived
@@ -97,6 +141,10 @@ Channels are created via `UdbChannel.ForAddress(...)`, which applies:
 
 Use `UdbChannel.DefaultOptions()` / `UdbChannel.ForAddress(...)` if you build a
 `GrpcChannel` yourself and want the same behaviour.
+
+Generated RPC wrappers raise `UdbRpcException`, which keeps the gRPC status,
+raw `udb-error-detail-bin` bytes, decoded `Udb.Entity.V1.ErrorDetail`, and
+`Retryable`/`RetryAfterMs`/`Kind` convenience properties.
 
 ## Local SDK Development
 

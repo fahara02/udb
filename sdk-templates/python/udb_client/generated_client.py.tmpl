@@ -32,12 +32,14 @@ imports them rather than re-implementing them.
 from __future__ import annotations
 
 import importlib
+import json
 import pkgutil
 import random
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, Callable, Iterable, Iterator, Sequence
+from datetime import datetime, timezone
+from typing import Any, Callable, Iterable, Iterator, Mapping, Sequence
 
 import grpc
 
@@ -49,9 +51,29 @@ __all__ = [
     "RetryPolicy",
     "UdbDetailedRpcError",
     "GeneratedClient",
+    "Query",
+    "WriteQuery",
+    "DeleteQuery",
+    "query",
+    "write_to",
+    "delete_from",
+    "EntityBinding",
+    "Repository",
+    "UnitOfWork",
+    "UnitOfWorkTxError",
+    "UnitOfWorkConflictError",
+    "UnitOfWorkUnsupportedBackendError",
+    "EagerIncludeUnsupportedBackendError",
+    "repository",
+    "unit_of_work",
+    "to_logical_value",
+    "raw_dispatch_request",
     # @@UDB_SERVICE_BEGIN
     "{{SERVICE_NAME}}Client",
     # @@UDB_SERVICE_END
+    # @@UDB_ENTITY_BEGIN
+    "{{ENTITY_ALIAS_SNAKE}}_repository",
+    # @@UDB_ENTITY_END
 ]
 
 # Default set of gRPC status codes retried only for read-only unary RPCs.
@@ -138,6 +160,26 @@ def _decode_error_detail(detail: bytes | None) -> Any | None:
         return None
 
 
+def _field_violations_from_detail(detail: Any | None) -> list[dict[str, str]]:
+    """Return structured validation failures from a decoded ErrorDetail.
+
+    Kept duck-typed so the template works before generated SDK outputs are
+    refreshed with ``field_violations``; after regen, generated protobuf accessors
+    populate this list automatically.
+    """
+    if detail is None:
+        return []
+    out: list[dict[str, str]] = []
+    for violation in getattr(detail, "field_violations", []) or []:
+        out.append(
+            {
+                "field": str(getattr(violation, "field", "") or ""),
+                "description": str(getattr(violation, "description", "") or ""),
+            }
+        )
+    return out
+
+
 class UdbDetailedRpcError(UdbRpcError):
     """An :class:`UdbRpcError` enriched with the broker's ``ErrorDetail`` trailer.
 
@@ -160,6 +202,7 @@ class UdbDetailedRpcError(UdbRpcError):
         self.capability_required: str = str(getattr(ed, "capability_required", "") or "")
         self.policy_decision_id: str = str(getattr(ed, "policy_decision_id", "") or "")
         self.correlation_id: str = str(getattr(ed, "correlation_id", "") or "")
+        self.field_violations: list[dict[str, str]] = _field_violations_from_detail(ed)
         # ``kind`` is the ErrorKind enum name (e.g. "ERROR_KIND_CAPABILITY"); empty
         # when no detail was decoded.
         self._kind: str = ""
@@ -201,8 +244,30 @@ def _extract_error_detail(error: grpc.RpcError) -> bytes | None:
     return None
 
 
+def _synthesize_transport_error_detail(error: grpc.RpcError) -> bytes | None:
+    code_getter = getattr(error, "code", None)
+    code = code_getter() if callable(code_getter) else None
+    if code not in {
+        grpc.StatusCode.UNAVAILABLE,
+        grpc.StatusCode.DEADLINE_EXCEEDED,
+        grpc.StatusCode.CANCELLED,
+    }:
+        return None
+    try:  # pragma: no cover - presence depends on codegen having run
+        from udb.entity.v1.error_pb2 import ErrorDetail, ErrorKind
+    except Exception:  # pragma: no cover - defensive
+        return None
+    detail = ErrorDetail()
+    detail.backend = "transport"
+    detail.operation = getattr(code, "name", str(code)).lower()
+    detail.retryable = code != grpc.StatusCode.CANCELLED
+    detail.retry_after_ms = 0
+    detail.kind = ErrorKind.ERROR_KIND_RETRYABLE
+    return detail.SerializeToString()
+
+
 def _map_error(rpc_name: str, error: grpc.RpcError) -> UdbRpcError:
-    detail = _extract_error_detail(error)
+    detail = _extract_error_detail(error) or _synthesize_transport_error_detail(error)
     if detail is not None:
         return UdbDetailedRpcError(rpc_name, error, detail)
     return UdbRpcError(rpc_name, error)
@@ -267,6 +332,33 @@ RPC_OPERATION_KIND: dict[str, str] = {
     # @@UDB_RPC_END
 }
 
+RPC_API_ALIAS: dict[str, str] = {
+    # @@UDB_RPC_BEGIN
+    "{{RPC_PATH}}": "{{RPC_ALIAS_SNAKE}}",
+    # @@UDB_RPC_END
+}
+
+
+RPC_OPERATION_ID: dict[str, str] = {
+    # @@UDB_RPC_BEGIN
+    "{{RPC_PATH}}": "{{REST_OPERATION_ID}}",
+    # @@UDB_RPC_END
+}
+
+
+RPC_HTTP_METHOD: dict[str, str] = {
+    # @@UDB_RPC_BEGIN
+    "{{RPC_PATH}}": "{{RPC_HTTP_METHOD}}",
+    # @@UDB_RPC_END
+}
+
+
+RPC_HTTP_PATH: dict[str, str] = {
+    # @@UDB_RPC_BEGIN
+    "{{RPC_PATH}}": "{{RPC_HTTP_PATH}}",
+    # @@UDB_RPC_END
+}
+
 
 # Proto-derived per-RPC replay-safety, keyed by full gRPC path: "true" ONLY for
 # RPCs whose proto ``method_idempotency_contract`` declares ``replay_safe = true``
@@ -290,19 +382,14 @@ def _is_replay_safe(rpc_path: str) -> bool:
 def _request_has_idempotency_key(request: Any) -> bool:
     """Whether ``request`` carries a non-empty ``idempotency_key``.
 
-    Reads the top-level ``idempotency_key`` field if present, else the one nested
-    in the request's ``context`` (``RequestContext.idempotency_key``). Returns
-    ``False`` defensively when neither is set or readable.
+    Reads only the top-level ``idempotency_key`` field named by the proto
+    idempotency contract. Returns ``False`` defensively when it is absent,
+    blank, nested only under request context, or unreadable.
     """
     try:
         key = getattr(request, "idempotency_key", "")
-        if isinstance(key, str) and key:
+        if isinstance(key, str) and key.strip():
             return True
-        context = getattr(request, "context", None)
-        if context is not None:
-            ctx_key = getattr(context, "idempotency_key", "")
-            if isinstance(ctx_key, str) and ctx_key:
-                return True
     except Exception:  # pragma: no cover - defensive
         return False
     return False
@@ -700,3 +787,851 @@ class GeneratedClient:
 
     def __exit__(self, *_: object) -> None:
         self.close()
+
+
+# ── Neutral-IR typed query builder (master-plan item 2.5) ──────────────────────
+#
+# A thin, typed layer that emits the broker's CANONICAL neutral-IR envelope
+# (``{"ir": {"op": ..., ...LogicalRead/Write/Delete}}``) and sends it through the
+# EXISTING GenericDispatch RPC (the generated ``DataBrokerClient.generic_dispatch``
+# forwarder, with its retry / error mapping). It is NOT a second client engine: it
+# builds the request and hands it to the very same dispatch method raw callers use,
+# so tenant / project / auth all flow from the caller's RequestContext metadata
+# exactly as they do for a raw call. The builder NEVER puts a tenant/project (or any
+# RequestContext) on the request body — the broker derives those from the verified
+# claim / headers.
+#
+# The broker parses this envelope in
+# ``handlers_data.rs::compile_neutral_ir_dispatch`` and lowers it to backend-native
+# SQL/query with tenant + RLS predicates injected server-side, so the safe,
+# mediated path is the one users naturally take. Raw spec stays available as an
+# explicit escape hatch — see ``raw_dispatch_request`` below and the untouched
+# ``DataBrokerClient.generic_dispatch(...)``.
+#
+# The wire shapes mirror the serde encoding of the Rust IR types (``src/ir/*.rs``):
+# externally-tagged enums (``{"Comparison": {...}}``, ``{"String": "x"}``, the unit
+# ``"Null"``), snake_case op tokens (``"eq"``, ``"starts_with"``), and the
+# ``LogicalRead``/``LogicalWrite``/``LogicalDelete`` field names. The envelope is
+# byte-identical to the TypeScript SDK's for the same logical query (compact JSON,
+# fixed key order, sorted record keys).
+
+#: Default backend whose neutral-IR compiler lowers the envelope. The broker
+#: resolves the concrete instance per project.
+_DEFAULT_IR_BACKEND = "postgres"
+ORM_TIERS: dict[str, str] = {{ORM_TIERS}}
+BACKEND_ROLES: dict[str, str] = {{BACKEND_ROLES}}
+
+
+class EagerIncludeUnsupportedBackendError(UdbError):
+    """Raised when eager relation include is requested on a non-relational backend."""
+
+    def __init__(self, backend: str, tier: str | None = None) -> None:
+        super().__init__(
+            f"udb: backend {backend!r} is {tier or 'unknown'}; eager include requires a relational backend"
+        )
+        self.backend = backend
+        self.tier = tier
+
+
+def _require_eager_include_backend(backend: str) -> None:
+    tier = ORM_TIERS.get(backend)
+    if tier != "relational":
+        raise EagerIncludeUnsupportedBackendError(backend, tier)
+
+#: Comparison-op tokens the IR compilers lower (mirrors ``ComparisonOp::token``).
+#: ``in`` is handled separately because it compiles to ``InList``, not
+#: ``Comparison``.
+_IR_COMPARISON_TOKENS: dict[str, str] = {
+    "eq": "eq",
+    "ne": "ne",
+    "gt": "gt",
+    "ge": "ge",
+    "lt": "lt",
+    "le": "le",
+    "like": "like",
+}
+
+
+def to_logical_value(value: Any) -> Any:
+    """Encode a Python value into the externally-tagged ``LogicalValue`` wire form.
+
+    ``datetime`` -> RFC3339 ``Timestamp`` (normalized to UTC), ``bytes`` ->
+    ``Bytes``, ``bool``/``int``/``float``/``str`` -> their tag, ``list``/``tuple``
+    -> ``Array``, ``dict`` -> ``Json``. ``None`` -> the unit ``"Null"``.
+    """
+    if value is None:
+        return "Null"
+    # bool is a subclass of int — check it first.
+    if isinstance(value, bool):
+        return {"Bool": value}
+    if isinstance(value, int):
+        return {"Int": value}
+    if isinstance(value, float):
+        return {"Float": value}
+    if isinstance(value, str):
+        return {"String": value}
+    if isinstance(value, (bytes, bytearray)):
+        return {"Bytes": list(value)}
+    if isinstance(value, datetime):
+        aware = value if value.tzinfo is not None else value.replace(tzinfo=timezone.utc)
+        return {"Timestamp": aware.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")}
+    if isinstance(value, (list, tuple)):
+        return {"Array": [to_logical_value(item) for item in value]}
+    if isinstance(value, Mapping):
+        return {"Json": dict(value)}
+    return {"String": str(value)}
+
+
+def _to_logical_record(record: Mapping[str, Any]) -> dict[str, Any]:
+    """Encode one record into a ``LogicalRecord`` (field -> LogicalValue), with
+    keys sorted so the envelope is deterministic and byte-stable across languages
+    (mirrors the server-side ``BTreeMap`` canonicalization)."""
+    return {key: to_logical_value(record[key]) for key in sorted(record)}
+
+
+def _dump_envelope(envelope: Mapping[str, Any]) -> str:
+    """Serialize the envelope to compact JSON with fixed key order — byte-identical
+    to the TypeScript SDK's ``JSON.stringify`` for the same logical query."""
+    return json.dumps(envelope, separators=(",", ":"))
+
+
+def _resolve_dispatch(target: Any) -> Any:
+    """Return an object exposing ``generic_dispatch``. Accepts the DataBroker
+    service client directly or the aggregate :class:`GeneratedClient` (uses its
+    ``.DataBroker``)."""
+    if callable(getattr(target, "generic_dispatch", None)):
+        return target
+    broker = getattr(target, "DataBroker", None)
+    if broker is not None and callable(getattr(broker, "generic_dispatch", None)):
+        return broker
+    raise UdbConfigurationError(
+        "IR dispatch target must expose generic_dispatch (pass the DataBroker client)"
+    )
+
+
+def _build_dispatch_request(backend: str, operation: str, spec_json: str) -> Any:
+    """Construct the buf-generated ``GenericDispatchRequest`` carrying ``spec_json``.
+
+    No tenant/project/context is set on the body — the broker derives caller scope
+    from the verified claim / metadata, exactly as for a raw dispatch.
+    """
+    admin_pb2 = importlib.import_module("udb.entity.v1.admin_pb2")
+    return admin_pb2.GenericDispatchRequest(
+        backend=backend, operation=operation, spec_json=spec_json
+    )
+
+
+class _PredicateSet:
+    """Shared predicate accumulator for read/delete builders."""
+
+    def __init__(self) -> None:
+        self._predicates: list[dict[str, Any]] = []
+
+    def _add_where(self, field_name: str, op: str, value: Any) -> None:
+        if op == "in":
+            self._add_where_in(field_name, value)
+            return
+        token = _IR_COMPARISON_TOKENS.get(op)
+        if token is None:
+            raise ValueError(f"udb: unsupported IR operator '{op}'")
+        self._predicates.append(
+            {"Comparison": {"field": field_name, "op": token, "value": to_logical_value(value)}}
+        )
+
+    def _add_where_in(self, field_name: str, values: Iterable[Any]) -> None:
+        self._predicates.append(
+            {"InList": {"field": field_name, "values": [to_logical_value(v) for v in values]}}
+        )
+
+    def _add_filter_node(self, filter_node: dict[str, Any]) -> None:
+        self._predicates.append(filter_node)
+
+    def _filter_node(self) -> dict[str, Any] | None:
+        """A single predicate is emitted bare; multiple are conjoined into ``And``
+        (mirrors ``LogicalFilter::and``)."""
+        if not self._predicates:
+            return None
+        if len(self._predicates) == 1:
+            return self._predicates[0]
+        return {"And": list(self._predicates)}
+
+
+class Query(_PredicateSet):
+    """Typed neutral-IR read builder.
+
+    ``query(mt).where("status", "eq", "open").order_by("created_at", "desc").limit(50)``
+    emits ``{"ir": {"op": "read", ...}}`` (a ``LogicalRead``).
+    """
+
+    def __init__(self, message_type: str) -> None:
+        super().__init__()
+        self._message_type = message_type
+        self._projection: list[str] | None = None
+        self._sorts: list[dict[str, Any]] = []
+        self._includes: list[dict[str, str]] = []
+        self._limit: int | None = None
+        self._offset: int | None = None
+
+    def where(self, field_name: str, op: str, value: Any) -> "Query":
+        self._add_where(field_name, op, value)
+        return self
+
+    def where_in(self, field_name: str, values: Iterable[Any]) -> "Query":
+        self._add_where_in(field_name, values)
+        return self
+
+    def where_filter(self, filter_node: dict[str, Any]) -> "Query":
+        self._add_filter_node(filter_node)
+        return self
+
+    def select(self, *fields: str) -> "Query":
+        """Projection (``LogicalProjection.fields``); omit to select every field."""
+        self._projection = list(fields)
+        return self
+
+    def order_by(self, field_name: str, direction: str = "asc") -> "Query":
+        self._sorts.append({"field": field_name, "direction": direction})
+        return self
+
+    def include(self, relation: str) -> "Query":
+        if not relation:
+            raise ValueError("udb: include relation name is required")
+        self._includes.append({"relation": relation})
+        return self
+
+    def limit(self, n: int) -> "Query":
+        self._limit = n
+        return self
+
+    def offset(self, n: int) -> "Query":
+        self._offset = n
+        return self
+
+    def _pagination(self) -> dict[str, Any] | None:
+        if self._limit is None and self._offset is None:
+            return None
+        pagination: dict[str, Any] = {}
+        if self._limit is not None:
+            pagination["limit"] = self._limit
+        if self._offset is not None:
+            pagination["offset"] = self._offset
+        return pagination
+
+    def to_envelope(self) -> dict[str, Any]:
+        """The canonical neutral-IR envelope."""
+        body: dict[str, Any] = {"op": "read", "message_type": self._message_type}
+        filter_node = self._filter_node()
+        if filter_node is not None:
+            body["filter"] = filter_node
+        if self._projection:
+            body["projection"] = {"fields": list(self._projection)}
+        if self._sorts:
+            body["sort"] = list(self._sorts)
+        if self._includes:
+            body["include"] = [dict(item) for item in self._includes]
+        pagination = self._pagination()
+        if pagination is not None:
+            body["pagination"] = pagination
+        return {"ir": body}
+
+    def to_spec_json(self) -> str:
+        return _dump_envelope(self.to_envelope())
+
+    def to_request(self, backend: str = _DEFAULT_IR_BACKEND) -> Any:
+        """The ``GenericDispatchRequest`` proto — no tenant/project/context set."""
+        if self._includes:
+            _require_eager_include_backend(backend)
+        return _build_dispatch_request(backend, "query", self.to_spec_json())
+
+    def execute(
+        self,
+        dispatch: Any,
+        *,
+        backend: str = _DEFAULT_IR_BACKEND,
+        metadata: Metadata | None = None,
+        timeout: float | None = None,
+    ) -> Any:
+        """Send through the EXISTING GenericDispatch RPC."""
+        return _resolve_dispatch(dispatch).generic_dispatch(
+            self.to_request(backend), metadata=metadata, timeout=timeout
+        )
+
+
+class WriteQuery:
+    """Typed neutral-IR write builder emitting ``{"ir": {"op": "write", ...}}`` (a
+    ``LogicalWrite``). Defaults to insert (conflict = ``Error``); call ``merge()`` /
+    ``ignore_conflicts()`` / ``update_on_conflict(...)`` for upsert semantics.
+    """
+
+    def __init__(self, message_type: str) -> None:
+        self._message_type = message_type
+        self._rows: list[Mapping[str, Any]] = []
+        self._conflict: dict[str, Any] | None = None
+        self._return_fields: list[str] = []
+
+    def record(self, row: Mapping[str, Any]) -> "WriteQuery":
+        self._rows.append(row)
+        return self
+
+    def records(self, rows: Iterable[Mapping[str, Any]]) -> "WriteQuery":
+        self._rows.extend(rows)
+        return self
+
+    def merge(self) -> "WriteQuery":
+        """Full upsert — replace every column on conflict (``ConflictStrategy::Replace``)."""
+        self._conflict = {"kind": "replace"}
+        return self
+
+    def ignore_conflicts(self) -> "WriteQuery":
+        """Skip conflicting rows (``ConflictStrategy::Ignore``)."""
+        self._conflict = {"kind": "ignore"}
+        return self
+
+    def update_on_conflict(
+        self, fields: Sequence[str], conflict_on: Sequence[str] | None = None
+    ) -> "WriteQuery":
+        """Partial upsert — update only ``fields`` on conflict
+        (``ConflictStrategy::Update``). ``conflict_on`` names an alternate unique
+        key; omit to use the manifest PK."""
+        if conflict_on:
+            self._conflict = {
+                "kind": "update",
+                "fields": list(fields),
+                "conflict_on": list(conflict_on),
+            }
+        else:
+            self._conflict = {"kind": "update", "fields": list(fields)}
+        return self
+
+    def returning(self, *fields: str) -> "WriteQuery":
+        self._return_fields.extend(fields)
+        return self
+
+    def to_envelope(self) -> dict[str, Any]:
+        if not self._rows:
+            raise ValueError("udb: write requires at least one record(...)")
+        body: dict[str, Any] = {
+            "op": "write",
+            "message_type": self._message_type,
+            "records": [_to_logical_record(row) for row in self._rows],
+        }
+        if self._conflict is not None:
+            body["conflict"] = self._conflict
+        if self._return_fields:
+            body["return_fields"] = list(self._return_fields)
+        return {"ir": body}
+
+    def to_spec_json(self) -> str:
+        return _dump_envelope(self.to_envelope())
+
+    def to_request(self, backend: str = _DEFAULT_IR_BACKEND) -> Any:
+        return _build_dispatch_request(backend, "mutate", self.to_spec_json())
+
+    def execute(
+        self,
+        dispatch: Any,
+        *,
+        backend: str = _DEFAULT_IR_BACKEND,
+        metadata: Metadata | None = None,
+        timeout: float | None = None,
+    ) -> Any:
+        return _resolve_dispatch(dispatch).generic_dispatch(
+            self.to_request(backend), metadata=metadata, timeout=timeout
+        )
+
+
+class DeleteQuery(_PredicateSet):
+    """Typed neutral-IR delete builder emitting ``{"ir": {"op": "delete", ...}}`` (a
+    ``LogicalDelete``). A ``where(...)`` predicate is REQUIRED — the IR has no
+    delete-everything path (mirrors the server-side contract).
+    """
+
+    def __init__(self, message_type: str) -> None:
+        super().__init__()
+        self._message_type = message_type
+        self._return_fields: list[str] = []
+
+    def where(self, field_name: str, op: str, value: Any) -> "DeleteQuery":
+        self._add_where(field_name, op, value)
+        return self
+
+    def where_in(self, field_name: str, values: Iterable[Any]) -> "DeleteQuery":
+        self._add_where_in(field_name, values)
+        return self
+
+    def returning(self, *fields: str) -> "DeleteQuery":
+        self._return_fields.extend(fields)
+        return self
+
+    def to_envelope(self) -> dict[str, Any]:
+        filter_node = self._filter_node()
+        if filter_node is None:
+            raise ValueError(
+                "udb: delete requires at least one where(...) predicate (no delete-everything path)"
+            )
+        body: dict[str, Any] = {
+            "op": "delete",
+            "message_type": self._message_type,
+            "filter": filter_node,
+        }
+        if self._return_fields:
+            body["return_fields"] = list(self._return_fields)
+        return {"ir": body}
+
+    def to_spec_json(self) -> str:
+        return _dump_envelope(self.to_envelope())
+
+    def to_request(self, backend: str = _DEFAULT_IR_BACKEND) -> Any:
+        return _build_dispatch_request(backend, "mutate", self.to_spec_json())
+
+    def execute(
+        self,
+        dispatch: Any,
+        *,
+        backend: str = _DEFAULT_IR_BACKEND,
+        metadata: Metadata | None = None,
+        timeout: float | None = None,
+    ) -> Any:
+        return _resolve_dispatch(dispatch).generic_dispatch(
+            self.to_request(backend), metadata=metadata, timeout=timeout
+        )
+
+
+def query(message_type: str) -> Query:
+    """Start a typed neutral-IR read for ``message_type`` (the catalog/proto FQN)."""
+    return Query(message_type)
+
+
+def write_to(message_type: str) -> WriteQuery:
+    """Start a typed neutral-IR write (insert/upsert) for ``message_type``."""
+    return WriteQuery(message_type)
+
+
+def delete_from(message_type: str) -> DeleteQuery:
+    """Start a typed neutral-IR delete for ``message_type``."""
+    return DeleteQuery(message_type)
+
+
+@dataclass(frozen=True)
+class EntityBinding:
+    """Descriptor-derived entity binding for repository helpers."""
+
+    message_type: str
+    table: str
+    primary_keys: tuple[str, ...]
+    fields: tuple[str, ...]
+    relations: tuple[Mapping[str, Any], ...] = ()
+    version_field: str = ""
+    py_type: str = ""
+    tenant_field: str = ""
+    project_field: str = ""
+
+
+ENTITY_REGISTRY: dict[str, EntityBinding] = {
+    # @@UDB_ENTITY_BEGIN
+    "{{ENTITY_MESSAGE_TYPE}}": EntityBinding(
+        message_type="{{ENTITY_MESSAGE_TYPE}}",
+        table="{{ENTITY_TABLE}}",
+        primary_keys=({{ENTITY_PRIMARY_KEYS}},),
+        fields=({{ENTITY_JSON_FIELDS}},),
+        relations=tuple({{ENTITY_RELATIONS_JSON}}),
+        version_field="{{ENTITY_VERSION_FIELD}}",
+        py_type="{{ENTITY_PY_IMPORT}}",
+        tenant_field="{{ENTITY_TENANT_FIELD}}",
+        project_field="{{ENTITY_PROJECT_FIELD}}",
+    ),
+    # @@UDB_ENTITY_END
+}
+
+
+def _require_entity_binding(binding: EntityBinding) -> EntityBinding:
+    if not binding.primary_keys:
+        raise ValueError(f"udb: entity {binding.message_type} has no descriptor primary key")
+    return binding
+
+
+def _validate_entity_record(binding: EntityBinding, record: Mapping[str, Any]) -> None:
+    allowed = set(binding.fields)
+    if not allowed:
+        return
+    for field_name in record.keys():
+        if field_name not in allowed:
+            raise ValueError(f"udb: field {field_name!r} is not declared on entity {binding.message_type}")
+
+
+class Repository:
+    """Descriptor-backed repository over the existing neutral-IR builders.
+
+    No tenant/project is written into request bodies and no identity map/cache is
+    kept here; 10.4 owns cross-call caching.
+    """
+
+    def __init__(self, binding: EntityBinding) -> None:
+        self.binding = _require_entity_binding(binding)
+
+    def query(self) -> Query:
+        return query(self.binding.message_type)
+
+    def relations(self) -> tuple[Mapping[str, Any], ...]:
+        return tuple(self.binding.relations)
+
+    def relation(self, name: str) -> Mapping[str, Any] | None:
+        for rel in self.binding.relations:
+            if rel.get("name") == name:
+                return rel
+        return None
+
+    def require_relation(self, name: str) -> Mapping[str, Any]:
+        rel = self.relation(name)
+        if rel is None:
+            raise KeyError(f"udb: unknown relation {name!r} on entity {self.binding.message_type}")
+        local_fields = tuple(rel.get("local_fields") or ())
+        target_fields = tuple(rel.get("target_fields") or ())
+        if not local_fields or len(local_fields) != len(target_fields):
+            raise ValueError(f"udb: relation {name!r} on entity {self.binding.message_type} has invalid field mapping")
+        if not rel.get("target_message_type"):
+            raise ValueError(f"udb: relation {name!r} on entity {self.binding.message_type} has no target entity")
+        return rel
+
+    def relation_query(self, name: str, parent: Mapping[str, Any]) -> Query:
+        rel = self.require_relation(name)
+        local_fields = tuple(rel["local_fields"])
+        target_fields = tuple(rel["target_fields"])
+        q = query(str(rel["target_message_type"]))
+        for local_field, target_field in zip(local_fields, target_fields):
+            if local_field not in parent:
+                raise ValueError(f"udb: relation {name!r} missing parent field {local_field!r}")
+            q.where(str(target_field), "eq", parent[local_field])
+        return q
+
+    def relation_batch_query(self, name: str, parents: Iterable[Mapping[str, Any]]) -> Query:
+        rel = self.require_relation(name)
+        local_fields = tuple(rel["local_fields"])
+        target_fields = tuple(rel["target_fields"])
+        if len(local_fields) != len(target_fields):
+            raise ValueError(f"udb: relation {name!r} on entity {self.binding.message_type} has invalid field mapping")
+        parent_count = 0
+        if len(local_fields) == 1:
+            values: list[Any] = []
+            seen_values: set[str] = set()
+            local_field = str(local_fields[0])
+            for parent in parents:
+                parent_count += 1
+                if local_field not in parent:
+                    raise ValueError(f"udb: relation {name!r} missing parent field {local_field!r}")
+                value = parent[local_field]
+                key = json.dumps(value, sort_keys=True, separators=(",", ":"))
+                if key not in seen_values:
+                    seen_values.add(key)
+                    values.append(value)
+            if parent_count == 0:
+                raise ValueError(f"udb: relation {name!r} batch query requires at least one parent")
+            return query(str(rel["target_message_type"])).where_in(str(target_fields[0]), values)
+        branches: list[dict[str, Any]] = []
+        seen_branches: set[str] = set()
+        for parent in parents:
+            parent_count += 1
+            comparisons: list[dict[str, Any]] = []
+            for local_field, target_field in zip(local_fields, target_fields):
+                local_name = str(local_field)
+                if local_name not in parent:
+                    raise ValueError(f"udb: relation {name!r} missing parent field {local_name!r}")
+                comparisons.append(
+                    {
+                        "Comparison": {
+                            "field": str(target_field),
+                            "op": "eq",
+                            "value": to_logical_value(parent[local_name]),
+                        }
+                    }
+                )
+            key = json.dumps(comparisons, sort_keys=True, separators=(",", ":"))
+            if key not in seen_branches:
+                seen_branches.add(key)
+                branches.append({"And": comparisons})
+        if parent_count == 0:
+            raise ValueError(f"udb: relation {name!r} batch query requires at least one parent")
+        return query(str(rel["target_message_type"])).where_filter({"Or": branches})
+
+{{ENTITY_PY_RELATION_ACCESSORS}}
+
+    def find(
+        self,
+        key: Mapping[str, Any],
+        dispatch: Any,
+        *,
+        backend: str = _DEFAULT_IR_BACKEND,
+        metadata: Metadata | None = None,
+        timeout: float | None = None,
+    ) -> Any:
+        q = self.query().limit(1)
+        for field_name in self.binding.primary_keys:
+            if field_name not in key:
+                raise ValueError(f"udb: missing primary key field {field_name!r}")
+            q.where(field_name, "eq", key[field_name])
+        return q.execute(dispatch, backend=backend, metadata=metadata, timeout=timeout)
+
+    def first(
+        self,
+        q: Query,
+        dispatch: Any,
+        *,
+        backend: str = _DEFAULT_IR_BACKEND,
+        metadata: Metadata | None = None,
+        timeout: float | None = None,
+    ) -> Any:
+        return q.limit(1).execute(dispatch, backend=backend, metadata=metadata, timeout=timeout)
+
+    def all(
+        self,
+        q: Query,
+        dispatch: Any,
+        *,
+        backend: str = _DEFAULT_IR_BACKEND,
+        metadata: Metadata | None = None,
+        timeout: float | None = None,
+    ) -> Any:
+        return q.execute(dispatch, backend=backend, metadata=metadata, timeout=timeout)
+
+    def upsert(
+        self,
+        record: Mapping[str, Any],
+        dispatch: Any,
+        *,
+        backend: str = _DEFAULT_IR_BACKEND,
+        metadata: Metadata | None = None,
+        timeout: float | None = None,
+    ) -> Any:
+        _validate_entity_record(self.binding, record)
+        for field_name in self.binding.primary_keys:
+            if field_name not in record:
+                raise ValueError(f"udb: missing primary key field {field_name!r}")
+        update_fields = [field for field in record.keys() if field not in self.binding.primary_keys]
+        if not update_fields:
+            raise ValueError("udb: upsert requires at least one non-primary-key field")
+        return (
+            write_to(self.binding.message_type)
+            .record(record)
+            .update_on_conflict(update_fields, self.binding.primary_keys)
+            .execute(dispatch, backend=backend, metadata=metadata, timeout=timeout)
+        )
+
+    def delete(
+        self,
+        key: Mapping[str, Any],
+        dispatch: Any,
+        *,
+        backend: str = _DEFAULT_IR_BACKEND,
+        metadata: Metadata | None = None,
+        timeout: float | None = None,
+    ) -> Any:
+        d = delete_from(self.binding.message_type)
+        for field_name in self.binding.primary_keys:
+            if field_name not in key:
+                raise ValueError(f"udb: missing primary key field {field_name!r}")
+            d.where(field_name, "eq", key[field_name])
+        return d.execute(dispatch, backend=backend, metadata=metadata, timeout=timeout)
+
+
+def repository(message_type: str) -> Repository:
+    binding = ENTITY_REGISTRY.get(message_type)
+    if binding is None:
+        raise KeyError(f"udb: unknown entity {message_type!r}")
+    return Repository(binding)
+
+
+def _clone_record(record: Mapping[str, Any]) -> dict[str, Any]:
+    return json.loads(json.dumps(dict(record), sort_keys=True, separators=(",", ":")))
+
+
+def _entity_identity(binding: EntityBinding, record: Mapping[str, Any]) -> str:
+    scope_parts: list[str] = []
+    for field_name in (binding.tenant_field, binding.project_field):
+        if not field_name:
+            continue
+        if field_name not in record:
+            raise ValueError(
+                f"udb: unit-of-work record for {binding.message_type} missing scope field {field_name!r}"
+            )
+        scope_parts.append(f"{field_name}={json.dumps(record[field_name], sort_keys=True, separators=(',', ':'))}")
+    parts: list[str] = []
+    for field_name in binding.primary_keys:
+        if field_name not in record:
+            raise ValueError(
+                f"udb: unit-of-work record for {binding.message_type} missing primary key field {field_name!r}"
+            )
+        parts.append(json.dumps(record[field_name], sort_keys=True, separators=(",", ":")))
+    return f"{binding.message_type}:{':'.join(scope_parts)}:{':'.join(parts)}"
+
+
+def _require_version_for_tracked_write(binding: EntityBinding, record: Mapping[str, Any]) -> None:
+    if binding.version_field and binding.version_field not in record:
+        raise ValueError(
+            f"udb: unit-of-work record for {binding.message_type} missing version field {binding.version_field!r}"
+        )
+
+
+@dataclass
+class UnitOfWorkEntry:
+    repo: Repository
+    record: Mapping[str, Any]
+    snapshot: str
+
+
+class UnitOfWorkTxError(UdbError):
+    """Raised when the broker reports a failed UnitOfWork transaction status."""
+
+    def __init__(self, message: str, status: Any | None = None) -> None:
+        super().__init__(message)
+        self.status = status
+
+
+class UnitOfWorkConflictError(UnitOfWorkTxError):
+    """Raised for ABORTED/version/conflict UnitOfWork transaction statuses."""
+
+
+class UnitOfWorkUnsupportedBackendError(UdbError):
+    """Raised when UnitOfWork is asked to flush on a projection/noncanonical backend."""
+
+    def __init__(self, backend: str, role: str | None = None) -> None:
+        super().__init__(
+            f"udb: backend {backend!r} is {role or 'unknown'}; UnitOfWork requires a canonical transactional backend"
+        )
+        self.backend = backend
+        self.role = role
+
+
+class UnitOfWork:
+    """Descriptor-backed identity map and dirty tracker for one transaction scope."""
+
+    def __init__(self) -> None:
+        self._entries: dict[str, UnitOfWorkEntry] = {}
+
+    def attach(self, repo: Repository, record: Mapping[str, Any]) -> Mapping[str, Any]:
+        _require_version_for_tracked_write(repo.binding, record)
+        self._entries[_entity_identity(repo.binding, record)] = UnitOfWorkEntry(
+            repo=repo,
+            record=record,
+            snapshot=json.dumps(_clone_record(record), sort_keys=True, separators=(",", ":")),
+        )
+        return record
+
+    def track(self, repo: Repository, record: Mapping[str, Any]) -> Mapping[str, Any]:
+        return self.attach(repo, record)
+
+    def dirty_entries(self) -> tuple[UnitOfWorkEntry, ...]:
+        return tuple(
+            entry
+            for entry in self._entries.values()
+            if json.dumps(dict(entry.record), sort_keys=True, separators=(",", ":")) != entry.snapshot
+        )
+
+    def tx_mutations(self) -> list[Any]:
+        Mutation = self._mutation_class()
+        return [
+            Mutation(
+                operation="upsert",
+                message_type=entry.repo.binding.message_type,
+                record_json=json.dumps(dict(entry.record), sort_keys=True, separators=(",", ":")).encode("utf-8"),
+            )
+            for entry in self.dirty_entries()
+        ]
+
+    def commit_mutation(self) -> Any:
+        return self._mutation_class()(commit=True)
+
+    def rollback_mutation(self) -> Any:
+        return self._mutation_class()(rollback=True)
+
+    def tx_commit_batch(self, backend: str = _DEFAULT_IR_BACKEND) -> list[Any]:
+        self.require_transactional_backend(backend)
+        return [*self.tx_mutations(), self.commit_mutation()]
+
+    def require_transactional_backend(self, backend: str = _DEFAULT_IR_BACKEND) -> None:
+        role = BACKEND_ROLES.get(backend)
+        if role not in {"canonical", "both"}:
+            raise UnitOfWorkUnsupportedBackendError(backend, role)
+
+    def validate_tx_statuses(self, statuses: Iterable[Any]) -> None:
+        for status in statuses:
+            state = str(getattr(status, "state", ""))
+            message = str(getattr(status, "message", ""))
+            if state == "4" or "ERROR" in state:
+                if _is_tx_conflict_message(message):
+                    raise UnitOfWorkConflictError(message or "udb: unit-of-work transaction conflict", status)
+                raise UnitOfWorkTxError(message or "udb: unit-of-work transaction failed", status)
+
+    def mark_clean(self) -> None:
+        for entry in self._entries.values():
+            entry.snapshot = json.dumps(_clone_record(entry.record), sort_keys=True, separators=(",", ":"))
+
+    def flush(
+        self,
+        target: Any,
+        backend: str = _DEFAULT_IR_BACKEND,
+        *,
+        metadata: Metadata | None = None,
+        timeout: float | None = None,
+    ) -> list[Any]:
+        broker = _resolve_begin_tx(target)
+        statuses = list(
+            broker.begin_tx(
+                iter(self.tx_commit_batch(backend)),
+                metadata=metadata,
+                timeout=timeout,
+            )
+        )
+        self.validate_tx_statuses(statuses)
+        self.mark_clean()
+        return statuses
+
+    @staticmethod
+    def _mutation_class() -> Any:
+        try:
+            from udb.entity.v1.tx_pb2 import Mutation
+        except Exception as exc:  # pragma: no cover - depends on generated protobuf package
+            raise UdbConfigurationError("UDB Mutation class not found. Run buf generate before UnitOfWork flush.") from exc
+        return Mutation
+
+
+def unit_of_work() -> UnitOfWork:
+    return UnitOfWork()
+
+
+def _resolve_begin_tx(target: Any) -> Any:
+    if callable(getattr(target, "begin_tx", None)):
+        return target
+    broker = getattr(target, "DataBroker", None)
+    if broker is not None and callable(getattr(broker, "begin_tx", None)):
+        return broker
+    raise UdbConfigurationError(
+        "UnitOfWork flush target must expose DataBroker.begin_tx"
+    )
+
+
+def _is_tx_conflict_message(message: str) -> bool:
+    lower = message.lower()
+    return "aborted" in lower or "version" in lower or "conflict" in lower
+
+
+# @@UDB_ENTITY_BEGIN
+def {{ENTITY_ALIAS_SNAKE}}_repository() -> Repository:
+    return repository("{{ENTITY_MESSAGE_TYPE}}")
+
+
+# @@UDB_ENTITY_END
+
+def raw_dispatch_request(
+    backend: str, operation: str, spec_json: str, resource_name: str = ""
+) -> Any:
+    """ESCAPE HATCH: build a raw ``GenericDispatchRequest`` with caller-authored
+    ``spec_json``, bypassing the typed IR builder. The mediated builders above are
+    preferred; this preserves the pre-existing raw capability for advanced/admin
+    callers. Like the builders, it sets no tenant/project on the body."""
+    admin_pb2 = importlib.import_module("udb.entity.v1.admin_pb2")
+    return admin_pb2.GenericDispatchRequest(
+        backend=backend,
+        operation=operation,
+        resource_name=resource_name,
+        spec_json=spec_json,
+    )

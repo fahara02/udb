@@ -4,6 +4,30 @@ declare(strict_types=1);
 
 namespace Fahara02\UdbLaravel;
 
+use Udb\Entity\V1\MutationResponse;
+
+if (! \function_exists('Fahara02\\UdbLaravel\\wasReplay')) {
+    /**
+     * Whether a mutation `MutationResponse` was a durable-idempotency REPLAY
+     * (the broker matched a prior request's idempotency key and returned the
+     * recorded outcome) rather than a fresh write. Reads the proto
+     * `was_duplicate` flag ergonomically so callers do not have to remember the
+     * generated `getWasDuplicate()` accessor; the raw `$response` is untouched
+     * and remains fully available (checksum, receipt, affected_rows, …).
+     *
+     *   $response = $udb->data->table('orders')->upsert($record, idempotencyKey: $key);
+     *   if (\Fahara02\UdbLaravel\wasReplay($response)) {
+     *       // idempotent replay — no new side effect occurred
+     *   }
+     *
+     * Parity with the proto field returned by both `upsert()` and `delete()`.
+     */
+    function wasReplay(MutationResponse $response): bool
+    {
+        return (bool) $response->getWasDuplicate();
+    }
+}
+
 if (! \function_exists('Fahara02\\UdbLaravel\\createUdb')) {
     /**
      * Construct a {@see UdbProject} from a single config bag — the ergonomic

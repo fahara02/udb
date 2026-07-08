@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 // Scenario perf bench — PHP (R6.2 scenario-vs-surface split).
 //
-// This is the SCENARIO counterpart to the full 265-RPC coverage sweep in
+// This is the SCENARIO counterpart to the full current generated RPC-surface coverage sweep in
 // GeneratedRpcSurfaceTest.php ('measures per-RPC latency' -> perf_report_php.md).
 // Where the full sweep answers "is every RPC reachable and how fast", this answers
 // "how fast is the user-facing facade path the simple-client docs tell people to call":
@@ -255,7 +255,7 @@ it('measures scenario perf', function () {
         'This is the SCENARIO bench: it times the user-facing WORKFLOW HELPERS the '
             .'simple-client docs prescribe (uploadFile, downloadFile, bound entity '
             .'upsert/select/delete, loginAndAdoptTenant, events subscribe-ready/publish-and-wait, '
-            .'webrtc joinSession) — measured as end-to-end facade calls, NOT the raw 265-RPC '
+            .'webrtc joinSession) — measured as end-to-end facade calls, NOT the raw generated RPC '
             .'surface (that stays in perf_report_php.md). Each `seq` is the documented helper '
             .'RPC sequence (docs/bench-bodies/workflow-sequences.md).', '',
         '| Scenario | seq | err | p50 ms | p99 ms | mean ms | min ms | max ms | iters |',

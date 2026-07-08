@@ -25,12 +25,24 @@ type EntityKey []string
 // Key builds an EntityKey from primary-key field names, e.g. Key("record_id").
 func Key(fields ...string) EntityKey { return EntityKey(fields) }
 
+type EntityRelationDescriptor struct {
+	Name              string   `json:"name"`
+	Kind              string   `json:"kind"`
+	LocalFields       []string `json:"local_fields"`
+	TargetMessageType string   `json:"target_message_type"`
+	TargetTable       string   `json:"target_table"`
+	TargetFields      []string `json:"target_fields"`
+	OnDelete          string   `json:"on_delete,omitempty"`
+	OnUpdate          string   `json:"on_update,omitempty"`
+}
+
 // Entity binds a message FQN + primary key once so CRUD calls stay terse.
 type Entity struct {
-	client *Client
-	fqn    string
-	key    EntityKey
-	meta   Metadata
+	client      *Client
+	fqn         string
+	key         EntityKey
+	meta        Metadata
+	consistency ConsistencyMode
 }
 
 // Entity binds a message FQN + key over this Client.
@@ -42,16 +54,31 @@ func (c *Client) Entity(fqn string, key EntityKey) *Entity {
 // u.Data.Entity(...) surfaces from the masterplan exist.
 func (u *Udb) Entity(fqn string, key EntityKey) *Entity { return u.Data.Entity(fqn, key) }
 
+// WithConsistency returns a shallow copy of the Entity whose reads/writes stamp
+// the requested consistency mode on their per-call RequestContext
+// (RequestContext.consistency_mode). The broker stays the enforcement point —
+// this only expresses the caller's preference (strong / read-your-writes /
+// bounded-staleness / eventual, etc.). Passing an empty mode clears it.
+func (e *Entity) WithConsistency(mode ConsistencyMode) *Entity {
+	cp := *e
+	cp.consistency = mode
+	return &cp
+}
+
 // requestContext returns a FRESH per-call RequestContext seeded with tenant/
 // project from meta only. It never sets body scopes (the broker derives effective
 // scopes from the verified claim — body scopes are requested-only) and never
 // forces primary_read (reads stay replica-eligible unless an explicit fence /
-// consistency choice is made via AfterWrite on the returned context).
+// consistency choice is made via AfterWrite on the returned context or a
+// consistency mode was selected with WithConsistency).
 func (e *Entity) requestContext() *entityv1.RequestContext {
-	return &entityv1.RequestContext{
+	rc := &entityv1.RequestContext{
 		TenantId:  e.meta.TenantID,
 		ProjectId: e.meta.ProjectID,
 	}
+	// Stamp the caller's consistency preference (if any) onto this one request.
+	e.consistency.Apply(rc)
+	return rc
 }
 
 // UpsertOption configures Upsert.
@@ -70,6 +97,11 @@ func ReturnRecord() UpsertOption { return func(o *upsertOptions) { o.returnRecor
 type UpsertResult struct {
 	Response *entityv1.MutationResponse
 	Record   map[string]any
+	// WasDuplicate is true when the broker collapsed this write onto a prior one
+	// via durable idempotency (a replay of the same idempotency key) instead of
+	// applying a fresh mutation. Mirrors MutationResponse.was_duplicate so a
+	// caller can distinguish an idempotency replay from a fresh write.
+	WasDuplicate bool
 }
 
 // Upsert marshals record (a map[string]any or json.RawMessage) to record_json,
@@ -94,7 +126,7 @@ func (e *Entity) Upsert(ctx context.Context, record any, opts ...UpsertOption) (
 	if err != nil {
 		return nil, err
 	}
-	out := &UpsertResult{Response: resp}
+	out := &UpsertResult{Response: resp, WasDuplicate: resp.GetWasDuplicate()}
 	if o.returnRecord {
 		if rb := resp.GetRecordJson(); len(rb) > 0 {
 			rec := map[string]any{}
@@ -193,7 +225,12 @@ func decodeRecordSet(rs *entityv1.RecordSet) ([]map[string]any, error) {
 // message so (*Client).Entity can default conflict_fields/PK from the manifest
 // instead of the caller passing Key(...).
 type EntityDescriptor struct {
-	Table       string
-	PrimaryKeys []string
-	GoType      string
+	Table        string
+	PrimaryKeys  []string
+	Fields       []string
+	Relations    []EntityRelationDescriptor
+	VersionField string
+	TenantField  string
+	ProjectField string
+	GoType       string
 }

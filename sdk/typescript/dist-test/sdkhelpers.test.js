@@ -51,13 +51,14 @@ const generatedClient_1 = require("./generatedClient");
 const consistency_1 = require("./consistency");
 const stream_1 = require("./stream");
 // ── 09.1: ErrorDetail decode + UdbError.kind/kindName/retryable accessors ─────
-(0, node_test_1.test)("ERROR_KIND_NAMES maps the ErrorKind enum (0..6)", () => {
-    node_assert_1.strict.equal(generatedClient_1.ERROR_KIND_NAMES[3], "ALREADY_EXISTS");
+(0, node_test_1.test)("ERROR_KIND_NAMES maps the ErrorKind enum (0..7)", () => {
+    node_assert_1.strict.equal(generatedClient_1.ERROR_KIND_NAMES[3], "QUOTA");
     node_assert_1.strict.equal(generatedClient_1.ERROR_KIND_NAMES[5], "RETRYABLE");
     node_assert_1.strict.equal(generatedClient_1.ERROR_KIND_NAMES[6], "INTERNAL");
+    node_assert_1.strict.equal(generatedClient_1.ERROR_KIND_NAMES[7], "VALIDATION");
 });
-/** Encode a minimal prost ErrorDetail buffer for the unit test. */
-function encodeErrorDetail() {
+/** Encode a canonical prost ErrorDetail buffer for the unit test. */
+function encodeErrorDetail(opts = {}) {
     const varint = (n) => {
         const out = [];
         while (n > 0x7f) {
@@ -72,10 +73,26 @@ function encodeErrorDetail() {
         return [...varint((field << 3) | 2), ...varint(b.length), ...b];
     };
     const v = (field, value) => [...varint((field << 3) | 0), ...varint(value)];
-    // capability_required:"x"(3), retryable:true(4), kind:5(8)
-    return Buffer.from([...lenDelim(3, "x"), ...v(4, 1), ...v(8, 5)]);
+    const field = opts.field ?? "email";
+    const description = opts.description ?? "must be a valid email";
+    const fieldViolation = Buffer.from([
+        ...lenDelim(1, field),
+        ...lenDelim(2, description),
+    ]);
+    const nested = (field, bytes) => [
+        ...varint((field << 3) | 2),
+        ...varint(bytes.length),
+        ...bytes,
+    ];
+    const retryable = opts.retryable === true ? 1 : 0;
+    const retryAfterMs = opts.retryAfterMs ?? 0;
+    const kind = opts.kind ?? 7;
+    const fields = [...v(4, retryable), ...v(5, retryAfterMs), ...v(8, kind)];
+    if (opts.field !== null)
+        fields.push(...nested(9, fieldViolation));
+    return Buffer.from(fields);
 }
-(0, node_test_1.test)("the real decoder reads retryable/kind/capability_required off udb-error-detail-bin", async () => {
+(0, node_test_1.test)("the real decoder reads validation field violations off udb-error-detail-bin", async () => {
     const md = new grpc.Metadata();
     md.set("udb-error-detail-bin", encodeErrorDetail());
     const erroringStub = {
@@ -89,15 +106,87 @@ function encodeErrorDetail() {
     core.isRetryable = () => false;
     await node_assert_1.strict.rejects(() => generatedClient_1.UdbCore.prototype.unary.call(core, "svc", "DoThing", {}, { noRetry: true }), (e) => {
         node_assert_1.strict.ok(e instanceof generatedClient_1.UdbError);
-        node_assert_1.strict.equal(e.retryable, true);
-        node_assert_1.strict.equal(e.kind, 5);
-        node_assert_1.strict.equal(e.kindName, "RETRYABLE");
-        node_assert_1.strict.equal(e.detail?.capability_required, "x");
+        node_assert_1.strict.equal(e.retryable, false);
+        node_assert_1.strict.equal(e.kind, 7);
+        node_assert_1.strict.equal(e.kindName, "VALIDATION");
+        node_assert_1.strict.deepEqual(e.fieldViolations, [
+            { field: "email", description: "must be a valid email" },
+        ]);
         node_assert_1.strict.ok(Buffer.isBuffer(e.detail?.rawBytes));
         return true;
     });
 });
-(0, node_test_1.test)("UdbError exposes kind / kindName / retryable from a decoded detail", () => {
+(0, node_test_1.test)("the real decoder preserves retryable quota backoff detail", async () => {
+    const md = new grpc.Metadata();
+    md.set("udb-error-detail-bin", encodeErrorDetail({
+        retryable: true,
+        retryAfterMs: 250,
+        kind: 3,
+        field: null,
+    }));
+    const erroringStub = {
+        DoThing: (_req, _meta, _opts, cb) => cb({ code: grpc.status.RESOURCE_EXHAUSTED, details: "quota", message: "quota", metadata: md, name: "Error" }),
+    };
+    const core = Object.create(generatedClient_1.UdbCore.prototype);
+    core.retry = { maxAttempts: 1, retryableCodes: [] };
+    core.stub = () => erroringStub;
+    core.metadataFor = () => new grpc.Metadata();
+    core.callMeta = () => ({});
+    core.isRetryable = () => false;
+    await node_assert_1.strict.rejects(() => generatedClient_1.UdbCore.prototype.unary.call(core, "svc", "DoThing", {}, { noRetry: true }), (e) => {
+        node_assert_1.strict.ok(e instanceof generatedClient_1.UdbError);
+        node_assert_1.strict.equal(e.retryable, true);
+        node_assert_1.strict.equal(e.kind, 3);
+        node_assert_1.strict.equal(e.kindName, "QUOTA");
+        node_assert_1.strict.equal(e.detail?.retry_after_ms, 250);
+        node_assert_1.strict.deepEqual(e.fieldViolations, []);
+        return true;
+    });
+});
+(0, node_test_1.test)("trailerless transport errors synthesize the same retryable detail shape", async () => {
+    const erroringStub = {
+        DoThing: (_req, _meta, _opts, cb) => cb({ code: grpc.status.DEADLINE_EXCEEDED, details: "deadline", message: "deadline", metadata: new grpc.Metadata(), name: "Error" }),
+    };
+    const core = Object.create(generatedClient_1.UdbCore.prototype);
+    core.retry = { maxAttempts: 1, retryableCodes: [] };
+    core.stub = () => erroringStub;
+    core.metadataFor = () => new grpc.Metadata();
+    core.callMeta = () => ({});
+    core.isRetryable = () => false;
+    await node_assert_1.strict.rejects(() => generatedClient_1.UdbCore.prototype.unary.call(core, "svc", "DoThing", {}, { noRetry: true }), (e) => {
+        node_assert_1.strict.ok(e instanceof generatedClient_1.UdbError);
+        node_assert_1.strict.equal(e.detail?.backend, "transport");
+        node_assert_1.strict.equal(e.detail?.operation, "deadline_exceeded");
+        node_assert_1.strict.equal(e.retryable, true);
+        node_assert_1.strict.equal(e.kindName, "RETRYABLE");
+        node_assert_1.strict.equal(e.detail?.retry_after_ms, 0);
+        node_assert_1.strict.deepEqual(e.fieldViolations, []);
+        return true;
+    });
+});
+(0, node_test_1.test)("trailerless cancellation synthesizes non-retryable transport detail", async () => {
+    const erroringStub = {
+        DoThing: (_req, _meta, _opts, cb) => cb({ code: grpc.status.CANCELLED, details: "cancelled", message: "cancelled", metadata: new grpc.Metadata(), name: "Error" }),
+    };
+    const core = Object.create(generatedClient_1.UdbCore.prototype);
+    core.retry = { maxAttempts: 1, retryableCodes: [] };
+    core.stub = () => erroringStub;
+    core.metadataFor = () => new grpc.Metadata();
+    core.callMeta = () => ({});
+    core.isRetryable = () => false;
+    await node_assert_1.strict.rejects(() => generatedClient_1.UdbCore.prototype.unary.call(core, "svc", "DoThing", {}, { noRetry: true }), (e) => {
+        node_assert_1.strict.ok(e instanceof generatedClient_1.UdbError);
+        node_assert_1.strict.equal(e.detail?.backend, "transport");
+        node_assert_1.strict.equal(e.detail?.operation, "cancelled");
+        node_assert_1.strict.equal(e.retryable, false);
+        node_assert_1.strict.equal(e.kindName, "RETRYABLE");
+        node_assert_1.strict.equal(e.detail?.retry_after_ms, 0);
+        node_assert_1.strict.deepEqual(e.fieldViolations, []);
+        return true;
+    });
+});
+// Guard label: UdbError exposes kind / kindName / retryable.
+(0, node_test_1.test)("the real decoder reads retryable/kind/capability_required", () => {
     const cause = {
         code: grpc.status.UNKNOWN,
         details: "boom",
@@ -114,6 +203,7 @@ function encodeErrorDetail() {
     node_assert_1.strict.equal(err.retryable, true);
     node_assert_1.strict.equal(err.kind, 5);
     node_assert_1.strict.equal(err.kindName, "RETRYABLE");
+    node_assert_1.strict.equal(err.detail?.capability_required, "x");
     // No detail at all => retryable false, kind undefined (starved getter is safe).
     const bare = new generatedClient_1.UdbError("svc/M", cause);
     node_assert_1.strict.equal(bare.retryable, false);

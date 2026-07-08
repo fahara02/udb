@@ -10,7 +10,13 @@ use Fahara02\UdbLaravel\Services\WebRtc\SignalingApi;
 use Fahara02\UdbLaravel\Services\WebRtc\TrackApi;
 use Fahara02\UdbLaravel\Services\WebRtc\TurnApi;
 use Fahara02\UdbLaravel\Services\WebRtcService;
+use Fahara02\UdbLaravel\UdbMetadata;
 use Fahara02\UdbLaravel\UdbProject;
+use Udb\Core\Storage\Services\V1\FinalizeUploadRequest;
+use Udb\Core\Storage\Services\V1\FinalizeUploadResponse;
+use Udb\Core\Storage\Services\V1\RegisterUploadRequest;
+use Udb\Core\Storage\Services\V1\RegisterUploadResponse;
+use Udb\Core\Storage\Services\V1\StorageServiceClient;
 
 /*
  * M8 media-service facade wiring (storage / asset / webRtc).
@@ -98,19 +104,126 @@ it('WebRTC group wrappers carry their key RPC verbs + client()', function () {
  * ext-grpc) is assert the shared fixture parses and pins the same 3-step contract
  * the PHP wrapper implements, so a drift in the contract trips a PHP test too.
  */
-it('shared workflow-sequences fixture pins the uploadFile contract PHP implements', function () {
+function loadWorkflowSequenceFixture(string $helper): array
+{
     $path = dirname(__DIR__, 4).'/docs/bench-bodies/workflow-sequences.md';
     expect(is_file($path))->toBeTrue("missing shared fixture: {$path}");
-    $text = file_get_contents($path) ?: '';
+    foreach (file($path, FILE_IGNORE_NEW_LINES) ?: [] as $line) {
+        $line = trim($line);
+        if ($line === '' || ! str_starts_with($line, '|') || str_contains($line, '---')) {
+            continue;
+        }
+        $cols = array_map('trim', explode('|', trim($line, '|')));
+        if (($cols[0] ?? '') !== $helper) {
+            continue;
+        }
 
-    // The fixture must document the canonical StorageFacade.uploadFile sequence.
-    expect($text)->toContain('StorageFacade.uploadFile');
-    // ...as exactly RegisterUpload -> PUT -> FinalizeUpload (the 3-step contract).
-    foreach (['RegisterUpload', 'PUT', 'FinalizeUpload'] as $step) {
-        expect($text)->toContain($step);
+        return array_values(array_filter(array_map('trim', explode(',', $cols[1] ?? ''))));
     }
 
-    // And the PHP wrapper that realizes it exposes the injectable PUT seam used to
+    expect()->fail("workflow helper {$helper} missing from workflow-sequences.md");
+}
+
+function offlineUdbProjectForSequenceGate(): UdbProject
+{
+    $ref = new ReflectionClass(UdbProject::class);
+    /** @var UdbProject $project */
+    $project = $ref->newInstanceWithoutConstructor();
+    foreach ([
+        'config' => ['retry' => ['max_attempts' => 1], 'deadline_ms' => 0],
+        'dataTarget' => 'offline.invalid:0',
+        'authTarget' => 'offline.invalid:0',
+        'boundContext' => new UdbMetadata(
+            tenantId: 'tenant-1',
+            userId: 'user-1',
+            purpose: 'php.upload.sequence.test',
+            correlationId: 'corr-1',
+            scopes: ['storage.write'],
+            serviceIdentity: 'php.test',
+            projectId: 'project-1',
+            clientCatalogVersion: 'test',
+        ),
+    ] as $name => $value) {
+        $prop = $ref->getProperty($name);
+        $prop->setAccessible(true);
+        $prop->setValue($project, $value);
+    }
+
+    return $project;
+}
+
+function okUnary(object $response): object
+{
+    return new class($response) {
+        public function __construct(private readonly object $response)
+        {
+        }
+
+        public function wait(): array
+        {
+            return [$this->response, (object) ['code' => 0, 'details' => 'OK']];
+        }
+    };
+}
+
+/*
+ * BENCH §11.2.x storage uploadFile sequence gate (OFFLINE).
+ *
+ * This exercises the actual PHP StorageService::uploadFile() wrapper with a fake
+ * generated StorageServiceClient and an injected HTTP PUT seam. It proves the
+ * wrapper emits exactly the shared RegisterUpload -> PUT -> FinalizeUpload
+ * sequence and no hidden Get/List/proof-read RPC.
+ */
+it('StorageService uploadFile emits the shared RegisterUpload PUT FinalizeUpload sequence', function () {
+    $seq = [];
+    $lastFinalizeFileId = '';
+    $lastFinalizeSize = 0;
+
+    $stub = new class($seq, $lastFinalizeFileId, $lastFinalizeSize) extends StorageServiceClient {
+        /** @param list<string> $seq */
+        public function __construct(private array &$seq, private string &$lastFinalizeFileId, private int &$lastFinalizeSize)
+        {
+        }
+
+        public function RegisterUpload(RegisterUploadRequest $argument, $metadata = [], $options = [])
+        {
+            $this->seq[] = 'RegisterUpload';
+
+            return okUnary((new RegisterUploadResponse())
+                ->setFileId('file-php-seq')
+                ->setUploadUrl('https://object.example/upload/file-php-seq'));
+        }
+
+        public function FinalizeUpload(FinalizeUploadRequest $argument, $metadata = [], $options = [])
+        {
+            $this->seq[] = 'FinalizeUpload';
+            $this->lastFinalizeFileId = $argument->getFileId();
+            $this->lastFinalizeSize = $argument->getSizeBytes();
+
+            return okUnary(new FinalizeUploadResponse());
+        }
+    };
+
+    $service = new StorageService(offlineUdbProjectForSequenceGate(), $stub);
+    $put = function (string $url, string $data, string $contentType) use (&$seq): void {
+        expect($url)->toBe('https://object.example/upload/file-php-seq');
+        expect($data)->toBe('hello from php');
+        expect($contentType)->toBe('text/plain');
+        $seq[] = 'PUT';
+    };
+
+    $service->uploadFile('hello.txt', 'hello from php', ['contentType' => 'text/plain'], httpPut: $put);
+
+    expect($seq)->toBe(loadWorkflowSequenceFixture('StorageFacade.uploadFile'));
+    expect($lastFinalizeFileId)->toBe('file-php-seq');
+    expect($lastFinalizeSize)->toBe(strlen('hello from php'));
+});
+
+it('shared workflow-sequences fixture pins the uploadFile contract PHP implements', function () {
+    expect(loadWorkflowSequenceFixture('StorageFacade.uploadFile'))
+        ->toBe(['RegisterUpload', 'PUT', 'FinalizeUpload']);
+
+    // The PHP wrapper that realizes it exposes the injectable PUT seam used to
     // verify the middle step without a live object store / broker.
     expect(method_exists(StorageService::class, 'uploadFile'))->toBeTrue('StorageService::uploadFile() missing');
     $params = (new ReflectionMethod(StorageService::class, 'uploadFile'))->getParameters();

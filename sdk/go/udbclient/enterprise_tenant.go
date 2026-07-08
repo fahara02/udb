@@ -3,7 +3,7 @@ package udbclient
 import "fmt"
 
 // TenantState makes the tenant-code → canonical-UUID transition explicit
-// (critic.md §15). The human tenant code (e.g. "acme", "medpac") is only a
+// (critic.md §15). The human tenant code (e.g. "acme", "billing") is only a
 // pre-login hint; after login the broker resolves and verifies the canonical
 // tenant UUID, and THAT is the value every tenant-scoped record/filter must use.
 // Conflating the two is a subtle, high-risk bug (reads miss, writes stamp an

@@ -140,6 +140,17 @@ function fakeCore(stub) {
     await node_assert_1.strict.rejects(() => core.unary(DATA_BROKER, "Upsert", { idempotency_key: "   " }));
     node_assert_1.strict.equal(calls, 1);
 });
+(0, node_test_1.test)("replay-safe mutation with CONTEXT-ONLY idempotency key is not retried", async () => {
+    let calls = 0;
+    const core = fakeCore({
+        Upsert(_request, _metadata, _options, cb) {
+            calls += 1;
+            cb(unavailable(), null);
+        },
+    });
+    await node_assert_1.strict.rejects(() => core.unary(DATA_BROKER, "Upsert", { context: { idempotency_key: "ctx-key" } }), (err) => err instanceof generatedClient_1.UdbError && err.code === grpc.status.UNAVAILABLE);
+    node_assert_1.strict.equal(calls, 1);
+});
 (0, node_test_1.test)("non-replay-safe mutation is not retried even WITH an idempotency key", async () => {
     let calls = 0;
     const core = fakeCore({

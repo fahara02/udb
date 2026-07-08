@@ -17,17 +17,18 @@ on the same public client contract.
 ```bash
 node sdk-conformance/run.mjs
 node sdk-conformance/run.mjs go python
-node sdk-conformance/run.mjs typescript python go csharp java php
+node sdk-conformance/run.mjs metadata typescript python go csharp java php
 ```
 
-When languages are explicitly named, missing tooling or failing tests are treated
-as failures. CI uses explicit language names.
+When languages or focused contract gates such as `error-details` are explicitly
+named, missing tooling or failing tests are treated as failures. CI uses
+explicit language names.
 
 ## What It Checks
 
 | Area | Contract |
 |---|---|
-| Metadata | All SDKs emit the same UDB metadata header names |
+| Metadata | All SDKs emit the same UDB metadata header names and generated alias/operationId identity maps |
 | Credentials | Bearer tokens use `authorization`; API keys use `x-api-key` |
 | Authz | SDK helpers populate requested scopes consistently |
 | Cache | Authz decision TTL behavior is consistent |

@@ -8,6 +8,7 @@ using NotificationV1 = udb.core.Notification.Services.V1;
 using StorageV1 = udb.core.Storage.Services.V1;
 using TenantV1 = udb.core.Tenant.Services.V1;
 using WebRtcV1 = udb.core.Webrtc.Services.V1;
+using AuthnV1 = udb.core.Authn.Services.V1;
 
 namespace Udb.Client;
 
@@ -73,8 +74,9 @@ public sealed class UdbProject : IAsyncDisposable, IDisposable
     private readonly GrpcChannel _webrtcChannel;
     private readonly bool _separateAuthChannel;
     private readonly bool _separateWebrtcChannel;
-    private readonly UdbMetadata _metadata;
+    private UdbMetadata _metadata;
     private readonly UdbCredentials _credentials;
+    private readonly object _adoptLock = new();
 
     private UdbProject(UdbProjectConfig config)
     {
@@ -193,6 +195,52 @@ public sealed class UdbProject : IAsyncDisposable, IDisposable
     public void SetCredentials(string? bearerToken, string? apiKey = null)
         => _credentials.Set(bearerToken, apiKey ?? _credentials.ApiKey);
 
+    /// <summary>
+    /// Login, always authenticate the minted bearer, then adopt the canonical
+    /// tenant/project from the verified principal across future calls.
+    /// </summary>
+    public async Task<AuthnV1.AuthnResponse> LoginAndAdoptTenantAsync(
+        AuthnV1.LoginRequest request, CancellationToken ct = default)
+    {
+        var login = await Auth.LoginAsync(request, ct);
+        var token = string.IsNullOrWhiteSpace(login.AccessToken) ? login.SessionToken : login.AccessToken;
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            throw new InvalidOperationException(
+                $"udb: Login returned no access token (MFA required: {login.MfaRequired})");
+        }
+
+        var verified = await Auth.AuthenticateBearerAsync(token, ct);
+        var principal = verified.Principal;
+        if (principal is null)
+        {
+            throw new InvalidOperationException("udb: AuthenticateBearer returned no principal");
+        }
+
+        var adopted = _metadata with
+        {
+            TenantId = string.IsNullOrWhiteSpace(principal.TenantId) ? _metadata.TenantId : principal.TenantId,
+            ProjectId = string.IsNullOrWhiteSpace(principal.ProjectId) ? _metadata.ProjectId : principal.ProjectId,
+            UserId = string.IsNullOrWhiteSpace(principal.UserId) ? _metadata.UserId : principal.UserId,
+            BearerToken = token,
+            ApiKey = _credentials.ApiKey,
+        };
+
+        lock (_adoptLock)
+        {
+            _metadata = adopted;
+            _credentials.Set(token, _credentials.ApiKey);
+            Auth.UpdateMetadata(adopted);
+        }
+        return verified;
+    }
+
+    public Task<AuthnV1.AuthnResponse> LoginAndAdoptTenantAsync(
+        string username, string password, CancellationToken ct = default)
+        => LoginAndAdoptTenantAsync(
+            new AuthnV1.LoginRequest { Username = username ?? string.Empty, Password = password ?? string.Empty },
+            ct);
+
     // ── first-class accessors ───────────────────────────────────────────────
     /// <summary>Raw data-plane broker client (Select/Upsert/etc.).</summary>
     public DataBroker.DataBrokerClient Data { get; }
@@ -232,6 +280,16 @@ public sealed class UdbProject : IAsyncDisposable, IDisposable
     /// <summary>Run an UPSERT through the data broker with the shared metadata.</summary>
     public Task<MutationResponse> UpsertAsync(UpsertRequest request, CancellationToken ct = default)
         => Data.UpsertAsync(request, Headers(), cancellationToken: ct).ResponseAsync;
+
+    /// <summary>Run a DELETE through the data broker with the shared metadata.</summary>
+    public Task<MutationResponse> DeleteAsync(DeleteRequest request, CancellationToken ct = default)
+        => Data.DeleteAsync(request, Headers(), cancellationToken: ct).ResponseAsync;
+
+    public UdbEntityHandle Entity(string messageType, params string[] key)
+        => UdbEntityHandle.For(messageType, key, () => _metadata, SelectAsync, UpsertAsync, DeleteAsync);
+
+    public UdbEntityHandle Table(string name, params string[] key)
+        => UdbEntityHandle.ForTable(name, key, () => _metadata, SelectAsync, UpsertAsync, DeleteAsync);
 
     /// <summary>
     /// Send a notification. The tenant/project/correlation fields default from

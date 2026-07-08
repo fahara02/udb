@@ -14,7 +14,7 @@ namespace Udb.Client;
 public sealed class UdbAuthClient : IAsyncDisposable
 {
     private readonly GrpcChannel? _ownedChannel;
-    private readonly UdbMetadata _metadata;
+    private UdbMetadata _metadata;
     private readonly UdbCredentials _credentials;
     private readonly AuthnV1.AuthnService.AuthnServiceClient _authn;
     private readonly AuthzV1.AuthzService.AuthzServiceClient _authz;
@@ -112,9 +112,20 @@ public sealed class UdbAuthClient : IAsyncDisposable
     /// <summary>The shared credentials holder backing this client's outbound auth headers.</summary>
     public UdbCredentials Credentials => _credentials;
 
+    /// <summary>The metadata identity currently bound to this auth client.</summary>
+    public UdbMetadata Metadata => _metadata;
+
+    internal void UpdateMetadata(UdbMetadata metadata)
+    {
+        _metadata = metadata;
+    }
+
     // ── Authentication ──────────────────────────────────────────────────────
     public Task<AuthnV1.AuthnResponse> AuthenticateAsync(AuthnV1.AuthnRequest request, CancellationToken ct = default)
         => _authn.AuthenticateAsync(request, Headers(), cancellationToken: ct).ResponseAsync;
+
+    public Task<AuthnV1.LoginResponse> LoginAsync(AuthnV1.LoginRequest request, CancellationToken ct = default)
+        => _authn.LoginAsync(request, Headers(), cancellationToken: ct).ResponseAsync;
 
     public Task<AuthnV1.AuthnResponse> AuthenticateBearerAsync(string token, CancellationToken ct = default)
         => AuthenticateAsync(new AuthnV1.AuthnRequest { BearerToken = token, TenantHint = _metadata.TenantId, ProjectHint = _metadata.ProjectId }, ct);

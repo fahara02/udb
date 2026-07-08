@@ -30,8 +30,45 @@
 // hand-written UdbClient / UdbAuthClient / UdbMetadata; it never redefines them.
 // </auto-generated>
 using Grpc.Core;
+using Google.Protobuf;
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+using System.Text;
+using System.Text.Encodings.Web;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Udb.Client.Generated;
+
+/// <summary>Descriptor-derived public API identity for one generated RPC.</summary>
+public sealed record RpcIdentity(
+    string Path,
+    string Service,
+    string WireName,
+    string ApiAlias,
+    string OperationId,
+    string OperationKind,
+    string HttpMethod,
+    string HttpPath);
+
+/// <summary>Generated public API identity table shared by all service wrappers.</summary>
+public static class GeneratedRpcIdentities
+{
+    public static IReadOnlyDictionary<string, RpcIdentity> All { get; } = Build();
+
+    private static IReadOnlyDictionary<string, RpcIdentity> Build()
+    {
+        var map = new Dictionary<string, RpcIdentity>(StringComparer.Ordinal);
+        // @@UDB_RPC_BEGIN
+        map["{{RPC_PATH}}"] = new RpcIdentity("{{RPC_PATH}}", "{{SERVICE_NAME}}", "{{RPC_WIRE_NAME}}", "{{RPC_ALIAS_SNAKE}}", "{{REST_OPERATION_ID}}", "{{RPC_OPERATION_KIND}}", "{{RPC_HTTP_METHOD}}", "{{RPC_HTTP_PATH}}");
+        // @@UDB_RPC_END
+        return map;
+    }
+}
 
 // ── Per-service robustness wrappers ─────────────────────────────────────────
 // One partial wrapper class per gRPC service. The per-service block below
@@ -89,10 +126,969 @@ public sealed partial class Generated{{SERVICE_NAME}}Client
             co => (object)_stub.{{RPC_WIRE_NAME}}Async(request, co),
             deadline,
             cancellationToken,
-            "{{RPC_OPERATION_KIND}}" == "read_only");
+            "{{RPC_OPERATION_KIND}}" == "read_only",
+            "{{RPC_REPLAY_SAFE}}" == "true",
+            (object)request);
     }
 }
 // @@UDB_RPC_END
+
+// ── Neutral-IR typed query builder (master-plan items 2.5 / 10.1) ─────────────
+//
+// A thin, typed layer that emits the broker's CANONICAL neutral-IR envelope
+// ({"ir":{"op":...}}) and sends it through the EXISTING DataBroker.GenericDispatch
+// generated wrapper. It is NOT a second client engine: it only builds a
+// GenericDispatchRequest and hands it to the same RPC raw callers use. Tenant,
+// project, and auth scope stay in request metadata / verified claims; these
+// builders never set RequestContext on the request body.
+
+/// <summary>Neutral-IR query-builder entry points for the generated C# SDK.</summary>
+public static class UdbIr
+{
+    public const string DefaultBackend = "postgres";
+
+    public static IReadOnlyDictionary<string, string> BackendRoles { get; } =
+        JsonSerializer.Deserialize<Dictionary<string, string>>({{BACKEND_ROLES_STRING}})
+        ?? new Dictionary<string, string>();
+
+    public static IReadOnlyDictionary<string, string> OrmTiers { get; } =
+        JsonSerializer.Deserialize<Dictionary<string, string>>({{ORM_TIERS_STRING}})
+        ?? new Dictionary<string, string>();
+
+    public static IReadOnlyDictionary<string, EntityBinding> Entities { get; } = BuildEntityRegistry();
+
+    private static IReadOnlyDictionary<string, EntityBinding> BuildEntityRegistry()
+    {
+        var entities = new Dictionary<string, EntityBinding>(StringComparer.Ordinal);
+        // @@UDB_ENTITY_BEGIN
+        entities["{{ENTITY_MESSAGE_TYPE}}"] = new EntityBinding(
+            "{{ENTITY_MESSAGE_TYPE}}",
+            "{{ENTITY_TABLE}}",
+            new List<string> { {{ENTITY_PRIMARY_KEYS}} },
+            new List<string> { {{ENTITY_JSON_FIELDS}} },
+            {{ENTITY_RELATIONS_JSON_STRING}},
+            "{{ENTITY_VERSION_FIELD}}",
+            "{{ENTITY_TENANT_FIELD}}",
+            "{{ENTITY_PROJECT_FIELD}}",
+            "{{ENTITY_CSHARP_TYPE}}");
+        // @@UDB_ENTITY_END
+        return entities;
+    }
+
+    public static EntityRepository Repository(string messageType)
+    {
+        if (!Entities.TryGetValue(messageType, out var binding))
+        {
+            throw new ArgumentException($"udb: unknown entity message type {messageType}", nameof(messageType));
+        }
+        return new EntityRepository(binding);
+    }
+
+    // @@UDB_ENTITY_BEGIN
+    public static EntityRepository {{ENTITY_ALIAS_PASCAL}}Repository() => Repository("{{ENTITY_MESSAGE_TYPE}}");
+    // @@UDB_ENTITY_END
+
+    public static IrQuery Query(string messageType) => new(messageType);
+
+    public static IrWriteQuery WriteTo(string messageType) => new(messageType);
+
+    public static IrDeleteQuery DeleteFrom(string messageType) => new(messageType);
+
+    public static UnitOfWork UnitOfWork() => new();
+
+    /// <summary>
+    /// Escape hatch for advanced callers that need raw GenericDispatch. The
+    /// mediated builders above are preferred. No RequestContext is set here.
+    /// </summary>
+    public static Udb.Entity.V1.GenericDispatchRequest RawDispatchRequest(
+        string backend,
+        string operation,
+        string specJson,
+        string resourceName = "")
+    {
+        return new Udb.Entity.V1.GenericDispatchRequest
+        {
+            Backend = backend,
+            Operation = operation,
+            ResourceName = resourceName,
+            SpecJson = specJson,
+        };
+    }
+
+    internal static Udb.Entity.V1.GenericDispatchRequest DispatchRequest(
+        string backend,
+        string operation,
+        string specJson)
+    {
+        return RawDispatchRequest(backend, operation, specJson);
+    }
+
+    internal static void RequireEagerIncludeBackend(string backend)
+    {
+        OrmTiers.TryGetValue(backend, out var tier);
+        if (tier != "relational")
+        {
+            throw new EagerIncludeUnsupportedBackendException(backend, tier);
+        }
+    }
+}
+
+public sealed class EagerIncludeUnsupportedBackendException : Exception
+{
+    public EagerIncludeUnsupportedBackendException(string backend, string? tier)
+        : base($"udb: backend '{backend}' is {tier ?? "unknown"}; eager include requires a relational backend")
+    {
+        Backend = backend;
+        Tier = tier;
+    }
+
+    public string Backend { get; }
+    public string? Tier { get; }
+}
+
+public sealed class UnitOfWorkEntry
+{
+    internal UnitOfWorkEntry(EntityRepository repository, IReadOnlyDictionary<string, object?> record, string snapshot)
+    {
+        Repository = repository;
+        Record = record;
+        Snapshot = snapshot;
+    }
+
+    public EntityRepository Repository { get; }
+    public IReadOnlyDictionary<string, object?> Record { get; }
+    internal string Snapshot { get; set; }
+}
+
+public class UnitOfWorkTxException : Exception
+{
+    public UnitOfWorkTxException(string message, Udb.Entity.V1.TxStatus? status = null) : base(message)
+    {
+        Status = status;
+    }
+
+    public Udb.Entity.V1.TxStatus? Status { get; }
+}
+
+public sealed class UnitOfWorkConflictException : UnitOfWorkTxException
+{
+    public UnitOfWorkConflictException(string message, Udb.Entity.V1.TxStatus? status = null) : base(message, status) {}
+}
+
+public sealed class UnitOfWorkUnsupportedBackendException : Exception
+{
+    public UnitOfWorkUnsupportedBackendException(string backend, string? role)
+        : base($"udb: backend '{backend}' is {role ?? "unknown"}; UnitOfWork requires a canonical transactional backend")
+    {
+        Backend = backend;
+        Role = role;
+    }
+
+    public string Backend { get; }
+    public string? Role { get; }
+}
+
+public sealed class UnitOfWork
+{
+    private readonly Dictionary<string, UnitOfWorkEntry> _entries = new(StringComparer.Ordinal);
+
+    public IReadOnlyDictionary<string, UnitOfWorkEntry> Entries => _entries;
+
+    public IReadOnlyDictionary<string, object?> Attach(EntityRepository repository, IReadOnlyDictionary<string, object?> record)
+    {
+        ArgumentNullException.ThrowIfNull(repository);
+        RequireVersionForTrackedWrite(repository.Binding, record);
+        _entries[EntityIdentity(repository.Binding, record)] = new UnitOfWorkEntry(repository, record, StableRecordJson(record));
+        return record;
+    }
+
+    public IReadOnlyDictionary<string, object?> Track(EntityRepository repository, IReadOnlyDictionary<string, object?> record) =>
+        Attach(repository, record);
+
+    public IReadOnlyList<UnitOfWorkEntry> DirtyEntries() =>
+        _entries.Values.Where(entry => StableRecordJson(entry.Record) != entry.Snapshot).ToList();
+
+    public IReadOnlyList<Udb.Entity.V1.Mutation> TxMutations() =>
+        DirtyEntries()
+            .Select(entry => new Udb.Entity.V1.Mutation
+            {
+                Operation = "upsert",
+                MessageType = entry.Repository.Binding.MessageType,
+                RecordJson = ByteString.CopyFromUtf8(StableRecordJson(entry.Record)),
+            })
+            .ToList();
+
+    public Udb.Entity.V1.Mutation CommitMutation() => new() { Commit = true };
+
+    public Udb.Entity.V1.Mutation RollbackMutation() => new() { Rollback = true };
+
+    public IReadOnlyList<Udb.Entity.V1.Mutation> TxCommitBatch(string backend = UdbIr.DefaultBackend)
+    {
+        RequireTransactionalBackend(backend);
+        var mutations = TxMutations().ToList();
+        mutations.Add(CommitMutation());
+        return mutations;
+    }
+
+    public void RequireTransactionalBackend(string backend = UdbIr.DefaultBackend)
+    {
+        UdbIr.BackendRoles.TryGetValue(backend, out var role);
+        if (role is not ("canonical" or "both"))
+        {
+            throw new UnitOfWorkUnsupportedBackendException(backend, role);
+        }
+    }
+
+    public void ValidateTxStatuses(IEnumerable<Udb.Entity.V1.TxStatus> statuses)
+    {
+        foreach (var status in statuses)
+        {
+            if (!status.State.ToString().Contains("Error", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+            var message = string.IsNullOrEmpty(status.Message) ? "udb: unit-of-work transaction failed" : status.Message;
+            if (IsTxConflictMessage(message))
+            {
+                throw new UnitOfWorkConflictException(message, status);
+            }
+            throw new UnitOfWorkTxException(message, status);
+        }
+    }
+
+    public async Task<IReadOnlyList<Udb.Entity.V1.TxStatus>> FlushAsync(
+        GeneratedDataBrokerClient dataBroker,
+        string backend = UdbIr.DefaultBackend,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(dataBroker);
+        var call = (AsyncDuplexStreamingCall<Udb.Entity.V1.Mutation, Udb.Entity.V1.TxStatus>)
+            dataBroker.BeginTx(deadline, cancellationToken);
+        var statuses = new List<Udb.Entity.V1.TxStatus>();
+        try
+        {
+            foreach (var mutation in TxCommitBatch(backend))
+            {
+                await call.RequestStream.WriteAsync(mutation).ConfigureAwait(false);
+            }
+            await call.RequestStream.CompleteAsync().ConfigureAwait(false);
+            while (await call.ResponseStream.MoveNext(cancellationToken).ConfigureAwait(false))
+            {
+                statuses.Add(call.ResponseStream.Current);
+            }
+        }
+        catch (RpcException ex)
+        {
+            throw GeneratedServiceBase.MapStreamError("/udb.services.v1.DataBroker/BeginTx", ex);
+        }
+        finally
+        {
+            call.Dispose();
+        }
+        ValidateTxStatuses(statuses);
+        MarkClean();
+        return statuses;
+    }
+
+    public void MarkClean()
+    {
+        foreach (var entry in _entries.Values)
+        {
+            entry.Snapshot = StableRecordJson(entry.Record);
+        }
+    }
+
+    private static void RequireVersionForTrackedWrite(EntityBinding binding, IReadOnlyDictionary<string, object?> record)
+    {
+        if (!string.IsNullOrEmpty(binding.VersionField) && !record.ContainsKey(binding.VersionField))
+        {
+            throw new ArgumentException($"udb: unit-of-work record for {binding.MessageType} missing version field {binding.VersionField}", nameof(record));
+        }
+    }
+
+    private static string EntityIdentity(EntityBinding binding, IReadOnlyDictionary<string, object?> record)
+    {
+        var scopeParts = new List<string>();
+        foreach (var field in new[] { binding.TenantField, binding.ProjectField }.Where(field => !string.IsNullOrEmpty(field)))
+        {
+            if (!record.ContainsKey(field))
+            {
+                throw new ArgumentException($"udb: unit-of-work record for {binding.MessageType} missing scope field {field}", nameof(record));
+            }
+            scopeParts.Add($"{field}={JsonSerializer.Serialize(record[field])}");
+        }
+        var parts = new List<string>();
+        foreach (var field in binding.PrimaryKeys)
+        {
+            if (!record.ContainsKey(field))
+            {
+                throw new ArgumentException($"udb: unit-of-work record for {binding.MessageType} missing primary key field {field}", nameof(record));
+            }
+            parts.Add(JsonSerializer.Serialize(record[field]));
+        }
+        return $"{binding.MessageType}:{string.Join(":", scopeParts)}:{string.Join(":", parts)}";
+    }
+
+    private static string StableRecordJson(IReadOnlyDictionary<string, object?> record)
+    {
+        var sorted = new SortedDictionary<string, object?>(StringComparer.Ordinal);
+        foreach (var item in record)
+        {
+            sorted[item.Key] = item.Value;
+        }
+        return JsonSerializer.Serialize(sorted);
+    }
+
+    private static bool IsTxConflictMessage(string message)
+    {
+        var lower = message.ToLowerInvariant();
+        return lower.Contains("aborted") || lower.Contains("version") || lower.Contains("conflict");
+    }
+}
+
+internal static class IrJson
+{
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        WriteIndented = false,
+    };
+
+    private static readonly IReadOnlyDictionary<string, string> ComparisonTokens =
+        new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["eq"] = "eq",
+            ["ne"] = "ne",
+            ["gt"] = "gt",
+            ["ge"] = "ge",
+            ["lt"] = "lt",
+            ["le"] = "le",
+            ["like"] = "like",
+        };
+
+    public static string Quote(string value) => JsonSerializer.Serialize(value, JsonOptions);
+
+    public static void WriteLogicalValue(StringBuilder sb, object? value)
+    {
+        switch (value)
+        {
+            case null:
+                sb.Append("\"Null\"");
+                return;
+            case bool b:
+                sb.Append("{\"Bool\":").Append(b ? "true" : "false").Append('}');
+                return;
+            case byte or sbyte or short or ushort or int or uint or long or ulong:
+                sb.Append("{\"Int\":").Append(Convert.ToString(value, CultureInfo.InvariantCulture)).Append('}');
+                return;
+            case float or double or decimal:
+                sb.Append("{\"Float\":").Append(Convert.ToString(value, CultureInfo.InvariantCulture)).Append('}');
+                return;
+            case string s:
+                sb.Append("{\"String\":").Append(Quote(s)).Append('}');
+                return;
+            case byte[] bytes:
+                sb.Append("{\"Bytes\":[");
+                for (var i = 0; i < bytes.Length; i++)
+                {
+                    if (i > 0) sb.Append(',');
+                    sb.Append(bytes[i]);
+                }
+                sb.Append("]}");
+                return;
+            case DateTimeOffset dto:
+                sb.Append("{\"Timestamp\":").Append(Quote(dto.UtcDateTime.ToString("O", CultureInfo.InvariantCulture))).Append('}');
+                return;
+            case DateTime dt:
+                sb.Append("{\"Timestamp\":").Append(Quote(dt.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture))).Append('}');
+                return;
+            case System.Collections.IDictionary:
+                sb.Append("{\"Json\":").Append(JsonSerializer.Serialize(value, JsonOptions)).Append('}');
+                return;
+            case System.Collections.IEnumerable items when value is not string:
+                sb.Append("{\"Array\":[");
+                var first = true;
+                foreach (var item in items)
+                {
+                    if (!first) sb.Append(',');
+                    first = false;
+                    WriteLogicalValue(sb, item);
+                }
+                sb.Append("]}");
+                return;
+            default:
+                sb.Append("{\"Json\":").Append(JsonSerializer.Serialize(value, JsonOptions)).Append('}');
+                return;
+        }
+    }
+
+    public static string Comparison(string field, string op, object? value)
+    {
+        if (!ComparisonTokens.TryGetValue(op, out var token))
+        {
+            throw new ArgumentException($"udb: unsupported IR operator '{op}'", nameof(op));
+        }
+        var sb = new StringBuilder("{\"Comparison\":{\"field\":");
+        sb.Append(Quote(field)).Append(",\"op\":").Append(Quote(token)).Append(",\"value\":");
+        WriteLogicalValue(sb, value);
+        sb.Append("}}");
+        return sb.ToString();
+    }
+
+    public static string InList(string field, IEnumerable<object?> values)
+    {
+        var sb = new StringBuilder("{\"InList\":{\"field\":");
+        sb.Append(Quote(field)).Append(",\"values\":[");
+        var first = true;
+        foreach (var value in values)
+        {
+            if (!first) sb.Append(',');
+            first = false;
+            WriteLogicalValue(sb, value);
+        }
+        sb.Append("]}}");
+        return sb.ToString();
+    }
+
+    public static string Filter(IReadOnlyList<string> predicates)
+    {
+        if (predicates.Count == 0) return "";
+        if (predicates.Count == 1) return predicates[0];
+        return "{\"And\":[" + string.Join(",", predicates) + "]}";
+    }
+
+    public static string AndFilter(IReadOnlyList<string> predicates) =>
+        "{\"And\":[" + string.Join(",", predicates) + "]}";
+
+    public static string OrFilter(IReadOnlyList<string> predicates) =>
+        "{\"Or\":[" + string.Join(",", predicates) + "]}";
+
+    public static void WriteStringArray(StringBuilder sb, IReadOnlyList<string> values)
+    {
+        sb.Append('[');
+        for (var i = 0; i < values.Count; i++)
+        {
+            if (i > 0) sb.Append(',');
+            sb.Append(Quote(values[i]));
+        }
+        sb.Append(']');
+    }
+
+    public static void WriteLogicalRecord(StringBuilder sb, IReadOnlyDictionary<string, object?> row)
+    {
+        sb.Append('{');
+        var first = true;
+        foreach (var item in row.OrderBy(kv => kv.Key, StringComparer.Ordinal))
+        {
+            if (!first) sb.Append(',');
+            first = false;
+            sb.Append(Quote(item.Key)).Append(':');
+            WriteLogicalValue(sb, item.Value);
+        }
+        sb.Append('}');
+    }
+}
+
+/// <summary>Shared predicate accumulator for read/delete IR builders.</summary>
+public abstract class IrPredicateBuilder<TSelf>
+    where TSelf : IrPredicateBuilder<TSelf>
+{
+    protected readonly List<string> Predicates = new();
+
+    public TSelf Where(string field, string op, object? value)
+    {
+        if (op == "in")
+        {
+            return WhereIn(
+                field,
+                value is System.Collections.IEnumerable xs && value is not string
+                    ? xs.Cast<object?>()
+                    : new object?[] { value });
+        }
+        Predicates.Add(IrJson.Comparison(field, op, value));
+        return (TSelf)this;
+    }
+
+    public TSelf WhereIn(string field, params object?[] values) => WhereIn(field, (IEnumerable<object?>)values);
+
+    public TSelf WhereIn(string field, IEnumerable<object?> values)
+    {
+        Predicates.Add(IrJson.InList(field, values));
+        return (TSelf)this;
+    }
+
+    public TSelf WhereFilter(string filter)
+    {
+        Predicates.Add(filter);
+        return (TSelf)this;
+    }
+}
+
+/// <summary>Typed neutral-IR read builder emitting a LogicalRead envelope.</summary>
+public sealed class IrQuery : IrPredicateBuilder<IrQuery>
+{
+    private readonly string _messageType;
+    private readonly List<string> _projection = new();
+    private readonly List<(string Field, string Direction)> _sorts = new();
+    private readonly List<string> _includes = new();
+    private int? _limit;
+    private int? _offset;
+
+    internal IrQuery(string messageType) => _messageType = messageType;
+
+    public IrQuery Select(params string[] fields)
+    {
+        _projection.Clear();
+        _projection.AddRange(fields);
+        return this;
+    }
+
+    public IrQuery OrderBy(string field, string direction = "asc")
+    {
+        _sorts.Add((field, direction));
+        return this;
+    }
+
+    public IrQuery Include(string relation)
+    {
+        if (string.IsNullOrEmpty(relation))
+        {
+            throw new ArgumentException("udb: include relation name is required", nameof(relation));
+        }
+        _includes.Add(relation);
+        return this;
+    }
+
+    public IrQuery Limit(int n) { _limit = n; return this; }
+
+    public IrQuery Offset(int n) { _offset = n; return this; }
+
+    public string ToSpecJson()
+    {
+        var sb = new StringBuilder("{\"ir\":{\"op\":\"read\",\"message_type\":");
+        sb.Append(IrJson.Quote(_messageType));
+        var filter = IrJson.Filter(Predicates);
+        if (filter.Length > 0) sb.Append(",\"filter\":").Append(filter);
+        if (_projection.Count > 0)
+        {
+            sb.Append(",\"projection\":{\"fields\":");
+            IrJson.WriteStringArray(sb, _projection);
+            sb.Append('}');
+        }
+        if (_sorts.Count > 0)
+        {
+            sb.Append(",\"sort\":[");
+            for (var i = 0; i < _sorts.Count; i++)
+            {
+                if (i > 0) sb.Append(',');
+                sb.Append("{\"field\":").Append(IrJson.Quote(_sorts[i].Field))
+                    .Append(",\"direction\":").Append(IrJson.Quote(_sorts[i].Direction)).Append('}');
+            }
+            sb.Append(']');
+        }
+        if (_includes.Count > 0)
+        {
+            sb.Append(",\"include\":[");
+            for (var i = 0; i < _includes.Count; i++)
+            {
+                if (i > 0) sb.Append(',');
+                sb.Append("{\"relation\":").Append(IrJson.Quote(_includes[i])).Append('}');
+            }
+            sb.Append(']');
+        }
+        if (_limit.HasValue || _offset.HasValue)
+        {
+            sb.Append(",\"pagination\":{");
+            var wrote = false;
+            if (_limit.HasValue) { sb.Append("\"limit\":").Append(_limit.Value); wrote = true; }
+            if (_offset.HasValue)
+            {
+                if (wrote) sb.Append(',');
+                sb.Append("\"offset\":").Append(_offset.Value);
+            }
+            sb.Append('}');
+        }
+        sb.Append("}}");
+        return sb.ToString();
+    }
+
+    public Udb.Entity.V1.GenericDispatchRequest ToRequest(string backend = UdbIr.DefaultBackend)
+    {
+        if (_includes.Count > 0)
+        {
+            UdbIr.RequireEagerIncludeBackend(backend);
+        }
+        return UdbIr.DispatchRequest(backend, "query", ToSpecJson());
+    }
+
+    public Task<dynamic> ExecuteAsync(
+        GeneratedDataBrokerClient dataBroker,
+        string backend = UdbIr.DefaultBackend,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+        => dataBroker.GenericDispatchAsync(ToRequest(backend), deadline, cancellationToken);
+}
+
+/// <summary>Typed neutral-IR write builder emitting a LogicalWrite envelope.</summary>
+public sealed class IrWriteQuery
+{
+    private readonly string _messageType;
+    private readonly List<IReadOnlyDictionary<string, object?>> _rows = new();
+    private readonly List<string> _returnFields = new();
+    private string? _conflict;
+
+    internal IrWriteQuery(string messageType) => _messageType = messageType;
+
+    public IrWriteQuery Record(IReadOnlyDictionary<string, object?> row) { _rows.Add(row); return this; }
+
+    public IrWriteQuery Records(IEnumerable<IReadOnlyDictionary<string, object?>> rows)
+    {
+        _rows.AddRange(rows);
+        return this;
+    }
+
+    public IrWriteQuery Merge() { _conflict = "{\"kind\":\"replace\"}"; return this; }
+
+    public IrWriteQuery IgnoreConflicts() { _conflict = "{\"kind\":\"ignore\"}"; return this; }
+
+    public IrWriteQuery UpdateOnConflict(IEnumerable<string> fields, IEnumerable<string>? conflictOn = null)
+    {
+        var fieldList = fields.ToList();
+        var conflictList = conflictOn?.ToList() ?? new List<string>();
+        var sb = new StringBuilder("{\"kind\":\"update\",\"fields\":");
+        IrJson.WriteStringArray(sb, fieldList);
+        if (conflictList.Count > 0)
+        {
+            sb.Append(",\"conflict_on\":");
+            IrJson.WriteStringArray(sb, conflictList);
+        }
+        sb.Append('}');
+        _conflict = sb.ToString();
+        return this;
+    }
+
+    public IrWriteQuery Returning(params string[] fields) { _returnFields.AddRange(fields); return this; }
+
+    public string ToSpecJson()
+    {
+        if (_rows.Count == 0) throw new InvalidOperationException("udb: write requires at least one Record(...)");
+        var sb = new StringBuilder("{\"ir\":{\"op\":\"write\",\"message_type\":");
+        sb.Append(IrJson.Quote(_messageType)).Append(",\"records\":[");
+        for (var i = 0; i < _rows.Count; i++)
+        {
+            if (i > 0) sb.Append(',');
+            IrJson.WriteLogicalRecord(sb, _rows[i]);
+        }
+        sb.Append(']');
+        if (_conflict is not null) sb.Append(",\"conflict\":").Append(_conflict);
+        if (_returnFields.Count > 0)
+        {
+            sb.Append(",\"return_fields\":");
+            IrJson.WriteStringArray(sb, _returnFields);
+        }
+        sb.Append("}}");
+        return sb.ToString();
+    }
+
+    public Udb.Entity.V1.GenericDispatchRequest ToRequest(string backend = UdbIr.DefaultBackend)
+        => UdbIr.DispatchRequest(backend, "mutate", ToSpecJson());
+
+    public Task<dynamic> ExecuteAsync(
+        GeneratedDataBrokerClient dataBroker,
+        string backend = UdbIr.DefaultBackend,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+        => dataBroker.GenericDispatchAsync(ToRequest(backend), deadline, cancellationToken);
+}
+
+/// <summary>Typed neutral-IR delete builder. At least one predicate is required.</summary>
+public sealed class IrDeleteQuery : IrPredicateBuilder<IrDeleteQuery>
+{
+    private readonly string _messageType;
+    private readonly List<string> _returnFields = new();
+
+    internal IrDeleteQuery(string messageType) => _messageType = messageType;
+
+    public IrDeleteQuery Returning(params string[] fields) { _returnFields.AddRange(fields); return this; }
+
+    public string ToSpecJson()
+    {
+        var filter = IrJson.Filter(Predicates);
+        if (filter.Length == 0)
+        {
+            throw new InvalidOperationException("udb: delete requires at least one Where(...) predicate (no delete-everything path)");
+        }
+        var sb = new StringBuilder("{\"ir\":{\"op\":\"delete\",\"message_type\":");
+        sb.Append(IrJson.Quote(_messageType)).Append(",\"filter\":").Append(filter);
+        if (_returnFields.Count > 0)
+        {
+            sb.Append(",\"return_fields\":");
+            IrJson.WriteStringArray(sb, _returnFields);
+        }
+        sb.Append("}}");
+        return sb.ToString();
+    }
+
+    public Udb.Entity.V1.GenericDispatchRequest ToRequest(string backend = UdbIr.DefaultBackend)
+        => UdbIr.DispatchRequest(backend, "mutate", ToSpecJson());
+
+    public Task<dynamic> ExecuteAsync(
+        GeneratedDataBrokerClient dataBroker,
+        string backend = UdbIr.DefaultBackend,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+        => dataBroker.GenericDispatchAsync(ToRequest(backend), deadline, cancellationToken);
+}
+
+public sealed record EntityBinding(
+    string MessageType,
+    string Table,
+    IReadOnlyList<string> PrimaryKeys,
+    IReadOnlyList<string> Fields,
+    string RelationsJson,
+    string VersionField,
+    string TenantField,
+    string ProjectField,
+    string CsharpType);
+
+public sealed class EntityRelationBinding
+{
+    [JsonPropertyName("name")]
+    public string Name { get; init; } = "";
+
+    [JsonPropertyName("kind")]
+    public string Kind { get; init; } = "";
+
+    [JsonPropertyName("local_fields")]
+    public IReadOnlyList<string> LocalFields { get; init; } = Array.Empty<string>();
+
+    [JsonPropertyName("target_message_type")]
+    public string TargetMessageType { get; init; } = "";
+
+    [JsonPropertyName("target_table")]
+    public string TargetTable { get; init; } = "";
+
+    [JsonPropertyName("target_fields")]
+    public IReadOnlyList<string> TargetFields { get; init; } = Array.Empty<string>();
+
+    [JsonPropertyName("on_delete")]
+    public string? OnDelete { get; init; }
+
+    [JsonPropertyName("on_update")]
+    public string? OnUpdate { get; init; }
+}
+
+public sealed class EntityRepository
+{
+    private IReadOnlyList<EntityRelationBinding>? _relations;
+
+    public EntityRepository(EntityBinding binding)
+    {
+        Binding = binding ?? throw new ArgumentNullException(nameof(binding));
+        if (Binding.PrimaryKeys.Count == 0)
+        {
+            throw new ArgumentException($"udb: entity {Binding.MessageType} has no descriptor primary key", nameof(binding));
+        }
+    }
+
+    public EntityBinding Binding { get; }
+
+    public IrQuery Query() => UdbIr.Query(Binding.MessageType);
+
+    public IReadOnlyList<EntityRelationBinding> Relations()
+    {
+        _relations ??= string.IsNullOrWhiteSpace(Binding.RelationsJson)
+            ? Array.Empty<EntityRelationBinding>()
+            : JsonSerializer.Deserialize<List<EntityRelationBinding>>(Binding.RelationsJson) ?? new List<EntityRelationBinding>();
+        return _relations;
+    }
+
+    public EntityRelationBinding? Relation(string name) =>
+        Relations().FirstOrDefault(rel => rel.Name == name);
+
+    public EntityRelationBinding RequireRelation(string name)
+    {
+        var rel = Relation(name);
+        if (rel is null)
+        {
+            throw new ArgumentException($"udb: unknown relation {name} on entity {Binding.MessageType}", nameof(name));
+        }
+        if (rel.LocalFields.Count == 0 || rel.LocalFields.Count != rel.TargetFields.Count)
+        {
+            throw new InvalidOperationException($"udb: relation {name} on entity {Binding.MessageType} has invalid field mapping");
+        }
+        if (string.IsNullOrWhiteSpace(rel.TargetMessageType))
+        {
+            throw new InvalidOperationException($"udb: relation {name} on entity {Binding.MessageType} has no target entity");
+        }
+        return rel;
+    }
+
+    public IrQuery RelationQuery(string name, IReadOnlyDictionary<string, object?> parent)
+    {
+        var rel = RequireRelation(name);
+        var q = UdbIr.Query(rel.TargetMessageType);
+        for (var idx = 0; idx < rel.LocalFields.Count; idx++)
+        {
+            var localField = rel.LocalFields[idx];
+            if (!parent.ContainsKey(localField))
+            {
+                throw new ArgumentException($"udb: relation {name} missing parent field {localField}", nameof(parent));
+            }
+            q.Where(rel.TargetFields[idx], "eq", parent[localField]);
+        }
+        return q;
+    }
+
+    public IrQuery RelationBatchQuery(string name, IReadOnlyList<IReadOnlyDictionary<string, object?>> parents)
+    {
+        var rel = RequireRelation(name);
+        if (rel.LocalFields.Count != rel.TargetFields.Count)
+        {
+            throw new InvalidOperationException($"udb: relation {name} on entity {Binding.MessageType} has invalid field mapping");
+        }
+        if (parents.Count == 0)
+        {
+            throw new ArgumentException($"udb: relation {name} batch query requires at least one parent", nameof(parents));
+        }
+        if (rel.LocalFields.Count == 1)
+        {
+            var localField = rel.LocalFields[0];
+            var values = new List<object?>();
+            var seen = new HashSet<string>();
+            foreach (var parent in parents)
+            {
+                if (!parent.ContainsKey(localField))
+                {
+                    throw new ArgumentException($"udb: relation {name} missing parent field {localField}", nameof(parents));
+                }
+                var value = parent[localField];
+                var key = JsonSerializer.Serialize(value);
+                if (seen.Add(key))
+                {
+                    values.Add(value);
+                }
+            }
+            return UdbIr.Query(rel.TargetMessageType).WhereIn(rel.TargetFields[0], values);
+        }
+        var branches = new List<string>();
+        var seenBranches = new HashSet<string>();
+        foreach (var parent in parents)
+        {
+            var comparisons = new List<string>();
+            for (var idx = 0; idx < rel.LocalFields.Count; idx++)
+            {
+                var localField = rel.LocalFields[idx];
+                if (!parent.ContainsKey(localField))
+                {
+                    throw new ArgumentException($"udb: relation {name} missing parent field {localField}", nameof(parents));
+                }
+                comparisons.Add(IrJson.Comparison(rel.TargetFields[idx], "eq", parent[localField]));
+            }
+            var branch = IrJson.AndFilter(comparisons);
+            if (seenBranches.Add(branch))
+            {
+                branches.Add(branch);
+            }
+        }
+        return UdbIr.Query(rel.TargetMessageType).WhereFilter(IrJson.OrFilter(branches));
+    }
+
+{{ENTITY_CSHARP_RELATION_ACCESSORS}}
+
+    public Task<dynamic> FindAsync(
+        IReadOnlyDictionary<string, object?> key,
+        GeneratedDataBrokerClient dataBroker,
+        string backend = UdbIr.DefaultBackend,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        var q = Query().Limit(1);
+        foreach (var field in Binding.PrimaryKeys)
+        {
+            if (!key.ContainsKey(field))
+            {
+                throw new ArgumentException($"udb: missing primary key field {field}", nameof(key));
+            }
+            q.Where(field, "eq", key[field]);
+        }
+        return q.ExecuteAsync(dataBroker, backend, deadline, cancellationToken);
+    }
+
+    public Task<dynamic> FirstAsync(
+        IrQuery query,
+        GeneratedDataBrokerClient dataBroker,
+        string backend = UdbIr.DefaultBackend,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+        => query.Limit(1).ExecuteAsync(dataBroker, backend, deadline, cancellationToken);
+
+    public Task<dynamic> AllAsync(
+        IrQuery query,
+        GeneratedDataBrokerClient dataBroker,
+        string backend = UdbIr.DefaultBackend,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+        => query.ExecuteAsync(dataBroker, backend, deadline, cancellationToken);
+
+    public Task<dynamic> UpsertAsync(
+        IReadOnlyDictionary<string, object?> record,
+        GeneratedDataBrokerClient dataBroker,
+        string backend = UdbIr.DefaultBackend,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateRecord(record);
+        foreach (var field in Binding.PrimaryKeys)
+        {
+            if (!record.ContainsKey(field))
+            {
+                throw new ArgumentException($"udb: missing primary key field {field}", nameof(record));
+            }
+        }
+        var updateFields = record.Keys.Where(field => !Binding.PrimaryKeys.Contains(field)).ToList();
+        if (updateFields.Count == 0)
+        {
+            throw new ArgumentException("udb: upsert requires at least one non-primary-key field", nameof(record));
+        }
+        return UdbIr.WriteTo(Binding.MessageType)
+            .Record(record)
+            .UpdateOnConflict(updateFields, Binding.PrimaryKeys)
+            .ExecuteAsync(dataBroker, backend, deadline, cancellationToken);
+    }
+
+    public Task<dynamic> DeleteAsync(
+        IReadOnlyDictionary<string, object?> key,
+        GeneratedDataBrokerClient dataBroker,
+        string backend = UdbIr.DefaultBackend,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        var d = UdbIr.DeleteFrom(Binding.MessageType);
+        foreach (var field in Binding.PrimaryKeys)
+        {
+            if (!key.ContainsKey(field))
+            {
+                throw new ArgumentException($"udb: missing primary key field {field}", nameof(key));
+            }
+            d.Where(field, "eq", key[field]);
+        }
+        return d.ExecuteAsync(dataBroker, backend, deadline, cancellationToken);
+    }
+
+    private void ValidateRecord(IReadOnlyDictionary<string, object?> record)
+    {
+        if (Binding.Fields.Count == 0) return;
+        foreach (var field in record.Keys)
+        {
+            if (!Binding.Fields.Contains(field))
+            {
+                throw new ArgumentException($"udb: field {field} is not declared on entity {Binding.MessageType}", nameof(record));
+            }
+        }
+    }
+}
 
 // ── Server-streaming RPC wrappers (single attempt) ──────────────────────────
 // @@UDB_RPC_BEGIN kind=server_streaming

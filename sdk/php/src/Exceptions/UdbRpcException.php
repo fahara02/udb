@@ -76,6 +76,35 @@ final class UdbRpcException extends UdbException
     }
 
     /**
+     * Structured validation failures from the decoded ErrorDetail trailer.
+     *
+     * @return array<int, array{field: string, description: string}>
+     */
+    public function fieldViolations(): array
+    {
+        $ed = $this->errorDetail;
+        if ($ed === null || ! method_exists($ed, 'getFieldViolations')) {
+            return [];
+        }
+        try {
+            $violations = $ed->getFieldViolations();
+        } catch (\Throwable) {
+            return [];
+        }
+        $out = [];
+        foreach ($violations as $violation) {
+            $out[] = [
+                'field' => method_exists($violation, 'getField') ? (string) $violation->getField() : '',
+                'description' => method_exists($violation, 'getDescription')
+                    ? (string) $violation->getDescription()
+                    : '',
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
      * Convenience constructor from a gRPC status value as returned
      * by `\Grpc\UnaryCall::wait()`'s second return value.
      *
@@ -97,7 +126,7 @@ final class UdbRpcException extends UdbException
         // ErrorDetail so EVERY non-OK path (hand-written facade AND the generated
         // client's mapError) surfaces the same typed diagnostics — no more
         // dropped decode.
-        $detail = self::decodeErrorDetail($status);
+        $detail = self::decodeErrorDetail($status) ?? self::synthesizeTransportErrorDetail($status);
         if ($detail !== null) {
             $exception->errorDetail = $detail;
         }
@@ -128,6 +157,44 @@ final class UdbRpcException extends UdbException
             /** @var \Google\Protobuf\Internal\Message $detail */
             $detail = new $fqn();
             $detail->mergeFromString((string) $values[0]);
+
+            return $detail;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * Build the same ErrorDetail shape for local transport statuses that never
+     * reached the broker and therefore have no server trailer.
+     *
+     * @return object|null  a \Udb\Entity\V1\ErrorDetail or null
+     */
+    public static function synthesizeTransportErrorDetail(mixed $status): ?object
+    {
+        $code = (int) (is_object($status) ? ($status->code ?? -1) : ($status['code'] ?? -1));
+        if (! in_array($code, [1, 4, 14], true)) { // CANCELLED, DEADLINE_EXCEEDED, UNAVAILABLE
+            return null;
+        }
+        $detailFqn = '\\Udb\\Entity\\V1\\ErrorDetail';
+        $kindFqn = '\\Udb\\Entity\\V1\\ErrorKind';
+        if (! class_exists($detailFqn) || ! class_exists($kindFqn)) {
+            return null;
+        }
+        $operation = match ($code) {
+            1 => 'cancelled',
+            4 => 'deadline_exceeded',
+            14 => 'unavailable',
+            default => 'transport',
+        };
+        try {
+            /** @var \Udb\Entity\V1\ErrorDetail $detail */
+            $detail = new $detailFqn();
+            $detail->setBackend('transport');
+            $detail->setOperation($operation);
+            $detail->setRetryable($code !== 1);
+            $detail->setRetryAfterMs(0);
+            $detail->setKind($kindFqn::ERROR_KIND_RETRYABLE);
 
             return $detail;
         } catch (\Throwable) {

@@ -22,6 +22,7 @@
 // the returned values, in your own code under src/main/java.
 package dev.udb.client.generated;
 
+import com.google.protobuf.ByteString;
 import dev.udb.client.UdbChannels;
 import dev.udb.client.UdbClient;
 import dev.udb.client.UdbMetadata;
@@ -31,9 +32,17 @@ import io.grpc.ManagedChannel;
 import io.grpc.Metadata;
 import io.grpc.stub.StreamObserver;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.TreeMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 /**
@@ -42,6 +51,56 @@ import java.util.function.Supplier;
  * {@link Channel} (does not own it).
  */
 public final class GeneratedUdbClient implements AutoCloseable {
+
+  /** Descriptor-derived public API identity for one generated RPC. */
+  public static final class RpcIdentity {
+    private final String path;
+    private final String service;
+    private final String wireName;
+    private final String apiAlias;
+    private final String operationId;
+    private final String operationKind;
+    private final String httpMethod;
+    private final String httpPath;
+
+    private RpcIdentity(
+        String path,
+        String service,
+        String wireName,
+        String apiAlias,
+        String operationId,
+        String operationKind,
+        String httpMethod,
+        String httpPath) {
+      this.path = path;
+      this.service = service;
+      this.wireName = wireName;
+      this.apiAlias = apiAlias;
+      this.operationId = operationId;
+      this.operationKind = operationKind;
+      this.httpMethod = httpMethod;
+      this.httpPath = httpPath;
+    }
+
+    public String path() { return path; }
+    public String service() { return service; }
+    public String wireName() { return wireName; }
+    public String apiAlias() { return apiAlias; }
+    public String operationId() { return operationId; }
+    public String operationKind() { return operationKind; }
+    public String httpMethod() { return httpMethod; }
+    public String httpPath() { return httpPath; }
+  }
+
+  public static final Map<String, RpcIdentity> RPC_IDENTITIES = buildRpcIdentities();
+
+  private static Map<String, RpcIdentity> buildRpcIdentities() {
+    TreeMap<String, RpcIdentity> map = new TreeMap<>();
+    // @@UDB_RPC_BEGIN
+    map.put("{{RPC_PATH}}", new RpcIdentity("{{RPC_PATH}}", "{{SERVICE_NAME}}", "{{RPC_WIRE_NAME}}", "{{RPC_ALIAS_SNAKE}}", "{{REST_OPERATION_ID}}", "{{RPC_OPERATION_KIND}}", "{{RPC_HTTP_METHOD}}", "{{RPC_HTTP_PATH}}"));
+    // @@UDB_RPC_END
+    return Map.copyOf(map);
+  }
 
   private final ManagedChannel ownedChannel;
   private final Channel channel;
@@ -103,7 +162,8 @@ public final class GeneratedUdbClient implements AutoCloseable {
         tuning,
         deadline,
         headers,
-        "{{RPC_OPERATION_KIND}}".equals("read_only"));
+        "{{RPC_OPERATION_KIND}}".equals("read_only"),
+        "{{RPC_REPLAY_SAFE}}".equals("true"));
   }
   // @@UDB_RPC_END
 
@@ -180,6 +240,1365 @@ public final class GeneratedUdbClient implements AutoCloseable {
     } catch (InterruptedException err) {
       ownedChannel.shutdownNow();
       Thread.currentThread().interrupt();
+    }
+  }
+
+  // ── Neutral-IR typed query builder (master-plan items 2.5 / 10.1) ─────────────
+  //
+  // A thin, typed layer that emits the broker's CANONICAL neutral-IR envelope
+  // ({"ir": {"op": ..., ...LogicalRead/Write/Delete}}) and sends it through the
+  // EXISTING GenericDispatch RPC — this client's own generated GenericDispatch
+  // unary forwarder (with its retry / deadline / metadata / error mapping). It is
+  // NOT a second client engine: it builds a GenericDispatchRequest and hands it to
+  // the very same dispatch method raw callers use, so tenant / project / auth all
+  // flow from the caller's RequestContext metadata exactly as they do for a raw
+  // call. The builder NEVER puts a tenant/project (or any RequestContext) on the
+  // request body — the broker derives those from the verified claim / headers.
+  //
+  // The broker parses this envelope in handlers_data.rs::compile_neutral_ir_dispatch
+  // and lowers it to backend-native SQL/query with tenant + RLS predicates injected
+  // server-side, so the safe, mediated path is the one users naturally take. Raw
+  // spec stays available as an explicit escape hatch — see rawDispatchRequest below
+  // and the untouched GenericDispatch(...) wrapper.
+  //
+  // The wire shapes mirror the serde encoding of the Rust IR types (src/ir/*.rs):
+  // externally-tagged enums ({"Comparison": {...}}, {"String": "x"}, the unit
+  // "Null"), snake_case op tokens ("eq", "like"), and the
+  // LogicalRead/LogicalWrite/LogicalDelete field names. The serialized envelope is
+  // byte-identical to the TypeScript / Python SDKs' for the same logical query:
+  // compact JSON, fixed key order (the writers below emit keys in the same order),
+  // sorted record keys (a TreeMap mirrors the server-side BTreeMap canonicalization
+  // and the other SDKs' explicit sort), JSON.stringify-compatible string escaping,
+  // and no HTML escaping.
+
+  /** Backend whose neutral-IR compiler lowers the envelope when the caller does
+   *  not pick one explicitly. The broker resolves the concrete instance per project. */
+  public static final String DEFAULT_IR_BACKEND = "postgres";
+
+  public static final Map<String, String> ORM_TIERS = {{ORM_TIERS_JAVA}};
+
+  public static final Map<String, String> BACKEND_ROLES = {{BACKEND_ROLES_JAVA}};
+
+  private static final Map<String, EntityBinding> ENTITY_REGISTRY = buildEntityRegistry();
+
+  private static Map<String, EntityBinding> buildEntityRegistry() {
+    Map<String, EntityBinding> entities = new TreeMap<>();
+    // @@UDB_ENTITY_BEGIN
+    entities.put(
+        "{{ENTITY_MESSAGE_TYPE}}",
+        new EntityBinding(
+            "{{ENTITY_MESSAGE_TYPE}}",
+            "{{ENTITY_TABLE}}",
+            List.of({{ENTITY_PRIMARY_KEYS}}),
+            List.of({{ENTITY_JSON_FIELDS}}),
+            {{ENTITY_JAVA_RELATIONS}},
+            {{ENTITY_RELATIONS_JSON_STRING}},
+            "{{ENTITY_VERSION_FIELD}}",
+            "{{ENTITY_TENANT_FIELD}}",
+            "{{ENTITY_PROJECT_FIELD}}",
+            "{{ENTITY_JAVA_TYPE}}"));
+    // @@UDB_ENTITY_END
+    return Map.copyOf(entities);
+  }
+
+  /** Descriptor-backed entity bindings keyed by proto message FQN. */
+  public static Map<String, EntityBinding> entities() {
+    return ENTITY_REGISTRY;
+  }
+
+  /** Start a descriptor-backed repository for {@code messageType}. */
+  public static Repository repository(String messageType) {
+    EntityBinding binding = ENTITY_REGISTRY.get(messageType);
+    if (binding == null) {
+      throw new IllegalArgumentException("udb: unknown entity message type " + messageType);
+    }
+    return new Repository(binding);
+  }
+
+  /** Descriptor-backed UnitOfWork for one transaction scope; no process-wide cache. */
+  public static UnitOfWork unitOfWork() {
+    return new UnitOfWork();
+  }
+
+  // @@UDB_ENTITY_BEGIN
+  public static Repository {{ENTITY_ALIAS_CAMEL}}Repository() {
+    return repository("{{ENTITY_MESSAGE_TYPE}}");
+  }
+  // @@UDB_ENTITY_END
+
+  /** Start a typed neutral-IR read for {@code messageType} (the catalog/proto FQN). */
+  public static Query query(String messageType) {
+    return new Query(messageType);
+  }
+
+  /** Start a typed neutral-IR write (insert/upsert) for {@code messageType}. */
+  public static WriteQuery writeTo(String messageType) {
+    return new WriteQuery(messageType);
+  }
+
+  /** Start a typed neutral-IR delete for {@code messageType}. */
+  public static DeleteQuery deleteFrom(String messageType) {
+    return new DeleteQuery(messageType);
+  }
+
+  /** ESCAPE HATCH: build a raw {@code GenericDispatchRequest} with caller-authored
+   *  {@code spec_json}, bypassing the typed IR builder. The mediated builders above
+   *  are preferred; this preserves the pre-existing raw capability for advanced /
+   *  admin callers. Like the builders, it sets no tenant/project on the body. */
+  public static com.udb.entity.v1.GenericDispatchRequest rawDispatchRequest(
+      String backend, String operation, String specJson, String resourceName) {
+    return com.udb.entity.v1.GenericDispatchRequest.newBuilder()
+        .setBackend(backend)
+        .setOperation(operation)
+        .setResourceName(resourceName == null ? "" : resourceName)
+        .setSpecJson(specJson)
+        .build();
+  }
+
+  static void requireEagerIncludeBackend(String backend) {
+    String tier = ORM_TIERS.get(backend);
+    if (!"relational".equals(tier)) {
+      throw new EagerIncludeUnsupportedBackendException(backend, tier);
+    }
+  }
+
+  public static final class EagerIncludeUnsupportedBackendException extends RuntimeException {
+    private final String backend;
+    private final String tier;
+
+    EagerIncludeUnsupportedBackendException(String backend, String tier) {
+      super(
+          "udb: backend '"
+              + backend
+              + "' is "
+              + (tier == null ? "unknown" : tier)
+              + "; eager include requires a relational backend");
+      this.backend = backend;
+      this.tier = tier;
+    }
+
+    public String backend() {
+      return backend;
+    }
+
+    public String tier() {
+      return tier;
+    }
+  }
+
+  /** Minimal, dependency-free JSON writers that emit the canonical IR envelope
+   *  byte-identically to {@code JSON.stringify} (compact, controlled key order,
+   *  JSON-string escaping, no HTML/forward-slash/non-ASCII escaping). */
+  static final class Ir {
+    private Ir() {}
+
+    static final Map<String, String> COMPARISON_TOKENS =
+        Map.of(
+            "eq", "eq",
+            "ne", "ne",
+            "gt", "gt",
+            "ge", "ge",
+            "lt", "lt",
+            "le", "le",
+            "like", "like");
+
+    static com.udb.entity.v1.GenericDispatchRequest dispatchRequest(
+        String backend, String operation, String specJson) {
+      // No context/tenant/project is set — the broker derives caller scope from the
+      // verified claim / metadata, exactly as for a raw dispatch.
+      return com.udb.entity.v1.GenericDispatchRequest.newBuilder()
+          .setBackend(backend)
+          .setOperation(operation)
+          .setSpecJson(specJson)
+          .build();
+    }
+
+    /** Encode a value into the externally-tagged {@code LogicalValue} wire form. */
+    static void writeLogicalValue(StringBuilder sb, Object v) {
+      if (v == null) {
+        sb.append("\"Null\"");
+      } else if (v instanceof Boolean b) {
+        sb.append("{\"Bool\":").append(b ? "true" : "false").append('}');
+      } else if (v instanceof Byte || v instanceof Short || v instanceof Integer
+          || v instanceof Long || v instanceof java.math.BigInteger) {
+        sb.append("{\"Int\":").append(v).append('}');
+      } else if (v instanceof Float || v instanceof Double) {
+        sb.append("{\"Float\":").append(number(((Number) v).doubleValue())).append('}');
+      } else if (v instanceof CharSequence s) {
+        sb.append("{\"String\":");
+        string(sb, s.toString());
+        sb.append('}');
+      } else if (v instanceof byte[] bytes) {
+        sb.append("{\"Bytes\":[");
+        for (int i = 0; i < bytes.length; i++) {
+          if (i > 0) {
+            sb.append(',');
+          }
+          sb.append(bytes[i] & 0xFF);
+        }
+        sb.append("]}");
+      } else if (v instanceof Instant inst) {
+        sb.append("{\"Timestamp\":");
+        string(sb, DateTimeFormatter.ISO_INSTANT.format(inst));
+        sb.append('}');
+      } else if (v instanceof Map<?, ?> m) {
+        sb.append("{\"Json\":");
+        json(sb, m);
+        sb.append('}');
+      } else if (v instanceof Iterable<?> it) {
+        sb.append("{\"Array\":[");
+        boolean first = true;
+        for (Object e : it) {
+          if (!first) {
+            sb.append(',');
+          }
+          first = false;
+          writeLogicalValue(sb, e);
+        }
+        sb.append("]}");
+      } else if (v instanceof Object[] arr) {
+        sb.append("{\"Array\":[");
+        for (int i = 0; i < arr.length; i++) {
+          if (i > 0) {
+            sb.append(',');
+          }
+          writeLogicalValue(sb, arr[i]);
+        }
+        sb.append("]}");
+      } else {
+        sb.append("{\"String\":");
+        string(sb, String.valueOf(v));
+        sb.append('}');
+      }
+    }
+
+    /** Plain JSON value writer used for the {@code Json} LogicalValue payload. */
+    static void json(StringBuilder sb, Object v) {
+      if (v == null) {
+        sb.append("null");
+      } else if (v instanceof Boolean b) {
+        sb.append(b ? "true" : "false");
+      } else if (v instanceof Number n) {
+        sb.append(number(n.doubleValue()));
+      } else if (v instanceof CharSequence s) {
+        string(sb, s.toString());
+      } else if (v instanceof Map<?, ?> m) {
+        sb.append('{');
+        boolean first = true;
+        for (Map.Entry<?, ?> e : m.entrySet()) {
+          if (!first) {
+            sb.append(',');
+          }
+          first = false;
+          string(sb, String.valueOf(e.getKey()));
+          sb.append(':');
+          json(sb, e.getValue());
+        }
+        sb.append('}');
+      } else if (v instanceof Iterable<?> it) {
+        sb.append('[');
+        boolean first = true;
+        for (Object e : it) {
+          if (!first) {
+            sb.append(',');
+          }
+          first = false;
+          json(sb, e);
+        }
+        sb.append(']');
+      } else {
+        string(sb, String.valueOf(v));
+      }
+    }
+
+    /** Render a number like JSON.stringify: integral doubles drop the fraction. */
+    static String number(double d) {
+      if (d == Math.rint(d) && !Double.isInfinite(d) && Math.abs(d) < 9.007199254740992E15) {
+        return Long.toString((long) d);
+      }
+      return Double.toString(d);
+    }
+
+    /** Write a JSON string literal with JSON.stringify-compatible escaping. */
+    static void string(StringBuilder sb, String s) {
+      sb.append('"');
+      for (int i = 0; i < s.length(); i++) {
+        char c = s.charAt(i);
+        switch (c) {
+          case '"' -> sb.append("\\\"");
+          case '\\' -> sb.append("\\\\");
+          case '\b' -> sb.append("\\b");
+          case '\f' -> sb.append("\\f");
+          case '\n' -> sb.append("\\n");
+          case '\r' -> sb.append("\\r");
+          case '\t' -> sb.append("\\t");
+          default -> {
+            if (c < 0x20) {
+              sb.append(String.format("\\u%04x", (int) c));
+            } else {
+              sb.append(c);
+            }
+          }
+        }
+      }
+      sb.append('"');
+    }
+
+    static void stringArray(StringBuilder sb, List<String> items) {
+      sb.append('[');
+      for (int i = 0; i < items.size(); i++) {
+        if (i > 0) {
+          sb.append(',');
+        }
+        string(sb, items.get(i));
+      }
+      sb.append(']');
+    }
+
+    static String andFilter(List<String> predicates) {
+      StringBuilder f = new StringBuilder("{\"And\":[");
+      for (int i = 0; i < predicates.size(); i++) {
+        if (i > 0) {
+          f.append(',');
+        }
+        f.append(predicates.get(i));
+      }
+      f.append("]}");
+      return f.toString();
+    }
+
+    static String orFilter(List<String> predicates) {
+      StringBuilder f = new StringBuilder("{\"Or\":[");
+      for (int i = 0; i < predicates.size(); i++) {
+        if (i > 0) {
+          f.append(',');
+        }
+        f.append(predicates.get(i));
+      }
+      f.append("]}");
+      return f.toString();
+    }
+  }
+
+  /** Shared predicate accumulator for the read/delete builders. Each predicate is
+   *  pre-rendered to its canonical JSON fragment so chain order is preserved. */
+  abstract static class PredicateSet {
+    final List<String> predicates = new ArrayList<>();
+
+    final void addWhere(String field, String op, Object value) {
+      if ("in".equals(op)) {
+        if (value instanceof Iterable<?> it) {
+          addWhereIn(field, it);
+        } else {
+          addWhereIn(field, java.util.Collections.singletonList(value));
+        }
+        return;
+      }
+      String token = Ir.COMPARISON_TOKENS.get(op);
+      if (token == null) {
+        throw new IllegalArgumentException("udb: unsupported IR operator '" + op + "'");
+      }
+      StringBuilder f = new StringBuilder("{\"Comparison\":{\"field\":");
+      Ir.string(f, field);
+      f.append(",\"op\":");
+      Ir.string(f, token);
+      f.append(",\"value\":");
+      Ir.writeLogicalValue(f, value);
+      f.append("}}");
+      predicates.add(f.toString());
+    }
+
+    final void addWhereIn(String field, Iterable<?> values) {
+      StringBuilder f = new StringBuilder("{\"InList\":{\"field\":");
+      Ir.string(f, field);
+      f.append(",\"values\":[");
+      boolean first = true;
+      for (Object v : values) {
+        if (!first) {
+          f.append(',');
+        }
+        first = false;
+        Ir.writeLogicalValue(f, v);
+      }
+      f.append("]}}");
+      predicates.add(f.toString());
+    }
+
+    final void addFilterFragment(String filter) {
+      predicates.add(filter);
+    }
+
+    /** A single predicate is emitted bare; multiple are conjoined into {@code And}
+     *  (mirrors {@code LogicalFilter::and}). Returns {@code null} when none is set. */
+    final String filterFragment() {
+      if (predicates.isEmpty()) {
+        return null;
+      }
+      if (predicates.size() == 1) {
+        return predicates.get(0);
+      }
+      StringBuilder f = new StringBuilder("{\"And\":[");
+      for (int i = 0; i < predicates.size(); i++) {
+        if (i > 0) {
+          f.append(',');
+        }
+        f.append(predicates.get(i));
+      }
+      f.append("]}");
+      return f.toString();
+    }
+  }
+
+  /**
+   * Typed neutral-IR read builder. Emits {@code {"ir": {"op": "read", ...}}} (a
+   * {@code LogicalRead}).
+   *
+   * <pre>{@code
+   * client.GenericDispatch(
+   *     GeneratedUdbClient.query("acme.v1.Invoice")
+   *         .where("status", "eq", "open")
+   *         .orderBy("created_at", "desc")
+   *         .limit(50)
+   *         .toRequest());
+   * }</pre>
+   */
+  public static final class Query extends PredicateSet {
+    private final String messageType;
+    private List<String> projection;
+    private final List<String[]> sorts = new ArrayList<>();
+    private final List<String> includes = new ArrayList<>();
+    private Integer limit;
+    private Integer offset;
+
+    Query(String messageType) {
+      this.messageType = messageType;
+    }
+
+    public Query where(String field, String op, Object value) {
+      addWhere(field, op, value);
+      return this;
+    }
+
+    public Query whereIn(String field, Iterable<?> values) {
+      addWhereIn(field, values);
+      return this;
+    }
+
+    public Query whereFilter(String filter) {
+      addFilterFragment(filter);
+      return this;
+    }
+
+    /** Projection ({@code LogicalProjection.fields}); omit to select every field. */
+    public Query select(String... fields) {
+      this.projection = List.of(fields);
+      return this;
+    }
+
+    /** Append a sort key; {@code direction} is the snake_case token "asc" or "desc". */
+    public Query orderBy(String field, String direction) {
+      sorts.add(new String[] {field, direction});
+      return this;
+    }
+
+    public Query include(String relation) {
+      if (relation == null || relation.isEmpty()) {
+        throw new IllegalArgumentException("udb: include relation name is required");
+      }
+      includes.add(relation);
+      return this;
+    }
+
+    public Query limit(int n) {
+      this.limit = n;
+      return this;
+    }
+
+    public Query offset(int n) {
+      this.offset = n;
+      return this;
+    }
+
+    /** The canonical neutral-IR envelope JSON. */
+    public String toSpecJson() {
+      StringBuilder sb = new StringBuilder("{\"ir\":{\"op\":\"read\",\"message_type\":");
+      Ir.string(sb, messageType);
+      String filter = filterFragment();
+      if (filter != null) {
+        sb.append(",\"filter\":").append(filter);
+      }
+      if (projection != null && !projection.isEmpty()) {
+        sb.append(",\"projection\":{\"fields\":");
+        Ir.stringArray(sb, projection);
+        sb.append('}');
+      }
+      if (!sorts.isEmpty()) {
+        sb.append(",\"sort\":[");
+        for (int i = 0; i < sorts.size(); i++) {
+          if (i > 0) {
+            sb.append(',');
+          }
+          sb.append("{\"field\":");
+          Ir.string(sb, sorts.get(i)[0]);
+          sb.append(",\"direction\":");
+          Ir.string(sb, sorts.get(i)[1]);
+          sb.append('}');
+        }
+        sb.append(']');
+      }
+      if (!includes.isEmpty()) {
+        sb.append(",\"include\":[");
+        for (int i = 0; i < includes.size(); i++) {
+          if (i > 0) {
+            sb.append(',');
+          }
+          sb.append("{\"relation\":");
+          Ir.string(sb, includes.get(i));
+          sb.append('}');
+        }
+        sb.append(']');
+      }
+      if (limit != null || offset != null) {
+        sb.append(",\"pagination\":{");
+        boolean wrote = false;
+        if (limit != null) {
+          sb.append("\"limit\":").append(limit.intValue());
+          wrote = true;
+        }
+        if (offset != null) {
+          if (wrote) {
+            sb.append(',');
+          }
+          sb.append("\"offset\":").append(offset.intValue());
+        }
+        sb.append('}');
+      }
+      sb.append("}}");
+      return sb.toString();
+    }
+
+    /** The {@code GenericDispatchRequest} (default backend) — no tenant/project/context set. */
+    public com.udb.entity.v1.GenericDispatchRequest toRequest() {
+      return toRequest(DEFAULT_IR_BACKEND);
+    }
+
+    public com.udb.entity.v1.GenericDispatchRequest toRequest(String backend) {
+      if (!includes.isEmpty()) {
+        requireEagerIncludeBackend(backend);
+      }
+      return Ir.dispatchRequest(backend, "query", toSpecJson());
+    }
+
+    /** Send through the EXISTING GenericDispatch RPC, defaulting to DEFAULT_IR_BACKEND. */
+    public com.udb.entity.v1.GenericDispatchResponse execute(GeneratedUdbClient client) {
+      return execute(client, DEFAULT_IR_BACKEND);
+    }
+
+    public com.udb.entity.v1.GenericDispatchResponse execute(GeneratedUdbClient client, String backend) {
+      return client.GenericDispatch(toRequest(backend));
+    }
+  }
+
+  /**
+   * Typed neutral-IR write builder. Emits {@code {"ir": {"op": "write", ...}}} (a
+   * {@code LogicalWrite}). Defaults to insert (conflict = {@code Error}); call
+   * {@code merge()} / {@code ignoreConflicts()} / {@code updateOnConflict(...)} for
+   * upsert semantics.
+   */
+  public static final class WriteQuery {
+    private final String messageType;
+    private final List<Map<String, Object>> rows = new ArrayList<>();
+    private String conflict;
+    private final List<String> returnFields = new ArrayList<>();
+
+    WriteQuery(String messageType) {
+      this.messageType = messageType;
+    }
+
+    public WriteQuery record(Map<String, Object> row) {
+      rows.add(row);
+      return this;
+    }
+
+    public WriteQuery records(Iterable<? extends Map<String, Object>> rows) {
+      for (Map<String, Object> row : rows) {
+        this.rows.add(row);
+      }
+      return this;
+    }
+
+    /** Full upsert — replace every column on conflict ({@code ConflictStrategy::Replace}). */
+    public WriteQuery merge() {
+      this.conflict = "{\"kind\":\"replace\"}";
+      return this;
+    }
+
+    /** Skip conflicting rows ({@code ConflictStrategy::Ignore}). */
+    public WriteQuery ignoreConflicts() {
+      this.conflict = "{\"kind\":\"ignore\"}";
+      return this;
+    }
+
+    /** Partial upsert — update only {@code fields} on conflict
+     *  ({@code ConflictStrategy::Update}). {@code conflictOn} names an alternate
+     *  unique key; pass null/empty to use the manifest PK. */
+    public WriteQuery updateOnConflict(List<String> fields, List<String> conflictOn) {
+      StringBuilder c = new StringBuilder("{\"kind\":\"update\",\"fields\":");
+      Ir.stringArray(c, fields);
+      if (conflictOn != null && !conflictOn.isEmpty()) {
+        c.append(",\"conflict_on\":");
+        Ir.stringArray(c, conflictOn);
+      }
+      c.append('}');
+      this.conflict = c.toString();
+      return this;
+    }
+
+    public WriteQuery returning(String... fields) {
+      for (String f : fields) {
+        returnFields.add(f);
+      }
+      return this;
+    }
+
+    public String toSpecJson() {
+      if (rows.isEmpty()) {
+        throw new IllegalStateException("udb: write requires at least one record(...)");
+      }
+      StringBuilder sb = new StringBuilder("{\"ir\":{\"op\":\"write\",\"message_type\":");
+      Ir.string(sb, messageType);
+      sb.append(",\"records\":[");
+      for (int i = 0; i < rows.size(); i++) {
+        if (i > 0) {
+          sb.append(',');
+        }
+        writeRecord(sb, rows.get(i));
+      }
+      sb.append(']');
+      if (conflict != null) {
+        sb.append(",\"conflict\":").append(conflict);
+      }
+      if (!returnFields.isEmpty()) {
+        sb.append(",\"return_fields\":");
+        Ir.stringArray(sb, returnFields);
+      }
+      sb.append("}}");
+      return sb.toString();
+    }
+
+    /** One {@code LogicalRecord} with keys sorted for cross-language byte-stability. */
+    private static void writeRecord(StringBuilder sb, Map<String, Object> row) {
+      Map<String, Object> sorted = new TreeMap<>(row);
+      sb.append('{');
+      boolean first = true;
+      for (Map.Entry<String, Object> e : sorted.entrySet()) {
+        if (!first) {
+          sb.append(',');
+        }
+        first = false;
+        Ir.string(sb, e.getKey());
+        sb.append(':');
+        Ir.writeLogicalValue(sb, e.getValue());
+      }
+      sb.append('}');
+    }
+
+    public com.udb.entity.v1.GenericDispatchRequest toRequest() {
+      return toRequest(DEFAULT_IR_BACKEND);
+    }
+
+    public com.udb.entity.v1.GenericDispatchRequest toRequest(String backend) {
+      return Ir.dispatchRequest(backend, "mutate", toSpecJson());
+    }
+
+    public com.udb.entity.v1.GenericDispatchResponse execute(GeneratedUdbClient client) {
+      return execute(client, DEFAULT_IR_BACKEND);
+    }
+
+    public com.udb.entity.v1.GenericDispatchResponse execute(GeneratedUdbClient client, String backend) {
+      return client.GenericDispatch(toRequest(backend));
+    }
+  }
+
+  /**
+   * Typed neutral-IR delete builder. Emits {@code {"ir": {"op": "delete", ...}}} (a
+   * {@code LogicalDelete}). A {@code where(...)} predicate is REQUIRED — the IR has
+   * no delete-everything path (mirrors the server-side contract).
+   */
+  public static final class DeleteQuery extends PredicateSet {
+    private final String messageType;
+    private final List<String> returnFields = new ArrayList<>();
+
+    DeleteQuery(String messageType) {
+      this.messageType = messageType;
+    }
+
+    public DeleteQuery where(String field, String op, Object value) {
+      addWhere(field, op, value);
+      return this;
+    }
+
+    public DeleteQuery whereIn(String field, Iterable<?> values) {
+      addWhereIn(field, values);
+      return this;
+    }
+
+    public DeleteQuery returning(String... fields) {
+      for (String f : fields) {
+        returnFields.add(f);
+      }
+      return this;
+    }
+
+    public String toSpecJson() {
+      String filter = filterFragment();
+      if (filter == null) {
+        throw new IllegalStateException(
+            "udb: delete requires at least one where(...) predicate (no delete-everything path)");
+      }
+      StringBuilder sb = new StringBuilder("{\"ir\":{\"op\":\"delete\",\"message_type\":");
+      Ir.string(sb, messageType);
+      sb.append(",\"filter\":").append(filter);
+      if (!returnFields.isEmpty()) {
+        sb.append(",\"return_fields\":");
+        Ir.stringArray(sb, returnFields);
+      }
+      sb.append("}}");
+      return sb.toString();
+    }
+
+    public com.udb.entity.v1.GenericDispatchRequest toRequest() {
+      return toRequest(DEFAULT_IR_BACKEND);
+    }
+
+    public com.udb.entity.v1.GenericDispatchRequest toRequest(String backend) {
+      return Ir.dispatchRequest(backend, "mutate", toSpecJson());
+    }
+
+    public com.udb.entity.v1.GenericDispatchResponse execute(GeneratedUdbClient client) {
+      return execute(client, DEFAULT_IR_BACKEND);
+    }
+
+    public com.udb.entity.v1.GenericDispatchResponse execute(GeneratedUdbClient client, String backend) {
+      return client.GenericDispatch(toRequest(backend));
+    }
+  }
+
+  public static final class EntityBinding {
+    private final String messageType;
+    private final String table;
+    private final List<String> primaryKeys;
+    private final List<String> fields;
+    private final List<EntityRelationBinding> relations;
+    private final String relationsJson;
+    private final String versionField;
+    private final String tenantField;
+    private final String projectField;
+    private final String javaType;
+
+    EntityBinding(
+        String messageType,
+        String table,
+        List<String> primaryKeys,
+        List<String> fields,
+        List<EntityRelationBinding> relations,
+        String relationsJson,
+        String versionField,
+        String tenantField,
+        String projectField,
+        String javaType) {
+      this.messageType = Objects.requireNonNull(messageType, "messageType");
+      this.table = Objects.requireNonNull(table, "table");
+      this.primaryKeys = List.copyOf(primaryKeys);
+      this.fields = List.copyOf(fields);
+      this.relations = List.copyOf(relations);
+      this.relationsJson = Objects.requireNonNull(relationsJson, "relationsJson");
+      this.versionField = Objects.requireNonNull(versionField, "versionField");
+      this.tenantField = Objects.requireNonNull(tenantField, "tenantField");
+      this.projectField = Objects.requireNonNull(projectField, "projectField");
+      this.javaType = Objects.requireNonNull(javaType, "javaType");
+    }
+
+    public String messageType() {
+      return messageType;
+    }
+
+    public String table() {
+      return table;
+    }
+
+    public List<String> primaryKeys() {
+      return primaryKeys;
+    }
+
+    public List<String> fields() {
+      return fields;
+    }
+
+    public List<EntityRelationBinding> relations() {
+      return relations;
+    }
+
+    public String relationsJson() {
+      return relationsJson;
+    }
+
+    public String versionField() {
+      return versionField;
+    }
+
+    public String tenantField() {
+      return tenantField;
+    }
+
+    public String projectField() {
+      return projectField;
+    }
+
+    public String javaType() {
+      return javaType;
+    }
+  }
+
+  public static final class EntityRelationBinding {
+    private final String name;
+    private final String kind;
+    private final List<String> localFields;
+    private final String targetMessageType;
+    private final String targetTable;
+    private final List<String> targetFields;
+    private final String onDelete;
+    private final String onUpdate;
+
+    EntityRelationBinding(
+        String name,
+        String kind,
+        List<String> localFields,
+        String targetMessageType,
+        String targetTable,
+        List<String> targetFields,
+        String onDelete,
+        String onUpdate) {
+      this.name = Objects.requireNonNull(name, "name");
+      this.kind = Objects.requireNonNull(kind, "kind");
+      this.localFields = List.copyOf(localFields);
+      this.targetMessageType = Objects.requireNonNull(targetMessageType, "targetMessageType");
+      this.targetTable = Objects.requireNonNull(targetTable, "targetTable");
+      this.targetFields = List.copyOf(targetFields);
+      this.onDelete = Objects.requireNonNull(onDelete, "onDelete");
+      this.onUpdate = Objects.requireNonNull(onUpdate, "onUpdate");
+    }
+
+    public String name() {
+      return name;
+    }
+
+    public String kind() {
+      return kind;
+    }
+
+    public List<String> localFields() {
+      return localFields;
+    }
+
+    public String targetMessageType() {
+      return targetMessageType;
+    }
+
+    public String targetTable() {
+      return targetTable;
+    }
+
+    public List<String> targetFields() {
+      return targetFields;
+    }
+
+    public String onDelete() {
+      return onDelete;
+    }
+
+    public String onUpdate() {
+      return onUpdate;
+    }
+  }
+
+  public static final class Repository {
+    private final EntityBinding binding;
+
+    Repository(EntityBinding binding) {
+      this.binding = binding;
+      if (binding.primaryKeys().isEmpty()) {
+        throw new IllegalArgumentException(
+            "udb: entity " + binding.messageType() + " has no descriptor primary key");
+      }
+    }
+
+    public EntityBinding binding() {
+      return binding;
+    }
+
+    public Query query() {
+      return GeneratedUdbClient.query(binding.messageType());
+    }
+
+    public List<EntityRelationBinding> relations() {
+      return binding.relations();
+    }
+
+    public EntityRelationBinding relation(String name) {
+      for (EntityRelationBinding relation : binding.relations()) {
+        if (relation.name().equals(name)) {
+          return relation;
+        }
+      }
+      return null;
+    }
+
+    public EntityRelationBinding requireRelation(String name) {
+      EntityRelationBinding relation = relation(name);
+      if (relation == null) {
+        throw new IllegalArgumentException(
+            "udb: unknown relation " + name + " on entity " + binding.messageType());
+      }
+      if (relation.localFields().isEmpty()
+          || relation.localFields().size() != relation.targetFields().size()) {
+        throw new IllegalStateException(
+            "udb: relation " + name + " on entity " + binding.messageType() + " has invalid field mapping");
+      }
+      if (relation.targetMessageType().isBlank()) {
+        throw new IllegalStateException(
+            "udb: relation " + name + " on entity " + binding.messageType() + " has no target entity");
+      }
+      return relation;
+    }
+
+    public Query relationQuery(String name, Map<String, Object> parent) {
+      EntityRelationBinding relation = requireRelation(name);
+      Query q = GeneratedUdbClient.query(relation.targetMessageType());
+      for (int idx = 0; idx < relation.localFields().size(); idx++) {
+        String localField = relation.localFields().get(idx);
+        if (!parent.containsKey(localField)) {
+          throw new IllegalArgumentException(
+              "udb: relation " + name + " missing parent field " + localField);
+        }
+        q.where(relation.targetFields().get(idx), "eq", parent.get(localField));
+      }
+      return q;
+    }
+
+    public Query relationBatchQuery(String name, List<Map<String, Object>> parents) {
+      EntityRelationBinding relation = requireRelation(name);
+      if (relation.localFields().size() != relation.targetFields().size()) {
+        throw new IllegalStateException(
+            "udb: relation " + name + " on entity " + binding.messageType() + " has invalid field mapping");
+      }
+      if (parents.isEmpty()) {
+        throw new IllegalArgumentException(
+            "udb: relation " + name + " batch query requires at least one parent");
+      }
+      if (relation.localFields().size() == 1) {
+        String localField = relation.localFields().get(0);
+        List<Object> values = new ArrayList<>();
+        List<String> seen = new ArrayList<>();
+        for (Map<String, Object> parent : parents) {
+          if (!parent.containsKey(localField)) {
+            throw new IllegalArgumentException(
+                "udb: relation " + name + " missing parent field " + localField);
+          }
+          Object value = parent.get(localField);
+          String key = value == null ? "null" : value.getClass().getName() + ":" + String.valueOf(value);
+          if (!seen.contains(key)) {
+            seen.add(key);
+            values.add(value);
+          }
+        }
+        return GeneratedUdbClient.query(relation.targetMessageType()).whereIn(relation.targetFields().get(0), values);
+      }
+      List<String> branches = new ArrayList<>();
+      List<String> seen = new ArrayList<>();
+      for (Map<String, Object> parent : parents) {
+        List<String> comparisons = new ArrayList<>();
+        for (int idx = 0; idx < relation.localFields().size(); idx++) {
+          String localField = relation.localFields().get(idx);
+          if (!parent.containsKey(localField)) {
+            throw new IllegalArgumentException(
+                "udb: relation " + name + " missing parent field " + localField);
+          }
+          StringBuilder f = new StringBuilder("{\"Comparison\":{\"field\":");
+          Ir.string(f, relation.targetFields().get(idx));
+          f.append(",\"op\":\"eq\",\"value\":");
+          Ir.writeLogicalValue(f, parent.get(localField));
+          f.append("}}");
+          comparisons.add(f.toString());
+        }
+        String branch = Ir.andFilter(comparisons);
+        if (!seen.contains(branch)) {
+          seen.add(branch);
+          branches.add(branch);
+        }
+      }
+      return GeneratedUdbClient.query(relation.targetMessageType()).whereFilter(Ir.orFilter(branches));
+    }
+
+{{ENTITY_JAVA_RELATION_ACCESSORS}}
+
+    public com.udb.entity.v1.GenericDispatchResponse find(
+        Map<String, Object> key, GeneratedUdbClient client) {
+      return find(key, client, DEFAULT_IR_BACKEND);
+    }
+
+    public com.udb.entity.v1.GenericDispatchResponse find(
+        Map<String, Object> key, GeneratedUdbClient client, String backend) {
+      Query q = query().limit(1);
+      for (String field : binding.primaryKeys()) {
+        if (!key.containsKey(field)) {
+          throw new IllegalArgumentException("udb: missing primary key field " + field);
+        }
+        q.where(field, "eq", key.get(field));
+      }
+      return q.execute(client, backend);
+    }
+
+    public com.udb.entity.v1.GenericDispatchResponse first(
+        Query q, GeneratedUdbClient client) {
+      return first(q, client, DEFAULT_IR_BACKEND);
+    }
+
+    public com.udb.entity.v1.GenericDispatchResponse first(
+        Query q, GeneratedUdbClient client, String backend) {
+      return q.limit(1).execute(client, backend);
+    }
+
+    public com.udb.entity.v1.GenericDispatchResponse all(
+        Query q, GeneratedUdbClient client) {
+      return all(q, client, DEFAULT_IR_BACKEND);
+    }
+
+    public com.udb.entity.v1.GenericDispatchResponse all(
+        Query q, GeneratedUdbClient client, String backend) {
+      return q.execute(client, backend);
+    }
+
+    public com.udb.entity.v1.GenericDispatchResponse upsert(
+        Map<String, Object> record, GeneratedUdbClient client) {
+      return upsert(record, client, DEFAULT_IR_BACKEND);
+    }
+
+    public com.udb.entity.v1.GenericDispatchResponse upsert(
+        Map<String, Object> record, GeneratedUdbClient client, String backend) {
+      validateRecord(record);
+      for (String field : binding.primaryKeys()) {
+        if (!record.containsKey(field)) {
+          throw new IllegalArgumentException("udb: missing primary key field " + field);
+        }
+      }
+      List<String> updateFields = new ArrayList<>();
+      for (String field : record.keySet()) {
+        if (!binding.primaryKeys().contains(field)) {
+          updateFields.add(field);
+        }
+      }
+      if (updateFields.isEmpty()) {
+        throw new IllegalArgumentException(
+            "udb: upsert requires at least one non-primary-key field");
+      }
+      return writeTo(binding.messageType())
+          .record(record)
+          .updateOnConflict(updateFields, binding.primaryKeys())
+          .execute(client, backend);
+    }
+
+    public com.udb.entity.v1.GenericDispatchResponse delete(
+        Map<String, Object> key, GeneratedUdbClient client) {
+      return delete(key, client, DEFAULT_IR_BACKEND);
+    }
+
+    public com.udb.entity.v1.GenericDispatchResponse delete(
+        Map<String, Object> key, GeneratedUdbClient client, String backend) {
+      DeleteQuery d = deleteFrom(binding.messageType());
+      for (String field : binding.primaryKeys()) {
+        if (!key.containsKey(field)) {
+          throw new IllegalArgumentException("udb: missing primary key field " + field);
+        }
+        d.where(field, "eq", key.get(field));
+      }
+      return d.execute(client, backend);
+    }
+
+    private void validateRecord(Map<String, Object> record) {
+      if (binding.fields().isEmpty()) {
+        return;
+      }
+      for (String field : record.keySet()) {
+        if (!binding.fields().contains(field)) {
+          throw new IllegalArgumentException(
+              "udb: field "
+                  + field
+                  + " is not declared on entity "
+                  + binding.messageType());
+        }
+      }
+    }
+  }
+
+  public static final class UnitOfWorkEntry {
+    private final Repository repository;
+    private final Map<String, Object> record;
+    private String snapshot;
+
+    UnitOfWorkEntry(Repository repository, Map<String, Object> record, String snapshot) {
+      this.repository = repository;
+      this.record = record;
+      this.snapshot = snapshot;
+    }
+
+    public Repository repository() {
+      return repository;
+    }
+
+    public Map<String, Object> record() {
+      return record;
+    }
+  }
+
+  public static class UnitOfWorkTxException extends RuntimeException {
+    private final com.udb.entity.v1.TxStatus status;
+
+    UnitOfWorkTxException(String message, com.udb.entity.v1.TxStatus status) {
+      super(message);
+      this.status = status;
+    }
+
+    public com.udb.entity.v1.TxStatus status() {
+      return status;
+    }
+  }
+
+  public static final class UnitOfWorkConflictException extends UnitOfWorkTxException {
+    UnitOfWorkConflictException(String message, com.udb.entity.v1.TxStatus status) {
+      super(message, status);
+    }
+  }
+
+  public static final class UnitOfWorkUnsupportedBackendException extends RuntimeException {
+    private final String backend;
+    private final String role;
+
+    UnitOfWorkUnsupportedBackendException(String backend, String role) {
+      super(
+          "udb: backend '"
+              + backend
+              + "' is "
+              + (role == null ? "unknown" : role)
+              + "; UnitOfWork requires a canonical transactional backend");
+      this.backend = backend;
+      this.role = role;
+    }
+
+    public String backend() {
+      return backend;
+    }
+
+    public String role() {
+      return role;
+    }
+  }
+
+  public static final class UnitOfWork {
+    private final Map<String, UnitOfWorkEntry> entries = new TreeMap<>();
+
+    public Map<String, UnitOfWorkEntry> entries() {
+      return Map.copyOf(entries);
+    }
+
+    public Map<String, Object> attach(Repository repository, Map<String, Object> record) {
+      Objects.requireNonNull(repository, "repository");
+      requireVersionForTrackedWrite(repository.binding(), record);
+      entries.put(
+          entityIdentity(repository.binding(), record),
+          new UnitOfWorkEntry(repository, record, stableRecordJson(record)));
+      return record;
+    }
+
+    public Map<String, Object> track(Repository repository, Map<String, Object> record) {
+      return attach(repository, record);
+    }
+
+    public List<UnitOfWorkEntry> dirtyEntries() {
+      List<UnitOfWorkEntry> out = new ArrayList<>();
+      for (UnitOfWorkEntry entry : entries.values()) {
+        if (!stableRecordJson(entry.record()).equals(entry.snapshot)) {
+          out.add(entry);
+        }
+      }
+      return out;
+    }
+
+    public List<com.udb.entity.v1.Mutation> txMutations() {
+      List<com.udb.entity.v1.Mutation> out = new ArrayList<>();
+      for (UnitOfWorkEntry entry : dirtyEntries()) {
+        out.add(
+            com.udb.entity.v1.Mutation.newBuilder()
+                .setOperation("upsert")
+                .setMessageType(entry.repository().binding().messageType())
+                .setRecordJson(ByteString.copyFromUtf8(stableRecordJson(entry.record())))
+                .build());
+      }
+      return out;
+    }
+
+    public com.udb.entity.v1.Mutation commitMutation() {
+      return com.udb.entity.v1.Mutation.newBuilder().setCommit(true).build();
+    }
+
+    public com.udb.entity.v1.Mutation rollbackMutation() {
+      return com.udb.entity.v1.Mutation.newBuilder().setRollback(true).build();
+    }
+
+    public List<com.udb.entity.v1.Mutation> txCommitBatch() {
+      return txCommitBatch(DEFAULT_IR_BACKEND);
+    }
+
+    public List<com.udb.entity.v1.Mutation> txCommitBatch(String backend) {
+      requireTransactionalBackend(backend);
+      List<com.udb.entity.v1.Mutation> out = new ArrayList<>(txMutations());
+      out.add(commitMutation());
+      return out;
+    }
+
+    public void requireTransactionalBackend(String backend) {
+      String role = BACKEND_ROLES.get(backend);
+      if (!"canonical".equals(role) && !"both".equals(role)) {
+        throw new UnitOfWorkUnsupportedBackendException(backend, role);
+      }
+    }
+
+    public void validateTxStatuses(Iterable<com.udb.entity.v1.TxStatus> statuses) {
+      for (com.udb.entity.v1.TxStatus status : statuses) {
+        if (status.getState() != com.udb.entity.v1.TxStatus.State.TX_STATE_ERROR) {
+          continue;
+        }
+        String message = status.getMessage().isBlank()
+            ? "udb: unit-of-work transaction failed"
+            : status.getMessage();
+        if (isTxConflictMessage(message)) {
+          throw new UnitOfWorkConflictException(message, status);
+        }
+        throw new UnitOfWorkTxException(message, status);
+      }
+    }
+
+    public List<com.udb.entity.v1.TxStatus> flush(GeneratedUdbClient client) {
+      return flush(client, DEFAULT_IR_BACKEND);
+    }
+
+    public List<com.udb.entity.v1.TxStatus> flush(GeneratedUdbClient client, String backend) {
+      Objects.requireNonNull(client, "client");
+      List<com.udb.entity.v1.TxStatus> statuses = new ArrayList<>();
+      CountDownLatch done = new CountDownLatch(1);
+      AtomicReference<Throwable> failure = new AtomicReference<>();
+      StreamObserver<com.udb.entity.v1.TxStatus> responseObserver =
+          new StreamObserver<>() {
+            @Override
+            public void onNext(com.udb.entity.v1.TxStatus value) {
+              statuses.add(value);
+            }
+
+            @Override
+            public void onError(Throwable throwable) {
+              failure.set(throwable);
+              done.countDown();
+            }
+
+            @Override
+            public void onCompleted() {
+              done.countDown();
+            }
+          };
+      StreamObserver<com.udb.entity.v1.Mutation> requestObserver = client.BeginTx(responseObserver);
+      try {
+        for (com.udb.entity.v1.Mutation mutation : txCommitBatch(backend)) {
+          requestObserver.onNext(mutation);
+        }
+        requestObserver.onCompleted();
+        done.await();
+      } catch (InterruptedException err) {
+        Thread.currentThread().interrupt();
+        throw new IllegalStateException("udb: interrupted while flushing UnitOfWork", err);
+      } catch (RuntimeException err) {
+        requestObserver.onError(err);
+        throw err;
+      }
+      Throwable err = failure.get();
+      if (err != null) {
+        if (err instanceof RuntimeException runtime) {
+          throw runtime;
+        }
+        throw new IllegalStateException("udb: UnitOfWork BeginTx failed", err);
+      }
+      validateTxStatuses(statuses);
+      markClean();
+      return List.copyOf(statuses);
+    }
+
+    public void markClean() {
+      for (UnitOfWorkEntry entry : entries.values()) {
+        entry.snapshot = stableRecordJson(entry.record());
+      }
+    }
+
+    private static void requireVersionForTrackedWrite(EntityBinding binding, Map<String, Object> record) {
+      if (!binding.versionField().isBlank() && !record.containsKey(binding.versionField())) {
+        throw new IllegalArgumentException(
+            "udb: unit-of-work record for "
+                + binding.messageType()
+                + " missing version field "
+                + binding.versionField());
+      }
+    }
+
+    private static String entityIdentity(EntityBinding binding, Map<String, Object> record) {
+      List<String> scopeParts = new ArrayList<>();
+      for (String field : List.of(binding.tenantField(), binding.projectField())) {
+        if (field.isBlank()) {
+          continue;
+        }
+        if (!record.containsKey(field)) {
+          throw new IllegalArgumentException(
+              "udb: unit-of-work record for "
+                  + binding.messageType()
+                  + " missing scope field "
+                  + field);
+        }
+        scopeParts.add(field + "=" + jsonValue(record.get(field)));
+      }
+      List<String> parts = new ArrayList<>();
+      for (String field : binding.primaryKeys()) {
+        if (!record.containsKey(field)) {
+          throw new IllegalArgumentException(
+              "udb: unit-of-work record for "
+                  + binding.messageType()
+                  + " missing primary key field "
+                  + field);
+        }
+        parts.add(jsonValue(record.get(field)));
+      }
+      return binding.messageType() + ":" + String.join(":", scopeParts) + ":" + String.join(":", parts);
+    }
+
+    private static String stableRecordJson(Map<String, Object> record) {
+      return jsonValue(new TreeMap<>(record));
+    }
+
+    private static String jsonValue(Object value) {
+      StringBuilder sb = new StringBuilder();
+      Ir.json(sb, value);
+      return sb.toString();
+    }
+
+    private static boolean isTxConflictMessage(String message) {
+      String lower = message.toLowerCase(java.util.Locale.ROOT);
+      return lower.contains("aborted") || lower.contains("version") || lower.contains("conflict");
     }
   }
 }

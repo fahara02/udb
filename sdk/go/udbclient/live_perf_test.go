@@ -18,8 +18,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // TestLivePerf measures per-RPC latency for the entire AllRPCs surface against a
@@ -147,14 +145,27 @@ func TestLivePerf(t *testing.T) {
 		errCode string
 	}
 
+	isCapabilitySkip := func(rpc RPCInfo, errCode, errText string) bool {
+		if rpc.Service != "RoomService" {
+			return false
+		}
+		switch rpc.Name {
+		case "ListEgress", "StartRoomComposite", "StartTrackEgress", "StopEgress":
+			return errCode == "FailedPrecondition" &&
+				(strings.Contains(errText, "EGRESS_NOT_ENABLED") ||
+					strings.Contains(errText, "EGRESS_BACKEND_UNAVAILABLE") ||
+					strings.Contains(errText, "webrtc egress is not enabled") ||
+					strings.Contains(errText, "webrtc egress is enabled but no egress backend"))
+		default:
+			return false
+		}
+	}
+
 	// timeOne measures one call. Unary RPCs are a full request→response round-trip.
-	// Streaming RPCs measure STREAM-OPEN latency (initiate + send request + CloseSend),
-	// NOT first-message latency: a subscription stream (PublishCDC, StreamResources, …)
-	// delivers its first message only when an event arrives, which never happens in a
-	// passive perf run — draining it would just time out at the deadline (this is the
-	// bug that produced the bogus 272 ms DataBroker mean). Stream-open is the real,
-	// data-independent latency a client pays to establish the stream, and it is labeled
-	// as such in the report so it is never mistaken for a unary round-trip.
+	// Non-CDC streaming RPCs use seeded inputs and measure time-to-FIRST-RESPONSE.
+	// PublishCDC measures time-to-FIRST-EVENT after firing a real mutation. Each
+	// measured stream gets an owned child context and is cancelled immediately after
+	// the measured receive so repeated full-surface sweeps do not leave streams open.
 	timeOne := func(gen *GeneratedClient, rpc RPCInfo) (time.Duration, error) {
 		d := 20 * time.Second
 		if rpc.Kind != KindUnary {
@@ -165,14 +176,11 @@ func TestLivePerf(t *testing.T) {
 		start := time.Now()
 		var err error
 		if rpc.Kind == KindUnary {
-			// NO generic fill. An explicit, MD-grounded body is required: the
-			// control-plane services come from buildSpecBody (BENCH_RPC_BODIES.md
-			// field specs), the DataBroker bodies from the typed perfRealBody. An RPC
-			// with neither returns NO-BODY and is surfaced as a failure to fix — never
-			// a placeholder request the broker rejects with INVALID_ARGUMENT.
+			// NO generic fill. An explicit shared-manifest body is required for every
+			// unary RPC. A missing or unhydratable manifest body returns NO-BODY and is
+			// surfaced as a failure to fix — never a placeholder request the broker
+			// rejects with INVALID_ARGUMENT.
 			if in, out, ok := buildSpecBody(rpc.FullMethod, fix); ok {
-				err = gen.InvokeUnary(callCtx, rpc.FullMethod, in, out)
-			} else if in, out, ok := perfRealBody(rpc, tenant, project, fix); ok {
 				err = gen.InvokeUnary(callCtx, rpc.FullMethod, in, out)
 			} else {
 				err = errNoExplicitBody
@@ -262,6 +270,10 @@ func TestLivePerf(t *testing.T) {
 		if len(okDurs) == 0 {
 			measured = durs
 			errCode = firstErr
+			if isCapabilitySkip(rpc, firstErr, firstErrText) {
+				errCode = "CAPABILITY_SKIPPED"
+				note += "; optional capability unavailable"
+			}
 		}
 		// Surface the FULL gRPC error (code + message + details) for every RPC that
 		// never succeeded, so `go test -v` is a complete diagnosis log — the report
@@ -343,7 +355,7 @@ func TestLivePerf(t *testing.T) {
 	// Failures subsection: every RPC whose last iteration returned a non-OK status.
 	failed := make([]sample, 0)
 	for _, s := range samples {
-		if e := errOf(s); e != "OK" {
+		if e := errOf(s); e != "OK" && e != "CAPABILITY_SKIPPED" {
 			failed = append(failed, s)
 		}
 	}
@@ -398,7 +410,7 @@ func TestLivePerf(t *testing.T) {
 		t.Logf("could not write perf_report_go.md: %v", err)
 	}
 	t.Logf("\n%s", report)
-	t.Logf("Go perf: %d RPCs measured (streaming rows = stream-open latency), %d FAILED (non-OK gRPC status), grand mean per-RPC = %s; report → sdk/go/perf_report_go.md",
+	t.Logf("Go perf: %d RPCs measured (streaming rows = first-response/first-event latency), %d FAILED (non-OK gRPC status), grand mean per-RPC = %s; report → sdk/go/perf_report_go.md",
 		len(samples), len(failed), (grand / time.Duration(len(samples))).Round(time.Microsecond))
 }
 
@@ -432,18 +444,21 @@ func seededFirstRecv(ctx context.Context, gen *GeneratedClient, rpc RPCInfo, ten
 	if !ok {
 		return errNoExplicitBody
 	}
+	streamCtx, cancelStream := context.WithCancel(ctx)
+	defer cancelStream()
 	switch rpc.Kind {
 	case KindServerStreaming:
-		stream, err := gen.NewServerStream(ctx, rpc.FullMethod, &grpc.StreamDesc{ServerStreams: true}, in)
+		stream, err := gen.NewServerStream(streamCtx, rpc.FullMethod, &grpc.StreamDesc{ServerStreams: true}, in)
 		if err != nil {
 			return err
 		}
+		defer func() { _ = stream.CloseSend() }()
 		if err := stream.RecvMsg(out); err != nil && err != io.EOF {
 			return err
 		}
 		return nil
 	case KindClientStreaming:
-		stream, err := gen.NewClientStream(ctx, rpc.FullMethod, &grpc.StreamDesc{ClientStreams: true})
+		stream, err := gen.NewClientStream(streamCtx, rpc.FullMethod, &grpc.StreamDesc{ClientStreams: true})
 		if err != nil {
 			return err
 		}
@@ -458,10 +473,11 @@ func seededFirstRecv(ctx context.Context, gen *GeneratedClient, rpc RPCInfo, ten
 		}
 		return nil
 	case KindBidi:
-		stream, err := gen.NewClientStream(ctx, rpc.FullMethod, &grpc.StreamDesc{ClientStreams: true, ServerStreams: true})
+		stream, err := gen.NewClientStream(streamCtx, rpc.FullMethod, &grpc.StreamDesc{ClientStreams: true, ServerStreams: true})
 		if err != nil {
 			return err
 		}
+		defer func() { _ = stream.CloseSend() }()
 		if err := stream.SendMsg(in); err != nil {
 			return err
 		}
@@ -493,10 +509,13 @@ func timeCdcFirstEvent(ctx context.Context, gen *GeneratedClient, broker service
 	if !ok {
 		return errNoExplicitBody
 	}
-	stream, err := gen.NewServerStream(ctx, rpc.FullMethod, &grpc.StreamDesc{ServerStreams: true}, in)
+	streamCtx, cancelStream := context.WithCancel(ctx)
+	defer cancelStream()
+	stream, err := gen.NewServerStream(streamCtx, rpc.FullMethod, &grpc.StreamDesc{ServerStreams: true}, in)
 	if err != nil {
 		return err
 	}
+	defer func() { _ = stream.CloseSend() }()
 	// Fire a real mutation that produces a CDC event for the seeded row. A fresh
 	// revision per call guarantees a NEW outbox event each iteration.
 	rev := time.Now().UnixNano()
@@ -520,96 +539,6 @@ func liveRecordJSONForCDC(recordID, tenant, project string, revision int64) []by
 		"lookup_key": "go-perf-cdc", "payload": "go-perf-cdc", "revision": revision,
 	})
 	return raw
-}
-
-// perfRealBody returns a SEMANTICALLY VALID request (and the matching empty
-// response message) for the top data-plane CRUD RPCs, so the perf harness
-// measures REAL handler work against the built-in `udb.sdk.live.v1.SdkLiveRecord`
-// schema (always active) instead of validation-rejection on a placeholder body.
-// Upsert uses a FIXED record_id so repeated iterations are idempotent (no row
-// accumulation). Returns ok=false for RPCs without a typed DataBroker override;
-// the caller must then find an explicit spec body or report NO-BODY.
-// perfRealBody also covers the BACKEND-SPECIFIC DataBroker RPCs (document / cache
-// / vector / graph / object / generic-dispatch). Each needs its OWN backend + the resource seeded for it (a
-// single global "backend" fixture cannot be both postgres and mongodb). These
-// reuse the exact resources created in the seed phase.
-func perfRealBody(rpc RPCInfo, tenant, project string, fix *perfFixtures) (proto.Message, proto.Message, bool) {
-	if rpc.Service != "DataBroker" {
-		return nil, nil, false
-	}
-	rc := liveRequestContext(tenant, project, "go.live.perf")
-	get := func(k string) string { v, _ := fix.lookup(k); return v }
-	mongo := &entityv1.StoreResource{Backend: "mongodb", ResourceName: get("mongo_collection")}
-	switch rpc.Name {
-	case "Upsert":
-		return &entityv1.UpsertRequest{
-			Context: rc, MessageType: liveMessageType,
-			RecordJson: perfRecordJSON(tenant, project), ConflictFields: []string{"record_id"},
-		}, &entityv1.MutationResponse{}, true
-	case "Select":
-		return &entityv1.SelectRequest{
-			Context: rc, MessageType: liveMessageType, Filter: perfTenantFilter(tenant, project), Limit: 10,
-		}, &entityv1.RecordSet{}, true
-	case "Delete":
-		// Delete a NON-EXISTENT row (filter on a unique unseeded id) so the success
-		// path runs without destroying the seeded record other RPCs read.
-		f, _ := structpb.NewStruct(map[string]any{"record_id": "go-perf-delete-noop", "tenant_id": tenant, "project_id": project})
-		return &entityv1.DeleteRequest{Context: rc, MessageType: liveMessageType, Filter: f}, &entityv1.MutationResponse{}, true
-	case "GenericDispatch":
-		return &entityv1.GenericDispatchRequest{
-			Context: rc, Backend: "postgres", Operation: "query", SpecJson: `{"sql":"SELECT 1 AS live_probe"}`,
-		}, &entityv1.GenericDispatchResponse{}, true
-	case "DocumentUpsert":
-		return &entityv1.DocumentUpsertRequest{
-			Context: rc, Resource: mongo, DocumentId: get("document_id"),
-			Document: perfStruct(map[string]any{"payload": "perf", "revision": 2}),
-		}, &entityv1.MutationResponse{}, true
-	case "DocumentGet":
-		return &entityv1.DocumentGetRequest{Context: rc, Resource: mongo, DocumentId: get("document_id")}, &entityv1.DocumentSet{}, true
-	case "DocumentFind":
-		return &entityv1.DocumentFindRequest{Context: rc, Resource: mongo, Filter: perfStruct(map[string]any{"_id": get("document_id")}), Limit: 1}, &entityv1.DocumentSet{}, true
-	case "EnsureResource":
-		return &entityv1.ResourceAdminRequest{Context: rc, Backend: "mongodb", ResourceName: get("mongo_collection"), SpecJson: `{"collection":"` + get("mongo_collection") + `"}`}, &entityv1.MutationResponse{}, true
-	case "ListResources":
-		return &entityv1.ResourceAdminRequest{Context: rc, Backend: "mongodb"}, &entityv1.ResourceListResponse{}, true
-	case "GeneratePresignedUrl":
-		return &entityv1.UrlRequest{Context: rc, Bucket: get("bucket"), ObjectKey: get("object_key"), Method: "GET", TtlSeconds: 60}, &entityv1.UrlResponse{}, true
-	case "CacheSet":
-		return &entityv1.CacheSetRequest{Context: rc, Resource: &entityv1.StoreResource{Backend: "redis"}, Key: "sdk-perf-cache", Value: []byte("perf"), ContentType: "text/plain", TtlSeconds: 60}, &entityv1.MutationResponse{}, true
-	case "CacheGet":
-		return &entityv1.CacheGetRequest{Context: rc, Resource: &entityv1.StoreResource{Backend: "redis"}, Key: "sdk-perf-cache"}, &entityv1.CacheGetResponse{}, true
-	case "EnsureBaseline":
-		// EnsureBaselineRequest carries ONLY context (field 1); tenant/project are
-		// derived from the verified principal server-side. Needs scope udb:admin,
-		// which rides the bearer JWT (RequestContext.Scopes is not authoritative).
-		return &servicesv1.EnsureBaselineRequest{Context: rc}, &servicesv1.EnsureBaselineResponse{}, true
-	}
-	return nil, nil, false
-}
-
-// perfStruct builds a structpb.Struct from a map (ignoring the error, which only
-// occurs for unsupported value types we never pass).
-func perfStruct(m map[string]any) *structpb.Struct {
-	s, _ := structpb.NewStruct(m)
-	return s
-}
-
-func perfRecordJSON(tenant, project string) []byte {
-	// json.Marshal of a map of strings/ints never errors.
-	raw, _ := json.Marshal(map[string]any{
-		"record_id":  "go-perf-" + tenant + "-" + project,
-		"tenant_id":  tenant,
-		"project_id": project,
-		"lookup_key": "go-perf-lk",
-		"payload":    "go-perf",
-		"revision":   1,
-	})
-	return raw
-}
-
-func perfTenantFilter(tenant, project string) *structpb.Struct {
-	s, _ := structpb.NewStruct(map[string]any{"tenant_id": tenant, "project_id": project})
-	return s
 }
 
 // pct returns the index into a sorted slice of length n for the p-th percentile.

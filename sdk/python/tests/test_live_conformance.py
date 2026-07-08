@@ -34,26 +34,53 @@ from udb.core.notification.services.v1 import core_pb2 as notif_pb, notification
 from udb.core.storage.services.v1 import storage_service_pb2 as storage_pb, storage_service_pb2_grpc as storage_grpc
 from udb.core.asset.services.v1 import asset_service_pb2 as asset_pb, asset_service_pb2_grpc as asset_grpc
 from udb.core.webrtc.services.v1 import webrtc_service_pb2 as webrtc_pb, webrtc_service_pb2_grpc as webrtc_grpc
+# New-service request messages for the perf seed (Vault/Lock/Workflow/Scheduler/
+# Webhook/Backup/Embedding/Search/Metering/Config) — populate the seed refs those
+# manifest bodies need (mirrors the Go perf seed).
+from udb.core.vault.services.v1 import vault_service_pb2 as vault_pb
+from udb.core.lock.services.v1 import lock_service_pb2 as lock_pb
+from udb.core.workflow.services.v1 import workflow_service_pb2 as workflow_pb
+from udb.core.scheduler.services.v1 import scheduler_service_pb2 as scheduler_pb
+from udb.core.webhook.services.v1 import webhook_service_pb2 as webhook_pb
+from udb.core.backup.services.v1 import backup_service_pb2 as backup_pb
+from udb.core.embedding.services.v1 import embedding_service_pb2 as embedding_pb
+from udb.core.search.services.v1 import search_service_pb2 as search_pb
+from udb.core.metering.services.v1 import metering_service_pb2 as metering_pb
+from udb.core.config.services.v1 import config_service_pb2 as config_pb
 
 from udb_client.auth import UdbAuthClient
 from udb_client.generated_client import (
+    RPC_API_ALIAS,
+    RPC_OPERATION_ID,
     RPC_OPERATION_KIND,
     AnalyticsServiceClient,
     ApiKeyServiceClient,
     AssetServiceClient,
     AuthnServiceClient,
     AuthzServiceClient,
+    BackupServiceClient,
+    CacheServiceClient,
+    ConfigServiceClient,
     ControlPlaneServiceClient,
     DataBrokerClient,
+    EmbeddingServiceClient,
     IdentityProviderServiceClient,
+    LiveQueryServiceClient,
+    LockServiceClient,
+    MeteringServiceClient,
     NotificationServiceClient,
     PeerServiceClient,
     RoomServiceClient,
+    SchedulerServiceClient,
+    SearchServiceClient,
     SignalingServiceClient,
     StorageServiceClient,
     TenantServiceClient,
     TrackServiceClient,
     TurnServiceClient,
+    VaultServiceClient,
+    WebhookServiceClient,
+    WorkflowServiceClient,
 )
 from udb_client.metadata import Metadata
 
@@ -69,16 +96,28 @@ SERVICE_CLIENTS = [
     AssetServiceClient,
     AuthnServiceClient,
     AuthzServiceClient,
+    BackupServiceClient,
+    CacheServiceClient,
+    ConfigServiceClient,
     ControlPlaneServiceClient,
+    EmbeddingServiceClient,
     IdentityProviderServiceClient,
+    LiveQueryServiceClient,
+    LockServiceClient,
+    MeteringServiceClient,
     NotificationServiceClient,
+    SchedulerServiceClient,
+    SearchServiceClient,
     StorageServiceClient,
     TenantServiceClient,
+    VaultServiceClient,
+    WebhookServiceClient,
     PeerServiceClient,
     RoomServiceClient,
     SignalingServiceClient,
     TrackServiceClient,
     TurnServiceClient,
+    WorkflowServiceClient,
     DataBrokerClient,
 ]
 
@@ -1223,16 +1262,28 @@ DOC_BY_CLIENT = {
     "AssetServiceClient": "asset.md",
     "AuthnServiceClient": "authn.md",
     "AuthzServiceClient": "authz.md",
+    "BackupServiceClient": "backup.md",
+    "CacheServiceClient": "cache.md",
+    "ConfigServiceClient": "config.md",
     "ControlPlaneServiceClient": "control_plane.md",
+    "EmbeddingServiceClient": "embedding.md",
     "IdentityProviderServiceClient": "idp.md",
+    "LiveQueryServiceClient": "livequery.md",
+    "LockServiceClient": "lock.md",
+    "MeteringServiceClient": "metering.md",
     "NotificationServiceClient": "notification.md",
+    "SchedulerServiceClient": "scheduler.md",
+    "SearchServiceClient": "search.md",
     "StorageServiceClient": "storage.md",
     "TenantServiceClient": "tenant.md",
+    "VaultServiceClient": "vault.md",
+    "WebhookServiceClient": "webhook.md",
     "PeerServiceClient": "webrtc.md",
     "RoomServiceClient": "webrtc.md",
     "SignalingServiceClient": "webrtc.md",
     "TrackServiceClient": "webrtc.md",
     "TurnServiceClient": "webrtc.md",
+    "WorkflowServiceClient": "workflow.md",
     "DataBrokerClient": "data_broker.md",
 }
 
@@ -1295,8 +1346,9 @@ def test_bench_bodies_json_matches_markdown() -> None:
     (`node scripts/gen-bench-bodies-json.mjs`) and this fails."""
     from_json = bench_body_rows()
     from_md = _parse_bench_body_markdown()
-    assert len(from_json) == 265, f"JSON manifest has {len(from_json)} rows, want 265"
-    assert len(from_md) == 265, f"markdown manifest has {len(from_md)} rows, want 265"
+    expected = len(RPC_OPERATION_KIND)
+    assert len(from_json) == expected, f"JSON manifest has {len(from_json)} rows, want {expected}"
+    assert len(from_md) == expected, f"markdown manifest has {len(from_md)} rows, want {expected}"
     assert from_json == from_md, (
         "bench-bodies.json drifted from markdown (run `node scripts/gen-bench-bodies-json.mjs`)"
     )
@@ -1309,6 +1361,9 @@ def doc_body_text(client_cls, method) -> str | None:
     rows = bench_body_rows()
     if prefix:
         return rows.get((filename, f"{prefix}.{method_name}")) or rows.get((filename, method_name))
+    service_name = getattr(client_cls, "_SERVICE_NAME", "")
+    if service_name:
+        return rows.get((filename, f"{service_name}.{method_name}")) or rows.get((filename, method_name))
     return rows.get((filename, method_name))
 
 
@@ -2137,14 +2192,28 @@ def perf_seed(clients: dict, meta: Metadata):
     fix.set("file_type", STORAGE_FILE_TYPE)
     fix.set("kind", "audio")
     fix.set("topic_pattern", "*")
-    fix.set("saga_id", "11111111-1111-4111-8111-111111111101")
-    fix.set("retry_saga_id", "11111111-1111-4111-8111-111111111102")
-    fix.set("mark_saga_id", "11111111-1111-4111-8111-111111111103")
-    fix.set("dlq_id", "22222222-2222-4222-8222-222222222201")
-    fix.set("replay_dlq_id", "22222222-2222-4222-8222-222222222202")
-    fix.set("dismiss_dlq_id", "22222222-2222-4222-8222-222222222203")
-    fix.set("quarantine_dlq_id", "22222222-2222-4222-8222-222222222204")
     fix.set("migration_id", str(uuid.uuid4()))
+
+    # Recovery fixtures come from the served, admin-gated DataBroker path, not
+    # raw udb_system inserts. Each mutating RPC gets a disposable row.
+    for saga_key, dlq_key in (
+        ("saga_id", "dlq_id"),
+        ("retry_saga_id", "dismiss_dlq_id"),
+        ("mark_saga_id", "quarantine_dlq_id"),
+        ("", "replay_dlq_id"),
+    ):
+        try:
+            baseline = broker.EnsureBaseline(
+                data_broker_pb2.EnsureBaselineRequest(context=rc),
+                metadata=md,
+                timeout=8.0,
+            )
+            if saga_key and baseline.saga_ids:
+                fix.set(saga_key, baseline.saga_ids[0])
+            if baseline.dlq_ids:
+                fix.set(dlq_key, baseline.dlq_ids[0])
+        except grpc.RpcError:
+            break
 
     # ── DataBroker: a real SdkLiveRecord row (drives Upsert/Select/Delete + CDC) ──
     record_id = f"py-perf-{suffix}"
@@ -2817,33 +2886,22 @@ def perf_seed(clients: dict, meta: Metadata):
     if uid:
         try:
             sent = notif.SendNotification(
-                notif_pb.SendNotificationRequest(event_type=event, recipient_id=uid, recipient_address=f"sdk+{suffix}@example.com", tenant_id=tenant, channels=[NOTIFICATION_CHANNEL_EMAIL]),
+                notif_pb.SendNotificationRequest(
+                    event_type=event,
+                    recipient_id=uid,
+                    recipient_address=f"sdk+{suffix}@example.com",
+                    tenant_id=tenant,
+                    resource_type="__perf_force_failed__",
+                    channels=[NOTIFICATION_CHANNEL_EMAIL],
+                ),
                 metadata=md, timeout=8.0,
             )
             if sent.logs:
                 log_id = sent.logs[0].log_id
                 fix.set("log_id", log_id)
                 fix.set("notification_id", log_id)
-                # RetryNotification is status-gated to FAILED/SUPPRESSED rows
-                # (notification_service/mod.rs retry_notification). Mark this real sent log
-                # FAILED through the broker's Postgres dispatch path (mirrors the Go seed's
-                # markPerfNotificationRetryable) so the measured RetryNotification has a
-                # retryable row — in-band, not a fixed out-of-band row.
-                try:
-                    broker.GenericDispatch(
-                        admin_pb2.GenericDispatchRequest(
-                            context=rc, backend="postgres", operation="mutate",
-                            spec_json=json.dumps({
-                                "sql": "UPDATE udb_notification.notification_logs SET status = 'FAILED', error_message = 'python live perf seed failure' WHERE log_id = $1::UUID AND tenant_id = $2 RETURNING log_id",
-                                "params": [log_id, tenant],
-                                "param_types": ["uuid", "string"],
-                                "return_rows": True,
-                            }),
-                        ),
-                        metadata=md, timeout=8.0,
-                    )
-                except grpc.RpcError:
-                    pass
+                # UDB_NOTIFICATION_TEST_MODE + ResourceType sentinel makes this
+                # served send produce a real FAILED row for RetryNotification.
         except grpc.RpcError:
             pass
         try:
@@ -3037,6 +3095,135 @@ def perf_seed(clients: dict, meta: Metadata):
     except grpc.RpcError:
         pass
 
+    # ── New native services: seed the ids/tokens their manifest bodies read ──────
+    # Every ref below is required by a docs/bench-bodies manifest body (a
+    # <seed:...> tag); without it perf_real_body raises MissingExplicitPerfBody
+    # and aborts the whole run. Mirrors the Go perf seed (live_perf_seed_test.go).
+
+    # VaultService: transit key + secrets → key/ciphertext/signature/secret-path refs.
+    vault = clients[VaultServiceClient].stub
+    vault_key = f"sdk-perf-key-{suffix}"
+    fix.set("vault_key_name", vault_key)
+    fix.set("vault_create_key_name", f"sdk-perf-create-key-{suffix}")
+    fix.set("vault_db_role", "readonly")
+    fix.set("vault_secret_path", f"app/config-{suffix}")
+    fix.set("vault_put_secret_path", f"app/put-{suffix}")
+    fix.set("vault_delete_secret_path", f"app/delete-{suffix}")
+    fix.set("vault_destroy_secret_path", f"app/destroy-{suffix}")
+    try:
+        vault.CreateTransitKey(vault_pb.CreateTransitKeyRequest(tenant_id=tenant, key_name=vault_key, algorithm="aes256-gcm-siv"), metadata=md, timeout=8.0)
+    except grpc.RpcError:
+        pass
+    try:
+        enc = vault.Encrypt(vault_pb.EncryptRequest(tenant_id=tenant, key_name=vault_key, plaintext="perf"), metadata=md, timeout=8.0)
+        fix.set("vault_ciphertext", enc.ciphertext)
+    except grpc.RpcError:
+        pass
+    try:
+        sig = vault.Sign(vault_pb.SignRequest(tenant_id=tenant, key_name=vault_key, input="perf"), metadata=md, timeout=8.0)
+        fix.set("vault_signature", sig.signature)
+    except grpc.RpcError:
+        pass
+    # secret_path/delete/destroy are pre-created (measured reads/deletes need them);
+    # put_secret_path is left unset so the measured PutSecret writes it fresh.
+    for _path_key in ("vault_secret_path", "vault_delete_secret_path", "vault_destroy_secret_path"):
+        try:
+            vault.PutSecret(vault_pb.PutSecretRequest(tenant_id=tenant, secret_path=fix.m[_path_key], secret_value="perf-secret", expected_version=0, metadata_json="{}"), metadata=md, timeout=8.0)
+        except grpc.RpcError:
+            pass
+
+    # LockService: two independent locks → renew/release fencing-token refs.
+    locks = clients[LockServiceClient].stub
+    lock_owner = _fixture(fix, "user_id", f"sdk-perf-owner-{suffix}")
+    for _lock_ref, _lock_name in (
+        ("renew_fencing_token", f"sdk-perf-renew-lock-{suffix}"),
+        ("release_fencing_token", f"sdk-perf-release-lock-{suffix}"),
+    ):
+        try:
+            acquired = locks.AcquireLock(lock_pb.AcquireLockRequest(tenant_id=tenant, lock_name=_lock_name, owner_id=lock_owner, lease_ttl_seconds=60, metadata_json="{}"), metadata=md, timeout=8.0)
+            if acquired.fencing_token:
+                fix.set(_lock_ref, str(acquired.fencing_token))
+        except grpc.RpcError:
+            pass
+
+    # WorkflowService: primary + disposable workflow → workflow_id/cancel_workflow_id.
+    workflow = clients[WorkflowServiceClient].stub
+    for _wf_ref, _wf_type, _wf_corr in (
+        ("workflow_id", "sdk.perf.workflow", record_id),
+        ("cancel_workflow_id", "sdk.perf.cancel", f"cancel-{record_id}"),
+    ):
+        try:
+            wf = workflow.StartWorkflow(workflow_pb.StartWorkflowRequest(tenant_id=tenant, project_id="", workflow_type=_wf_type, total_steps=20, payload="{}", compensations="[]", correlation_id=_wf_corr), metadata=md, timeout=8.0)
+            fix.set(_wf_ref, wf.workflow_id)
+        except grpc.RpcError:
+            pass
+
+    # SchedulerService: a stable job → job_id (reads/pause/resume/delete).
+    scheduler = clients[SchedulerServiceClient].stub
+    try:
+        job = scheduler.CreateJob(scheduler_pb.CreateJobRequest(tenant_id=tenant, project_id="", name=f"sdk-perf-seed-job-{suffix}", schedule_type="CRON", cron_expression="*/5 * * * *", payload="{}", target_topic="sdk.perf.scheduler", max_attempts=3, backoff_seconds=30), metadata=md, timeout=8.0)
+        fix.set("job_id", job.job_id)
+    except grpc.RpcError:
+        pass
+
+    # WebhookService: primary + disposable endpoint → endpoint_id/delete_endpoint_id.
+    webhooks = clients[WebhookServiceClient].stub
+    for _ep_ref, _ep_url, _ep_desc in (
+        ("endpoint_id", "https://example.com/udb-webhook-seed", "sdk perf seed webhook"),
+        ("delete_endpoint_id", "https://example.com/udb-webhook-delete", "sdk perf delete webhook"),
+    ):
+        try:
+            ep = webhooks.CreateEndpoint(webhook_pb.CreateEndpointRequest(tenant_id=tenant, url=_ep_url, topic_pattern="*", description=_ep_desc, max_attempts=3, metadata_json="{}"), metadata=md, timeout=8.0)
+            fix.set(_ep_ref, ep.endpoint_id)
+        except grpc.RpcError:
+            pass
+
+    # BackupService: policy + a tenant backup → backup_id + restore_tenant_id.
+    backup = clients[BackupServiceClient].stub
+    try:
+        backup.PutBackupPolicy(backup_pb.PutBackupPolicyRequest(tenant_id=tenant, policy_name="sdk-perf-default", schedule_cron="0 3 * * *", retention_days=7, max_retained_backups=3, enabled=True, metadata_json="{}"), metadata=md, timeout=8.0)
+    except grpc.RpcError:
+        pass
+    try:
+        b = backup.StartTenantBackup(backup_pb.StartTenantBackupRequest(tenant_id=tenant, metadata_json='{"source":"sdk-perf-seed"}'), metadata=md, timeout=8.0)
+        fix.set("backup_id", b.backup_id)
+        fix.set("restore_tenant_id", str(uuid.uuid4()))
+    except grpc.RpcError:
+        pass
+
+    # EmbeddingService: register the seeded record as a source + report one vector
+    # so the Retrieve/Backfill/DeleteSource read/mutate paths resolve real state.
+    embedding = clients[EmbeddingServiceClient].stub
+    try:
+        embedding.RegisterSource(embedding_pb.RegisterSourceRequest(tenant_id=tenant, source_name="sdk_live_records", source_message_type=LIVE_MESSAGE_TYPE, text_fields=["payload"], target_collection="sdk_live_records", model_id="text-embedding-3-small", metadata_json="{}"), metadata=md, timeout=8.0)
+    except grpc.RpcError:
+        pass
+    try:
+        embedding.ReportEmbedding(embedding_pb.ReportEmbeddingRequest(tenant_id=tenant, source_name="sdk_live_records", row_pk=record_id, vector=[0.1, 0.2, 0.3], model="text-embedding-3-small", dims=3), metadata=md, timeout=8.0)
+    except grpc.RpcError:
+        pass
+
+    # SearchService: create the seeded index so Search/Reindex/DeleteIndex resolve.
+    search = clients[SearchServiceClient].stub
+    try:
+        search.CreateIndex(search_pb.CreateIndexRequest(tenant_id=tenant, index_name="sdk_live_records", source_message_type=LIVE_MESSAGE_TYPE, backend="qdrant", resource_name="sdk_live_records", vector_dims=3, metadata_json="{}"), metadata=md, timeout=8.0)
+    except grpc.RpcError:
+        pass
+
+    # MeteringService: upsert the seeded quota so GetQuota/CheckQuota/QueryUsage read it.
+    metering = clients[MeteringServiceClient].stub
+    try:
+        metering.PutQuota(metering_pb.PutQuotaRequest(tenant_id=tenant, project_id=project, metric="sdk.perf.request", limit_value=1000000, window_seconds=86400, enabled=True, metadata_json="{}"), metadata=md, timeout=8.0)
+    except grpc.RpcError:
+        pass
+
+    # ConfigService: upsert the seeded flag so GetFlag/EvaluateFlags/ListFlags resolve.
+    config = clients[ConfigServiceClient].stub
+    try:
+        config.PutFlag(config_pb.PutFlagRequest(tenant_id=tenant, project_id=project, environment="prod", flag_key="sdk.perf.enabled", value=config_pb.FlagValue(bool_value=True), enabled=True, rollout_percentage=100, rollout_context_key="user_id", metadata_json="{}"), metadata=md, timeout=8.0)
+    except grpc.RpcError:
+        pass
+
     # ── DataBroker migration/catalog lifecycle fixtures ─────────────────────────
     try:
         plan = broker.PlanMigration(
@@ -3212,16 +3399,16 @@ def write_python_perf_report(samples, fixtures, authed_meta: Metadata, error: Ex
         lines.append("No RPC returned a non-OK gRPC status.")
     else:
         lines.append("These RPCs returned a non-OK gRPC status and are FAILURES, not latency samples.")
-        lines += ["", "| RPC | kind | err | detail | p99 ms | mean ms | iters |", "|---|---|---|---|--:|--:|--:|"]
+        lines += ["", "| RPC | api_alias | operation_id | kind | err | detail | p99 ms | mean ms | iters |", "|---|---|---|---|---|---|--:|--:|--:|"]
         for s in sorted(failed, key=lambda x: (x["service"], x["rpc"])):
             detail = str(s.get("err_detail", "")).replace("\n", " ").replace("|", "\\|")
-            lines.append(f"| {s['service']}/{s['rpc']} | {s['kind']} | {s['err']} | {detail} | {s['p99']:.2f} | {s['mean']:.2f} | {s['iters']} |")
-    lines += ["", "## Slowest 20 by p99", "", "| RPC | kind | err | p50 ms | p99 ms | mean ms |", "|---|---|---|--:|--:|--:|"]
+            lines.append(f"| {s['service']}/{s['rpc']} | {s['api_alias']} | {s['operation_id']} | {s['kind']} | {s['err']} | {detail} | {s['p99']:.2f} | {s['mean']:.2f} | {s['iters']} |")
+    lines += ["", "## Slowest 20 by p99", "", "| RPC | api_alias | operation_id | kind | err | p50 ms | p99 ms | mean ms |", "|---|---|---|---|---|--:|--:|--:|"]
     for s in sorted(samples, key=lambda x: -x["p99"])[:20]:
-        lines.append(f"| {s['service']}/{s['rpc']} | {s['kind']} | {s['err']} | {s['p50']:.2f} | {s['p99']:.2f} | {s['mean']:.2f} |")
-    lines += ["", "## Full per-RPC table (sorted by service, then RPC)", "", "| Service | RPC | kind | err | p50 ms | p99 ms | mean ms | iters |", "|---|---|---|---|--:|--:|--:|--:|"]
+        lines.append(f"| {s['service']}/{s['rpc']} | {s['api_alias']} | {s['operation_id']} | {s['kind']} | {s['err']} | {s['p50']:.2f} | {s['p99']:.2f} | {s['mean']:.2f} |")
+    lines += ["", "## Full per-RPC table (sorted by service, then RPC)", "", "| Service | RPC | api_alias | operation_id | kind | err | p50 ms | p99 ms | mean ms | iters |", "|---|---|---|---|---|---|--:|--:|--:|--:|"]
     for s in sorted(samples, key=lambda x: (x["service"], x["rpc"])):
-        lines.append(f"| {s['service']} | {s['rpc']} | {s['kind']} | {s['err']} | {s['p50']:.2f} | {s['p99']:.2f} | {s['mean']:.2f} | {s['iters']} |")
+        lines.append(f"| {s['service']} | {s['rpc']} | {s['api_alias']} | {s['operation_id']} | {s['kind']} | {s['err']} | {s['p50']:.2f} | {s['p99']:.2f} | {s['mean']:.2f} | {s['iters']} |")
     report = "\n".join(lines) + "\n"
     report_path = Path(__file__).resolve().parents[1] / "perf_report_python.md"
     report_path.write_text(report, encoding="utf-8")
@@ -3266,7 +3453,7 @@ def test_live_generated_rpc_surface():
     # CANONICAL UUID, so the Login JWT tenant claim is a UUID — not the human code.
     # Discover it from our own authenticated principal and use it for every request
     # body, so the body tenant matches the claim and the UUID-strict services
-    # (storage/webrtc/asset) accept it. ONE admin now serves all 265 RPCs.
+    # (storage/webrtc/asset) accept it. ONE admin now serves the generated RPC surface.
     canonical_tenant = principal_resp.principal.tenant_id
     assert canonical_tenant, "authenticated principal must carry a tenant_id (the canonical UUID)"
     refreshed = auth.refresh_token(login.refresh_token)
@@ -3324,7 +3511,7 @@ def test_live_generated_rpc_surface():
     finally:
         auth_channel.close()
 
-    # The full-surface 265-RPC probe is now ONE parametrized test case per RPC
+    # The full-surface generated RPC probe is now ONE parametrized test case per RPC
     # (`test_rpc_surface[...]`, below) so the runner reports per-RPC pass/fail like
     # the Go suite's sub-tests — not a single opaque "1 passed". This monolithic test
     # keeps the deep, value-asserted E2E (backend matrix, native-service CRUD, session
@@ -3334,7 +3521,7 @@ def test_live_generated_rpc_surface():
 
 
 # --------------------------------------------------------------------------------
-# Per-RPC surface coverage — one parametrized pytest case PER RPC (265 total), so
+# Per-RPC surface coverage — one parametrized pytest case PER generated RPC, so
 # the runner shows granular per-RPC results (like Go's sub-tests). Each case sends a
 # descriptor-derived, field-populated typed request and asserts the RPC REACHED a
 # live handler (no Unimplemented/Unavailable/Unknown mount failure) — i.e. it is
@@ -3351,7 +3538,9 @@ def _all_rpcs():
 
 
 ALL_RPCS = _all_rpcs()
-assert len(ALL_RPCS) == 265, f"expected 265 RPCs from the descriptor set, found {len(ALL_RPCS)}"
+assert len(ALL_RPCS) == len(RPC_OPERATION_KIND), (
+    f"expected {len(RPC_OPERATION_KIND)} RPCs from the descriptor set, found {len(ALL_RPCS)}"
+)
 RPC_ORDER_INDEX = {(client_cls, method.name): idx for idx, (client_cls, method) in enumerate(ALL_RPCS)}
 
 
@@ -3367,7 +3556,9 @@ def assert_explicit_perf_body_coverage() -> None:
         fields = doc_field_names(client_cls, method)
         if method.input_type.fields and not fields and method.name != "GetJwks":
             empty_bodies.append(f"{client_cls._SERVICE_FULL}/{method.name}")
-    assert len(rows) == 265, f"docs/bench-bodies must have exactly 265 RPC rows, found {len(rows)}"
+    assert len(rows) == len(ALL_RPCS), (
+        f"docs/bench-bodies must have current generated RPC rows, found {len(rows)} want {len(ALL_RPCS)}"
+    )
     assert not missing_rows, "missing docs/bench-bodies rows: " + ", ".join(missing_rows)
     assert not empty_bodies, "docs rows did not name any real request fields: " + ", ".join(empty_bodies)
 
@@ -3578,7 +3769,14 @@ def test_live_perf():
                 # (outbox->CDC->Kafka), and time the first delivered event.
                 err_code = time_cdc_first_event(broker_stub, method, authed_meta, seed_record_id)
                 return (time.perf_counter() - start) * 1000.0, err_code, err_detail
-            request = perf_real_body(client_cls, method, authed_meta, fixtures)
+            try:
+                request = perf_real_body(client_cls, method, authed_meta, fixtures)
+            except MissingExplicitPerfBody as exc:
+                # An RPC whose body needs a fixture the seed could not populate
+                # (e.g. a service was degraded/unmounted during seeding). Record it
+                # as a skip rather than aborting the WHOLE perf run — a single
+                # unseeded RPC must not lose every other service's samples.
+                return (time.perf_counter() - start) * 1000.0, "SKIP_NO_BODY", str(exc)
             if method.client_streaming or method.server_streaming:
                 # Other streaming RPCs: open with seeded inputs and measure time to the
                 # FIRST server response (a real round-trip), not just stream-open.
@@ -3607,7 +3805,7 @@ def test_live_perf():
                     pass
             return (time.perf_counter() - start) * 1000.0, err_code, err_detail
 
-        # All 265 RPCs are measured down their SUCCESS path. Unary = full round-trip;
+        # The current generated RPC surface is measured down the SUCCESS path. Unary = full round-trip;
         # non-CDC streaming = time-to-first-response (seeded inputs); CDC subscription
         # (PublishCDC) = time-to-first-event (subscribe, fire a real Upsert, time delivery).
         for client_cls, method in sorted(ALL_RPCS, key=perf_rpc_order_key):
@@ -3644,7 +3842,10 @@ def test_live_perf():
 
             samples.append({
                 "service": client_cls._SERVICE_FULL.split(".")[-1],
-                "rpc": method.name, "kind": kind, "iters": n, "err": err_code,
+                "rpc": method.name,
+                "api_alias": RPC_API_ALIAS.get(rpc_path(method), ""),
+                "operation_id": RPC_OPERATION_ID.get(rpc_path(method), ""),
+                "kind": kind, "iters": n, "err": err_code,
                 "err_detail": err_detail,
                 "p50": pct(50), "p99": pct(99), "mean": sum(durs) / len(durs),
             })

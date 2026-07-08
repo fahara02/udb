@@ -61,6 +61,10 @@ public final class UdbWebRtcClient {
   }
 
   UdbWebRtcClient(Channel channel, UdbMetadata metadata, UdbCredentials credentials) {
+    this(channel, new UdbMetadataRef(metadata), credentials);
+  }
+
+  UdbWebRtcClient(Channel channel, UdbMetadataRef metadata, UdbCredentials credentials) {
     io.grpc.ClientInterceptor headers =
         UdbClient.credentialInterceptor(metadata, credentials);
     this.room =

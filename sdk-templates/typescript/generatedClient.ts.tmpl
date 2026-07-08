@@ -33,6 +33,7 @@ import path from "path";
 
 import "./wkt"; // registers the google.protobuf.Struct serializer (must precede any loadSync)
 import { UDB_PROTOCOL_VERSION, UdbMetadata, metadata as buildMetadata } from "./client";
+import type * as Msg from "./messages";
 import { defaultProtoRoot } from "./protoRoot";
 
 export const UDB_SDK_VERSION = "{{UDB_VERSION}}";
@@ -122,25 +123,61 @@ export interface CallOptions {
   onResponseMetadata?: (md: grpc.Metadata) => void;
 }
 
+type KnownRequestMessages = {
+  SelectRequest: Msg.SelectRequest;
+  UpsertRequest: Msg.UpsertRequest;
+  DeleteRequest: Msg.DeleteRequest;
+  RegisterUploadRequest: Msg.RegisterUploadRequest;
+  FinalizeUploadRequest: Msg.FinalizeUploadRequest;
+  LoginRequest: Msg.LoginRequest;
+  AuthenticateRequest: Msg.AuthenticateRequest;
+};
+
+type KnownResponseMessages = {
+  SelectResponse: Msg.SelectResponse;
+  MutationResponse: Msg.MutationResponse;
+  RegisterUploadResponse: Msg.RegisterUploadResponse;
+  FinalizeUploadResponse: Msg.FinalizeUploadResponse;
+  LoginResponse: Msg.LoginResponse;
+  AuthenticateResponse: Msg.AuthenticateResponse;
+  MigrationStatusResponse: Msg.MigrationStatusResponse;
+};
+
+/** Generated per-RPC signatures use the hand-written `messages.ts` subset when
+ *  available; unknown descriptor messages fall back to a dynamic plain object.
+ *  The method-level `<TRes = ...>` generic keeps the old response escape hatch. */
+type RpcInput<Name extends string> = Name extends keyof KnownRequestMessages
+  ? KnownRequestMessages[Name]
+  : Record<string, unknown>;
+type RpcOutput<Name extends string> = Name extends keyof KnownResponseMessages
+  ? KnownResponseMessages[Name]
+  : any;
+
 // ── Typed errors ───────────────────────────────────────────────────────────────
 
 /** Symbolic names for the `udb.entity.v1.ErrorKind` enum (error.proto), mapped
  *  from the numeric `kind` tag decoded off the `udb-error-detail-bin` trailer. */
 export const ERROR_KIND_NAMES: Record<number, string> = {
   0: "UNSPECIFIED",
-  1: "VALIDATION",
-  2: "NOT_FOUND",
-  3: "ALREADY_EXISTS",
-  4: "PERMISSION_DENIED",
+  1: "CAPABILITY",
+  2: "POLICY",
+  3: "QUOTA",
+  4: "SCHEMA",
   5: "RETRYABLE",
   6: "INTERNAL",
+  7: "VALIDATION",
 };
+
+export interface UdbFieldViolation {
+  field?: string;
+  description?: string;
+}
 
 /** A decoded `ErrorDetail` from the `udb-error-detail-bin` trailer, when present.
  *  Left as a loose record (with the typed fields the broker actually emits) because
  *  the SDK does not depend on the generated message classes — it forwards through
- *  the dynamic stubs and hand-decodes the prost bytes. Mirrors the 8-field
- *  `udb/entity/v1/error.proto::ErrorDetail` (tags 1-8). */
+ *  the dynamic stubs and hand-decodes the prost bytes. Mirrors the
+ *  `udb/entity/v1/error.proto::ErrorDetail` wire shape. */
 export interface UdbErrorDetail {
   /** Field 1: backend identifier (e.g. "postgres"). */
   backend?: string;
@@ -156,8 +193,10 @@ export interface UdbErrorDetail {
   policy_decision_id?: string;
   /** Field 7: correlation id for tracing. */
   correlation_id?: string;
-  /** Field 8: numeric `ErrorKind` (0=UNSPECIFIED…6=INTERNAL). */
+  /** Field 8: numeric `ErrorKind`. */
   kind?: number;
+  /** Field 9: structured invalid request fields. */
+  field_violations?: UdbFieldViolation[];
   /** Symbolic name for `kind`, mapped from {@link ERROR_KIND_NAMES}. */
   kindName?: string;
   /** Compatibility alias: legacy callers read `reason`; mapped from the wire shape. */
@@ -191,7 +230,7 @@ export class UdbError extends Error {
     return Boolean(this.detail?.retryable);
   }
 
-  /** Numeric `ErrorKind` (0=UNSPECIFIED…6=INTERNAL) decoded from the
+  /** Numeric `ErrorKind` decoded from the
    *  `udb-error-detail-bin` trailer, or undefined when the broker sent none.
    *  Cross-language parity accessor (Go/PHP expose the same). */
   get kind(): number | undefined {
@@ -203,17 +242,61 @@ export class UdbError extends Error {
   get kindName(): string | undefined {
     return this.detail?.kindName;
   }
+
+  /** Structured validation failures decoded from the
+   *  `udb-error-detail-bin` trailer. Empty when the broker sent no validation
+   *  detail or the error kind is unrelated to field validation. */
+  get fieldViolations(): UdbFieldViolation[] {
+    return this.detail?.field_violations ?? [];
+  }
 }
 
 const ERROR_DETAIL_TRAILER = "udb-error-detail-bin";
 
+function decodeFieldViolationBytes(bytes: Buffer): UdbFieldViolation {
+  const violation: UdbFieldViolation = {};
+  let i = 0;
+  const readVarint = (): number => {
+    let shift = 0;
+    let result = 0;
+    while (i < bytes.length) {
+      const b = bytes[i++];
+      result += (b & 0x7f) * Math.pow(2, shift);
+      if ((b & 0x80) === 0) break;
+      shift += 7;
+    }
+    return result;
+  };
+  while (i < bytes.length) {
+    const tag = readVarint();
+    const field = tag >>> 3;
+    const wire = tag & 0x7;
+    if (wire === 2) {
+      const len = readVarint();
+      const value = bytes.toString("utf8", i, i + len);
+      i += len;
+      if (field === 1) violation.field = value;
+      if (field === 2) violation.description = value;
+    } else if (wire === 0) {
+      readVarint();
+    } else if (wire === 5) {
+      i += 4;
+    } else if (wire === 1) {
+      i += 8;
+    } else {
+      break;
+    }
+  }
+  return violation;
+}
+
 /** Minimal prost/protobuf wire decoder for the `udb.entity.v1.ErrorDetail`
- *  message (error.proto tags 1-8). The SDK forwards through dynamic stubs and
+ *  message. The SDK forwards through dynamic stubs and
  *  deliberately does NOT depend on generated message classes, so it hand-reads
  *  the length-delimited / varint fields it needs:
  *    1 backend(string) 2 operation(string) 3 capability_required(string)
  *    4 retryable(bool) 5 retry_after_ms(int) 6 policy_decision_id(string)
- *    7 correlation_id(string) 8 kind(enum/int) */
+ *    7 correlation_id(string) 8 kind(enum/int) 9 field_violations(message). */
 function decodeErrorDetailBytes(bytes: Buffer): UdbErrorDetail {
   const detail: UdbErrorDetail = { rawBytes: bytes };
   let i = 0;
@@ -235,7 +318,8 @@ function decodeErrorDetailBytes(bytes: Buffer): UdbErrorDetail {
     if (wire === 2) {
       // length-delimited (string/bytes)
       const len = readVarint();
-      const value = bytes.toString("utf8", i, i + len);
+      const start = i;
+      const value = bytes.toString("utf8", start, start + len);
       i += len;
       switch (field) {
         case 1: detail.backend = value; break;
@@ -243,6 +327,10 @@ function decodeErrorDetailBytes(bytes: Buffer): UdbErrorDetail {
         case 3: detail.capability_required = value; break;
         case 6: detail.policy_decision_id = value; break;
         case 7: detail.correlation_id = value; break;
+        case 9:
+          if (!detail.field_violations) detail.field_violations = [];
+          detail.field_violations.push(decodeFieldViolationBytes(bytes.subarray(start, start + len)));
+          break;
         default: break; // unknown string field — ignore, raw bytes retained
       }
     } else if (wire === 0) {
@@ -275,14 +363,38 @@ function decodeErrorDetailBytes(bytes: Buffer): UdbErrorDetail {
 
 function decodeErrorDetail(err: grpc.ServiceError): UdbErrorDetail | undefined {
   const trailers = err.metadata;
-  if (!trailers) return undefined;
-  const raw = trailers.get(ERROR_DETAIL_TRAILER);
-  if (!raw || raw.length === 0) return undefined;
-  const buf = raw[0];
-  const bytes = typeof buf === "string" ? Buffer.from(buf, "binary") : (buf as Buffer);
-  // The wire payload is the prost-encoded `udb.entity.v1.ErrorDetail`; decode it
-  // inline into the typed shape (rawBytes is retained for advanced callers).
-  return decodeErrorDetailBytes(bytes);
+  if (trailers) {
+    const raw = trailers.get(ERROR_DETAIL_TRAILER);
+    if (raw && raw.length > 0) {
+      const buf = raw[0];
+      const bytes = typeof buf === "string" ? Buffer.from(buf, "binary") : (buf as Buffer);
+      // The wire payload is the prost-encoded `udb.entity.v1.ErrorDetail`; decode it
+      // inline into the typed shape (rawBytes is retained for advanced callers).
+      return decodeErrorDetailBytes(bytes);
+    }
+  }
+  return synthesizeTransportErrorDetail(err);
+}
+
+function synthesizeTransportErrorDetail(err: grpc.ServiceError): UdbErrorDetail | undefined {
+  const transportCodes = new Set([
+    grpc.status.UNAVAILABLE,
+    grpc.status.DEADLINE_EXCEEDED,
+    grpc.status.CANCELLED,
+  ]);
+  if (!transportCodes.has(err.code)) return undefined;
+  const operation = (grpc.status[err.code] ?? String(err.code)).toLowerCase();
+  const retryable = err.code !== grpc.status.CANCELLED;
+  return {
+    backend: "transport",
+    operation,
+    retryable,
+    retry_after_ms: 0,
+    kind: 5,
+    kindName: ERROR_KIND_NAMES[5],
+    reason: "transport",
+    code: ERROR_KIND_NAMES[5],
+  };
 }
 
 // Retry safety is read from the proto-derived operation_kind per RPC (each
@@ -300,6 +412,38 @@ export const RPC_OPERATION_KIND: Record<string, string> = {
   // @@UDB_RPC_END
 };
 
+// Proto-derived public SDK alias for every RPC, keyed by full gRPC path. This
+// is display/metadata only; dispatch continues to use the raw wire path.
+export const RPC_API_ALIAS: Record<string, string> = {
+  // @@UDB_RPC_BEGIN
+  "{{RPC_PATH}}": "{{RPC_ALIAS_SNAKE}}",
+  // @@UDB_RPC_END
+};
+
+// Proto-derived REST operationId for every RPC, keyed by full gRPC path. This
+// is the canonical public API identity used by docs and benchmark artifacts.
+export const RPC_OPERATION_ID: Record<string, string> = {
+  // @@UDB_RPC_BEGIN
+  "{{RPC_PATH}}": "{{REST_OPERATION_ID}}",
+  // @@UDB_RPC_END
+};
+
+// Descriptor-derived REST HTTP method for every RPC with an HTTP annotation.
+// Empty string means the RPC is gRPC-only.
+export const RPC_HTTP_METHOD: Record<string, string> = {
+  // @@UDB_RPC_BEGIN
+  "{{RPC_PATH}}": "{{RPC_HTTP_METHOD}}",
+  // @@UDB_RPC_END
+};
+
+// Descriptor-derived REST HTTP path for every RPC with an HTTP annotation.
+// Empty string means the RPC is gRPC-only.
+export const RPC_HTTP_PATH: Record<string, string> = {
+  // @@UDB_RPC_BEGIN
+  "{{RPC_PATH}}": "{{RPC_HTTP_PATH}}",
+  // @@UDB_RPC_END
+};
+
 // Proto-derived idempotency replay-safety for every RPC, keyed by full gRPC
 // path ("/pkg.Service/Method"). A `true` value means the broker treats a retry
 // carrying the SAME idempotency key as a safe replay (the duplicate is detected
@@ -314,18 +458,34 @@ export const RPC_REPLAY_SAFE: Record<string, boolean> = {
 };
 
 /** A descriptor-driven entity binding emitted from annotated entity protos. The
- *  generator fills one row per `@@UDB_ENTITY` block from lane 07's `{{ENTITY_*}}`
+ *  generator fills one row per `@@UDB_ENTITY` block from lane 07's ENTITY
  *  placeholder catalog (D7). `UdbProject.entity(messageType)` looks the binding up
- *  here so callers need not hand-pass `{ key, tenantField, projectField }`. Until
- *  lane 07 ships the `{{ENTITY_*}}` substitutions the block emits nothing and this
+ *  here so callers need not hand-pass `{ primaryKeys, tenantField, projectField }`. Until
+ *  lane 07 ships the ENTITY substitutions the block emits nothing and this
  *  registry is empty — the hand-written `entity.ts` path works without it. */
 export interface EntityBinding {
   messageType: string;
   table: string;
+  primaryKeys: string[];
+  /** @deprecated use descriptor-backed primaryKeys. */
   key: string[];
+  fields: string[];
+  relations: EntityRelationBinding[];
+  versionField?: string;
   tsType?: string;
   tenantField?: string;
   projectField?: string;
+}
+
+export interface EntityRelationBinding {
+  name: string;
+  kind: string;
+  local_fields: string[];
+  target_message_type: string;
+  target_table: string;
+  target_fields: string[];
+  on_delete?: string;
+  on_update?: string;
 }
 
 export const ENTITY_REGISTRY: Record<string, EntityBinding> = {
@@ -333,7 +493,11 @@ export const ENTITY_REGISTRY: Record<string, EntityBinding> = {
   "{{ENTITY_MESSAGE_TYPE}}": {
     messageType: "{{ENTITY_MESSAGE_TYPE}}",
     table: "{{ENTITY_TABLE}}",
+    primaryKeys: [{{ENTITY_PRIMARY_KEYS}}],
     key: [{{ENTITY_PRIMARY_KEYS}}],
+    fields: [{{ENTITY_JSON_FIELDS}}],
+    relations: {{ENTITY_RELATIONS_JSON}},
+    versionField: "{{ENTITY_VERSION_FIELD}}",
     tsType: "{{ENTITY_TS_TYPE}}",
     tenantField: "{{ENTITY_TENANT_FIELD}}",
     projectField: "{{ENTITY_PROJECT_FIELD}}",
@@ -468,22 +632,15 @@ export class UdbCore {
     return this.retry.retryableCodes.includes(err.code);
   }
 
-  /** Read a non-empty idempotency key off a request body, mirroring the field
-   *  the broker keys replay on (`idempotency_key`; some messages nest it under a
-   *  `context`/`request_context`). Returns false when absent or blank so a
-   *  replay-safe mutation without a key is NOT retried. */
+  /** Read a non-empty top-level idempotency key off a request body, mirroring
+   *  the proto `request_key_field` the broker uses for durable replay. Returns
+   *  false when absent or blank so a replay-safe mutation without a top-level key
+   *  is NOT retried. */
   private static hasIdempotencyKey(request: any): boolean {
     if (!request || typeof request !== "object") return false;
-    const fromCtx = (ctx: any): string | undefined =>
-      ctx && typeof ctx === "object"
-        ? (ctx.idempotency_key ?? ctx.idempotencyKey)
-        : undefined;
     const key =
       request.idempotency_key ??
-      request.idempotencyKey ??
-      fromCtx(request.context) ??
-      fromCtx(request.request_context) ??
-      fromCtx(request.requestContext);
+      request.idempotencyKey;
     return typeof key === "string" && key.trim().length > 0;
   }
 
@@ -656,14 +813,13 @@ export interface {{SERVICE_NAME}}Api {
 /** {{SERVICE_FULL}} · {{RPC_KIND}} · `{{RPC_PATH}}` · alias `{{RPC_ALIAS_SNAKE}}` · ({{RPC_INPUT_PKG}}.{{RPC_INPUT}}) → ({{RPC_OUTPUT_PKG}}.{{RPC_OUTPUT}})
  *
  *  The request/response are wire JSON plain objects (snake_case, keepCase loader).
- *  The signature stays `any`/`Promise<any>` here because the per-message typed
- *  interfaces live in the hand-written `messages.ts` subset (09.2.2.1) — they are
- *  NOT in scope inside the generated file, and the full descriptor-driven typed
- *  signature emit is deferred (D10). Callers wanting compile-time field checking
- *  import `messages.ts` and pass a typed object (still accepted as `any` here). */
+ *  Known common messages resolve to the hand-written `messages.ts` subset; all
+ *  other descriptor messages intentionally fall back to `Record<string, unknown>`
+ *  until full descriptor-driven message-interface generation lands. `<TRes = …>`
+ *  preserves the dynamic response escape hatch for advanced callers. */
 export interface {{SERVICE_NAME}}Api {
-  {{RPC_ALIAS_SNAKE}}(request: any, call?: CallOptions): Promise<any>;
-  {{RPC_ALIAS_CAMEL}}(request: any, call?: CallOptions): Promise<any>;
+  {{RPC_ALIAS_SNAKE}}<TRes = RpcOutput<"{{RPC_OUTPUT}}">>(request: RpcInput<"{{RPC_INPUT}}">, call?: CallOptions): Promise<TRes>;
+  {{RPC_ALIAS_CAMEL}}<TRes = RpcOutput<"{{RPC_OUTPUT}}">>(request: RpcInput<"{{RPC_INPUT}}">, call?: CallOptions): Promise<TRes>;
 }
 // @@UDB_RPC_END
 // @@UDB_RPC_BEGIN kind=server_streaming
@@ -779,4 +935,737 @@ export class UdbGeneratedClient {
   close(): void {
     this.core.close();
   }
+}
+
+// ── Neutral-IR typed query builder (master-plan item 2.5) ───────────────────────
+//
+// A thin, typed layer that emits the broker's CANONICAL neutral-IR envelope
+// (`{ "ir": { "op": ..., ...LogicalRead/Write/Delete } }`) and sends it through the
+// EXISTING GenericDispatch RPC (`core.unary` -> `DataBroker/GenericDispatch`). It
+// is NOT a second client engine: it builds a plain request object and hands it to
+// the very same dispatch method raw callers use, so tenant / project / auth all
+// flow from the caller's RequestContext metadata exactly as they do for a raw
+// call. The builder NEVER puts a tenant/project (or any RequestContext) on the
+// request body — the broker derives those from the verified claim / headers.
+//
+// The broker parses this envelope in `handlers_data.rs::compile_neutral_ir_dispatch`
+// and lowers it to backend-native SQL/query with tenant + RLS predicates injected
+// server-side, so the safe, mediated path is the one users naturally take. Raw
+// spec stays available as an explicit escape hatch — see `rawDispatchRequest`
+// below and the untouched `DataBroker.generic_dispatch(...)`.
+//
+// The wire shapes below mirror the serde encoding of the Rust IR types
+// (`src/ir/*.rs`): externally-tagged enums (`{ "Comparison": {...} }`,
+// `{ "String": "x" }`, the unit `"Null"`), snake_case op tokens (`"eq"`,
+// `"starts_with"`), and `LogicalRead`/`LogicalWrite`/`LogicalDelete` field names.
+
+/** Comparison operators the IR compilers lower (mirrors `ir::filter::ComparisonOp`
+ *  plus the `in` -> `InList` shorthand). */
+export type IrComparisonOp = "eq" | "ne" | "gt" | "ge" | "lt" | "le" | "in" | "like";
+
+/** Stable comparison-op tokens (snake_case, matching `ComparisonOp::token`). `in`
+ *  is handled separately because it compiles to `InList`, not `Comparison`. */
+const IR_COMPARISON_TOKENS: Record<Exclude<IrComparisonOp, "in">, string> = {
+  eq: "eq",
+  ne: "ne",
+  gt: "gt",
+  ge: "ge",
+  lt: "lt",
+  le: "le",
+  like: "like",
+};
+
+export type IrSortDirection = "asc" | "desc";
+
+/** A `DataBroker` surface that can carry the IR envelope. The generated
+ *  `DataBrokerApi` satisfies this structurally; the aggregate `UdbGeneratedClient`
+ *  is also accepted (its `.DataBroker` is used). */
+export interface IrDispatchTarget {
+  generic_dispatch(request: any, call?: CallOptions): Promise<any>;
+}
+type IrDispatchLike = IrDispatchTarget | { DataBroker: IrDispatchTarget };
+
+function resolveDispatch(target: IrDispatchLike): IrDispatchTarget {
+  if (typeof (target as IrDispatchTarget).generic_dispatch === "function") {
+    return target as IrDispatchTarget;
+  }
+  const broker = (target as { DataBroker?: IrDispatchTarget }).DataBroker;
+  if (broker && typeof broker.generic_dispatch === "function") return broker;
+  throw new Error("udb: IR dispatch target must expose generic_dispatch (pass the DataBroker client)");
+}
+
+/** Encode a JS value into the externally-tagged `ir::value::LogicalValue` wire
+ *  form. `Date` -> RFC3339 `Timestamp`, `Uint8Array` -> `Bytes`, integer numbers
+ *  -> `Int` (non-integers -> `Float`), plain objects -> `Json`, arrays -> `Array`. */
+export function toLogicalValue(value: unknown): any {
+  if (value === null || value === undefined) return "Null";
+  if (typeof value === "boolean") return { Bool: value };
+  if (typeof value === "bigint") return { Int: Number(value) };
+  if (typeof value === "number") return Number.isInteger(value) ? { Int: value } : { Float: value };
+  if (typeof value === "string") return { String: value };
+  if (value instanceof Date) return { Timestamp: value.toISOString() };
+  if (value instanceof Uint8Array) return { Bytes: Array.from(value) };
+  if (Array.isArray(value)) return { Array: value.map(toLogicalValue) };
+  if (typeof value === "object") return { Json: value };
+  return { String: String(value) };
+}
+
+/** Encode one record into a `LogicalRecord` (field -> LogicalValue). Keys are
+ *  sorted so the envelope is deterministic and byte-stable across languages
+ *  (mirrors the server-side `BTreeMap` canonicalization). */
+function toLogicalRecord(record: Record<string, unknown>): Record<string, any> {
+  const out: Record<string, any> = {};
+  for (const key of Object.keys(record).sort()) out[key] = toLogicalValue(record[key]);
+  return out;
+}
+
+/** Shared predicate accumulator for read/delete builders. */
+class PredicateSet {
+  protected readonly predicates: any[] = [];
+
+  protected addWhere(field: string, op: IrComparisonOp, value: unknown): void {
+    if (op === "in") {
+      this.addWhereIn(field, value as unknown[]);
+      return;
+    }
+    const token = IR_COMPARISON_TOKENS[op];
+    if (!token) throw new Error(`udb: unsupported IR operator '${op}'`);
+    this.predicates.push({ Comparison: { field, op: token, value: toLogicalValue(value) } });
+  }
+
+  protected addWhereIn(field: string, values: unknown[]): void {
+    this.predicates.push({ InList: { field, values: values.map(toLogicalValue) } });
+  }
+
+  protected addFilterNode(filter: any): void {
+    this.predicates.push(filter);
+  }
+
+  /** A single predicate is emitted bare; multiple are conjoined into `And`
+   *  (mirrors `LogicalFilter::and`). Returns undefined when no predicate set. */
+  protected filterNode(): any | undefined {
+    if (this.predicates.length === 0) return undefined;
+    if (this.predicates.length === 1) return this.predicates[0];
+    return { And: this.predicates.slice() };
+  }
+}
+
+export interface IrExecOptions {
+  /** Target backend whose neutral-IR compiler lowers the envelope. Defaults to
+   *  `postgres`. The broker resolves the concrete instance per project. */
+  backend?: string;
+  call?: CallOptions;
+}
+
+const DEFAULT_IR_BACKEND = "postgres";
+
+export const ORM_TIERS: Record<string, string> = {{ORM_TIERS}};
+
+export const BACKEND_ROLES: Record<string, string> = {{BACKEND_ROLES}};
+
+export class EagerIncludeUnsupportedBackendError extends Error {
+  constructor(readonly backend: string, readonly tier?: string) {
+    super(`udb: backend '${backend}' is ${tier ?? "unknown"}; eager include requires a relational backend`);
+    this.name = "EagerIncludeUnsupportedBackendError";
+  }
+}
+
+function requireEagerIncludeBackend(backend: string): void {
+  const tier = ORM_TIERS[backend];
+  if (tier !== "relational") {
+    throw new EagerIncludeUnsupportedBackendError(backend, tier);
+  }
+}
+
+/** Typed read builder: `query(mt).where("status","eq","open").orderBy("created_at","desc").limit(50)`.
+ *  Emits `{ "ir": { "op": "read", ... } }` (a `LogicalRead`). */
+export class Query extends PredicateSet {
+  private projectionFields: string[] | null = null;
+  private readonly sorts: any[] = [];
+  private readonly includes: Array<{ relation: string }> = [];
+  private limitN?: number;
+  private offsetN?: number;
+
+  constructor(private readonly messageType: string) {
+    super();
+  }
+
+  where(field: string, op: IrComparisonOp, value: unknown): this {
+    this.addWhere(field, op, value);
+    return this;
+  }
+
+  whereIn(field: string, values: unknown[]): this {
+    this.addWhereIn(field, values);
+    return this;
+  }
+
+  whereFilter(filter: any): this {
+    this.addFilterNode(filter);
+    return this;
+  }
+
+  /** Projection (`LogicalProjection.fields`); omit to select every field. */
+  select(...fields: string[]): this {
+    this.projectionFields = fields;
+    return this;
+  }
+
+  orderBy(field: string, direction: IrSortDirection = "asc"): this {
+    this.sorts.push({ field, direction });
+    return this;
+  }
+
+  include(relation: string): this {
+    if (!relation) throw new Error("udb: include relation name is required");
+    this.includes.push({ relation });
+    return this;
+  }
+
+  limit(n: number): this {
+    this.limitN = n;
+    return this;
+  }
+
+  offset(n: number): this {
+    this.offsetN = n;
+    return this;
+  }
+
+  private pagination(): any | undefined {
+    if (this.limitN === undefined && this.offsetN === undefined) return undefined;
+    const p: any = {};
+    if (this.limitN !== undefined) p.limit = this.limitN;
+    if (this.offsetN !== undefined) p.offset = this.offsetN;
+    return p;
+  }
+
+  /** The canonical neutral-IR envelope. */
+  toEnvelope(): { ir: Record<string, any> } {
+    const body: Record<string, any> = { op: "read", message_type: this.messageType };
+    const filter = this.filterNode();
+    if (filter !== undefined) body.filter = filter;
+    if (this.projectionFields && this.projectionFields.length) {
+      body.projection = { fields: this.projectionFields.slice() };
+    }
+    if (this.sorts.length) body.sort = this.sorts.slice();
+    if (this.includes.length) body.include = this.includes.map((item) => ({ ...item }));
+    const pagination = this.pagination();
+    if (pagination !== undefined) body.pagination = pagination;
+    return { ir: body };
+  }
+
+  toSpecJson(): string {
+    return JSON.stringify(this.toEnvelope());
+  }
+
+  /** GenericDispatchRequest body — note: no tenant/project/context is set. */
+  toRequest(backend: string = DEFAULT_IR_BACKEND): any {
+    if (this.includes.length) requireEagerIncludeBackend(backend);
+    return { backend, operation: "query", spec_json: this.toSpecJson() };
+  }
+
+  /** Send through the EXISTING GenericDispatch RPC. */
+  execute(dispatch: IrDispatchLike, opts: IrExecOptions = {}): Promise<any> {
+    return resolveDispatch(dispatch).generic_dispatch(
+      this.toRequest(opts.backend ?? DEFAULT_IR_BACKEND),
+      opts.call,
+    );
+  }
+}
+
+/** Typed write builder emitting `{ "ir": { "op": "write", ... } }` (a
+ *  `LogicalWrite`). Defaults to insert (conflict = `Error`); call `merge()` /
+ *  `ignoreConflicts()` / `updateOnConflict(...)` for upsert semantics. */
+export class WriteQuery {
+  private readonly rows: Array<Record<string, unknown>> = [];
+  private conflict?: any;
+  private readonly returnFields: string[] = [];
+
+  constructor(private readonly messageType: string) {}
+
+  record(row: Record<string, unknown>): this {
+    this.rows.push(row);
+    return this;
+  }
+
+  records(rows: Array<Record<string, unknown>>): this {
+    for (const row of rows) this.rows.push(row);
+    return this;
+  }
+
+  /** Full upsert — replace every column on conflict (`ConflictStrategy::Replace`). */
+  merge(): this {
+    this.conflict = { kind: "replace" };
+    return this;
+  }
+
+  /** Skip conflicting rows (`ConflictStrategy::Ignore`). */
+  ignoreConflicts(): this {
+    this.conflict = { kind: "ignore" };
+    return this;
+  }
+
+  /** Partial upsert — update only `fields` on conflict (`ConflictStrategy::Update`).
+   *  `conflictOn` names an alternate unique key; omit to use the manifest PK. */
+  updateOnConflict(fields: string[], conflictOn?: string[]): this {
+    this.conflict =
+      conflictOn && conflictOn.length
+        ? { kind: "update", fields: fields.slice(), conflict_on: conflictOn.slice() }
+        : { kind: "update", fields: fields.slice() };
+    return this;
+  }
+
+  returning(...fields: string[]): this {
+    for (const f of fields) this.returnFields.push(f);
+    return this;
+  }
+
+  toEnvelope(): { ir: Record<string, any> } {
+    if (this.rows.length === 0) throw new Error("udb: write requires at least one record(...)");
+    const body: Record<string, any> = {
+      op: "write",
+      message_type: this.messageType,
+      records: this.rows.map(toLogicalRecord),
+    };
+    if (this.conflict) body.conflict = this.conflict;
+    if (this.returnFields.length) body.return_fields = this.returnFields.slice();
+    return { ir: body };
+  }
+
+  toSpecJson(): string {
+    return JSON.stringify(this.toEnvelope());
+  }
+
+  toRequest(backend: string = DEFAULT_IR_BACKEND): any {
+    return { backend, operation: "mutate", spec_json: this.toSpecJson() };
+  }
+
+  execute(dispatch: IrDispatchLike, opts: IrExecOptions = {}): Promise<any> {
+    return resolveDispatch(dispatch).generic_dispatch(
+      this.toRequest(opts.backend ?? DEFAULT_IR_BACKEND),
+      opts.call,
+    );
+  }
+}
+
+/** Typed delete builder emitting `{ "ir": { "op": "delete", ... } }` (a
+ *  `LogicalDelete`). A `where(...)` predicate is REQUIRED — the IR has no
+ *  delete-everything path (mirrors the server-side contract). */
+export class DeleteQuery extends PredicateSet {
+  private readonly returnFields: string[] = [];
+
+  constructor(private readonly messageType: string) {
+    super();
+  }
+
+  where(field: string, op: IrComparisonOp, value: unknown): this {
+    this.addWhere(field, op, value);
+    return this;
+  }
+
+  whereIn(field: string, values: unknown[]): this {
+    this.addWhereIn(field, values);
+    return this;
+  }
+
+  returning(...fields: string[]): this {
+    for (const f of fields) this.returnFields.push(f);
+    return this;
+  }
+
+  toEnvelope(): { ir: Record<string, any> } {
+    const filter = this.filterNode();
+    if (filter === undefined) {
+      throw new Error("udb: delete requires at least one where(...) predicate (no delete-everything path)");
+    }
+    const body: Record<string, any> = { op: "delete", message_type: this.messageType, filter };
+    if (this.returnFields.length) body.return_fields = this.returnFields.slice();
+    return { ir: body };
+  }
+
+  toSpecJson(): string {
+    return JSON.stringify(this.toEnvelope());
+  }
+
+  toRequest(backend: string = DEFAULT_IR_BACKEND): any {
+    return { backend, operation: "mutate", spec_json: this.toSpecJson() };
+  }
+
+  execute(dispatch: IrDispatchLike, opts: IrExecOptions = {}): Promise<any> {
+    return resolveDispatch(dispatch).generic_dispatch(
+      this.toRequest(opts.backend ?? DEFAULT_IR_BACKEND),
+      opts.call,
+    );
+  }
+}
+
+/** Start a typed neutral-IR read for `messageType` (the catalog/proto FQN). */
+export function query(messageType: string): Query {
+  return new Query(messageType);
+}
+
+/** Start a typed neutral-IR write (insert/upsert) for `messageType`. */
+export function writeTo(messageType: string): WriteQuery {
+  return new WriteQuery(messageType);
+}
+
+/** Start a typed neutral-IR delete for `messageType`. */
+export function deleteFrom(messageType: string): DeleteQuery {
+  return new DeleteQuery(messageType);
+}
+
+// ── Descriptor-driven repositories (master-plan item 10.2) ────────────────────
+
+function requireEntityBinding(binding: EntityBinding): EntityBinding {
+  if (!binding.primaryKeys || binding.primaryKeys.length === 0) {
+    throw new Error(`udb: entity ${binding.messageType} has no descriptor primary key`);
+  }
+  return binding;
+}
+
+function validateEntityRecord(binding: EntityBinding, record: Record<string, unknown>): void {
+  const allowed = new Set(binding.fields);
+  for (const field of Object.keys(record)) {
+    if (allowed.size > 0 && !allowed.has(field)) {
+      throw new Error(`udb: field '${field}' is not declared on entity ${binding.messageType}`);
+    }
+  }
+}
+
+function updateFieldsFor(binding: EntityBinding, record: Record<string, unknown>): string[] {
+  const pk = new Set(binding.primaryKeys);
+  return Object.keys(record).filter((field) => !pk.has(field));
+}
+
+export class Repository<T extends Record<string, unknown> = Record<string, unknown>> {
+  readonly binding: EntityBinding;
+
+  constructor(binding: EntityBinding) {
+    this.binding = requireEntityBinding(binding);
+  }
+
+  query(): Query {
+    return query(this.binding.messageType);
+  }
+
+  relations(): readonly EntityRelationBinding[] {
+    return this.binding.relations.slice();
+  }
+
+  relation(name: string): EntityRelationBinding | undefined {
+    return this.binding.relations.find((rel) => rel.name === name);
+  }
+
+  requireRelation(name: string): EntityRelationBinding {
+    const rel = this.relation(name);
+    if (!rel) throw new Error(`udb: unknown relation '${name}' on entity ${this.binding.messageType}`);
+    if (rel.local_fields.length === 0 || rel.local_fields.length !== rel.target_fields.length) {
+      throw new Error(`udb: relation '${name}' on entity ${this.binding.messageType} has invalid field mapping`);
+    }
+    if (!rel.target_message_type) {
+      throw new Error(`udb: relation '${name}' on entity ${this.binding.messageType} has no target entity`);
+    }
+    return rel;
+  }
+
+  relationQuery(name: string, parent: Record<string, unknown>): Query {
+    const rel = this.requireRelation(name);
+    const q = query(rel.target_message_type);
+    rel.local_fields.forEach((localField, idx) => {
+      if (!Object.prototype.hasOwnProperty.call(parent, localField)) {
+        throw new Error(`udb: relation '${name}' missing parent field '${localField}'`);
+      }
+      q.where(rel.target_fields[idx], "eq", parent[localField]);
+    });
+    return q;
+  }
+
+  relationBatchQuery(name: string, parents: Array<Record<string, unknown>>): Query {
+    const rel = this.requireRelation(name);
+    if (parents.length === 0) {
+      throw new Error(`udb: relation '${name}' batch query requires at least one parent`);
+    }
+    if (rel.local_fields.length === 1 && rel.target_fields.length === 1) {
+      const localField = rel.local_fields[0];
+      const seen = new Set<string>();
+      const values: unknown[] = [];
+      for (const parent of parents) {
+        if (!Object.prototype.hasOwnProperty.call(parent, localField)) {
+          throw new Error(`udb: relation '${name}' missing parent field '${localField}'`);
+        }
+        const value = parent[localField];
+        const key = JSON.stringify(value) ?? "undefined";
+        if (!seen.has(key)) {
+          seen.add(key);
+          values.push(value);
+        }
+      }
+      return query(rel.target_message_type).whereIn(rel.target_fields[0], values);
+    }
+    if (rel.local_fields.length !== rel.target_fields.length) {
+      throw new Error(`udb: relation '${name}' on entity ${this.binding.messageType} has invalid field mapping`);
+    }
+    const seen = new Set<string>();
+    const branches: any[] = [];
+    for (const parent of parents) {
+      const comparisons = rel.local_fields.map((localField, idx) => {
+        if (!Object.prototype.hasOwnProperty.call(parent, localField)) {
+          throw new Error(`udb: relation '${name}' missing parent field '${localField}'`);
+        }
+        return {
+          Comparison: {
+            field: rel.target_fields[idx],
+            op: "eq",
+            value: toLogicalValue(parent[localField]),
+          },
+        };
+      });
+      const key = JSON.stringify(comparisons) ?? "undefined";
+      if (!seen.has(key)) {
+        seen.add(key);
+        branches.push({ And: comparisons });
+      }
+    }
+    return query(rel.target_message_type).whereFilter({ Or: branches });
+  }
+
+{{ENTITY_TS_RELATION_ACCESSORS}}
+
+  find(key: Record<string, unknown>, dispatch: IrDispatchLike, opts: IrExecOptions = {}): Promise<any> {
+    const q = this.query().limit(1);
+    for (const field of this.binding.primaryKeys) {
+      if (!(field in key)) throw new Error(`udb: missing primary key field '${field}'`);
+      q.where(field, "eq", key[field]);
+    }
+    return q.execute(dispatch, opts);
+  }
+
+  first(q: Query, dispatch: IrDispatchLike, opts: IrExecOptions = {}): Promise<any> {
+    return q.limit(1).execute(dispatch, opts);
+  }
+
+  all(q: Query, dispatch: IrDispatchLike, opts: IrExecOptions = {}): Promise<any> {
+    return q.execute(dispatch, opts);
+  }
+
+  upsert(record: T, dispatch: IrDispatchLike, opts: IrExecOptions = {}): Promise<any> {
+    validateEntityRecord(this.binding, record);
+    for (const field of this.binding.primaryKeys) {
+      if (!(field in record)) throw new Error(`udb: missing primary key field '${field}'`);
+    }
+    const updateFields = updateFieldsFor(this.binding, record);
+    if (updateFields.length === 0) throw new Error("udb: upsert requires at least one non-primary-key field");
+    return writeTo(this.binding.messageType)
+      .record(record)
+      .updateOnConflict(updateFields, this.binding.primaryKeys)
+      .execute(dispatch, opts);
+  }
+
+  delete(key: Record<string, unknown>, dispatch: IrDispatchLike, opts: IrExecOptions = {}): Promise<any> {
+    const d = deleteFrom(this.binding.messageType);
+    for (const field of this.binding.primaryKeys) {
+      if (!(field in key)) throw new Error(`udb: missing primary key field '${field}'`);
+      d.where(field, "eq", key[field]);
+    }
+    return d.execute(dispatch, opts);
+  }
+}
+
+export function repository<T extends Record<string, unknown> = Record<string, unknown>>(
+  messageType: string,
+): Repository<T> {
+  const binding = ENTITY_REGISTRY[messageType];
+  if (!binding) throw new Error(`udb: unknown entity '${messageType}'`);
+  return new Repository<T>(binding);
+}
+
+export interface UnitOfWorkEntry {
+  repo: Repository;
+  record: Record<string, unknown>;
+  snapshot: string;
+}
+
+export class UnitOfWorkTxError extends Error {
+  constructor(message: string, readonly status?: any) {
+    super(message);
+    this.name = "UnitOfWorkTxError";
+  }
+}
+
+export class UnitOfWorkConflictError extends UnitOfWorkTxError {
+  constructor(message: string, status?: any) {
+    super(message, status);
+    this.name = "UnitOfWorkConflictError";
+  }
+}
+
+export class UnitOfWorkUnsupportedBackendError extends Error {
+  constructor(readonly backend: string, readonly role?: string) {
+    super(`udb: backend '${backend}' is ${role ?? "unknown"}; UnitOfWork requires a canonical transactional backend`);
+    this.name = "UnitOfWorkUnsupportedBackendError";
+  }
+}
+
+function cloneRecord(record: Record<string, unknown>): Record<string, unknown> {
+  return JSON.parse(JSON.stringify(record));
+}
+
+function entityIdentity(binding: EntityBinding, record: Record<string, unknown>): string {
+  const scopeParts: string[] = [];
+  for (const field of [binding.tenantField, binding.projectField].filter(Boolean) as string[]) {
+    if (!Object.prototype.hasOwnProperty.call(record, field)) {
+      throw new Error(`udb: unit-of-work record for ${binding.messageType} missing scope field '${field}'`);
+    }
+    scopeParts.push(`${field}=${JSON.stringify(record[field])}`);
+  }
+  const parts = binding.primaryKeys.map((field) => {
+    if (!Object.prototype.hasOwnProperty.call(record, field)) {
+      throw new Error(`udb: unit-of-work record for ${binding.messageType} missing primary key field '${field}'`);
+    }
+    return JSON.stringify(record[field]);
+  });
+  return `${binding.messageType}:${scopeParts.join(":")}:${parts.join(":")}`;
+}
+
+function requireVersionForTrackedWrite(binding: EntityBinding, record: Record<string, unknown>): void {
+  if (binding.versionField && !Object.prototype.hasOwnProperty.call(record, binding.versionField)) {
+    throw new Error(`udb: unit-of-work record for ${binding.messageType} missing version field '${binding.versionField}'`);
+  }
+}
+
+/** Descriptor-backed UnitOfWork change tracker. It keeps an identity map per
+ *  UnitOfWork instance only; there is no cross-call or process-wide cache. */
+export class UnitOfWork {
+  private readonly entries = new Map<string, UnitOfWorkEntry>();
+
+  attach<T extends Record<string, unknown>>(repo: Repository<T>, record: T): T {
+    requireVersionForTrackedWrite(repo.binding, record);
+    this.entries.set(entityIdentity(repo.binding, record), {
+      repo,
+      record,
+      snapshot: JSON.stringify(cloneRecord(record)),
+    });
+    return record;
+  }
+
+  track<T extends Record<string, unknown>>(repo: Repository<T>, record: T): T {
+    return this.attach(repo, record);
+  }
+
+  dirtyEntries(): readonly UnitOfWorkEntry[] {
+    return Array.from(this.entries.values()).filter(
+      (entry) => JSON.stringify(entry.record) !== entry.snapshot,
+    );
+  }
+
+  txMutations(): any[] {
+    return this.dirtyEntries().map((entry) => ({
+      operation: "upsert",
+      message_type: entry.repo.binding.messageType,
+      record_json: Buffer.from(JSON.stringify(entry.record)),
+    }));
+  }
+
+  commitMutation(): any {
+    return { commit: true };
+  }
+
+  rollbackMutation(): any {
+    return { rollback: true };
+  }
+
+  txCommitBatch(backend: string = DEFAULT_IR_BACKEND): any[] {
+    this.requireTransactionalBackend(backend);
+    return [...this.txMutations(), this.commitMutation()];
+  }
+
+  requireTransactionalBackend(backend: string = DEFAULT_IR_BACKEND): void {
+    const role = BACKEND_ROLES[backend];
+    if (role !== "canonical" && role !== "both") {
+      throw new UnitOfWorkUnsupportedBackendError(backend, role);
+    }
+  }
+
+  validateTxStatuses(statuses: Iterable<any>): void {
+    for (const status of statuses) {
+      const state = String(status?.state ?? "");
+      const message = String(status?.message ?? "");
+      if (state === "4" || state.includes("ERROR")) {
+        if (isTxConflictMessage(message)) {
+          throw new UnitOfWorkConflictError(message || "udb: unit-of-work transaction conflict", status);
+        }
+        throw new UnitOfWorkTxError(message || "udb: unit-of-work transaction failed", status);
+      }
+    }
+  }
+
+  markClean(): void {
+    for (const entry of this.entries.values()) {
+      entry.snapshot = JSON.stringify(cloneRecord(entry.record));
+    }
+  }
+
+  async flush(
+    target: UnitOfWorkFlushLike,
+    opts: { backend?: string; call?: CallOptions } = {},
+  ): Promise<any[]> {
+    const stream = resolveBeginTx(target).begin_tx(opts.call);
+    const statuses: any[] = [];
+    const done = new Promise<void>((resolve, reject) => {
+      stream.on("data", (status: any) => statuses.push(status));
+      stream.on("error", reject);
+      stream.on("end", resolve);
+    });
+    for (const mutation of this.txCommitBatch(opts.backend ?? DEFAULT_IR_BACKEND)) {
+      stream.write(mutation);
+    }
+    stream.end();
+    await done;
+    this.validateTxStatuses(statuses);
+    this.markClean();
+    return statuses;
+  }
+}
+
+export function unitOfWork(): UnitOfWork {
+  return new UnitOfWork();
+}
+
+export interface UnitOfWorkFlushTarget {
+  begin_tx(call?: CallOptions): grpc.ClientDuplexStream<any, any>;
+}
+type UnitOfWorkFlushLike = UnitOfWorkFlushTarget | { DataBroker: UnitOfWorkFlushTarget };
+
+function resolveBeginTx(target: UnitOfWorkFlushLike): UnitOfWorkFlushTarget {
+  if (typeof (target as UnitOfWorkFlushTarget).begin_tx === "function") {
+    return target as UnitOfWorkFlushTarget;
+  }
+  const broker = (target as { DataBroker?: UnitOfWorkFlushTarget }).DataBroker;
+  if (broker && typeof broker.begin_tx === "function") return broker;
+  throw new Error("udb: UnitOfWork flush target must expose DataBroker.begin_tx");
+}
+
+function isTxConflictMessage(message: string): boolean {
+  const lower = message.toLowerCase();
+  return lower.includes("aborted") || lower.includes("version") || lower.includes("conflict");
+}
+
+// @@UDB_ENTITY_BEGIN
+export function {{ENTITY_ALIAS_CAMEL}}Repository(): Repository<{{ENTITY_TS_TYPE}}> {
+  return repository<{{ENTITY_TS_TYPE}}>("{{ENTITY_MESSAGE_TYPE}}");
+}
+// @@UDB_ENTITY_END
+
+/** ESCAPE HATCH: build a raw GenericDispatchRequest body with caller-authored
+ *  `spec_json`, bypassing the typed IR builder. The mediated builders above are
+ *  preferred; this preserves the pre-existing raw capability for advanced/admin
+ *  callers. Like the builders, it sets no tenant/project on the body. */
+export function rawDispatchRequest(
+  backend: string,
+  operation: string,
+  specJson: string,
+  resourceName = "",
+): any {
+  return { backend, operation, resource_name: resourceName, spec_json: specJson };
 }

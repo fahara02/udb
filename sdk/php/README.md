@@ -203,6 +203,32 @@ $response = Udb::delete($deleteRequest);
 
 `delete()` also returns a `MutationResponse`.
 
+### Idempotency Replay And Read-Your-Writes
+
+A keyed replay-safe mutation the broker deduplicated reports `was_duplicate`;
+the write receipt on the response fences a follow-up read (full contract:
+[docs/native-services.md](../../docs/native-services.md)).
+
+```php
+use Fahara02\UdbLaravel\UdbMetadata;
+use Fahara02\UdbLaravel\WriteReceipt;
+use function Fahara02\UdbLaravel\wasReplay;
+
+$response = Udb::upsert($upsertRequest); // request carries an idempotency_key
+
+if (wasReplay($response)) {
+    // durable-idempotency replay — no new side effect occurred
+}
+
+// Read-your-writes: fence the next read on the write's receipt.
+$receipt = WriteReceipt::fromJson($response->getWriteReceiptJson());
+$meta = UdbMetadata::fromContext(/* ... */)->afterWrite($receipt);
+```
+
+Retry contract: a replay-safe mutation is retried on transient errors **only
+when the request carries a non-empty idempotency key** — keyless mutations fail
+closed rather than risk a double apply.
+
 ### Queue Jobs And Scheduled Commands
 
 Jobs, commands, and schedulers do not have an HTTP request, so pass metadata explicitly:
@@ -287,6 +313,29 @@ $stub = Udb::stub();
 $call = $stub->BeginTx($request, Udb::context()->toGrpcMetadata());
 [$response, $status] = $call->wait();
 ```
+
+### Platform Services (Vault, Metering, Scheduler, …)
+
+Vault, Metering, Scheduler, Search, Webhook, Workflow, Lock, LiveQuery, Config,
+Backup, and Embedding have no convenience wrappers yet — reach their
+buf-generated stubs through the generated client's per-service accessors
+(`VaultServiceStub()`, `MeteringServiceStub()`, …), which share one channel,
+metadata, and TLS configuration:
+
+```php
+use Fahara02\UdbLaravel\Generated\GeneratedClient;
+use Udb\Core\Vault\Services\V1\EncryptRequest;
+
+$gen = new GeneratedClient(config('udb'));
+$stub = $gen->VaultServiceStub();
+[$response, $status] = $stub->Encrypt(
+    (new EncryptRequest())->setTenantId($tenant)->setKeyName('docs')->setPlaintext('secret'),
+    Udb::context()->toGrpcMetadata(),
+)->wait();
+```
+
+The per-RPC retry class and idempotency contract are listed in
+[docs/generated/udb-native-contract.json](../../docs/generated/udb-native-contract.json).
 
 ### Error handling
 

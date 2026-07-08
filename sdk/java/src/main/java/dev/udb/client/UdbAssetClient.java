@@ -33,6 +33,10 @@ public final class UdbAssetClient {
   }
 
   UdbAssetClient(Channel channel, UdbMetadata metadata, UdbCredentials credentials) {
+    this(channel, new UdbMetadataRef(metadata), credentials);
+  }
+
+  UdbAssetClient(Channel channel, UdbMetadataRef metadata, UdbCredentials credentials) {
     this.stub =
         AssetServiceGrpc.newBlockingStub(channel)
             .withInterceptors(UdbClient.credentialInterceptor(metadata, credentials));

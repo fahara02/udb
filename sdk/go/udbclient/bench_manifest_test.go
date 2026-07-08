@@ -10,17 +10,9 @@ package udbclient
 // consumers (Go loadBenchBodyRows, TS loadBenchBodyRows, PHP loadBenchBodyRows,
 // Python bench_body_rows) all key on col2/col5 and must match AllRPCs.
 //
-// HONEST RESIDUAL (11.1.2.2/11.1.2.3 decision): the manifest col5 body cell is
-// free-form markdown prose (e.g. `username`=`<seed:username>`, `password`="X"),
-// NOT machine-readable JSON. A faithful generic markdown -> dynamicpb hydration
-// would lose fidelity for the control-plane services — the typed perfBodySpecs
-// encode real enum values (e.g. DEVICE_TYPE_API), nested actor/context scope
-// sub-messages, and seeded reference IDs that the prose cannot reliably yield,
-// and which the broker requires (it rejects placeholder bodies with
-// INVALID_ARGUMENT / PERMISSION_DENIED). So perfBodySpecs is KEPT as the typed
-// realization, and the manifest is enforced as the CONTRACT via the
-// cross-consistency tests below: a manifest row with no Go body, or a Go body
-// with no manifest row, fails `go test`. The two copies cannot silently drift.
+// The manifest col5 body cell is now strict JSON for every generated RPC. Go
+// hydrates it directly through protojson/dynamicpb, so there is no parallel
+// perfBodySpecs map to drift away from the shared docs/generated manifest.
 
 import (
 	"encoding/json"
@@ -46,6 +38,7 @@ const benchBodiesJSONPath = "../../../docs/generated/bench-bodies.json"
 // benchBodyEntry mirrors one object in docs/generated/bench-bodies.json.
 type benchBodyEntry struct {
 	RPC        string `json:"rpc"`
+	Service    string `json:"service"`
 	OpKind     string `json:"op_kind"`
 	RequestMsg string `json:"request_msg"`
 	Body       string `json:"body"`
@@ -66,12 +59,56 @@ func loadBenchBodyEntries(t *testing.T) []benchBodyEntry {
 	return entries
 }
 
+func duplicateRPCNames() map[string]bool {
+	counts := map[string]int{}
+	for _, rpc := range AllRPCs {
+		counts[rpc.Name]++
+	}
+	out := map[string]bool{}
+	for name, count := range counts {
+		if count > 1 {
+			out[name] = true
+		}
+	}
+	return out
+}
+
+func rpcBenchKey(service, name string, duplicateNames map[string]bool) string {
+	if duplicateNames[name] {
+		return service + "." + name
+	}
+	return name
+}
+
+func manifestRPCKey(rpc string) string {
+	if i := strings.LastIndex(rpc, "."); i >= 0 {
+		return rpc
+	}
+	return rpc
+}
+
+func surfaceBenchKeys() map[string]bool {
+	dups := duplicateRPCNames()
+	keys := map[string]bool{}
+	for _, rpc := range AllRPCs {
+		keys[rpcBenchKey(rpc.Service, rpc.Name, dups)] = true
+		keys[rpc.Service+"."+rpc.Name] = true
+	}
+	return keys
+}
+
+func rowHasRPC(rows map[string]string, rpc RPCInfo) bool {
+	dups := duplicateRPCNames()
+	if _, ok := rows[rpcBenchKey(rpc.Service, rpc.Name, dups)]; ok {
+		return true
+	}
+	_, ok := rows[rpc.Service+"."+rpc.Name]
+	return ok
+}
+
 // loadBenchBodyRows reads the generated docs/generated/bench-bodies.json and maps
-// the bare RPC method name (rpc's last dotted segment — webrtc uses
-// `Service.Method`, others use a bare `Method`) to the body cell. It t.Fatalf's
-// unless the row count matches AllRPCs. The bare-name keys are unique across the
-// whole corpus (verified),
-// so the returned map has exactly that many entries.
+// the RPC manifest key to the body cell. Unique RPC names use the bare method
+// name; duplicated names use `Service.Method`.
 func loadBenchBodyRows(t *testing.T) map[string]string {
 	t.Helper()
 	entries := loadBenchBodyEntries(t)
@@ -80,13 +117,9 @@ func loadBenchBodyRows(t *testing.T) map[string]string {
 		if e.RPC == "" {
 			t.Fatalf("manifest entry with empty RPC name: %+v", e)
 		}
-		// Key on the bare method name (last dotted segment).
-		name := e.RPC
-		if i := strings.LastIndex(e.RPC, "."); i >= 0 {
-			name = e.RPC[i+1:]
-		}
+		name := manifestRPCKey(e.RPC)
 		if prev, dup := rows[name]; dup {
-			t.Fatalf("duplicate bench-body RPC name %q (%q vs %q) — bare names must be unique across the corpus", name, prev, e.Body)
+			t.Fatalf("duplicate bench-body RPC key %q (%q vs %q)", name, prev, e.Body)
 		}
 		rows[name] = e.Body
 	}
@@ -96,8 +129,8 @@ func loadBenchBodyRows(t *testing.T) map[string]string {
 	return rows
 }
 
-// parseBenchBodyMarkdown walks docs/bench-bodies/*.md and maps the bare RPC method
-// name to the col5 body cell — the LEGACY markdown parse, retained ONLY to power
+// parseBenchBodyMarkdown walks docs/bench-bodies/*.md and maps the manifest RPC
+// key to the col5 body cell — the LEGACY markdown parse, retained ONLY to power
 // the drift test that proves the generated JSON still equals a fresh parse of the
 // human-editable markdown source.
 func parseBenchBodyMarkdown(t *testing.T) map[string]string {
@@ -130,11 +163,7 @@ func parseBenchBodyMarkdown(t *testing.T) map[string]string {
 			if rpc == "" {
 				t.Fatalf("manifest row with empty RPC name in %s: %q", filepath.Base(f), line)
 			}
-			name := rpc
-			if i := strings.LastIndex(rpc, "."); i >= 0 {
-				name = rpc[i+1:]
-			}
-			rows[name] = body
+			rows[manifestRPCKey(rpc)] = body
 			total++
 		}
 	}
@@ -232,24 +261,21 @@ func TestBenchBodyManifestCount(t *testing.T) {
 
 // TestBenchBodyManifestMatchesSurface is the cross-consistency contract
 // (11.1.2.x): the manifest and the live RPC surface must be in exact bijection by
-// bare method name. A manifest row whose RPC is not in AllRPCs (stale/renamed),
+// manifest RPC key. A manifest row whose RPC is not in AllRPCs (stale/renamed),
 // or an AllRPCs RPC with no manifest row (a body added in code but not documented
 // as the contract), fails `go test` — so the manifest cannot drift from the surface.
 func TestBenchBodyManifestMatchesSurface(t *testing.T) {
 	rows := loadBenchBodyRows(t)
-	surface := map[string]bool{}
-	for _, rpc := range AllRPCs {
-		surface[rpc.Name] = true
-	}
+	surface := surfaceBenchKeys()
 	var manifestNotInSurface, surfaceNotInManifest []string
 	for name := range rows {
 		if !surface[name] {
 			manifestNotInSurface = append(manifestNotInSurface, name)
 		}
 	}
-	for name := range surface {
-		if _, ok := rows[name]; !ok {
-			surfaceNotInManifest = append(surfaceNotInManifest, name)
+	for _, rpc := range AllRPCs {
+		if !rowHasRPC(rows, rpc) {
+			surfaceNotInManifest = append(surfaceNotInManifest, rpc.Service+"/"+rpc.Name)
 		}
 	}
 	sort.Strings(manifestNotInSurface)
@@ -262,27 +288,40 @@ func TestBenchBodyManifestMatchesSurface(t *testing.T) {
 	}
 }
 
-// TestBenchBodySpecsHaveManifestRow asserts every typed control-plane perfBodySpecs
-// key (the realization) has a corresponding manifest row (the contract). This is
-// the spec->manifest direction of 11.1.2.2: the typed specs may not encode a body
-// the manifest does not document. (The reverse direction — every manifest row has
-// a Go body — is covered by TestLivePerfExplicitBodyCoverage, which iterates the
-// full AllRPCs surface and fails on any NO-BODY gap.)
-func TestBenchBodySpecsHaveManifestRow(t *testing.T) {
+// TestBenchBodyManifestRowsAreStrictJSON asserts every manifest body can be
+// consumed by the shared protojson/dynamicpb path. This is the post-perfBodySpecs
+// 11.1.2.3 invariant: adding a prose row reintroduces per-language drift.
+func TestBenchBodyManifestRowsAreStrictJSON(t *testing.T) {
 	rows := loadBenchBodyRows(t)
-	var missing []string
-	for key := range perfBodySpecs {
-		// key form: "Pkg.Service/Method" — take the bare method after "/".
-		name := key
-		if i := strings.LastIndex(key, "/"); i >= 0 {
-			name = key[i+1:]
-		}
-		if _, ok := rows[name]; !ok {
-			missing = append(missing, name)
+	var nonJSON []string
+	for key, body := range rows {
+		jsonBody, ok := manifestJSONBodyCell(body)
+		if !ok || !json.Valid([]byte(benchBodyJSONSample(jsonBody))) {
+			nonJSON = append(nonJSON, key)
 		}
 	}
-	sort.Strings(missing)
-	if len(missing) > 0 {
-		t.Fatalf("perfBodySpecs keys with no bench-body manifest row: %s", strings.Join(missing, ", "))
+	sort.Strings(nonJSON)
+	if len(nonJSON) > 0 {
+		t.Fatalf("bench-body manifest rows with non-JSON body cells: %s", strings.Join(nonJSON, ", "))
+	}
+}
+
+func benchBodyJSONSample(body string) string {
+	for {
+		start := strings.Index(body, "<seed:")
+		if start < 0 {
+			return body
+		}
+		endRel := strings.Index(body[start:], ">")
+		if endRel < 0 {
+			return body
+		}
+		end := start + endRel
+		key := strings.ToLower(strings.TrimSpace(body[start+len("<seed:") : end]))
+		replacement := "x"
+		if strings.HasSuffix(key, "fencing_token") || key == "gov_exp" {
+			replacement = "1"
+		}
+		body = body[:start] + replacement + body[end+1:]
 	}
 }

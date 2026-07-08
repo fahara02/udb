@@ -24,10 +24,10 @@ Current SDK release: `0.3.7`
 
 Current wire protocol: [`1.0.0`](UDB_PROTOCOL_VERSION)
 
-## 0.3.6 SDK Focus
+## 0.3.7 SDK Focus
 
-The 0.3.6 SDK cut adds a workflow-oriented simple-client facade over the
-0.3.5 native-store control-plane surface (265 RPCs). Application code uses one
+The 0.3.7 SDK cut keeps the workflow-oriented simple-client facade aligned with
+the descriptor-derived native/data-plane surface (344 generated RPCs). Application code uses one
 `connect` + `loginAndAdoptTenant`, then `storage.uploadFile` /
 `downloadFileBytes`, `data.table(name).select({ where })`,
 `authz.allowRole(role, { resource, action })`, and `metadata.afterWrite(receipt)`
@@ -43,8 +43,8 @@ The CI story has two layers:
 - deep live broker coverage for the Go, TypeScript, Python, and PHP harnesses,
   including DataBroker RPCs, native auth, tenant/authz/API key flows,
   notification/analytics/storage/asset/WebRTC facades, and backend capability
-  checks. All four run the full-surface live perf bench green (0 failures /
-  265 RPCs) against real backends.
+  checks. Their manifest gates now compare against the current generated RPC
+  surface instead of a hand-maintained fixed row count.
 
 ## Install
 

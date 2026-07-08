@@ -3,6 +3,7 @@ package udbclient
 import (
 	entityv1 "github.com/fahara02/udb/sdk/go/gen/udb/entity/v1"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 // ── Typed error-detail trailer decode (chapter 08.2) ─────────────────────────
@@ -47,4 +48,49 @@ func (e *Error) Kind() entityv1.ErrorKind {
 		return entityv1.ErrorKind_ERROR_KIND_UNSPECIFIED
 	}
 	return d.GetKind()
+}
+
+// FieldViolation is the SDK-level view of one structured validation failure.
+// It deliberately does not depend on regenerated ErrorFieldViolation classes, so
+// this helper compiles before SDK regen and starts returning entries as soon as
+// the generated ErrorDetail descriptor includes field_violations.
+type FieldViolation struct {
+	Field       string
+	Description string
+}
+
+// FieldViolations returns decoded validation field violations, or nil when no
+// typed detail was attached, decoding failed, or the checked-in generated
+// ErrorDetail class has not yet been refreshed with field_violations.
+func (e *Error) FieldViolations() []FieldViolation {
+	d, ok := e.Detail()
+	if !ok {
+		return nil
+	}
+	msg := d.ProtoReflect()
+	fd := msg.Descriptor().Fields().ByName("field_violations")
+	if fd == nil || !fd.IsList() {
+		return nil
+	}
+	values := msg.Get(fd).List()
+	if values.Len() == 0 {
+		return nil
+	}
+	out := make([]FieldViolation, 0, values.Len())
+	for i := 0; i < values.Len(); i++ {
+		item := values.Get(i).Message()
+		fields := item.Descriptor().Fields()
+		out = append(out, FieldViolation{
+			Field:       stringValue(item, fields.ByName("field")),
+			Description: stringValue(item, fields.ByName("description")),
+		})
+	}
+	return out
+}
+
+func stringValue(msg protoreflect.Message, fd protoreflect.FieldDescriptor) string {
+	if fd == nil {
+		return ""
+	}
+	return msg.Get(fd).String()
 }

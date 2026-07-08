@@ -26,6 +26,18 @@ export interface RequestContext {
   purpose?: string;
   correlation_id?: string;
   read_fence_json?: string;
+  /** Requested read consistency (context.proto field 18). A pinned wire token
+   *  ("strong" / "read_your_writes" / "bounded_staleness" / "replica_bounded" /
+   *  "eventual" / "projection_ok" / "cache_ok"); empty uses the runtime default.
+   *  Mirrors the `x-udb-consistency` header. Set it ergonomically with
+   *  `consistencyContext()` (body) or `withConsistency()` (header) from
+   *  ./consistency rather than hand-typing the token. */
+  consistency?: string;
+  /** Typed consistency mode (context.proto field 22, ConsistencyMode enum). Under
+   *  the keepCase / `enums: String` proto-loader this is the enum NAME string
+   *  (e.g. "CONSISTENCY_MODE_STRONG"). The `x-udb-consistency` header still wins
+   *  server-side when both are supplied. */
+  consistency_mode?: string;
   [k: string]: unknown;
 }
 

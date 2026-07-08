@@ -13,6 +13,12 @@ namespace Udb.Client.Tests;
 /// </summary>
 public sealed class UdbMediaFacadeTests
 {
+    private static readonly string[] WorkflowSequenceProbeRoots =
+    {
+        AppContext.BaseDirectory,
+        Directory.GetCurrentDirectory(),
+    };
+
     private static readonly string[] CanonicalHeaderNames =
     {
         "x-tenant-id",
@@ -57,6 +63,68 @@ public sealed class UdbMediaFacadeTests
         Assert.Equal("report.pdf", req.Filename);
         AssertCanonicalHeaders(invoker);
         Assert.Same(raw, storage.Raw);
+    }
+
+    [Fact]
+    public async Task Storage_UploadFile_Does_RegisterPutFinalize_Only()
+    {
+        var putSeen = false;
+        var observed = new List<string>();
+        var invoker = new CapturingCallInvoker(method => method switch
+        {
+            "RegisterUpload" => Record(method, new StorageV1.RegisterUploadResponse
+            {
+                FileId = "file-1",
+                UploadUrl = "https://put.example/file-1",
+            }),
+            "FinalizeUpload" => Record(method, new StorageV1.FinalizeUploadResponse()),
+            _ => throw new InvalidOperationException(method),
+        });
+        var raw = new StorageV1.StorageService.StorageServiceClient(invoker);
+        var storage = new UdbStorageClient(raw, Headers, (url, data, contentType, _) =>
+        {
+            Assert.Equal("https://put.example/file-1", url);
+            Assert.Equal(new byte[] { 1, 2, 3 }, data);
+            Assert.Equal("text/plain", contentType);
+            putSeen = true;
+            observed.Add("PUT");
+            return Task.CompletedTask;
+        });
+
+        await storage.UploadFileAsync(
+            "report.txt",
+            new byte[] { 1, 2, 3 },
+            new UdbStorageClient.UploadFileOptions(
+                ContentType: "text/plain",
+                FileType: "report",
+                ReferenceId: "r-1",
+                ReferenceType: "case",
+                IsPublic: true,
+                ExpiresInMinutes: 15,
+                Checksum: "sha256:abc",
+                Etag: "etag-1"));
+
+        Assert.True(putSeen);
+        Assert.Equal(LoadWorkflowSequence("StorageFacade.uploadFile"), observed);
+        Assert.Equal(new[] { "RegisterUpload", "FinalizeUpload" }, invoker.MethodHistory);
+        var register = Assert.IsType<StorageV1.RegisterUploadRequest>(invoker.RequestHistory[0]);
+        Assert.Equal("acme", register.TenantId);
+        Assert.Equal("proj-1", register.ProjectId);
+        Assert.Equal("report.txt", register.Filename);
+        Assert.Equal(3, register.SizeBytes);
+        Assert.True(register.IsPublic);
+
+        var finalize = Assert.IsType<StorageV1.FinalizeUploadRequest>(invoker.RequestHistory[1]);
+        Assert.Equal("file-1", finalize.FileId);
+        Assert.Equal(3, finalize.SizeBytes);
+        Assert.Equal("sha256:abc", finalize.Checksum);
+        Assert.Equal("etag-1", finalize.Etag);
+
+        object Record(string method, object response)
+        {
+            observed.Add(method);
+            return response;
+        }
     }
 
     // ── Asset ─────────────────────────────────────────────────────────────────
@@ -164,5 +232,48 @@ public sealed class UdbMediaFacadeTests
         {
             Assert.Contains(invoker.LastHeaders!, e => e.Key == name);
         }
+    }
+
+    private static string[] LoadWorkflowSequence(string helper)
+    {
+        var path = FindWorkflowSequenceFixture();
+        foreach (var rawLine in File.ReadLines(path))
+        {
+            var line = rawLine.Trim();
+            if (!line.StartsWith("|", StringComparison.Ordinal) || line.Contains("---", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var parts = line.Split('|', StringSplitOptions.TrimEntries);
+            if (parts.Length < 4 || parts[1] != helper)
+            {
+                continue;
+            }
+
+            return parts[2].Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        }
+
+        throw new InvalidOperationException($"workflow-sequences.md has no row for helper {helper}");
+    }
+
+    private static string FindWorkflowSequenceFixture()
+    {
+        foreach (var root in WorkflowSequenceProbeRoots)
+        {
+            var dir = new DirectoryInfo(root);
+            while (dir is not null)
+            {
+                var candidate = Path.Combine(dir.FullName, "docs", "bench-bodies", "workflow-sequences.md");
+                if (File.Exists(candidate))
+                {
+                    return candidate;
+                }
+
+                dir = dir.Parent;
+            }
+        }
+
+        throw new FileNotFoundException("docs/bench-bodies/workflow-sequences.md was not found");
     }
 }

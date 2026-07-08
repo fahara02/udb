@@ -57,6 +57,9 @@ func TestHasIdempotencyKey(t *testing.T) {
 	if hasIdempotencyKey(&entityv1.UpsertRequest{}) != false {
 		t.Fatal("UpsertRequest without key: hasIdempotencyKey = true, want false")
 	}
+	if hasIdempotencyKey(&entityv1.UpsertRequest{IdempotencyKey: "   "}) != false {
+		t.Fatal("UpsertRequest with whitespace-only key: hasIdempotencyKey = true, want false")
+	}
 	// A request type with no idempotency_key field never satisfies the gate.
 	if hasIdempotencyKey(&entityv1.SelectRequest{}) != false {
 		t.Fatal("SelectRequest (no key field): hasIdempotencyKey = true, want false")
@@ -138,6 +141,23 @@ func TestRetryReplaySafeMutationWithoutKeyDoesNotRetry(t *testing.T) {
 	}
 	if conn.attempts != 1 {
 		t.Fatalf("attempts = %d, want 1 (no retry without key)", conn.attempts)
+	}
+}
+
+func TestRetryReplaySafeMutationWithBlankKeyDoesNotRetry(t *testing.T) {
+	conn := &fakeConn{results: []error{
+		status.Error(codes.Unavailable, "transient"),
+		nil, // would succeed if it retried — it must not
+	}}
+	g := newTestClient(conn)
+
+	req := &entityv1.UpsertRequest{IdempotencyKey: "   "}
+	err := g.InvokeUnary(context.Background(), mUpsert, req, &entityv1.MutationResponse{})
+	if err == nil {
+		t.Fatal("InvokeUnary(Upsert, blank key) = nil, want error (no retry allowed)")
+	}
+	if conn.attempts != 1 {
+		t.Fatalf("attempts = %d, want 1 (no retry with blank key)", conn.attempts)
 	}
 }
 

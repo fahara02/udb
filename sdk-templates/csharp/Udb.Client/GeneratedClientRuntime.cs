@@ -11,6 +11,7 @@
 // generated wrappers reuse UdbMetadata.Headers()-equivalent metadata and never
 // redefine those types.
 // </auto-generated>
+#nullable enable
 using Grpc.Core;
 
 namespace Udb.Client.Generated;
@@ -47,7 +48,7 @@ public sealed record UdbCallOptions
 
 /// <summary>
 /// Structured error raised by the generated wrappers. Carries the gRPC status
-/// plus the decoded UDB <c>ErrorDetail</c> bytes from the
+/// plus the UDB <c>ErrorDetail</c> bytes and decoded message from the
 /// <c>udb-error-detail-bin</c> trailer, when the server attached one.
 /// </summary>
 public sealed class UdbRpcException : Exception
@@ -58,12 +59,30 @@ public sealed class UdbRpcException : Exception
     /// <summary>Raw protobuf-encoded udb.entity.v1.ErrorDetail bytes, or null.</summary>
     public byte[]? ErrorDetail { get; }
 
+    /// <summary>Decoded udb.entity.v1.ErrorDetail, or null when absent/malformed.</summary>
+    public global::Udb.Entity.V1.ErrorDetail? DecodedErrorDetail { get; }
+
+    /// <summary>Whether the broker marked the typed error detail as retryable.</summary>
+    public bool Retryable => DecodedErrorDetail?.Retryable ?? false;
+
+    /// <summary>Server-advised retry delay in milliseconds, or zero when absent.</summary>
+    public long RetryAfterMs => DecodedErrorDetail?.RetryAfterMs ?? 0L;
+
+    /// <summary>Typed error-detail kind, or Unspecified when absent.</summary>
+    public global::Udb.Entity.V1.ErrorKind Kind =>
+        DecodedErrorDetail?.Kind ?? global::Udb.Entity.V1.ErrorKind.Unspecified;
+
+    /// <summary>Structured validation failures from the decoded ErrorDetail trailer.</summary>
+    public System.Collections.Generic.IReadOnlyList<(string Field, string Description)> FieldViolations =>
+        ExtractFieldViolations(DecodedErrorDetail);
+
     public UdbRpcException(string rpcPath, RpcException inner)
         : base($"udb: RPC {rpcPath} failed with {inner.StatusCode}: {inner.Status.Detail}", inner)
     {
         RpcPath = rpcPath;
         Code = inner.StatusCode;
         ErrorDetail = ExtractDetail(inner);
+        DecodedErrorDetail = ParseDetail(ErrorDetail) ?? SynthesizeTransportDetail(Code);
     }
 
     private static byte[]? ExtractDetail(RpcException ex)
@@ -79,6 +98,81 @@ public sealed class UdbRpcException : Exception
             }
         }
         return null;
+    }
+
+    private static global::Udb.Entity.V1.ErrorDetail? ParseDetail(byte[]? raw)
+    {
+        if (raw is null || raw.Length == 0)
+        {
+            return null;
+        }
+        try
+        {
+            return global::Udb.Entity.V1.ErrorDetail.Parser.ParseFrom(raw);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static System.Collections.Generic.IReadOnlyList<(string Field, string Description)>
+        ExtractFieldViolations(global::Udb.Entity.V1.ErrorDetail? detail)
+    {
+        if (detail is null)
+        {
+            return System.Array.Empty<(string Field, string Description)>();
+        }
+        var field = global::Udb.Entity.V1.ErrorDetail.Descriptor.FindFieldByName("field_violations");
+        if (field is null || !field.IsRepeated)
+        {
+            return System.Array.Empty<(string Field, string Description)>();
+        }
+        if (field.Accessor.GetValue(detail) is not System.Collections.IEnumerable values)
+        {
+            return System.Array.Empty<(string Field, string Description)>();
+        }
+        var outValues = new System.Collections.Generic.List<(string Field, string Description)>();
+        foreach (var item in values)
+        {
+            if (item is not Google.Protobuf.IMessage message)
+            {
+                continue;
+            }
+            var fieldName = message.Descriptor.FindFieldByName("field");
+            var description = message.Descriptor.FindFieldByName("description");
+            outValues.Add((
+                fieldName?.Accessor.GetValue(message) as string ?? string.Empty,
+                description?.Accessor.GetValue(message) as string ?? string.Empty));
+        }
+        return outValues;
+    }
+
+    private static global::Udb.Entity.V1.ErrorDetail? SynthesizeTransportDetail(StatusCode code)
+    {
+        if (code is not (StatusCode.Unavailable or StatusCode.DeadlineExceeded or StatusCode.Cancelled))
+        {
+            return null;
+        }
+        return new global::Udb.Entity.V1.ErrorDetail
+        {
+            Backend = "transport",
+            Operation = TransportErrorOperation(code),
+            Retryable = code != StatusCode.Cancelled,
+            RetryAfterMs = 0,
+            Kind = global::Udb.Entity.V1.ErrorKind.Retryable,
+        };
+    }
+
+    private static string TransportErrorOperation(StatusCode code)
+    {
+        return code switch
+        {
+            StatusCode.DeadlineExceeded => "deadline_exceeded",
+            StatusCode.Cancelled => "cancelled",
+            StatusCode.Unavailable => "unavailable",
+            _ => "transport",
+        };
     }
 }
 
@@ -115,6 +209,8 @@ public abstract class GeneratedServiceBase
     /// <summary>
     /// Invoke a unary RPC with retry + backoff + jitter on transient codes.
     /// <c>DeadlineExceeded</c> is retried only when <paramref name="readOnly"/> is true.
+    /// Mutations retry only when the proto contract marks the RPC replay-safe and
+    /// the request carries a non-empty idempotency key.
     /// <paramref name="call"/> forwards to the stub's <c>&lt;Name&gt;Async</c>
     /// and returns the boxed <c>AsyncUnaryCall&lt;TResp&gt;</c> as <see cref="object"/>,
     /// so the closed generic stays concrete at runtime (no dynamic-to-generic
@@ -125,9 +221,12 @@ public abstract class GeneratedServiceBase
         Func<CallOptions, object> call,
         TimeSpan? deadline,
         CancellationToken ct,
-        bool readOnly)
+        bool readOnly,
+        bool replaySafe,
+        object? request)
     {
         var backoff = Options.InitialBackoff;
+        var hasIdempotencyKey = HasIdempotencyKey(request);
         for (var attempt = 1; ; attempt++)
         {
             try
@@ -141,7 +240,7 @@ public abstract class GeneratedServiceBase
             }
             catch (RpcException ex) when (
                 attempt < Options.MaxAttempts &&
-                IsRetryable(ex.StatusCode, readOnly) &&
+                IsRetryable(ex.StatusCode, readOnly, replaySafe, hasIdempotencyKey) &&
                 !ct.IsCancellationRequested)
             {
                 await Task.Delay(NextBackoff(ref backoff), ct).ConfigureAwait(false);
@@ -153,16 +252,30 @@ public abstract class GeneratedServiceBase
         }
     }
 
-    // Retry safety is read from the proto-derived operation_kind per RPC (each
-    // wrapper passes operation_kind == "read_only") — never guessed from the name.
+    // Retry safety is read from proto-derived operation_kind and replay_safe per RPC
+    // plus the request idempotency key — never guessed from the method name.
 
-    private bool IsRetryable(StatusCode code, bool readOnly)
+    private bool IsRetryable(StatusCode code, bool readOnly, bool replaySafe, bool hasIdempotencyKey)
     {
-        if (!readOnly)
+        if (readOnly)
+        {
+            return code == StatusCode.DeadlineExceeded || Options.RetryableCodes.Contains(code);
+        }
+        if (!replaySafe || !hasIdempotencyKey)
         {
             return false;
         }
-        return code == StatusCode.DeadlineExceeded || Options.RetryableCodes.Contains(code);
+        return code != StatusCode.DeadlineExceeded && Options.RetryableCodes.Contains(code);
+    }
+
+    private static bool HasIdempotencyKey(object? request)
+    {
+        if (request is null)
+        {
+            return false;
+        }
+        var property = request.GetType().GetProperty("IdempotencyKey");
+        return property?.GetValue(request) is string key && !string.IsNullOrWhiteSpace(key);
     }
 
     /// <summary>

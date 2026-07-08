@@ -33,7 +33,7 @@ import java.util.function.Function;
  * {@code x-tenant-id}, {@code x-user-id}, {@code x-purpose}, {@code
  * x-correlation-id}, {@code x-scopes}, {@code x-service-identity}, {@code
  * x-udb-project-id}, {@code x-udb-client-catalog-version}, {@code authorization},
- * and {@code x-api-key}. A missing/blank {@code x-correlation-id} (or {@code
+ * {@code x-api-key}, and the optional consistency headers. A missing/blank {@code x-correlation-id} (or {@code
  * x-request-id}) is synthesized as a UUID and echoed back on the response so the
  * trace id survives the hop.
  */
@@ -57,6 +57,12 @@ public class UdbContextFilter implements Filter {
   public static final String H_CLIENT_CATALOG_VERSION = "x-udb-client-catalog-version";
   public static final String H_AUTHORIZATION = "authorization";
   public static final String H_API_KEY = "x-api-key";
+  public static final String H_CONSISTENCY = "x-udb-consistency";
+  public static final String H_PRIMARY_READ = "x-udb-primary-read";
+  public static final String H_MAX_REPLICA_LAG_MS = "x-udb-max-replica-lag-ms";
+  public static final String H_EVENTUAL_CONSISTENCY_ALLOWED =
+      "x-udb-eventual-consistency-allowed";
+  public static final String H_READ_FENCE = "x-udb-read-fence";
 
   @Override
   public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
@@ -96,7 +102,12 @@ public class UdbContextFilter implements Filter {
         header.apply(H_PROJECT_ID), // UdbMetadata defaults blank -> "default"
         nullToEmpty(header.apply(H_CLIENT_CATALOG_VERSION)),
         bearerToken(header.apply(H_AUTHORIZATION)),
-        nullToEmpty(header.apply(H_API_KEY)));
+        nullToEmpty(header.apply(H_API_KEY)),
+        nullToEmpty(header.apply(H_CONSISTENCY)),
+        truthy(header.apply(H_PRIMARY_READ)),
+        nonNegativeLong(header.apply(H_MAX_REPLICA_LAG_MS)),
+        truthy(header.apply(H_EVENTUAL_CONSISTENCY_ALLOWED)),
+        nullToEmpty(header.apply(H_READ_FENCE)));
   }
 
   /** Read the request-scoped {@link UdbMetadata} an earlier filter pass published. */
@@ -117,6 +128,21 @@ public class UdbContextFilter implements Filter {
 
   private static String nullToEmpty(String s) {
     return s == null ? "" : s;
+  }
+
+  private static boolean truthy(String s) {
+    return s != null && s.equalsIgnoreCase("true");
+  }
+
+  private static long nonNegativeLong(String s) {
+    if (s == null || s.isBlank()) {
+      return 0;
+    }
+    try {
+      return Math.max(0, Long.parseLong(s.trim()));
+    } catch (NumberFormatException ignored) {
+      return 0;
+    }
   }
 
   private static String bearerToken(String authorization) {

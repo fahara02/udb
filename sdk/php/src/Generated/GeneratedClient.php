@@ -20,8 +20,8 @@ use Grpc\ChannelCredentials;
  *
  *   UDB version ...... 0.3.7
  *   Protocol version . 1.0.0
- *   Services ......... 16
- *   RPCs ............. 265
+ *   Services ......... 28
+ *   RPCs ............. 344
  *
  * This class COMPOSES WITH the hand-written layer; it does not replace it:
  *   - it reuses {@see UdbMetadata} for the eight broker headers,
@@ -177,11 +177,38 @@ final class GeneratedClient
         "SubmitPolicyDraft" => "mutation",
         "UpdatePolicyDraft" => "mutation",
         "UpdateRole" => "mutation",
+        "DeleteBackupPolicy" => "mutation",
+        "GetBackup" => "read_only",
+        "GetBackupPolicy" => "read_only",
+        "ListBackupPolicies" => "read_only",
+        "ListBackups" => "read_only",
+        "PutBackupPolicy" => "mutation",
+        "RestoreTenant" => "destructive",
+        "StartTenantBackup" => "mutation",
+        "CreateNamespace" => "mutation",
+        "Delete" => "mutation",
+        "DeleteNamespace" => "destructive",
+        "Get" => "read_only",
+        "GetNamespaceStats" => "read_only",
+        "Scan" => "read_only",
+        "Set" => "mutation",
+        "DeleteFlag" => "destructive",
+        "EvaluateFlags" => "read_only",
+        "GetFlag" => "read_only",
+        "ListFlags" => "read_only",
+        "PutFlag" => "mutation",
         "AckStatus" => "mutation",
         "DeltaResources" => "mutation",
         "GetResources" => "read_only",
         "ListNodeStates" => "read_only",
+        "RollbackResources" => "mutation",
         "StreamResources" => "mutation",
+        "Backfill" => "mutation",
+        "DeleteSource" => "destructive",
+        "ListSources" => "read_only",
+        "RegisterSource" => "mutation",
+        "ReportEmbedding" => "mutation",
+        "Retrieve" => "read_only",
         "CreateProvider" => "mutation",
         "DisableProvider" => "mutation",
         "ForceJwksRefresh" => "mutation",
@@ -209,6 +236,16 @@ final class GeneratedClient
         "TestProviderDiscovery" => "read_only",
         "UnlinkIdentity" => "mutation",
         "UpdateProvider" => "mutation",
+        "Subscribe" => "read_only",
+        "AcquireLock" => "mutation",
+        "ReleaseLock" => "mutation",
+        "RenewLock" => "mutation",
+        "CheckQuota" => "read_only",
+        "GetQuota" => "read_only",
+        "ListQuotas" => "read_only",
+        "PutQuota" => "mutation",
+        "QueryUsage" => "read_only",
+        "RecordUsage" => "mutation",
         "GetDeliveryStats" => "read_only",
         "GetNotification" => "read_only",
         "GetPreference" => "read_only",
@@ -216,10 +253,22 @@ final class GeneratedClient
         "ListNotifications" => "read_only",
         "ListPreferences" => "read_only",
         "ListTemplates" => "read_only",
+        "ReportDelivery" => "mutation",
         "RetryNotification" => "mutation",
         "SendNotification" => "mutation",
         "SetPreference" => "mutation",
         "UpsertTemplate" => "mutation",
+        "CreateJob" => "mutation",
+        "DeleteJob" => "destructive",
+        "GetJob" => "read_only",
+        "ListJobs" => "read_only",
+        "PauseJob" => "mutation",
+        "ResumeJob" => "mutation",
+        "CreateIndex" => "mutation",
+        "DeleteIndex" => "destructive",
+        "ListIndexes" => "read_only",
+        "Reindex" => "mutation",
+        "Search" => "read_only",
         "DeleteFile" => "mutation",
         "DownloadFile" => "read_only",
         "FinalizeUpload" => "mutation",
@@ -232,8 +281,29 @@ final class GeneratedClient
         "GetTenant" => "read_only",
         "GetTenantConfig" => "read_only",
         "ListTenants" => "read_only",
+        "PurgeTenant" => "destructive",
         "UpdateTenant" => "mutation",
         "UpdateTenantConfig" => "mutation",
+        "CreateTransitKey" => "mutation",
+        "Decrypt" => "read_only",
+        "DeleteSecret" => "mutation",
+        "DestroySecret" => "destructive",
+        "Encrypt" => "mutation",
+        "GenerateDatabaseCredentials" => "mutation",
+        "GetSecret" => "read_only",
+        "Hmac" => "mutation",
+        "ListSecrets" => "read_only",
+        "PutSecret" => "mutation",
+        "RotateTransitKey" => "mutation",
+        "SealStatus" => "read_only",
+        "Sign" => "mutation",
+        "Verify" => "read_only",
+        "CreateEndpoint" => "mutation",
+        "DeleteEndpoint" => "destructive",
+        "GetEndpoint" => "read_only",
+        "ListDeliveries" => "read_only",
+        "ListEndpoints" => "read_only",
+        "UpdateEndpoint" => "mutation",
         "GetPeer" => "read_only",
         "JoinRoom" => "mutation",
         "JoinSession" => "mutation",
@@ -242,7 +312,11 @@ final class GeneratedClient
         "CloseRoom" => "mutation",
         "CreateRoom" => "mutation",
         "GetRoom" => "read_only",
+        "ListEgress" => "read_only",
         "ListRooms" => "read_only",
+        "StartRoomComposite" => "mutation",
+        "StartTrackEgress" => "mutation",
+        "StopEgress" => "mutation",
         "UpdateRoom" => "mutation",
         "Signal" => "mutation",
         "ListTracks" => "read_only",
@@ -250,6 +324,11 @@ final class GeneratedClient
         "PublishTrack" => "mutation",
         "UnpublishTrack" => "mutation",
         "IssueCredentials" => "mutation",
+        "CancelWorkflow" => "destructive",
+        "GetWorkflow" => "read_only",
+        "ListWorkflows" => "read_only",
+        "SignalWorkflow" => "mutation",
+        "StartWorkflow" => "mutation",
         "ActivateCatalog" => "destructive",
         "AnalyticalQuery" => "read_only",
         "ApplyMigration" => "mutation",
@@ -330,6 +409,1768 @@ final class GeneratedClient
     ];
 
     /**
+     * Proto-derived operation_kind per RPC, keyed by "Service/Method" for
+     * cross-language metadata conformance and benchmark identity joins.
+     *
+     * @var array<string, string>
+     */
+    public const OPERATION_KIND_BY_RPC = [
+        "AnalyticsService/GetExecutorPerformance" => "read_only",
+        "AnalyticsService/GetPipelineSummary" => "read_only",
+        "AnalyticsService/GetReconciliationAnalytics" => "read_only",
+        "AnalyticsService/GetSlaCompliance" => "read_only",
+        "AnalyticsService/GetThroughput" => "read_only",
+        "AnalyticsService/RecordPipelineMetric" => "mutation",
+        "AnalyticsService/TriggerSnapshot" => "mutation",
+        "ApiKeyService/CreateApiKey" => "mutation",
+        "ApiKeyService/EmergencyRevokeApiKeys" => "destructive",
+        "ApiKeyService/GetApiKey" => "read_only",
+        "ApiKeyService/GetApiKeyUsageStats" => "read_only",
+        "ApiKeyService/ListApiKeys" => "read_only",
+        "ApiKeyService/RevokeApiKey" => "mutation",
+        "ApiKeyService/RotateApiKey" => "mutation",
+        "ApiKeyService/UpdateApiKey" => "mutation",
+        "ApiKeyService/ValidateApiKey" => "read_only",
+        "AssetService/CompleteStep" => "mutation",
+        "AssetService/CreatePipelineDefinition" => "mutation",
+        "AssetService/GetAsset" => "read_only",
+        "AssetService/GetPipeline" => "read_only",
+        "AssetService/GetPipelineDefinition" => "read_only",
+        "AssetService/ListAssets" => "read_only",
+        "AssetService/RegisterAsset" => "mutation",
+        "AssetService/StartPipeline" => "mutation",
+        "AuthnService/AdminResetMfa" => "destructive",
+        "AuthnService/AdminResetPassword" => "destructive",
+        "AuthnService/AdminRevokeAllTenantSessions" => "destructive",
+        "AuthnService/AdminRevokeAllUserSessions" => "destructive",
+        "AuthnService/AdminRevokeSession" => "destructive",
+        "AuthnService/Authenticate" => "read_only",
+        "AuthnService/ChangePassword" => "mutation",
+        "AuthnService/ChangeUserStatus" => "destructive",
+        "AuthnService/ConfirmMFAEnrollment" => "mutation",
+        "AuthnService/CreateSession" => "mutation",
+        "AuthnService/CreateUser" => "mutation",
+        "AuthnService/DeleteWebAuthnCredential" => "mutation",
+        "AuthnService/DisableMfaFactor" => "mutation",
+        "AuthnService/EmergencyRevoke" => "destructive",
+        "AuthnService/EnrollMFA" => "mutation",
+        "AuthnService/FinishWebAuthnAuthentication" => "mutation",
+        "AuthnService/FinishWebAuthnRegistration" => "mutation",
+        "AuthnService/ForgotPassword" => "mutation",
+        "AuthnService/GenerateRecoveryCodes" => "mutation",
+        "AuthnService/GetJwks" => "read_only",
+        "AuthnService/GetMfaPolicy" => "read_only",
+        "AuthnService/GetSession" => "read_only",
+        "AuthnService/GetUser" => "read_only",
+        "AuthnService/IntrospectToken" => "read_only",
+        "AuthnService/IssueMfaChallenge" => "mutation",
+        "AuthnService/ListDevices" => "read_only",
+        "AuthnService/ListMfaFactors" => "read_only",
+        "AuthnService/ListSessions" => "read_only",
+        "AuthnService/ListUsers" => "read_only",
+        "AuthnService/ListWebAuthnCredentials" => "read_only",
+        "AuthnService/Login" => "mutation",
+        "AuthnService/Logout" => "mutation",
+        "AuthnService/PutMfaPolicy" => "mutation",
+        "AuthnService/RefreshSession" => "mutation",
+        "AuthnService/RefreshToken" => "mutation",
+        "AuthnService/RenamePasskey" => "mutation",
+        "AuthnService/ResendOTP" => "mutation",
+        "AuthnService/ResetPassword" => "mutation",
+        "AuthnService/RevokeDevice" => "mutation",
+        "AuthnService/RevokeRecoveryCodes" => "mutation",
+        "AuthnService/RevokeSession" => "mutation",
+        "AuthnService/SendOTP" => "mutation",
+        "AuthnService/SendPhoneVerification" => "mutation",
+        "AuthnService/StartWebAuthnAuthentication" => "mutation",
+        "AuthnService/StartWebAuthnRegistration" => "mutation",
+        "AuthnService/UpdateUser" => "mutation",
+        "AuthnService/ValidateCSRF" => "read_only",
+        "AuthnService/ValidateToken" => "read_only",
+        "AuthnService/VerifyMfaChallenge" => "read_only",
+        "AuthnService/VerifyOTP" => "read_only",
+        "AuthzService/ActivateCanary" => "destructive",
+        "AuthzService/ActivatePolicyVersion" => "destructive",
+        "AuthzService/ApprovePolicyDraft" => "mutation",
+        "AuthzService/AssignRole" => "mutation",
+        "AuthzService/Authorize" => "read_only",
+        "AuthzService/BatchCheckPermissions" => "read_only",
+        "AuthzService/CheckAccess" => "read_only",
+        "AuthzService/CreatePolicyDraft" => "mutation",
+        "AuthzService/CreatePolicyRule" => "mutation",
+        "AuthzService/CreateRole" => "mutation",
+        "AuthzService/DeletePolicyRule" => "mutation",
+        "AuthzService/DeleteRole" => "mutation",
+        "AuthzService/DiffPolicyDraft" => "read_only",
+        "AuthzService/ExplainPolicy" => "read_only",
+        "AuthzService/GetAuthzRevision" => "read_only",
+        "AuthzService/GetCanaryStatus" => "read_only",
+        "AuthzService/GetNativeAccess" => "read_only",
+        "AuthzService/GetPolicyBundle" => "read_only",
+        "AuthzService/GetPolicyRule" => "read_only",
+        "AuthzService/GetRole" => "read_only",
+        "AuthzService/InvalidatePolicyBundles" => "destructive",
+        "AuthzService/LintAuthzPolicies" => "read_only",
+        "AuthzService/ListAccessDecisionAudits" => "read_only",
+        "AuthzService/ListPolicyRules" => "read_only",
+        "AuthzService/ListPolicyVersions" => "read_only",
+        "AuthzService/ListRoles" => "read_only",
+        "AuthzService/ListUserPermissions" => "read_only",
+        "AuthzService/ListUserRoles" => "read_only",
+        "AuthzService/MigrateLegacyPolicies" => "destructive",
+        "AuthzService/PromoteCanary" => "destructive",
+        "AuthzService/PutAuthzPolicy" => "mutation",
+        "AuthzService/PutRelationship" => "mutation",
+        "AuthzService/PutRoleBinding" => "mutation",
+        "AuthzService/RejectPolicyDraft" => "mutation",
+        "AuthzService/RevokeRole" => "mutation",
+        "AuthzService/RollbackPolicyVersion" => "destructive",
+        "AuthzService/SeedBuiltinRoles" => "mutation",
+        "AuthzService/SimulatePolicy" => "mutation",
+        "AuthzService/SubmitPolicyDraft" => "mutation",
+        "AuthzService/UpdatePolicyDraft" => "mutation",
+        "AuthzService/UpdateRole" => "mutation",
+        "BackupService/DeleteBackupPolicy" => "mutation",
+        "BackupService/GetBackup" => "read_only",
+        "BackupService/GetBackupPolicy" => "read_only",
+        "BackupService/ListBackupPolicies" => "read_only",
+        "BackupService/ListBackups" => "read_only",
+        "BackupService/PutBackupPolicy" => "mutation",
+        "BackupService/RestoreTenant" => "destructive",
+        "BackupService/StartTenantBackup" => "mutation",
+        "CacheService/CreateNamespace" => "mutation",
+        "CacheService/Delete" => "mutation",
+        "CacheService/DeleteNamespace" => "destructive",
+        "CacheService/Get" => "read_only",
+        "CacheService/GetNamespaceStats" => "read_only",
+        "CacheService/Scan" => "read_only",
+        "CacheService/Set" => "mutation",
+        "ConfigService/DeleteFlag" => "destructive",
+        "ConfigService/EvaluateFlags" => "read_only",
+        "ConfigService/GetFlag" => "read_only",
+        "ConfigService/ListFlags" => "read_only",
+        "ConfigService/PutFlag" => "mutation",
+        "ControlPlaneService/AckStatus" => "mutation",
+        "ControlPlaneService/DeltaResources" => "mutation",
+        "ControlPlaneService/GetResources" => "read_only",
+        "ControlPlaneService/ListNodeStates" => "read_only",
+        "ControlPlaneService/RollbackResources" => "mutation",
+        "ControlPlaneService/StreamResources" => "mutation",
+        "EmbeddingService/Backfill" => "mutation",
+        "EmbeddingService/DeleteSource" => "destructive",
+        "EmbeddingService/ListSources" => "read_only",
+        "EmbeddingService/RegisterSource" => "mutation",
+        "EmbeddingService/ReportEmbedding" => "mutation",
+        "EmbeddingService/Retrieve" => "read_only",
+        "IdentityProviderService/CreateProvider" => "mutation",
+        "IdentityProviderService/DisableProvider" => "mutation",
+        "IdentityProviderService/ForceJwksRefresh" => "mutation",
+        "IdentityProviderService/GetProvider" => "read_only",
+        "IdentityProviderService/ImportSamlMetadata" => "mutation",
+        "IdentityProviderService/LinkIdentity" => "mutation",
+        "IdentityProviderService/ListExternalIdentities" => "read_only",
+        "IdentityProviderService/ListProviders" => "read_only",
+        "IdentityProviderService/PreviewClaimMapping" => "read_only",
+        "IdentityProviderService/PreviewGroupMapping" => "read_only",
+        "IdentityProviderService/ResolveExternalIdentity" => "mutation",
+        "IdentityProviderService/SamlAcs" => "mutation",
+        "IdentityProviderService/ScimCreateGroup" => "mutation",
+        "IdentityProviderService/ScimCreateUser" => "mutation",
+        "IdentityProviderService/ScimDeleteGroup" => "mutation",
+        "IdentityProviderService/ScimDeleteUser" => "mutation",
+        "IdentityProviderService/ScimGetGroup" => "mutation",
+        "IdentityProviderService/ScimGetUser" => "mutation",
+        "IdentityProviderService/ScimListGroups" => "mutation",
+        "IdentityProviderService/ScimListUsers" => "mutation",
+        "IdentityProviderService/ScimPatchGroup" => "mutation",
+        "IdentityProviderService/ScimPatchUser" => "mutation",
+        "IdentityProviderService/ScimReplaceUser" => "mutation",
+        "IdentityProviderService/StartSamlLogin" => "mutation",
+        "IdentityProviderService/TestProviderDiscovery" => "read_only",
+        "IdentityProviderService/UnlinkIdentity" => "mutation",
+        "IdentityProviderService/UpdateProvider" => "mutation",
+        "LiveQueryService/Subscribe" => "read_only",
+        "LockService/AcquireLock" => "mutation",
+        "LockService/ReleaseLock" => "mutation",
+        "LockService/RenewLock" => "mutation",
+        "MeteringService/CheckQuota" => "read_only",
+        "MeteringService/GetQuota" => "read_only",
+        "MeteringService/ListQuotas" => "read_only",
+        "MeteringService/PutQuota" => "mutation",
+        "MeteringService/QueryUsage" => "read_only",
+        "MeteringService/RecordUsage" => "mutation",
+        "NotificationService/GetDeliveryStats" => "read_only",
+        "NotificationService/GetNotification" => "read_only",
+        "NotificationService/GetPreference" => "read_only",
+        "NotificationService/GetTemplate" => "read_only",
+        "NotificationService/ListNotifications" => "read_only",
+        "NotificationService/ListPreferences" => "read_only",
+        "NotificationService/ListTemplates" => "read_only",
+        "NotificationService/ReportDelivery" => "mutation",
+        "NotificationService/RetryNotification" => "mutation",
+        "NotificationService/SendNotification" => "mutation",
+        "NotificationService/SetPreference" => "mutation",
+        "NotificationService/UpsertTemplate" => "mutation",
+        "SchedulerService/CreateJob" => "mutation",
+        "SchedulerService/DeleteJob" => "destructive",
+        "SchedulerService/GetJob" => "read_only",
+        "SchedulerService/ListJobs" => "read_only",
+        "SchedulerService/PauseJob" => "mutation",
+        "SchedulerService/ResumeJob" => "mutation",
+        "SearchService/CreateIndex" => "mutation",
+        "SearchService/DeleteIndex" => "destructive",
+        "SearchService/ListIndexes" => "read_only",
+        "SearchService/Reindex" => "mutation",
+        "SearchService/Search" => "read_only",
+        "StorageService/DeleteFile" => "mutation",
+        "StorageService/DownloadFile" => "read_only",
+        "StorageService/FinalizeUpload" => "mutation",
+        "StorageService/GetDownloadUrl" => "read_only",
+        "StorageService/GetFile" => "read_only",
+        "StorageService/ListFiles" => "read_only",
+        "StorageService/RegisterUpload" => "mutation",
+        "StorageService/UpdateFile" => "mutation",
+        "TenantService/CreateTenant" => "mutation",
+        "TenantService/GetTenant" => "read_only",
+        "TenantService/GetTenantConfig" => "read_only",
+        "TenantService/ListTenants" => "read_only",
+        "TenantService/PurgeTenant" => "destructive",
+        "TenantService/UpdateTenant" => "mutation",
+        "TenantService/UpdateTenantConfig" => "mutation",
+        "VaultService/CreateTransitKey" => "mutation",
+        "VaultService/Decrypt" => "read_only",
+        "VaultService/DeleteSecret" => "mutation",
+        "VaultService/DestroySecret" => "destructive",
+        "VaultService/Encrypt" => "mutation",
+        "VaultService/GenerateDatabaseCredentials" => "mutation",
+        "VaultService/GetSecret" => "read_only",
+        "VaultService/Hmac" => "mutation",
+        "VaultService/ListSecrets" => "read_only",
+        "VaultService/PutSecret" => "mutation",
+        "VaultService/RotateTransitKey" => "mutation",
+        "VaultService/SealStatus" => "read_only",
+        "VaultService/Sign" => "mutation",
+        "VaultService/Verify" => "read_only",
+        "WebhookService/CreateEndpoint" => "mutation",
+        "WebhookService/DeleteEndpoint" => "destructive",
+        "WebhookService/GetEndpoint" => "read_only",
+        "WebhookService/ListDeliveries" => "read_only",
+        "WebhookService/ListEndpoints" => "read_only",
+        "WebhookService/UpdateEndpoint" => "mutation",
+        "PeerService/GetPeer" => "read_only",
+        "PeerService/JoinRoom" => "mutation",
+        "PeerService/JoinSession" => "mutation",
+        "PeerService/LeaveRoom" => "mutation",
+        "PeerService/ListPeers" => "read_only",
+        "RoomService/CloseRoom" => "mutation",
+        "RoomService/CreateRoom" => "mutation",
+        "RoomService/GetRoom" => "read_only",
+        "RoomService/ListEgress" => "read_only",
+        "RoomService/ListRooms" => "read_only",
+        "RoomService/StartRoomComposite" => "mutation",
+        "RoomService/StartTrackEgress" => "mutation",
+        "RoomService/StopEgress" => "mutation",
+        "RoomService/UpdateRoom" => "mutation",
+        "SignalingService/Signal" => "mutation",
+        "TrackService/ListTracks" => "read_only",
+        "TrackService/MuteTrack" => "mutation",
+        "TrackService/PublishTrack" => "mutation",
+        "TrackService/UnpublishTrack" => "mutation",
+        "TurnService/IssueCredentials" => "mutation",
+        "WorkflowService/CancelWorkflow" => "destructive",
+        "WorkflowService/GetWorkflow" => "read_only",
+        "WorkflowService/ListWorkflows" => "read_only",
+        "WorkflowService/SignalWorkflow" => "mutation",
+        "WorkflowService/StartWorkflow" => "mutation",
+        "DataBroker/ActivateCatalog" => "destructive",
+        "DataBroker/AnalyticalQuery" => "read_only",
+        "DataBroker/ApplyMigration" => "mutation",
+        "DataBroker/ApproveMigrationPlan" => "mutation",
+        "DataBroker/BatchSelect" => "mutation",
+        "DataBroker/BatchUpsert" => "mutation",
+        "DataBroker/BeginTx" => "mutation",
+        "DataBroker/CacheDelete" => "mutation",
+        "DataBroker/CacheGet" => "read_only",
+        "DataBroker/CacheScan" => "read_only",
+        "DataBroker/CacheSet" => "mutation",
+        "DataBroker/CreateMaterializedView" => "mutation",
+        "DataBroker/Delete" => "mutation",
+        "DataBroker/DeletePolicy" => "mutation",
+        "DataBroker/DismissDlqEvent" => "mutation",
+        "DataBroker/DocumentDelete" => "mutation",
+        "DataBroker/DocumentFind" => "read_only",
+        "DataBroker/DocumentGet" => "read_only",
+        "DataBroker/DocumentUpsert" => "mutation",
+        "DataBroker/DropResource" => "destructive",
+        "DataBroker/EnqueueOutboxEvent" => "mutation",
+        "DataBroker/EnsureBaseline" => "mutation",
+        "DataBroker/EnsureProject" => "mutation",
+        "DataBroker/EnsureResource" => "mutation",
+        "DataBroker/GeneratePresignedUrl" => "mutation",
+        "DataBroker/GenericDispatch" => "mutation",
+        "DataBroker/GetAdminSummary" => "read_only",
+        "DataBroker/GetCapabilities" => "read_only",
+        "DataBroker/GetCatalogManifest" => "read_only",
+        "DataBroker/GetCatalogVersion" => "read_only",
+        "DataBroker/GetCatalogVersions" => "read_only",
+        "DataBroker/GetCdcStatus" => "read_only",
+        "DataBroker/GetDlqEvent" => "read_only",
+        "DataBroker/GetHealthReport" => "read_only",
+        "DataBroker/GetMigrationStatus" => "read_only",
+        "DataBroker/GetObject" => "read_only",
+        "DataBroker/GetSaga" => "read_only",
+        "DataBroker/GraphMutate" => "mutation",
+        "DataBroker/GraphQuery" => "read_only",
+        "DataBroker/InitiateMultipartUpload" => "mutation",
+        "DataBroker/LintPolicies" => "read_only",
+        "DataBroker/ListAdminAuditLogs" => "read_only",
+        "DataBroker/ListDlqEvents" => "read_only",
+        "DataBroker/ListMessageSchemas" => "read_only",
+        "DataBroker/ListMigrationRuns" => "read_only",
+        "DataBroker/ListPolicies" => "read_only",
+        "DataBroker/ListProjects" => "read_only",
+        "DataBroker/ListResources" => "read_only",
+        "DataBroker/ListSagas" => "read_only",
+        "DataBroker/LookupMessageSchema" => "read_only",
+        "DataBroker/MarkSagaReviewed" => "mutation",
+        "DataBroker/PauseCdc" => "mutation",
+        "DataBroker/PlanMigration" => "mutation",
+        "DataBroker/PreviewCdcRedaction" => "read_only",
+        "DataBroker/PublishCDC" => "mutation",
+        "DataBroker/PutObject" => "mutation",
+        "DataBroker/PutPolicy" => "destructive",
+        "DataBroker/QuarantineDlqEvent" => "mutation",
+        "DataBroker/ReloadPolicies" => "destructive",
+        "DataBroker/ReplayDlqEvent" => "mutation",
+        "DataBroker/ResumeCdc" => "mutation",
+        "DataBroker/RetrySagaCompensation" => "mutation",
+        "DataBroker/RollbackCatalog" => "destructive",
+        "DataBroker/ScanProjectionDrift" => "read_only",
+        "DataBroker/Select" => "read_only",
+        "DataBroker/SelectV2" => "read_only",
+        "DataBroker/StageCatalog" => "destructive",
+        "DataBroker/StepDownCdcLeader" => "mutation",
+        "DataBroker/TimeSeriesQuery" => "read_only",
+        "DataBroker/TimeSeriesWrite" => "mutation",
+        "DataBroker/Upsert" => "mutation",
+        "DataBroker/ValidateCatalog" => "destructive",
+        "DataBroker/VectorBatchUpsert" => "mutation",
+        "DataBroker/VectorHybridSearch" => "read_only",
+        "DataBroker/VectorSearch" => "read_only",
+        "DataBroker/VectorUpsert" => "mutation",
+        "DataBroker/VerifyAdminAuditLog" => "read_only",
+    ];
+
+    /**
+     * Descriptor public alias per RPC, keyed by "Service/Method". This is
+     * metadata for docs/benchmarks; dispatch still uses the generated stubs.
+     *
+     * @var array<string, string>
+     */
+    public const API_ALIAS = [
+        "AnalyticsService/GetExecutorPerformance" => "get_executor_performance",
+        "AnalyticsService/GetPipelineSummary" => "get_pipeline_summary",
+        "AnalyticsService/GetReconciliationAnalytics" => "get_reconciliation_analytics",
+        "AnalyticsService/GetSlaCompliance" => "get_sla_compliance",
+        "AnalyticsService/GetThroughput" => "get_throughput",
+        "AnalyticsService/RecordPipelineMetric" => "record_pipeline_metric",
+        "AnalyticsService/TriggerSnapshot" => "trigger_snapshot",
+        "ApiKeyService/CreateApiKey" => "create_api_key",
+        "ApiKeyService/EmergencyRevokeApiKeys" => "emergency_revoke_api_keys",
+        "ApiKeyService/GetApiKey" => "get_api_key",
+        "ApiKeyService/GetApiKeyUsageStats" => "get_api_key_usage_stats",
+        "ApiKeyService/ListApiKeys" => "list_api_keys",
+        "ApiKeyService/RevokeApiKey" => "revoke_api_key",
+        "ApiKeyService/RotateApiKey" => "rotate_api_key",
+        "ApiKeyService/UpdateApiKey" => "update_api_key",
+        "ApiKeyService/ValidateApiKey" => "validate_api_key",
+        "AssetService/CompleteStep" => "complete_step",
+        "AssetService/CreatePipelineDefinition" => "create_pipeline_definition",
+        "AssetService/GetAsset" => "get_asset",
+        "AssetService/GetPipeline" => "get_pipeline",
+        "AssetService/GetPipelineDefinition" => "get_pipeline_definition",
+        "AssetService/ListAssets" => "list_assets",
+        "AssetService/RegisterAsset" => "register_asset",
+        "AssetService/StartPipeline" => "start_pipeline",
+        "AuthnService/AdminResetMfa" => "admin_reset_mfa",
+        "AuthnService/AdminResetPassword" => "admin_reset_password",
+        "AuthnService/AdminRevokeAllTenantSessions" => "admin_revoke_all_tenant_sessions",
+        "AuthnService/AdminRevokeAllUserSessions" => "admin_revoke_all_user_sessions",
+        "AuthnService/AdminRevokeSession" => "admin_revoke_session",
+        "AuthnService/Authenticate" => "authenticate",
+        "AuthnService/ChangePassword" => "change_password",
+        "AuthnService/ChangeUserStatus" => "change_user_status",
+        "AuthnService/ConfirmMFAEnrollment" => "confirm_mfaenrollment",
+        "AuthnService/CreateSession" => "create_session",
+        "AuthnService/CreateUser" => "create_user",
+        "AuthnService/DeleteWebAuthnCredential" => "delete_web_authn_credential",
+        "AuthnService/DisableMfaFactor" => "disable_mfa_factor",
+        "AuthnService/EmergencyRevoke" => "emergency_revoke",
+        "AuthnService/EnrollMFA" => "enroll_mfa",
+        "AuthnService/FinishWebAuthnAuthentication" => "finish_web_authn_authentication",
+        "AuthnService/FinishWebAuthnRegistration" => "finish_web_authn_registration",
+        "AuthnService/ForgotPassword" => "forgot_password",
+        "AuthnService/GenerateRecoveryCodes" => "generate_recovery_codes",
+        "AuthnService/GetJwks" => "get_jwks",
+        "AuthnService/GetMfaPolicy" => "get_mfa_policy",
+        "AuthnService/GetSession" => "get_session",
+        "AuthnService/GetUser" => "get_user",
+        "AuthnService/IntrospectToken" => "introspect_token",
+        "AuthnService/IssueMfaChallenge" => "issue_mfa_challenge",
+        "AuthnService/ListDevices" => "list_devices",
+        "AuthnService/ListMfaFactors" => "list_mfa_factors",
+        "AuthnService/ListSessions" => "list_sessions",
+        "AuthnService/ListUsers" => "list_users",
+        "AuthnService/ListWebAuthnCredentials" => "list_web_authn_credentials",
+        "AuthnService/Login" => "login",
+        "AuthnService/Logout" => "logout",
+        "AuthnService/PutMfaPolicy" => "put_mfa_policy",
+        "AuthnService/RefreshSession" => "refresh_session",
+        "AuthnService/RefreshToken" => "refresh_token",
+        "AuthnService/RenamePasskey" => "rename_passkey",
+        "AuthnService/ResendOTP" => "resend_otp",
+        "AuthnService/ResetPassword" => "reset_password",
+        "AuthnService/RevokeDevice" => "revoke_device",
+        "AuthnService/RevokeRecoveryCodes" => "revoke_recovery_codes",
+        "AuthnService/RevokeSession" => "revoke_session",
+        "AuthnService/SendOTP" => "send_otp",
+        "AuthnService/SendPhoneVerification" => "send_phone_verification",
+        "AuthnService/StartWebAuthnAuthentication" => "start_web_authn_authentication",
+        "AuthnService/StartWebAuthnRegistration" => "start_web_authn_registration",
+        "AuthnService/UpdateUser" => "update_user",
+        "AuthnService/ValidateCSRF" => "validate_csrf",
+        "AuthnService/ValidateToken" => "validate_token",
+        "AuthnService/VerifyMfaChallenge" => "verify_mfa_challenge",
+        "AuthnService/VerifyOTP" => "verify_otp",
+        "AuthzService/ActivateCanary" => "activate_canary",
+        "AuthzService/ActivatePolicyVersion" => "activate_policy_version",
+        "AuthzService/ApprovePolicyDraft" => "approve_policy_draft",
+        "AuthzService/AssignRole" => "assign_role",
+        "AuthzService/Authorize" => "authorize",
+        "AuthzService/BatchCheckPermissions" => "batch_check_permissions",
+        "AuthzService/CheckAccess" => "check_access",
+        "AuthzService/CreatePolicyDraft" => "create_policy_draft",
+        "AuthzService/CreatePolicyRule" => "create_policy_rule",
+        "AuthzService/CreateRole" => "create_role",
+        "AuthzService/DeletePolicyRule" => "delete_policy_rule",
+        "AuthzService/DeleteRole" => "delete_role",
+        "AuthzService/DiffPolicyDraft" => "diff_policy_draft",
+        "AuthzService/ExplainPolicy" => "explain_policy",
+        "AuthzService/GetAuthzRevision" => "get_authz_revision",
+        "AuthzService/GetCanaryStatus" => "get_canary_status",
+        "AuthzService/GetNativeAccess" => "get_native_access",
+        "AuthzService/GetPolicyBundle" => "get_policy_bundle",
+        "AuthzService/GetPolicyRule" => "get_policy_rule",
+        "AuthzService/GetRole" => "get_role",
+        "AuthzService/InvalidatePolicyBundles" => "invalidate_policy_bundles",
+        "AuthzService/LintAuthzPolicies" => "lint_authz_policies",
+        "AuthzService/ListAccessDecisionAudits" => "list_access_decision_audits",
+        "AuthzService/ListPolicyRules" => "list_policy_rules",
+        "AuthzService/ListPolicyVersions" => "list_policy_versions",
+        "AuthzService/ListRoles" => "list_roles",
+        "AuthzService/ListUserPermissions" => "list_user_permissions",
+        "AuthzService/ListUserRoles" => "list_user_roles",
+        "AuthzService/MigrateLegacyPolicies" => "migrate_legacy_policies",
+        "AuthzService/PromoteCanary" => "promote_canary",
+        "AuthzService/PutAuthzPolicy" => "put_authz_policy",
+        "AuthzService/PutRelationship" => "put_relationship",
+        "AuthzService/PutRoleBinding" => "put_role_binding",
+        "AuthzService/RejectPolicyDraft" => "reject_policy_draft",
+        "AuthzService/RevokeRole" => "revoke_role",
+        "AuthzService/RollbackPolicyVersion" => "rollback_policy_version",
+        "AuthzService/SeedBuiltinRoles" => "seed_builtin_roles",
+        "AuthzService/SimulatePolicy" => "simulate_policy",
+        "AuthzService/SubmitPolicyDraft" => "submit_policy_draft",
+        "AuthzService/UpdatePolicyDraft" => "update_policy_draft",
+        "AuthzService/UpdateRole" => "update_role",
+        "BackupService/DeleteBackupPolicy" => "delete_backup_policy",
+        "BackupService/GetBackup" => "get_backup",
+        "BackupService/GetBackupPolicy" => "get_backup_policy",
+        "BackupService/ListBackupPolicies" => "list_backup_policies",
+        "BackupService/ListBackups" => "list_backups",
+        "BackupService/PutBackupPolicy" => "put_backup_policy",
+        "BackupService/RestoreTenant" => "restore_tenant",
+        "BackupService/StartTenantBackup" => "start_tenant_backup",
+        "CacheService/CreateNamespace" => "create_cache_namespace",
+        "CacheService/Delete" => "cache_delete",
+        "CacheService/DeleteNamespace" => "delete_cache_namespace",
+        "CacheService/Get" => "cache_get",
+        "CacheService/GetNamespaceStats" => "get_cache_namespace_stats",
+        "CacheService/Scan" => "cache_scan",
+        "CacheService/Set" => "cache_set",
+        "ConfigService/DeleteFlag" => "delete_flag",
+        "ConfigService/EvaluateFlags" => "evaluate_flags",
+        "ConfigService/GetFlag" => "get_flag",
+        "ConfigService/ListFlags" => "list_flags",
+        "ConfigService/PutFlag" => "put_flag",
+        "ControlPlaneService/AckStatus" => "ack_status",
+        "ControlPlaneService/DeltaResources" => "delta_resources",
+        "ControlPlaneService/GetResources" => "get_resources",
+        "ControlPlaneService/ListNodeStates" => "list_node_states",
+        "ControlPlaneService/RollbackResources" => "rollback_resources",
+        "ControlPlaneService/StreamResources" => "stream_resources",
+        "EmbeddingService/Backfill" => "backfill",
+        "EmbeddingService/DeleteSource" => "delete_source",
+        "EmbeddingService/ListSources" => "list_sources",
+        "EmbeddingService/RegisterSource" => "register_source",
+        "EmbeddingService/ReportEmbedding" => "report_embedding",
+        "EmbeddingService/Retrieve" => "retrieve",
+        "IdentityProviderService/CreateProvider" => "create_provider",
+        "IdentityProviderService/DisableProvider" => "disable_provider",
+        "IdentityProviderService/ForceJwksRefresh" => "force_jwks_refresh",
+        "IdentityProviderService/GetProvider" => "get_provider",
+        "IdentityProviderService/ImportSamlMetadata" => "import_saml_metadata",
+        "IdentityProviderService/LinkIdentity" => "link_identity",
+        "IdentityProviderService/ListExternalIdentities" => "list_external_identities",
+        "IdentityProviderService/ListProviders" => "list_providers",
+        "IdentityProviderService/PreviewClaimMapping" => "preview_claim_mapping",
+        "IdentityProviderService/PreviewGroupMapping" => "preview_group_mapping",
+        "IdentityProviderService/ResolveExternalIdentity" => "resolve_external_identity",
+        "IdentityProviderService/SamlAcs" => "saml_acs",
+        "IdentityProviderService/ScimCreateGroup" => "scim_create_group",
+        "IdentityProviderService/ScimCreateUser" => "scim_create_user",
+        "IdentityProviderService/ScimDeleteGroup" => "scim_delete_group",
+        "IdentityProviderService/ScimDeleteUser" => "scim_delete_user",
+        "IdentityProviderService/ScimGetGroup" => "scim_get_group",
+        "IdentityProviderService/ScimGetUser" => "scim_get_user",
+        "IdentityProviderService/ScimListGroups" => "scim_list_groups",
+        "IdentityProviderService/ScimListUsers" => "scim_list_users",
+        "IdentityProviderService/ScimPatchGroup" => "scim_patch_group",
+        "IdentityProviderService/ScimPatchUser" => "scim_patch_user",
+        "IdentityProviderService/ScimReplaceUser" => "scim_replace_user",
+        "IdentityProviderService/StartSamlLogin" => "start_saml_login",
+        "IdentityProviderService/TestProviderDiscovery" => "test_provider_discovery",
+        "IdentityProviderService/UnlinkIdentity" => "unlink_identity",
+        "IdentityProviderService/UpdateProvider" => "update_provider",
+        "LiveQueryService/Subscribe" => "subscribe",
+        "LockService/AcquireLock" => "acquire_lock",
+        "LockService/ReleaseLock" => "release_lock",
+        "LockService/RenewLock" => "renew_lock",
+        "MeteringService/CheckQuota" => "check_quota",
+        "MeteringService/GetQuota" => "get_quota",
+        "MeteringService/ListQuotas" => "list_quotas",
+        "MeteringService/PutQuota" => "put_quota",
+        "MeteringService/QueryUsage" => "query_usage",
+        "MeteringService/RecordUsage" => "record_usage",
+        "NotificationService/GetDeliveryStats" => "get_delivery_stats",
+        "NotificationService/GetNotification" => "get_notification",
+        "NotificationService/GetPreference" => "get_preference",
+        "NotificationService/GetTemplate" => "get_template",
+        "NotificationService/ListNotifications" => "list_notifications",
+        "NotificationService/ListPreferences" => "list_preferences",
+        "NotificationService/ListTemplates" => "list_templates",
+        "NotificationService/ReportDelivery" => "report_delivery",
+        "NotificationService/RetryNotification" => "retry_notification",
+        "NotificationService/SendNotification" => "send_notification",
+        "NotificationService/SetPreference" => "set_preference",
+        "NotificationService/UpsertTemplate" => "upsert_template",
+        "SchedulerService/CreateJob" => "create_job",
+        "SchedulerService/DeleteJob" => "delete_job",
+        "SchedulerService/GetJob" => "get_job",
+        "SchedulerService/ListJobs" => "list_jobs",
+        "SchedulerService/PauseJob" => "pause_job",
+        "SchedulerService/ResumeJob" => "resume_job",
+        "SearchService/CreateIndex" => "create_index",
+        "SearchService/DeleteIndex" => "delete_index",
+        "SearchService/ListIndexes" => "list_indexes",
+        "SearchService/Reindex" => "reindex",
+        "SearchService/Search" => "search",
+        "StorageService/DeleteFile" => "delete_file",
+        "StorageService/DownloadFile" => "download_file",
+        "StorageService/FinalizeUpload" => "finalize_upload",
+        "StorageService/GetDownloadUrl" => "get_download_url",
+        "StorageService/GetFile" => "get_file",
+        "StorageService/ListFiles" => "list_files",
+        "StorageService/RegisterUpload" => "register_upload",
+        "StorageService/UpdateFile" => "update_file",
+        "TenantService/CreateTenant" => "create_tenant",
+        "TenantService/GetTenant" => "get_tenant",
+        "TenantService/GetTenantConfig" => "get_tenant_config",
+        "TenantService/ListTenants" => "list_tenants",
+        "TenantService/PurgeTenant" => "purge_tenant",
+        "TenantService/UpdateTenant" => "update_tenant",
+        "TenantService/UpdateTenantConfig" => "update_tenant_config",
+        "VaultService/CreateTransitKey" => "create_transit_key",
+        "VaultService/Decrypt" => "decrypt",
+        "VaultService/DeleteSecret" => "delete_secret",
+        "VaultService/DestroySecret" => "destroy_secret",
+        "VaultService/Encrypt" => "encrypt",
+        "VaultService/GenerateDatabaseCredentials" => "generate_database_credentials",
+        "VaultService/GetSecret" => "get_secret",
+        "VaultService/Hmac" => "hmac",
+        "VaultService/ListSecrets" => "list_secrets",
+        "VaultService/PutSecret" => "put_secret",
+        "VaultService/RotateTransitKey" => "rotate_transit_key",
+        "VaultService/SealStatus" => "seal_status",
+        "VaultService/Sign" => "sign",
+        "VaultService/Verify" => "verify",
+        "WebhookService/CreateEndpoint" => "create_endpoint",
+        "WebhookService/DeleteEndpoint" => "delete_endpoint",
+        "WebhookService/GetEndpoint" => "get_endpoint",
+        "WebhookService/ListDeliveries" => "list_deliveries",
+        "WebhookService/ListEndpoints" => "list_endpoints",
+        "WebhookService/UpdateEndpoint" => "update_endpoint",
+        "PeerService/GetPeer" => "get_peer",
+        "PeerService/JoinRoom" => "join_room",
+        "PeerService/JoinSession" => "join_session",
+        "PeerService/LeaveRoom" => "leave_room",
+        "PeerService/ListPeers" => "list_peers",
+        "RoomService/CloseRoom" => "close_room",
+        "RoomService/CreateRoom" => "create_room",
+        "RoomService/GetRoom" => "get_room",
+        "RoomService/ListEgress" => "list_egress",
+        "RoomService/ListRooms" => "list_rooms",
+        "RoomService/StartRoomComposite" => "start_room_composite",
+        "RoomService/StartTrackEgress" => "start_track_egress",
+        "RoomService/StopEgress" => "stop_egress",
+        "RoomService/UpdateRoom" => "update_room",
+        "SignalingService/Signal" => "signal",
+        "TrackService/ListTracks" => "list_tracks",
+        "TrackService/MuteTrack" => "mute_track",
+        "TrackService/PublishTrack" => "publish_track",
+        "TrackService/UnpublishTrack" => "unpublish_track",
+        "TurnService/IssueCredentials" => "issue_credentials",
+        "WorkflowService/CancelWorkflow" => "cancel_workflow",
+        "WorkflowService/GetWorkflow" => "get_workflow",
+        "WorkflowService/ListWorkflows" => "list_workflows",
+        "WorkflowService/SignalWorkflow" => "signal_workflow",
+        "WorkflowService/StartWorkflow" => "start_workflow",
+        "DataBroker/ActivateCatalog" => "activate_catalog",
+        "DataBroker/AnalyticalQuery" => "analytical_query",
+        "DataBroker/ApplyMigration" => "apply_migration",
+        "DataBroker/ApproveMigrationPlan" => "approve_migration_plan",
+        "DataBroker/BatchSelect" => "batch_select",
+        "DataBroker/BatchUpsert" => "batch_upsert",
+        "DataBroker/BeginTx" => "begin_tx",
+        "DataBroker/CacheDelete" => "cache_delete",
+        "DataBroker/CacheGet" => "cache_get",
+        "DataBroker/CacheScan" => "cache_scan",
+        "DataBroker/CacheSet" => "cache_set",
+        "DataBroker/CreateMaterializedView" => "create_materialized_view",
+        "DataBroker/Delete" => "delete",
+        "DataBroker/DeletePolicy" => "delete_policy",
+        "DataBroker/DismissDlqEvent" => "dismiss_dlq_event",
+        "DataBroker/DocumentDelete" => "document_delete",
+        "DataBroker/DocumentFind" => "document_find",
+        "DataBroker/DocumentGet" => "document_get",
+        "DataBroker/DocumentUpsert" => "document_upsert",
+        "DataBroker/DropResource" => "drop_resource",
+        "DataBroker/EnqueueOutboxEvent" => "enqueue_outbox_event",
+        "DataBroker/EnsureBaseline" => "ensure_baseline",
+        "DataBroker/EnsureProject" => "ensure_project",
+        "DataBroker/EnsureResource" => "ensure_resource",
+        "DataBroker/GeneratePresignedUrl" => "generate_presigned_url",
+        "DataBroker/GenericDispatch" => "generic_dispatch",
+        "DataBroker/GetAdminSummary" => "get_admin_summary",
+        "DataBroker/GetCapabilities" => "get_capabilities",
+        "DataBroker/GetCatalogManifest" => "get_catalog_manifest",
+        "DataBroker/GetCatalogVersion" => "get_catalog_version",
+        "DataBroker/GetCatalogVersions" => "get_catalog_versions",
+        "DataBroker/GetCdcStatus" => "get_cdc_status",
+        "DataBroker/GetDlqEvent" => "get_dlq_event",
+        "DataBroker/GetHealthReport" => "get_health_report",
+        "DataBroker/GetMigrationStatus" => "get_migration_status",
+        "DataBroker/GetObject" => "get_object",
+        "DataBroker/GetSaga" => "get_saga",
+        "DataBroker/GraphMutate" => "graph_mutate",
+        "DataBroker/GraphQuery" => "graph_query",
+        "DataBroker/InitiateMultipartUpload" => "initiate_multipart_upload",
+        "DataBroker/LintPolicies" => "lint_policies",
+        "DataBroker/ListAdminAuditLogs" => "list_admin_audit_logs",
+        "DataBroker/ListDlqEvents" => "list_dlq_events",
+        "DataBroker/ListMessageSchemas" => "list_message_schemas",
+        "DataBroker/ListMigrationRuns" => "list_migration_runs",
+        "DataBroker/ListPolicies" => "list_policies",
+        "DataBroker/ListProjects" => "list_projects",
+        "DataBroker/ListResources" => "list_resources",
+        "DataBroker/ListSagas" => "list_sagas",
+        "DataBroker/LookupMessageSchema" => "lookup_message_schema",
+        "DataBroker/MarkSagaReviewed" => "mark_saga_reviewed",
+        "DataBroker/PauseCdc" => "pause_cdc",
+        "DataBroker/PlanMigration" => "plan_migration",
+        "DataBroker/PreviewCdcRedaction" => "preview_cdc_redaction",
+        "DataBroker/PublishCDC" => "publish_cdc",
+        "DataBroker/PutObject" => "put_object",
+        "DataBroker/PutPolicy" => "put_policy",
+        "DataBroker/QuarantineDlqEvent" => "quarantine_dlq_event",
+        "DataBroker/ReloadPolicies" => "reload_policies",
+        "DataBroker/ReplayDlqEvent" => "replay_dlq_event",
+        "DataBroker/ResumeCdc" => "resume_cdc",
+        "DataBroker/RetrySagaCompensation" => "retry_saga_compensation",
+        "DataBroker/RollbackCatalog" => "rollback_catalog",
+        "DataBroker/ScanProjectionDrift" => "scan_projection_drift",
+        "DataBroker/Select" => "select",
+        "DataBroker/SelectV2" => "select_v_2",
+        "DataBroker/StageCatalog" => "stage_catalog",
+        "DataBroker/StepDownCdcLeader" => "step_down_cdc_leader",
+        "DataBroker/TimeSeriesQuery" => "time_series_query",
+        "DataBroker/TimeSeriesWrite" => "time_series_write",
+        "DataBroker/Upsert" => "upsert",
+        "DataBroker/ValidateCatalog" => "validate_catalog",
+        "DataBroker/VectorBatchUpsert" => "vector_batch_upsert",
+        "DataBroker/VectorHybridSearch" => "vector_hybrid_search",
+        "DataBroker/VectorSearch" => "vector_search",
+        "DataBroker/VectorUpsert" => "vector_upsert",
+        "DataBroker/VerifyAdminAuditLog" => "verify_admin_audit_log",
+    ];
+
+    /**
+     * Descriptor REST operationId per RPC, keyed by "Service/Method".
+     *
+     * @var array<string, string>
+     */
+    public const OPERATION_ID = [
+        "AnalyticsService/GetExecutorPerformance" => "getExecutorPerformance",
+        "AnalyticsService/GetPipelineSummary" => "getPipelineSummary",
+        "AnalyticsService/GetReconciliationAnalytics" => "getReconciliationAnalytics",
+        "AnalyticsService/GetSlaCompliance" => "getSlaCompliance",
+        "AnalyticsService/GetThroughput" => "getThroughput",
+        "AnalyticsService/RecordPipelineMetric" => "recordPipelineMetric",
+        "AnalyticsService/TriggerSnapshot" => "triggerSnapshot",
+        "ApiKeyService/CreateApiKey" => "createApiKey",
+        "ApiKeyService/EmergencyRevokeApiKeys" => "emergencyRevokeApiKeys",
+        "ApiKeyService/GetApiKey" => "getApiKey",
+        "ApiKeyService/GetApiKeyUsageStats" => "getApiKeyUsageStats",
+        "ApiKeyService/ListApiKeys" => "listApiKeys",
+        "ApiKeyService/RevokeApiKey" => "revokeApiKey",
+        "ApiKeyService/RotateApiKey" => "rotateApiKey",
+        "ApiKeyService/UpdateApiKey" => "updateApiKey",
+        "ApiKeyService/ValidateApiKey" => "validateApiKey",
+        "AssetService/CompleteStep" => "completeStep",
+        "AssetService/CreatePipelineDefinition" => "createPipelineDefinition",
+        "AssetService/GetAsset" => "getAsset",
+        "AssetService/GetPipeline" => "getPipeline",
+        "AssetService/GetPipelineDefinition" => "getPipelineDefinition",
+        "AssetService/ListAssets" => "listAssets",
+        "AssetService/RegisterAsset" => "registerAsset",
+        "AssetService/StartPipeline" => "startPipeline",
+        "AuthnService/AdminResetMfa" => "adminResetMfa",
+        "AuthnService/AdminResetPassword" => "adminResetPassword",
+        "AuthnService/AdminRevokeAllTenantSessions" => "adminRevokeAllTenantSessions",
+        "AuthnService/AdminRevokeAllUserSessions" => "adminRevokeAllUserSessions",
+        "AuthnService/AdminRevokeSession" => "adminRevokeSession",
+        "AuthnService/Authenticate" => "authenticate",
+        "AuthnService/ChangePassword" => "changePassword",
+        "AuthnService/ChangeUserStatus" => "changeUserStatus",
+        "AuthnService/ConfirmMFAEnrollment" => "confirmMfaenrollment",
+        "AuthnService/CreateSession" => "createSession",
+        "AuthnService/CreateUser" => "createUser",
+        "AuthnService/DeleteWebAuthnCredential" => "deleteWebAuthnCredential",
+        "AuthnService/DisableMfaFactor" => "disableMfaFactor",
+        "AuthnService/EmergencyRevoke" => "emergencyRevoke",
+        "AuthnService/EnrollMFA" => "enrollMfa",
+        "AuthnService/FinishWebAuthnAuthentication" => "finishWebAuthnAuthentication",
+        "AuthnService/FinishWebAuthnRegistration" => "finishWebAuthnRegistration",
+        "AuthnService/ForgotPassword" => "forgotPassword",
+        "AuthnService/GenerateRecoveryCodes" => "generateRecoveryCodes",
+        "AuthnService/GetJwks" => "getJwks",
+        "AuthnService/GetMfaPolicy" => "getMfaPolicy",
+        "AuthnService/GetSession" => "getSession",
+        "AuthnService/GetUser" => "getUser",
+        "AuthnService/IntrospectToken" => "introspectToken",
+        "AuthnService/IssueMfaChallenge" => "issueMfaChallenge",
+        "AuthnService/ListDevices" => "listDevices",
+        "AuthnService/ListMfaFactors" => "listMfaFactors",
+        "AuthnService/ListSessions" => "listSessions",
+        "AuthnService/ListUsers" => "listUsers",
+        "AuthnService/ListWebAuthnCredentials" => "listWebAuthnCredentials",
+        "AuthnService/Login" => "login",
+        "AuthnService/Logout" => "logout",
+        "AuthnService/PutMfaPolicy" => "putMfaPolicy",
+        "AuthnService/RefreshSession" => "refreshSession",
+        "AuthnService/RefreshToken" => "refreshToken",
+        "AuthnService/RenamePasskey" => "renamePasskey",
+        "AuthnService/ResendOTP" => "resendOtp",
+        "AuthnService/ResetPassword" => "resetPassword",
+        "AuthnService/RevokeDevice" => "revokeDevice",
+        "AuthnService/RevokeRecoveryCodes" => "revokeRecoveryCodes",
+        "AuthnService/RevokeSession" => "revokeSession",
+        "AuthnService/SendOTP" => "sendOtp",
+        "AuthnService/SendPhoneVerification" => "sendPhoneVerification",
+        "AuthnService/StartWebAuthnAuthentication" => "startWebAuthnAuthentication",
+        "AuthnService/StartWebAuthnRegistration" => "startWebAuthnRegistration",
+        "AuthnService/UpdateUser" => "updateUser",
+        "AuthnService/ValidateCSRF" => "validateCsrf",
+        "AuthnService/ValidateToken" => "validateToken",
+        "AuthnService/VerifyMfaChallenge" => "verifyMfaChallenge",
+        "AuthnService/VerifyOTP" => "verifyOtp",
+        "AuthzService/ActivateCanary" => "activateCanary",
+        "AuthzService/ActivatePolicyVersion" => "activatePolicyVersion",
+        "AuthzService/ApprovePolicyDraft" => "approvePolicyDraft",
+        "AuthzService/AssignRole" => "assignRole",
+        "AuthzService/Authorize" => "authorize",
+        "AuthzService/BatchCheckPermissions" => "batchCheckPermissions",
+        "AuthzService/CheckAccess" => "checkAccess",
+        "AuthzService/CreatePolicyDraft" => "createPolicyDraft",
+        "AuthzService/CreatePolicyRule" => "createPolicyRule",
+        "AuthzService/CreateRole" => "createRole",
+        "AuthzService/DeletePolicyRule" => "deletePolicyRule",
+        "AuthzService/DeleteRole" => "deleteRole",
+        "AuthzService/DiffPolicyDraft" => "diffPolicyDraft",
+        "AuthzService/ExplainPolicy" => "explainPolicy",
+        "AuthzService/GetAuthzRevision" => "getAuthzRevision",
+        "AuthzService/GetCanaryStatus" => "getCanaryStatus",
+        "AuthzService/GetNativeAccess" => "getNativeAccess",
+        "AuthzService/GetPolicyBundle" => "getPolicyBundle",
+        "AuthzService/GetPolicyRule" => "getPolicyRule",
+        "AuthzService/GetRole" => "getRole",
+        "AuthzService/InvalidatePolicyBundles" => "invalidatePolicyBundles",
+        "AuthzService/LintAuthzPolicies" => "lintAuthzPolicies",
+        "AuthzService/ListAccessDecisionAudits" => "listAccessDecisionAudits",
+        "AuthzService/ListPolicyRules" => "listPolicyRules",
+        "AuthzService/ListPolicyVersions" => "listPolicyVersions",
+        "AuthzService/ListRoles" => "listRoles",
+        "AuthzService/ListUserPermissions" => "listUserPermissions",
+        "AuthzService/ListUserRoles" => "listUserRoles",
+        "AuthzService/MigrateLegacyPolicies" => "migrateLegacyPolicies",
+        "AuthzService/PromoteCanary" => "promoteCanary",
+        "AuthzService/PutAuthzPolicy" => "putAuthzPolicy",
+        "AuthzService/PutRelationship" => "putRelationship",
+        "AuthzService/PutRoleBinding" => "putRoleBinding",
+        "AuthzService/RejectPolicyDraft" => "rejectPolicyDraft",
+        "AuthzService/RevokeRole" => "revokeRole",
+        "AuthzService/RollbackPolicyVersion" => "rollbackPolicyVersion",
+        "AuthzService/SeedBuiltinRoles" => "seedBuiltinRoles",
+        "AuthzService/SimulatePolicy" => "simulatePolicy",
+        "AuthzService/SubmitPolicyDraft" => "submitPolicyDraft",
+        "AuthzService/UpdatePolicyDraft" => "updatePolicyDraft",
+        "AuthzService/UpdateRole" => "updateRole",
+        "BackupService/DeleteBackupPolicy" => "deleteBackupPolicy",
+        "BackupService/GetBackup" => "getBackup",
+        "BackupService/GetBackupPolicy" => "getBackupPolicy",
+        "BackupService/ListBackupPolicies" => "listBackupPolicies",
+        "BackupService/ListBackups" => "listBackups",
+        "BackupService/PutBackupPolicy" => "putBackupPolicy",
+        "BackupService/RestoreTenant" => "restoreTenant",
+        "BackupService/StartTenantBackup" => "startTenantBackup",
+        "CacheService/CreateNamespace" => "createCacheNamespace",
+        "CacheService/Delete" => "cacheNamespaceDelete",
+        "CacheService/DeleteNamespace" => "deleteCacheNamespace",
+        "CacheService/Get" => "cacheNamespaceGet",
+        "CacheService/GetNamespaceStats" => "getCacheNamespaceStats",
+        "CacheService/Scan" => "cacheNamespaceScan",
+        "CacheService/Set" => "cacheNamespaceSet",
+        "ConfigService/DeleteFlag" => "deleteFlag",
+        "ConfigService/EvaluateFlags" => "evaluateFlags",
+        "ConfigService/GetFlag" => "getFlag",
+        "ConfigService/ListFlags" => "listFlags",
+        "ConfigService/PutFlag" => "putFlag",
+        "ControlPlaneService/AckStatus" => "ackStatus",
+        "ControlPlaneService/DeltaResources" => "deltaResources",
+        "ControlPlaneService/GetResources" => "getResources",
+        "ControlPlaneService/ListNodeStates" => "listNodeStates",
+        "ControlPlaneService/RollbackResources" => "rollbackResources",
+        "ControlPlaneService/StreamResources" => "streamResources",
+        "EmbeddingService/Backfill" => "backfillEmbeddingSource",
+        "EmbeddingService/DeleteSource" => "deleteEmbeddingSource",
+        "EmbeddingService/ListSources" => "listEmbeddingSources",
+        "EmbeddingService/RegisterSource" => "registerEmbeddingSource",
+        "EmbeddingService/ReportEmbedding" => "reportEmbedding",
+        "EmbeddingService/Retrieve" => "retrieveEmbedding",
+        "IdentityProviderService/CreateProvider" => "createProvider",
+        "IdentityProviderService/DisableProvider" => "disableProvider",
+        "IdentityProviderService/ForceJwksRefresh" => "forceJwksRefresh",
+        "IdentityProviderService/GetProvider" => "getProvider",
+        "IdentityProviderService/ImportSamlMetadata" => "importSamlMetadata",
+        "IdentityProviderService/LinkIdentity" => "linkIdentity",
+        "IdentityProviderService/ListExternalIdentities" => "listExternalIdentities",
+        "IdentityProviderService/ListProviders" => "listProviders",
+        "IdentityProviderService/PreviewClaimMapping" => "previewClaimMapping",
+        "IdentityProviderService/PreviewGroupMapping" => "previewGroupMapping",
+        "IdentityProviderService/ResolveExternalIdentity" => "resolveExternalIdentity",
+        "IdentityProviderService/SamlAcs" => "samlAcs",
+        "IdentityProviderService/ScimCreateGroup" => "scimCreateGroup",
+        "IdentityProviderService/ScimCreateUser" => "scimCreateUser",
+        "IdentityProviderService/ScimDeleteGroup" => "scimDeleteGroup",
+        "IdentityProviderService/ScimDeleteUser" => "scimDeleteUser",
+        "IdentityProviderService/ScimGetGroup" => "scimGetGroup",
+        "IdentityProviderService/ScimGetUser" => "scimGetUser",
+        "IdentityProviderService/ScimListGroups" => "scimListGroups",
+        "IdentityProviderService/ScimListUsers" => "scimListUsers",
+        "IdentityProviderService/ScimPatchGroup" => "scimPatchGroup",
+        "IdentityProviderService/ScimPatchUser" => "scimPatchUser",
+        "IdentityProviderService/ScimReplaceUser" => "scimReplaceUser",
+        "IdentityProviderService/StartSamlLogin" => "startSamlLogin",
+        "IdentityProviderService/TestProviderDiscovery" => "testProviderDiscovery",
+        "IdentityProviderService/UnlinkIdentity" => "unlinkIdentity",
+        "IdentityProviderService/UpdateProvider" => "updateProvider",
+        "LiveQueryService/Subscribe" => "liveQuerySubscribe",
+        "LockService/AcquireLock" => "acquireLock",
+        "LockService/ReleaseLock" => "releaseLock",
+        "LockService/RenewLock" => "renewLock",
+        "MeteringService/CheckQuota" => "checkQuota",
+        "MeteringService/GetQuota" => "getQuota",
+        "MeteringService/ListQuotas" => "listQuotas",
+        "MeteringService/PutQuota" => "putQuota",
+        "MeteringService/QueryUsage" => "queryUsage",
+        "MeteringService/RecordUsage" => "recordUsage",
+        "NotificationService/GetDeliveryStats" => "getDeliveryStats",
+        "NotificationService/GetNotification" => "getNotification",
+        "NotificationService/GetPreference" => "getPreference",
+        "NotificationService/GetTemplate" => "getTemplate",
+        "NotificationService/ListNotifications" => "listNotifications",
+        "NotificationService/ListPreferences" => "listPreferences",
+        "NotificationService/ListTemplates" => "listTemplates",
+        "NotificationService/ReportDelivery" => "reportDelivery",
+        "NotificationService/RetryNotification" => "retryNotification",
+        "NotificationService/SendNotification" => "sendNotification",
+        "NotificationService/SetPreference" => "setPreference",
+        "NotificationService/UpsertTemplate" => "upsertTemplate",
+        "SchedulerService/CreateJob" => "createJob",
+        "SchedulerService/DeleteJob" => "deleteJob",
+        "SchedulerService/GetJob" => "getJob",
+        "SchedulerService/ListJobs" => "listJobs",
+        "SchedulerService/PauseJob" => "pauseJob",
+        "SchedulerService/ResumeJob" => "resumeJob",
+        "SearchService/CreateIndex" => "createSearchIndex",
+        "SearchService/DeleteIndex" => "deleteSearchIndex",
+        "SearchService/ListIndexes" => "listSearchIndexes",
+        "SearchService/Reindex" => "reindexSearchIndex",
+        "SearchService/Search" => "search",
+        "StorageService/DeleteFile" => "deleteFile",
+        "StorageService/DownloadFile" => "downloadFile",
+        "StorageService/FinalizeUpload" => "finalizeUpload",
+        "StorageService/GetDownloadUrl" => "getDownloadUrl",
+        "StorageService/GetFile" => "getFile",
+        "StorageService/ListFiles" => "listFiles",
+        "StorageService/RegisterUpload" => "registerUpload",
+        "StorageService/UpdateFile" => "updateFile",
+        "TenantService/CreateTenant" => "createTenant",
+        "TenantService/GetTenant" => "getTenant",
+        "TenantService/GetTenantConfig" => "getTenantConfig",
+        "TenantService/ListTenants" => "listTenants",
+        "TenantService/PurgeTenant" => "purgeTenant",
+        "TenantService/UpdateTenant" => "updateTenant",
+        "TenantService/UpdateTenantConfig" => "updateTenantConfig",
+        "VaultService/CreateTransitKey" => "createTransitKey",
+        "VaultService/Decrypt" => "vaultDecrypt",
+        "VaultService/DeleteSecret" => "deleteSecret",
+        "VaultService/DestroySecret" => "destroySecret",
+        "VaultService/Encrypt" => "vaultEncrypt",
+        "VaultService/GenerateDatabaseCredentials" => "generateDatabaseCredentials",
+        "VaultService/GetSecret" => "getSecret",
+        "VaultService/Hmac" => "vaultHmac",
+        "VaultService/ListSecrets" => "listSecrets",
+        "VaultService/PutSecret" => "putSecret",
+        "VaultService/RotateTransitKey" => "rotateTransitKey",
+        "VaultService/SealStatus" => "vaultSealStatus",
+        "VaultService/Sign" => "vaultSign",
+        "VaultService/Verify" => "vaultVerify",
+        "WebhookService/CreateEndpoint" => "createWebhookEndpoint",
+        "WebhookService/DeleteEndpoint" => "deleteWebhookEndpoint",
+        "WebhookService/GetEndpoint" => "getWebhookEndpoint",
+        "WebhookService/ListDeliveries" => "listWebhookDeliveries",
+        "WebhookService/ListEndpoints" => "listWebhookEndpoints",
+        "WebhookService/UpdateEndpoint" => "updateWebhookEndpoint",
+        "PeerService/GetPeer" => "getPeer",
+        "PeerService/JoinRoom" => "joinRoom",
+        "PeerService/JoinSession" => "joinSession",
+        "PeerService/LeaveRoom" => "leaveRoom",
+        "PeerService/ListPeers" => "listPeers",
+        "RoomService/CloseRoom" => "closeRoom",
+        "RoomService/CreateRoom" => "createRoom",
+        "RoomService/GetRoom" => "getRoom",
+        "RoomService/ListEgress" => "listEgress",
+        "RoomService/ListRooms" => "listRooms",
+        "RoomService/StartRoomComposite" => "startRoomComposite",
+        "RoomService/StartTrackEgress" => "startTrackEgress",
+        "RoomService/StopEgress" => "stopEgress",
+        "RoomService/UpdateRoom" => "updateRoom",
+        "SignalingService/Signal" => "signal",
+        "TrackService/ListTracks" => "listTracks",
+        "TrackService/MuteTrack" => "muteTrack",
+        "TrackService/PublishTrack" => "publishTrack",
+        "TrackService/UnpublishTrack" => "unpublishTrack",
+        "TurnService/IssueCredentials" => "issueCredentials",
+        "WorkflowService/CancelWorkflow" => "cancelWorkflow",
+        "WorkflowService/GetWorkflow" => "getWorkflow",
+        "WorkflowService/ListWorkflows" => "listWorkflows",
+        "WorkflowService/SignalWorkflow" => "signalWorkflow",
+        "WorkflowService/StartWorkflow" => "startWorkflow",
+        "DataBroker/ActivateCatalog" => "activateCatalog",
+        "DataBroker/AnalyticalQuery" => "analyticalQuery",
+        "DataBroker/ApplyMigration" => "applyMigration",
+        "DataBroker/ApproveMigrationPlan" => "approveMigrationPlan",
+        "DataBroker/BatchSelect" => "batchSelect",
+        "DataBroker/BatchUpsert" => "batchUpsert",
+        "DataBroker/BeginTx" => "beginTx",
+        "DataBroker/CacheDelete" => "cacheDelete",
+        "DataBroker/CacheGet" => "cacheGet",
+        "DataBroker/CacheScan" => "cacheScan",
+        "DataBroker/CacheSet" => "cacheSet",
+        "DataBroker/CreateMaterializedView" => "createMaterializedView",
+        "DataBroker/Delete" => "delete",
+        "DataBroker/DeletePolicy" => "deletePolicy",
+        "DataBroker/DismissDlqEvent" => "dismissDlqEvent",
+        "DataBroker/DocumentDelete" => "documentDelete",
+        "DataBroker/DocumentFind" => "documentFind",
+        "DataBroker/DocumentGet" => "documentGet",
+        "DataBroker/DocumentUpsert" => "documentUpsert",
+        "DataBroker/DropResource" => "dropResource",
+        "DataBroker/EnqueueOutboxEvent" => "enqueueOutboxEvent",
+        "DataBroker/EnsureBaseline" => "ensureBaseline",
+        "DataBroker/EnsureProject" => "ensureProject",
+        "DataBroker/EnsureResource" => "ensureResource",
+        "DataBroker/GeneratePresignedUrl" => "generatePresignedUrl",
+        "DataBroker/GenericDispatch" => "genericDispatch",
+        "DataBroker/GetAdminSummary" => "getAdminSummary",
+        "DataBroker/GetCapabilities" => "getCapabilities",
+        "DataBroker/GetCatalogManifest" => "getCatalogManifest",
+        "DataBroker/GetCatalogVersion" => "getCatalogVersion",
+        "DataBroker/GetCatalogVersions" => "getCatalogVersions",
+        "DataBroker/GetCdcStatus" => "getCdcStatus",
+        "DataBroker/GetDlqEvent" => "getDlqEvent",
+        "DataBroker/GetHealthReport" => "getHealthReport",
+        "DataBroker/GetMigrationStatus" => "getMigrationStatus",
+        "DataBroker/GetObject" => "getObject",
+        "DataBroker/GetSaga" => "getSaga",
+        "DataBroker/GraphMutate" => "graphMutate",
+        "DataBroker/GraphQuery" => "graphQuery",
+        "DataBroker/InitiateMultipartUpload" => "initiateMultipartUpload",
+        "DataBroker/LintPolicies" => "lintPolicies",
+        "DataBroker/ListAdminAuditLogs" => "listAdminAuditLogs",
+        "DataBroker/ListDlqEvents" => "listDlqEvents",
+        "DataBroker/ListMessageSchemas" => "listMessageSchemas",
+        "DataBroker/ListMigrationRuns" => "listMigrationRuns",
+        "DataBroker/ListPolicies" => "listPolicies",
+        "DataBroker/ListProjects" => "listProjects",
+        "DataBroker/ListResources" => "listResources",
+        "DataBroker/ListSagas" => "listSagas",
+        "DataBroker/LookupMessageSchema" => "lookupMessageSchema",
+        "DataBroker/MarkSagaReviewed" => "markSagaReviewed",
+        "DataBroker/PauseCdc" => "pauseCdc",
+        "DataBroker/PlanMigration" => "planMigration",
+        "DataBroker/PreviewCdcRedaction" => "previewCdcRedaction",
+        "DataBroker/PublishCDC" => "publishCdc",
+        "DataBroker/PutObject" => "putObject",
+        "DataBroker/PutPolicy" => "putPolicy",
+        "DataBroker/QuarantineDlqEvent" => "quarantineDlqEvent",
+        "DataBroker/ReloadPolicies" => "reloadPolicies",
+        "DataBroker/ReplayDlqEvent" => "replayDlqEvent",
+        "DataBroker/ResumeCdc" => "resumeCdc",
+        "DataBroker/RetrySagaCompensation" => "retrySagaCompensation",
+        "DataBroker/RollbackCatalog" => "rollbackCatalog",
+        "DataBroker/ScanProjectionDrift" => "scanProjectionDrift",
+        "DataBroker/Select" => "select",
+        "DataBroker/SelectV2" => "selectV2",
+        "DataBroker/StageCatalog" => "stageCatalog",
+        "DataBroker/StepDownCdcLeader" => "stepDownCdcLeader",
+        "DataBroker/TimeSeriesQuery" => "timeSeriesQuery",
+        "DataBroker/TimeSeriesWrite" => "timeSeriesWrite",
+        "DataBroker/Upsert" => "upsert",
+        "DataBroker/ValidateCatalog" => "validateCatalog",
+        "DataBroker/VectorBatchUpsert" => "vectorBatchUpsert",
+        "DataBroker/VectorHybridSearch" => "vectorHybridSearch",
+        "DataBroker/VectorSearch" => "vectorSearch",
+        "DataBroker/VectorUpsert" => "vectorUpsert",
+        "DataBroker/VerifyAdminAuditLog" => "verifyAdminAuditLog",
+    ];
+
+    /**
+     * Descriptor REST HTTP method per RPC, keyed by "Service/Method".
+     *
+     * @var array<string, string>
+     */
+    public const HTTP_METHOD = [
+        "AnalyticsService/GetExecutorPerformance" => "get",
+        "AnalyticsService/GetPipelineSummary" => "get",
+        "AnalyticsService/GetReconciliationAnalytics" => "get",
+        "AnalyticsService/GetSlaCompliance" => "get",
+        "AnalyticsService/GetThroughput" => "get",
+        "AnalyticsService/RecordPipelineMetric" => "post",
+        "AnalyticsService/TriggerSnapshot" => "post",
+        "ApiKeyService/CreateApiKey" => "post",
+        "ApiKeyService/EmergencyRevokeApiKeys" => "post",
+        "ApiKeyService/GetApiKey" => "get",
+        "ApiKeyService/GetApiKeyUsageStats" => "get",
+        "ApiKeyService/ListApiKeys" => "get",
+        "ApiKeyService/RevokeApiKey" => "delete",
+        "ApiKeyService/RotateApiKey" => "post",
+        "ApiKeyService/UpdateApiKey" => "patch",
+        "ApiKeyService/ValidateApiKey" => "post",
+        "AssetService/CompleteStep" => "post",
+        "AssetService/CreatePipelineDefinition" => "post",
+        "AssetService/GetAsset" => "get",
+        "AssetService/GetPipeline" => "get",
+        "AssetService/GetPipelineDefinition" => "get",
+        "AssetService/ListAssets" => "get",
+        "AssetService/RegisterAsset" => "post",
+        "AssetService/StartPipeline" => "post",
+        "AuthnService/AdminResetMfa" => "post",
+        "AuthnService/AdminResetPassword" => "post",
+        "AuthnService/AdminRevokeAllTenantSessions" => "post",
+        "AuthnService/AdminRevokeAllUserSessions" => "post",
+        "AuthnService/AdminRevokeSession" => "post",
+        "AuthnService/Authenticate" => "post",
+        "AuthnService/ChangePassword" => "post",
+        "AuthnService/ChangeUserStatus" => "post",
+        "AuthnService/ConfirmMFAEnrollment" => "post",
+        "AuthnService/CreateSession" => "post",
+        "AuthnService/CreateUser" => "post",
+        "AuthnService/DeleteWebAuthnCredential" => "delete",
+        "AuthnService/DisableMfaFactor" => "post",
+        "AuthnService/EmergencyRevoke" => "post",
+        "AuthnService/EnrollMFA" => "post",
+        "AuthnService/FinishWebAuthnAuthentication" => "post",
+        "AuthnService/FinishWebAuthnRegistration" => "post",
+        "AuthnService/ForgotPassword" => "post",
+        "AuthnService/GenerateRecoveryCodes" => "post",
+        "AuthnService/GetJwks" => "get",
+        "AuthnService/GetMfaPolicy" => "get",
+        "AuthnService/GetSession" => "get",
+        "AuthnService/GetUser" => "get",
+        "AuthnService/IntrospectToken" => "post",
+        "AuthnService/IssueMfaChallenge" => "post",
+        "AuthnService/ListDevices" => "get",
+        "AuthnService/ListMfaFactors" => "get",
+        "AuthnService/ListSessions" => "get",
+        "AuthnService/ListUsers" => "get",
+        "AuthnService/ListWebAuthnCredentials" => "get",
+        "AuthnService/Login" => "post",
+        "AuthnService/Logout" => "post",
+        "AuthnService/PutMfaPolicy" => "put",
+        "AuthnService/RefreshSession" => "post",
+        "AuthnService/RefreshToken" => "post",
+        "AuthnService/RenamePasskey" => "post",
+        "AuthnService/ResendOTP" => "post",
+        "AuthnService/ResetPassword" => "post",
+        "AuthnService/RevokeDevice" => "delete",
+        "AuthnService/RevokeRecoveryCodes" => "post",
+        "AuthnService/RevokeSession" => "delete",
+        "AuthnService/SendOTP" => "post",
+        "AuthnService/SendPhoneVerification" => "post",
+        "AuthnService/StartWebAuthnAuthentication" => "post",
+        "AuthnService/StartWebAuthnRegistration" => "post",
+        "AuthnService/UpdateUser" => "patch",
+        "AuthnService/ValidateCSRF" => "post",
+        "AuthnService/ValidateToken" => "post",
+        "AuthnService/VerifyMfaChallenge" => "post",
+        "AuthnService/VerifyOTP" => "post",
+        "AuthzService/ActivateCanary" => "post",
+        "AuthzService/ActivatePolicyVersion" => "post",
+        "AuthzService/ApprovePolicyDraft" => "post",
+        "AuthzService/AssignRole" => "post",
+        "AuthzService/Authorize" => "post",
+        "AuthzService/BatchCheckPermissions" => "post",
+        "AuthzService/CheckAccess" => "post",
+        "AuthzService/CreatePolicyDraft" => "post",
+        "AuthzService/CreatePolicyRule" => "post",
+        "AuthzService/CreateRole" => "post",
+        "AuthzService/DeletePolicyRule" => "delete",
+        "AuthzService/DeleteRole" => "delete",
+        "AuthzService/DiffPolicyDraft" => "post",
+        "AuthzService/ExplainPolicy" => "post",
+        "AuthzService/GetAuthzRevision" => "get",
+        "AuthzService/GetCanaryStatus" => "get",
+        "AuthzService/GetNativeAccess" => "post",
+        "AuthzService/GetPolicyBundle" => "post",
+        "AuthzService/GetPolicyRule" => "get",
+        "AuthzService/GetRole" => "get",
+        "AuthzService/InvalidatePolicyBundles" => "post",
+        "AuthzService/LintAuthzPolicies" => "post",
+        "AuthzService/ListAccessDecisionAudits" => "get",
+        "AuthzService/ListPolicyRules" => "get",
+        "AuthzService/ListPolicyVersions" => "get",
+        "AuthzService/ListRoles" => "get",
+        "AuthzService/ListUserPermissions" => "get",
+        "AuthzService/ListUserRoles" => "get",
+        "AuthzService/MigrateLegacyPolicies" => "post",
+        "AuthzService/PromoteCanary" => "post",
+        "AuthzService/PutAuthzPolicy" => "put",
+        "AuthzService/PutRelationship" => "put",
+        "AuthzService/PutRoleBinding" => "put",
+        "AuthzService/RejectPolicyDraft" => "post",
+        "AuthzService/RevokeRole" => "post",
+        "AuthzService/RollbackPolicyVersion" => "post",
+        "AuthzService/SeedBuiltinRoles" => "post",
+        "AuthzService/SimulatePolicy" => "post",
+        "AuthzService/SubmitPolicyDraft" => "post",
+        "AuthzService/UpdatePolicyDraft" => "post",
+        "AuthzService/UpdateRole" => "patch",
+        "BackupService/DeleteBackupPolicy" => "delete",
+        "BackupService/GetBackup" => "get",
+        "BackupService/GetBackupPolicy" => "get",
+        "BackupService/ListBackupPolicies" => "get",
+        "BackupService/ListBackups" => "get",
+        "BackupService/PutBackupPolicy" => "post",
+        "BackupService/RestoreTenant" => "post",
+        "BackupService/StartTenantBackup" => "post",
+        "CacheService/CreateNamespace" => "post",
+        "CacheService/Delete" => "delete",
+        "CacheService/DeleteNamespace" => "post",
+        "CacheService/Get" => "get",
+        "CacheService/GetNamespaceStats" => "get",
+        "CacheService/Scan" => "get",
+        "CacheService/Set" => "put",
+        "ConfigService/DeleteFlag" => "post",
+        "ConfigService/EvaluateFlags" => "post",
+        "ConfigService/GetFlag" => "get",
+        "ConfigService/ListFlags" => "get",
+        "ConfigService/PutFlag" => "post",
+        "ControlPlaneService/AckStatus" => "post",
+        "ControlPlaneService/DeltaResources" => "",
+        "ControlPlaneService/GetResources" => "get",
+        "ControlPlaneService/ListNodeStates" => "get",
+        "ControlPlaneService/RollbackResources" => "post",
+        "ControlPlaneService/StreamResources" => "",
+        "EmbeddingService/Backfill" => "post",
+        "EmbeddingService/DeleteSource" => "post",
+        "EmbeddingService/ListSources" => "get",
+        "EmbeddingService/RegisterSource" => "post",
+        "EmbeddingService/ReportEmbedding" => "",
+        "EmbeddingService/Retrieve" => "post",
+        "IdentityProviderService/CreateProvider" => "post",
+        "IdentityProviderService/DisableProvider" => "post",
+        "IdentityProviderService/ForceJwksRefresh" => "post",
+        "IdentityProviderService/GetProvider" => "get",
+        "IdentityProviderService/ImportSamlMetadata" => "post",
+        "IdentityProviderService/LinkIdentity" => "post",
+        "IdentityProviderService/ListExternalIdentities" => "get",
+        "IdentityProviderService/ListProviders" => "get",
+        "IdentityProviderService/PreviewClaimMapping" => "post",
+        "IdentityProviderService/PreviewGroupMapping" => "post",
+        "IdentityProviderService/ResolveExternalIdentity" => "post",
+        "IdentityProviderService/SamlAcs" => "post",
+        "IdentityProviderService/ScimCreateGroup" => "post",
+        "IdentityProviderService/ScimCreateUser" => "post",
+        "IdentityProviderService/ScimDeleteGroup" => "delete",
+        "IdentityProviderService/ScimDeleteUser" => "delete",
+        "IdentityProviderService/ScimGetGroup" => "get",
+        "IdentityProviderService/ScimGetUser" => "get",
+        "IdentityProviderService/ScimListGroups" => "get",
+        "IdentityProviderService/ScimListUsers" => "get",
+        "IdentityProviderService/ScimPatchGroup" => "patch",
+        "IdentityProviderService/ScimPatchUser" => "patch",
+        "IdentityProviderService/ScimReplaceUser" => "put",
+        "IdentityProviderService/StartSamlLogin" => "post",
+        "IdentityProviderService/TestProviderDiscovery" => "post",
+        "IdentityProviderService/UnlinkIdentity" => "post",
+        "IdentityProviderService/UpdateProvider" => "patch",
+        "LiveQueryService/Subscribe" => "post",
+        "LockService/AcquireLock" => "post",
+        "LockService/ReleaseLock" => "post",
+        "LockService/RenewLock" => "post",
+        "MeteringService/CheckQuota" => "post",
+        "MeteringService/GetQuota" => "get",
+        "MeteringService/ListQuotas" => "get",
+        "MeteringService/PutQuota" => "post",
+        "MeteringService/QueryUsage" => "post",
+        "MeteringService/RecordUsage" => "post",
+        "NotificationService/GetDeliveryStats" => "get",
+        "NotificationService/GetNotification" => "get",
+        "NotificationService/GetPreference" => "get",
+        "NotificationService/GetTemplate" => "get",
+        "NotificationService/ListNotifications" => "get",
+        "NotificationService/ListPreferences" => "get",
+        "NotificationService/ListTemplates" => "get",
+        "NotificationService/ReportDelivery" => "post",
+        "NotificationService/RetryNotification" => "post",
+        "NotificationService/SendNotification" => "post",
+        "NotificationService/SetPreference" => "put",
+        "NotificationService/UpsertTemplate" => "put",
+        "SchedulerService/CreateJob" => "post",
+        "SchedulerService/DeleteJob" => "delete",
+        "SchedulerService/GetJob" => "get",
+        "SchedulerService/ListJobs" => "get",
+        "SchedulerService/PauseJob" => "post",
+        "SchedulerService/ResumeJob" => "post",
+        "SearchService/CreateIndex" => "post",
+        "SearchService/DeleteIndex" => "post",
+        "SearchService/ListIndexes" => "get",
+        "SearchService/Reindex" => "post",
+        "SearchService/Search" => "post",
+        "StorageService/DeleteFile" => "delete",
+        "StorageService/DownloadFile" => "get",
+        "StorageService/FinalizeUpload" => "post",
+        "StorageService/GetDownloadUrl" => "get",
+        "StorageService/GetFile" => "get",
+        "StorageService/ListFiles" => "get",
+        "StorageService/RegisterUpload" => "post",
+        "StorageService/UpdateFile" => "patch",
+        "TenantService/CreateTenant" => "post",
+        "TenantService/GetTenant" => "get",
+        "TenantService/GetTenantConfig" => "get",
+        "TenantService/ListTenants" => "get",
+        "TenantService/PurgeTenant" => "post",
+        "TenantService/UpdateTenant" => "patch",
+        "TenantService/UpdateTenantConfig" => "put",
+        "VaultService/CreateTransitKey" => "post",
+        "VaultService/Decrypt" => "post",
+        "VaultService/DeleteSecret" => "post",
+        "VaultService/DestroySecret" => "post",
+        "VaultService/Encrypt" => "post",
+        "VaultService/GenerateDatabaseCredentials" => "post",
+        "VaultService/GetSecret" => "get",
+        "VaultService/Hmac" => "post",
+        "VaultService/ListSecrets" => "get",
+        "VaultService/PutSecret" => "post",
+        "VaultService/RotateTransitKey" => "post",
+        "VaultService/SealStatus" => "get",
+        "VaultService/Sign" => "post",
+        "VaultService/Verify" => "post",
+        "WebhookService/CreateEndpoint" => "post",
+        "WebhookService/DeleteEndpoint" => "delete",
+        "WebhookService/GetEndpoint" => "get",
+        "WebhookService/ListDeliveries" => "get",
+        "WebhookService/ListEndpoints" => "get",
+        "WebhookService/UpdateEndpoint" => "patch",
+        "PeerService/GetPeer" => "get",
+        "PeerService/JoinRoom" => "post",
+        "PeerService/JoinSession" => "",
+        "PeerService/LeaveRoom" => "post",
+        "PeerService/ListPeers" => "get",
+        "RoomService/CloseRoom" => "post",
+        "RoomService/CreateRoom" => "post",
+        "RoomService/GetRoom" => "get",
+        "RoomService/ListEgress" => "get",
+        "RoomService/ListRooms" => "get",
+        "RoomService/StartRoomComposite" => "post",
+        "RoomService/StartTrackEgress" => "post",
+        "RoomService/StopEgress" => "post",
+        "RoomService/UpdateRoom" => "patch",
+        "SignalingService/Signal" => "",
+        "TrackService/ListTracks" => "get",
+        "TrackService/MuteTrack" => "post",
+        "TrackService/PublishTrack" => "post",
+        "TrackService/UnpublishTrack" => "post",
+        "TurnService/IssueCredentials" => "post",
+        "WorkflowService/CancelWorkflow" => "post",
+        "WorkflowService/GetWorkflow" => "get",
+        "WorkflowService/ListWorkflows" => "get",
+        "WorkflowService/SignalWorkflow" => "post",
+        "WorkflowService/StartWorkflow" => "post",
+        "DataBroker/ActivateCatalog" => "",
+        "DataBroker/AnalyticalQuery" => "",
+        "DataBroker/ApplyMigration" => "",
+        "DataBroker/ApproveMigrationPlan" => "",
+        "DataBroker/BatchSelect" => "",
+        "DataBroker/BatchUpsert" => "",
+        "DataBroker/BeginTx" => "",
+        "DataBroker/CacheDelete" => "",
+        "DataBroker/CacheGet" => "",
+        "DataBroker/CacheScan" => "",
+        "DataBroker/CacheSet" => "",
+        "DataBroker/CreateMaterializedView" => "",
+        "DataBroker/Delete" => "",
+        "DataBroker/DeletePolicy" => "",
+        "DataBroker/DismissDlqEvent" => "",
+        "DataBroker/DocumentDelete" => "",
+        "DataBroker/DocumentFind" => "",
+        "DataBroker/DocumentGet" => "",
+        "DataBroker/DocumentUpsert" => "",
+        "DataBroker/DropResource" => "",
+        "DataBroker/EnqueueOutboxEvent" => "",
+        "DataBroker/EnsureBaseline" => "",
+        "DataBroker/EnsureProject" => "",
+        "DataBroker/EnsureResource" => "",
+        "DataBroker/GeneratePresignedUrl" => "",
+        "DataBroker/GenericDispatch" => "",
+        "DataBroker/GetAdminSummary" => "",
+        "DataBroker/GetCapabilities" => "",
+        "DataBroker/GetCatalogManifest" => "",
+        "DataBroker/GetCatalogVersion" => "",
+        "DataBroker/GetCatalogVersions" => "",
+        "DataBroker/GetCdcStatus" => "",
+        "DataBroker/GetDlqEvent" => "",
+        "DataBroker/GetHealthReport" => "",
+        "DataBroker/GetMigrationStatus" => "",
+        "DataBroker/GetObject" => "",
+        "DataBroker/GetSaga" => "",
+        "DataBroker/GraphMutate" => "",
+        "DataBroker/GraphQuery" => "",
+        "DataBroker/InitiateMultipartUpload" => "",
+        "DataBroker/LintPolicies" => "",
+        "DataBroker/ListAdminAuditLogs" => "",
+        "DataBroker/ListDlqEvents" => "",
+        "DataBroker/ListMessageSchemas" => "",
+        "DataBroker/ListMigrationRuns" => "",
+        "DataBroker/ListPolicies" => "",
+        "DataBroker/ListProjects" => "",
+        "DataBroker/ListResources" => "",
+        "DataBroker/ListSagas" => "",
+        "DataBroker/LookupMessageSchema" => "",
+        "DataBroker/MarkSagaReviewed" => "",
+        "DataBroker/PauseCdc" => "",
+        "DataBroker/PlanMigration" => "",
+        "DataBroker/PreviewCdcRedaction" => "",
+        "DataBroker/PublishCDC" => "",
+        "DataBroker/PutObject" => "",
+        "DataBroker/PutPolicy" => "",
+        "DataBroker/QuarantineDlqEvent" => "",
+        "DataBroker/ReloadPolicies" => "",
+        "DataBroker/ReplayDlqEvent" => "",
+        "DataBroker/ResumeCdc" => "",
+        "DataBroker/RetrySagaCompensation" => "",
+        "DataBroker/RollbackCatalog" => "",
+        "DataBroker/ScanProjectionDrift" => "",
+        "DataBroker/Select" => "",
+        "DataBroker/SelectV2" => "",
+        "DataBroker/StageCatalog" => "",
+        "DataBroker/StepDownCdcLeader" => "",
+        "DataBroker/TimeSeriesQuery" => "",
+        "DataBroker/TimeSeriesWrite" => "",
+        "DataBroker/Upsert" => "",
+        "DataBroker/ValidateCatalog" => "",
+        "DataBroker/VectorBatchUpsert" => "",
+        "DataBroker/VectorHybridSearch" => "",
+        "DataBroker/VectorSearch" => "",
+        "DataBroker/VectorUpsert" => "",
+        "DataBroker/VerifyAdminAuditLog" => "",
+    ];
+
+    /**
+     * Descriptor REST HTTP path per RPC, keyed by "Service/Method".
+     *
+     * @var array<string, string>
+     */
+    public const HTTP_PATH = [
+        "AnalyticsService/GetExecutorPerformance" => "/v1/analytics/executor-performance",
+        "AnalyticsService/GetPipelineSummary" => "/v1/analytics/pipeline-summaries",
+        "AnalyticsService/GetReconciliationAnalytics" => "/v1/analytics/reconciliation-stats",
+        "AnalyticsService/GetSlaCompliance" => "/v1/analytics/sla-compliance",
+        "AnalyticsService/GetThroughput" => "/v1/analytics/throughput",
+        "AnalyticsService/RecordPipelineMetric" => "/v1/analytics/pipeline-metrics",
+        "AnalyticsService/TriggerSnapshot" => "/v1/analytics/snapshots:trigger",
+        "ApiKeyService/CreateApiKey" => "/v1/api-keys",
+        "ApiKeyService/EmergencyRevokeApiKeys" => "/v1/api-keys:emergencyRevoke",
+        "ApiKeyService/GetApiKey" => "/v1/api-keys/{key_id}",
+        "ApiKeyService/GetApiKeyUsageStats" => "/v1/api-keys/{key_id}/stats",
+        "ApiKeyService/ListApiKeys" => "/v1/api-keys",
+        "ApiKeyService/RevokeApiKey" => "/v1/api-keys/{key_id}",
+        "ApiKeyService/RotateApiKey" => "/v1/api-keys/{key_id}:rotate",
+        "ApiKeyService/UpdateApiKey" => "/v1/api-keys/{key_id}",
+        "ApiKeyService/ValidateApiKey" => "/v1/api-keys:validate",
+        "AssetService/CompleteStep" => "/v1/assets/steps/{step_id}:complete",
+        "AssetService/CreatePipelineDefinition" => "/v1/assets/pipeline-definitions",
+        "AssetService/GetAsset" => "/v1/assets/{asset_id}",
+        "AssetService/GetPipeline" => "/v1/assets/pipelines/{instance_id}",
+        "AssetService/GetPipelineDefinition" => "/v1/assets/pipeline-definitions/{definition_id}",
+        "AssetService/ListAssets" => "/v1/assets",
+        "AssetService/RegisterAsset" => "/v1/assets",
+        "AssetService/StartPipeline" => "/v1/assets/pipelines",
+        "AuthnService/AdminResetMfa" => "/v1/auth/admin/users/{user_id}/mfa:reset",
+        "AuthnService/AdminResetPassword" => "/v1/auth/users/{user_id}/passwords:reset",
+        "AuthnService/AdminRevokeAllTenantSessions" => "/v1/auth/admin/tenants/{tenant_id}/sessions:revokeAll",
+        "AuthnService/AdminRevokeAllUserSessions" => "/v1/auth/admin/users/{user_id}/sessions:revokeAll",
+        "AuthnService/AdminRevokeSession" => "/v1/auth/admin/users/{user_id}/sessions:revoke",
+        "AuthnService/Authenticate" => "/v1/auth/credentials:authenticate",
+        "AuthnService/ChangePassword" => "/v1/auth/passwords:change",
+        "AuthnService/ChangeUserStatus" => "/v1/auth/users/{user_id}:changeStatus",
+        "AuthnService/ConfirmMFAEnrollment" => "/v1/auth/users/{user_id}/mfa:confirm",
+        "AuthnService/CreateSession" => "/v1/auth/sessions",
+        "AuthnService/CreateUser" => "/v1/auth/users",
+        "AuthnService/DeleteWebAuthnCredential" => "/v1/auth/users/{user_id}/webauthn/credentials/{credential_id}",
+        "AuthnService/DisableMfaFactor" => "/v1/auth/users/{user_id}/mfa/factors:disable",
+        "AuthnService/EmergencyRevoke" => "/v1/auth/admin:emergencyRevoke",
+        "AuthnService/EnrollMFA" => "/v1/auth/users/{user_id}/mfa:enroll",
+        "AuthnService/FinishWebAuthnAuthentication" => "/v1/auth/webauthn/authentication:finish",
+        "AuthnService/FinishWebAuthnRegistration" => "/v1/auth/webauthn/registration:finish",
+        "AuthnService/ForgotPassword" => "/v1/auth/passwords:forgot",
+        "AuthnService/GenerateRecoveryCodes" => "/v1/auth/users/{user_id}/recovery-codes:generate",
+        "AuthnService/GetJwks" => "/v1/auth/.well-known/jwks.json",
+        "AuthnService/GetMfaPolicy" => "/v1/auth/tenants/{tenant_id}/mfa-policy",
+        "AuthnService/GetSession" => "/v1/auth/sessions/{session_id}",
+        "AuthnService/GetUser" => "/v1/auth/users/{user_id}",
+        "AuthnService/IntrospectToken" => "/v1/auth/tokens:introspect",
+        "AuthnService/IssueMfaChallenge" => "/v1/auth/mfa/challenges:issue",
+        "AuthnService/ListDevices" => "/v1/auth/users/{user_id}/devices",
+        "AuthnService/ListMfaFactors" => "/v1/auth/users/{user_id}/mfa/factors",
+        "AuthnService/ListSessions" => "/v1/auth/users/{user_id}/sessions",
+        "AuthnService/ListUsers" => "/v1/auth/users",
+        "AuthnService/ListWebAuthnCredentials" => "/v1/auth/users/{user_id}/webauthn/credentials",
+        "AuthnService/Login" => "/v1/auth/password-sessions",
+        "AuthnService/Logout" => "/v1/auth/sessions:logout",
+        "AuthnService/PutMfaPolicy" => "/v1/auth/tenants/{tenant_id}/mfa-policy",
+        "AuthnService/RefreshSession" => "/v1/auth/sessions/{session_id}:refresh",
+        "AuthnService/RefreshToken" => "/v1/auth/tokens:refresh",
+        "AuthnService/RenamePasskey" => "/v1/auth/users/{user_id}/webauthn/credentials:rename",
+        "AuthnService/ResendOTP" => "/v1/auth/otps:resend",
+        "AuthnService/ResetPassword" => "/v1/auth/passwords:reset",
+        "AuthnService/RevokeDevice" => "/v1/auth/devices/{device_id}",
+        "AuthnService/RevokeRecoveryCodes" => "/v1/auth/users/{user_id}/recovery-codes:revoke",
+        "AuthnService/RevokeSession" => "/v1/auth/sessions/{session_id}",
+        "AuthnService/SendOTP" => "/v1/auth/otps:send",
+        "AuthnService/SendPhoneVerification" => "/v1/auth/users/{user_id}/phones:verify",
+        "AuthnService/StartWebAuthnAuthentication" => "/v1/auth/webauthn/authentication:start",
+        "AuthnService/StartWebAuthnRegistration" => "/v1/auth/users/{user_id}/webauthn/registration:start",
+        "AuthnService/UpdateUser" => "/v1/auth/users/{user_id}",
+        "AuthnService/ValidateCSRF" => "/v1/auth/csrf-tokens:validate",
+        "AuthnService/ValidateToken" => "/v1/auth/tokens:validate",
+        "AuthnService/VerifyMfaChallenge" => "/v1/auth/mfa/challenges:verify",
+        "AuthnService/VerifyOTP" => "/v1/auth/otps:verify",
+        "AuthzService/ActivateCanary" => "/v1/authz/governance/canaries:activate",
+        "AuthzService/ActivatePolicyVersion" => "/v1/authz/governance/versions:activate",
+        "AuthzService/ApprovePolicyDraft" => "/v1/authz/governance/drafts:approve",
+        "AuthzService/AssignRole" => "/v1/authz/users/{user_id}/roles",
+        "AuthzService/Authorize" => "/v1/authz/authorize",
+        "AuthzService/BatchCheckPermissions" => "/v1/authz/checks:batch",
+        "AuthzService/CheckAccess" => "/v1/authz/checks",
+        "AuthzService/CreatePolicyDraft" => "/v1/authz/governance/drafts",
+        "AuthzService/CreatePolicyRule" => "/v1/authz/policies",
+        "AuthzService/CreateRole" => "/v1/authz/roles",
+        "AuthzService/DeletePolicyRule" => "/v1/authz/policies/{policy_id}",
+        "AuthzService/DeleteRole" => "/v1/authz/roles/{role_id}",
+        "AuthzService/DiffPolicyDraft" => "/v1/authz/governance/drafts:diff",
+        "AuthzService/ExplainPolicy" => "/v1/authz/governance/policy-explanations",
+        "AuthzService/GetAuthzRevision" => "/v1/authz/governance/revisions/current",
+        "AuthzService/GetCanaryStatus" => "/v1/authz/governance/canaries/{canary_id}",
+        "AuthzService/GetNativeAccess" => "/v1/authz/native-access",
+        "AuthzService/GetPolicyBundle" => "/v1/authz/policy-bundle",
+        "AuthzService/GetPolicyRule" => "/v1/authz/policies/{policy_id}",
+        "AuthzService/GetRole" => "/v1/authz/roles/{role_id}",
+        "AuthzService/InvalidatePolicyBundles" => "/v1/authz/governance/bundles:invalidate",
+        "AuthzService/LintAuthzPolicies" => "/v1/authz/policies:lint",
+        "AuthzService/ListAccessDecisionAudits" => "/v1/authz/audits",
+        "AuthzService/ListPolicyRules" => "/v1/authz/policies",
+        "AuthzService/ListPolicyVersions" => "/v1/authz/governance/versions",
+        "AuthzService/ListRoles" => "/v1/authz/roles",
+        "AuthzService/ListUserPermissions" => "/v1/authz/users/{user_id}/permissions",
+        "AuthzService/ListUserRoles" => "/v1/authz/users/{user_id}/roles",
+        "AuthzService/MigrateLegacyPolicies" => "/v1/authz/governance/legacy:migrate",
+        "AuthzService/PromoteCanary" => "/v1/authz/governance/canaries:promote",
+        "AuthzService/PutAuthzPolicy" => "/v1/authz/policies",
+        "AuthzService/PutRelationship" => "/v1/authz/relationships",
+        "AuthzService/PutRoleBinding" => "/v1/authz/role-bindings",
+        "AuthzService/RejectPolicyDraft" => "/v1/authz/governance/drafts:reject",
+        "AuthzService/RevokeRole" => "/v1/authz/users/{user_id}/roles/{user_role_id}:revoke",
+        "AuthzService/RollbackPolicyVersion" => "/v1/authz/governance/versions:rollback",
+        "AuthzService/SeedBuiltinRoles" => "/v1/authz/governance/roles:seed",
+        "AuthzService/SimulatePolicy" => "/v1/authz/governance/policy-simulations",
+        "AuthzService/SubmitPolicyDraft" => "/v1/authz/governance/drafts:submit",
+        "AuthzService/UpdatePolicyDraft" => "/v1/authz/governance/drafts:update",
+        "AuthzService/UpdateRole" => "/v1/authz/roles/{role_id}",
+        "BackupService/DeleteBackupPolicy" => "/v1/backups/policies/{policy_name}",
+        "BackupService/GetBackup" => "/v1/backups/{backup_id}",
+        "BackupService/GetBackupPolicy" => "/v1/backups/policies/{policy_name}",
+        "BackupService/ListBackupPolicies" => "/v1/backups/policies",
+        "BackupService/ListBackups" => "/v1/backups",
+        "BackupService/PutBackupPolicy" => "/v1/backups/policies",
+        "BackupService/RestoreTenant" => "/v1/backups:restore",
+        "BackupService/StartTenantBackup" => "/v1/backups:start",
+        "CacheService/CreateNamespace" => "/v1/cache/namespaces",
+        "CacheService/Delete" => "/v1/cache/{namespace}/{key}",
+        "CacheService/DeleteNamespace" => "/v1/cache/namespaces/{namespace}:flush",
+        "CacheService/Get" => "/v1/cache/{namespace}/{key}",
+        "CacheService/GetNamespaceStats" => "/v1/cache/namespaces/{namespace}/stats",
+        "CacheService/Scan" => "/v1/cache/{namespace}:scan",
+        "CacheService/Set" => "/v1/cache/{namespace}/{key}",
+        "ConfigService/DeleteFlag" => "/v1/config/flags:delete",
+        "ConfigService/EvaluateFlags" => "/v1/config/flags:evaluate",
+        "ConfigService/GetFlag" => "/v1/config/flags/{flag_key}",
+        "ConfigService/ListFlags" => "/v1/config/flags",
+        "ConfigService/PutFlag" => "/v1/config/flags:put",
+        "ControlPlaneService/AckStatus" => "/v1/control/node-states/{node_id}:ackStatus",
+        "ControlPlaneService/DeltaResources" => "",
+        "ControlPlaneService/GetResources" => "/v1/control/resources",
+        "ControlPlaneService/ListNodeStates" => "/v1/control/node-states",
+        "ControlPlaneService/RollbackResources" => "/v1/control/node-states/{node_id}:rollbackResources",
+        "ControlPlaneService/StreamResources" => "",
+        "EmbeddingService/Backfill" => "/v1/embedding/sources:backfill",
+        "EmbeddingService/DeleteSource" => "/v1/embedding/sources:delete",
+        "EmbeddingService/ListSources" => "/v1/embedding/sources",
+        "EmbeddingService/RegisterSource" => "/v1/embedding/sources:register",
+        "EmbeddingService/ReportEmbedding" => "",
+        "EmbeddingService/Retrieve" => "/v1/embedding:retrieve",
+        "IdentityProviderService/CreateProvider" => "/v1/idp/providers",
+        "IdentityProviderService/DisableProvider" => "/v1/idp/providers/{provider_id}:disable",
+        "IdentityProviderService/ForceJwksRefresh" => "/v1/idp/providers/{provider_id}:refreshJwks",
+        "IdentityProviderService/GetProvider" => "/v1/idp/providers/{provider_id}",
+        "IdentityProviderService/ImportSamlMetadata" => "/v1/idp/providers/{provider_id}:importSamlMetadata",
+        "IdentityProviderService/LinkIdentity" => "/v1/idp/external-identities:link",
+        "IdentityProviderService/ListExternalIdentities" => "/v1/idp/external-identities",
+        "IdentityProviderService/ListProviders" => "/v1/idp/providers",
+        "IdentityProviderService/PreviewClaimMapping" => "/v1/idp/providers/{provider_id}:previewClaimMapping",
+        "IdentityProviderService/PreviewGroupMapping" => "/v1/idp/providers/{provider_id}:previewGroupMapping",
+        "IdentityProviderService/ResolveExternalIdentity" => "/v1/idp/providers/{provider_id}:resolveIdentity",
+        "IdentityProviderService/SamlAcs" => "/v1/idp/providers/{provider_id}:samlAcs",
+        "IdentityProviderService/ScimCreateGroup" => "/v1/idp/scim/{provider_id}/Groups",
+        "IdentityProviderService/ScimCreateUser" => "/v1/idp/scim/{provider_id}/Users",
+        "IdentityProviderService/ScimDeleteGroup" => "/v1/idp/scim/{provider_id}/Groups/{scim_group_id}",
+        "IdentityProviderService/ScimDeleteUser" => "/v1/idp/scim/{provider_id}/Users/{scim_user_id}",
+        "IdentityProviderService/ScimGetGroup" => "/v1/idp/scim/{provider_id}/Groups/{scim_group_id}",
+        "IdentityProviderService/ScimGetUser" => "/v1/idp/scim/{provider_id}/Users/{scim_user_id}",
+        "IdentityProviderService/ScimListGroups" => "/v1/idp/scim/{provider_id}/Groups",
+        "IdentityProviderService/ScimListUsers" => "/v1/idp/scim/{provider_id}/Users",
+        "IdentityProviderService/ScimPatchGroup" => "/v1/idp/scim/{provider_id}/Groups/{scim_group_id}",
+        "IdentityProviderService/ScimPatchUser" => "/v1/idp/scim/{provider_id}/Users/{scim_user_id}",
+        "IdentityProviderService/ScimReplaceUser" => "/v1/idp/scim/{provider_id}/Users/{scim_user_id}",
+        "IdentityProviderService/StartSamlLogin" => "/v1/idp/providers/{provider_id}:startSamlLogin",
+        "IdentityProviderService/TestProviderDiscovery" => "/v1/idp/providers/{provider_id}:testDiscovery",
+        "IdentityProviderService/UnlinkIdentity" => "/v1/idp/external-identities/{external_identity_id}:unlink",
+        "IdentityProviderService/UpdateProvider" => "/v1/idp/providers/{provider_id}",
+        "LiveQueryService/Subscribe" => "/v1/livequery:subscribe",
+        "LockService/AcquireLock" => "/v1/locks:acquire",
+        "LockService/ReleaseLock" => "/v1/locks:release",
+        "LockService/RenewLock" => "/v1/locks:renew",
+        "MeteringService/CheckQuota" => "/v1/metering/quotas:check",
+        "MeteringService/GetQuota" => "/v1/metering/quotas/{metric}",
+        "MeteringService/ListQuotas" => "/v1/metering/quotas",
+        "MeteringService/PutQuota" => "/v1/metering/quotas:put",
+        "MeteringService/QueryUsage" => "/v1/metering/usage:query",
+        "MeteringService/RecordUsage" => "/v1/metering/usage:record",
+        "NotificationService/GetDeliveryStats" => "/v1/notifications/stats",
+        "NotificationService/GetNotification" => "/v1/notifications/{log_id}",
+        "NotificationService/GetPreference" => "/v1/notifications/preferences/{user_id}/{channel}",
+        "NotificationService/GetTemplate" => "/v1/notifications/templates/{event_type}/{channel}",
+        "NotificationService/ListNotifications" => "/v1/notifications",
+        "NotificationService/ListPreferences" => "/v1/notifications/preferences/{user_id}",
+        "NotificationService/ListTemplates" => "/v1/notifications/templates",
+        "NotificationService/ReportDelivery" => "/v1/notifications/{log_id}:report-delivery",
+        "NotificationService/RetryNotification" => "/v1/notifications/{log_id}:retry",
+        "NotificationService/SendNotification" => "/v1/notifications",
+        "NotificationService/SetPreference" => "/v1/notifications/preferences/{user_id}/{channel}",
+        "NotificationService/UpsertTemplate" => "/v1/notifications/templates/{event_type}/{channel}",
+        "SchedulerService/CreateJob" => "/v1/scheduler/jobs",
+        "SchedulerService/DeleteJob" => "/v1/scheduler/jobs/{job_id}",
+        "SchedulerService/GetJob" => "/v1/scheduler/jobs/{job_id}",
+        "SchedulerService/ListJobs" => "/v1/scheduler/jobs",
+        "SchedulerService/PauseJob" => "/v1/scheduler/jobs/{job_id}:pause",
+        "SchedulerService/ResumeJob" => "/v1/scheduler/jobs/{job_id}:resume",
+        "SearchService/CreateIndex" => "/v1/search/indexes:create",
+        "SearchService/DeleteIndex" => "/v1/search/indexes:delete",
+        "SearchService/ListIndexes" => "/v1/search/indexes",
+        "SearchService/Reindex" => "/v1/search/indexes:reindex",
+        "SearchService/Search" => "/v1/search:query",
+        "StorageService/DeleteFile" => "/v1/storage/files/{file_id}",
+        "StorageService/DownloadFile" => "/v1/storage/files/{file_id}:download",
+        "StorageService/FinalizeUpload" => "/v1/storage/uploads/{file_id}:finalize",
+        "StorageService/GetDownloadUrl" => "/v1/storage/files/{file_id}:getDownloadUrl",
+        "StorageService/GetFile" => "/v1/storage/files/{file_id}",
+        "StorageService/ListFiles" => "/v1/storage/files",
+        "StorageService/RegisterUpload" => "/v1/storage/uploads",
+        "StorageService/UpdateFile" => "/v1/storage/files/{file_id}",
+        "TenantService/CreateTenant" => "/v1/tenants",
+        "TenantService/GetTenant" => "/v1/tenants/{tenant_id}",
+        "TenantService/GetTenantConfig" => "/v1/tenants/{tenant_id}/config",
+        "TenantService/ListTenants" => "/v1/tenants",
+        "TenantService/PurgeTenant" => "/v1/tenants/{tenant_id}:purge",
+        "TenantService/UpdateTenant" => "/v1/tenants/{tenant_id}",
+        "TenantService/UpdateTenantConfig" => "/v1/tenants/{tenant_id}/config",
+        "VaultService/CreateTransitKey" => "/v1/vault/transit/keys",
+        "VaultService/Decrypt" => "/v1/vault/transit:decrypt",
+        "VaultService/DeleteSecret" => "/v1/vault/secrets:delete",
+        "VaultService/DestroySecret" => "/v1/vault/secrets:destroy",
+        "VaultService/Encrypt" => "/v1/vault/transit:encrypt",
+        "VaultService/GenerateDatabaseCredentials" => "/v1/vault/database/credentials",
+        "VaultService/GetSecret" => "/v1/vault/secrets/{secret_path=**}",
+        "VaultService/Hmac" => "/v1/vault/transit:hmac",
+        "VaultService/ListSecrets" => "/v1/vault/secrets",
+        "VaultService/PutSecret" => "/v1/vault/secrets:put",
+        "VaultService/RotateTransitKey" => "/v1/vault/transit/keys:rotate",
+        "VaultService/SealStatus" => "/v1/vault/seal-status",
+        "VaultService/Sign" => "/v1/vault/transit:sign",
+        "VaultService/Verify" => "/v1/vault/transit:verify",
+        "WebhookService/CreateEndpoint" => "/v1/webhook/endpoints",
+        "WebhookService/DeleteEndpoint" => "/v1/webhook/endpoints/{endpoint_id}",
+        "WebhookService/GetEndpoint" => "/v1/webhook/endpoints/{endpoint_id}",
+        "WebhookService/ListDeliveries" => "/v1/webhook/deliveries",
+        "WebhookService/ListEndpoints" => "/v1/webhook/endpoints",
+        "WebhookService/UpdateEndpoint" => "/v1/webhook/endpoints/{endpoint_id}",
+        "PeerService/GetPeer" => "/v1/webrtc/peers/{peer_id}",
+        "PeerService/JoinRoom" => "/v1/webrtc/rooms/{room_id}/peers",
+        "PeerService/JoinSession" => "",
+        "PeerService/LeaveRoom" => "/v1/webrtc/rooms/{room_id}/peers/{peer_id}:leave",
+        "PeerService/ListPeers" => "/v1/webrtc/rooms/{room_id}/peers",
+        "RoomService/CloseRoom" => "/v1/webrtc/rooms/{room_id}:close",
+        "RoomService/CreateRoom" => "/v1/webrtc/rooms",
+        "RoomService/GetRoom" => "/v1/webrtc/rooms/{room_id}",
+        "RoomService/ListEgress" => "/v1/webrtc/egress",
+        "RoomService/ListRooms" => "/v1/webrtc/rooms",
+        "RoomService/StartRoomComposite" => "/v1/webrtc/rooms/{room_id}/egress:composite",
+        "RoomService/StartTrackEgress" => "/v1/webrtc/tracks/{track_id}:startEgress",
+        "RoomService/StopEgress" => "/v1/webrtc/egress/{egress_id}:stop",
+        "RoomService/UpdateRoom" => "/v1/webrtc/rooms/{room_id}",
+        "SignalingService/Signal" => "",
+        "TrackService/ListTracks" => "/v1/webrtc/rooms/{room_id}/tracks",
+        "TrackService/MuteTrack" => "/v1/webrtc/tracks/{track_id}:mute",
+        "TrackService/PublishTrack" => "/v1/webrtc/tracks",
+        "TrackService/UnpublishTrack" => "/v1/webrtc/tracks/{track_id}:unpublish",
+        "TurnService/IssueCredentials" => "/v1/webrtc/turn/credentials",
+        "WorkflowService/CancelWorkflow" => "/v1/workflows/{workflow_id}:cancel",
+        "WorkflowService/GetWorkflow" => "/v1/workflows/{workflow_id}",
+        "WorkflowService/ListWorkflows" => "/v1/workflows",
+        "WorkflowService/SignalWorkflow" => "/v1/workflows/{workflow_id}:signal",
+        "WorkflowService/StartWorkflow" => "/v1/workflows:start",
+        "DataBroker/ActivateCatalog" => "",
+        "DataBroker/AnalyticalQuery" => "",
+        "DataBroker/ApplyMigration" => "",
+        "DataBroker/ApproveMigrationPlan" => "",
+        "DataBroker/BatchSelect" => "",
+        "DataBroker/BatchUpsert" => "",
+        "DataBroker/BeginTx" => "",
+        "DataBroker/CacheDelete" => "",
+        "DataBroker/CacheGet" => "",
+        "DataBroker/CacheScan" => "",
+        "DataBroker/CacheSet" => "",
+        "DataBroker/CreateMaterializedView" => "",
+        "DataBroker/Delete" => "",
+        "DataBroker/DeletePolicy" => "",
+        "DataBroker/DismissDlqEvent" => "",
+        "DataBroker/DocumentDelete" => "",
+        "DataBroker/DocumentFind" => "",
+        "DataBroker/DocumentGet" => "",
+        "DataBroker/DocumentUpsert" => "",
+        "DataBroker/DropResource" => "",
+        "DataBroker/EnqueueOutboxEvent" => "",
+        "DataBroker/EnsureBaseline" => "",
+        "DataBroker/EnsureProject" => "",
+        "DataBroker/EnsureResource" => "",
+        "DataBroker/GeneratePresignedUrl" => "",
+        "DataBroker/GenericDispatch" => "",
+        "DataBroker/GetAdminSummary" => "",
+        "DataBroker/GetCapabilities" => "",
+        "DataBroker/GetCatalogManifest" => "",
+        "DataBroker/GetCatalogVersion" => "",
+        "DataBroker/GetCatalogVersions" => "",
+        "DataBroker/GetCdcStatus" => "",
+        "DataBroker/GetDlqEvent" => "",
+        "DataBroker/GetHealthReport" => "",
+        "DataBroker/GetMigrationStatus" => "",
+        "DataBroker/GetObject" => "",
+        "DataBroker/GetSaga" => "",
+        "DataBroker/GraphMutate" => "",
+        "DataBroker/GraphQuery" => "",
+        "DataBroker/InitiateMultipartUpload" => "",
+        "DataBroker/LintPolicies" => "",
+        "DataBroker/ListAdminAuditLogs" => "",
+        "DataBroker/ListDlqEvents" => "",
+        "DataBroker/ListMessageSchemas" => "",
+        "DataBroker/ListMigrationRuns" => "",
+        "DataBroker/ListPolicies" => "",
+        "DataBroker/ListProjects" => "",
+        "DataBroker/ListResources" => "",
+        "DataBroker/ListSagas" => "",
+        "DataBroker/LookupMessageSchema" => "",
+        "DataBroker/MarkSagaReviewed" => "",
+        "DataBroker/PauseCdc" => "",
+        "DataBroker/PlanMigration" => "",
+        "DataBroker/PreviewCdcRedaction" => "",
+        "DataBroker/PublishCDC" => "",
+        "DataBroker/PutObject" => "",
+        "DataBroker/PutPolicy" => "",
+        "DataBroker/QuarantineDlqEvent" => "",
+        "DataBroker/ReloadPolicies" => "",
+        "DataBroker/ReplayDlqEvent" => "",
+        "DataBroker/ResumeCdc" => "",
+        "DataBroker/RetrySagaCompensation" => "",
+        "DataBroker/RollbackCatalog" => "",
+        "DataBroker/ScanProjectionDrift" => "",
+        "DataBroker/Select" => "",
+        "DataBroker/SelectV2" => "",
+        "DataBroker/StageCatalog" => "",
+        "DataBroker/StepDownCdcLeader" => "",
+        "DataBroker/TimeSeriesQuery" => "",
+        "DataBroker/TimeSeriesWrite" => "",
+        "DataBroker/Upsert" => "",
+        "DataBroker/ValidateCatalog" => "",
+        "DataBroker/VectorBatchUpsert" => "",
+        "DataBroker/VectorHybridSearch" => "",
+        "DataBroker/VectorSearch" => "",
+        "DataBroker/VectorUpsert" => "",
+        "DataBroker/VerifyAdminAuditLog" => "",
+    ];
+
+    /**
      * Proto-derived replay-safe flag per RPC, keyed by method name (globally
      * unique): from `method_idempotency_contract.replay_safe`. A mutation is
      * eligible for auto-retry on a transient failure ONLY when it is replay-safe
@@ -342,6 +2183,76 @@ final class GeneratedClient
     public const REPLAY_SAFE = [
         "Delete" => true,
         "Upsert" => true,
+    ];
+
+    /** @var array<string,array{table:string,primary_keys:list<string>,fields:list<string>,relations_json:string,version_field:string,tenant_field:string,project_field:string,php_type:string}> */
+    public const ENTITIES = [
+        "udb.core.analytics.entity.v1.ExecutorPerformanceSummary" => ['table' => "executor_performance_summaries", 'primary_keys' => ["summary_id"], 'fields' => ["summary_id", "summary_date", "executor_identity", "workload_kind", "total_dispatches", "successful_results", "timeout_count", "error_count", "avg_execution_ms", "p99_execution_ms", "avg_confidence", "success_rate", "avg_capacity_utilisation", "recorded_at", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "", 'project_field' => "", 'php_type' => "Udb\Core\Analytics\Entity\V1\ExecutorPerformanceSummary"],
+        "udb.core.analytics.entity.v1.PipelineMetricSnapshot" => ['table' => "pipeline_metric_snapshots", 'primary_keys' => ["snapshot_id"], 'fields' => ["snapshot_id", "snapshot_hour", "stage_name", "tenant_id", "total_requests", "successful", "failed", "p50_latency_ms", "p95_latency_ms", "p99_latency_ms", "avg_latency_ms", "error_rate", "throughput_rps", "recorded_at", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Analytics\Entity\V1\PipelineMetricSnapshot"],
+        "udb.core.analytics.entity.v1.ReconciliationAnalyticsSummary" => ['table' => "reconciliation_analytics_summaries", 'primary_keys' => ["summary_id"], 'fields' => ["summary_id", "summary_date", "total_reconciliations", "exact_matches", "partial_conflicts", "hard_conflicts", "low_confidence_flagged", "avg_reconciliation_ms", "resolution_rate", "avg_record_confidence", "recorded_at", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "", 'project_field' => "", 'php_type' => "Udb\Core\Analytics\Entity\V1\ReconciliationAnalyticsSummary"],
+        "udb.core.apikey.entity.v1.ApiKey" => ['table' => "api_keys", 'primary_keys' => ["key_id"], 'fields' => ["key_id", "key_prefix", "key_hash", "name", "description", "owner_type", "owner_id", "scopes_json", "status", "ip_allowlist_json", "rate_limit_per_minute", "rate_limit_per_day", "created_by", "revoked_by", "revoke_reason", "expires_at", "last_used_at", "created_at", "updated_at", "deleted_at", "deleted_by", "tenant_id", "project_id", "allowed_resources_json", "metadata_json"], 'relations_json' => "[{\"name\":\"api_key_usages\",\"kind\":\"has_many\",\"local_fields\":[\"key_id\"],\"target_message_type\":\"udb.core.apikey.entity.v1.ApiKeyUsage\",\"target_table\":\"udb_authn.api_key_usages\",\"target_fields\":[\"key_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Apikey\Entity\V1\ApiKey"],
+        "udb.core.apikey.entity.v1.ApiKeyUsage" => ['table' => "api_key_usages", 'primary_keys' => ["usage_id"], 'fields' => ["usage_id", "key_id", "endpoint", "ip_address", "http_status", "latency_ms", "rate_limited", "requested_at", "tenant_id", "created_at", "updated_at", "created_by"], 'relations_json' => "[{\"name\":\"key\",\"kind\":\"belongs_to\",\"local_fields\":[\"key_id\"],\"target_message_type\":\"udb.core.apikey.entity.v1.ApiKey\",\"target_table\":\"udb_authn.api_keys\",\"target_fields\":[\"key_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Apikey\Entity\V1\ApiKeyUsage"],
+        "udb.core.asset.entity.v1.Asset" => ['table' => "assets", 'primary_keys' => ["asset_id"], 'fields' => ["asset_id", "tenant_id", "project_id", "file_id", "name", "media_type", "status", "metadata", "audit_info", "deleted_at", "deleted_by", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Asset\Entity\V1\Asset"],
+        "udb.core.asset.entity.v1.PipelineDefinition" => ['table' => "pipeline_definitions", 'primary_keys' => ["definition_id"], 'fields' => ["definition_id", "tenant_id", "name", "description", "media_type", "steps", "version", "status", "audit_info", "trigger_topic", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "version", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Asset\Entity\V1\PipelineDefinition"],
+        "udb.core.asset.entity.v1.PipelineInstance" => ['table' => "pipeline_instances", 'primary_keys' => ["instance_id"], 'fields' => ["instance_id", "definition_id", "asset_id", "tenant_id", "status", "current_step", "context", "correlation_id", "started_at", "completed_at", "audit_info", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Asset\Entity\V1\PipelineInstance"],
+        "udb.core.asset.entity.v1.PipelineStep" => ['table' => "pipeline_steps", 'primary_keys' => ["step_id"], 'fields' => ["step_id", "instance_id", "step_name", "step_type", "status", "result", "error", "retry_count", "started_at", "completed_at", "audit_info", "tenant_id", "params", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Asset\Entity\V1\PipelineStep"],
+        "udb.core.authn.entity.v1.Device" => ['table' => "devices", 'primary_keys' => ["device_id"], 'fields' => ["device_id", "user_id", "tenant_id", "project_id", "device_name", "device_type", "fingerprint_hash", "last_ip_masked", "last_user_agent_hash", "last_seen_at", "created_at", "revoked_at", "revoked_by", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Authn\Entity\V1\Device"],
+        "udb.core.authn.entity.v1.MfaChallenge" => ['table' => "mfa_challenges", 'primary_keys' => ["challenge_id"], 'fields' => ["challenge_id", "user_id", "tenant_id", "project_id", "factor_kind", "purpose", "device_fingerprint_hash", "ip_address_masked", "attempt_count", "expires_at", "consumed_at", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Authn\Entity\V1\MfaChallenge"],
+        "udb.core.authn.entity.v1.MfaPolicy" => ['table' => "mfa_policies", 'primary_keys' => ["policy_id"], 'fields' => ["policy_id", "tenant_id", "require_mfa", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Authn\Entity\V1\MfaPolicy"],
+        "udb.core.authn.entity.v1.OTP" => ['table' => "otps", 'primary_keys' => ["otp_id"], 'fields' => ["otp_id", "user_id", "otp_type", "code_hash", "delivery_channel", "delivery_address", "status", "attempt_count", "superseded_by_id", "expires_at", "used_at", "created_at", "correlation_id", "tenant_id", "updated_at", "created_by"], 'relations_json' => "[{\"name\":\"otps\",\"kind\":\"has_many\",\"local_fields\":[\"otp_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.OTP\",\"target_table\":\"udb_authn.otps\",\"target_fields\":[\"superseded_by_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"superseded_by\",\"kind\":\"belongs_to\",\"local_fields\":[\"superseded_by_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.OTP\",\"target_table\":\"udb_authn.otps\",\"target_fields\":[\"otp_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"user\",\"kind\":\"belongs_to\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Authn\Entity\V1\OTP"],
+        "udb.core.authn.entity.v1.RecoveryCode" => ['table' => "recovery_codes", 'primary_keys' => ["recovery_code_id"], 'fields' => ["recovery_code_id", "user_id", "code_hash", "used_at", "created_at", "tenant_id", "updated_at", "created_by"], 'relations_json' => "[{\"name\":\"user\",\"kind\":\"belongs_to\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Authn\Entity\V1\RecoveryCode"],
+        "udb.core.authn.entity.v1.Session" => ['table' => "sessions", 'primary_keys' => ["session_id"], 'fields' => ["session_id", "user_id", "session_type", "session_token_lookup", "session_token_hash", "csrf_token_hash", "access_token_jti", "refresh_token_jti", "device_type", "device_name", "ip_address", "user_agent", "is_active", "expires_at", "last_active_at", "revoked_by", "revoke_reason", "created_at", "tenant_id", "project_id", "principal_id", "provider_id", "auth_method", "scopes_json", "metadata_json", "updated_at", "created_by"], 'relations_json' => "[{\"name\":\"revoked_by\",\"kind\":\"belongs_to\",\"local_fields\":[\"revoked_by\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"user_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"user\",\"kind\":\"belongs_to\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Authn\Entity\V1\Session"],
+        "udb.core.authn.entity.v1.SigningKey" => ['table' => "signing_keys", 'primary_keys' => ["key_id"], 'fields' => ["key_id", "tenant_id", "algorithm", "public_material", "encrypted_private_material", "kms_key_ref", "state", "not_before", "not_after", "created_at", "retired_at", "created_by", "retired_by", "rotation_reason", "updated_at"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Authn\Entity\V1\SigningKey"],
+        "udb.core.authn.entity.v1.TokenFamily" => ['table' => "token_families", 'primary_keys' => ["family_id"], 'fields' => ["family_id", "session_id", "user_id", "principal_id", "tenant_id", "project_id", "device_id", "current_refresh_jti_hash", "previous_refresh_jti_hash", "reuse_detected_at", "revoked_at", "revocation_reason", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Authn\Entity\V1\TokenFamily"],
+        "udb.core.authn.entity.v1.TokenRevocation" => ['table' => "token_revocations", 'primary_keys' => ["jti_hash"], 'fields' => ["jti_hash", "token_type", "tenant_id", "expires_at", "revoked_at", "revoked_by", "reason", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Authn\Entity\V1\TokenRevocation"],
+        "udb.core.authn.entity.v1.User" => ['table' => "users", 'primary_keys' => ["user_id"], 'fields' => ["user_id", "username", "email", "password_hash", "account_kind", "status", "tenant_id", "full_name", "totp_secret_enc", "mfa_enabled", "failed_login_count", "locked_until", "email_verified_at", "last_login_at", "created_by", "created_at", "updated_at", "deleted_at", "deleted_by", "project_id", "external_provider_id", "external_subject", "locale", "timezone", "profile_attributes_json", "external_references_json", "phone", "phone_verified_at"], 'relations_json' => "[{\"name\":\"created_by\",\"kind\":\"belongs_to\",\"local_fields\":[\"created_by\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"user_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"notification_logs\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.notification.entity.v1.NotificationLog\",\"target_table\":\"udb_notification.notification_logs\",\"target_fields\":[\"recipient_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"otps\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.OTP\",\"target_table\":\"udb_authn.otps\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"recovery_codes\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.RecoveryCode\",\"target_table\":\"udb_authn.recovery_codes\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"role_permissions\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.RolePermission\",\"target_table\":\"udb_authz.role_permissions\",\"target_fields\":[\"granted_by\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"sessions\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.Session\",\"target_table\":\"udb_authn.sessions\",\"target_fields\":[\"revoked_by\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"sessions\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.Session\",\"target_table\":\"udb_authn.sessions\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"user_roles\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.UserRole\",\"target_table\":\"udb_authz.user_roles\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"users\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"created_by\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"webauthn_credentials\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.WebAuthnCredential\",\"target_table\":\"udb_authn.webauthn_credentials\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Authn\Entity\V1\User"],
+        "udb.core.authn.entity.v1.WebAuthnCredential" => ['table' => "webauthn_credentials", 'primary_keys' => ["credential_id"], 'fields' => ["credential_id", "user_id", "passkey_json", "label", "tenant_id", "project_id", "created_at", "updated_at", "last_used_at", "created_by"], 'relations_json' => "[{\"name\":\"user\",\"kind\":\"belongs_to\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Authn\Entity\V1\WebAuthnCredential"],
+        "udb.core.authn.entity.v1.WebAuthnPolicy" => ['table' => "webauthn_policies", 'primary_keys' => ["policy_id"], 'fields' => ["policy_id", "tenant_id", "required_user_verification", "required_resident_key", "allowed_attestation_conveyance", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Authn\Entity\V1\WebAuthnPolicy"],
+        "udb.core.authz.entity.v1.AccessDecisionAudit" => ['table' => "access_decision_audits", 'primary_keys' => ["decision_audit_id"], 'fields' => ["decision_audit_id", "user_id", "domain", "object", "action", "effect", "decision_source", "matched_rule", "reason", "ip_address", "correlation_id", "decided_at", "tenant_id", "decision_id", "policy_version", "relationship_version", "purpose", "scopes", "matched_policy_ids", "project_id", "actor_kind", "resource_type", "trace_id", "span_id", "user_agent_hash", "decision_input", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Authz\Entity\V1\AccessDecisionAudit"],
+        "udb.core.authz.entity.v1.AuthzRevision" => ['table' => "authz_revisions", 'primary_keys' => ["revision_id"], 'fields' => ["revision_id", "tenant_id", "project_id", "policy_revision", "relationship_revision", "content_hash", "changed_by", "changed_at", "change_type", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Authz\Entity\V1\AuthzRevision"],
+        "udb.core.authz.entity.v1.PolicyApproval" => ['table' => "policy_approvals", 'primary_keys' => ["approval_id"], 'fields' => ["approval_id", "draft_id", "tenant_id", "actor", "role", "decision", "reason", "created_at", "updated_at", "created_by"], 'relations_json' => "[{\"name\":\"draft\",\"kind\":\"belongs_to\",\"local_fields\":[\"draft_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.PolicyDraft\",\"target_table\":\"udb_authz.policy_drafts\",\"target_fields\":[\"draft_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Authz\Entity\V1\PolicyApproval"],
+        "udb.core.authz.entity.v1.PolicyCanary" => ['table' => "policy_canaries", 'primary_keys' => ["canary_id"], 'fields' => ["canary_id", "policy_set_id", "policy_version_id", "scope_kind", "scope_values", "state", "started_at", "success_window_secs", "metric_threshold", "created_by", "tenant_id", "project_id", "min_samples", "rollback_version_id", "outcome_reason", "revision", "created_at", "updated_at"], 'relations_json' => "[{\"name\":\"policy_set\",\"kind\":\"belongs_to\",\"local_fields\":[\"policy_set_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.PolicySet\",\"target_table\":\"udb_authz.policy_sets\",\"target_fields\":[\"policy_set_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"policy_version\",\"kind\":\"belongs_to\",\"local_fields\":[\"policy_version_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.PolicyVersion\",\"target_table\":\"udb_authz.policy_versions\",\"target_fields\":[\"policy_version_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "revision", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Authz\Entity\V1\PolicyCanary"],
+        "udb.core.authz.entity.v1.PolicyDraft" => ['table' => "policy_drafts", 'primary_keys' => ["draft_id"], 'fields' => ["draft_id", "tenant_id", "project_id", "title", "description", "proposed_policies_json", "proposed_tuples_json", "base_version_id", "status", "author", "high_risk", "created_at", "updated_at", "created_by"], 'relations_json' => "[{\"name\":\"policy_approvals\",\"kind\":\"has_many\",\"local_fields\":[\"draft_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.PolicyApproval\",\"target_table\":\"udb_authz.policy_approvals\",\"target_fields\":[\"draft_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Authz\Entity\V1\PolicyDraft"],
+        "udb.core.authz.entity.v1.PolicyRule" => ['table' => "policy_rules", 'primary_keys' => ["policy_id"], 'fields' => ["policy_id", "subject", "domain", "object", "action", "effect", "condition", "description", "is_active", "created_by", "created_at", "updated_at", "deleted_at", "tenant_id", "deleted_by", "project_id", "resource_type", "attributes_json"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Authz\Entity\V1\PolicyRule"],
+        "udb.core.authz.entity.v1.PolicySet" => ['table' => "policy_sets", 'primary_keys' => ["policy_set_id"], 'fields' => ["policy_set_id", "tenant_id", "project_id", "name", "active_version_id", "rollback_version_id", "description", "created_by", "created_at", "updated_at", "deleted_at"], 'relations_json' => "[{\"name\":\"policy_canaries\",\"kind\":\"has_many\",\"local_fields\":[\"policy_set_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.PolicyCanary\",\"target_table\":\"udb_authz.policy_canaries\",\"target_fields\":[\"policy_set_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"policy_versions\",\"kind\":\"has_many\",\"local_fields\":[\"policy_set_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.PolicyVersion\",\"target_table\":\"udb_authz.policy_versions\",\"target_fields\":[\"policy_set_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Authz\Entity\V1\PolicySet"],
+        "udb.core.authz.entity.v1.PolicySimulation" => ['table' => "policy_simulations", 'primary_keys' => ["simulation_id"], 'fields' => ["simulation_id", "policy_version_id", "principal_json", "resource_json", "action", "purpose", "active_decision_json", "draft_decision_json", "diff_json", "tenant_id", "project_id", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Authz\Entity\V1\PolicySimulation"],
+        "udb.core.authz.entity.v1.PolicyTuple" => ['table' => "policy_tuples", 'primary_keys' => ["policy_tuple_id"], 'fields' => ["policy_tuple_id", "tuple_kind", "subject", "domain", "object", "action", "effect", "condition", "tenant_id", "project_id", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Authz\Entity\V1\PolicyTuple"],
+        "udb.core.authz.entity.v1.PolicyVersion" => ['table' => "policy_versions", 'primary_keys' => ["policy_version_id"], 'fields' => ["policy_version_id", "policy_set_id", "version_number", "state", "snapshot_hash", "created_by", "created_at", "activated_by", "activated_at", "rollback_of", "change_reason", "revision", "content_hash", "tenant_id", "project_id", "payload_json", "high_risk", "submitted_by", "source_draft_id", "updated_at"], 'relations_json' => "[{\"name\":\"policy_canaries\",\"kind\":\"has_many\",\"local_fields\":[\"policy_version_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.PolicyCanary\",\"target_table\":\"udb_authz.policy_canaries\",\"target_fields\":[\"policy_version_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"policy_set\",\"kind\":\"belongs_to\",\"local_fields\":[\"policy_set_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.PolicySet\",\"target_table\":\"udb_authz.policy_sets\",\"target_fields\":[\"policy_set_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "revision", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Authz\Entity\V1\PolicyVersion"],
+        "udb.core.authz.entity.v1.Role" => ['table' => "roles", 'primary_keys' => ["role_id"], 'fields' => ["role_id", "name", "description", "is_system", "is_active", "created_by", "created_at", "updated_at", "deleted_at", "tenant_id", "deleted_by", "role_code", "domain", "project_id", "scope_type", "access_surface", "metadata_json"], 'relations_json' => "[{\"name\":\"role_permissions\",\"kind\":\"has_many\",\"local_fields\":[\"role_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.RolePermission\",\"target_table\":\"udb_authz.role_permissions\",\"target_fields\":[\"role_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"user_roles\",\"kind\":\"has_many\",\"local_fields\":[\"role_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.UserRole\",\"target_table\":\"udb_authz.user_roles\",\"target_fields\":[\"role_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Authz\Entity\V1\Role"],
+        "udb.core.authz.entity.v1.RolePermission" => ['table' => "role_permissions", 'primary_keys' => ["role_permission_id"], 'fields' => ["role_permission_id", "role_id", "permission_code", "granted_by", "granted_at", "tenant_id", "created_at", "updated_at", "created_by"], 'relations_json' => "[{\"name\":\"granted_by\",\"kind\":\"belongs_to\",\"local_fields\":[\"granted_by\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"user_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"role\",\"kind\":\"belongs_to\",\"local_fields\":[\"role_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.Role\",\"target_table\":\"udb_authz.roles\",\"target_fields\":[\"role_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Authz\Entity\V1\RolePermission"],
+        "udb.core.authz.entity.v1.UserRole" => ['table' => "user_roles", 'primary_keys' => ["user_role_id"], 'fields' => ["user_role_id", "user_id", "role_id", "domain", "assigned_by", "assigned_at", "expires_at", "created_at", "updated_at", "created_by", "tenant_id"], 'relations_json' => "[{\"name\":\"role\",\"kind\":\"belongs_to\",\"local_fields\":[\"role_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.Role\",\"target_table\":\"udb_authz.roles\",\"target_fields\":[\"role_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"user\",\"kind\":\"belongs_to\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Authz\Entity\V1\UserRole"],
+        "udb.core.backup.entity.v1.BackupPolicy" => ['table' => "backup_policies", 'primary_keys' => ["policy_id"], 'fields' => ["policy_id", "tenant_id", "policy_name", "schedule_cron", "retention_days", "max_retained_backups", "enabled", "object_backend", "object_bucket", "created_at", "updated_at", "metadata_json", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Backup\Entity\V1\BackupPolicy"],
+        "udb.core.backup.entity.v1.BackupRun" => ['table' => "backup_runs", 'primary_keys' => ["backup_id"], 'fields' => ["backup_id", "tenant_id", "kind", "status", "object_prefix", "manifest_checksum", "table_count", "total_rows", "excluded_count", "source_tenant_id", "target_tenant_id", "error_message", "created_at", "completed_at", "metadata_json", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Backup\Entity\V1\BackupRun"],
+        "udb.core.config.entity.v1.Flag" => ['table' => "flags", 'primary_keys' => ["flag_id"], 'fields' => ["flag_id", "tenant_id", "project_id", "environment", "flag_key", "value_type", "value_json", "enabled", "rollout_percentage", "rollout_context_key", "revision", "metadata_json", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "revision", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Config\Entity\V1\Flag"],
+        "udb.core.control.entity.v1.ControlPlaneNodeState" => ['table' => "control_plane_node_states", 'primary_keys' => ["node_state_id"], 'fields' => ["node_state_id", "node_id", "resource_type", "subscribed_names", "accepted_version", "last_good_version", "last_response_nonce", "nack_error_detail", "nonce_counter", "created_at", "updated_at", "served_snapshots", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "", 'project_field' => "", 'php_type' => "Udb\Core\Control\Entity\V1\ControlPlaneNodeState"],
+        "udb.core.control.entity.v1.ControlPlaneResource" => ['table' => "control_plane_resources", 'primary_keys' => ["resource_id"], 'fields' => ["resource_id", "resource_type", "name", "tenant_id", "project_id", "version", "content_hash", "payload_json", "updated_by", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "version", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Control\Entity\V1\ControlPlaneResource"],
+        "udb.core.embedding.entity.v1.EmbeddingSource" => ['table' => "embedding_sources", 'primary_keys' => ["source_id"], 'fields' => ["source_id", "tenant_id", "source_name", "source_message_type", "text_fields_json", "target_collection", "model_id", "tenant_column", "source_cdc_topic", "status", "created_at", "updated_at", "metadata_json", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Embedding\Entity\V1\EmbeddingSource"],
+        "udb.core.idp.entity.v1.ExternalIdentity" => ['table' => "external_identities", 'primary_keys' => ["external_identity_id"], 'fields' => ["external_identity_id", "tenant_id", "provider_id", "subject", "user_id", "email", "email_verified", "linked_at", "last_login_at", "deleted_at", "created_at", "updated_at", "created_by"], 'relations_json' => "[{\"name\":\"provider\",\"kind\":\"belongs_to\",\"local_fields\":[\"provider_id\"],\"target_message_type\":\"udb.core.idp.entity.v1.IdentityProvider\",\"target_table\":\"udb_idp.identity_providers\",\"target_fields\":[\"provider_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Idp\Entity\V1\ExternalIdentity"],
+        "udb.core.idp.entity.v1.IdentityProvider" => ['table' => "identity_providers", 'primary_keys' => ["provider_id"], 'fields' => ["provider_id", "tenant_id", "kind", "display_name", "issuer", "entity_id", "jwks_url", "saml_metadata_url", "client_ids_json", "audiences_json", "claim_mapping_json", "group_mapping_json", "jit_policy_json", "account_linking_policy", "enabled", "client_secret", "saml_signing_key_pem", "saml_idp_certs_json", "saml_sso_url", "health", "last_jwks_refresh_at", "last_jwks_refresh_status", "created_by", "updated_by", "created_at", "updated_at", "deleted_at"], 'relations_json' => "[{\"name\":\"external_identities\",\"kind\":\"has_many\",\"local_fields\":[\"provider_id\"],\"target_message_type\":\"udb.core.idp.entity.v1.ExternalIdentity\",\"target_table\":\"udb_idp.external_identities\",\"target_fields\":[\"provider_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"scim_directory_state\",\"kind\":\"has_many\",\"local_fields\":[\"provider_id\"],\"target_message_type\":\"udb.core.idp.entity.v1.ScimDirectoryState\",\"target_table\":\"udb_idp.scim_directory_state\",\"target_fields\":[\"provider_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Idp\Entity\V1\IdentityProvider"],
+        "udb.core.idp.entity.v1.SamlReplayEntry" => ['table' => "saml_replay_entries", 'primary_keys' => ["saml_replay_entry_id"], 'fields' => ["saml_replay_entry_id", "tenant_id", "provider_id", "assertion_id", "not_on_or_after", "consumed_at"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Idp\Entity\V1\SamlReplayEntry"],
+        "udb.core.idp.entity.v1.ScimDirectoryState" => ['table' => "scim_directory_state", 'primary_keys' => ["scim_directory_state_id"], 'fields' => ["scim_directory_state_id", "tenant_id", "provider_id", "cursor", "last_sync_at", "failure_count", "last_error", "deprovision_policy", "created_at", "updated_at", "created_by"], 'relations_json' => "[{\"name\":\"provider\",\"kind\":\"belongs_to\",\"local_fields\":[\"provider_id\"],\"target_message_type\":\"udb.core.idp.entity.v1.IdentityProvider\",\"target_table\":\"udb_idp.identity_providers\",\"target_fields\":[\"provider_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Idp\Entity\V1\ScimDirectoryState"],
+        "udb.core.lock.entity.v1.Lock" => ['table' => "locks", 'primary_keys' => ["lock_id"], 'fields' => ["lock_id", "tenant_id", "lock_name", "owner_id", "fencing_token", "lease_ttl_seconds", "status", "acquired_at", "expires_at", "metadata_json", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Lock\Entity\V1\Lock"],
+        "udb.core.metering.entity.v1.QuotaRule" => ['table' => "quota_rules", 'primary_keys' => ["quota_id"], 'fields' => ["quota_id", "tenant_id", "project_id", "metric", "limit_value", "window_seconds", "enabled", "revision", "metadata_json", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "revision", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Metering\Entity\V1\QuotaRule"],
+        "udb.core.metering.entity.v1.UsageEvent" => ['table' => "usage_events", 'primary_keys' => ["usage_id"], 'fields' => ["usage_id", "tenant_id", "principal_id", "method", "unit", "quantity", "occurred_at", "occurred_at_unix", "metadata_json", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Metering\Entity\V1\UsageEvent"],
+        "udb.core.notification.entity.v1.Notification" => ['table' => "notifications", 'primary_keys' => ["notification_id"], 'fields' => ["notification_id", "recipient_id", "type", "channel", "subject", "message", "template_data", "priority", "status", "scheduled_at", "sent_at", "delivered_at", "read_at", "created_at", "retry_count", "error_message", "tenant_id", "deleted_at", "deleted_by", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Notification\Entity\V1\Notification"],
+        "udb.core.notification.entity.v1.NotificationDeliveryAttempt" => ['table' => "notification_delivery_attempts", 'primary_keys' => ["attempt_id"], 'fields' => ["attempt_id", "notification_id", "tenant_id", "channel", "provider", "status", "attempt_count", "last_error", "provider_message_id", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Notification\Entity\V1\NotificationDeliveryAttempt"],
+        "udb.core.notification.entity.v1.NotificationLog" => ['table' => "notification_logs", 'primary_keys' => ["log_id"], 'fields' => ["log_id", "template_id", "event_type", "channel", "recipient_id", "recipient_address", "tenant_id", "project_id", "resource_type", "resource_id", "resource_name", "correlation_id", "status", "error_message", "provider_message_id", "retry_count", "sent_at", "delivered_at", "created_at", "rendered_subject", "rendered_body", "updated_at", "created_by"], 'relations_json' => "[{\"name\":\"recipient\",\"kind\":\"belongs_to\",\"local_fields\":[\"recipient_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"user_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"template\",\"kind\":\"belongs_to\",\"local_fields\":[\"template_id\"],\"target_message_type\":\"udb.core.notification.entity.v1.NotificationTemplate\",\"target_table\":\"udb_notification.notification_templates\",\"target_fields\":[\"template_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Notification\Entity\V1\NotificationLog"],
+        "udb.core.notification.entity.v1.NotificationPreference" => ['table' => "notification_preferences", 'primary_keys' => ["preference_id"], 'fields' => ["preference_id", "user_id", "tenant_id", "channel", "event_type", "is_opted_out", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Notification\Entity\V1\NotificationPreference"],
+        "udb.core.notification.entity.v1.NotificationTemplate" => ['table' => "notification_templates", 'primary_keys' => ["template_id"], 'fields' => ["template_id", "event_type", "channel", "subject_template", "body_template", "locale", "is_active", "created_at", "updated_at", "deleted_at", "created_by", "deleted_by", "tenant_id"], 'relations_json' => "[{\"name\":\"notification_logs\",\"kind\":\"has_many\",\"local_fields\":[\"template_id\"],\"target_message_type\":\"udb.core.notification.entity.v1.NotificationLog\",\"target_table\":\"udb_notification.notification_logs\",\"target_fields\":[\"template_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Notification\Entity\V1\NotificationTemplate"],
+        "udb.core.scheduler.entity.v1.ScheduledJob" => ['table' => "scheduled_jobs", 'primary_keys' => ["job_id"], 'fields' => ["job_id", "tenant_id", "project_id", "name", "schedule_type", "cron_expression", "payload", "target_topic", "status", "next_fire_at", "last_fired_at", "max_attempts", "attempt_count", "backoff_seconds", "audit_info", "deleted_at", "deleted_by", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Scheduler\Entity\V1\ScheduledJob"],
+        "udb.core.search.entity.v1.SearchIndex" => ['table' => "search_indexes", 'primary_keys' => ["index_id"], 'fields' => ["index_id", "tenant_id", "index_name", "source_message_type", "backend", "resource_name", "vector_dims", "tenant_column", "source_cdc_topic", "status", "created_at", "updated_at", "metadata_json", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Search\Entity\V1\SearchIndex"],
+        "udb.core.storage.entity.v1.File" => ['table' => "files", 'primary_keys' => ["file_id"], 'fields' => ["file_id", "tenant_id", "project_id", "filename", "content_type", "size_bytes", "backend", "bucket", "object_key", "url", "cdn_url", "file_type", "reference_id", "reference_type", "is_public", "status", "checksum", "expires_at", "uploaded_by", "audit_info", "deleted_at", "deleted_by", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Storage\Entity\V1\File"],
+        "udb.core.tenant.entity.v1.Tenant" => ['table' => "tenants", 'primary_keys' => ["tenant_id"], 'fields' => ["tenant_id", "code", "name", "type", "status", "parent_tenant_id", "config", "branding", "audit_info", "deleted_at", "deleted_by", "created_at", "updated_at", "created_by"], 'relations_json' => "[{\"name\":\"parent_tenant\",\"kind\":\"belongs_to\",\"local_fields\":[\"parent_tenant_id\"],\"target_message_type\":\"udb.core.tenant.entity.v1.Tenant\",\"target_table\":\"udb_tenant.tenants\",\"target_fields\":[\"tenant_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"tenant_configs\",\"kind\":\"has_many\",\"local_fields\":[\"tenant_id\"],\"target_message_type\":\"udb.core.tenant.entity.v1.TenantConfig\",\"target_table\":\"udb_tenant.tenant_configs\",\"target_fields\":[\"tenant_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"tenants\",\"kind\":\"has_many\",\"local_fields\":[\"tenant_id\"],\"target_message_type\":\"udb.core.tenant.entity.v1.Tenant\",\"target_table\":\"udb_tenant.tenants\",\"target_fields\":[\"parent_tenant_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Tenant\Entity\V1\Tenant"],
+        "udb.core.tenant.entity.v1.TenantConfig" => ['table' => "tenant_configs", 'primary_keys' => ["config_id"], 'fields' => ["id", "tenant_id", "config_key", "config_value", "type", "description", "audit_info", "created_at", "updated_at", "created_by"], 'relations_json' => "[{\"name\":\"tenant\",\"kind\":\"belongs_to\",\"local_fields\":[\"tenant_id\"],\"target_message_type\":\"udb.core.tenant.entity.v1.Tenant\",\"target_table\":\"udb_tenant.tenants\",\"target_fields\":[\"tenant_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Tenant\Entity\V1\TenantConfig"],
+        "udb.core.vault.entity.v1.VaultDbCredentialLease" => ['table' => "vault_db_credential_leases", 'primary_keys' => ["lease_id"], 'fields' => ["lease_id", "tenant_id", "role_name", "username", "parent_role", "backend", "issued_at", "expires_at", "revoked_at", "state", "metadata_json", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Vault\Entity\V1\VaultDbCredentialLease"],
+        "udb.core.vault.entity.v1.VaultSecret" => ['table' => "vault_secrets", 'primary_keys' => ["secret_id"], 'fields' => ["secret_id", "tenant_id", "secret_path", "version", "ciphertext", "data_key_wrapped", "state", "metadata_json", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "version", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Vault\Entity\V1\VaultSecret"],
+        "udb.core.vault.entity.v1.VaultTransitKey" => ['table' => "vault_transit_keys", 'primary_keys' => ["key_id"], 'fields' => ["key_id", "tenant_id", "key_name", "version", "algorithm", "wrapped_key_material", "state", "metadata_json", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "version", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Vault\Entity\V1\VaultTransitKey"],
+        "udb.core.webhook.entity.v1.WebhookDelivery" => ['table' => "webhook_deliveries", 'primary_keys' => ["delivery_id"], 'fields' => ["delivery_id", "tenant_id", "endpoint_id", "event_id", "topic", "status", "attempt_count", "response_status", "signature", "last_error", "payload_json", "delivered_at", "audit_info", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Webhook\Entity\V1\WebhookDelivery"],
+        "udb.core.webhook.entity.v1.WebhookEndpoint" => ['table' => "webhook_endpoints", 'primary_keys' => ["endpoint_id"], 'fields' => ["endpoint_id", "tenant_id", "url", "topic_pattern", "signing_secret", "active", "description", "max_attempts", "metadata_json", "audit_info", "deleted_at", "deleted_by", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Webhook\Entity\V1\WebhookEndpoint"],
+        "udb.core.webrtc.entity.v1.Peer" => ['table' => "peers", 'primary_keys' => ["peer_id"], 'fields' => ["peer_id", "room_id", "tenant_id", "display_name", "state", "metadata", "user_agent", "joined_at", "left_at", "audit_info", "deleted_at", "deleted_by", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Webrtc\Entity\V1\Peer"],
+        "udb.core.webrtc.entity.v1.Room" => ['table' => "rooms", 'primary_keys' => ["room_id"], 'fields' => ["room_id", "tenant_id", "name", "state", "max_participants", "participant_count", "config", "created_by", "audit_info", "deleted_at", "deleted_by", "created_at", "updated_at"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Webrtc\Entity\V1\Room"],
+        "udb.core.webrtc.entity.v1.Track" => ['table' => "tracks", 'primary_keys' => ["track_id"], 'fields' => ["track_id", "room_id", "peer_id", "tenant_id", "kind", "label", "state", "settings", "metadata", "audit_info", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Webrtc\Entity\V1\Track"],
+        "udb.core.workflow.entity.v1.WorkflowInstance" => ['table' => "workflow_instances", 'primary_keys' => ["workflow_id"], 'fields' => ["workflow_id", "tenant_id", "project_id", "workflow_type", "status", "current_step", "total_steps", "payload", "compensations", "correlation_id", "saga_id", "pending_signal", "last_error", "next_run_at", "last_transition_at", "audit_info", "deleted_at", "deleted_by", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Workflow\Entity\V1\WorkflowInstance"],
     ];
 
     /**
@@ -473,11 +2384,41 @@ final class GeneratedClient
         "submit_policy_draft" => "submitPolicyDraft",
         "update_policy_draft" => "updatePolicyDraft",
         "update_role" => "updateRole",
+        "delete_backup_policy" => "deleteBackupPolicy",
+        "get_backup" => "getBackup",
+        "get_backup_policy" => "getBackupPolicy",
+        "list_backup_policies" => "listBackupPolicies",
+        "list_backups" => "listBackups",
+        "put_backup_policy" => "putBackupPolicy",
+        "restore_tenant" => "restoreTenant",
+        "start_tenant_backup" => "startTenantBackup",
+        "create_cache_namespace" => "createCacheNamespace",
+        "create_namespace" => "createCacheNamespace",
+
+        "delete_cache_namespace" => "deleteCacheNamespace",
+        "delete_namespace" => "deleteCacheNamespace",
+        "get" => "cacheServiceGet",
+        "get_cache_namespace_stats" => "getCacheNamespaceStats",
+        "get_namespace_stats" => "getCacheNamespaceStats",
+        "scan" => "cacheServiceScan",
+        "set" => "cacheServiceSet",
+        "delete_flag" => "deleteFlag",
+        "evaluate_flags" => "evaluateFlags",
+        "get_flag" => "getFlag",
+        "list_flags" => "listFlags",
+        "put_flag" => "putFlag",
         "ack_status" => "ackStatus",
         "delta_resources" => "deltaResources",
         "get_resources" => "getResources",
         "list_node_states" => "listNodeStates",
+        "rollback_resources" => "rollbackResources",
         "stream_resources" => "streamResources",
+        "backfill" => "backfill",
+        "delete_source" => "deleteSource",
+        "list_sources" => "listSources",
+        "register_source" => "registerSource",
+        "report_embedding" => "reportEmbedding",
+        "retrieve" => "retrieve",
         "create_provider" => "createProvider",
         "disable_provider" => "disableProvider",
         "force_jwks_refresh" => "forceJwksRefresh",
@@ -505,6 +2446,16 @@ final class GeneratedClient
         "test_provider_discovery" => "testProviderDiscovery",
         "unlink_identity" => "unlinkIdentity",
         "update_provider" => "updateProvider",
+        "subscribe" => "subscribe",
+        "acquire_lock" => "acquireLock",
+        "release_lock" => "releaseLock",
+        "renew_lock" => "renewLock",
+        "check_quota" => "checkQuota",
+        "get_quota" => "getQuota",
+        "list_quotas" => "listQuotas",
+        "put_quota" => "putQuota",
+        "query_usage" => "queryUsage",
+        "record_usage" => "recordUsage",
         "get_delivery_stats" => "getDeliveryStats",
         "get_notification" => "getNotification",
         "get_preference" => "getPreference",
@@ -512,10 +2463,22 @@ final class GeneratedClient
         "list_notifications" => "listNotifications",
         "list_preferences" => "listPreferences",
         "list_templates" => "listTemplates",
+        "report_delivery" => "reportDelivery",
         "retry_notification" => "retryNotification",
         "send_notification" => "sendNotification",
         "set_preference" => "setPreference",
         "upsert_template" => "upsertTemplate",
+        "create_job" => "createJob",
+        "delete_job" => "deleteJob",
+        "get_job" => "getJob",
+        "list_jobs" => "listJobs",
+        "pause_job" => "pauseJob",
+        "resume_job" => "resumeJob",
+        "create_index" => "createIndex",
+        "delete_index" => "deleteIndex",
+        "list_indexes" => "listIndexes",
+        "reindex" => "reindex",
+        "search" => "search",
         "delete_file" => "deleteFile",
         "download_file" => "downloadFile",
         "finalize_upload" => "finalizeUpload",
@@ -528,8 +2491,29 @@ final class GeneratedClient
         "get_tenant" => "getTenant",
         "get_tenant_config" => "getTenantConfig",
         "list_tenants" => "listTenants",
+        "purge_tenant" => "purgeTenant",
         "update_tenant" => "updateTenant",
         "update_tenant_config" => "updateTenantConfig",
+        "create_transit_key" => "createTransitKey",
+        "decrypt" => "decrypt",
+        "delete_secret" => "deleteSecret",
+        "destroy_secret" => "destroySecret",
+        "encrypt" => "encrypt",
+        "generate_database_credentials" => "generateDatabaseCredentials",
+        "get_secret" => "getSecret",
+        "hmac" => "hmac",
+        "list_secrets" => "listSecrets",
+        "put_secret" => "putSecret",
+        "rotate_transit_key" => "rotateTransitKey",
+        "seal_status" => "sealStatus",
+        "sign" => "sign",
+        "verify" => "verify",
+        "create_endpoint" => "createEndpoint",
+        "delete_endpoint" => "deleteEndpoint",
+        "get_endpoint" => "getEndpoint",
+        "list_deliveries" => "listDeliveries",
+        "list_endpoints" => "listEndpoints",
+        "update_endpoint" => "updateEndpoint",
         "get_peer" => "getPeer",
         "join_room" => "joinRoom",
         "join_session" => "joinSession",
@@ -538,7 +2522,11 @@ final class GeneratedClient
         "close_room" => "closeRoom",
         "create_room" => "createRoom",
         "get_room" => "getRoom",
+        "list_egress" => "listEgress",
         "list_rooms" => "listRooms",
+        "start_room_composite" => "startRoomComposite",
+        "start_track_egress" => "startTrackEgress",
+        "stop_egress" => "stopEgress",
         "update_room" => "updateRoom",
         "signal" => "signal",
         "list_tracks" => "listTracks",
@@ -546,6 +2534,11 @@ final class GeneratedClient
         "publish_track" => "publishTrack",
         "unpublish_track" => "unpublishTrack",
         "issue_credentials" => "issueCredentials",
+        "cancel_workflow" => "cancelWorkflow",
+        "get_workflow" => "getWorkflow",
+        "list_workflows" => "listWorkflows",
+        "signal_workflow" => "signalWorkflow",
+        "start_workflow" => "startWorkflow",
         "activate_catalog" => "activateCatalog",
         "analytical_query" => "analyticalQuery",
         "apply_migration" => "applyMigration",
@@ -3123,6 +5116,426 @@ final class GeneratedClient
         );
     }
     /**
+     * udb.core.backup.services.v1.BackupService / DeleteBackupPolicy (unary), public alias delete_backup_policy.
+     *
+     * Forwards to {@see stubFor()}->DeleteBackupPolicy(); retries transient codes.
+     * Path: /udb.core.backup.services.v1.BackupService/DeleteBackupPolicy
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded DeleteBackupPolicyResponse
+     */
+    public function deleteBackupPolicy($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'DeleteBackupPolicy',
+            'BackupService',
+            'udb.core.backup.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->DeleteBackupPolicy($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.backup.services.v1.BackupService / GetBackup (unary), public alias get_backup.
+     *
+     * Forwards to {@see stubFor()}->GetBackup(); retries transient codes.
+     * Path: /udb.core.backup.services.v1.BackupService/GetBackup
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded GetBackupResponse
+     */
+    public function getBackup($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'GetBackup',
+            'BackupService',
+            'udb.core.backup.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->GetBackup($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.backup.services.v1.BackupService / GetBackupPolicy (unary), public alias get_backup_policy.
+     *
+     * Forwards to {@see stubFor()}->GetBackupPolicy(); retries transient codes.
+     * Path: /udb.core.backup.services.v1.BackupService/GetBackupPolicy
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded GetBackupPolicyResponse
+     */
+    public function getBackupPolicy($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'GetBackupPolicy',
+            'BackupService',
+            'udb.core.backup.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->GetBackupPolicy($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.backup.services.v1.BackupService / ListBackupPolicies (unary), public alias list_backup_policies.
+     *
+     * Forwards to {@see stubFor()}->ListBackupPolicies(); retries transient codes.
+     * Path: /udb.core.backup.services.v1.BackupService/ListBackupPolicies
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ListBackupPoliciesResponse
+     */
+    public function listBackupPolicies($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ListBackupPolicies',
+            'BackupService',
+            'udb.core.backup.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ListBackupPolicies($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.backup.services.v1.BackupService / ListBackups (unary), public alias list_backups.
+     *
+     * Forwards to {@see stubFor()}->ListBackups(); retries transient codes.
+     * Path: /udb.core.backup.services.v1.BackupService/ListBackups
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ListBackupsResponse
+     */
+    public function listBackups($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ListBackups',
+            'BackupService',
+            'udb.core.backup.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ListBackups($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.backup.services.v1.BackupService / PutBackupPolicy (unary), public alias put_backup_policy.
+     *
+     * Forwards to {@see stubFor()}->PutBackupPolicy(); retries transient codes.
+     * Path: /udb.core.backup.services.v1.BackupService/PutBackupPolicy
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded PutBackupPolicyResponse
+     */
+    public function putBackupPolicy($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'PutBackupPolicy',
+            'BackupService',
+            'udb.core.backup.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->PutBackupPolicy($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.backup.services.v1.BackupService / RestoreTenant (unary), public alias restore_tenant.
+     *
+     * Forwards to {@see stubFor()}->RestoreTenant(); retries transient codes.
+     * Path: /udb.core.backup.services.v1.BackupService/RestoreTenant
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded RestoreTenantResponse
+     */
+    public function restoreTenant($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'RestoreTenant',
+            'BackupService',
+            'udb.core.backup.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->RestoreTenant($request, $md, $opts),
+            $metadata,
+            'destructive' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.backup.services.v1.BackupService / StartTenantBackup (unary), public alias start_tenant_backup.
+     *
+     * Forwards to {@see stubFor()}->StartTenantBackup(); retries transient codes.
+     * Path: /udb.core.backup.services.v1.BackupService/StartTenantBackup
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded StartTenantBackupResponse
+     */
+    public function startTenantBackup($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'StartTenantBackup',
+            'BackupService',
+            'udb.core.backup.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->StartTenantBackup($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.cache.services.v1.CacheService / CreateNamespace (unary), public alias create_cache_namespace.
+     *
+     * Forwards to {@see stubFor()}->CreateNamespace(); retries transient codes.
+     * Path: /udb.core.cache.services.v1.CacheService/CreateNamespace
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded CreateNamespaceResponse
+     */
+    public function createCacheNamespace($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'CreateNamespace',
+            'CacheService',
+            'udb.core.cache.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->CreateNamespace($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.cache.services.v1.CacheService / Delete (unary), public alias cache_delete.
+     *
+     * Forwards to {@see stubFor()}->Delete(); retries transient codes.
+     * Path: /udb.core.cache.services.v1.CacheService/Delete
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded DeleteResponse
+     */
+    public function cacheServiceDelete($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'Delete',
+            'CacheService',
+            'udb.core.cache.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->Delete($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.cache.services.v1.CacheService / DeleteNamespace (unary), public alias delete_cache_namespace.
+     *
+     * Forwards to {@see stubFor()}->DeleteNamespace(); retries transient codes.
+     * Path: /udb.core.cache.services.v1.CacheService/DeleteNamespace
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded DeleteNamespaceResponse
+     */
+    public function deleteCacheNamespace($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'DeleteNamespace',
+            'CacheService',
+            'udb.core.cache.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->DeleteNamespace($request, $md, $opts),
+            $metadata,
+            'destructive' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.cache.services.v1.CacheService / Get (unary), public alias cache_get.
+     *
+     * Forwards to {@see stubFor()}->Get(); retries transient codes.
+     * Path: /udb.core.cache.services.v1.CacheService/Get
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded GetResponse
+     */
+    public function cacheServiceGet($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'Get',
+            'CacheService',
+            'udb.core.cache.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->Get($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.cache.services.v1.CacheService / GetNamespaceStats (unary), public alias get_cache_namespace_stats.
+     *
+     * Forwards to {@see stubFor()}->GetNamespaceStats(); retries transient codes.
+     * Path: /udb.core.cache.services.v1.CacheService/GetNamespaceStats
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded GetNamespaceStatsResponse
+     */
+    public function getCacheNamespaceStats($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'GetNamespaceStats',
+            'CacheService',
+            'udb.core.cache.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->GetNamespaceStats($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.cache.services.v1.CacheService / Scan (unary), public alias cache_scan.
+     *
+     * Forwards to {@see stubFor()}->Scan(); retries transient codes.
+     * Path: /udb.core.cache.services.v1.CacheService/Scan
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ScanResponse
+     */
+    public function cacheServiceScan($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'Scan',
+            'CacheService',
+            'udb.core.cache.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->Scan($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.cache.services.v1.CacheService / Set (unary), public alias cache_set.
+     *
+     * Forwards to {@see stubFor()}->Set(); retries transient codes.
+     * Path: /udb.core.cache.services.v1.CacheService/Set
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded SetResponse
+     */
+    public function cacheServiceSet($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'Set',
+            'CacheService',
+            'udb.core.cache.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->Set($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.config.services.v1.ConfigService / DeleteFlag (unary), public alias delete_flag.
+     *
+     * Forwards to {@see stubFor()}->DeleteFlag(); retries transient codes.
+     * Path: /udb.core.config.services.v1.ConfigService/DeleteFlag
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded DeleteFlagResponse
+     */
+    public function deleteFlag($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'DeleteFlag',
+            'ConfigService',
+            'udb.core.config.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->DeleteFlag($request, $md, $opts),
+            $metadata,
+            'destructive' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.config.services.v1.ConfigService / EvaluateFlags (unary), public alias evaluate_flags.
+     *
+     * Forwards to {@see stubFor()}->EvaluateFlags(); retries transient codes.
+     * Path: /udb.core.config.services.v1.ConfigService/EvaluateFlags
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded EvaluateFlagsResponse
+     */
+    public function evaluateFlags($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'EvaluateFlags',
+            'ConfigService',
+            'udb.core.config.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->EvaluateFlags($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.config.services.v1.ConfigService / GetFlag (unary), public alias get_flag.
+     *
+     * Forwards to {@see stubFor()}->GetFlag(); retries transient codes.
+     * Path: /udb.core.config.services.v1.ConfigService/GetFlag
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded GetFlagResponse
+     */
+    public function getFlag($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'GetFlag',
+            'ConfigService',
+            'udb.core.config.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->GetFlag($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.config.services.v1.ConfigService / ListFlags (unary), public alias list_flags.
+     *
+     * Forwards to {@see stubFor()}->ListFlags(); retries transient codes.
+     * Path: /udb.core.config.services.v1.ConfigService/ListFlags
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ListFlagsResponse
+     */
+    public function listFlags($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ListFlags',
+            'ConfigService',
+            'udb.core.config.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ListFlags($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.config.services.v1.ConfigService / PutFlag (unary), public alias put_flag.
+     *
+     * Forwards to {@see stubFor()}->PutFlag(); retries transient codes.
+     * Path: /udb.core.config.services.v1.ConfigService/PutFlag
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded PutFlagResponse
+     */
+    public function putFlag($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'PutFlag',
+            'ConfigService',
+            'udb.core.config.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->PutFlag($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
      * udb.core.control.services.v1.ControlPlaneService / AckStatus (unary), public alias ack_status.
      *
      * Forwards to {@see stubFor()}->AckStatus(); retries transient codes.
@@ -3180,6 +5593,153 @@ final class GeneratedClient
             'ControlPlaneService',
             'udb.core.control.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListNodeStates($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.control.services.v1.ControlPlaneService / RollbackResources (unary), public alias rollback_resources.
+     *
+     * Forwards to {@see stubFor()}->RollbackResources(); retries transient codes.
+     * Path: /udb.core.control.services.v1.ControlPlaneService/RollbackResources
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded RollbackResourcesResponse
+     */
+    public function rollbackResources($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'RollbackResources',
+            'ControlPlaneService',
+            'udb.core.control.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->RollbackResources($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.embedding.services.v1.EmbeddingService / Backfill (unary), public alias backfill.
+     *
+     * Forwards to {@see stubFor()}->Backfill(); retries transient codes.
+     * Path: /udb.core.embedding.services.v1.EmbeddingService/Backfill
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded BackfillResponse
+     */
+    public function backfill($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'Backfill',
+            'EmbeddingService',
+            'udb.core.embedding.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->Backfill($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.embedding.services.v1.EmbeddingService / DeleteSource (unary), public alias delete_source.
+     *
+     * Forwards to {@see stubFor()}->DeleteSource(); retries transient codes.
+     * Path: /udb.core.embedding.services.v1.EmbeddingService/DeleteSource
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded DeleteSourceResponse
+     */
+    public function deleteSource($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'DeleteSource',
+            'EmbeddingService',
+            'udb.core.embedding.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->DeleteSource($request, $md, $opts),
+            $metadata,
+            'destructive' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.embedding.services.v1.EmbeddingService / ListSources (unary), public alias list_sources.
+     *
+     * Forwards to {@see stubFor()}->ListSources(); retries transient codes.
+     * Path: /udb.core.embedding.services.v1.EmbeddingService/ListSources
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ListSourcesResponse
+     */
+    public function listSources($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ListSources',
+            'EmbeddingService',
+            'udb.core.embedding.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ListSources($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.embedding.services.v1.EmbeddingService / RegisterSource (unary), public alias register_source.
+     *
+     * Forwards to {@see stubFor()}->RegisterSource(); retries transient codes.
+     * Path: /udb.core.embedding.services.v1.EmbeddingService/RegisterSource
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded RegisterSourceResponse
+     */
+    public function registerSource($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'RegisterSource',
+            'EmbeddingService',
+            'udb.core.embedding.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->RegisterSource($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.embedding.services.v1.EmbeddingService / ReportEmbedding (unary), public alias report_embedding.
+     *
+     * Forwards to {@see stubFor()}->ReportEmbedding(); retries transient codes.
+     * Path: /udb.core.embedding.services.v1.EmbeddingService/ReportEmbedding
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ReportEmbeddingResponse
+     */
+    public function reportEmbedding($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ReportEmbedding',
+            'EmbeddingService',
+            'udb.core.embedding.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ReportEmbedding($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.embedding.services.v1.EmbeddingService / Retrieve (unary), public alias retrieve.
+     *
+     * Forwards to {@see stubFor()}->Retrieve(); retries transient codes.
+     * Path: /udb.core.embedding.services.v1.EmbeddingService/Retrieve
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded RetrieveResponse
+     */
+    public function retrieve($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'Retrieve',
+            'EmbeddingService',
+            'udb.core.embedding.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->Retrieve($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
             $request,
@@ -3753,6 +6313,195 @@ final class GeneratedClient
         );
     }
     /**
+     * udb.core.lock.services.v1.LockService / AcquireLock (unary), public alias acquire_lock.
+     *
+     * Forwards to {@see stubFor()}->AcquireLock(); retries transient codes.
+     * Path: /udb.core.lock.services.v1.LockService/AcquireLock
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded AcquireLockResponse
+     */
+    public function acquireLock($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'AcquireLock',
+            'LockService',
+            'udb.core.lock.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->AcquireLock($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.lock.services.v1.LockService / ReleaseLock (unary), public alias release_lock.
+     *
+     * Forwards to {@see stubFor()}->ReleaseLock(); retries transient codes.
+     * Path: /udb.core.lock.services.v1.LockService/ReleaseLock
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ReleaseLockResponse
+     */
+    public function releaseLock($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ReleaseLock',
+            'LockService',
+            'udb.core.lock.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ReleaseLock($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.lock.services.v1.LockService / RenewLock (unary), public alias renew_lock.
+     *
+     * Forwards to {@see stubFor()}->RenewLock(); retries transient codes.
+     * Path: /udb.core.lock.services.v1.LockService/RenewLock
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded RenewLockResponse
+     */
+    public function renewLock($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'RenewLock',
+            'LockService',
+            'udb.core.lock.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->RenewLock($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.metering.services.v1.MeteringService / CheckQuota (unary), public alias check_quota.
+     *
+     * Forwards to {@see stubFor()}->CheckQuota(); retries transient codes.
+     * Path: /udb.core.metering.services.v1.MeteringService/CheckQuota
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded CheckQuotaResponse
+     */
+    public function checkQuota($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'CheckQuota',
+            'MeteringService',
+            'udb.core.metering.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->CheckQuota($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.metering.services.v1.MeteringService / GetQuota (unary), public alias get_quota.
+     *
+     * Forwards to {@see stubFor()}->GetQuota(); retries transient codes.
+     * Path: /udb.core.metering.services.v1.MeteringService/GetQuota
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded GetQuotaResponse
+     */
+    public function getQuota($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'GetQuota',
+            'MeteringService',
+            'udb.core.metering.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->GetQuota($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.metering.services.v1.MeteringService / ListQuotas (unary), public alias list_quotas.
+     *
+     * Forwards to {@see stubFor()}->ListQuotas(); retries transient codes.
+     * Path: /udb.core.metering.services.v1.MeteringService/ListQuotas
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ListQuotasResponse
+     */
+    public function listQuotas($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ListQuotas',
+            'MeteringService',
+            'udb.core.metering.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ListQuotas($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.metering.services.v1.MeteringService / PutQuota (unary), public alias put_quota.
+     *
+     * Forwards to {@see stubFor()}->PutQuota(); retries transient codes.
+     * Path: /udb.core.metering.services.v1.MeteringService/PutQuota
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded PutQuotaResponse
+     */
+    public function putQuota($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'PutQuota',
+            'MeteringService',
+            'udb.core.metering.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->PutQuota($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.metering.services.v1.MeteringService / QueryUsage (unary), public alias query_usage.
+     *
+     * Forwards to {@see stubFor()}->QueryUsage(); retries transient codes.
+     * Path: /udb.core.metering.services.v1.MeteringService/QueryUsage
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded QueryUsageResponse
+     */
+    public function queryUsage($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'QueryUsage',
+            'MeteringService',
+            'udb.core.metering.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->QueryUsage($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.metering.services.v1.MeteringService / RecordUsage (unary), public alias record_usage.
+     *
+     * Forwards to {@see stubFor()}->RecordUsage(); retries transient codes.
+     * Path: /udb.core.metering.services.v1.MeteringService/RecordUsage
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded RecordUsageResponse
+     */
+    public function recordUsage($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'RecordUsage',
+            'MeteringService',
+            'udb.core.metering.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->RecordUsage($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
      * udb.core.notification.services.v1.NotificationService / GetDeliveryStats (unary), public alias get_delivery_stats.
      *
      * Forwards to {@see stubFor()}->GetDeliveryStats(); retries transient codes.
@@ -3900,6 +6649,27 @@ final class GeneratedClient
         );
     }
     /**
+     * udb.core.notification.services.v1.NotificationService / ReportDelivery (unary), public alias report_delivery.
+     *
+     * Forwards to {@see stubFor()}->ReportDelivery(); retries transient codes.
+     * Path: /udb.core.notification.services.v1.NotificationService/ReportDelivery
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ReportDeliveryResponse
+     */
+    public function reportDelivery($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ReportDelivery',
+            'NotificationService',
+            'udb.core.notification.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ReportDelivery($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
      * udb.core.notification.services.v1.NotificationService / RetryNotification (unary), public alias retry_notification.
      *
      * Forwards to {@see stubFor()}->RetryNotification(); retries transient codes.
@@ -3980,6 +6750,237 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->UpsertTemplate($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.scheduler.services.v1.SchedulerService / CreateJob (unary), public alias create_job.
+     *
+     * Forwards to {@see stubFor()}->CreateJob(); retries transient codes.
+     * Path: /udb.core.scheduler.services.v1.SchedulerService/CreateJob
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded CreateJobResponse
+     */
+    public function createJob($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'CreateJob',
+            'SchedulerService',
+            'udb.core.scheduler.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->CreateJob($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.scheduler.services.v1.SchedulerService / DeleteJob (unary), public alias delete_job.
+     *
+     * Forwards to {@see stubFor()}->DeleteJob(); retries transient codes.
+     * Path: /udb.core.scheduler.services.v1.SchedulerService/DeleteJob
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded DeleteJobResponse
+     */
+    public function deleteJob($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'DeleteJob',
+            'SchedulerService',
+            'udb.core.scheduler.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->DeleteJob($request, $md, $opts),
+            $metadata,
+            'destructive' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.scheduler.services.v1.SchedulerService / GetJob (unary), public alias get_job.
+     *
+     * Forwards to {@see stubFor()}->GetJob(); retries transient codes.
+     * Path: /udb.core.scheduler.services.v1.SchedulerService/GetJob
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded GetJobResponse
+     */
+    public function getJob($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'GetJob',
+            'SchedulerService',
+            'udb.core.scheduler.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->GetJob($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.scheduler.services.v1.SchedulerService / ListJobs (unary), public alias list_jobs.
+     *
+     * Forwards to {@see stubFor()}->ListJobs(); retries transient codes.
+     * Path: /udb.core.scheduler.services.v1.SchedulerService/ListJobs
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ListJobsResponse
+     */
+    public function listJobs($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ListJobs',
+            'SchedulerService',
+            'udb.core.scheduler.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ListJobs($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.scheduler.services.v1.SchedulerService / PauseJob (unary), public alias pause_job.
+     *
+     * Forwards to {@see stubFor()}->PauseJob(); retries transient codes.
+     * Path: /udb.core.scheduler.services.v1.SchedulerService/PauseJob
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded PauseJobResponse
+     */
+    public function pauseJob($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'PauseJob',
+            'SchedulerService',
+            'udb.core.scheduler.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->PauseJob($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.scheduler.services.v1.SchedulerService / ResumeJob (unary), public alias resume_job.
+     *
+     * Forwards to {@see stubFor()}->ResumeJob(); retries transient codes.
+     * Path: /udb.core.scheduler.services.v1.SchedulerService/ResumeJob
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ResumeJobResponse
+     */
+    public function resumeJob($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ResumeJob',
+            'SchedulerService',
+            'udb.core.scheduler.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ResumeJob($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.search.services.v1.SearchService / CreateIndex (unary), public alias create_index.
+     *
+     * Forwards to {@see stubFor()}->CreateIndex(); retries transient codes.
+     * Path: /udb.core.search.services.v1.SearchService/CreateIndex
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded CreateIndexResponse
+     */
+    public function createIndex($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'CreateIndex',
+            'SearchService',
+            'udb.core.search.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->CreateIndex($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.search.services.v1.SearchService / DeleteIndex (unary), public alias delete_index.
+     *
+     * Forwards to {@see stubFor()}->DeleteIndex(); retries transient codes.
+     * Path: /udb.core.search.services.v1.SearchService/DeleteIndex
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded DeleteIndexResponse
+     */
+    public function deleteIndex($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'DeleteIndex',
+            'SearchService',
+            'udb.core.search.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->DeleteIndex($request, $md, $opts),
+            $metadata,
+            'destructive' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.search.services.v1.SearchService / ListIndexes (unary), public alias list_indexes.
+     *
+     * Forwards to {@see stubFor()}->ListIndexes(); retries transient codes.
+     * Path: /udb.core.search.services.v1.SearchService/ListIndexes
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ListIndexesResponse
+     */
+    public function listIndexes($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ListIndexes',
+            'SearchService',
+            'udb.core.search.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ListIndexes($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.search.services.v1.SearchService / Reindex (unary), public alias reindex.
+     *
+     * Forwards to {@see stubFor()}->Reindex(); retries transient codes.
+     * Path: /udb.core.search.services.v1.SearchService/Reindex
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ReindexResponse
+     */
+    public function reindex($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'Reindex',
+            'SearchService',
+            'udb.core.search.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->Reindex($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.search.services.v1.SearchService / Search (unary), public alias search.
+     *
+     * Forwards to {@see stubFor()}->Search(); retries transient codes.
+     * Path: /udb.core.search.services.v1.SearchService/Search
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded SearchResponse
+     */
+    public function search($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'Search',
+            'SearchService',
+            'udb.core.search.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->Search($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
             $request,
         );
     }
@@ -4215,6 +7216,27 @@ final class GeneratedClient
         );
     }
     /**
+     * udb.core.tenant.services.v1.TenantService / PurgeTenant (unary), public alias purge_tenant.
+     *
+     * Forwards to {@see stubFor()}->PurgeTenant(); retries transient codes.
+     * Path: /udb.core.tenant.services.v1.TenantService/PurgeTenant
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded PurgeTenantResponse
+     */
+    public function purgeTenant($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'PurgeTenant',
+            'TenantService',
+            'udb.core.tenant.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->PurgeTenant($request, $md, $opts),
+            $metadata,
+            'destructive' === 'read_only',
+            $request,
+        );
+    }
+    /**
      * udb.core.tenant.services.v1.TenantService / UpdateTenant (unary), public alias update_tenant.
      *
      * Forwards to {@see stubFor()}->UpdateTenant(); retries transient codes.
@@ -4251,6 +7273,426 @@ final class GeneratedClient
             'TenantService',
             'udb.core.tenant.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->UpdateTenantConfig($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.vault.services.v1.VaultService / CreateTransitKey (unary), public alias create_transit_key.
+     *
+     * Forwards to {@see stubFor()}->CreateTransitKey(); retries transient codes.
+     * Path: /udb.core.vault.services.v1.VaultService/CreateTransitKey
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded CreateTransitKeyResponse
+     */
+    public function createTransitKey($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'CreateTransitKey',
+            'VaultService',
+            'udb.core.vault.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->CreateTransitKey($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.vault.services.v1.VaultService / Decrypt (unary), public alias decrypt.
+     *
+     * Forwards to {@see stubFor()}->Decrypt(); retries transient codes.
+     * Path: /udb.core.vault.services.v1.VaultService/Decrypt
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded DecryptResponse
+     */
+    public function decrypt($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'Decrypt',
+            'VaultService',
+            'udb.core.vault.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->Decrypt($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.vault.services.v1.VaultService / DeleteSecret (unary), public alias delete_secret.
+     *
+     * Forwards to {@see stubFor()}->DeleteSecret(); retries transient codes.
+     * Path: /udb.core.vault.services.v1.VaultService/DeleteSecret
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded DeleteSecretResponse
+     */
+    public function deleteSecret($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'DeleteSecret',
+            'VaultService',
+            'udb.core.vault.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->DeleteSecret($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.vault.services.v1.VaultService / DestroySecret (unary), public alias destroy_secret.
+     *
+     * Forwards to {@see stubFor()}->DestroySecret(); retries transient codes.
+     * Path: /udb.core.vault.services.v1.VaultService/DestroySecret
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded DestroySecretResponse
+     */
+    public function destroySecret($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'DestroySecret',
+            'VaultService',
+            'udb.core.vault.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->DestroySecret($request, $md, $opts),
+            $metadata,
+            'destructive' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.vault.services.v1.VaultService / Encrypt (unary), public alias encrypt.
+     *
+     * Forwards to {@see stubFor()}->Encrypt(); retries transient codes.
+     * Path: /udb.core.vault.services.v1.VaultService/Encrypt
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded EncryptResponse
+     */
+    public function encrypt($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'Encrypt',
+            'VaultService',
+            'udb.core.vault.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->Encrypt($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.vault.services.v1.VaultService / GenerateDatabaseCredentials (unary), public alias generate_database_credentials.
+     *
+     * Forwards to {@see stubFor()}->GenerateDatabaseCredentials(); retries transient codes.
+     * Path: /udb.core.vault.services.v1.VaultService/GenerateDatabaseCredentials
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded GenerateDatabaseCredentialsResponse
+     */
+    public function generateDatabaseCredentials($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'GenerateDatabaseCredentials',
+            'VaultService',
+            'udb.core.vault.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->GenerateDatabaseCredentials($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.vault.services.v1.VaultService / GetSecret (unary), public alias get_secret.
+     *
+     * Forwards to {@see stubFor()}->GetSecret(); retries transient codes.
+     * Path: /udb.core.vault.services.v1.VaultService/GetSecret
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded GetSecretResponse
+     */
+    public function getSecret($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'GetSecret',
+            'VaultService',
+            'udb.core.vault.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->GetSecret($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.vault.services.v1.VaultService / Hmac (unary), public alias hmac.
+     *
+     * Forwards to {@see stubFor()}->Hmac(); retries transient codes.
+     * Path: /udb.core.vault.services.v1.VaultService/Hmac
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded HmacResponse
+     */
+    public function hmac($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'Hmac',
+            'VaultService',
+            'udb.core.vault.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->Hmac($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.vault.services.v1.VaultService / ListSecrets (unary), public alias list_secrets.
+     *
+     * Forwards to {@see stubFor()}->ListSecrets(); retries transient codes.
+     * Path: /udb.core.vault.services.v1.VaultService/ListSecrets
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ListSecretsResponse
+     */
+    public function listSecrets($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ListSecrets',
+            'VaultService',
+            'udb.core.vault.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ListSecrets($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.vault.services.v1.VaultService / PutSecret (unary), public alias put_secret.
+     *
+     * Forwards to {@see stubFor()}->PutSecret(); retries transient codes.
+     * Path: /udb.core.vault.services.v1.VaultService/PutSecret
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded PutSecretResponse
+     */
+    public function putSecret($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'PutSecret',
+            'VaultService',
+            'udb.core.vault.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->PutSecret($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.vault.services.v1.VaultService / RotateTransitKey (unary), public alias rotate_transit_key.
+     *
+     * Forwards to {@see stubFor()}->RotateTransitKey(); retries transient codes.
+     * Path: /udb.core.vault.services.v1.VaultService/RotateTransitKey
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded RotateTransitKeyResponse
+     */
+    public function rotateTransitKey($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'RotateTransitKey',
+            'VaultService',
+            'udb.core.vault.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->RotateTransitKey($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.vault.services.v1.VaultService / SealStatus (unary), public alias seal_status.
+     *
+     * Forwards to {@see stubFor()}->SealStatus(); retries transient codes.
+     * Path: /udb.core.vault.services.v1.VaultService/SealStatus
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded SealStatusResponse
+     */
+    public function sealStatus($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'SealStatus',
+            'VaultService',
+            'udb.core.vault.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->SealStatus($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.vault.services.v1.VaultService / Sign (unary), public alias sign.
+     *
+     * Forwards to {@see stubFor()}->Sign(); retries transient codes.
+     * Path: /udb.core.vault.services.v1.VaultService/Sign
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded SignResponse
+     */
+    public function sign($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'Sign',
+            'VaultService',
+            'udb.core.vault.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->Sign($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.vault.services.v1.VaultService / Verify (unary), public alias verify.
+     *
+     * Forwards to {@see stubFor()}->Verify(); retries transient codes.
+     * Path: /udb.core.vault.services.v1.VaultService/Verify
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded VerifyResponse
+     */
+    public function verify($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'Verify',
+            'VaultService',
+            'udb.core.vault.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->Verify($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.webhook.services.v1.WebhookService / CreateEndpoint (unary), public alias create_endpoint.
+     *
+     * Forwards to {@see stubFor()}->CreateEndpoint(); retries transient codes.
+     * Path: /udb.core.webhook.services.v1.WebhookService/CreateEndpoint
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded CreateEndpointResponse
+     */
+    public function createEndpoint($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'CreateEndpoint',
+            'WebhookService',
+            'udb.core.webhook.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->CreateEndpoint($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.webhook.services.v1.WebhookService / DeleteEndpoint (unary), public alias delete_endpoint.
+     *
+     * Forwards to {@see stubFor()}->DeleteEndpoint(); retries transient codes.
+     * Path: /udb.core.webhook.services.v1.WebhookService/DeleteEndpoint
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded DeleteEndpointResponse
+     */
+    public function deleteEndpoint($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'DeleteEndpoint',
+            'WebhookService',
+            'udb.core.webhook.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->DeleteEndpoint($request, $md, $opts),
+            $metadata,
+            'destructive' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.webhook.services.v1.WebhookService / GetEndpoint (unary), public alias get_endpoint.
+     *
+     * Forwards to {@see stubFor()}->GetEndpoint(); retries transient codes.
+     * Path: /udb.core.webhook.services.v1.WebhookService/GetEndpoint
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded GetEndpointResponse
+     */
+    public function getEndpoint($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'GetEndpoint',
+            'WebhookService',
+            'udb.core.webhook.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->GetEndpoint($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.webhook.services.v1.WebhookService / ListDeliveries (unary), public alias list_deliveries.
+     *
+     * Forwards to {@see stubFor()}->ListDeliveries(); retries transient codes.
+     * Path: /udb.core.webhook.services.v1.WebhookService/ListDeliveries
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ListDeliveriesResponse
+     */
+    public function listDeliveries($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ListDeliveries',
+            'WebhookService',
+            'udb.core.webhook.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ListDeliveries($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.webhook.services.v1.WebhookService / ListEndpoints (unary), public alias list_endpoints.
+     *
+     * Forwards to {@see stubFor()}->ListEndpoints(); retries transient codes.
+     * Path: /udb.core.webhook.services.v1.WebhookService/ListEndpoints
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ListEndpointsResponse
+     */
+    public function listEndpoints($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ListEndpoints',
+            'WebhookService',
+            'udb.core.webhook.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ListEndpoints($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.webhook.services.v1.WebhookService / UpdateEndpoint (unary), public alias update_endpoint.
+     *
+     * Forwards to {@see stubFor()}->UpdateEndpoint(); retries transient codes.
+     * Path: /udb.core.webhook.services.v1.WebhookService/UpdateEndpoint
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded UpdateEndpointResponse
+     */
+    public function updateEndpoint($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'UpdateEndpoint',
+            'WebhookService',
+            'udb.core.webhook.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->UpdateEndpoint($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
             $request,
@@ -4425,6 +7867,27 @@ final class GeneratedClient
         );
     }
     /**
+     * udb.core.webrtc.services.v1.RoomService / ListEgress (unary), public alias list_egress.
+     *
+     * Forwards to {@see stubFor()}->ListEgress(); retries transient codes.
+     * Path: /udb.core.webrtc.services.v1.RoomService/ListEgress
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ListEgressResponse
+     */
+    public function listEgress($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ListEgress',
+            'RoomService',
+            'udb.core.webrtc.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ListEgress($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
      * udb.core.webrtc.services.v1.RoomService / ListRooms (unary), public alias list_rooms.
      *
      * Forwards to {@see stubFor()}->ListRooms(); retries transient codes.
@@ -4442,6 +7905,69 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListRooms($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.webrtc.services.v1.RoomService / StartRoomComposite (unary), public alias start_room_composite.
+     *
+     * Forwards to {@see stubFor()}->StartRoomComposite(); retries transient codes.
+     * Path: /udb.core.webrtc.services.v1.RoomService/StartRoomComposite
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded StartRoomCompositeResponse
+     */
+    public function startRoomComposite($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'StartRoomComposite',
+            'RoomService',
+            'udb.core.webrtc.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->StartRoomComposite($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.webrtc.services.v1.RoomService / StartTrackEgress (unary), public alias start_track_egress.
+     *
+     * Forwards to {@see stubFor()}->StartTrackEgress(); retries transient codes.
+     * Path: /udb.core.webrtc.services.v1.RoomService/StartTrackEgress
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded StartTrackEgressResponse
+     */
+    public function startTrackEgress($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'StartTrackEgress',
+            'RoomService',
+            'udb.core.webrtc.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->StartTrackEgress($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.webrtc.services.v1.RoomService / StopEgress (unary), public alias stop_egress.
+     *
+     * Forwards to {@see stubFor()}->StopEgress(); retries transient codes.
+     * Path: /udb.core.webrtc.services.v1.RoomService/StopEgress
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded StopEgressResponse
+     */
+    public function stopEgress($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'StopEgress',
+            'RoomService',
+            'udb.core.webrtc.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->StopEgress($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
             $request,
         );
     }
@@ -4566,6 +8092,111 @@ final class GeneratedClient
             'TurnService',
             'udb.core.webrtc.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->IssueCredentials($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.workflow.services.v1.WorkflowService / CancelWorkflow (unary), public alias cancel_workflow.
+     *
+     * Forwards to {@see stubFor()}->CancelWorkflow(); retries transient codes.
+     * Path: /udb.core.workflow.services.v1.WorkflowService/CancelWorkflow
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded CancelWorkflowResponse
+     */
+    public function cancelWorkflow($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'CancelWorkflow',
+            'WorkflowService',
+            'udb.core.workflow.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->CancelWorkflow($request, $md, $opts),
+            $metadata,
+            'destructive' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.workflow.services.v1.WorkflowService / GetWorkflow (unary), public alias get_workflow.
+     *
+     * Forwards to {@see stubFor()}->GetWorkflow(); retries transient codes.
+     * Path: /udb.core.workflow.services.v1.WorkflowService/GetWorkflow
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded GetWorkflowResponse
+     */
+    public function getWorkflow($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'GetWorkflow',
+            'WorkflowService',
+            'udb.core.workflow.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->GetWorkflow($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.workflow.services.v1.WorkflowService / ListWorkflows (unary), public alias list_workflows.
+     *
+     * Forwards to {@see stubFor()}->ListWorkflows(); retries transient codes.
+     * Path: /udb.core.workflow.services.v1.WorkflowService/ListWorkflows
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ListWorkflowsResponse
+     */
+    public function listWorkflows($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ListWorkflows',
+            'WorkflowService',
+            'udb.core.workflow.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ListWorkflows($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.workflow.services.v1.WorkflowService / SignalWorkflow (unary), public alias signal_workflow.
+     *
+     * Forwards to {@see stubFor()}->SignalWorkflow(); retries transient codes.
+     * Path: /udb.core.workflow.services.v1.WorkflowService/SignalWorkflow
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded SignalWorkflowResponse
+     */
+    public function signalWorkflow($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'SignalWorkflow',
+            'WorkflowService',
+            'udb.core.workflow.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->SignalWorkflow($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.workflow.services.v1.WorkflowService / StartWorkflow (unary), public alias start_workflow.
+     *
+     * Forwards to {@see stubFor()}->StartWorkflow(); retries transient codes.
+     * Path: /udb.core.workflow.services.v1.WorkflowService/StartWorkflow
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded StartWorkflowResponse
+     */
+    public function startWorkflow($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'StartWorkflow',
+            'WorkflowService',
+            'udb.core.workflow.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->StartWorkflow($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
             $request,
@@ -6022,6 +9653,20 @@ final class GeneratedClient
     }
 
     /**
+     * udb.core.livequery.services.v1.LiveQueryService / Subscribe (server_streaming), public alias subscribe.
+     *
+     * Returns the live {@see \Grpc\ServerStreamingCall}; iterate
+     * `->responses()` then check `->getStatus()`. Path: /udb.core.livequery.services.v1.LiveQueryService/Subscribe
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Grpc\ServerStreamingCall
+     */
+    public function subscribe($request, ?UdbMetadata $metadata = null)
+    {
+        $stub = $this->stubFor('LiveQueryService', 'udb.core.livequery.services.v1');
+        return $stub->Subscribe($request, $this->headers($metadata), $this->callOptions());
+    }
+    /**
      * udb.core.storage.services.v1.StorageService / DownloadFile (server_streaming), public alias download_file.
      *
      * Returns the live {@see \Grpc\ServerStreamingCall}; iterate
@@ -6241,7 +9886,37 @@ final class GeneratedClient
         return $this->stubFor('AuthzService', 'udb.core.authz.services.v1');
     }
     /**
-     * Underlying buf-generated stub for udb.core.control.services.v1.ControlPlaneService (5 RPC(s)).
+     * Underlying buf-generated stub for udb.core.backup.services.v1.BackupService (8 RPC(s)).
+     * Channel is shared with every other service stub on this client.
+     *
+     * @return BaseStub  a BackupServiceClient
+     */
+    public function BackupServiceStub(): BaseStub
+    {
+        return $this->stubFor('BackupService', 'udb.core.backup.services.v1');
+    }
+    /**
+     * Underlying buf-generated stub for udb.core.cache.services.v1.CacheService (7 RPC(s)).
+     * Channel is shared with every other service stub on this client.
+     *
+     * @return BaseStub  a CacheServiceClient
+     */
+    public function CacheServiceStub(): BaseStub
+    {
+        return $this->stubFor('CacheService', 'udb.core.cache.services.v1');
+    }
+    /**
+     * Underlying buf-generated stub for udb.core.config.services.v1.ConfigService (5 RPC(s)).
+     * Channel is shared with every other service stub on this client.
+     *
+     * @return BaseStub  a ConfigServiceClient
+     */
+    public function ConfigServiceStub(): BaseStub
+    {
+        return $this->stubFor('ConfigService', 'udb.core.config.services.v1');
+    }
+    /**
+     * Underlying buf-generated stub for udb.core.control.services.v1.ControlPlaneService (6 RPC(s)).
      * Channel is shared with every other service stub on this client.
      *
      * @return BaseStub  a ControlPlaneServiceClient
@@ -6249,6 +9924,16 @@ final class GeneratedClient
     public function ControlPlaneServiceStub(): BaseStub
     {
         return $this->stubFor('ControlPlaneService', 'udb.core.control.services.v1');
+    }
+    /**
+     * Underlying buf-generated stub for udb.core.embedding.services.v1.EmbeddingService (6 RPC(s)).
+     * Channel is shared with every other service stub on this client.
+     *
+     * @return BaseStub  a EmbeddingServiceClient
+     */
+    public function EmbeddingServiceStub(): BaseStub
+    {
+        return $this->stubFor('EmbeddingService', 'udb.core.embedding.services.v1');
     }
     /**
      * Underlying buf-generated stub for udb.core.idp.services.v1.IdentityProviderService (27 RPC(s)).
@@ -6261,7 +9946,37 @@ final class GeneratedClient
         return $this->stubFor('IdentityProviderService', 'udb.core.idp.services.v1');
     }
     /**
-     * Underlying buf-generated stub for udb.core.notification.services.v1.NotificationService (11 RPC(s)).
+     * Underlying buf-generated stub for udb.core.livequery.services.v1.LiveQueryService (1 RPC(s)).
+     * Channel is shared with every other service stub on this client.
+     *
+     * @return BaseStub  a LiveQueryServiceClient
+     */
+    public function LiveQueryServiceStub(): BaseStub
+    {
+        return $this->stubFor('LiveQueryService', 'udb.core.livequery.services.v1');
+    }
+    /**
+     * Underlying buf-generated stub for udb.core.lock.services.v1.LockService (3 RPC(s)).
+     * Channel is shared with every other service stub on this client.
+     *
+     * @return BaseStub  a LockServiceClient
+     */
+    public function LockServiceStub(): BaseStub
+    {
+        return $this->stubFor('LockService', 'udb.core.lock.services.v1');
+    }
+    /**
+     * Underlying buf-generated stub for udb.core.metering.services.v1.MeteringService (6 RPC(s)).
+     * Channel is shared with every other service stub on this client.
+     *
+     * @return BaseStub  a MeteringServiceClient
+     */
+    public function MeteringServiceStub(): BaseStub
+    {
+        return $this->stubFor('MeteringService', 'udb.core.metering.services.v1');
+    }
+    /**
+     * Underlying buf-generated stub for udb.core.notification.services.v1.NotificationService (12 RPC(s)).
      * Channel is shared with every other service stub on this client.
      *
      * @return BaseStub  a NotificationServiceClient
@@ -6269,6 +9984,26 @@ final class GeneratedClient
     public function NotificationServiceStub(): BaseStub
     {
         return $this->stubFor('NotificationService', 'udb.core.notification.services.v1');
+    }
+    /**
+     * Underlying buf-generated stub for udb.core.scheduler.services.v1.SchedulerService (6 RPC(s)).
+     * Channel is shared with every other service stub on this client.
+     *
+     * @return BaseStub  a SchedulerServiceClient
+     */
+    public function SchedulerServiceStub(): BaseStub
+    {
+        return $this->stubFor('SchedulerService', 'udb.core.scheduler.services.v1');
+    }
+    /**
+     * Underlying buf-generated stub for udb.core.search.services.v1.SearchService (5 RPC(s)).
+     * Channel is shared with every other service stub on this client.
+     *
+     * @return BaseStub  a SearchServiceClient
+     */
+    public function SearchServiceStub(): BaseStub
+    {
+        return $this->stubFor('SearchService', 'udb.core.search.services.v1');
     }
     /**
      * Underlying buf-generated stub for udb.core.storage.services.v1.StorageService (8 RPC(s)).
@@ -6281,7 +10016,7 @@ final class GeneratedClient
         return $this->stubFor('StorageService', 'udb.core.storage.services.v1');
     }
     /**
-     * Underlying buf-generated stub for udb.core.tenant.services.v1.TenantService (6 RPC(s)).
+     * Underlying buf-generated stub for udb.core.tenant.services.v1.TenantService (7 RPC(s)).
      * Channel is shared with every other service stub on this client.
      *
      * @return BaseStub  a TenantServiceClient
@@ -6289,6 +10024,26 @@ final class GeneratedClient
     public function TenantServiceStub(): BaseStub
     {
         return $this->stubFor('TenantService', 'udb.core.tenant.services.v1');
+    }
+    /**
+     * Underlying buf-generated stub for udb.core.vault.services.v1.VaultService (14 RPC(s)).
+     * Channel is shared with every other service stub on this client.
+     *
+     * @return BaseStub  a VaultServiceClient
+     */
+    public function VaultServiceStub(): BaseStub
+    {
+        return $this->stubFor('VaultService', 'udb.core.vault.services.v1');
+    }
+    /**
+     * Underlying buf-generated stub for udb.core.webhook.services.v1.WebhookService (6 RPC(s)).
+     * Channel is shared with every other service stub on this client.
+     *
+     * @return BaseStub  a WebhookServiceClient
+     */
+    public function WebhookServiceStub(): BaseStub
+    {
+        return $this->stubFor('WebhookService', 'udb.core.webhook.services.v1');
     }
     /**
      * Underlying buf-generated stub for udb.core.webrtc.services.v1.PeerService (5 RPC(s)).
@@ -6301,7 +10056,7 @@ final class GeneratedClient
         return $this->stubFor('PeerService', 'udb.core.webrtc.services.v1');
     }
     /**
-     * Underlying buf-generated stub for udb.core.webrtc.services.v1.RoomService (5 RPC(s)).
+     * Underlying buf-generated stub for udb.core.webrtc.services.v1.RoomService (9 RPC(s)).
      * Channel is shared with every other service stub on this client.
      *
      * @return BaseStub  a RoomServiceClient
@@ -6339,6 +10094,16 @@ final class GeneratedClient
     public function TurnServiceStub(): BaseStub
     {
         return $this->stubFor('TurnService', 'udb.core.webrtc.services.v1');
+    }
+    /**
+     * Underlying buf-generated stub for udb.core.workflow.services.v1.WorkflowService (5 RPC(s)).
+     * Channel is shared with every other service stub on this client.
+     *
+     * @return BaseStub  a WorkflowServiceClient
+     */
+    public function WorkflowServiceStub(): BaseStub
+    {
+        return $this->stubFor('WorkflowService', 'udb.core.workflow.services.v1');
     }
     /**
      * Underlying buf-generated stub for udb.services.v1.DataBroker (77 RPC(s)).
@@ -6535,6 +10300,362 @@ final class GeneratedClient
         return $this->lastResponseMetadata;
     }
 
+    // ── Neutral-IR typed query builder (master-plan items 2.5 / 10.1) ──────
+    //
+    // These builders emit the broker's canonical neutral-IR envelope and send it
+    // through the EXISTING generated GenericDispatch RPC. They are not a second
+    // client engine and they never set tenant/project/RequestContext on the
+    // request body; caller scope still comes from UDB metadata / verified claims.
+
+    public const DEFAULT_IR_BACKEND = 'postgres';
+
+    private const ORM_TIERS_JSON = "{\"postgres\":\"relational\",\"mysql\":\"relational\",\"sqlite\":\"relational\",\"sqlserver\":\"relational\",\"clickhouse\":\"relational\",\"redis\":\"kv\",\"memcached\":\"kv\",\"qdrant\":\"vector\",\"weaviate\":\"vector\",\"pinecone\":\"vector\",\"minio\":\"blob\",\"s3\":\"blob\",\"azureblob\":\"blob\",\"gcs\":\"blob\",\"mongodb\":\"document\",\"elasticsearch\":\"vector\",\"neo4j\":\"graph\",\"cassandra\":\"relational\"}";
+
+    private const BACKEND_ROLES_JSON = "{\"postgres\":\"canonical\",\"mysql\":\"canonical\",\"sqlite\":\"canonical\",\"sqlserver\":\"canonical\",\"clickhouse\":\"canonical\",\"redis\":\"canonical\",\"memcached\":\"projection\",\"qdrant\":\"projection\",\"weaviate\":\"projection\",\"pinecone\":\"projection\",\"minio\":\"projection\",\"s3\":\"projection\",\"azureblob\":\"projection\",\"gcs\":\"projection\",\"mongodb\":\"canonical\",\"elasticsearch\":\"projection\",\"neo4j\":\"canonical\",\"cassandra\":\"canonical\"}";
+
+    public static function query(string $messageType): IrQuery
+    {
+        return new IrQuery($messageType);
+    }
+
+    public static function writeTo(string $messageType): IrWriteQuery
+    {
+        return new IrWriteQuery($messageType);
+    }
+
+    public static function deleteFrom(string $messageType): IrDeleteQuery
+    {
+        return new IrDeleteQuery($messageType);
+    }
+
+    public static function repository(string $messageType): EntityRepository
+    {
+        $binding = self::ENTITIES[$messageType] ?? null;
+        if ($binding === null) {
+            throw new \InvalidArgumentException("udb: unknown entity '{$messageType}'");
+        }
+        return new EntityRepository($messageType, $binding);
+    }
+
+    public static function unitOfWork(): UnitOfWork
+    {
+        return new UnitOfWork();
+    }
+
+    /** @return array<string,string> */
+    public static function backendRoles(): array
+    {
+        $roles = json_decode(self::BACKEND_ROLES_JSON, true, 512, JSON_THROW_ON_ERROR);
+        if (! is_array($roles)) {
+            throw new UdbConfigurationException('UDB backend role map is invalid.');
+        }
+        return $roles;
+    }
+
+    /** @return array<string,string> */
+    public static function ormTiers(): array
+    {
+        $tiers = json_decode(self::ORM_TIERS_JSON, true, 512, JSON_THROW_ON_ERROR);
+        if (! is_array($tiers)) {
+            throw new UdbConfigurationException('UDB ORM tier map is invalid.');
+        }
+        return $tiers;
+    }
+
+    public static function requireEagerIncludeBackend(string $backend): void
+    {
+        $tiers = self::ormTiers();
+        $tier = $tiers[$backend] ?? null;
+        if ($tier !== 'relational') {
+            throw new EagerIncludeUnsupportedBackendException($backend, $tier);
+        }
+    }
+
+    public static function executorPerformanceSummaryRepository(): EntityRepository
+    {
+        return self::repository("udb.core.analytics.entity.v1.ExecutorPerformanceSummary");
+    }
+    public static function pipelineMetricSnapshotRepository(): EntityRepository
+    {
+        return self::repository("udb.core.analytics.entity.v1.PipelineMetricSnapshot");
+    }
+    public static function reconciliationAnalyticsSummaryRepository(): EntityRepository
+    {
+        return self::repository("udb.core.analytics.entity.v1.ReconciliationAnalyticsSummary");
+    }
+    public static function apiKeyRepository(): EntityRepository
+    {
+        return self::repository("udb.core.apikey.entity.v1.ApiKey");
+    }
+    public static function apiKeyUsageRepository(): EntityRepository
+    {
+        return self::repository("udb.core.apikey.entity.v1.ApiKeyUsage");
+    }
+    public static function assetRepository(): EntityRepository
+    {
+        return self::repository("udb.core.asset.entity.v1.Asset");
+    }
+    public static function pipelineDefinitionRepository(): EntityRepository
+    {
+        return self::repository("udb.core.asset.entity.v1.PipelineDefinition");
+    }
+    public static function pipelineInstanceRepository(): EntityRepository
+    {
+        return self::repository("udb.core.asset.entity.v1.PipelineInstance");
+    }
+    public static function pipelineStepRepository(): EntityRepository
+    {
+        return self::repository("udb.core.asset.entity.v1.PipelineStep");
+    }
+    public static function deviceRepository(): EntityRepository
+    {
+        return self::repository("udb.core.authn.entity.v1.Device");
+    }
+    public static function mfaChallengeRepository(): EntityRepository
+    {
+        return self::repository("udb.core.authn.entity.v1.MfaChallenge");
+    }
+    public static function mfaPolicyRepository(): EntityRepository
+    {
+        return self::repository("udb.core.authn.entity.v1.MfaPolicy");
+    }
+    public static function otpRepository(): EntityRepository
+    {
+        return self::repository("udb.core.authn.entity.v1.OTP");
+    }
+    public static function recoveryCodeRepository(): EntityRepository
+    {
+        return self::repository("udb.core.authn.entity.v1.RecoveryCode");
+    }
+    public static function sessionRepository(): EntityRepository
+    {
+        return self::repository("udb.core.authn.entity.v1.Session");
+    }
+    public static function signingKeyRepository(): EntityRepository
+    {
+        return self::repository("udb.core.authn.entity.v1.SigningKey");
+    }
+    public static function tokenFamilyRepository(): EntityRepository
+    {
+        return self::repository("udb.core.authn.entity.v1.TokenFamily");
+    }
+    public static function tokenRevocationRepository(): EntityRepository
+    {
+        return self::repository("udb.core.authn.entity.v1.TokenRevocation");
+    }
+    public static function userRepository(): EntityRepository
+    {
+        return self::repository("udb.core.authn.entity.v1.User");
+    }
+    public static function webAuthnCredentialRepository(): EntityRepository
+    {
+        return self::repository("udb.core.authn.entity.v1.WebAuthnCredential");
+    }
+    public static function webAuthnPolicyRepository(): EntityRepository
+    {
+        return self::repository("udb.core.authn.entity.v1.WebAuthnPolicy");
+    }
+    public static function accessDecisionAuditRepository(): EntityRepository
+    {
+        return self::repository("udb.core.authz.entity.v1.AccessDecisionAudit");
+    }
+    public static function authzRevisionRepository(): EntityRepository
+    {
+        return self::repository("udb.core.authz.entity.v1.AuthzRevision");
+    }
+    public static function policyApprovalRepository(): EntityRepository
+    {
+        return self::repository("udb.core.authz.entity.v1.PolicyApproval");
+    }
+    public static function policyCanaryRepository(): EntityRepository
+    {
+        return self::repository("udb.core.authz.entity.v1.PolicyCanary");
+    }
+    public static function policyDraftRepository(): EntityRepository
+    {
+        return self::repository("udb.core.authz.entity.v1.PolicyDraft");
+    }
+    public static function policyRuleRepository(): EntityRepository
+    {
+        return self::repository("udb.core.authz.entity.v1.PolicyRule");
+    }
+    public static function policySetRepository(): EntityRepository
+    {
+        return self::repository("udb.core.authz.entity.v1.PolicySet");
+    }
+    public static function policySimulationRepository(): EntityRepository
+    {
+        return self::repository("udb.core.authz.entity.v1.PolicySimulation");
+    }
+    public static function policyTupleRepository(): EntityRepository
+    {
+        return self::repository("udb.core.authz.entity.v1.PolicyTuple");
+    }
+    public static function policyVersionRepository(): EntityRepository
+    {
+        return self::repository("udb.core.authz.entity.v1.PolicyVersion");
+    }
+    public static function roleRepository(): EntityRepository
+    {
+        return self::repository("udb.core.authz.entity.v1.Role");
+    }
+    public static function rolePermissionRepository(): EntityRepository
+    {
+        return self::repository("udb.core.authz.entity.v1.RolePermission");
+    }
+    public static function userRoleRepository(): EntityRepository
+    {
+        return self::repository("udb.core.authz.entity.v1.UserRole");
+    }
+    public static function backupPolicyRepository(): EntityRepository
+    {
+        return self::repository("udb.core.backup.entity.v1.BackupPolicy");
+    }
+    public static function backupRunRepository(): EntityRepository
+    {
+        return self::repository("udb.core.backup.entity.v1.BackupRun");
+    }
+    public static function flagRepository(): EntityRepository
+    {
+        return self::repository("udb.core.config.entity.v1.Flag");
+    }
+    public static function controlPlaneNodeStateRepository(): EntityRepository
+    {
+        return self::repository("udb.core.control.entity.v1.ControlPlaneNodeState");
+    }
+    public static function controlPlaneResourceRepository(): EntityRepository
+    {
+        return self::repository("udb.core.control.entity.v1.ControlPlaneResource");
+    }
+    public static function embeddingSourceRepository(): EntityRepository
+    {
+        return self::repository("udb.core.embedding.entity.v1.EmbeddingSource");
+    }
+    public static function externalIdentityRepository(): EntityRepository
+    {
+        return self::repository("udb.core.idp.entity.v1.ExternalIdentity");
+    }
+    public static function identityProviderRepository(): EntityRepository
+    {
+        return self::repository("udb.core.idp.entity.v1.IdentityProvider");
+    }
+    public static function samlReplayEntryRepository(): EntityRepository
+    {
+        return self::repository("udb.core.idp.entity.v1.SamlReplayEntry");
+    }
+    public static function scimDirectoryStateRepository(): EntityRepository
+    {
+        return self::repository("udb.core.idp.entity.v1.ScimDirectoryState");
+    }
+    public static function lockRepository(): EntityRepository
+    {
+        return self::repository("udb.core.lock.entity.v1.Lock");
+    }
+    public static function quotaRuleRepository(): EntityRepository
+    {
+        return self::repository("udb.core.metering.entity.v1.QuotaRule");
+    }
+    public static function usageEventRepository(): EntityRepository
+    {
+        return self::repository("udb.core.metering.entity.v1.UsageEvent");
+    }
+    public static function notificationRepository(): EntityRepository
+    {
+        return self::repository("udb.core.notification.entity.v1.Notification");
+    }
+    public static function notificationDeliveryAttemptRepository(): EntityRepository
+    {
+        return self::repository("udb.core.notification.entity.v1.NotificationDeliveryAttempt");
+    }
+    public static function notificationLogRepository(): EntityRepository
+    {
+        return self::repository("udb.core.notification.entity.v1.NotificationLog");
+    }
+    public static function notificationPreferenceRepository(): EntityRepository
+    {
+        return self::repository("udb.core.notification.entity.v1.NotificationPreference");
+    }
+    public static function notificationTemplateRepository(): EntityRepository
+    {
+        return self::repository("udb.core.notification.entity.v1.NotificationTemplate");
+    }
+    public static function scheduledJobRepository(): EntityRepository
+    {
+        return self::repository("udb.core.scheduler.entity.v1.ScheduledJob");
+    }
+    public static function searchIndexRepository(): EntityRepository
+    {
+        return self::repository("udb.core.search.entity.v1.SearchIndex");
+    }
+    public static function fileRepository(): EntityRepository
+    {
+        return self::repository("udb.core.storage.entity.v1.File");
+    }
+    public static function tenantRepository(): EntityRepository
+    {
+        return self::repository("udb.core.tenant.entity.v1.Tenant");
+    }
+    public static function tenantConfigRepository(): EntityRepository
+    {
+        return self::repository("udb.core.tenant.entity.v1.TenantConfig");
+    }
+    public static function vaultDbCredentialLeaseRepository(): EntityRepository
+    {
+        return self::repository("udb.core.vault.entity.v1.VaultDbCredentialLease");
+    }
+    public static function vaultSecretRepository(): EntityRepository
+    {
+        return self::repository("udb.core.vault.entity.v1.VaultSecret");
+    }
+    public static function vaultTransitKeyRepository(): EntityRepository
+    {
+        return self::repository("udb.core.vault.entity.v1.VaultTransitKey");
+    }
+    public static function webhookDeliveryRepository(): EntityRepository
+    {
+        return self::repository("udb.core.webhook.entity.v1.WebhookDelivery");
+    }
+    public static function webhookEndpointRepository(): EntityRepository
+    {
+        return self::repository("udb.core.webhook.entity.v1.WebhookEndpoint");
+    }
+    public static function peerRepository(): EntityRepository
+    {
+        return self::repository("udb.core.webrtc.entity.v1.Peer");
+    }
+    public static function roomRepository(): EntityRepository
+    {
+        return self::repository("udb.core.webrtc.entity.v1.Room");
+    }
+    public static function trackRepository(): EntityRepository
+    {
+        return self::repository("udb.core.webrtc.entity.v1.Track");
+    }
+    public static function workflowInstanceRepository(): EntityRepository
+    {
+        return self::repository("udb.core.workflow.entity.v1.WorkflowInstance");
+    }
+
+    public static function rawDispatchRequest(
+        string $backend,
+        string $operation,
+        string $specJson,
+        string $resourceName = '',
+    ): object {
+        $fqn = '\\Udb\\Entity\\V1\\GenericDispatchRequest';
+        if (! class_exists($fqn)) {
+            throw new UdbConfigurationException(
+                'UDB GenericDispatchRequest class not found. Run buf generate before using IR builders.'
+            );
+        }
+        $request = new $fqn();
+        $request->setBackend($backend);
+        $request->setOperation($operation);
+        $request->setResourceName($resourceName);
+        $request->setSpecJson($specJson);
+        return $request;
+    }
+
     private function statusCode(mixed $status): int
     {
         return is_object($status) ? (int) ($status->code ?? -1) : (int) ($status['code'] ?? -1);
@@ -6583,7 +10704,7 @@ final class GeneratedClient
             return false;
         }
         try {
-            return (string) $request->getIdempotencyKey() !== '';
+            return trim((string) $request->getIdempotencyKey()) !== '';
         } catch (\Throwable) {
             return false;
         }
@@ -6616,7 +10737,7 @@ final class GeneratedClient
      */
     private function mapError(mixed $status, string $rpcName): UdbRpcException
     {
-        $detail = $this->decodeErrorDetail($status);
+        $detail = $this->decodeErrorDetail($status) ?? $this->synthesizeTransportErrorDetail($status);
         $exception = UdbRpcException::fromGrpcStatus($status, $rpcName);
         if ($detail !== null && property_exists($exception, 'errorDetail')) {
             // Forward-compatible: only set if the hand-written exception grows
@@ -6654,5 +10775,828 @@ final class GeneratedClient
         } catch (\Throwable) {
             return null;
         }
+    }
+
+    /**
+     * Build the same ErrorDetail shape for local transport statuses that never
+     * reached the broker and therefore have no server trailer.
+     *
+     * @return object|null  a \Udb\Entity\V1\ErrorDetail or null
+     */
+    private function synthesizeTransportErrorDetail(mixed $status): ?object
+    {
+        $code = $this->statusCode($status);
+        if (! in_array($code, [1, 4, 14], true)) { // CANCELLED, DEADLINE_EXCEEDED, UNAVAILABLE
+            return null;
+        }
+        $detailFqn = '\\Udb\\Entity\\V1\\ErrorDetail';
+        $kindFqn = '\\Udb\\Entity\\V1\\ErrorKind';
+        if (! class_exists($detailFqn) || ! class_exists($kindFqn)) {
+            return null;
+        }
+        $operation = match ($code) {
+            1 => 'cancelled',
+            4 => 'deadline_exceeded',
+            14 => 'unavailable',
+            default => 'transport',
+        };
+        try {
+            /** @var \Udb\Entity\V1\ErrorDetail $detail */
+            $detail = new $detailFqn();
+            $detail->setBackend('transport');
+            $detail->setOperation($operation);
+            $detail->setRetryable($code !== 1);
+            $detail->setRetryAfterMs(0);
+            $detail->setKind($kindFqn::ERROR_KIND_RETRYABLE);
+            return $detail;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+}
+
+final class IrJson
+{
+    private const COMPARISON_TOKENS = [
+        'eq' => 'eq',
+        'ne' => 'ne',
+        'gt' => 'gt',
+        'ge' => 'ge',
+        'lt' => 'lt',
+        'le' => 'le',
+        'like' => 'like',
+    ];
+
+    public static function logicalValue(mixed $value): mixed
+    {
+        if ($value === null) {
+            return 'Null';
+        }
+        if (is_bool($value)) {
+            return ['Bool' => $value];
+        }
+        if (is_int($value)) {
+            return ['Int' => $value];
+        }
+        if (is_float($value)) {
+            return ['Float' => $value];
+        }
+        if (is_string($value)) {
+            return ['String' => $value];
+        }
+        if ($value instanceof \DateTimeInterface) {
+            $utc = \DateTimeImmutable::createFromInterface($value)
+                ->setTimezone(new \DateTimeZone('UTC'));
+            return ['Timestamp' => $utc->format('Y-m-d\TH:i:s.u\Z')];
+        }
+        if (is_array($value)) {
+            if (array_is_list($value)) {
+                return ['Array' => array_map([self::class, 'logicalValue'], $value)];
+            }
+            return ['Json' => $value];
+        }
+        return ['Json' => $value];
+    }
+
+    public static function logicalRecord(array $row): array
+    {
+        ksort($row, SORT_STRING);
+        $out = [];
+        foreach ($row as $key => $value) {
+            $out[(string) $key] = self::logicalValue($value);
+        }
+        return $out;
+    }
+
+    public static function comparison(string $field, string $op, mixed $value): array
+    {
+        $token = self::COMPARISON_TOKENS[$op] ?? null;
+        if ($token === null) {
+            throw new \InvalidArgumentException("udb: unsupported IR operator '{$op}'");
+        }
+        return ['Comparison' => ['field' => $field, 'op' => $token, 'value' => self::logicalValue($value)]];
+    }
+
+    public static function inList(string $field, iterable $values): array
+    {
+        $encoded = [];
+        foreach ($values as $value) {
+            $encoded[] = self::logicalValue($value);
+        }
+        return ['InList' => ['field' => $field, 'values' => $encoded]];
+    }
+
+    public static function andFilter(array $predicates): array
+    {
+        return ['And' => array_values($predicates)];
+    }
+
+    public static function orFilter(array $predicates): array
+    {
+        return ['Or' => array_values($predicates)];
+    }
+
+    public static function filter(array $predicates): ?array
+    {
+        $count = count($predicates);
+        if ($count === 0) {
+            return null;
+        }
+        if ($count === 1) {
+            return $predicates[0];
+        }
+        return ['And' => array_values($predicates)];
+    }
+
+    public static function specJson(array $body): string
+    {
+        return json_encode(
+            ['ir' => $body],
+            JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+        );
+    }
+}
+
+abstract class IrPredicateBuilder
+{
+    /** @var list<array<string,mixed>> */
+    protected array $predicates = [];
+
+    public function where(string $field, string $op, mixed $value): static
+    {
+        if ($op === 'in') {
+            return $this->whereIn($field, is_iterable($value) ? $value : [$value]);
+        }
+        $this->predicates[] = IrJson::comparison($field, $op, $value);
+        return $this;
+    }
+
+    public function whereIn(string $field, iterable $values): static
+    {
+        $this->predicates[] = IrJson::inList($field, $values);
+        return $this;
+    }
+
+    public function whereFilter(array $filter): static
+    {
+        $this->predicates[] = $filter;
+        return $this;
+    }
+}
+
+final class EagerIncludeUnsupportedBackendException extends \RuntimeException
+{
+    public function __construct(public readonly string $backend, public readonly ?string $tier = null)
+    {
+        parent::__construct(
+            "udb: backend '{$backend}' is " . ($tier ?? 'unknown') . '; eager include requires a relational backend'
+        );
+    }
+}
+
+final class IrQuery extends IrPredicateBuilder
+{
+    /** @var list<string>|null */
+    private ?array $projection = null;
+
+    /** @var list<array{field:string,direction:string}> */
+    private array $sorts = [];
+
+    /** @var list<array{relation:string}> */
+    private array $includes = [];
+
+    private ?int $limit = null;
+    private ?int $offset = null;
+
+    public function __construct(private readonly string $messageType) {}
+
+    public function select(string ...$fields): self
+    {
+        $this->projection = array_values($fields);
+        return $this;
+    }
+
+    public function orderBy(string $field, string $direction = 'asc'): self
+    {
+        $this->sorts[] = ['field' => $field, 'direction' => $direction];
+        return $this;
+    }
+
+    public function include(string $relation): self
+    {
+        if ($relation === '') {
+            throw new \InvalidArgumentException('udb: include relation name is required');
+        }
+        $this->includes[] = ['relation' => $relation];
+        return $this;
+    }
+
+    public function limit(int $n): self
+    {
+        $this->limit = $n;
+        return $this;
+    }
+
+    public function offset(int $n): self
+    {
+        $this->offset = $n;
+        return $this;
+    }
+
+    public function toEnvelope(): array
+    {
+        $body = ['op' => 'read', 'message_type' => $this->messageType];
+        $filter = IrJson::filter($this->predicates);
+        if ($filter !== null) {
+            $body['filter'] = $filter;
+        }
+        if ($this->projection !== null && $this->projection !== []) {
+            $body['projection'] = ['fields' => $this->projection];
+        }
+        if ($this->sorts !== []) {
+            $body['sort'] = $this->sorts;
+        }
+        if ($this->includes !== []) {
+            $body['include'] = $this->includes;
+        }
+        if ($this->limit !== null || $this->offset !== null) {
+            $pagination = [];
+            if ($this->limit !== null) {
+                $pagination['limit'] = $this->limit;
+            }
+            if ($this->offset !== null) {
+                $pagination['offset'] = $this->offset;
+            }
+            $body['pagination'] = $pagination;
+        }
+        return ['ir' => $body];
+    }
+
+    public function toSpecJson(): string
+    {
+        return IrJson::specJson($this->toEnvelope()['ir']);
+    }
+
+    public function toRequest(string $backend = GeneratedClient::DEFAULT_IR_BACKEND): object
+    {
+        if ($this->includes !== []) {
+            GeneratedClient::requireEagerIncludeBackend($backend);
+        }
+        return GeneratedClient::rawDispatchRequest($backend, 'query', $this->toSpecJson());
+    }
+
+    public function execute(GeneratedClient $client, string $backend = GeneratedClient::DEFAULT_IR_BACKEND, ?UdbMetadata $metadata = null): object
+    {
+        return $client->genericDispatch($this->toRequest($backend), $metadata);
+    }
+}
+
+final class IrWriteQuery
+{
+    /** @var list<array<string,mixed>> */
+    private array $rows = [];
+
+    private ?array $conflict = null;
+
+    /** @var list<string> */
+    private array $returnFields = [];
+
+    public function __construct(private readonly string $messageType) {}
+
+    public function record(array $row): self
+    {
+        $this->rows[] = $row;
+        return $this;
+    }
+
+    public function records(iterable $rows): self
+    {
+        foreach ($rows as $row) {
+            $this->rows[] = (array) $row;
+        }
+        return $this;
+    }
+
+    public function merge(): self
+    {
+        $this->conflict = ['kind' => 'replace'];
+        return $this;
+    }
+
+    public function ignoreConflicts(): self
+    {
+        $this->conflict = ['kind' => 'ignore'];
+        return $this;
+    }
+
+    public function updateOnConflict(array $fields, array $conflictOn = []): self
+    {
+        $this->conflict = ['kind' => 'update', 'fields' => array_values($fields)];
+        if ($conflictOn !== []) {
+            $this->conflict['conflict_on'] = array_values($conflictOn);
+        }
+        return $this;
+    }
+
+    public function returning(string ...$fields): self
+    {
+        array_push($this->returnFields, ...$fields);
+        return $this;
+    }
+
+    public function toEnvelope(): array
+    {
+        if ($this->rows === []) {
+            throw new \LogicException('udb: write requires at least one record(...)');
+        }
+        $body = [
+            'op' => 'write',
+            'message_type' => $this->messageType,
+            'records' => array_map([IrJson::class, 'logicalRecord'], $this->rows),
+        ];
+        if ($this->conflict !== null) {
+            $body['conflict'] = $this->conflict;
+        }
+        if ($this->returnFields !== []) {
+            $body['return_fields'] = $this->returnFields;
+        }
+        return ['ir' => $body];
+    }
+
+    public function toSpecJson(): string
+    {
+        return IrJson::specJson($this->toEnvelope()['ir']);
+    }
+
+    public function toRequest(string $backend = GeneratedClient::DEFAULT_IR_BACKEND): object
+    {
+        return GeneratedClient::rawDispatchRequest($backend, 'mutate', $this->toSpecJson());
+    }
+
+    public function execute(GeneratedClient $client, string $backend = GeneratedClient::DEFAULT_IR_BACKEND, ?UdbMetadata $metadata = null): object
+    {
+        return $client->genericDispatch($this->toRequest($backend), $metadata);
+    }
+}
+
+final class IrDeleteQuery extends IrPredicateBuilder
+{
+    /** @var list<string> */
+    private array $returnFields = [];
+
+    public function __construct(private readonly string $messageType) {}
+
+    public function returning(string ...$fields): self
+    {
+        array_push($this->returnFields, ...$fields);
+        return $this;
+    }
+
+    public function toEnvelope(): array
+    {
+        $filter = IrJson::filter($this->predicates);
+        if ($filter === null) {
+            throw new \LogicException('udb: delete requires at least one where(...) predicate (no delete-everything path)');
+        }
+        $body = ['op' => 'delete', 'message_type' => $this->messageType, 'filter' => $filter];
+        if ($this->returnFields !== []) {
+            $body['return_fields'] = $this->returnFields;
+        }
+        return ['ir' => $body];
+    }
+
+    public function toSpecJson(): string
+    {
+        return IrJson::specJson($this->toEnvelope()['ir']);
+    }
+
+    public function toRequest(string $backend = GeneratedClient::DEFAULT_IR_BACKEND): object
+    {
+        return GeneratedClient::rawDispatchRequest($backend, 'mutate', $this->toSpecJson());
+    }
+
+    public function execute(GeneratedClient $client, string $backend = GeneratedClient::DEFAULT_IR_BACKEND, ?UdbMetadata $metadata = null): object
+    {
+        return $client->genericDispatch($this->toRequest($backend), $metadata);
+    }
+}
+
+final class EntityRepository
+{
+    /** @param array{table:string,primary_keys:list<string>,fields:list<string>,relations_json:string,version_field:string,tenant_field:string,project_field:string,php_type:string} $binding */
+    public function __construct(
+        private readonly string $messageType,
+        private readonly array $binding,
+    ) {
+        if (($this->binding['primary_keys'] ?? []) === []) {
+            throw new \InvalidArgumentException("udb: entity {$this->messageType} has no descriptor primary key");
+        }
+    }
+
+    public function query(): IrQuery
+    {
+        return GeneratedClient::query($this->messageType);
+    }
+
+    public function messageType(): string
+    {
+        return $this->messageType;
+    }
+
+    /** @return array{table:string,primary_keys:list<string>,fields:list<string>,relations_json:string,version_field:string,tenant_field:string,project_field:string,php_type:string} */
+    public function binding(): array
+    {
+        return $this->binding;
+    }
+
+    /** @return list<array<string,mixed>> */
+    public function relations(): array
+    {
+        $raw = $this->binding['relations_json'] ?? '[]';
+        $relations = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+        if (! is_array($relations)) {
+            throw new \LogicException("udb: invalid relation metadata for entity {$this->messageType}");
+        }
+        return array_values($relations);
+    }
+
+    /** @return array<string,mixed>|null */
+    public function relation(string $name): ?array
+    {
+        foreach ($this->relations() as $relation) {
+            if (($relation['name'] ?? null) === $name) {
+                return $relation;
+            }
+        }
+        return null;
+    }
+
+    /** @return array<string,mixed> */
+    public function requireRelation(string $name): array
+    {
+        $relation = $this->relation($name);
+        if ($relation === null) {
+            throw new \InvalidArgumentException("udb: unknown relation '{$name}' on entity {$this->messageType}");
+        }
+        $localFields = $relation['local_fields'] ?? [];
+        $targetFields = $relation['target_fields'] ?? [];
+        if ($localFields === [] || count($localFields) !== count($targetFields)) {
+            throw new \LogicException("udb: relation '{$name}' on entity {$this->messageType} has invalid field mapping");
+        }
+        if (($relation['target_message_type'] ?? '') === '') {
+            throw new \LogicException("udb: relation '{$name}' on entity {$this->messageType} has no target entity");
+        }
+        return $relation;
+    }
+
+    public function relationQuery(string $name, array $parent): IrQuery
+    {
+        $relation = $this->requireRelation($name);
+        $query = GeneratedClient::query($relation['target_message_type']);
+        foreach ($relation['local_fields'] as $idx => $localField) {
+            if (! array_key_exists($localField, $parent)) {
+                throw new \InvalidArgumentException("udb: relation '{$name}' missing parent field '{$localField}'");
+            }
+            $query->where($relation['target_fields'][$idx], 'eq', $parent[$localField]);
+        }
+        return $query;
+    }
+
+    /**
+     * @param list<array<string,mixed>> $parents
+     */
+    public function relationBatchQuery(string $name, array $parents): IrQuery
+    {
+        $relation = $this->requireRelation($name);
+        $localFields = array_values($relation['local_fields']);
+        $targetFields = array_values($relation['target_fields']);
+        if (count($localFields) !== count($targetFields)) {
+            throw new \LogicException("udb: relation '{$name}' on entity {$this->messageType} has invalid field mapping");
+        }
+        if ($parents === []) {
+            throw new \InvalidArgumentException("udb: relation '{$name}' batch query requires at least one parent");
+        }
+        if (count($localFields) === 1) {
+            $localField = (string) $localFields[0];
+            $values = [];
+            $seen = [];
+            foreach ($parents as $parent) {
+                if (! array_key_exists($localField, $parent)) {
+                    throw new \InvalidArgumentException("udb: relation '{$name}' missing parent field '{$localField}'");
+                }
+                $value = $parent[$localField];
+                $key = json_encode($value, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+                if (! array_key_exists($key, $seen)) {
+                    $seen[$key] = true;
+                    $values[] = $value;
+                }
+            }
+            return GeneratedClient::query((string) $relation['target_message_type'])
+                ->whereIn((string) $targetFields[0], $values);
+        }
+        $branches = [];
+        $seen = [];
+        foreach ($parents as $parent) {
+            $comparisons = [];
+            foreach ($localFields as $idx => $localField) {
+                $localField = (string) $localField;
+                if (! array_key_exists($localField, $parent)) {
+                    throw new \InvalidArgumentException("udb: relation '{$name}' missing parent field '{$localField}'");
+                }
+                $comparisons[] = IrJson::comparison((string) $targetFields[$idx], 'eq', $parent[$localField]);
+            }
+            $key = json_encode($comparisons, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            if (! array_key_exists($key, $seen)) {
+                $seen[$key] = true;
+                $branches[] = IrJson::andFilter($comparisons);
+            }
+        }
+        return GeneratedClient::query((string) $relation['target_message_type'])
+            ->whereFilter(IrJson::orFilter($branches));
+    }
+
+
+
+    public function find(array $key, GeneratedClient $client, string $backend = GeneratedClient::DEFAULT_IR_BACKEND, ?UdbMetadata $metadata = null): object
+    {
+        $query = $this->query()->limit(1);
+        foreach ($this->binding['primary_keys'] as $field) {
+            if (! array_key_exists($field, $key)) {
+                throw new \InvalidArgumentException("udb: missing primary key field '{$field}'");
+            }
+            $query->where($field, 'eq', $key[$field]);
+        }
+        return $query->execute($client, $backend, $metadata);
+    }
+
+    public function first(IrQuery $query, GeneratedClient $client, string $backend = GeneratedClient::DEFAULT_IR_BACKEND, ?UdbMetadata $metadata = null): object
+    {
+        return $query->limit(1)->execute($client, $backend, $metadata);
+    }
+
+    public function all(IrQuery $query, GeneratedClient $client, string $backend = GeneratedClient::DEFAULT_IR_BACKEND, ?UdbMetadata $metadata = null): object
+    {
+        return $query->execute($client, $backend, $metadata);
+    }
+
+    public function upsert(array $record, GeneratedClient $client, string $backend = GeneratedClient::DEFAULT_IR_BACKEND, ?UdbMetadata $metadata = null): object
+    {
+        $this->validateRecord($record);
+        foreach ($this->binding['primary_keys'] as $field) {
+            if (! array_key_exists($field, $record)) {
+                throw new \InvalidArgumentException("udb: missing primary key field '{$field}'");
+            }
+        }
+        $updateFields = array_values(array_diff(array_keys($record), $this->binding['primary_keys']));
+        if ($updateFields === []) {
+            throw new \InvalidArgumentException('udb: upsert requires at least one non-primary-key field');
+        }
+        return GeneratedClient::writeTo($this->messageType)
+            ->record($record)
+            ->updateOnConflict($updateFields, $this->binding['primary_keys'])
+            ->execute($client, $backend, $metadata);
+    }
+
+    public function delete(array $key, GeneratedClient $client, string $backend = GeneratedClient::DEFAULT_IR_BACKEND, ?UdbMetadata $metadata = null): object
+    {
+        $delete = GeneratedClient::deleteFrom($this->messageType);
+        foreach ($this->binding['primary_keys'] as $field) {
+            if (! array_key_exists($field, $key)) {
+                throw new \InvalidArgumentException("udb: missing primary key field '{$field}'");
+            }
+            $delete->where($field, 'eq', $key[$field]);
+        }
+        return $delete->execute($client, $backend, $metadata);
+    }
+
+    private function validateRecord(array $record): void
+    {
+        $fields = $this->binding['fields'] ?? [];
+        if ($fields === []) {
+            return;
+        }
+        $allowed = array_flip($fields);
+        foreach (array_keys($record) as $field) {
+            if (! array_key_exists($field, $allowed)) {
+                throw new \InvalidArgumentException("udb: field '{$field}' is not declared on entity {$this->messageType}");
+            }
+        }
+    }
+}
+
+final class UnitOfWorkEntry
+{
+    public function __construct(
+        public readonly EntityRepository $repository,
+        public array $record,
+        public string $snapshot,
+    ) {}
+}
+
+class UnitOfWorkTxException extends \RuntimeException
+{
+    public function __construct(string $message, public readonly ?object $status = null)
+    {
+        parent::__construct($message);
+    }
+}
+
+final class UnitOfWorkConflictException extends UnitOfWorkTxException {}
+
+final class UnitOfWorkUnsupportedBackendException extends \RuntimeException
+{
+    public function __construct(public readonly string $backend, public readonly ?string $role = null)
+    {
+        parent::__construct("udb: backend '{$backend}' is " . ($role ?? 'unknown') . '; UnitOfWork requires a canonical transactional backend');
+    }
+}
+
+final class UnitOfWork
+{
+    /** @var array<string,UnitOfWorkEntry> */
+    private array $entries = [];
+
+    public function attach(EntityRepository $repository, array $record): array
+    {
+        $binding = $repository->binding();
+        self::requireVersionForTrackedWrite($repository->messageType(), $binding, $record);
+        $this->entries[self::entityIdentity($repository->messageType(), $binding, $record)] = new UnitOfWorkEntry(
+            $repository,
+            $record,
+            self::stableRecordJson($record),
+        );
+        return $record;
+    }
+
+    public function track(EntityRepository $repository, array $record): array
+    {
+        return $this->attach($repository, $record);
+    }
+
+    public function update(EntityRepository $repository, array $record): array
+    {
+        $binding = $repository->binding();
+        self::requireVersionForTrackedWrite($repository->messageType(), $binding, $record);
+        $identity = self::entityIdentity($repository->messageType(), $binding, $record);
+        if (! isset($this->entries[$identity])) {
+            return $this->attach($repository, $record);
+        }
+        $this->entries[$identity]->record = $record;
+        return $record;
+    }
+
+    /** @return list<UnitOfWorkEntry> */
+    public function dirtyEntries(): array
+    {
+        return array_values(array_filter(
+            $this->entries,
+            static fn (UnitOfWorkEntry $entry): bool => self::stableRecordJson($entry->record) !== $entry->snapshot,
+        ));
+    }
+
+    /** @return list<object> */
+    public function txMutations(): array
+    {
+        $fqn = self::mutationClass();
+        return array_map(static function (UnitOfWorkEntry $entry) use ($fqn): object {
+            $mutation = new $fqn();
+            $mutation->setOperation('upsert');
+            $mutation->setMessageType($entry->repository->messageType());
+            $mutation->setRecordJson(self::stableRecordJson($entry->record));
+            return $mutation;
+        }, $this->dirtyEntries());
+    }
+
+    public function commitMutation(): object
+    {
+        $fqn = self::mutationClass();
+        $mutation = new $fqn();
+        $mutation->setCommit(true);
+        return $mutation;
+    }
+
+    public function rollbackMutation(): object
+    {
+        $fqn = self::mutationClass();
+        $mutation = new $fqn();
+        $mutation->setRollback(true);
+        return $mutation;
+    }
+
+    /** @return list<object> */
+    public function txCommitBatch(string $backend = GeneratedClient::DEFAULT_IR_BACKEND): array
+    {
+        $this->requireTransactionalBackend($backend);
+        return [...$this->txMutations(), $this->commitMutation()];
+    }
+
+    public function requireTransactionalBackend(string $backend = GeneratedClient::DEFAULT_IR_BACKEND): void
+    {
+        $role = GeneratedClient::backendRoles()[$backend] ?? null;
+        if ($role !== 'canonical' && $role !== 'both') {
+            throw new UnitOfWorkUnsupportedBackendException($backend, $role);
+        }
+    }
+
+    public function validateTxStatuses(iterable $statuses): void
+    {
+        foreach ($statuses as $status) {
+            $state = method_exists($status, 'getState') ? (string) $status->getState() : '';
+            $message = method_exists($status, 'getMessage') ? (string) $status->getMessage() : '';
+            if ($state !== '4' && ! str_contains(strtoupper($state), 'ERROR')) {
+                continue;
+            }
+            $message = $message !== '' ? $message : 'udb: unit-of-work transaction failed';
+            if (self::isTxConflictMessage($message)) {
+                throw new UnitOfWorkConflictException($message, $status);
+            }
+            throw new UnitOfWorkTxException($message, $status);
+        }
+    }
+
+    /** @return list<object> */
+    public function flush(
+        GeneratedClient $client,
+        string $backend = GeneratedClient::DEFAULT_IR_BACKEND,
+        ?UdbMetadata $metadata = null,
+    ): array {
+        if (! method_exists($client, 'beginTx')) {
+            throw new UdbConfigurationException('GeneratedClient::beginTx is unavailable. Run sdk generation before UnitOfWork flush.');
+        }
+        $call = $client->beginTx($metadata);
+        foreach ($this->txCommitBatch($backend) as $mutation) {
+            $call->write($mutation);
+        }
+        $call->writesDone();
+        $statuses = [];
+        while (($status = $call->read()) !== null) {
+            $statuses[] = $status;
+        }
+        $grpcStatus = method_exists($call, 'getStatus') ? $call->getStatus() : null;
+        $code = is_object($grpcStatus) ? (int) ($grpcStatus->code ?? 0) : (int) (($grpcStatus['code'] ?? 0));
+        if ($code !== 0) {
+            throw UdbRpcException::fromGrpcStatus($grpcStatus, 'BeginTx');
+        }
+        $this->validateTxStatuses($statuses);
+        $this->markClean();
+        return $statuses;
+    }
+
+    public function markClean(): void
+    {
+        foreach ($this->entries as $entry) {
+            $entry->snapshot = self::stableRecordJson($entry->record);
+        }
+    }
+
+    private static function requireVersionForTrackedWrite(string $messageType, array $binding, array $record): void
+    {
+        $versionField = $binding['version_field'] ?? '';
+        if ($versionField !== '' && ! array_key_exists($versionField, $record)) {
+            throw new \InvalidArgumentException("udb: unit-of-work record for {$messageType} missing version field '{$versionField}'");
+        }
+    }
+
+    private static function entityIdentity(string $messageType, array $binding, array $record): string
+    {
+        $scopeParts = [];
+        foreach ([$binding['tenant_field'] ?? '', $binding['project_field'] ?? ''] as $field) {
+            if ($field === '') {
+                continue;
+            }
+            if (! array_key_exists($field, $record)) {
+                throw new \InvalidArgumentException("udb: unit-of-work record for {$messageType} missing scope field '{$field}'");
+            }
+            $scopeParts[] = $field . '=' . json_encode($record[$field], JSON_THROW_ON_ERROR);
+        }
+        $parts = [];
+        foreach ($binding['primary_keys'] as $field) {
+            if (! array_key_exists($field, $record)) {
+                throw new \InvalidArgumentException("udb: unit-of-work record for {$messageType} missing primary key field '{$field}'");
+            }
+            $parts[] = json_encode($record[$field], JSON_THROW_ON_ERROR);
+        }
+        return $messageType . ':' . implode(':', $scopeParts) . ':' . implode(':', $parts);
+    }
+
+    private static function stableRecordJson(array $record): string
+    {
+        ksort($record);
+        return json_encode($record, JSON_THROW_ON_ERROR);
+    }
+
+    private static function mutationClass(): string
+    {
+        $fqn = '\\Udb\\Entity\\V1\\Mutation';
+        if (! class_exists($fqn)) {
+            throw new UdbConfigurationException('UDB Mutation class not found. Run buf generate before UnitOfWork flush.');
+        }
+        return $fqn;
+    }
+
+    private static function isTxConflictMessage(string $message): bool
+    {
+        $lower = strtolower($message);
+        return str_contains($lower, 'aborted') || str_contains($lower, 'version') || str_contains($lower, 'conflict');
     }
 }

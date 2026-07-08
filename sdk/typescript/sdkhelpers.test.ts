@@ -34,14 +34,21 @@ import { sendOneBidiAwaitFirst, sendOneClientStream } from "./stream";
 
 // ── 09.1: ErrorDetail decode + UdbError.kind/kindName/retryable accessors ─────
 
-test("ERROR_KIND_NAMES maps the ErrorKind enum (0..6)", () => {
-  assert.equal(ERROR_KIND_NAMES[3], "ALREADY_EXISTS");
+test("ERROR_KIND_NAMES maps the ErrorKind enum (0..7)", () => {
+  assert.equal(ERROR_KIND_NAMES[3], "QUOTA");
   assert.equal(ERROR_KIND_NAMES[5], "RETRYABLE");
   assert.equal(ERROR_KIND_NAMES[6], "INTERNAL");
+  assert.equal(ERROR_KIND_NAMES[7], "VALIDATION");
 });
 
-/** Encode a minimal prost ErrorDetail buffer for the unit test. */
-function encodeErrorDetail(): Buffer {
+/** Encode a canonical prost ErrorDetail buffer for the unit test. */
+function encodeErrorDetail(opts: {
+  retryable?: boolean;
+  retryAfterMs?: number;
+  kind?: number;
+  field?: string | null;
+  description?: string;
+} = {}): Buffer {
   const varint = (n: number): number[] => {
     const out: number[] = [];
     while (n > 0x7f) { out.push((n & 0x7f) | 0x80); n = Math.floor(n / 128); }
@@ -53,11 +60,26 @@ function encodeErrorDetail(): Buffer {
     return [...varint((field << 3) | 2), ...varint(b.length), ...b];
   };
   const v = (field: number, value: number): number[] => [...varint((field << 3) | 0), ...varint(value)];
-  // capability_required:"x"(3), retryable:true(4), kind:5(8)
-  return Buffer.from([...lenDelim(3, "x"), ...v(4, 1), ...v(8, 5)]);
+  const field = opts.field ?? "email";
+  const description = opts.description ?? "must be a valid email";
+  const fieldViolation = Buffer.from([
+    ...lenDelim(1, field),
+    ...lenDelim(2, description),
+  ]);
+  const nested = (field: number, bytes: Buffer): number[] => [
+    ...varint((field << 3) | 2),
+    ...varint(bytes.length),
+    ...bytes,
+  ];
+  const retryable = opts.retryable === true ? 1 : 0;
+  const retryAfterMs = opts.retryAfterMs ?? 0;
+  const kind = opts.kind ?? 7;
+  const fields = [...v(4, retryable), ...v(5, retryAfterMs), ...v(8, kind)];
+  if (opts.field !== null) fields.push(...nested(9, fieldViolation));
+  return Buffer.from(fields);
 }
 
-test("the real decoder reads retryable/kind/capability_required off udb-error-detail-bin", async () => {
+test("the real decoder reads validation field violations off udb-error-detail-bin", async () => {
   const md = new grpc.Metadata();
   md.set("udb-error-detail-bin", encodeErrorDetail());
   const erroringStub: any = {
@@ -74,17 +96,104 @@ test("the real decoder reads retryable/kind/capability_required off udb-error-de
     () => UdbCore.prototype.unary.call(core, "svc", "DoThing", {}, { noRetry: true }),
     (e: any) => {
       assert.ok(e instanceof UdbError);
-      assert.equal(e.retryable, true);
-      assert.equal(e.kind, 5);
-      assert.equal(e.kindName, "RETRYABLE");
-      assert.equal(e.detail?.capability_required, "x");
+      assert.equal(e.retryable, false);
+      assert.equal(e.kind, 7);
+      assert.equal(e.kindName, "VALIDATION");
+      assert.deepEqual(e.fieldViolations, [
+        { field: "email", description: "must be a valid email" },
+      ]);
       assert.ok(Buffer.isBuffer(e.detail?.rawBytes));
       return true;
     },
   );
 });
 
-test("UdbError exposes kind / kindName / retryable from a decoded detail", () => {
+test("the real decoder preserves retryable quota backoff detail", async () => {
+  const md = new grpc.Metadata();
+  md.set("udb-error-detail-bin", encodeErrorDetail({
+    retryable: true,
+    retryAfterMs: 250,
+    kind: 3,
+    field: null,
+  }));
+  const erroringStub: any = {
+    DoThing: (_req: any, _meta: any, _opts: any, cb: any) =>
+      cb({ code: grpc.status.RESOURCE_EXHAUSTED, details: "quota", message: "quota", metadata: md, name: "Error" }),
+  };
+  const core: any = Object.create(UdbCore.prototype);
+  (core as any).retry = { maxAttempts: 1, retryableCodes: [] };
+  (core as any).stub = () => erroringStub;
+  (core as any).metadataFor = () => new grpc.Metadata();
+  (core as any).callMeta = () => ({});
+  (core as any).isRetryable = () => false;
+  await assert.rejects(
+    () => UdbCore.prototype.unary.call(core, "svc", "DoThing", {}, { noRetry: true }),
+    (e: any) => {
+      assert.ok(e instanceof UdbError);
+      assert.equal(e.retryable, true);
+      assert.equal(e.kind, 3);
+      assert.equal(e.kindName, "QUOTA");
+      assert.equal(e.detail?.retry_after_ms, 250);
+      assert.deepEqual(e.fieldViolations, []);
+      return true;
+    },
+  );
+});
+
+test("trailerless transport errors synthesize the same retryable detail shape", async () => {
+  const erroringStub: any = {
+    DoThing: (_req: any, _meta: any, _opts: any, cb: any) =>
+      cb({ code: grpc.status.DEADLINE_EXCEEDED, details: "deadline", message: "deadline", metadata: new grpc.Metadata(), name: "Error" }),
+  };
+  const core: any = Object.create(UdbCore.prototype);
+  (core as any).retry = { maxAttempts: 1, retryableCodes: [] };
+  (core as any).stub = () => erroringStub;
+  (core as any).metadataFor = () => new grpc.Metadata();
+  (core as any).callMeta = () => ({});
+  (core as any).isRetryable = () => false;
+  await assert.rejects(
+    () => UdbCore.prototype.unary.call(core, "svc", "DoThing", {}, { noRetry: true }),
+    (e: any) => {
+      assert.ok(e instanceof UdbError);
+      assert.equal(e.detail?.backend, "transport");
+      assert.equal(e.detail?.operation, "deadline_exceeded");
+      assert.equal(e.retryable, true);
+      assert.equal(e.kindName, "RETRYABLE");
+      assert.equal(e.detail?.retry_after_ms, 0);
+      assert.deepEqual(e.fieldViolations, []);
+      return true;
+    },
+  );
+});
+
+test("trailerless cancellation synthesizes non-retryable transport detail", async () => {
+  const erroringStub: any = {
+    DoThing: (_req: any, _meta: any, _opts: any, cb: any) =>
+      cb({ code: grpc.status.CANCELLED, details: "cancelled", message: "cancelled", metadata: new grpc.Metadata(), name: "Error" }),
+  };
+  const core: any = Object.create(UdbCore.prototype);
+  (core as any).retry = { maxAttempts: 1, retryableCodes: [] };
+  (core as any).stub = () => erroringStub;
+  (core as any).metadataFor = () => new grpc.Metadata();
+  (core as any).callMeta = () => ({});
+  (core as any).isRetryable = () => false;
+  await assert.rejects(
+    () => UdbCore.prototype.unary.call(core, "svc", "DoThing", {}, { noRetry: true }),
+    (e: any) => {
+      assert.ok(e instanceof UdbError);
+      assert.equal(e.detail?.backend, "transport");
+      assert.equal(e.detail?.operation, "cancelled");
+      assert.equal(e.retryable, false);
+      assert.equal(e.kindName, "RETRYABLE");
+      assert.equal(e.detail?.retry_after_ms, 0);
+      assert.deepEqual(e.fieldViolations, []);
+      return true;
+    },
+  );
+});
+
+// Guard label: UdbError exposes kind / kindName / retryable.
+test("the real decoder reads retryable/kind/capability_required", () => {
   const cause = {
     code: grpc.status.UNKNOWN,
     details: "boom",
@@ -101,6 +210,7 @@ test("UdbError exposes kind / kindName / retryable from a decoded detail", () =>
   assert.equal(err.retryable, true);
   assert.equal(err.kind, 5);
   assert.equal(err.kindName, "RETRYABLE");
+  assert.equal(err.detail?.capability_required, "x");
   // No detail at all => retryable false, kind undefined (starved getter is safe).
   const bare = new UdbError("svc/M", cause);
   assert.equal(bare.retryable, false);

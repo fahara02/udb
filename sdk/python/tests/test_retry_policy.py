@@ -4,6 +4,7 @@ from udb_client.generated_client import (
     RPC_REPLAY_SAFE,
     RetryPolicy,
     _is_replay_safe,
+    _request_has_idempotency_key,
 )
 
 _TRANSIENT = (grpc.StatusCode.UNAVAILABLE, grpc.StatusCode.RESOURCE_EXHAUSTED)
@@ -180,6 +181,40 @@ def test_invoke_replay_safe_mutation_without_key_not_retried() -> None:
         fake = _FakeUnary(None, raise_codes=[grpc.StatusCode.UNAVAILABLE])
         client._stub.Upsert = fake
         req = _relational.UpsertRequest(message_type="Order")  # no idempotency_key
+        with pytest.raises(UdbRpcError):
+            client.upsert(req)
+        assert fake.calls == 1
+    finally:
+        client.close()
+
+
+def test_invoke_replay_safe_mutation_with_blank_key_not_retried() -> None:
+    # Whitespace-only keys are broker-keyless, so the SDK retry gate must fail
+    # closed before a transient mutation retry can duplicate the write.
+    client = _fast_client()
+    try:
+        fake = _FakeUnary(None, raise_codes=[grpc.StatusCode.UNAVAILABLE])
+        client._stub.Upsert = fake
+        req = _relational.UpsertRequest(message_type="Order", idempotency_key="   ")
+        assert not _request_has_idempotency_key(req)
+        with pytest.raises(UdbRpcError):
+            client.upsert(req)
+        assert fake.calls == 1
+    finally:
+        client.close()
+
+
+def test_invoke_replay_safe_mutation_with_context_only_key_not_retried() -> None:
+    # The broker's replay contract is the top-level request idempotency_key.
+    # RequestContext has no idempotency-key field; setting other context values
+    # must not unlock mutation auto-retry.
+    client = _fast_client()
+    try:
+        fake = _FakeUnary(None, raise_codes=[grpc.StatusCode.UNAVAILABLE])
+        client._stub.Upsert = fake
+        req = _relational.UpsertRequest(message_type="Order")
+        req.context.purpose = "ctx-only"
+        assert not _request_has_idempotency_key(req)
         with pytest.raises(UdbRpcError):
             client.upsert(req)
         assert fake.calls == 1

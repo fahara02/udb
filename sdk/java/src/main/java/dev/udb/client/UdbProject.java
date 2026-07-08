@@ -6,6 +6,10 @@ import com.udb.core.apikey.services.v1.CreateApiKeyRequest;
 import com.udb.core.apikey.services.v1.CreateApiKeyResponse;
 import com.udb.core.apikey.services.v1.RevokeApiKeyRequest;
 import com.udb.core.apikey.services.v1.RevokeApiKeyResponse;
+import com.udb.core.authn.services.v1.AuthnResponse;
+import com.udb.core.authn.services.v1.LoginRequest;
+import com.udb.core.authn.services.v1.LoginResponse;
+import com.udb.core.authn.services.v1.Principal;
 import com.udb.core.notification.services.v1.NotificationServiceGrpc;
 import com.udb.core.notification.services.v1.SendNotificationRequest;
 import com.udb.core.notification.services.v1.SendNotificationResponse;
@@ -31,7 +35,7 @@ import java.util.concurrent.TimeUnit;
  */
 public final class UdbProject implements AutoCloseable {
   private final UdbProjectConfig config;
-  private final UdbMetadata metadata;
+  private final UdbMetadataRef metadata;
 
   private final ManagedChannel dataChannel;
   private final ManagedChannel authChannel; // may be the same as dataChannel
@@ -53,8 +57,9 @@ public final class UdbProject implements AutoCloseable {
 
   private UdbProject(UdbProjectConfig config) {
     this.config = config;
-    this.metadata = config.metadata();
-    this.credentials = UdbCredentials.fromMetadata(metadata);
+    UdbMetadata initialMetadata = config.metadata();
+    this.metadata = new UdbMetadataRef(initialMetadata);
+    this.credentials = UdbCredentials.fromMetadata(initialMetadata);
 
     this.dataChannel = channel(config.target(), config.tls());
     this.authChannel =
@@ -152,7 +157,15 @@ public final class UdbProject implements AutoCloseable {
   }
 
   public UdbMetadata metadata() {
-    return metadata;
+    return metadata.current();
+  }
+
+  public UdbEntityHandle entity(String messageType, String... key) {
+    return data.entity(messageType, key);
+  }
+
+  public UdbEntityHandle table(String name, String... key) {
+    return data.table(name, key);
   }
 
   /** The shared credentials holder; mutating it hot-swaps creds on every stub. */
@@ -176,6 +189,55 @@ public final class UdbProject implements AutoCloseable {
   }
 
   // ── Convenience wrappers ───────────────────────────────────────────────────
+
+  public AuthnResponse loginAndAdoptTenant(String username, String password) {
+    return loginAndAdoptTenant(
+        LoginRequest.newBuilder()
+            .setUsername(username == null ? "" : username)
+            .setPassword(password == null ? "" : password)
+            .build());
+  }
+
+  /**
+   * Login, ALWAYS authenticate the freshly minted bearer, then adopt the
+   * canonical tenant/project from the verified principal across every facade.
+   */
+  public synchronized AuthnResponse loginAndAdoptTenant(LoginRequest request) {
+    LoginResponse login = auth.login(request);
+    String token = login.getAccessToken().isBlank() ? login.getSessionToken() : login.getAccessToken();
+    if (token.isBlank()) {
+      throw new IllegalStateException(
+          "udb: Login returned no access token (MFA required: " + login.getMfaRequired() + ")");
+    }
+
+    AuthnResponse verified = auth.authenticateBearer(token);
+    if (!verified.hasPrincipal()) {
+      throw new IllegalStateException("udb: AuthenticateBearer returned no principal");
+    }
+
+    Principal principal = verified.getPrincipal();
+    UdbMetadata current = metadata.current();
+    UdbMetadata adopted =
+        new UdbMetadata(
+            principal.getTenantId().isBlank() ? current.tenantId() : principal.getTenantId(),
+            current.purpose(),
+            current.correlationId(),
+            current.scopes(),
+            current.serviceIdentity(),
+            principal.getUserId().isBlank() ? current.userId() : principal.getUserId(),
+            principal.getProjectId().isBlank() ? current.projectId() : principal.getProjectId(),
+            current.clientCatalogVersion(),
+            token,
+            credentials.apiKey(),
+            current.consistency(),
+            current.primaryRead(),
+            current.maxReplicaLagMs(),
+            current.eventualConsistencyAllowed(),
+            current.readFenceJson());
+    metadata.set(adopted);
+    credentials.setBearerToken(token);
+    return verified;
+  }
 
   /** Send a notification to a recipient over one or more channels. */
   public SendNotificationResponse sendNotification(SendNotificationRequest request) {

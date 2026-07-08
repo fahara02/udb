@@ -127,6 +127,61 @@ The streaming helper accepts extra request fields (e.g. `chunk_size_bytes`) in
 its `opts` argument. See `examples/storage_upload_download.ts` for a full
 connect -> login -> upload -> streaming-download example.
 
+## Consistency, Idempotency Replay, And Typed Errors
+
+A mutation returns a `WriteReceipt`; a follow-up read can carry a fence built
+from it, or request an explicit consistency mode. A keyed replay-safe mutation
+the broker deduplicated reports `was_duplicate` (full contract:
+[docs/native-services.md](../../docs/native-services.md)).
+
+```ts
+// Raw MutationResponse (the table handle's upsert returns the decoded record;
+// use the generated DataBroker call when you want the response envelope).
+const resp = await udb.data.upsert({
+  context: { tenant_id: tenant, project_id: project },
+  message_type: "acme.billing.v1.Invoice",
+  record_json: Buffer.from(JSON.stringify(record)),
+  idempotency_key: "inv-1-create",
+});
+
+// Durable-idempotency replay flag (true = broker replayed a prior keyed write).
+const replayed = udb.metadata.wasDuplicate(resp);
+
+// Read-your-writes: fence the next read on the write's receipt.
+const receipt = udb.metadata.receiptFromResponse(resp); // null when absent
+const call = receipt ? udb.metadata.afterWrite(receipt) : undefined;
+const rows = await udb.data.table("invoice").select({ where, call });
+
+// Or request an explicit consistency mode for one call.
+const eventual = udb.metadata.withConsistency("eventual"); // strong | read_your_writes | bounded_staleness | replica_bounded | eventual | projection_ok | cache_ok
+```
+
+Retry contract: a replay-safe mutation is retried on transient errors **only
+when the request carries a non-empty idempotency key** — keyless mutations fail
+closed rather than risk a double apply. Typed error details decode from the
+`udb-error-detail-bin` trailer onto `UdbError.detail`
+(`kind` / `retryable` / `retryAfterMs` / `field_violations`).
+
+## Platform Services (Vault, Metering, Scheduler, …)
+
+Vault, Metering, Scheduler, Search, Webhook, Workflow, Lock, LiveQuery, Config,
+Backup, and Embedding have no workflow facade yet — call them through the typed
+generated client (native services ride the native listener; set `authTarget`
+when it differs from the data-plane target):
+
+```ts
+const enc = await udb.generated.VaultService.encrypt({
+  tenant_id: tenant,
+  key_name: "docs",
+  plaintext: "secret",
+});
+const quota = await udb.generated.MeteringService.checkQuota({ tenant_id: tenant, method: "upsert" });
+```
+
+Each service exposes both snake_case and camelCase method aliases; the per-RPC
+retry class and idempotency contract are in
+[docs/generated/udb-native-contract.json](../../docs/generated/udb-native-contract.json).
+
 ## Performance
 
 The SDK uses a **single long-lived gRPC channel** — the generated client caches one

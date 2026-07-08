@@ -68,6 +68,63 @@ final class GeneratedClient
     ];
 
     /**
+     * Proto-derived operation_kind per RPC, keyed by "Service/Method" for
+     * cross-language metadata conformance and benchmark identity joins.
+     *
+     * @var array<string, string>
+     */
+    public const OPERATION_KIND_BY_RPC = [
+        // @@UDB_RPC_BEGIN
+        "{{SERVICE_NAME}}/{{RPC_WIRE_NAME}}" => "{{RPC_OPERATION_KIND}}",
+        // @@UDB_RPC_END
+    ];
+
+    /**
+     * Descriptor public alias per RPC, keyed by "Service/Method". This is
+     * metadata for docs/benchmarks; dispatch still uses the generated stubs.
+     *
+     * @var array<string, string>
+     */
+    public const API_ALIAS = [
+        // @@UDB_RPC_BEGIN
+        "{{SERVICE_NAME}}/{{RPC_WIRE_NAME}}" => "{{RPC_ALIAS_SNAKE}}",
+        // @@UDB_RPC_END
+    ];
+
+    /**
+     * Descriptor REST operationId per RPC, keyed by "Service/Method".
+     *
+     * @var array<string, string>
+     */
+    public const OPERATION_ID = [
+        // @@UDB_RPC_BEGIN
+        "{{SERVICE_NAME}}/{{RPC_WIRE_NAME}}" => "{{REST_OPERATION_ID}}",
+        // @@UDB_RPC_END
+    ];
+
+    /**
+     * Descriptor REST HTTP method per RPC, keyed by "Service/Method".
+     *
+     * @var array<string, string>
+     */
+    public const HTTP_METHOD = [
+        // @@UDB_RPC_BEGIN
+        "{{SERVICE_NAME}}/{{RPC_WIRE_NAME}}" => "{{RPC_HTTP_METHOD}}",
+        // @@UDB_RPC_END
+    ];
+
+    /**
+     * Descriptor REST HTTP path per RPC, keyed by "Service/Method".
+     *
+     * @var array<string, string>
+     */
+    public const HTTP_PATH = [
+        // @@UDB_RPC_BEGIN
+        "{{SERVICE_NAME}}/{{RPC_WIRE_NAME}}" => "{{RPC_HTTP_PATH}}",
+        // @@UDB_RPC_END
+    ];
+
+    /**
      * Proto-derived replay-safe flag per RPC, keyed by method name (globally
      * unique): from `method_idempotency_contract.replay_safe`. A mutation is
      * eligible for auto-retry on a transient failure ONLY when it is replay-safe
@@ -80,6 +137,13 @@ final class GeneratedClient
     public const REPLAY_SAFE = [
         "Delete" => true,
         "Upsert" => true,
+    ];
+
+    /** @var array<string,array{table:string,primary_keys:list<string>,fields:list<string>,relations_json:string,version_field:string,tenant_field:string,project_field:string,php_type:string}> */
+    public const ENTITIES = [
+        // @@UDB_ENTITY_BEGIN
+        "{{ENTITY_MESSAGE_TYPE}}" => ['table' => "{{ENTITY_TABLE}}", 'primary_keys' => [{{ENTITY_PRIMARY_KEYS}}], 'fields' => [{{ENTITY_JSON_FIELDS}}], 'relations_json' => {{ENTITY_RELATIONS_JSON_STRING}}, 'version_field' => "{{ENTITY_VERSION_FIELD}}", 'tenant_field' => "{{ENTITY_TENANT_FIELD}}", 'project_field' => "{{ENTITY_PROJECT_FIELD}}", 'php_type' => "{{ENTITY_PHP_TYPE}}"],
+        // @@UDB_ENTITY_END
     ];
 
     /**
@@ -185,7 +249,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Google\Protobuf\Internal\Message  the decoded {{RPC_OUTPUT}}
      */
-    public function {{RPC_ALIAS_CAMEL}}($request, ?UdbMetadata $metadata = null)
+    public function {{PHP_RPC_METHOD_CAMEL}}($request, ?UdbMetadata $metadata = null)
     {
         return $this->invokeUnary(
             '{{RPC_WIRE_NAME}}',
@@ -209,7 +273,7 @@ final class GeneratedClient
      * @param  \Google\Protobuf\Internal\Message  $request
      * @return \Grpc\ServerStreamingCall
      */
-    public function {{RPC_ALIAS_CAMEL}}($request, ?UdbMetadata $metadata = null)
+    public function {{PHP_RPC_METHOD_CAMEL}}($request, ?UdbMetadata $metadata = null)
     {
         $stub = $this->stubFor('{{SERVICE_NAME}}', '{{SERVICE_PKG}}');
         return $stub->{{RPC_WIRE_NAME}}($request, $this->headers($metadata), $this->callOptions());
@@ -226,7 +290,7 @@ final class GeneratedClient
      *
      * @return \Grpc\ClientStreamingCall
      */
-    public function {{RPC_ALIAS_CAMEL}}(?UdbMetadata $metadata = null)
+    public function {{PHP_RPC_METHOD_CAMEL}}(?UdbMetadata $metadata = null)
     {
         $stub = $this->stubFor('{{SERVICE_NAME}}', '{{SERVICE_PKG}}');
         return $stub->{{RPC_WIRE_NAME}}($this->headers($metadata), $this->callOptions());
@@ -242,7 +306,7 @@ final class GeneratedClient
      *
      * @return \Grpc\BidiStreamingCall
      */
-    public function {{RPC_ALIAS_CAMEL}}(?UdbMetadata $metadata = null)
+    public function {{PHP_RPC_METHOD_CAMEL}}(?UdbMetadata $metadata = null)
     {
         $stub = $this->stubFor('{{SERVICE_NAME}}', '{{SERVICE_PKG}}');
         return $stub->{{RPC_WIRE_NAME}}($this->headers($metadata), $this->callOptions());
@@ -451,6 +515,104 @@ final class GeneratedClient
         return $this->lastResponseMetadata;
     }
 
+    // ── Neutral-IR typed query builder (master-plan items 2.5 / 10.1) ──────
+    //
+    // These builders emit the broker's canonical neutral-IR envelope and send it
+    // through the EXISTING generated GenericDispatch RPC. They are not a second
+    // client engine and they never set tenant/project/RequestContext on the
+    // request body; caller scope still comes from UDB metadata / verified claims.
+
+    public const DEFAULT_IR_BACKEND = 'postgres';
+
+    private const ORM_TIERS_JSON = {{ORM_TIERS_STRING}};
+
+    private const BACKEND_ROLES_JSON = {{BACKEND_ROLES_STRING}};
+
+    public static function query(string $messageType): IrQuery
+    {
+        return new IrQuery($messageType);
+    }
+
+    public static function writeTo(string $messageType): IrWriteQuery
+    {
+        return new IrWriteQuery($messageType);
+    }
+
+    public static function deleteFrom(string $messageType): IrDeleteQuery
+    {
+        return new IrDeleteQuery($messageType);
+    }
+
+    public static function repository(string $messageType): EntityRepository
+    {
+        $binding = self::ENTITIES[$messageType] ?? null;
+        if ($binding === null) {
+            throw new \InvalidArgumentException("udb: unknown entity '{$messageType}'");
+        }
+        return new EntityRepository($messageType, $binding);
+    }
+
+    public static function unitOfWork(): UnitOfWork
+    {
+        return new UnitOfWork();
+    }
+
+    /** @return array<string,string> */
+    public static function backendRoles(): array
+    {
+        $roles = json_decode(self::BACKEND_ROLES_JSON, true, 512, JSON_THROW_ON_ERROR);
+        if (! is_array($roles)) {
+            throw new UdbConfigurationException('UDB backend role map is invalid.');
+        }
+        return $roles;
+    }
+
+    /** @return array<string,string> */
+    public static function ormTiers(): array
+    {
+        $tiers = json_decode(self::ORM_TIERS_JSON, true, 512, JSON_THROW_ON_ERROR);
+        if (! is_array($tiers)) {
+            throw new UdbConfigurationException('UDB ORM tier map is invalid.');
+        }
+        return $tiers;
+    }
+
+    public static function requireEagerIncludeBackend(string $backend): void
+    {
+        $tiers = self::ormTiers();
+        $tier = $tiers[$backend] ?? null;
+        if ($tier !== 'relational') {
+            throw new EagerIncludeUnsupportedBackendException($backend, $tier);
+        }
+    }
+
+    // @@UDB_ENTITY_BEGIN
+    public static function {{ENTITY_ALIAS_CAMEL}}Repository(): EntityRepository
+    {
+        return self::repository("{{ENTITY_MESSAGE_TYPE}}");
+    }
+    // @@UDB_ENTITY_END
+
+    public static function rawDispatchRequest(
+        string $backend,
+        string $operation,
+        string $specJson,
+        string $resourceName = '',
+    ): object {
+        $fqn = '\\Udb\\Entity\\V1\\GenericDispatchRequest';
+        if (! class_exists($fqn)) {
+            throw new UdbConfigurationException(
+                'UDB GenericDispatchRequest class not found. Run buf generate before using IR builders.'
+            );
+        }
+        $request = new $fqn();
+        $request->setBackend($backend);
+        $request->setOperation($operation);
+        $request->setResourceName($resourceName);
+        $request->setSpecJson($specJson);
+        return $request;
+    }
+
     private function statusCode(mixed $status): int
     {
         return is_object($status) ? (int) ($status->code ?? -1) : (int) ($status['code'] ?? -1);
@@ -499,7 +661,7 @@ final class GeneratedClient
             return false;
         }
         try {
-            return (string) $request->getIdempotencyKey() !== '';
+            return trim((string) $request->getIdempotencyKey()) !== '';
         } catch (\Throwable) {
             return false;
         }
@@ -532,7 +694,7 @@ final class GeneratedClient
      */
     private function mapError(mixed $status, string $rpcName): UdbRpcException
     {
-        $detail = $this->decodeErrorDetail($status);
+        $detail = $this->decodeErrorDetail($status) ?? $this->synthesizeTransportErrorDetail($status);
         $exception = UdbRpcException::fromGrpcStatus($status, $rpcName);
         if ($detail !== null && property_exists($exception, 'errorDetail')) {
             // Forward-compatible: only set if the hand-written exception grows
@@ -570,5 +732,828 @@ final class GeneratedClient
         } catch (\Throwable) {
             return null;
         }
+    }
+
+    /**
+     * Build the same ErrorDetail shape for local transport statuses that never
+     * reached the broker and therefore have no server trailer.
+     *
+     * @return object|null  a \Udb\Entity\V1\ErrorDetail or null
+     */
+    private function synthesizeTransportErrorDetail(mixed $status): ?object
+    {
+        $code = $this->statusCode($status);
+        if (! in_array($code, [1, 4, 14], true)) { // CANCELLED, DEADLINE_EXCEEDED, UNAVAILABLE
+            return null;
+        }
+        $detailFqn = '\\Udb\\Entity\\V1\\ErrorDetail';
+        $kindFqn = '\\Udb\\Entity\\V1\\ErrorKind';
+        if (! class_exists($detailFqn) || ! class_exists($kindFqn)) {
+            return null;
+        }
+        $operation = match ($code) {
+            1 => 'cancelled',
+            4 => 'deadline_exceeded',
+            14 => 'unavailable',
+            default => 'transport',
+        };
+        try {
+            /** @var \Udb\Entity\V1\ErrorDetail $detail */
+            $detail = new $detailFqn();
+            $detail->setBackend('transport');
+            $detail->setOperation($operation);
+            $detail->setRetryable($code !== 1);
+            $detail->setRetryAfterMs(0);
+            $detail->setKind($kindFqn::ERROR_KIND_RETRYABLE);
+            return $detail;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+}
+
+final class IrJson
+{
+    private const COMPARISON_TOKENS = [
+        'eq' => 'eq',
+        'ne' => 'ne',
+        'gt' => 'gt',
+        'ge' => 'ge',
+        'lt' => 'lt',
+        'le' => 'le',
+        'like' => 'like',
+    ];
+
+    public static function logicalValue(mixed $value): mixed
+    {
+        if ($value === null) {
+            return 'Null';
+        }
+        if (is_bool($value)) {
+            return ['Bool' => $value];
+        }
+        if (is_int($value)) {
+            return ['Int' => $value];
+        }
+        if (is_float($value)) {
+            return ['Float' => $value];
+        }
+        if (is_string($value)) {
+            return ['String' => $value];
+        }
+        if ($value instanceof \DateTimeInterface) {
+            $utc = \DateTimeImmutable::createFromInterface($value)
+                ->setTimezone(new \DateTimeZone('UTC'));
+            return ['Timestamp' => $utc->format('Y-m-d\TH:i:s.u\Z')];
+        }
+        if (is_array($value)) {
+            if (array_is_list($value)) {
+                return ['Array' => array_map([self::class, 'logicalValue'], $value)];
+            }
+            return ['Json' => $value];
+        }
+        return ['Json' => $value];
+    }
+
+    public static function logicalRecord(array $row): array
+    {
+        ksort($row, SORT_STRING);
+        $out = [];
+        foreach ($row as $key => $value) {
+            $out[(string) $key] = self::logicalValue($value);
+        }
+        return $out;
+    }
+
+    public static function comparison(string $field, string $op, mixed $value): array
+    {
+        $token = self::COMPARISON_TOKENS[$op] ?? null;
+        if ($token === null) {
+            throw new \InvalidArgumentException("udb: unsupported IR operator '{$op}'");
+        }
+        return ['Comparison' => ['field' => $field, 'op' => $token, 'value' => self::logicalValue($value)]];
+    }
+
+    public static function inList(string $field, iterable $values): array
+    {
+        $encoded = [];
+        foreach ($values as $value) {
+            $encoded[] = self::logicalValue($value);
+        }
+        return ['InList' => ['field' => $field, 'values' => $encoded]];
+    }
+
+    public static function andFilter(array $predicates): array
+    {
+        return ['And' => array_values($predicates)];
+    }
+
+    public static function orFilter(array $predicates): array
+    {
+        return ['Or' => array_values($predicates)];
+    }
+
+    public static function filter(array $predicates): ?array
+    {
+        $count = count($predicates);
+        if ($count === 0) {
+            return null;
+        }
+        if ($count === 1) {
+            return $predicates[0];
+        }
+        return ['And' => array_values($predicates)];
+    }
+
+    public static function specJson(array $body): string
+    {
+        return json_encode(
+            ['ir' => $body],
+            JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+        );
+    }
+}
+
+abstract class IrPredicateBuilder
+{
+    /** @var list<array<string,mixed>> */
+    protected array $predicates = [];
+
+    public function where(string $field, string $op, mixed $value): static
+    {
+        if ($op === 'in') {
+            return $this->whereIn($field, is_iterable($value) ? $value : [$value]);
+        }
+        $this->predicates[] = IrJson::comparison($field, $op, $value);
+        return $this;
+    }
+
+    public function whereIn(string $field, iterable $values): static
+    {
+        $this->predicates[] = IrJson::inList($field, $values);
+        return $this;
+    }
+
+    public function whereFilter(array $filter): static
+    {
+        $this->predicates[] = $filter;
+        return $this;
+    }
+}
+
+final class EagerIncludeUnsupportedBackendException extends \RuntimeException
+{
+    public function __construct(public readonly string $backend, public readonly ?string $tier = null)
+    {
+        parent::__construct(
+            "udb: backend '{$backend}' is " . ($tier ?? 'unknown') . '; eager include requires a relational backend'
+        );
+    }
+}
+
+final class IrQuery extends IrPredicateBuilder
+{
+    /** @var list<string>|null */
+    private ?array $projection = null;
+
+    /** @var list<array{field:string,direction:string}> */
+    private array $sorts = [];
+
+    /** @var list<array{relation:string}> */
+    private array $includes = [];
+
+    private ?int $limit = null;
+    private ?int $offset = null;
+
+    public function __construct(private readonly string $messageType) {}
+
+    public function select(string ...$fields): self
+    {
+        $this->projection = array_values($fields);
+        return $this;
+    }
+
+    public function orderBy(string $field, string $direction = 'asc'): self
+    {
+        $this->sorts[] = ['field' => $field, 'direction' => $direction];
+        return $this;
+    }
+
+    public function include(string $relation): self
+    {
+        if ($relation === '') {
+            throw new \InvalidArgumentException('udb: include relation name is required');
+        }
+        $this->includes[] = ['relation' => $relation];
+        return $this;
+    }
+
+    public function limit(int $n): self
+    {
+        $this->limit = $n;
+        return $this;
+    }
+
+    public function offset(int $n): self
+    {
+        $this->offset = $n;
+        return $this;
+    }
+
+    public function toEnvelope(): array
+    {
+        $body = ['op' => 'read', 'message_type' => $this->messageType];
+        $filter = IrJson::filter($this->predicates);
+        if ($filter !== null) {
+            $body['filter'] = $filter;
+        }
+        if ($this->projection !== null && $this->projection !== []) {
+            $body['projection'] = ['fields' => $this->projection];
+        }
+        if ($this->sorts !== []) {
+            $body['sort'] = $this->sorts;
+        }
+        if ($this->includes !== []) {
+            $body['include'] = $this->includes;
+        }
+        if ($this->limit !== null || $this->offset !== null) {
+            $pagination = [];
+            if ($this->limit !== null) {
+                $pagination['limit'] = $this->limit;
+            }
+            if ($this->offset !== null) {
+                $pagination['offset'] = $this->offset;
+            }
+            $body['pagination'] = $pagination;
+        }
+        return ['ir' => $body];
+    }
+
+    public function toSpecJson(): string
+    {
+        return IrJson::specJson($this->toEnvelope()['ir']);
+    }
+
+    public function toRequest(string $backend = GeneratedClient::DEFAULT_IR_BACKEND): object
+    {
+        if ($this->includes !== []) {
+            GeneratedClient::requireEagerIncludeBackend($backend);
+        }
+        return GeneratedClient::rawDispatchRequest($backend, 'query', $this->toSpecJson());
+    }
+
+    public function execute(GeneratedClient $client, string $backend = GeneratedClient::DEFAULT_IR_BACKEND, ?UdbMetadata $metadata = null): object
+    {
+        return $client->genericDispatch($this->toRequest($backend), $metadata);
+    }
+}
+
+final class IrWriteQuery
+{
+    /** @var list<array<string,mixed>> */
+    private array $rows = [];
+
+    private ?array $conflict = null;
+
+    /** @var list<string> */
+    private array $returnFields = [];
+
+    public function __construct(private readonly string $messageType) {}
+
+    public function record(array $row): self
+    {
+        $this->rows[] = $row;
+        return $this;
+    }
+
+    public function records(iterable $rows): self
+    {
+        foreach ($rows as $row) {
+            $this->rows[] = (array) $row;
+        }
+        return $this;
+    }
+
+    public function merge(): self
+    {
+        $this->conflict = ['kind' => 'replace'];
+        return $this;
+    }
+
+    public function ignoreConflicts(): self
+    {
+        $this->conflict = ['kind' => 'ignore'];
+        return $this;
+    }
+
+    public function updateOnConflict(array $fields, array $conflictOn = []): self
+    {
+        $this->conflict = ['kind' => 'update', 'fields' => array_values($fields)];
+        if ($conflictOn !== []) {
+            $this->conflict['conflict_on'] = array_values($conflictOn);
+        }
+        return $this;
+    }
+
+    public function returning(string ...$fields): self
+    {
+        array_push($this->returnFields, ...$fields);
+        return $this;
+    }
+
+    public function toEnvelope(): array
+    {
+        if ($this->rows === []) {
+            throw new \LogicException('udb: write requires at least one record(...)');
+        }
+        $body = [
+            'op' => 'write',
+            'message_type' => $this->messageType,
+            'records' => array_map([IrJson::class, 'logicalRecord'], $this->rows),
+        ];
+        if ($this->conflict !== null) {
+            $body['conflict'] = $this->conflict;
+        }
+        if ($this->returnFields !== []) {
+            $body['return_fields'] = $this->returnFields;
+        }
+        return ['ir' => $body];
+    }
+
+    public function toSpecJson(): string
+    {
+        return IrJson::specJson($this->toEnvelope()['ir']);
+    }
+
+    public function toRequest(string $backend = GeneratedClient::DEFAULT_IR_BACKEND): object
+    {
+        return GeneratedClient::rawDispatchRequest($backend, 'mutate', $this->toSpecJson());
+    }
+
+    public function execute(GeneratedClient $client, string $backend = GeneratedClient::DEFAULT_IR_BACKEND, ?UdbMetadata $metadata = null): object
+    {
+        return $client->genericDispatch($this->toRequest($backend), $metadata);
+    }
+}
+
+final class IrDeleteQuery extends IrPredicateBuilder
+{
+    /** @var list<string> */
+    private array $returnFields = [];
+
+    public function __construct(private readonly string $messageType) {}
+
+    public function returning(string ...$fields): self
+    {
+        array_push($this->returnFields, ...$fields);
+        return $this;
+    }
+
+    public function toEnvelope(): array
+    {
+        $filter = IrJson::filter($this->predicates);
+        if ($filter === null) {
+            throw new \LogicException('udb: delete requires at least one where(...) predicate (no delete-everything path)');
+        }
+        $body = ['op' => 'delete', 'message_type' => $this->messageType, 'filter' => $filter];
+        if ($this->returnFields !== []) {
+            $body['return_fields'] = $this->returnFields;
+        }
+        return ['ir' => $body];
+    }
+
+    public function toSpecJson(): string
+    {
+        return IrJson::specJson($this->toEnvelope()['ir']);
+    }
+
+    public function toRequest(string $backend = GeneratedClient::DEFAULT_IR_BACKEND): object
+    {
+        return GeneratedClient::rawDispatchRequest($backend, 'mutate', $this->toSpecJson());
+    }
+
+    public function execute(GeneratedClient $client, string $backend = GeneratedClient::DEFAULT_IR_BACKEND, ?UdbMetadata $metadata = null): object
+    {
+        return $client->genericDispatch($this->toRequest($backend), $metadata);
+    }
+}
+
+final class EntityRepository
+{
+    /** @param array{table:string,primary_keys:list<string>,fields:list<string>,relations_json:string,version_field:string,tenant_field:string,project_field:string,php_type:string} $binding */
+    public function __construct(
+        private readonly string $messageType,
+        private readonly array $binding,
+    ) {
+        if (($this->binding['primary_keys'] ?? []) === []) {
+            throw new \InvalidArgumentException("udb: entity {$this->messageType} has no descriptor primary key");
+        }
+    }
+
+    public function query(): IrQuery
+    {
+        return GeneratedClient::query($this->messageType);
+    }
+
+    public function messageType(): string
+    {
+        return $this->messageType;
+    }
+
+    /** @return array{table:string,primary_keys:list<string>,fields:list<string>,relations_json:string,version_field:string,tenant_field:string,project_field:string,php_type:string} */
+    public function binding(): array
+    {
+        return $this->binding;
+    }
+
+    /** @return list<array<string,mixed>> */
+    public function relations(): array
+    {
+        $raw = $this->binding['relations_json'] ?? '[]';
+        $relations = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+        if (! is_array($relations)) {
+            throw new \LogicException("udb: invalid relation metadata for entity {$this->messageType}");
+        }
+        return array_values($relations);
+    }
+
+    /** @return array<string,mixed>|null */
+    public function relation(string $name): ?array
+    {
+        foreach ($this->relations() as $relation) {
+            if (($relation['name'] ?? null) === $name) {
+                return $relation;
+            }
+        }
+        return null;
+    }
+
+    /** @return array<string,mixed> */
+    public function requireRelation(string $name): array
+    {
+        $relation = $this->relation($name);
+        if ($relation === null) {
+            throw new \InvalidArgumentException("udb: unknown relation '{$name}' on entity {$this->messageType}");
+        }
+        $localFields = $relation['local_fields'] ?? [];
+        $targetFields = $relation['target_fields'] ?? [];
+        if ($localFields === [] || count($localFields) !== count($targetFields)) {
+            throw new \LogicException("udb: relation '{$name}' on entity {$this->messageType} has invalid field mapping");
+        }
+        if (($relation['target_message_type'] ?? '') === '') {
+            throw new \LogicException("udb: relation '{$name}' on entity {$this->messageType} has no target entity");
+        }
+        return $relation;
+    }
+
+    public function relationQuery(string $name, array $parent): IrQuery
+    {
+        $relation = $this->requireRelation($name);
+        $query = GeneratedClient::query($relation['target_message_type']);
+        foreach ($relation['local_fields'] as $idx => $localField) {
+            if (! array_key_exists($localField, $parent)) {
+                throw new \InvalidArgumentException("udb: relation '{$name}' missing parent field '{$localField}'");
+            }
+            $query->where($relation['target_fields'][$idx], 'eq', $parent[$localField]);
+        }
+        return $query;
+    }
+
+    /**
+     * @param list<array<string,mixed>> $parents
+     */
+    public function relationBatchQuery(string $name, array $parents): IrQuery
+    {
+        $relation = $this->requireRelation($name);
+        $localFields = array_values($relation['local_fields']);
+        $targetFields = array_values($relation['target_fields']);
+        if (count($localFields) !== count($targetFields)) {
+            throw new \LogicException("udb: relation '{$name}' on entity {$this->messageType} has invalid field mapping");
+        }
+        if ($parents === []) {
+            throw new \InvalidArgumentException("udb: relation '{$name}' batch query requires at least one parent");
+        }
+        if (count($localFields) === 1) {
+            $localField = (string) $localFields[0];
+            $values = [];
+            $seen = [];
+            foreach ($parents as $parent) {
+                if (! array_key_exists($localField, $parent)) {
+                    throw new \InvalidArgumentException("udb: relation '{$name}' missing parent field '{$localField}'");
+                }
+                $value = $parent[$localField];
+                $key = json_encode($value, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+                if (! array_key_exists($key, $seen)) {
+                    $seen[$key] = true;
+                    $values[] = $value;
+                }
+            }
+            return GeneratedClient::query((string) $relation['target_message_type'])
+                ->whereIn((string) $targetFields[0], $values);
+        }
+        $branches = [];
+        $seen = [];
+        foreach ($parents as $parent) {
+            $comparisons = [];
+            foreach ($localFields as $idx => $localField) {
+                $localField = (string) $localField;
+                if (! array_key_exists($localField, $parent)) {
+                    throw new \InvalidArgumentException("udb: relation '{$name}' missing parent field '{$localField}'");
+                }
+                $comparisons[] = IrJson::comparison((string) $targetFields[$idx], 'eq', $parent[$localField]);
+            }
+            $key = json_encode($comparisons, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            if (! array_key_exists($key, $seen)) {
+                $seen[$key] = true;
+                $branches[] = IrJson::andFilter($comparisons);
+            }
+        }
+        return GeneratedClient::query((string) $relation['target_message_type'])
+            ->whereFilter(IrJson::orFilter($branches));
+    }
+
+{{ENTITY_PHP_RELATION_ACCESSORS}}
+
+    public function find(array $key, GeneratedClient $client, string $backend = GeneratedClient::DEFAULT_IR_BACKEND, ?UdbMetadata $metadata = null): object
+    {
+        $query = $this->query()->limit(1);
+        foreach ($this->binding['primary_keys'] as $field) {
+            if (! array_key_exists($field, $key)) {
+                throw new \InvalidArgumentException("udb: missing primary key field '{$field}'");
+            }
+            $query->where($field, 'eq', $key[$field]);
+        }
+        return $query->execute($client, $backend, $metadata);
+    }
+
+    public function first(IrQuery $query, GeneratedClient $client, string $backend = GeneratedClient::DEFAULT_IR_BACKEND, ?UdbMetadata $metadata = null): object
+    {
+        return $query->limit(1)->execute($client, $backend, $metadata);
+    }
+
+    public function all(IrQuery $query, GeneratedClient $client, string $backend = GeneratedClient::DEFAULT_IR_BACKEND, ?UdbMetadata $metadata = null): object
+    {
+        return $query->execute($client, $backend, $metadata);
+    }
+
+    public function upsert(array $record, GeneratedClient $client, string $backend = GeneratedClient::DEFAULT_IR_BACKEND, ?UdbMetadata $metadata = null): object
+    {
+        $this->validateRecord($record);
+        foreach ($this->binding['primary_keys'] as $field) {
+            if (! array_key_exists($field, $record)) {
+                throw new \InvalidArgumentException("udb: missing primary key field '{$field}'");
+            }
+        }
+        $updateFields = array_values(array_diff(array_keys($record), $this->binding['primary_keys']));
+        if ($updateFields === []) {
+            throw new \InvalidArgumentException('udb: upsert requires at least one non-primary-key field');
+        }
+        return GeneratedClient::writeTo($this->messageType)
+            ->record($record)
+            ->updateOnConflict($updateFields, $this->binding['primary_keys'])
+            ->execute($client, $backend, $metadata);
+    }
+
+    public function delete(array $key, GeneratedClient $client, string $backend = GeneratedClient::DEFAULT_IR_BACKEND, ?UdbMetadata $metadata = null): object
+    {
+        $delete = GeneratedClient::deleteFrom($this->messageType);
+        foreach ($this->binding['primary_keys'] as $field) {
+            if (! array_key_exists($field, $key)) {
+                throw new \InvalidArgumentException("udb: missing primary key field '{$field}'");
+            }
+            $delete->where($field, 'eq', $key[$field]);
+        }
+        return $delete->execute($client, $backend, $metadata);
+    }
+
+    private function validateRecord(array $record): void
+    {
+        $fields = $this->binding['fields'] ?? [];
+        if ($fields === []) {
+            return;
+        }
+        $allowed = array_flip($fields);
+        foreach (array_keys($record) as $field) {
+            if (! array_key_exists($field, $allowed)) {
+                throw new \InvalidArgumentException("udb: field '{$field}' is not declared on entity {$this->messageType}");
+            }
+        }
+    }
+}
+
+final class UnitOfWorkEntry
+{
+    public function __construct(
+        public readonly EntityRepository $repository,
+        public array $record,
+        public string $snapshot,
+    ) {}
+}
+
+class UnitOfWorkTxException extends \RuntimeException
+{
+    public function __construct(string $message, public readonly ?object $status = null)
+    {
+        parent::__construct($message);
+    }
+}
+
+final class UnitOfWorkConflictException extends UnitOfWorkTxException {}
+
+final class UnitOfWorkUnsupportedBackendException extends \RuntimeException
+{
+    public function __construct(public readonly string $backend, public readonly ?string $role = null)
+    {
+        parent::__construct("udb: backend '{$backend}' is " . ($role ?? 'unknown') . '; UnitOfWork requires a canonical transactional backend');
+    }
+}
+
+final class UnitOfWork
+{
+    /** @var array<string,UnitOfWorkEntry> */
+    private array $entries = [];
+
+    public function attach(EntityRepository $repository, array $record): array
+    {
+        $binding = $repository->binding();
+        self::requireVersionForTrackedWrite($repository->messageType(), $binding, $record);
+        $this->entries[self::entityIdentity($repository->messageType(), $binding, $record)] = new UnitOfWorkEntry(
+            $repository,
+            $record,
+            self::stableRecordJson($record),
+        );
+        return $record;
+    }
+
+    public function track(EntityRepository $repository, array $record): array
+    {
+        return $this->attach($repository, $record);
+    }
+
+    public function update(EntityRepository $repository, array $record): array
+    {
+        $binding = $repository->binding();
+        self::requireVersionForTrackedWrite($repository->messageType(), $binding, $record);
+        $identity = self::entityIdentity($repository->messageType(), $binding, $record);
+        if (! isset($this->entries[$identity])) {
+            return $this->attach($repository, $record);
+        }
+        $this->entries[$identity]->record = $record;
+        return $record;
+    }
+
+    /** @return list<UnitOfWorkEntry> */
+    public function dirtyEntries(): array
+    {
+        return array_values(array_filter(
+            $this->entries,
+            static fn (UnitOfWorkEntry $entry): bool => self::stableRecordJson($entry->record) !== $entry->snapshot,
+        ));
+    }
+
+    /** @return list<object> */
+    public function txMutations(): array
+    {
+        $fqn = self::mutationClass();
+        return array_map(static function (UnitOfWorkEntry $entry) use ($fqn): object {
+            $mutation = new $fqn();
+            $mutation->setOperation('upsert');
+            $mutation->setMessageType($entry->repository->messageType());
+            $mutation->setRecordJson(self::stableRecordJson($entry->record));
+            return $mutation;
+        }, $this->dirtyEntries());
+    }
+
+    public function commitMutation(): object
+    {
+        $fqn = self::mutationClass();
+        $mutation = new $fqn();
+        $mutation->setCommit(true);
+        return $mutation;
+    }
+
+    public function rollbackMutation(): object
+    {
+        $fqn = self::mutationClass();
+        $mutation = new $fqn();
+        $mutation->setRollback(true);
+        return $mutation;
+    }
+
+    /** @return list<object> */
+    public function txCommitBatch(string $backend = GeneratedClient::DEFAULT_IR_BACKEND): array
+    {
+        $this->requireTransactionalBackend($backend);
+        return [...$this->txMutations(), $this->commitMutation()];
+    }
+
+    public function requireTransactionalBackend(string $backend = GeneratedClient::DEFAULT_IR_BACKEND): void
+    {
+        $role = GeneratedClient::backendRoles()[$backend] ?? null;
+        if ($role !== 'canonical' && $role !== 'both') {
+            throw new UnitOfWorkUnsupportedBackendException($backend, $role);
+        }
+    }
+
+    public function validateTxStatuses(iterable $statuses): void
+    {
+        foreach ($statuses as $status) {
+            $state = method_exists($status, 'getState') ? (string) $status->getState() : '';
+            $message = method_exists($status, 'getMessage') ? (string) $status->getMessage() : '';
+            if ($state !== '4' && ! str_contains(strtoupper($state), 'ERROR')) {
+                continue;
+            }
+            $message = $message !== '' ? $message : 'udb: unit-of-work transaction failed';
+            if (self::isTxConflictMessage($message)) {
+                throw new UnitOfWorkConflictException($message, $status);
+            }
+            throw new UnitOfWorkTxException($message, $status);
+        }
+    }
+
+    /** @return list<object> */
+    public function flush(
+        GeneratedClient $client,
+        string $backend = GeneratedClient::DEFAULT_IR_BACKEND,
+        ?UdbMetadata $metadata = null,
+    ): array {
+        if (! method_exists($client, 'beginTx')) {
+            throw new UdbConfigurationException('GeneratedClient::beginTx is unavailable. Run sdk generation before UnitOfWork flush.');
+        }
+        $call = $client->beginTx($metadata);
+        foreach ($this->txCommitBatch($backend) as $mutation) {
+            $call->write($mutation);
+        }
+        $call->writesDone();
+        $statuses = [];
+        while (($status = $call->read()) !== null) {
+            $statuses[] = $status;
+        }
+        $grpcStatus = method_exists($call, 'getStatus') ? $call->getStatus() : null;
+        $code = is_object($grpcStatus) ? (int) ($grpcStatus->code ?? 0) : (int) (($grpcStatus['code'] ?? 0));
+        if ($code !== 0) {
+            throw UdbRpcException::fromGrpcStatus($grpcStatus, 'BeginTx');
+        }
+        $this->validateTxStatuses($statuses);
+        $this->markClean();
+        return $statuses;
+    }
+
+    public function markClean(): void
+    {
+        foreach ($this->entries as $entry) {
+            $entry->snapshot = self::stableRecordJson($entry->record);
+        }
+    }
+
+    private static function requireVersionForTrackedWrite(string $messageType, array $binding, array $record): void
+    {
+        $versionField = $binding['version_field'] ?? '';
+        if ($versionField !== '' && ! array_key_exists($versionField, $record)) {
+            throw new \InvalidArgumentException("udb: unit-of-work record for {$messageType} missing version field '{$versionField}'");
+        }
+    }
+
+    private static function entityIdentity(string $messageType, array $binding, array $record): string
+    {
+        $scopeParts = [];
+        foreach ([$binding['tenant_field'] ?? '', $binding['project_field'] ?? ''] as $field) {
+            if ($field === '') {
+                continue;
+            }
+            if (! array_key_exists($field, $record)) {
+                throw new \InvalidArgumentException("udb: unit-of-work record for {$messageType} missing scope field '{$field}'");
+            }
+            $scopeParts[] = $field . '=' . json_encode($record[$field], JSON_THROW_ON_ERROR);
+        }
+        $parts = [];
+        foreach ($binding['primary_keys'] as $field) {
+            if (! array_key_exists($field, $record)) {
+                throw new \InvalidArgumentException("udb: unit-of-work record for {$messageType} missing primary key field '{$field}'");
+            }
+            $parts[] = json_encode($record[$field], JSON_THROW_ON_ERROR);
+        }
+        return $messageType . ':' . implode(':', $scopeParts) . ':' . implode(':', $parts);
+    }
+
+    private static function stableRecordJson(array $record): string
+    {
+        ksort($record);
+        return json_encode($record, JSON_THROW_ON_ERROR);
+    }
+
+    private static function mutationClass(): string
+    {
+        $fqn = '\\Udb\\Entity\\V1\\Mutation';
+        if (! class_exists($fqn)) {
+            throw new UdbConfigurationException('UDB Mutation class not found. Run buf generate before UnitOfWork flush.');
+        }
+        return $fqn;
+    }
+
+    private static function isTxConflictMessage(string $message): bool
+    {
+        $lower = strtolower($message);
+        return str_contains($lower, 'aborted') || str_contains($lower, 'version') || str_contains($lower, 'conflict');
     }
 }

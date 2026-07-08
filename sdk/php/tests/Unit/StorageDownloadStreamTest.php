@@ -8,7 +8,7 @@ use Fahara02\UdbLaravel\UdbProject;
 /*
  * RB-PHP: StorageService streaming-download fallback (DownloadFile).
  *
- * UDB surface 264 -> 265 added the server-streaming StorageService.DownloadFile
+ * The current UDB SDK surface includes the server-streaming StorageService.DownloadFile
  * RPC. StorageService::downloadFile() keeps PREFERRING the presigned
  * GetDownloadUrl URL (unchanged); the new downloadFileBytes() is the STREAMING
  * fallback that pulls the raw bytes through the broker and reassembles the

@@ -5,5 +5,5 @@
     "rootDir": ".",
     "noEmit": false
   },
-  "include": ["index.ts", "client.ts", "auth.ts", "negotiation.ts", "generatedClient.ts", "messages.ts", "consistency.ts", "stream.ts", "entity.ts", "project.ts", "protoRoot.ts", "adapters/**/*.ts", "negotiation.test.ts", "outbound.test.ts", "facade.test.ts", "sdkhelpers.test.ts", "refresh.test.ts", "retry.test.ts", "live-auth.test.ts"]
+  "include": ["index.ts", "client.ts", "auth.ts", "negotiation.ts", "generatedClient.ts", "messages.ts", "consistency.ts", "stream.ts", "entity.ts", "project.ts", "protoRoot.ts", "adapters/**/*.ts", "negotiation.test.ts", "outbound.test.ts", "facade.test.ts", "sdkhelpers.test.ts", "refresh.test.ts", "retry.test.ts", "live-auth.test.ts", "live-orm.test.ts"]
 }

@@ -29,8 +29,9 @@ lives in the **new** `dev.udb.client.generated` package:
 
 - **`GeneratedClientSupport.java`** (verbatim) — the robustness core:
   - `CallTuning` (deadline, max attempts, backoff multiplier/ceiling),
-  - `UdbRpcException` carrying the gRPC `Status` plus the decoded
-    `udb-error-detail-bin` binary trailer bytes,
+  - `UdbRpcException` carrying the gRPC `Status`, raw
+    `udb-error-detail-bin` bytes, decoded `ErrorDetail`, and retry/kind
+    convenience accessors,
   - `unary(...)` with retry + exponential backoff + **full jitter** on
     `UNAVAILABLE` / `RESOURCE_EXHAUSTED`, plus `DEADLINE_EXCEEDED` only for
     read-only RPCs,

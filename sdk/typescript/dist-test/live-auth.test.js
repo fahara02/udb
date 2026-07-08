@@ -64,23 +64,25 @@ function memoryStore(initial = null) {
         current: () => token,
     };
 }
+// The native-service API surface the live runner drives on the AUTH route is
+// DERIVED from the generated RPC catalog (RPC_OPERATION_KIND), never hand-listed:
+// so every service the generator emits — including the newer Vault / Metering /
+// Scheduler / Search / Webhook / Workflow / Lock / LiveQuery / Config / Backup /
+// Embedding / Cache services — is iterated, and the full-surface coverage gates
+// (expectedRpcCount / expectedPerfCount = the whole RPC_OPERATION_KIND count) can
+// pass. DataBroker is excluded because it is driven on the DATA route (`target`).
+// The short name (last dotted segment of the service path) is exactly the property
+// name the generated client exposes each service under (e.g. `LiveQueryService`).
+function serviceShortNameOf(fullPath) {
+    const slash = fullPath.lastIndexOf("/");
+    const servicePath = fullPath.slice(1, slash);
+    return servicePath.slice(servicePath.lastIndexOf(".") + 1);
+}
 const NATIVE_SERVICE_APIS = [
-    "AnalyticsService",
-    "ApiKeyService",
-    "AssetService",
-    "AuthnService",
-    "AuthzService",
-    "ControlPlaneService",
-    "IdentityProviderService",
-    "NotificationService",
-    "StorageService",
-    "TenantService",
-    "PeerService",
-    "RoomService",
-    "SignalingService",
-    "TrackService",
-    "TurnService",
-];
+    ...new Set(Object.keys(generatedClient_1.RPC_OPERATION_KIND)
+        .map(serviceShortNameOf)
+        .filter((service) => service !== "DataBroker")),
+].sort();
 // The real CatalogManifest bytes captured by the seed (get_catalog_manifest), used by
 // the stage_catalog/validate_catalog bodies — an empty {} is rejected as invalid.
 let seedCatalogManifest;
@@ -106,6 +108,9 @@ const NON_UNARY_METHODS = new Set([
     "begin_tx",
     "vector_batch_upsert",
     "download_file",
+    // LiveQueryService.Subscribe is server-streaming (counted in STREAMING_PROBED,
+    // not the unary surface), so it must be excluded from the unary probe/measure.
+    "subscribe",
 ]);
 const FATAL_CONNECTIVITY_CODES = new Set([
     grpc.status.CANCELLED,
@@ -274,26 +279,29 @@ function snakeToPascal(s) {
         return acronymSafe[s];
     return s.split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join("");
 }
+function snakeToCamel(s) {
+    const pascal = snakeToPascal(s);
+    return pascal.charAt(0).toLowerCase() + pascal.slice(1);
+}
 function operationKindOf(serviceFull, methodSnake) {
-    return generatedClient_1.RPC_OPERATION_KIND[`/${serviceFull}/${snakeToPascal(methodSnake)}`];
+    return generatedClient_1.RPC_OPERATION_KIND[rpcPathOf(serviceFull, methodSnake)];
+}
+function rpcPathOf(serviceFull, methodSnake) {
+    return `/${serviceFull}/${snakeToPascal(methodSnake)}`;
+}
+function apiAliasOf(serviceFull, methodSnake) {
+    return generatedClient_1.RPC_API_ALIAS[rpcPathOf(serviceFull, methodSnake)] || methodSnake;
+}
+function operationIdOf(serviceFull, methodSnake) {
+    return generatedClient_1.RPC_OPERATION_ID[rpcPathOf(serviceFull, methodSnake)] || snakeToCamel(methodSnake);
 }
 // ── bench-body manifest consumer (chapter 11.1.3 / 11.1.5.2) ──────────────────
 // docs/bench-bodies/*.md is the cross-SDK SINGLE SOURCE OF TRUTH for the per-RPC
 // valid request body (Go/Python/PHP/TS each load it). Each `| done | RPC | … |`
 // row's col2 is the RPC name (bare PascalCase like `Select`, or `Service.Method`
-// like `PeerService.JoinRoom`) and col5 is the free-form body cell.
-//
-// HONEST RESIDUAL (11.1.3.2/.3): col5 is free-form markdown prose
-// (e.g. `` `username`=`<seed:username>`, `password`="X" ``), NOT clean JSON. The
-// 12 typed `*Body` switches below encode broker-required nested shapes a generic
-// markdown→object hydrator cannot faithfully reproduce (nested RequestContext /
-// TenantContext, GovernanceActor `actor{scopes}`, exact non-`*_UNSPECIFIED` enum
-// NAMEs, bytes-vs-Struct field choices). So we DO NOT delete the switches and we
-// DO NOT hand-parse col5 into request objects. Instead the manifest is the
-// ASSERTED CONTRACT: `benchManifestCoversSurface` (a `node --test` test) fails if
-// the manifest row count != 265 OR if any RPC on the generated surface
-// (RPC_OPERATION_KIND, exactly 265 paths) lacks a manifest row — so the typed
-// switches can never silently drift away from the documented contract.
+// like `PeerService.JoinRoom`) and col5 is the strict JSON body cell. The TS
+// bench harness hydrates every measured request from this manifest; there is no
+// retained typed `*Body` switch fallback.
 function benchBodiesDir() {
     const candidates = [
         path.resolve(__dirname, "../../../docs/bench-bodies"), // dev: dist-test/ -> repo/docs
@@ -332,23 +340,48 @@ function benchBodiesJSONPath() {
     }
     return candidates[0];
 }
-// Map of normalized RPC short name (PascalCase, service prefix stripped, e.g.
-// `JoinSession`) → body cell, read from the generated JSON manifest. Throws if the
-// total row count != 265 (11.1.5.2).
+function duplicateRpcNames() {
+    const counts = new Map();
+    for (const fullPath of Object.keys(generatedClient_1.RPC_OPERATION_KIND)) {
+        const method = fullPath.slice(fullPath.lastIndexOf("/") + 1);
+        counts.set(method, (counts.get(method) ?? 0) + 1);
+    }
+    return new Set([...counts].filter(([, count]) => count > 1).map(([name]) => name));
+}
+function rpcBenchKey(fullPath) {
+    const slash = fullPath.lastIndexOf("/");
+    const servicePath = fullPath.slice(1, slash);
+    const service = servicePath.slice(servicePath.lastIndexOf(".") + 1);
+    const method = fullPath.slice(slash + 1);
+    return duplicateRpcNames().has(method) ? `${service}.${method}` : method;
+}
+function rpcServiceKey(fullPath) {
+    const slash = fullPath.lastIndexOf("/");
+    const servicePath = fullPath.slice(1, slash);
+    const service = servicePath.slice(servicePath.lastIndexOf(".") + 1);
+    const method = fullPath.slice(slash + 1);
+    return `${service}.${method}`;
+}
+function manifestRpcKey(rpc) {
+    return rpc;
+}
+// Map of RPC manifest key → body cell, read from the generated JSON manifest.
+// Unique RPC names use the bare method name; duplicated names use Service.Method.
 function loadBenchBodyRows() {
     const entries = JSON.parse((0, node_fs_1.readFileSync)(benchBodiesJSONPath(), "utf8"));
     const rows = new Map();
     for (const e of entries) {
         if (!e.rpc)
             continue;
-        const short = e.rpc.includes(".") ? e.rpc.slice(e.rpc.lastIndexOf(".") + 1) : e.rpc;
-        if (rows.has(short)) {
-            throw new Error(`bench-body manifest has a duplicate RPC short name "${short}"`);
+        const key = manifestRpcKey(e.rpc);
+        if (rows.has(key)) {
+            throw new Error(`bench-body manifest has a duplicate RPC key "${key}"`);
         }
-        rows.set(short, e.body ?? "");
+        rows.set(key, e.body ?? "");
     }
-    if (rows.size !== 265) {
-        throw new Error(`bench-body manifest has ${rows.size} RPC rows in docs/generated/bench-bodies.json, want exactly 265 (11.1.5.2)`);
+    const expected = Object.keys(generatedClient_1.RPC_OPERATION_KIND).length;
+    if (rows.size !== expected) {
+        throw new Error(`bench-body manifest has ${rows.size} RPC rows in docs/generated/bench-bodies.json, want current generated RPC count ${expected}`);
     }
     return rows;
 }
@@ -370,21 +403,22 @@ function parseBenchBodyMarkdownRows() {
             const rpc = cells[2];
             if (!rpc)
                 continue;
-            const short = rpc.includes(".") ? rpc.slice(rpc.lastIndexOf(".") + 1) : rpc;
             total += 1;
-            rows.set(short, cells[5] ?? "");
+            rows.set(manifestRpcKey(rpc), cells[5] ?? "");
         }
     }
-    if (total !== 265) {
-        throw new Error(`bench-body markdown has ${total} RPC rows, want exactly 265`);
+    const expected = Object.keys(generatedClient_1.RPC_OPERATION_KIND).length;
+    if (total !== expected) {
+        throw new Error(`bench-body markdown has ${total} RPC rows, want current generated RPC count ${expected}`);
     }
     return rows;
 }
 (0, node_test_1.test)("bench-bodies.json matches a fresh markdown parse (R6.1 drift gate)", () => {
     const fromJSON = loadBenchBodyRows();
     const fromMD = parseBenchBodyMarkdownRows();
-    node_assert_1.strict.equal(fromJSON.size, 265, `JSON manifest has ${fromJSON.size} rows, want 265`);
-    node_assert_1.strict.equal(fromMD.size, 265, `markdown manifest has ${fromMD.size} rows, want 265`);
+    const expected = Object.keys(generatedClient_1.RPC_OPERATION_KIND).length;
+    node_assert_1.strict.equal(fromJSON.size, expected, `JSON manifest has ${fromJSON.size} rows, want ${expected}`);
+    node_assert_1.strict.equal(fromMD.size, expected, `markdown manifest has ${fromMD.size} rows, want ${expected}`);
     const diffs = [];
     for (const [name, body] of fromMD) {
         if (!fromJSON.has(name))
@@ -398,25 +432,1196 @@ function parseBenchBodyMarkdownRows() {
     }
     node_assert_1.strict.equal(diffs.length, 0, `bench-bodies.json drifted from markdown (run \`node scripts/gen-bench-bodies-json.mjs\`):\n${diffs.sort().join("\n")}`);
 });
-(0, node_test_1.test)("bench-body manifest is the asserted 265-RPC contract for the typed perf bodies", () => {
-    // 11.1.5.2: row count must be exactly 265 (loadBenchBodyRows throws otherwise).
+(0, node_test_1.test)("bench-body manifest matches the generated RPC contract", () => {
     const rows = loadBenchBodyRows();
-    node_assert_1.strict.equal(rows.size, 265, `manifest has ${rows.size} unique RPC rows, want 265`);
-    // 11.1.3.x residual: every RPC the perf harness drives (the generated surface,
-    // realized by the typed *Body switches) MUST have a manifest row — the manifest
-    // is the contract the switches cannot drift away from.
+    const expected = Object.keys(generatedClient_1.RPC_OPERATION_KIND).length;
+    node_assert_1.strict.equal(rows.size, expected, `manifest has ${rows.size} unique RPC rows, want ${expected}`);
+    // Every RPC the perf harness drives MUST have a manifest row — the manifest is
+    // the only request-body source.
     const missing = [];
     for (const fullPath of Object.keys(generatedClient_1.RPC_OPERATION_KIND)) {
-        const method = fullPath.slice(fullPath.lastIndexOf("/") + 1);
-        if (!rows.has(method))
+        const method = rpcBenchKey(fullPath);
+        if (!rows.has(method) && !rows.has(rpcServiceKey(fullPath)))
             missing.push(fullPath);
     }
     node_assert_1.strict.equal(missing.length, 0, `RPC(s) on the generated surface have no bench-body manifest row: ${missing.join(", ")}`);
     // The bijection also holds the other way: a manifest row with no generated RPC
     // is stale contract drift.
-    const surfaceShort = new Set(Object.keys(generatedClient_1.RPC_OPERATION_KIND).map((p) => p.slice(p.lastIndexOf("/") + 1)));
+    const surfaceShort = new Set(Object.keys(generatedClient_1.RPC_OPERATION_KIND).flatMap((p) => [rpcBenchKey(p), rpcServiceKey(p)]));
     const orphan = [...rows.keys()].filter((m) => !surfaceShort.has(m));
     node_assert_1.strict.equal(orphan.length, 0, `bench-body manifest row(s) have no generated RPC (stale contract): ${orphan.join(", ")}`);
+});
+function manifestBodyFor(serviceName, methodName) {
+    const rows = loadBenchBodyRows();
+    const method = snakeToPascal(methodName);
+    const candidates = [`${serviceName}.${method}`, method];
+    for (const key of candidates) {
+        const body = rows.get(key);
+        if (body !== undefined)
+            return body;
+    }
+    return undefined;
+}
+function strictManifestJSONCell(body) {
+    const trimmed = body.trim();
+    const unwrapped = trimmed.startsWith("`") && trimmed.endsWith("`") ? trimmed.slice(1, -1).trim() : trimmed;
+    if (!unwrapped.startsWith("{") || !unwrapped.endsWith("}"))
+        return undefined;
+    return unwrapped;
+}
+function resolveManifestSeeds(body, fixtures) {
+    return body.replace(/<seed:([^>]+)>/g, (_match, rawKey) => {
+        const key = String(rawKey).trim().toLowerCase();
+        const value = fixtures?.lookup(key);
+        if (!value)
+            throw new Error(`missing bench manifest seed ${key}`);
+        return value;
+    });
+}
+function manifestJSONBody(serviceName, methodName, fixtures) {
+    const cell = manifestBodyFor(serviceName, methodName);
+    if (!cell)
+        return undefined;
+    const jsonCell = strictManifestJSONCell(cell);
+    if (!jsonCell)
+        return undefined;
+    try {
+        const resolved = resolveManifestSeeds(jsonCell, fixtures);
+        if (!resolved)
+            return undefined;
+        return JSON.parse(resolved);
+    }
+    catch {
+        return undefined;
+    }
+}
+function fullSurfaceManifestFixtures() {
+    const fixtures = new PerfFixtures();
+    for (const [key, value] of Object.entries({
+        tenant_id: "tenant-1", tenant: "tenant-1", project: "project-1", project_id: "project-1",
+        tenant_code: "tenant-code-1", purge_tenant_id: "tenant-purge-1",
+        message_type: LIVE_MESSAGE_TYPE, record_id: "record-1", bucket: "bucket-1", object_key: "object-1",
+        document_id: "document-1", mongo_collection: "collection_1", node_id: "node-1",
+        user_id: "user-1", subject: "user:user-1", session_id: "session-1", token: "token-1",
+        refresh_token: "refresh-1", csrf_token: "csrf-1", code: "123456", role_id: "role-1",
+        role: "reader", role_code: "reader", user_role_id: "user-role-1", policy_id: "1",
+        policy_draft_id: "draft-1", relation: "member", object: "group:bench", resource: "invoice",
+        action: "data.select", key_id: "key-1", plain_key: "udbk_key", stage_name: "stage-1",
+        event_type: "event-1", log_id: "log-1", file_id: "file-1", definition_id: "definition-1",
+        asset_id: "asset-1", instance_id: "instance-1", room_id: "room-1", peer_id: "peer-1",
+        track_id: "track-1", provider_id: "provider-1", migration_id: "migration-1", saga_id: "saga-1",
+        apply_run_id: "apply-run-1", approval_token: "approval-token-1", approve_run_id: "approve-run-1",
+        auth_challenge_id: "auth-challenge-1", backup_id: "backup-1", canary_id: "canary-1",
+        cancel_workflow_id: "cancel-workflow-1", catalog_manifest_b64: "e30=", challenge_id: "challenge-1",
+        close_room_id: "close-room-1", delete_endpoint_id: "delete-endpoint-1", delete_file_id: "delete-file-1",
+        device_id: "device-1", dismiss_dlq_id: "dismiss-dlq-1", dlq_id: "dlq-1",
+        ds_policy_id: "2", egress_id: "egress-1", endpoint_id: "endpoint-1", external_identity_id: "external-1",
+        fencing_token: "1", finalize_file_id: "finalize-file-1", gov_exp: "1900000000", job_id: "job-1",
+        join_session_room_id: "join-room-1", leave_peer_id: "leave-peer-1", mark_saga_id: "mark-saga-1",
+        otp_code: "123456", otp_id: "otp-1", owner_id: "owner-1", quarantine_dlq_id: "quarantine-dlq-1",
+        refresh_session_id: "refresh-session-1", reg_challenge_id: "reg-challenge-1", replay_dlq_id: "replay-dlq-1",
+        reset_otp_code: "654321", reset_otp_id: "reset-otp-1", resource_name: "resource-1",
+        restore_tenant_id: "restore-tenant-1", retry_saga_id: "retry-saga-1", revoke_key_id: "revoke-key-1",
+        saml_provider_id: "saml-provider-1", scim_group_id: "sdk-perf-group", scim_user_id: "scim-user-1",
+        signal_peer_id: "signal-peer-1", step_id: "step-1", topic_pattern: "topic.*", ts_table: "sdk_timeseries",
+        unpublish_track_id: "unpublish-track-1", update_key_id: "update-key-1", username: "perf-u",
+        vault_ciphertext: "vault-ciphertext-1", vault_db_role: "readonly", vault_delete_secret_path: "secret/delete",
+        vault_destroy_secret_path: "secret/destroy", vault_key_name: "transit-key", vault_secret_path: "secret/path",
+        vault_signature: "vault-signature-1", workflow_id: "workflow-1",
+        approve_draft_id: "approve-draft-1", canary_version_id: "canary-version-1",
+        policy_version_id: "policy-version-1", reject_draft_id: "reject-draft-1",
+        rollback_policy_set_id: "rollback-policy-set-1", rollback_target_version_id: "rollback-target-version-1",
+        update_draft_id: "update-draft-1", release_fencing_token: "1", renew_fencing_token: "1",
+        vault_create_key_name: "transit-create-key", vault_put_secret_path: "secret/put",
+    })) {
+        fixtures.set(key, value);
+    }
+    return fixtures;
+}
+(0, node_test_1.test)("manifest-only perf body covers every generated RPC", () => {
+    const fixtures = fullSurfaceManifestFixtures();
+    const missing = [];
+    for (const fullPath of Object.keys(generatedClient_1.RPC_OPERATION_KIND)) {
+        const slash = fullPath.lastIndexOf("/");
+        const servicePath = fullPath.slice(1, slash);
+        const serviceName = servicePath.slice(servicePath.lastIndexOf(".") + 1);
+        const methodName = fullPath.slice(slash + 1);
+        if (perfRealBody(serviceName, methodName, "tenant-1", "project-1", fixtures) === undefined) {
+            missing.push(`${serviceName}/${methodName}`);
+        }
+    }
+    node_assert_1.strict.equal(missing.length, 0, `manifest-only perf body gaps: ${missing.join(", ")}`);
+});
+(0, node_test_1.test)("manifest JSON body hydrates AnalyticsService rows with seed refs", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("stage_name", "stage-1");
+    const body = manifestJSONBody("AnalyticsService", "get_pipeline_summary", fixtures);
+    node_assert_1.strict.deepEqual(body?.page, { page: 1, page_size: 50 });
+    node_assert_1.strict.equal(body?.tenant_id, "tenant-1");
+    node_assert_1.strict.equal(body?.stage_name, "stage-1");
+});
+(0, node_test_1.test)("manifest JSON body hydrates TenantService rows with seed refs", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("tenant_code", "tenant-code-1");
+    fixtures.set("purge_tenant_id", "tenant-purge-1");
+    const created = manifestJSONBody("TenantService", "create_tenant", fixtures);
+    const tenant = manifestJSONBody("TenantService", "get_tenant", fixtures);
+    const config = manifestJSONBody("TenantService", "get_tenant_config", fixtures);
+    const list = manifestJSONBody("TenantService", "list_tenants", fixtures);
+    const purged = manifestJSONBody("TenantService", "purge_tenant", fixtures);
+    const updated = manifestJSONBody("TenantService", "update_tenant", fixtures);
+    const updatedConfig = manifestJSONBody("TenantService", "update_tenant_config", fixtures);
+    node_assert_1.strict.equal(created?.code, "tenant-code-1");
+    node_assert_1.strict.equal(created?.config, "{}");
+    node_assert_1.strict.equal(created?.branding, "{}");
+    node_assert_1.strict.equal(tenant?.tenant_id, "tenant-1");
+    node_assert_1.strict.equal(config?.tenant_id, "tenant-1");
+    node_assert_1.strict.equal(list?.page_size, 20);
+    node_assert_1.strict.equal(purged?.tenant_id, "tenant-purge-1");
+    node_assert_1.strict.equal(purged?.confirmation_token, "sdk-perf-confirm-purge");
+    node_assert_1.strict.equal(updated?.status, "active");
+    node_assert_1.strict.equal(updatedConfig?.config_key, "feature.flag");
+    node_assert_1.strict.equal(updatedConfig?.config_value, "on");
+});
+(0, node_test_1.test)("manifest JSON body hydrates DataBroker scalar read-only rows with seed refs", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("project", "project-1");
+    fixtures.set("message_type", "myapp.v1.Invoice");
+    fixtures.set("dlq_id", "dlq-1");
+    fixtures.set("saga_id", "saga-1");
+    fixtures.set("migration_id", "migration-1");
+    fixtures.set("object_key", "cache-key-1");
+    fixtures.set("mongo_collection", "invoices");
+    fixtures.set("document_id", "document-1");
+    fixtures.set("record_id", "record-1");
+    fixtures.set("bucket", "bucket-1");
+    fixtures.set("ts_table", "metrics_1");
+    fixtures.set("event_type", "invoice.updated");
+    const capabilities = manifestJSONBody("DataBroker", "get_capabilities", fixtures);
+    const catalog = manifestJSONBody("DataBroker", "get_catalog_manifest", fixtures);
+    const health = manifestJSONBody("DataBroker", "get_health_report", fixtures);
+    const schemas = manifestJSONBody("DataBroker", "lookup_message_schema", fixtures);
+    const dlq = manifestJSONBody("DataBroker", "get_dlq_event", fixtures);
+    const dlqs = manifestJSONBody("DataBroker", "list_dlq_events", fixtures);
+    const saga = manifestJSONBody("DataBroker", "get_saga", fixtures);
+    const sagas = manifestJSONBody("DataBroker", "list_sagas", fixtures);
+    const policies = manifestJSONBody("DataBroker", "list_policies", fixtures);
+    const lint = manifestJSONBody("DataBroker", "lint_policies", fixtures);
+    const admin = manifestJSONBody("DataBroker", "get_admin_summary", fixtures);
+    const catalogVersion = manifestJSONBody("DataBroker", "get_catalog_version", fixtures);
+    const catalogVersions = manifestJSONBody("DataBroker", "get_catalog_versions", fixtures);
+    const cdc = manifestJSONBody("DataBroker", "get_cdc_status", fixtures);
+    const migration = manifestJSONBody("DataBroker", "get_migration_status", fixtures);
+    const migrationRuns = manifestJSONBody("DataBroker", "list_migration_runs", fixtures);
+    const projects = manifestJSONBody("DataBroker", "list_projects", fixtures);
+    const resources = manifestJSONBody("DataBroker", "list_resources", fixtures);
+    const audit = manifestJSONBody("DataBroker", "list_admin_audit_logs", fixtures);
+    const verify = manifestJSONBody("DataBroker", "verify_admin_audit_log", fixtures);
+    const vector = manifestJSONBody("DataBroker", "vector_search", fixtures);
+    const hybrid = manifestJSONBody("DataBroker", "vector_hybrid_search", fixtures);
+    const cacheGet = manifestJSONBody("DataBroker", "cache_get", fixtures);
+    const cacheScan = manifestJSONBody("DataBroker", "cache_scan", fixtures);
+    const documentGet = manifestJSONBody("DataBroker", "document_get", fixtures);
+    const documentFind = manifestJSONBody("DataBroker", "document_find", fixtures);
+    const graph = manifestJSONBody("DataBroker", "graph_query", fixtures);
+    const analytical = manifestJSONBody("DataBroker", "analytical_query", fixtures);
+    const select = manifestJSONBody("DataBroker", "select", fixtures);
+    const selectV2 = manifestJSONBody("DataBroker", "select_v_2", fixtures);
+    const object = manifestJSONBody("DataBroker", "get_object", fixtures);
+    const timeSeries = manifestJSONBody("DataBroker", "time_series_query", fixtures);
+    const preview = manifestJSONBody("DataBroker", "preview_cdc_redaction", fixtures);
+    const drift = manifestJSONBody("DataBroker", "scan_projection_drift", fixtures);
+    node_assert_1.strict.equal(capabilities?.context?.tenant_id, "tenant-1");
+    node_assert_1.strict.equal(capabilities?.project_id, "project-1");
+    node_assert_1.strict.equal(catalog?.redact, false);
+    node_assert_1.strict.equal(health?.with_probes, false);
+    node_assert_1.strict.equal(schemas?.message_type, "myapp.v1.Invoice");
+    node_assert_1.strict.equal(dlq?.dlq_id, "dlq-1");
+    node_assert_1.strict.equal(dlqs?.limit, 50);
+    node_assert_1.strict.equal(saga?.saga_id, "saga-1");
+    node_assert_1.strict.equal(sagas?.limit, 50);
+    node_assert_1.strict.equal(policies?.include_disabled, false);
+    node_assert_1.strict.equal(lint?.project_id, "project-1");
+    node_assert_1.strict.deepEqual(admin?.context?.scopes, ["udb:admin"]);
+    node_assert_1.strict.equal(admin?.with_probes, false);
+    node_assert_1.strict.equal(catalogVersion?.version, "");
+    node_assert_1.strict.equal(catalogVersions?.redact, false);
+    node_assert_1.strict.equal(cdc?.slot_name, "udb_cdc");
+    node_assert_1.strict.equal(migration?.run_id, "migration-1");
+    node_assert_1.strict.equal(migrationRuns?.limit, 50);
+    node_assert_1.strict.equal(projects?.limit, 50);
+    node_assert_1.strict.equal(resources?.backend, "mongodb");
+    node_assert_1.strict.equal(audit?.redact, false);
+    node_assert_1.strict.equal(verify?.limit, 0);
+    node_assert_1.strict.equal(vector?.collection, "sdk_live_records");
+    node_assert_1.strict.deepEqual(vector?.vector, [0.1, 0.2, 0.3]);
+    node_assert_1.strict.equal(hybrid?.text_query, "hello");
+    node_assert_1.strict.equal(cacheGet?.resource?.backend, "redis");
+    node_assert_1.strict.equal(cacheGet?.key, "cache-key-1");
+    node_assert_1.strict.equal(cacheScan?.limit, 50);
+    node_assert_1.strict.equal(documentGet?.resource?.resource_name, "invoices");
+    node_assert_1.strict.equal(documentGet?.document_id, "document-1");
+    node_assert_1.strict.deepEqual(documentFind?.filter, {});
+    node_assert_1.strict.equal(graph?.read_only, true);
+    node_assert_1.strict.equal(analytical?.query, "SELECT 1");
+    node_assert_1.strict.equal(select?.filter?.record_id, "record-1");
+    node_assert_1.strict.equal(selectV2?.limit, 10);
+    node_assert_1.strict.equal(object?.bucket, "bucket-1");
+    node_assert_1.strict.equal(timeSeries?.resource?.resource_name, "metrics_1");
+    node_assert_1.strict.equal(preview?.payload_json, "e30=");
+    node_assert_1.strict.equal(drift?.rows_per_target, 100);
+});
+(0, node_test_1.test)("manifest JSON body hydrates DataBroker CDC control mutation rows", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("project", "project-1");
+    const pause = manifestJSONBody("DataBroker", "pause_cdc", fixtures);
+    const resume = manifestJSONBody("DataBroker", "resume_cdc", fixtures);
+    const stepDown = manifestJSONBody("DataBroker", "step_down_cdc_leader", fixtures);
+    node_assert_1.strict.equal(pause?.slot_name, "udb_cdc");
+    node_assert_1.strict.equal(pause?.reason, "maintenance");
+    node_assert_1.strict.equal(resume?.reason, "resume");
+    node_assert_1.strict.equal(stepDown?.reason, "failover");
+});
+(0, node_test_1.test)("manifest JSON body hydrates DataBroker unary mutation rows", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("project", "project-1");
+    fixtures.set("record_id", "record-1");
+    fixtures.set("bucket", "bucket-1");
+    fixtures.set("object_key", "object-1");
+    fixtures.set("mongo_collection", "invoices");
+    fixtures.set("document_id", "document-1");
+    const url = manifestJSONBody("DataBroker", "generate_presigned_url", fixtures);
+    const multipart = manifestJSONBody("DataBroker", "initiate_multipart_upload", fixtures);
+    const doc = manifestJSONBody("DataBroker", "document_upsert", fixtures);
+    const graph = manifestJSONBody("DataBroker", "graph_mutate", fixtures);
+    const vector = manifestJSONBody("DataBroker", "vector_upsert", fixtures);
+    const view = manifestJSONBody("DataBroker", "create_materialized_view", fixtures);
+    const plan = manifestJSONBody("DataBroker", "plan_migration", fixtures);
+    node_assert_1.strict.equal(url?.method, "GET");
+    node_assert_1.strict.equal(url?.ttl_seconds, 300);
+    node_assert_1.strict.equal(multipart?.part_count, 1);
+    node_assert_1.strict.equal(doc?.document?.name, "x");
+    node_assert_1.strict.equal(graph?.parameters?.id, "record-1");
+    node_assert_1.strict.equal(vector?.points?.[0]?.id, "record-1");
+    node_assert_1.strict.equal(view?.with_data, true);
+    node_assert_1.strict.deepEqual(plan?.context?.scopes, ["udb:admin"]);
+    node_assert_1.strict.equal(plan?.dry_run, true);
+});
+(0, node_test_1.test)("manifest JSON body hydrates DataBroker scalar action rows", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("project", "project-1");
+    fixtures.set("object_key", "cache-key-1");
+    fixtures.set("replay_dlq_id", "replay-dlq-1");
+    fixtures.set("dismiss_dlq_id", "dismiss-dlq-1");
+    fixtures.set("quarantine_dlq_id", "quarantine-dlq-1");
+    fixtures.set("retry_saga_id", "retry-saga-1");
+    fixtures.set("mark_saga_id", "mark-saga-1");
+    fixtures.set("ds_policy_id", "42");
+    const cacheDelete = manifestJSONBody("DataBroker", "cache_delete", fixtures);
+    const replay = manifestJSONBody("DataBroker", "replay_dlq_event", fixtures);
+    const dismiss = manifestJSONBody("DataBroker", "dismiss_dlq_event", fixtures);
+    const quarantine = manifestJSONBody("DataBroker", "quarantine_dlq_event", fixtures);
+    const retry = manifestJSONBody("DataBroker", "retry_saga_compensation", fixtures);
+    const reviewed = manifestJSONBody("DataBroker", "mark_saga_reviewed", fixtures);
+    const deletePolicy = manifestJSONBody("DataBroker", "delete_policy", fixtures);
+    const reload = manifestJSONBody("DataBroker", "reload_policies", fixtures);
+    node_assert_1.strict.equal(cacheDelete?.key, "cache-key-1");
+    node_assert_1.strict.equal(replay?.dlq_id, "replay-dlq-1");
+    node_assert_1.strict.equal(replay?.preserve_event_id, false);
+    node_assert_1.strict.equal(dismiss?.dlq_id, "dismiss-dlq-1");
+    node_assert_1.strict.equal(quarantine?.dlq_id, "quarantine-dlq-1");
+    node_assert_1.strict.equal(retry?.reason, "retry");
+    node_assert_1.strict.equal(reviewed?.reason, "reviewed");
+    node_assert_1.strict.equal(deletePolicy?.policy_id, "42");
+    node_assert_1.strict.equal(reload?.project_id, "project-1");
+});
+(0, node_test_1.test)("manifest JSON body hydrates DataBroker mutation/admin rows", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("project", "project-1");
+    fixtures.set("message_type", "myapp.v1.Invoice");
+    fixtures.set("record_id", "record-1");
+    fixtures.set("object_key", "cache-key-1");
+    fixtures.set("mongo_collection", "invoices");
+    fixtures.set("document_id", "document-1");
+    fixtures.set("apply_run_id", "apply-run-1");
+    fixtures.set("approve_run_id", "approve-run-1");
+    fixtures.set("approval_token", "approval-token-1");
+    const apply = manifestJSONBody("DataBroker", "apply_migration", fixtures);
+    const approve = manifestJSONBody("DataBroker", "approve_migration_plan", fixtures);
+    const batchSelect = manifestJSONBody("DataBroker", "batch_select", fixtures);
+    const batchUpsert = manifestJSONBody("DataBroker", "batch_upsert", fixtures);
+    const cacheSet = manifestJSONBody("DataBroker", "cache_set", fixtures);
+    const deleteReq = manifestJSONBody("DataBroker", "delete", fixtures);
+    const documentDelete = manifestJSONBody("DataBroker", "document_delete", fixtures);
+    const baseline = manifestJSONBody("DataBroker", "ensure_baseline", fixtures);
+    const project = manifestJSONBody("DataBroker", "ensure_project", fixtures);
+    const ensureResource = manifestJSONBody("DataBroker", "ensure_resource", fixtures);
+    const dropResource = manifestJSONBody("DataBroker", "drop_resource", fixtures);
+    const generic = manifestJSONBody("DataBroker", "generic_dispatch", fixtures);
+    const publish = manifestJSONBody("DataBroker", "publish_cdc", fixtures);
+    const upsert = manifestJSONBody("DataBroker", "upsert", fixtures);
+    const vectorBatch = manifestJSONBody("DataBroker", "vector_batch_upsert", fixtures);
+    node_assert_1.strict.equal(apply?.approval_token, "approval-token-1");
+    node_assert_1.strict.equal(approve?.run_id, "approve-run-1");
+    node_assert_1.strict.equal(batchSelect?.limit, 10);
+    node_assert_1.strict.equal(batchUpsert?.return_record, true);
+    node_assert_1.strict.equal(cacheSet?.value, "cGVyZg==");
+    node_assert_1.strict.equal(deleteReq?.message_type, "myapp.v1.Invoice");
+    node_assert_1.strict.equal(deleteReq?.filter?.record_id, "record-1");
+    node_assert_1.strict.equal(documentDelete?.document_id, "document-1");
+    node_assert_1.strict.deepEqual(baseline?.context?.scopes, ["udb:admin"]);
+    node_assert_1.strict.equal(project?.cdc_topic_prefix, "project-1.");
+    node_assert_1.strict.equal(ensureResource?.resource_name, "invoices");
+    node_assert_1.strict.equal(dropResource?.spec_json, "{\"udb_allow_rls_bypass\":true}");
+    node_assert_1.strict.equal(generic?.operation, "ping");
+    node_assert_1.strict.equal(publish?.topic_pattern, "*");
+    node_assert_1.strict.equal(upsert?.return_record, true);
+    node_assert_1.strict.equal(vectorBatch?.points?.[0]?.id, "record-1");
+});
+(0, node_test_1.test)("manifest JSON body hydrates all remaining DataBroker rows", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("project", "project-1");
+    fixtures.set("message_type", "myapp.v1.Invoice");
+    fixtures.set("document_id", "document-1");
+    fixtures.set("bucket", "bucket-1");
+    fixtures.set("object_key", "object-1");
+    fixtures.set("event_type", "invoice.updated");
+    fixtures.set("ts_table", "metrics_1");
+    fixtures.set("catalog_manifest_b64", "e30=");
+    const activate = manifestJSONBody("DataBroker", "activate_catalog", fixtures);
+    const begin = manifestJSONBody("DataBroker", "begin_tx", fixtures);
+    const enqueue = manifestJSONBody("DataBroker", "enqueue_outbox_event", fixtures);
+    const putObject = manifestJSONBody("DataBroker", "put_object", fixtures);
+    const putPolicy = manifestJSONBody("DataBroker", "put_policy", fixtures);
+    const rollback = manifestJSONBody("DataBroker", "rollback_catalog", fixtures);
+    const stage = manifestJSONBody("DataBroker", "stage_catalog", fixtures);
+    const timeSeries = manifestJSONBody("DataBroker", "time_series_write", fixtures);
+    const validate = manifestJSONBody("DataBroker", "validate_catalog", fixtures);
+    node_assert_1.strict.equal(activate?.project_id, "project-1");
+    node_assert_1.strict.deepEqual(activate?.context?.scopes, ["udb:admin"]);
+    node_assert_1.strict.equal(begin?.operation, "upsert");
+    node_assert_1.strict.equal(begin?.payload?.lookup_key, "manifest-tx-lk");
+    node_assert_1.strict.equal(enqueue?.payload?.event_type, "invoice.updated");
+    node_assert_1.strict.equal(putObject?.data, "cGVyZg==");
+    node_assert_1.strict.equal(putObject?.final_chunk, true);
+    node_assert_1.strict.equal(putPolicy?.policy?.effect, "allow");
+    node_assert_1.strict.equal(putPolicy?.policy?.enabled, true);
+    node_assert_1.strict.equal(rollback?.project_id, "project-1");
+    node_assert_1.strict.equal(stage?.manifest_json, "e30=");
+    node_assert_1.strict.equal(stage?.reason, "stage");
+    node_assert_1.strict.equal(timeSeries?.points?.[0]?.timestamp, "2026-01-01T00:00:00Z");
+    node_assert_1.strict.equal(timeSeries?.points?.[0]?.values?.cpu, 0.5);
+    node_assert_1.strict.equal(validate?.manifest_json, "e30=");
+    node_assert_1.strict.equal(validate?.reason, "validate");
+});
+(0, node_test_1.test)("manifest JSON body hydrates StorageService read-only rows with seed refs", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("file_id", "file-1");
+    fixtures.set("user_id", "user-1");
+    const getFile = manifestJSONBody("StorageService", "get_file", fixtures);
+    const download = manifestJSONBody("StorageService", "download_file", fixtures);
+    const list = manifestJSONBody("StorageService", "list_files", fixtures);
+    node_assert_1.strict.equal(getFile?.tenant_id, "tenant-1");
+    node_assert_1.strict.equal(getFile?.file_id, "file-1");
+    node_assert_1.strict.equal(download?.chunk_size_bytes, 65536);
+    node_assert_1.strict.equal(list?.reference_id, "");
+    node_assert_1.strict.equal(list?.page_size, 20);
+});
+(0, node_test_1.test)("manifest JSON body hydrates ApiKeyService rows with seed refs", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("key_id", "key-1");
+    fixtures.set("plain_key", "plain-1");
+    fixtures.set("owner_id", "owner-1");
+    fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("project", "project-1");
+    fixtures.set("update_key_id", "update-key-1");
+    fixtures.set("revoke_key_id", "revoke-key-1");
+    const created = manifestJSONBody("ApiKeyService", "create_api_key", fixtures);
+    const getKey = manifestJSONBody("ApiKeyService", "get_api_key", fixtures);
+    const usage = manifestJSONBody("ApiKeyService", "get_api_key_usage_stats", fixtures);
+    const list = manifestJSONBody("ApiKeyService", "list_api_keys", fixtures);
+    const updated = manifestJSONBody("ApiKeyService", "update_api_key", fixtures);
+    const revoked = manifestJSONBody("ApiKeyService", "revoke_api_key", fixtures);
+    const rotated = manifestJSONBody("ApiKeyService", "rotate_api_key", fixtures);
+    const emergency = manifestJSONBody("ApiKeyService", "emergency_revoke_api_keys", fixtures);
+    const validate = manifestJSONBody("ApiKeyService", "validate_api_key", fixtures);
+    node_assert_1.strict.equal(created?.owner_id, "owner-1");
+    node_assert_1.strict.deepEqual(created?.scopes, ["resource:read"]);
+    node_assert_1.strict.equal(created?.context?.tenant?.project_id, "project-1");
+    node_assert_1.strict.equal(created?.context?.user_id, "owner-1");
+    node_assert_1.strict.equal(getKey?.key_id, "key-1");
+    node_assert_1.strict.equal(usage?.key_id, "key-1");
+    node_assert_1.strict.equal(list?.owner_id, "owner-1");
+    node_assert_1.strict.equal(list?.owner_type, "API_KEY_OWNER_TYPE_SERVICE_ACCOUNT");
+    node_assert_1.strict.deepEqual(list?.page, { page: 1, page_size: 50 });
+    node_assert_1.strict.equal(updated?.key_id, "update-key-1");
+    node_assert_1.strict.equal(updated?.name, "bench-key-2");
+    node_assert_1.strict.deepEqual(updated?.ip_allowlist, []);
+    node_assert_1.strict.equal(revoked?.key_id, "revoke-key-1");
+    node_assert_1.strict.equal(revoked?.revoke_reason, "bench cleanup");
+    node_assert_1.strict.equal(rotated?.key_id, "key-1");
+    node_assert_1.strict.equal(rotated?.rotation_reason, "bench rotate");
+    node_assert_1.strict.equal(emergency?.tenant_id, "tenant-1");
+    node_assert_1.strict.equal(emergency?.project_id, "project-1");
+    node_assert_1.strict.equal(emergency?.scope, "resource:read");
+    node_assert_1.strict.equal(validate?.plain_key, "plain-1");
+    node_assert_1.strict.equal(validate?.required_scope, "resource:read");
+});
+(0, node_test_1.test)("manifest JSON body hydrates AuthnService read-only rows with seed refs", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("user_id", "user-1");
+    fixtures.set("session_id", "session-1");
+    fixtures.set("token", "token-1");
+    fixtures.set("csrf_token", "csrf-1");
+    fixtures.set("otp_id", "otp-1");
+    fixtures.set("otp_code", "654321");
+    fixtures.set("challenge_id", "challenge-1");
+    const getUser = manifestJSONBody("AuthnService", "get_user", fixtures);
+    const listSessions = manifestJSONBody("AuthnService", "list_sessions", fixtures);
+    const validate = manifestJSONBody("AuthnService", "validate_token", fixtures);
+    const authenticate = manifestJSONBody("AuthnService", "authenticate", fixtures);
+    const csrf = manifestJSONBody("AuthnService", "validate_csrf", fixtures);
+    const otp = manifestJSONBody("AuthnService", "verify_otp", fixtures);
+    const mfa = manifestJSONBody("AuthnService", "verify_mfa_challenge", fixtures);
+    node_assert_1.strict.equal(getUser?.user_id, "user-1");
+    node_assert_1.strict.equal(listSessions?.user_id, "user-1");
+    node_assert_1.strict.equal(listSessions?.active_only, true);
+    node_assert_1.strict.deepEqual(listSessions?.page, { page: 1, page_size: 20 });
+    node_assert_1.strict.equal(validate?.token, "token-1");
+    node_assert_1.strict.equal(validate?.token_type, "TOKEN_TYPE_JWT_ACCESS");
+    node_assert_1.strict.equal(authenticate?.bearer_token, "token-1");
+    node_assert_1.strict.equal(authenticate?.credential_type, "AUTH_CREDENTIAL_TYPE_BEARER_TOKEN");
+    node_assert_1.strict.equal(csrf?.csrf_token, "csrf-1");
+    node_assert_1.strict.equal(otp?.otp_id, "otp-1");
+    node_assert_1.strict.equal(otp?.code, "654321");
+    node_assert_1.strict.equal(mfa?.challenge_id, "challenge-1");
+});
+(0, node_test_1.test)("manifest JSON body hydrates AuthnService session and MFA setup rows", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("project", "project-1");
+    fixtures.set("username", "bench-user");
+    fixtures.set("user_id", "user-1");
+    fixtures.set("subject", "subject-1");
+    fixtures.set("refresh_token", "refresh-1");
+    fixtures.set("refresh_session_id", "refresh-session-1");
+    fixtures.set("otp_id", "otp-1");
+    const login = manifestJSONBody("AuthnService", "login", fixtures);
+    const refreshedToken = manifestJSONBody("AuthnService", "refresh_token", fixtures);
+    const refreshedSession = manifestJSONBody("AuthnService", "refresh_session", fixtures);
+    const session = manifestJSONBody("AuthnService", "create_session", fixtures);
+    const created = manifestJSONBody("AuthnService", "create_user", fixtures);
+    const updated = manifestJSONBody("AuthnService", "update_user", fixtures);
+    const sentOtp = manifestJSONBody("AuthnService", "send_otp", fixtures);
+    const resentOtp = manifestJSONBody("AuthnService", "resend_otp", fixtures);
+    const enrolled = manifestJSONBody("AuthnService", "enroll_mfa", fixtures);
+    const recovery = manifestJSONBody("AuthnService", "generate_recovery_codes", fixtures);
+    const policy = manifestJSONBody("AuthnService", "put_mfa_policy", fixtures);
+    const forgot = manifestJSONBody("AuthnService", "forgot_password", fixtures);
+    const phone = manifestJSONBody("AuthnService", "send_phone_verification", fixtures);
+    const challenge = manifestJSONBody("AuthnService", "issue_mfa_challenge", fixtures);
+    node_assert_1.strict.equal(login?.username, "bench-user");
+    node_assert_1.strict.equal(login?.password, "CorrectHorse1!");
+    node_assert_1.strict.equal(login?.device_type, "DEVICE_TYPE_API");
+    node_assert_1.strict.equal(login?.project_hint, "project-1");
+    node_assert_1.strict.equal(refreshedToken?.refresh_token, "refresh-1");
+    node_assert_1.strict.equal(refreshedSession?.session_id, "refresh-session-1");
+    node_assert_1.strict.equal(refreshedSession?.ttl_seconds, 3600);
+    node_assert_1.strict.equal(session?.principal?.subject, "subject-1");
+    node_assert_1.strict.equal(session?.principal?.tenant_id, "tenant-1");
+    node_assert_1.strict.equal(session?.ttl_seconds, 3600);
+    node_assert_1.strict.equal(created?.username, "perf-u");
+    node_assert_1.strict.equal(created?.account_kind, "ACCOUNT_KIND_PERSON");
+    node_assert_1.strict.equal(updated?.full_name, "Perf U2");
+    node_assert_1.strict.equal(updated?.email, "perf-u2@acme.test");
+    node_assert_1.strict.equal(sentOtp?.otp_type, "OTP_TYPE_EMAIL_VERIFICATION");
+    node_assert_1.strict.equal(resentOtp?.original_otp_id, "otp-1");
+    node_assert_1.strict.equal(enrolled?.mfa_type, "AUTH_FACTOR_KIND_TOTP");
+    node_assert_1.strict.equal(recovery?.count, 10);
+    node_assert_1.strict.equal(policy?.require_mfa, false);
+    node_assert_1.strict.equal(forgot?.identifier, "perf-u@acme.test");
+    node_assert_1.strict.equal(phone?.phone, "+15551234567");
+    node_assert_1.strict.equal(challenge?.purpose, "MFA_CHALLENGE_PURPOSE_SENSITIVE_OPERATION");
+});
+(0, node_test_1.test)("manifest JSON body hydrates AuthnService terminal and WebAuthn rows", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("user_id", "user-1");
+    fixtures.set("session_id", "session-1");
+    fixtures.set("subject", "subject-1");
+    fixtures.set("code", "code-1");
+    fixtures.set("reset_otp_id", "reset-otp-1");
+    fixtures.set("reset_otp_code", "135790");
+    fixtures.set("device_id", "device-1");
+    fixtures.set("record_id", "credential-1");
+    fixtures.set("reg_challenge_id", "reg-challenge-1");
+    fixtures.set("auth_challenge_id", "auth-challenge-1");
+    const logout = manifestJSONBody("AuthnService", "logout", fixtures);
+    const revoked = manifestJSONBody("AuthnService", "revoke_session", fixtures);
+    const adminRevoked = manifestJSONBody("AuthnService", "admin_revoke_session", fixtures);
+    const adminAllUsers = manifestJSONBody("AuthnService", "admin_revoke_all_user_sessions", fixtures);
+    const adminAllTenant = manifestJSONBody("AuthnService", "admin_revoke_all_tenant_sessions", fixtures);
+    const emergency = manifestJSONBody("AuthnService", "emergency_revoke", fixtures);
+    const changedPassword = manifestJSONBody("AuthnService", "change_password", fixtures);
+    const resetPassword = manifestJSONBody("AuthnService", "reset_password", fixtures);
+    const changedStatus = manifestJSONBody("AuthnService", "change_user_status", fixtures);
+    const adminResetPassword = manifestJSONBody("AuthnService", "admin_reset_password", fixtures);
+    const confirmedMfa = manifestJSONBody("AuthnService", "confirm_mfaenrollment", fixtures);
+    const disabledMfa = manifestJSONBody("AuthnService", "disable_mfa_factor", fixtures);
+    const renamed = manifestJSONBody("AuthnService", "rename_passkey", fixtures);
+    const revokedRecovery = manifestJSONBody("AuthnService", "revoke_recovery_codes", fixtures);
+    const adminResetMfa = manifestJSONBody("AuthnService", "admin_reset_mfa", fixtures);
+    const revokedDevice = manifestJSONBody("AuthnService", "revoke_device", fixtures);
+    const deletedWebAuthn = manifestJSONBody("AuthnService", "delete_web_authn_credential", fixtures);
+    const startedReg = manifestJSONBody("AuthnService", "start_web_authn_registration", fixtures);
+    const finishedReg = manifestJSONBody("AuthnService", "finish_web_authn_registration", fixtures);
+    const startedAuth = manifestJSONBody("AuthnService", "start_web_authn_authentication", fixtures);
+    const finishedAuth = manifestJSONBody("AuthnService", "finish_web_authn_authentication", fixtures);
+    node_assert_1.strict.equal(logout?.session_id, "session-1");
+    node_assert_1.strict.equal(revoked?.revoke_reason, "perf");
+    node_assert_1.strict.equal(adminRevoked?.reason, "perf");
+    node_assert_1.strict.equal(adminAllUsers?.user_id, "user-1");
+    node_assert_1.strict.equal(adminAllTenant?.tenant_id, "tenant-1");
+    node_assert_1.strict.equal(emergency?.principal_id, "subject-1");
+    node_assert_1.strict.equal(changedPassword?.current_password, "CorrectHorse1!");
+    node_assert_1.strict.equal(changedPassword?.otp_id, undefined);
+    node_assert_1.strict.equal(resetPassword?.code, "135790");
+    node_assert_1.strict.equal(changedStatus?.new_status, "USER_STATUS_SUSPENDED");
+    node_assert_1.strict.equal(adminResetPassword?.user_id, "user-1");
+    node_assert_1.strict.equal(confirmedMfa?.otp_id, "code-1");
+    node_assert_1.strict.equal(disabledMfa?.factor_kind, "AUTH_FACTOR_KIND_TOTP");
+    node_assert_1.strict.equal(renamed?.new_label, "perf-key2");
+    node_assert_1.strict.equal(revokedRecovery?.user_id, "user-1");
+    node_assert_1.strict.equal(adminResetMfa?.reason, "perf");
+    node_assert_1.strict.equal(revokedDevice?.device_id, "device-1");
+    node_assert_1.strict.equal(deletedWebAuthn?.credential_id, "credential-1");
+    node_assert_1.strict.equal(startedReg?.label, "perf-key");
+    node_assert_1.strict.equal(finishedReg?.challenge_id, "reg-challenge-1");
+    node_assert_1.strict.equal(finishedReg?.public_key_credential_json, "__UDB_WEBAUTHN_TEST__");
+    node_assert_1.strict.equal(startedAuth?.tenant_id, "tenant-1");
+    node_assert_1.strict.equal(finishedAuth?.challenge_id, "auth-challenge-1");
+    node_assert_1.strict.equal(finishedAuth?.public_key_credential_json, "__UDB_WEBAUTHN_TEST__");
+});
+(0, node_test_1.test)("manifest JSON body hydrates IdentityProviderService read-only rows with seed refs", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("provider_id", "provider-1");
+    const getProvider = manifestJSONBody("IdentityProviderService", "get_provider", fixtures);
+    const listProviders = manifestJSONBody("IdentityProviderService", "list_providers", fixtures);
+    const claims = manifestJSONBody("IdentityProviderService", "preview_claim_mapping", fixtures);
+    const groups = manifestJSONBody("IdentityProviderService", "preview_group_mapping", fixtures);
+    node_assert_1.strict.equal(getProvider?.provider_id, "provider-1");
+    node_assert_1.strict.equal(getProvider?.tenant_id, "tenant-1");
+    node_assert_1.strict.equal(listProviders?.kind, "IDP_KIND_UNSPECIFIED");
+    node_assert_1.strict.deepEqual(listProviders?.page, { page: 1, page_size: 20 });
+    node_assert_1.strict.equal(claims?.claims_json, "{\"sub\":\"abc\",\"email\":\"a@x.com\"}");
+    node_assert_1.strict.deepEqual(groups?.groups, ["admins"]);
+});
+(0, node_test_1.test)("manifest JSON body hydrates AssetService rows with seed refs", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("asset_id", "asset-1");
+    fixtures.set("definition_id", "definition-1");
+    fixtures.set("file_id", "file-1");
+    fixtures.set("instance_id", "instance-1");
+    fixtures.set("project", "project-1");
+    fixtures.set("step_id", "step-1");
+    const complete = manifestJSONBody("AssetService", "complete_step", fixtures);
+    const created = manifestJSONBody("AssetService", "create_pipeline_definition", fixtures);
+    const asset = manifestJSONBody("AssetService", "get_asset", fixtures);
+    const definition = manifestJSONBody("AssetService", "get_pipeline_definition", fixtures);
+    const pipeline = manifestJSONBody("AssetService", "get_pipeline", fixtures);
+    const list = manifestJSONBody("AssetService", "list_assets", fixtures);
+    const registered = manifestJSONBody("AssetService", "register_asset", fixtures);
+    const started = manifestJSONBody("AssetService", "start_pipeline", fixtures);
+    node_assert_1.strict.equal(complete?.step_id, "step-1");
+    node_assert_1.strict.equal(complete?.status, "COMPLETED");
+    node_assert_1.strict.equal(complete?.result, "{}");
+    node_assert_1.strict.equal(created?.steps, "[{\"name\":\"resize\",\"type\":\"TRANSFORM\"}]");
+    node_assert_1.strict.equal(created?.version, 1);
+    node_assert_1.strict.equal(asset?.asset_id, "asset-1");
+    node_assert_1.strict.equal(definition?.definition_id, "definition-1");
+    node_assert_1.strict.equal(pipeline?.instance_id, "instance-1");
+    node_assert_1.strict.equal(list?.tenant_id, "tenant-1");
+    node_assert_1.strict.equal(list?.media_type, "image/png");
+    node_assert_1.strict.equal(list?.page_size, 20);
+    node_assert_1.strict.equal(registered?.project_id, "");
+    node_assert_1.strict.equal(registered?.file_id, "file-1");
+    node_assert_1.strict.equal(registered?.metadata, "{\"source\":\"upload\"}");
+    node_assert_1.strict.equal(started?.definition_id, "definition-1");
+    node_assert_1.strict.equal(started?.asset_id, "asset-1");
+    node_assert_1.strict.equal(started?.correlation_id, "run-001");
+});
+(0, node_test_1.test)("manifest JSON body hydrates WebRTC read-only rows with seed refs", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("room_id", "room-1");
+    fixtures.set("peer_id", "peer-1");
+    fixtures.set("track_id", "track-1");
+    const room = manifestJSONBody("RoomService", "get_room", fixtures);
+    const rooms = manifestJSONBody("RoomService", "list_rooms", fixtures);
+    const egress = manifestJSONBody("RoomService", "list_egress", fixtures);
+    const peer = manifestJSONBody("PeerService", "get_peer", fixtures);
+    const peers = manifestJSONBody("PeerService", "list_peers", fixtures);
+    const tracks = manifestJSONBody("TrackService", "list_tracks", fixtures);
+    node_assert_1.strict.equal(room?.room_id, "room-1");
+    node_assert_1.strict.equal(rooms?.state, "active");
+    node_assert_1.strict.equal(rooms?.page_size, 20);
+    node_assert_1.strict.equal(egress?.room_id, "room-1");
+    node_assert_1.strict.equal(peer?.peer_id, "peer-1");
+    node_assert_1.strict.equal(peers?.state, "connected");
+    node_assert_1.strict.equal(tracks?.kind, "audio");
+    node_assert_1.strict.equal(tracks?.page_size, 20);
+});
+(0, node_test_1.test)("manifest JSON body hydrates RoomService mutation rows", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("room_id", "room-1");
+    fixtures.set("close_room_id", "close-room-1");
+    fixtures.set("track_id", "track-1");
+    fixtures.set("object_key", "object-1");
+    fixtures.set("egress_id", "egress-1");
+    fixtures.set("user_id", "user-1");
+    const created = manifestJSONBody("RoomService", "create_room", fixtures);
+    const updated = manifestJSONBody("RoomService", "update_room", fixtures);
+    const closed = manifestJSONBody("RoomService", "close_room", fixtures);
+    const composite = manifestJSONBody("RoomService", "start_room_composite", fixtures);
+    const trackEgress = manifestJSONBody("RoomService", "start_track_egress", fixtures);
+    const stopped = manifestJSONBody("RoomService", "stop_egress", fixtures);
+    node_assert_1.strict.equal(created?.created_by, "user-1");
+    node_assert_1.strict.equal(created?.max_participants, 10);
+    node_assert_1.strict.equal(created?.config, "{}");
+    node_assert_1.strict.equal(updated?.name, "bench-room-2");
+    node_assert_1.strict.equal(updated?.state, "active");
+    node_assert_1.strict.equal(closed?.room_id, "close-room-1");
+    node_assert_1.strict.equal(composite?.destination, "object-1");
+    node_assert_1.strict.equal(composite?.options, "{}");
+    node_assert_1.strict.equal(trackEgress?.track_id, "track-1");
+    node_assert_1.strict.equal(trackEgress?.format, "mp4");
+    node_assert_1.strict.equal(stopped?.egress_id, "egress-1");
+});
+(0, node_test_1.test)("manifest JSON body hydrates PeerService mutation rows", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("room_id", "room-1");
+    fixtures.set("join_session_room_id", "join-session-room-1");
+    fixtures.set("leave_peer_id", "leave-peer-1");
+    const joined = manifestJSONBody("PeerService", "join_room", fixtures);
+    const session = manifestJSONBody("PeerService", "join_session", fixtures);
+    const left = manifestJSONBody("PeerService", "leave_room", fixtures);
+    node_assert_1.strict.equal(joined?.display_name, "Bench User");
+    node_assert_1.strict.equal(joined?.metadata, "{}");
+    node_assert_1.strict.equal(joined?.user_agent, "bench/1.0");
+    node_assert_1.strict.equal(session?.room_id, "join-session-room-1");
+    node_assert_1.strict.equal(session?.ttl_seconds, 3600);
+    node_assert_1.strict.equal(left?.peer_id, "leave-peer-1");
+});
+(0, node_test_1.test)("manifest JSON body hydrates TrackService mutation rows", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("room_id", "room-1");
+    fixtures.set("peer_id", "peer-1");
+    fixtures.set("track_id", "track-1");
+    fixtures.set("unpublish_track_id", "track-disposable-1");
+    const published = manifestJSONBody("TrackService", "publish_track", fixtures);
+    const muted = manifestJSONBody("TrackService", "mute_track", fixtures);
+    const unpublished = manifestJSONBody("TrackService", "unpublish_track", fixtures);
+    node_assert_1.strict.equal(published?.kind, "audio");
+    node_assert_1.strict.equal(published?.label, "mic");
+    node_assert_1.strict.equal(published?.settings, "{}");
+    node_assert_1.strict.equal(published?.metadata, "{}");
+    node_assert_1.strict.equal(muted?.track_id, "track-1");
+    node_assert_1.strict.equal(muted?.muted, true);
+    node_assert_1.strict.equal(unpublished?.track_id, "track-disposable-1");
+});
+(0, node_test_1.test)("manifest JSON body hydrates NotificationService read-only rows with seed refs", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("user_id", "user-1");
+    fixtures.set("event_type", "event-1");
+    fixtures.set("log_id", "log-1");
+    const stats = manifestJSONBody("NotificationService", "get_delivery_stats", fixtures);
+    const notification = manifestJSONBody("NotificationService", "get_notification", fixtures);
+    const preference = manifestJSONBody("NotificationService", "get_preference", fixtures);
+    const template = manifestJSONBody("NotificationService", "get_template", fixtures);
+    const notifications = manifestJSONBody("NotificationService", "list_notifications", fixtures);
+    const preferences = manifestJSONBody("NotificationService", "list_preferences", fixtures);
+    const templates = manifestJSONBody("NotificationService", "list_templates", fixtures);
+    node_assert_1.strict.equal(stats?.event_type, "event-1");
+    node_assert_1.strict.equal(stats?.date_to, "2026-12-31");
+    node_assert_1.strict.equal(notification?.log_id, "log-1");
+    node_assert_1.strict.equal(preference?.channel, "NOTIFICATION_CHANNEL_EMAIL");
+    node_assert_1.strict.equal(template?.locale, "en");
+    node_assert_1.strict.deepEqual(notifications?.page, { page: 1, page_size: 20 });
+    node_assert_1.strict.equal(preferences?.user_id, "user-1");
+    node_assert_1.strict.deepEqual(templates?.page, { page: 1, page_size: 20 });
+});
+(0, node_test_1.test)("manifest JSON body hydrates NotificationService mutation rows", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("project", "project-1");
+    fixtures.set("user_id", "user-1");
+    fixtures.set("event_type", "event-1");
+    fixtures.set("log_id", "log-1");
+    const sent = manifestJSONBody("NotificationService", "send_notification", fixtures);
+    const reported = manifestJSONBody("NotificationService", "report_delivery", fixtures);
+    const retried = manifestJSONBody("NotificationService", "retry_notification", fixtures);
+    const preference = manifestJSONBody("NotificationService", "set_preference", fixtures);
+    const template = manifestJSONBody("NotificationService", "upsert_template", fixtures);
+    node_assert_1.strict.equal(sent?.project_id, "project-1");
+    node_assert_1.strict.deepEqual(sent?.variables, { name: "SDK" });
+    node_assert_1.strict.deepEqual(sent?.channels, ["NOTIFICATION_CHANNEL_EMAIL"]);
+    node_assert_1.strict.equal(sent?.context?.purpose, "go.live.perf");
+    node_assert_1.strict.equal(reported?.provider, "sdk-perf");
+    node_assert_1.strict.equal(reported?.status, "NOTIFICATION_STATUS_DELIVERED");
+    node_assert_1.strict.equal(reported?.context?.tenant?.project_id, "project-1");
+    node_assert_1.strict.equal(retried?.log_id, "log-1");
+    node_assert_1.strict.equal(retried?.context?.purpose, "go.live.perf");
+    node_assert_1.strict.equal(preference?.is_opted_out, true);
+    node_assert_1.strict.equal(preference?.event_type, "");
+    node_assert_1.strict.equal(template?.subject_template, "Hello {name}");
+    node_assert_1.strict.equal(template?.body_template, "Body {name}");
+    node_assert_1.strict.equal(template?.is_active, true);
+});
+(0, node_test_1.test)("manifest JSON body hydrates CacheService read-only rows with seed refs", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("object_key", "cache-key-1");
+    const get = manifestJSONBody("CacheService", "get", fixtures);
+    const stats = manifestJSONBody("CacheService", "get_namespace_stats", fixtures);
+    const scan = manifestJSONBody("CacheService", "scan", fixtures);
+    node_assert_1.strict.equal(get?.tenant_id, "tenant-1");
+    node_assert_1.strict.equal(get?.key, "cache-key-1");
+    node_assert_1.strict.equal(stats?.namespace, "sdk-perf-cache");
+    node_assert_1.strict.equal(scan?.limit, 50);
+    node_assert_1.strict.equal(scan?.page_token, "0");
+});
+(0, node_test_1.test)("manifest JSON body hydrates CacheService mutation rows", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("object_key", "cache-key-1");
+    const created = manifestJSONBody("CacheService", "create_namespace", fixtures);
+    const set = manifestJSONBody("CacheService", "set", fixtures);
+    const deleted = manifestJSONBody("CacheService", "delete", fixtures);
+    const dropped = manifestJSONBody("CacheService", "delete_namespace", fixtures);
+    node_assert_1.strict.equal(created?.namespace, "sdk-perf-cache");
+    node_assert_1.strict.equal(created?.max_bytes, 1048576);
+    node_assert_1.strict.equal(created?.default_ttl_seconds, 300);
+    node_assert_1.strict.equal(set?.key, "cache-key-1");
+    node_assert_1.strict.equal(set?.value, "cGVyZg==");
+    node_assert_1.strict.equal(set?.ttl_seconds, 300);
+    node_assert_1.strict.equal(deleted?.key, "cache-key-1");
+    node_assert_1.strict.equal(dropped?.confirmation_token, "sdk-perf-cache");
+});
+(0, node_test_1.test)("manifest JSON body hydrates MeteringService read-only rows with seed refs", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("project", "project-1");
+    const check = manifestJSONBody("MeteringService", "check_quota", fixtures);
+    const quota = manifestJSONBody("MeteringService", "get_quota", fixtures);
+    const list = manifestJSONBody("MeteringService", "list_quotas", fixtures);
+    const usage = manifestJSONBody("MeteringService", "query_usage", fixtures);
+    node_assert_1.strict.equal(check?.metric, "sdk.perf.request");
+    node_assert_1.strict.equal(quota?.project_id, "project-1");
+    node_assert_1.strict.equal(list?.limit, 50);
+    node_assert_1.strict.equal(list?.page_size, 50);
+    node_assert_1.strict.equal(usage?.window_seconds, 86400);
+});
+(0, node_test_1.test)("manifest JSON body hydrates MeteringService mutation rows", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("project", "project-1");
+    fixtures.set("user_id", "user-1");
+    const quota = manifestJSONBody("MeteringService", "put_quota", fixtures);
+    const usage = manifestJSONBody("MeteringService", "record_usage", fixtures);
+    node_assert_1.strict.equal(quota?.limit_value, 1000000);
+    node_assert_1.strict.equal(quota?.enabled, true);
+    node_assert_1.strict.equal(quota?.metadata_json, "{}");
+    node_assert_1.strict.equal(usage?.principal_id, "user-1");
+    node_assert_1.strict.equal(usage?.quantity, 1);
+    node_assert_1.strict.equal(usage?.unit, "request");
+});
+(0, node_test_1.test)("manifest JSON body hydrates LockService rows", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("user_id", "user-1");
+    fixtures.set("fencing_token", "77");
+    fixtures.set("release_fencing_token", "77");
+    fixtures.set("renew_fencing_token", "77");
+    const acquired = manifestJSONBody("LockService", "acquire_lock", fixtures);
+    const renewed = manifestJSONBody("LockService", "renew_lock", fixtures);
+    const released = manifestJSONBody("LockService", "release_lock", fixtures);
+    node_assert_1.strict.equal(acquired?.lease_ttl_seconds, 60);
+    node_assert_1.strict.equal(acquired?.metadata_json, "{}");
+    node_assert_1.strict.equal(renewed?.fencing_token, 77);
+    node_assert_1.strict.equal(released?.owner_id, "user-1");
+    node_assert_1.strict.equal(released?.fencing_token, 77);
+});
+(0, node_test_1.test)("manifest JSON body hydrates SchedulerService read-only rows with seed refs", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("job_id", "job-1");
+    const job = manifestJSONBody("SchedulerService", "get_job", fixtures);
+    const jobs = manifestJSONBody("SchedulerService", "list_jobs", fixtures);
+    node_assert_1.strict.equal(job?.job_id, "job-1");
+    node_assert_1.strict.equal(jobs?.tenant_id, "tenant-1");
+    node_assert_1.strict.equal(jobs?.page_size, 20);
+});
+(0, node_test_1.test)("manifest JSON body hydrates SchedulerService mutation rows", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("project", "project-1");
+    fixtures.set("job_id", "job-1");
+    const created = manifestJSONBody("SchedulerService", "create_job", fixtures);
+    const paused = manifestJSONBody("SchedulerService", "pause_job", fixtures);
+    const resumed = manifestJSONBody("SchedulerService", "resume_job", fixtures);
+    const deleted = manifestJSONBody("SchedulerService", "delete_job", fixtures);
+    node_assert_1.strict.equal(created?.project_id, "");
+    node_assert_1.strict.equal(created?.name, "sdk-perf-job");
+    node_assert_1.strict.equal(created?.schedule_type, "CRON");
+    node_assert_1.strict.equal(created?.cron_expression, "*/5 * * * *");
+    node_assert_1.strict.equal(created?.payload, "{}");
+    node_assert_1.strict.equal(created?.target_topic, "sdk.perf.scheduler");
+    node_assert_1.strict.equal(created?.max_attempts, 3);
+    node_assert_1.strict.equal(created?.backoff_seconds, 30);
+    node_assert_1.strict.equal(paused?.job_id, "job-1");
+    node_assert_1.strict.equal(resumed?.job_id, "job-1");
+    node_assert_1.strict.equal(deleted?.job_id, "job-1");
+});
+(0, node_test_1.test)("manifest JSON body hydrates WebhookService read-only rows with seed refs", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("endpoint_id", "endpoint-1");
+    const endpoint = manifestJSONBody("WebhookService", "get_endpoint", fixtures);
+    const deliveries = manifestJSONBody("WebhookService", "list_deliveries", fixtures);
+    const endpoints = manifestJSONBody("WebhookService", "list_endpoints", fixtures);
+    node_assert_1.strict.equal(endpoint?.endpoint_id, "endpoint-1");
+    node_assert_1.strict.equal(deliveries?.page_size, 20);
+    node_assert_1.strict.equal(endpoints?.active_only, true);
+});
+(0, node_test_1.test)("manifest JSON body hydrates WebhookService mutation rows", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("endpoint_id", "endpoint-1");
+    fixtures.set("delete_endpoint_id", "endpoint-delete-1");
+    fixtures.set("topic_pattern", "tenant-1.*");
+    const created = manifestJSONBody("WebhookService", "create_endpoint", fixtures);
+    const updated = manifestJSONBody("WebhookService", "update_endpoint", fixtures);
+    const deleted = manifestJSONBody("WebhookService", "delete_endpoint", fixtures);
+    node_assert_1.strict.equal(created?.url, "https://example.com/udb-webhook");
+    node_assert_1.strict.equal(created?.topic_pattern, "tenant-1.*");
+    node_assert_1.strict.equal(created?.metadata_json, "{}");
+    node_assert_1.strict.equal(created?.max_attempts, 3);
+    node_assert_1.strict.equal(updated?.endpoint_id, "endpoint-1");
+    node_assert_1.strict.equal(updated?.description, "sdk perf webhook updated");
+    node_assert_1.strict.equal(updated?.active, true);
+    node_assert_1.strict.equal(deleted?.endpoint_id, "endpoint-delete-1");
+});
+(0, node_test_1.test)("manifest JSON body hydrates BackupService rows with seed refs", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("backup_id", "backup-1");
+    fixtures.set("restore_tenant_id", "restore-tenant-1");
+    const backup = manifestJSONBody("BackupService", "get_backup", fixtures);
+    const policy = manifestJSONBody("BackupService", "get_backup_policy", fixtures);
+    const policies = manifestJSONBody("BackupService", "list_backup_policies", fixtures);
+    const backups = manifestJSONBody("BackupService", "list_backups", fixtures);
+    const putPolicy = manifestJSONBody("BackupService", "put_backup_policy", fixtures);
+    const started = manifestJSONBody("BackupService", "start_tenant_backup", fixtures);
+    const restored = manifestJSONBody("BackupService", "restore_tenant", fixtures);
+    const deleted = manifestJSONBody("BackupService", "delete_backup_policy", fixtures);
+    node_assert_1.strict.equal(backup?.backup_id, "backup-1");
+    node_assert_1.strict.equal(policy?.policy_name, "sdk-perf-default");
+    node_assert_1.strict.equal(policies?.page_size, 20);
+    node_assert_1.strict.equal(backups?.tenant_id, "tenant-1");
+    node_assert_1.strict.equal(putPolicy?.schedule_cron, "0 3 * * *");
+    node_assert_1.strict.equal(putPolicy?.retention_days, 7);
+    node_assert_1.strict.equal(putPolicy?.max_retained_backups, 3);
+    node_assert_1.strict.equal(putPolicy?.enabled, true);
+    node_assert_1.strict.equal(started?.tenant_id, "tenant-1");
+    node_assert_1.strict.equal(restored?.target_tenant_id, "restore-tenant-1");
+    node_assert_1.strict.equal(restored?.confirmation_token, "yes");
+    node_assert_1.strict.equal(restored?.allow_cross_tenant, true);
+    node_assert_1.strict.equal(deleted?.policy_name, "sdk-perf-default");
+});
+(0, node_test_1.test)("manifest JSON body hydrates ConfigService read-only rows with seed refs", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("project", "project-1");
+    const evaluated = manifestJSONBody("ConfigService", "evaluate_flags", fixtures);
+    const flag = manifestJSONBody("ConfigService", "get_flag", fixtures);
+    const flags = manifestJSONBody("ConfigService", "list_flags", fixtures);
+    node_assert_1.strict.deepEqual(evaluated?.keys, ["sdk.perf.enabled"]);
+    node_assert_1.strict.equal(evaluated?.context?.project_id, "project-1");
+    node_assert_1.strict.equal(flag?.flag_key, "sdk.perf.enabled");
+    node_assert_1.strict.equal(flags?.limit, 50);
+});
+(0, node_test_1.test)("manifest JSON body hydrates ConfigService mutation rows", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("project", "project-1");
+    const put = manifestJSONBody("ConfigService", "put_flag", fixtures);
+    const del = manifestJSONBody("ConfigService", "delete_flag", fixtures);
+    node_assert_1.strict.equal(put?.value?.bool_value, true);
+    node_assert_1.strict.equal(put?.rollout_percentage, 100);
+    node_assert_1.strict.equal(put?.metadata_json, "{}");
+    node_assert_1.strict.equal(del?.flag_key, "sdk.perf.enabled");
+    node_assert_1.strict.equal(del?.project_id, "project-1");
+});
+(0, node_test_1.test)("manifest JSON body hydrates WorkflowService read-only rows with seed refs", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("workflow_id", "workflow-1");
+    const workflow = manifestJSONBody("WorkflowService", "get_workflow", fixtures);
+    const workflows = manifestJSONBody("WorkflowService", "list_workflows", fixtures);
+    node_assert_1.strict.equal(workflow?.workflow_id, "workflow-1");
+    node_assert_1.strict.equal(workflows?.status, "RUNNING");
+    node_assert_1.strict.equal(workflows?.page_size, 20);
+});
+(0, node_test_1.test)("manifest JSON body hydrates WorkflowService mutation rows", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("project", "project-1");
+    fixtures.set("record_id", "record-1");
+    fixtures.set("workflow_id", "workflow-1");
+    fixtures.set("cancel_workflow_id", "workflow-cancel-1");
+    const started = manifestJSONBody("WorkflowService", "start_workflow", fixtures);
+    const cancelled = manifestJSONBody("WorkflowService", "cancel_workflow", fixtures);
+    const signalled = manifestJSONBody("WorkflowService", "signal_workflow", fixtures);
+    node_assert_1.strict.equal(started?.project_id, "");
+    node_assert_1.strict.equal(started?.workflow_type, "sdk.perf.workflow");
+    node_assert_1.strict.equal(started?.total_steps, 20);
+    node_assert_1.strict.equal(started?.payload, "{}");
+    node_assert_1.strict.equal(started?.compensations, "[]");
+    node_assert_1.strict.equal(started?.correlation_id, "record-1");
+    node_assert_1.strict.equal(cancelled?.workflow_id, "workflow-cancel-1");
+    node_assert_1.strict.equal(cancelled?.reason, "sdk perf cancel");
+    node_assert_1.strict.equal(signalled?.workflow_id, "workflow-1");
+    node_assert_1.strict.equal(signalled?.signal_name, "continue");
+    node_assert_1.strict.equal(signalled?.signal_payload, "{\"ok\":true}");
+});
+(0, node_test_1.test)("manifest JSON body hydrates SearchService read-only rows with seed refs", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("tenant_id", "tenant-1");
+    const indexes = manifestJSONBody("SearchService", "list_indexes", fixtures);
+    const search = manifestJSONBody("SearchService", "search", fixtures);
+    node_assert_1.strict.equal(indexes?.page_size, 50);
+    node_assert_1.strict.deepEqual(search?.query_vector, [0.1, 0.2, 0.3]);
+    node_assert_1.strict.equal(search?.mode, "SEARCH_MODE_HYBRID");
+    node_assert_1.strict.equal(search?.top_k, 5);
+});
+(0, node_test_1.test)("manifest JSON body hydrates SearchService mutation rows", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("message_type", "myapp.v1.Invoice");
+    const created = manifestJSONBody("SearchService", "create_index", fixtures);
+    const reindex = manifestJSONBody("SearchService", "reindex", fixtures);
+    const deleted = manifestJSONBody("SearchService", "delete_index", fixtures);
+    node_assert_1.strict.equal(created?.source_message_type, "myapp.v1.Invoice");
+    node_assert_1.strict.equal(created?.backend, "qdrant");
+    node_assert_1.strict.equal(created?.vector_dims, 3);
+    node_assert_1.strict.equal(created?.metadata_json, "{}");
+    node_assert_1.strict.equal(reindex?.index_name, "sdk_live_records");
+    node_assert_1.strict.equal(deleted?.index_name, "sdk_live_records");
+});
+(0, node_test_1.test)("manifest JSON body hydrates EmbeddingService read-only rows with seed refs", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("tenant_id", "tenant-1");
+    const sources = manifestJSONBody("EmbeddingService", "list_sources", fixtures);
+    const retrieve = manifestJSONBody("EmbeddingService", "retrieve", fixtures);
+    node_assert_1.strict.equal(sources?.page_size, 50);
+    node_assert_1.strict.deepEqual(retrieve?.query_vector, [0.1, 0.2, 0.3]);
+    node_assert_1.strict.equal(retrieve?.source_name, "sdk_live_records");
+    node_assert_1.strict.equal(retrieve?.top_k, 5);
+});
+(0, node_test_1.test)("manifest JSON body hydrates EmbeddingService mutation rows", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("message_type", "myapp.v1.Invoice");
+    fixtures.set("record_id", "record-1");
+    const registered = manifestJSONBody("EmbeddingService", "register_source", fixtures);
+    const reported = manifestJSONBody("EmbeddingService", "report_embedding", fixtures);
+    const backfill = manifestJSONBody("EmbeddingService", "backfill", fixtures);
+    const deleted = manifestJSONBody("EmbeddingService", "delete_source", fixtures);
+    node_assert_1.strict.equal(registered?.source_message_type, "myapp.v1.Invoice");
+    node_assert_1.strict.deepEqual(registered?.text_fields, ["payload"]);
+    node_assert_1.strict.equal(registered?.metadata_json, "{}");
+    node_assert_1.strict.equal(reported?.row_pk, "record-1");
+    node_assert_1.strict.deepEqual(reported?.vector, [0.1, 0.2, 0.3]);
+    node_assert_1.strict.equal(reported?.dims, 3);
+    node_assert_1.strict.equal(backfill?.source_name, "sdk_live_records");
+    node_assert_1.strict.equal(deleted?.source_name, "sdk_live_records");
+});
+(0, node_test_1.test)("manifest JSON body hydrates LiveQueryService subscribe row with seed refs", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("project", "project-1");
+    fixtures.set("message_type", "myapp.v1.Invoice");
+    fixtures.set("record_id", "record-1");
+    const subscribe = manifestJSONBody("LiveQueryService", "subscribe", fixtures);
+    node_assert_1.strict.equal(subscribe?.message_type, "udb.core.lock.entity.v1.Lock");
+    node_assert_1.strict.equal(subscribe?.project_id, undefined);
+    node_assert_1.strict.equal(subscribe?.snapshot_limit, 10);
+    node_assert_1.strict.deepEqual(subscribe?.filters, [
+        { field: "lock_name", op: "LIVE_QUERY_COMPARISON_EQ", value: "sdk-perf-renew-lock" },
+    ]);
+});
+(0, node_test_1.test)("manifest JSON body hydrates WebRTC turn and signaling rows", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("room_id", "room-1");
+    fixtures.set("peer_id", "peer-1");
+    fixtures.set("signal_peer_id", "signal-peer-1");
+    const turn = manifestJSONBody("TurnService", "issue_credentials", fixtures);
+    const signal = manifestJSONBody("SignalingService", "signal", fixtures);
+    node_assert_1.strict.equal(turn?.ttl_seconds, 3600);
+    node_assert_1.strict.equal(turn?.peer_id, "peer-1");
+    node_assert_1.strict.equal(signal?.peer_id, "signal-peer-1");
+    node_assert_1.strict.equal(signal?.ping, true);
+});
+(0, node_test_1.test)("manifest JSON body hydrates VaultService rows with seed refs", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("vault_key_name", "sdk-perf-key");
+    fixtures.set("vault_ciphertext", "udb-vault:v1:seed");
+    fixtures.set("vault_secret_path", "app/config");
+    fixtures.set("vault_signature", "udb-vault-sig:v1:seed");
+    fixtures.set("vault_delete_secret_path", "app/delete");
+    fixtures.set("vault_destroy_secret_path", "app/destroy");
+    fixtures.set("vault_db_role", "sdk-readonly");
+    fixtures.set("vault_create_key_name", "sdk-perf-create-key");
+    fixtures.set("vault_put_secret_path", "app/put");
+    const created = manifestJSONBody("VaultService", "create_transit_key", fixtures);
+    const decrypt = manifestJSONBody("VaultService", "decrypt", fixtures);
+    const deleted = manifestJSONBody("VaultService", "delete_secret", fixtures);
+    const destroyed = manifestJSONBody("VaultService", "destroy_secret", fixtures);
+    const encrypted = manifestJSONBody("VaultService", "encrypt", fixtures);
+    const dbCreds = manifestJSONBody("VaultService", "generate_database_credentials", fixtures);
+    const secret = manifestJSONBody("VaultService", "get_secret", fixtures);
+    const hmac = manifestJSONBody("VaultService", "hmac", fixtures);
+    const secrets = manifestJSONBody("VaultService", "list_secrets", fixtures);
+    const put = manifestJSONBody("VaultService", "put_secret", fixtures);
+    const rotated = manifestJSONBody("VaultService", "rotate_transit_key", fixtures);
+    const seal = manifestJSONBody("VaultService", "seal_status", fixtures);
+    const signed = manifestJSONBody("VaultService", "sign", fixtures);
+    const verify = manifestJSONBody("VaultService", "verify", fixtures);
+    node_assert_1.strict.equal(created?.algorithm, "aes256-gcm-siv");
+    node_assert_1.strict.equal(decrypt?.ciphertext, "udb-vault:v1:seed");
+    node_assert_1.strict.equal(deleted?.secret_path, "app/delete");
+    node_assert_1.strict.equal(destroyed?.confirmation_token, "destroy");
+    node_assert_1.strict.equal(encrypted?.plaintext, "perf");
+    node_assert_1.strict.equal(dbCreds?.role_name, "sdk-readonly");
+    node_assert_1.strict.equal(dbCreds?.ttl_seconds, 900);
+    node_assert_1.strict.equal(secret?.secret_path, "app/config");
+    node_assert_1.strict.equal(hmac?.input, "perf");
+    node_assert_1.strict.equal(secrets?.page_size, 50);
+    node_assert_1.strict.equal(put?.secret_value, "perf-secret");
+    node_assert_1.strict.equal(put?.expected_version, 0);
+    node_assert_1.strict.equal(rotated?.key_name, "sdk-perf-key");
+    node_assert_1.strict.equal(seal?.tenant_id, "tenant-1");
+    node_assert_1.strict.equal(signed?.input, "perf");
+    node_assert_1.strict.equal(verify?.signature, "udb-vault-sig:v1:seed");
+});
+(0, node_test_1.test)("manifest JSON body hydrates ControlPlaneService rows with seed refs", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("project", "project-1");
+    fixtures.set("node_id", "node-1");
+    fixtures.set("resource_name", "backend-target-1");
+    const ack = manifestJSONBody("ControlPlaneService", "ack_status", fixtures);
+    const delta = manifestJSONBody("ControlPlaneService", "delta_resources", fixtures);
+    const resources = manifestJSONBody("ControlPlaneService", "get_resources", fixtures);
+    const nodes = manifestJSONBody("ControlPlaneService", "list_node_states", fixtures);
+    const rollback = manifestJSONBody("ControlPlaneService", "rollback_resources", fixtures);
+    const stream = manifestJSONBody("ControlPlaneService", "stream_resources", fixtures);
+    node_assert_1.strict.equal(ack?.node_id, "node-1");
+    node_assert_1.strict.equal(ack?.resource_type, "RESOURCE_TYPE_BACKEND_TARGET_DEFINITION");
+    node_assert_1.strict.equal(ack?.context?.tenant?.tenant_id, "tenant-1");
+    node_assert_1.strict.equal(delta?.node_id, "node-1");
+    node_assert_1.strict.deepEqual(delta?.resource_names_subscribe, ["backend-target-1"]);
+    node_assert_1.strict.deepEqual(delta?.initial_resource_versions, {});
+    node_assert_1.strict.equal(resources?.resource_type, "RESOURCE_TYPE_BACKEND_TARGET_DEFINITION");
+    node_assert_1.strict.equal(resources?.context?.tenant?.tenant_id, "tenant-1");
+    node_assert_1.strict.equal(resources?.page?.page_size, 50);
+    node_assert_1.strict.equal(nodes?.resource_type, "RESOURCE_TYPE_UNSPECIFIED");
+    node_assert_1.strict.equal(nodes?.page?.page, 1);
+    node_assert_1.strict.equal(rollback?.target_version, "");
+    node_assert_1.strict.equal(rollback?.context?.tenant?.project_id, "project-1");
+    node_assert_1.strict.equal(stream?.node_id, "node-1");
+    node_assert_1.strict.deepEqual(stream?.resource_names, []);
+    node_assert_1.strict.equal(stream?.version_info, "");
+});
+(0, node_test_1.test)("manifest JSON body hydrates AuthzService core read-only rows with seed refs", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("project", "project-1");
+    fixtures.set("user_id", "user-1");
+    fixtures.set("object", "ledger");
+    fixtures.set("action", "data.select");
+    fixtures.set("subject", "subject-1");
+    fixtures.set("policy_id", "policy-1");
+    fixtures.set("resource", "invoice");
+    fixtures.set("role_id", "role-1");
+    fixtures.set("policy_draft_id", "draft-1");
+    fixtures.set("canary_id", "canary-1");
+    fixtures.set("gov_exp", "1893456000");
+    const authorize = manifestJSONBody("AuthzService", "authorize", fixtures);
+    const batch = manifestJSONBody("AuthzService", "batch_check_permissions", fixtures);
+    const check = manifestJSONBody("AuthzService", "check_access", fixtures);
+    const bundle = manifestJSONBody("AuthzService", "get_policy_bundle", fixtures);
+    const nativeAccess = manifestJSONBody("AuthzService", "get_native_access", fixtures);
+    const role = manifestJSONBody("AuthzService", "get_role", fixtures);
+    const audits = manifestJSONBody("AuthzService", "list_access_decision_audits", fixtures);
+    const lint = manifestJSONBody("AuthzService", "lint_authz_policies", fixtures);
+    const roles = manifestJSONBody("AuthzService", "list_roles", fixtures);
+    const rules = manifestJSONBody("AuthzService", "list_policy_rules", fixtures);
+    const diff = manifestJSONBody("AuthzService", "diff_policy_draft", fixtures);
+    const explain = manifestJSONBody("AuthzService", "explain_policy", fixtures);
+    const canary = manifestJSONBody("AuthzService", "get_canary_status", fixtures);
+    const versions = manifestJSONBody("AuthzService", "list_policy_versions", fixtures);
+    node_assert_1.strict.equal(authorize?.principal?.user_id, "user-1");
+    node_assert_1.strict.equal(authorize?.resource?.table, "sdk_live_records");
+    node_assert_1.strict.deepEqual(authorize?.requested_scopes, ["udb:read"]);
+    node_assert_1.strict.equal(batch?.checks?.[0]?.action, "data.select");
+    node_assert_1.strict.equal(check?.object, "ledger");
+    node_assert_1.strict.equal(bundle?.project_id, "project-1");
+    node_assert_1.strict.equal(nativeAccess?.backend, "postgres");
+    node_assert_1.strict.equal(role?.role_id, "role-1");
+    node_assert_1.strict.equal(audits?.page?.page_size, 50);
+    node_assert_1.strict.deepEqual(lint, {});
+    node_assert_1.strict.equal(roles?.page?.page_size, 50);
+    node_assert_1.strict.equal(rules?.active_only, true);
+    node_assert_1.strict.equal(diff?.actor?.break_glass_expires_at_unix, "1893456000");
+    node_assert_1.strict.equal(explain?.test_case?.resource?.resource_type, "invoice");
+    node_assert_1.strict.equal(canary?.canary_id, "canary-1");
+    node_assert_1.strict.equal(versions?.state, "POLICY_VERSION_STATE_APPROVED");
+});
+(0, node_test_1.test)("manifest JSON body hydrates AuthzService create-policy-draft row", () => {
+    const fixtures = new PerfFixtures();
+    fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("project", "project-1");
+    fixtures.set("subject", "subject-1");
+    fixtures.set("gov_exp", "1893456000");
+    const draft = manifestJSONBody("AuthzService", "create_policy_draft", fixtures);
+    node_assert_1.strict.equal(draft?.tenant_id, "tenant-1");
+    node_assert_1.strict.equal(draft?.project_id, "project-1");
+    node_assert_1.strict.equal(draft?.policy_set_name, "default");
+    node_assert_1.strict.equal(draft?.title, "draft 1");
+    node_assert_1.strict.equal(draft?.change_reason, "init");
+    node_assert_1.strict.equal(draft?.actor?.subject, "subject-1");
+    node_assert_1.strict.deepEqual(draft?.actor?.scopes, ["authz:policy:write"]);
+    node_assert_1.strict.equal(draft?.actor?.break_glass, true);
+    node_assert_1.strict.deepEqual(draft?.document, {});
 });
 // A "kitchen-sink" request: protobufjs (under proto-loader) drops keys that the
 // concrete request type doesn't declare, so every read RPC picks up exactly the
@@ -435,783 +1640,12 @@ function surfaceProbeRequest(tenantId, projectId) {
         limit: 10,
     };
 }
-// perfRealBody returns a SEMANTICALLY VALID request for EVERY RPC the bench
-// measures, grounded one-for-one against BENCH_RPC_BODIES.md (real proto fields,
-// valid non-`*_UNSPECIFIED` enum NAMEs, seeded fixture values for `<seed:KEY>` ID
-// references, valid scalars). The bench then measures REAL handler work down the
-// SUCCESS path, not validation-rejection on a generic placeholder. Returns
-// It covers ALL 265 RPCs (every unary RPC AND every streaming first-message); the
-// perf caller treats a returned undefined as a HARD failure — there is no generic
-// fallback. proto-loader drops keys a request type does not declare, so
-// over-supplying within a body is safe.
-//
-// Governance/admin RPCs carry a `GovernanceActor actor{scopes:[...]}` whose scopes
-// the broker re-checks under `native.authz.governance` — the MD's authz-notes
-// scopes (`authz:admin`, `authz:policy:write|approve|read`) are set on that
-// actor here, per-RPC, since admin AUTHORITY comes from the Login JWT (the broker
-// derives the principal's scopes from the validated bearer; client-asserted login
-// scopes are ignored when a JWT verifier is configured).
-function perfRealBody(serviceName, methodName, tenantId, projectId, fixtures) {
-    const get = (k) => fixtures?.lookup(k) ?? "";
-    const ctx = { tenant_id: tenantId, project_id: projectId, purpose: "ts.live.perf" };
-    // RequestContext with a nested TenantContext — the shape the native control-plane
-    // services read tenant from (common.v1.RequestContext.tenant.tenant_id).
-    const tctx = { tenant_id: tenantId, project_id: projectId, purpose: "ts.live.perf", tenant: { tenant_id: tenantId, project_id: projectId } };
-    switch (serviceName) {
-        case "DataBroker":
-            return dataBrokerBody(methodName, tenantId, projectId, ctx, get);
-        case "AuthnService":
-            return authnBody(methodName, tenantId, projectId, get);
-        case "AuthzService":
-            return authzBody(methodName, tenantId, projectId, get);
-        case "ApiKeyService":
-            return apiKeyBody(methodName, tenantId, projectId, tctx, get);
-        case "IdentityProviderService":
-            return idpBody(methodName, tenantId, projectId, tctx, get);
-        case "TenantService":
-            return tenantBody(methodName, get);
-        case "AnalyticsService":
-            return analyticsBody(methodName, tenantId, projectId, tctx, get);
-        case "AssetService":
-            return assetBody(methodName, tenantId, projectId, get);
-        case "StorageService":
-            return storageBody(methodName, tenantId, get);
-        case "NotificationService":
-            return notificationBody(methodName, tenantId, projectId, tctx, get);
-        case "RoomService":
-        case "PeerService":
-        case "TrackService":
-        case "TurnService":
-        case "SignalingService":
-            return webrtcBody(methodName, tenantId, get);
-        case "ControlPlaneService":
-            return controlPlaneBody(methodName, tenantId, get);
-    }
-    return undefined;
-}
-// ── DataBroker (services/v1/data_broker.proto) — 76 RPCs ───────────────────────
-function dataBrokerBody(methodName, tenantId, projectId, context, get) {
-    const mongo = { backend: "mongodb", resource_name: get("mongo_collection") };
-    const nowIso = () => new Date().toISOString();
-    switch (methodName) {
-        case "upsert":
-            return { context, message_type: LIVE_MESSAGE_TYPE, return_record: true, record_json: jsonBytes({ record_id: `ts-perf-${tenantId}-${projectId}`, tenant_id: tenantId, project_id: projectId, lookup_key: "ts-perf-lk", payload: "ts-perf", revision: 1 }), conflict_fields: ["record_id"] };
-        case "batch_upsert":
-            return { context, message_type: LIVE_MESSAGE_TYPE, record_json: jsonBytes({ record_id: `ts-perf-${tenantId}-${projectId}`, tenant_id: tenantId, project_id: projectId, lookup_key: "ts-perf-lk", payload: "ts-perf", revision: 1 }), conflict_fields: ["record_id"] };
-        case "select":
-        case "select_v_2":
-        case "batch_select":
-            return { context, message_type: LIVE_MESSAGE_TYPE, filter: { record_id: get("record_id"), tenant_id: tenantId, project_id: projectId }, limit: 10 };
-        case "delete":
-            // A NON-EXISTENT row id so the success path runs without destroying the
-            // seeded record other RPCs read (still a real, valid Delete).
-            return { context, message_type: LIVE_MESSAGE_TYPE, filter: { record_id: "ts-perf-delete-noop", tenant_id: tenantId, project_id: projectId } };
-        case "vector_search":
-            return { context, collection: "sdk_live_records", vector: [0.1, 0.2, 0.3], limit: 5, with_payload: true };
-        case "vector_hybrid_search":
-            return { context, collection: "sdk_live_records", vector: [0.1, 0.2, 0.3], text_query: "hello", limit: 5, with_payload: true };
-        case "vector_upsert":
-        case "vector_batch_upsert":
-            return { context, collection: "sdk_live_records", points: [{ id: get("record_id"), vector: [0.1, 0.2, 0.3], payload: {} }] };
-        case "put_object":
-            // Client-streaming first Chunk (final_chunk so one message is a complete object).
-            return { context, bucket: get("bucket") || "udb-live-sdk", object_key: get("object_key") || "ts-perf.txt", data: Buffer.from("x", "utf8"), content_type: "application/octet-stream", final_chunk: true };
-        case "get_object":
-            return { context, bucket: get("bucket"), object_key: get("object_key") };
-        case "generate_presigned_url":
-            return { context, bucket: get("bucket"), object_key: get("object_key"), method: "GET", ttl_seconds: 300 };
-        case "initiate_multipart_upload":
-            return { context, bucket: get("bucket"), object_key: get("object_key"), content_type: "application/octet-stream", part_count: 1, ttl_seconds: 300 };
-        case "cache_get":
-            return { context, resource: { backend: "redis" }, key: get("object_key") || "ts-perf-cache", touch: false };
-        case "cache_set":
-            return { context, resource: { backend: "redis" }, key: get("object_key") || "ts-perf-cache", value: Buffer.from("perf", "utf8"), content_type: "text/plain", ttl_seconds: 60 };
-        case "cache_delete":
-            return { context, resource: { backend: "redis" }, key: get("object_key") || "ts-perf-cache" };
-        case "cache_scan":
-            return { context, resource: { backend: "redis" }, key_pattern: "*", limit: 50 };
-        case "document_get":
-            return { context, resource: mongo, document_id: get("document_id") };
-        case "document_find":
-            return { context, resource: mongo, filter: {}, limit: 10 };
-        case "document_upsert":
-            return { context, resource: mongo, document_id: get("document_id"), document: { name: "x" } };
-        case "document_delete":
-            return { context, resource: mongo, document_id: "ts-perf-doc-noop" };
-        case "graph_query":
-            return { context, resource: { backend: "neo4j" }, query: "MATCH (n) RETURN n LIMIT 1", read_only: true, limit: 10 };
-        case "graph_mutate":
-            return { context, resource: { backend: "neo4j" }, query: "CREATE (n:Node {id:$id})", parameters: { id: get("record_id") } };
-        case "time_series_write":
-            // No points (matches Go) — the TimeSeriesPoint.timestamp is a Timestamp message, not a
-            // string, so a JSON-string timestamp serialization-fails; the empty write still resolves.
-            return { context, resource: { backend: "clickhouse", resource_name: get("ts_table") || "sdk_perf_ts" } };
-        case "time_series_query":
-            // No from/to (matches Go) — they are Timestamp messages, not strings; a string
-            // serialization-fails. resource_name + limit is a valid query.
-            return { context, resource: { backend: "clickhouse", resource_name: get("ts_table") || "sdk_perf_ts" }, limit: 100 };
-        case "analytical_query":
-            return { context, resource: { backend: "clickhouse" }, query: "SELECT 1", limit: 100 };
-        case "begin_tx":
-            return { context, operation: "upsert", message_type: LIVE_MESSAGE_TYPE, payload: { record_id: get("record_id"), tenant_id: tenantId, project_id: projectId } };
-        case "publish_cdc":
-            return { context, topic_pattern: `${projectId}.*` };
-        case "create_materialized_view":
-            return { context, schema: "public", name: "mv_test", query: "SELECT 1", with_data: true };
-        case "enqueue_outbox_event": {
-            const uuid = liveUuid();
-            const pkey = get("document_id") || uuid;
-            return { context, topic: get("event_type") || "sdk.perf", partition_key: pkey, payload: { event_id: uuid, event_type: get("event_type") || "sdk.perf", correlation_id: liveUuid(), document_id: pkey } };
-        }
-        case "generic_dispatch":
-            return { context: { ...context, scopes: ["udb:dispatch"] }, backend: "postgres", operation: "query", spec_json: JSON.stringify({ sql: "SELECT 1 AS live_probe" }) };
-        case "ensure_resource":
-            return { context: { ...context, scopes: ["udb:admin"] }, backend: "mongodb", resource_name: get("mongo_collection") };
-        case "drop_resource":
-            // destructive — target a disposable, non-seeded resource name (never the seeded one).
-            // udb_allow_rls_bypass: a drop spans tenants, so the broker fail-closes unless the
-            // caller explicitly acknowledges the RLS-bypass review.
-            return { context: { ...context, scopes: ["udb:admin"] }, backend: "mongodb", resource_name: `ts_perf_drop_noop_${tenantId}`, spec_json: JSON.stringify({ udb_allow_rls_bypass: true }) };
-        case "list_resources":
-            return { context: { ...context, scopes: ["udb:admin"] }, backend: "mongodb" };
-        case "stage_catalog":
-        case "validate_catalog":
-            // Use the REAL current manifest captured by the seed (a valid CatalogManifest with
-            // checksum_sha256); an empty {} is rejected as "not a CatalogManifest".
-            return { context: { ...context, scopes: ["udb:admin"] }, manifest_json: seedCatalogManifest ?? jsonBytes({}), project_id: projectId, reason: "stage" };
-        case "activate_catalog":
-        case "rollback_catalog":
-            return { context: { ...context, scopes: ["udb:admin"] }, project_id: projectId };
-        case "get_catalog_versions":
-        case "get_catalog_manifest":
-            return { context: { ...context, scopes: ["udb:admin"] }, redact: false };
-        case "get_catalog_version":
-            return { context: { ...context, scopes: ["udb:admin"] }, project_id: projectId, version: "" };
-        case "plan_migration":
-            return { context: { ...context, scopes: ["udb:admin"] }, project_id: projectId, dry_run: true };
-        case "apply_migration":
-            return { context: { ...context, scopes: ["udb:admin"] }, run_id: get("apply_run_id") || get("migration_id"), project_id: projectId, approval_token: get("approval_token") };
-        case "get_migration_status":
-            return { context: { ...context, scopes: ["udb:admin"] }, run_id: get("migration_id"), project_id: projectId };
-        case "approve_migration_plan":
-            return { context: { ...context, scopes: ["udb:admin"] }, run_id: get("approve_run_id") || get("migration_id"), project_id: projectId };
-        case "list_migration_runs":
-            return { context: { ...context, scopes: ["udb:admin"] }, project_id: projectId, limit: 50 };
-        case "list_dlq_events":
-            return { context, limit: 50 };
-        case "get_dlq_event":
-            return { context, dlq_id: get("dlq_id") || liveUuid() };
-        case "replay_dlq_event":
-            return { context, dlq_id: get("replay_dlq_id") || liveUuid(), preserve_event_id: false };
-        case "dismiss_dlq_event":
-            return { context, dlq_id: get("dismiss_dlq_id") || liveUuid() };
-        case "quarantine_dlq_event":
-            return { context, dlq_id: get("quarantine_dlq_id") || liveUuid() };
-        case "get_cdc_status":
-            return { context, slot_name: "udb_cdc" };
-        case "pause_cdc":
-            return { context, slot_name: "udb_cdc", reason: "maintenance" };
-        case "resume_cdc":
-            return { context, slot_name: "udb_cdc", reason: "resume" };
-        case "step_down_cdc_leader":
-            return { context, slot_name: "udb_cdc", reason: "failover" };
-        case "preview_cdc_redaction":
-            return { context, message_type: get("message_type"), topic: get("event_type"), payload_json: jsonBytes({ sample: true }), redaction_mode: "mask", redaction_version: 1 };
-        case "scan_projection_drift":
-            return { context, project_id: projectId, message_type: get("message_type"), scan_mode: "sample", rows_per_target: 100, limit: 10 };
-        case "list_sagas":
-            return { context, limit: 50 };
-        case "get_saga":
-            return { context, saga_id: get("saga_id") || liveUuid() };
-        case "retry_saga_compensation":
-            return { context, saga_id: get("retry_saga_id") || liveUuid(), reason: "retry" };
-        case "mark_saga_reviewed":
-            return { context, saga_id: get("mark_saga_id") || liveUuid(), reason: "reviewed" };
-        case "list_policies":
-            return { context, include_disabled: false, limit: 50 };
-        case "put_policy":
-            // ALLOW-ALL (empty selectors = match-any): a narrow policy would flip the data
-            // plane to deny-by-default (snapshot non-empty) and deny the admin's own
-            // Upsert/Select/Vector*/TimeSeries* once reload_policies runs. An allow-all keeps
-            // the data plane open while still exercising the write path.
-            return { context, policy: { effect: "allow", service_identity: "", tenant_id: tenantId, message_type: "", operation: "", required_scope: "", priority: 1, enabled: true } };
-        case "delete_policy":
-            return { context, policy_id: Number(get("ds_policy_id")) || Number(get("policy_id")) || 0 };
-        case "reload_policies":
-        case "lint_policies":
-        case "get_capabilities":
-            return { context, project_id: projectId };
-        case "lookup_message_schema":
-            return { context, project_id: projectId, message_type: get("message_type") };
-        case "list_message_schemas":
-            return { context, project_id: projectId };
-        case "get_health_report":
-            return { context, with_probes: false, project_id: projectId };
-        case "ensure_project":
-            return { context: { ...context, scopes: ["udb:admin"] }, project_id: projectId, name: "My Project", cdc_topic_prefix: `${projectId}.` };
-        case "list_projects":
-            return { context: { ...context, scopes: ["udb:admin"] }, limit: 50 };
-        case "get_admin_summary":
-            return { context: { ...context, scopes: ["udb:admin"] }, project_id: projectId, with_probes: false, redact: false };
-        case "list_admin_audit_logs":
-            return { context: { ...context, scopes: ["udb:admin"] }, limit: 50, redact: false };
-        case "verify_admin_audit_log":
-            return { context: { ...context, scopes: ["udb:admin"] }, limit: 0 };
-        case "ensure_baseline":
-            // EnsureBaselineRequest carries only `context` (field 1). Privilege-creating
-            // admin seed (env-gated UDB_ENABLE_ADMIN_SEED), requires scope `udb:admin`;
-            // idempotently seeds a baseline saga + DLQ row for the verified principal's
-            // tenant/project (bench-bodies/data_broker.md row EnsureBaseline).
-            return { context: { ...context, scopes: ["udb:admin"] } };
-    }
-    return undefined;
-}
-// ── AuthnService (core/authn/services/v1) — 50 RPCs ────────────────────────────
-// Destructive/session-terminal RPCs are sequenced in Phase 3 by the caller and MUST
-// target the seeded disposable user / its session — never the admin's own. The
-// bodies below already point at <seed:user_id>/<seed:session_id> accordingly.
-function authnBody(methodName, tenantId, projectId, get) {
-    const u = get("user_id");
-    switch (methodName) {
-        case "create_user":
-            return { username: `bench-${liveUuid().slice(0, 8)}`, email: `bench-${liveUuid().slice(0, 8)}@acme.test`, password: "Str0ng!Passw0rd", tenant_id: tenantId, full_name: "Bench User", account_kind: "ACCOUNT_KIND_PERSON" };
-        case "get_user":
-            return { user_id: u };
-        case "list_users":
-            return { tenant_id: tenantId };
-        case "update_user":
-            return { user_id: u, full_name: "Bench B", tenant_id: tenantId };
-        case "change_user_status":
-            return { user_id: u, new_status: "USER_STATUS_SUSPENDED", reason: "bench action" };
-        case "admin_reset_password":
-            return { user_id: u };
-        case "send_otp":
-        case "send_o_t_p":
-            return { user_id: u, otp_type: "OTP_TYPE_EMAIL_VERIFICATION" };
-        case "verify_otp":
-        case "verify_o_t_p":
-            // Seeded otp_id + dev-echoed otp_code from the dedicated OTP user.
-            return { otp_id: get("otp_id"), code: get("otp_code") };
-        case "resend_otp":
-        case "resend_o_t_p":
-            return { original_otp_id: get("otp_id"), reason: "not_received" };
-        case "authenticate":
-            return { bearer_token: get("token"), credential_type: "AUTH_CREDENTIAL_TYPE_BEARER_TOKEN" };
-        case "login":
-            // Use the REAL bench credentials so the measured Login drives the success path
-            // (a placeholder username returns UNAUTHENTICATED "invalid username or password").
-            return { username: process.env.UDB_LIVE_USERNAME || get("username") || "bench", password: process.env.UDB_LIVE_PASSWORD || "Str0ng!Passw0rd", device_type: "DEVICE_TYPE_API", device_name: "cli", tenant_hint: tenantId, project_hint: projectId };
-        case "refresh_token":
-            return { refresh_token: get("refresh_token") };
-        case "logout":
-            return { session_id: get("session_id") };
-        case "change_password":
-            // current_password MUST be the exact password the seed user was created with.
-            return { user_id: u, current_password: "CorrectHorse1!", new_password: "N3w!Passw0rd9" };
-        case "validate_token":
-            return { token: get("token"), token_type: "TOKEN_TYPE_JWT_ACCESS" };
-        case "create_session":
-            return { principal: { principal_id: u, subject: get("subject"), user_id: u, tenant_id: tenantId }, ttl_seconds: 3600 };
-        case "refresh_session":
-            return { session_id: get("session_id"), ttl_seconds: 3600 };
-        case "get_session":
-            return { session_id: get("session_id") };
-        case "list_sessions":
-            return { user_id: u };
-        case "revoke_session":
-            return { session_id: get("session_id"), revoke_reason: "user logout" };
-        case "validate_csrf":
-        case "validate_c_s_r_f":
-            return { session_id: get("session_id"), csrf_token: get("csrf_token") };
-        case "enroll_mfa":
-        case "enroll_m_f_a":
-            return { user_id: u, mfa_type: "AUTH_FACTOR_KIND_TOTP" };
-        case "confirm_mfaenrollment":
-        case "confirm_m_f_a_enrollment":
-            return { user_id: u, otp_id: get("code"), code: "123456" };
-        case "generate_recovery_codes":
-            return { user_id: u, count: 10 };
-        case "put_mfa_policy":
-            // require_mfa MUST stay false on the live login tenant: true makes every later
-            // Login fail FAILED_PRECONDITION "MFA enrollment required by tenant policy" and
-            // poisons the whole bench (the admin user has no enrolled second factor).
-            return { tenant_id: tenantId, require_mfa: false };
-        case "get_mfa_policy":
-            return { tenant_id: tenantId };
-        case "forgot_password":
-            return { identifier: `bench-${u}@acme.test` };
-        case "reset_password":
-            // Use the real dev-echoed code (UDB_OTP_DEV_ECHO=1 → mfa.rs:208 echoes it
-            // unconditionally). NO "123456" fallback — a wrong code denies and masks the
-            // real bug (empty reset_otp_code), per BENCH_TS_PHP_ADVISORY.md.
-            return { otp_id: get("reset_otp_id"), code: get("reset_otp_code"), new_password: "N3w!Passw0rd9" };
-        case "introspect_token":
-            return { token: get("token") };
-        case "send_phone_verification":
-            return { user_id: u, phone: "+15551234567" };
-        case "get_jwks":
-            return {};
-        case "start_web_authn_registration":
-            return { user_id: u, label: "yubikey", tenant_id: tenantId };
-        case "finish_web_authn_registration":
-            // dev soft-authenticator: fresh reg challenge + the test sentinel credential.
-            return { challenge_id: get("reg_challenge_id"), public_key_credential_json: "__UDB_WEBAUTHN_TEST__", label: "perf-key" };
-        case "start_web_authn_authentication":
-            return { user_id: u, tenant_id: tenantId };
-        case "finish_web_authn_authentication":
-            // dev soft-authenticator: fresh auth challenge + the test sentinel assertion.
-            return { challenge_id: get("auth_challenge_id"), public_key_credential_json: "__UDB_WEBAUTHN_TEST__" };
-        case "list_devices":
-            return { user_id: u };
-        case "revoke_device":
-            return { device_id: get("device_id"), reason: "lost device" };
-        case "admin_revoke_session":
-            return { user_id: u, session_id: get("session_id"), reason: "compromised" };
-        case "admin_revoke_all_user_sessions":
-            return { user_id: u, reason: "compromised" };
-        case "admin_revoke_all_tenant_sessions":
-            // Targets a NON-seeded throwaway tenant so it never kills the admin's own sessions.
-            return { tenant_id: `bench-throwaway-${liveUuid().slice(0, 8)}`, reason: "incident" };
-        case "emergency_revoke":
-            // Target the seeded disposable principal only — never the live admin tenant.
-            return { principal_id: get("subject"), reason: "incident" };
-        case "issue_mfa_challenge":
-            return { user_id: u, factor_kind: "AUTH_FACTOR_KIND_TOTP", purpose: "MFA_CHALLENGE_PURPOSE_SENSITIVE_OPERATION" };
-        case "verify_mfa_challenge":
-            return { challenge_id: get("challenge_id"), code: get("otp_code") };
-        case "list_mfa_factors":
-            return { user_id: u };
-        case "disable_mfa_factor":
-            return { user_id: u, factor_kind: "AUTH_FACTOR_KIND_TOTP" };
-        case "rename_passkey":
-            return { user_id: u, credential_id: get("record_id"), new_label: "work key" };
-        case "revoke_recovery_codes":
-            return { user_id: u };
-        case "admin_reset_mfa":
-            return { user_id: u, reason: "lost device" };
-        case "list_web_authn_credentials":
-            return { user_id: u };
-        case "delete_web_authn_credential":
-            return { user_id: u, credential_id: get("record_id") };
-    }
-    return undefined;
-}
-// ── AuthzService (core/authz/services/v1) — 41 RPCs ────────────────────────────
-// Governance RPCs carry a GovernanceActor whose scopes are re-checked under
-// native.authz.governance — set the MD-specified scope on the actor per-RPC.
-function authzBody(methodName, tenantId, projectId, get) {
-    const subject = get("subject");
-    // created_by / assigned_by / deleted_by / … are audit columns the broker validates
-    // as bare UUIDs — the casbin `subject` ("user:<uuid>") is NOT a valid UUID there.
-    const byId = get("user_id") || liveUuid();
-    // The `scope` arg names the standing scope the RPC requires (kept for doc
-    // parity), but the live D1/D2 governance gate evaluates scopes from the VERIFIED
-    // claim, NOT request-body actor.scopes, and no role projects to authz:*
-    // (tokens.rs ROLE_SCOPE_PROJECTIONS) — so body scopes can never satisfy the gate
-    // here. Use the body-authoritative break-glass bypass instead (≤900s,
-    // reason-bearing, audited). break_glass_expires_at_unix is int64; this SDK
-    // passes int64 as a plain JS number (cf. size_bytes), epoch seconds is well
-    // within Number.MAX_SAFE_INTEGER. Mirrors gov_exp seeded to now+900.
-    const actor = (_scope) => ({
-        subject, tenant_id: tenantId, project_id: projectId,
-        break_glass: true, break_glass_reason: "sdk perf bench",
-        break_glass_expires_at_unix: Math.floor(Date.now() / 1000) + 900,
-    });
-    const principal = { subject, user_id: get("user_id"), tenant_id: tenantId, scopes: [] };
-    const resource = { resource_type: get("resource") || "invoice", table: "invoice" };
-    switch (methodName) {
-        case "authorize":
-            return { principal, tenant_id: tenantId, project_id: projectId, resource, action: get("action") || "data.select", domain: tenantId, requested_scopes: ["udb:read"] };
-        case "check_access":
-            return { user_id: get("user_id"), domain: tenantId, object: get("object") || "invoice", action: get("action") || "data.select" };
-        case "create_role":
-            return { name: `bench-reader-${liveUuid().slice(0, 8)}`, created_by: byId, role_code: `bench_reader_${liveUuid().slice(0, 8)}`, domain: tenantId, tenant_id: tenantId, scope_type: "ROLE_SCOPE_TYPE_TENANT" };
-        case "assign_role":
-            return { user_id: get("user_id"), role_id: get("role_id"), domain: tenantId, assigned_by: byId, principal_kind: "PRINCIPAL_KIND_USER", tenant_id: tenantId };
-        case "create_policy_rule":
-            return { subject, domain: tenantId, object: get("object") || "ledger", action: get("action") || "data.update", effect: "POLICY_EFFECT_ALLOW", created_by: byId, tenant_id: tenantId };
-        case "list_user_permissions":
-            return { user_id: get("user_id"), domain: tenantId };
-        case "list_access_decision_audits":
-            return { user_id: get("user_id"), domain: tenantId, page: { page_size: 50 } };
-        case "revoke_role":
-            return { user_id: get("user_id"), user_role_id: get("user_role_id"), reason: "rotation", revoked_by: byId };
-        case "list_user_roles":
-            return { user_id: get("user_id"), domain: tenantId, active_only: true };
-        case "get_role":
-            return { role_id: get("role_id") };
-        case "list_roles":
-            return { domain: tenantId, active_only: true, page: { page_size: 50 } };
-        case "batch_check_permissions":
-            return { user_id: get("user_id"), domain: tenantId, checks: [{ object: get("object") || "invoice", action: get("action") || "data.select" }], context: { ip_address: "127.0.0.1" } };
-        case "update_role":
-            return { role_id: get("role_id"), updated_by: byId, name: `reader-${liveUuid().slice(0, 8)}`, description: "bench", is_active: true };
-        case "delete_role":
-            // destructive — the SEPARATE disposable role seeded for deletion (real 200); the
-            // primary role_id survives for get_role/update_role/list_user_roles.
-            return { role_id: get("delete_role_id") || liveUuid(), deleted_by: byId };
-        case "get_policy_rule":
-            return { policy_id: Number(get("policy_id")) || get("policy_id") };
-        case "list_policy_rules":
-            return { domain: tenantId, subject, object: get("object") || "ledger", active_only: true, page: { page_size: 50 } };
-        case "delete_policy_rule":
-            // destructive — the SEPARATE disposable policy rule seeded for deletion (real 200).
-            return { policy_id: get("delete_policy_id") || liveUuid(), deleted_by: byId };
-        case "put_role_binding":
-            return { binding: { subject, role: get("role"), tenant: tenantId, project: projectId, source: "bench" } };
-        case "put_relationship":
-            return { tuple: { subject, relation: get("relation") || "member", object: get("object") || "group:bench", tenant: tenantId, project: projectId, source: "bench" } };
-        case "put_authz_policy":
-            return { policy: { id: get("policy_id") || liveUuid(), priority: 100, enabled: true, effect: "allow", tenant: tenantId, subject, action: get("action") || "data.select", resource: get("resource") || "invoice", required_scopes: ["udb:read"] } };
-        case "lint_authz_policies":
-            return {};
-        case "get_native_access":
-            return { principal, tenant_id: tenantId, project_id: projectId, resource, action: get("action") || "data.select", backend: "postgres", requested_scopes: ["udb:read"] };
-        case "get_policy_bundle":
-            return { tenant_id: tenantId, project_id: projectId, domain: tenantId };
-        case "create_policy_draft":
-            return { actor: actor("authz:policy:write"), tenant_id: tenantId, project_id: projectId, policy_set_name: "default", title: "draft 1", change_reason: "init", document: { policies: [] } };
-        case "update_policy_draft":
-            return { actor: actor("authz:policy:write"), draft_id: get("update_draft_id") || get("policy_draft_id"), document: {}, change_reason: "edit", title: "draft 1" };
-        case "diff_policy_draft":
-            return { actor: actor("authz:policy:read"), draft_id: get("policy_draft_id") };
-        case "submit_policy_draft":
-            return { actor: actor("authz:policy:write"), draft_id: get("policy_draft_id") };
-        case "approve_policy_draft":
-            return { actor: actor("authz:policy:approve"), draft_id: get("approve_draft_id"), reviewer: subject, reason: "ok" };
-        case "reject_policy_draft":
-            return { actor: actor("authz:policy:approve"), draft_id: get("reject_draft_id"), reviewer: subject, reason: "nack" };
-        case "activate_policy_version":
-            return { actor: actor("authz:admin"), policy_version_id: get("policy_version_id") || liveUuid() };
-        case "rollback_policy_version":
-            return { actor: actor("authz:admin"), policy_set_id: get("rollback_policy_set_id") || liveUuid(), target_version_id: get("rollback_target_version_id") || liveUuid(), change_reason: "revert" };
-        case "activate_canary":
-            return { actor: actor("authz:admin"), policy_version_id: get("canary_version_id") || liveUuid(), scope_kind: "CANARY_SCOPE_KIND_PERCENT", scope_values: ["10"], success_window_secs: 0, metric_threshold: 0.99, min_samples: 0 };
-        case "promote_canary":
-            return { actor: actor("authz:admin"), canary_id: get("canary_id") || liveUuid() };
-        case "get_canary_status":
-            return { actor: actor("authz:policy:read"), canary_id: get("canary_id") || liveUuid() };
-        case "list_policy_versions":
-            return { actor: actor("authz:policy:read"), tenant_id: tenantId, project_id: projectId, policy_set_id: get("policy_id"), state: "POLICY_VERSION_STATE_ACTIVE", page: { page_size: 50 } };
-        case "simulate_policy":
-            return { actor: actor("authz:policy:read"), tenant_id: tenantId, project_id: projectId, draft_id: get("policy_draft_id"), cases: [{ principal: { subject }, resource, action: get("action") || "data.select", label: "c1" }], persist: false };
-        case "explain_policy":
-            return { actor: actor("authz:policy:read"), tenant_id: tenantId, project_id: projectId, test_case: { principal: { subject }, resource, action: get("action") || "data.select" } };
-        case "get_authz_revision":
-            return { tenant_id: tenantId, project_id: projectId };
-        case "invalidate_policy_bundles":
-            return { actor: actor("authz:admin"), tenant_id: tenantId, project_id: projectId, reason: "rotate" };
-        case "seed_builtin_roles":
-            return { actor: actor("authz:admin"), tenant_id: tenantId, project_id: projectId };
-        case "migrate_legacy_policies":
-            return { actor: actor("authz:admin"), tenant_id: tenantId, project_id: projectId, apply: false, policy_set_name: "default" };
-    }
-    return undefined;
-}
-// ── ApiKeyService (core/apikey/services/v1) — 9 RPCs ───────────────────────────
-function apiKeyBody(methodName, tenantId, projectId, tctx, get) {
-    const context = { tenant: { tenant_id: tenantId, project_id: projectId }, user_id: get("owner_id") };
-    switch (methodName) {
-        case "create_api_key":
-            return { name: "bench-key", description: "bench", owner_type: "API_KEY_OWNER_TYPE_SERVICE_ACCOUNT", owner_id: get("owner_id"), scopes: ["resource:read"], context };
-        case "get_api_key":
-            return { key_id: get("key_id") };
-        case "list_api_keys":
-            return { owner_id: get("owner_id"), owner_type: "API_KEY_OWNER_TYPE_SERVICE_ACCOUNT", status: "API_KEY_STATUS_ACTIVE", page: { page: 1, page_size: 50 } };
-        case "update_api_key":
-            // separate disposable key (RotateApiKey rotates the primary key_id and would
-            // invalidate it).
-            return { key_id: get("update_key_id") || get("key_id"), name: "bench-key-2", description: "updated", scopes: ["resource:read"], context };
-        case "revoke_api_key":
-            // the SEPARATE disposable key seeded for revocation (real 200); the primary
-            // key survives for update/rotate/get/validate.
-            return { key_id: get("revoke_key_id") || get("key_id"), revoke_reason: "bench cleanup", context };
-        case "rotate_api_key":
-            return { key_id: get("key_id"), rotation_reason: "bench rotate", context };
-        case "emergency_revoke_api_keys":
-            // destructive — scope to the bench owner only so it never revokes other keys.
-            return { owner_id: get("owner_id"), tenant_id: tenantId, reason: "bench emergency", context };
-        case "validate_api_key":
-            return { plain_key: get("plain_key"), endpoint: "/v1/test", required_scope: "resource:read", ip_address: "127.0.0.1" };
-        case "get_api_key_usage_stats":
-            return { key_id: get("key_id") };
-    }
-    return undefined;
-}
-// ── IdentityProviderService (core/idp/services/v1) — 27 RPCs ───────────────────
-// SAML/SCIM/external-IdP RPCs need an external provider — best valid body only.
-function idpBody(methodName, tenantId, projectId, tctx, get) {
-    const provider_id = get("provider_id");
-    const context = { tenant: { tenant_id: tenantId } };
-    const page = { page: 1, page_size: 20 };
-    switch (methodName) {
-        case "create_provider":
-            // kind must be ≤24 chars → IDP_KIND_OIDC (VARCHAR(24) overflow on EXTERNAL_SESSION).
-            return { tenant_id: tenantId, kind: "IDP_KIND_OIDC", display_name: `Acme OIDC ${liveUuid().slice(0, 8)}`, issuer: "https://idp.example.com", jwks_url: "https://idp.example.com/jwks", client_ids: ["client-1"], audiences: ["udb"], claim_mapping_json: "{}", group_mapping_json: "{}", jit_policy_json: JSON.stringify({ require_verified_email: false }), account_linking_policy: "explicit", enabled: true, created_by: get("user_id"), context };
-        case "update_provider":
-            return { provider_id, tenant_id: tenantId, display_name: `Acme OIDC ${liveUuid().slice(0, 8)}`, claim_mapping_json: "{}", group_mapping_json: "{}", jit_policy_json: JSON.stringify({ require_verified_email: false }), account_linking_policy: "explicit", updated_by: get("user_id"), context };
-        case "disable_provider":
-            // target the SEPARATE disposable provider so saml_acs/resolve (which read the main
-            // provider_id) aren't broken by a disabled provider.
-            return { provider_id: get("disable_provider_id") || provider_id, tenant_id: tenantId, updated_by: get("user_id"), context };
-        case "get_provider":
-            return { provider_id, tenant_id: tenantId };
-        case "list_providers":
-            return { tenant_id: tenantId, kind: "IDP_KIND_UNSPECIFIED", enabled_only: false, page };
-        case "test_provider_discovery":
-            return { provider_id, tenant_id: tenantId };
-        case "force_jwks_refresh":
-            return { provider_id, tenant_id: tenantId };
-        case "preview_claim_mapping":
-            return { provider_id, tenant_id: tenantId, claims_json: JSON.stringify({ sub: "abc", email: "a@x.com" }), claim_mapping_json: "" };
-        case "preview_group_mapping":
-            return { provider_id, tenant_id: tenantId, groups: ["admins"], group_mapping_json: "" };
-        case "list_external_identities":
-            return { tenant_id: tenantId, provider_id: "", user_id: "", page };
-        case "link_identity":
-            return { tenant_id: tenantId, provider_id, subject: "ext-subject-1", user_id: get("user_id"), email: "a@x.com", email_verified: true, context };
-        case "unlink_identity":
-            return { tenant_id: tenantId, external_identity_id: get("external_identity_id") || liveUuid(), context };
-        case "import_saml_metadata":
-            return { provider_id: get("saml_provider_id") || provider_id, tenant_id: tenantId, metadata_xml: SAML_IDP_METADATA_XML, updated_by: get("user_id"), context };
-        case "start_saml_login":
-            // Must target the SAML-kind provider with an imported SSO URL, not the OIDC one.
-            return { provider_id: get("saml_provider_id") || provider_id, tenant_id: tenantId, relay_state: "state-1" };
-        case "saml_acs":
-            // dev self-asserted IdP: the test sentinel SAML response.
-            // Unique NameID/email per call (sentinel `:<name_id>` suffix, saml.rs:940) so JIT
-            // provisioning always creates a FRESH external user → no "account exists; explicit
-            // linking required" collision with prior runs/iterations (account_linking_policy=explicit).
-            return { provider_id, tenant_id: tenantId, saml_response: `__UDB_SAML_TEST__:saml-${liveUuid().slice(0, 8)}@x.com`, relay_state: "state-1", context };
-        case "resolve_external_identity":
-            // Unique sub/email per call so JIT always provisions a FRESH external user (no
-            // pre-existing-account collision with scim/prior runs; account_linking_policy=explicit).
-            return { provider_id, tenant_id: tenantId, claims_json: JSON.stringify({ sub: `ext-${liveUuid().slice(0, 8)}`, email: `ext-${liveUuid().slice(0, 8)}@x.com`, email_verified: true }) };
-        case "scim_create_user":
-            // random userName per iteration so the per-iteration rebuild doesn't dup (ALREADY_EXISTS).
-            return { tenant_id: tenantId, provider_id, scim_user_json: JSON.stringify({ userName: `scim-${liveUuid().slice(0, 8)}@x.com`, active: true }), context };
-        case "scim_get_user":
-            return { tenant_id: tenantId, provider_id, scim_user_id: get("scim_user_id") || get("record_id") };
-        case "scim_list_users":
-            return { tenant_id: tenantId, provider_id, filter: "", page };
-        case "scim_replace_user":
-            return { tenant_id: tenantId, provider_id, scim_user_id: get("scim_user_id") || get("record_id"), scim_user_json: JSON.stringify({ userName: "a@x.com", active: true }), context };
-        case "scim_patch_user":
-            return { tenant_id: tenantId, provider_id, scim_user_id: get("scim_user_id") || get("record_id"), operations: [{ op: "replace", path: "active", value_json: "false" }], context };
-        case "scim_delete_user":
-            return { tenant_id: tenantId, provider_id, scim_user_id: get("delete_scim_user_id") || get("record_id"), context };
-        case "scim_create_group":
-            // displayName MUST equal a seeded provider group_mapping_json key — the
-            // provider seed maps "sdk-perf-group", so the group resolves against it.
-            return { tenant_id: tenantId, provider_id, scim_group_json: JSON.stringify({ displayName: "sdk-perf-group" }), context };
-        case "scim_get_group":
-            return { tenant_id: tenantId, provider_id, scim_group_id: get("scim_group_id") || get("record_id") };
-        case "scim_list_groups":
-            return { tenant_id: tenantId, provider_id, filter: "", page };
-        case "scim_patch_group":
-            return { tenant_id: tenantId, provider_id, scim_group_id: get("scim_group_id") || get("record_id"), operations: [{ op: "add", path: "members", value_json: '["scim-user-id"]' }], context };
-        case "scim_delete_group":
-            return { tenant_id: tenantId, provider_id, scim_group_id: get("scim_group_id") || get("record_id"), context };
-    }
-    return undefined;
-}
-// ── TenantService (core/tenant/services/v1) — 6 RPCs ───────────────────────────
-function tenantBody(methodName, get) {
-    const tenant_id = get("tenant_id");
-    switch (methodName) {
-        case "create_tenant":
-            // unique code per call avoids the unique-code collision the MD flags.
-            return { code: `bench-${liveUuid().slice(0, 8)}`, name: "Acme Bench", type: "organization", parent_tenant_id: "", config: "{}", branding: "{}" };
-        case "get_tenant":
-            return { tenant_id };
-        case "list_tenants":
-            return { type: "", status: "", page: 1, page_size: 20 };
-        case "update_tenant":
-            return { tenant_id, name: "Acme Bench", status: "active", config: "{}", branding: "{}" };
-        case "get_tenant_config":
-            return { tenant_id };
-        case "update_tenant_config":
-            return { tenant_id, config_key: "feature.flag", config_value: "on", type: "string" };
-    }
-    return undefined;
-}
-// ── AnalyticsService (core/analytics/services/v1) — 7 RPCs ─────────────────────
-function analyticsBody(methodName, tenantId, projectId, tctx, get) {
-    const context = { tenant: { tenant_id: tenantId, project_id: projectId }, request_id: `ts-perf-${Date.now()}` };
-    const stage_name = get("stage_name");
-    switch (methodName) {
-        case "record_pipeline_metric":
-            return { stage_name, tenant_id: tenantId, latency_ms: 12.5, is_success: true, context };
-        case "get_pipeline_summary":
-            return { stage_name, tenant_id: tenantId, hour_from: "2026-06-01T00:00:00Z", hour_to: "2026-06-14T23:00:00Z", page: { page: 1, page_size: 50 } };
-        case "get_executor_performance":
-            return { executor_identity: "", workload_kind: "", date_from: "2026-06-01", date_to: "2026-06-14" };
-        case "get_reconciliation_analytics":
-            return { date_from: "2026-06-01", date_to: "2026-06-14" };
-        case "get_throughput":
-            return { tenant_id: tenantId, hour_from: "2026-06-01T00:00:00Z", hour_to: "2026-06-14T23:00:00Z" };
-        case "get_sla_compliance":
-            return { stage_name, date_from: "2026-06-01", date_to: "2026-06-14", p99_threshold_ms: 250.0, error_rate_threshold: 0.01 };
-        case "trigger_snapshot":
-            return { stage_name, hour: "2026-06-14T10:00:00Z", context };
-    }
-    return undefined;
-}
-// ── AssetService (core/asset/services/v1) — 8 RPCs ─────────────────────────────
-function assetBody(methodName, tenantId, projectId, get) {
-    switch (methodName) {
-        case "create_pipeline_definition":
-            return { tenant_id: tenantId, name: `bench-pipeline-${liveUuid().slice(0, 8)}`, description: "Generate thumbnails", media_type: "image/png", steps: JSON.stringify([{ name: "resize", type: "TRANSFORM" }]), version: 1 };
-        case "get_pipeline_definition":
-            return { tenant_id: tenantId, definition_id: get("definition_id") };
-        case "register_asset":
-            return { tenant_id: tenantId, project_id: "", file_id: get("file_id"), name: "logo.png", media_type: "image/png", metadata: JSON.stringify({ source: "upload" }) };
-        case "start_pipeline":
-            return { tenant_id: tenantId, definition_id: get("definition_id"), asset_id: get("asset_id"), context: "{}", correlation_id: `run-${liveUuid().slice(0, 8)}` };
-        case "get_pipeline":
-            return { tenant_id: tenantId, instance_id: get("instance_id") };
-        case "complete_step":
-            // step_id is a real step from the seeded started pipeline (GetPipeline.steps[].id).
-            return { tenant_id: tenantId, step_id: get("step_id") || liveUuid(), status: "COMPLETED", result: "{}", error_message: "" };
-        case "list_assets":
-            return { tenant_id: tenantId, media_type: "", status: "", page: 1, page_size: 20 };
-        case "get_asset":
-            return { tenant_id: tenantId, asset_id: get("asset_id") };
-    }
-    return undefined;
-}
-// ── StorageService (core/storage/services/v1) — 7 RPCs ─────────────────────────
-function storageBody(methodName, tenantId, get) {
-    const file_id = get("file_id");
-    switch (methodName) {
-        case "register_upload":
-            return { tenant_id: tenantId, project_id: "", filename: "report.pdf", content_type: "application/pdf", file_type: "document", reference_id: liveUuid(), reference_type: "document", is_public: false, expires_in_minutes: 15, size_bytes: 1024 };
-        case "finalize_upload": {
-            // The primary file_id is already finalized by the seed (FinalizeUpload twice
-            // fails "upload already finalized"), so the measured Finalize targets a
-            // SEPARATE registered+uploaded-but-NOT-finalized file seeded as
-            // finalize_file_id.
-            const fin = get("finalize_file_id") || file_id;
-            return { tenant_id: tenantId, file_id: fin, content_type: "application/pdf", file_type: "document", reference_id: fin, reference_type: "document", is_public: false, size_bytes: 1024 };
-        }
-        case "get_download_url":
-            return { tenant_id: tenantId, file_id, expires_in_minutes: 15 };
-        case "get_file":
-            return { tenant_id: tenantId, file_id };
-        case "update_file":
-            return { tenant_id: tenantId, file_id, filename: "renamed.pdf", content_type: "application/pdf", file_type: "document", reference_id: file_id, reference_type: "document", is_public: true };
-        case "delete_file":
-            // destructive — the SEPARATE disposable file seeded for deletion (real 200); the
-            // primary file_id survives for get_file/get_download_url/update_file.
-            return { tenant_id: tenantId, file_id: get("delete_file_id") || liveUuid() };
-        case "list_files":
-            return { tenant_id: tenantId, file_type: "document", page: 1, page_size: 20 };
-    }
-    return undefined;
-}
-// ── NotificationService (core/notification/services/v1) — 11 RPCs ──────────────
-function notificationBody(methodName, tenantId, projectId, tctx, get) {
-    const event_type = get("event_type");
-    switch (methodName) {
-        case "send_notification":
-            return { event_type, recipient_id: get("user_id"), recipient_address: "user@example.com", tenant_id: tenantId, project_id: projectId, locale: "en", variables: { name: "SDK" }, channels: ["NOTIFICATION_CHANNEL_EMAIL"] };
-        case "get_notification":
-            return { log_id: get("log_id") };
-        case "list_notifications":
-            return { tenant_id: tenantId, page: { page: 1, page_size: 20 } };
-        case "retry_notification":
-            return { log_id: get("log_id") };
-        case "upsert_template":
-            return { event_type, channel: "NOTIFICATION_CHANNEL_EMAIL", locale: "en", subject_template: "Hello {name}", body_template: "Body {name}", is_active: true };
-        case "get_template":
-            return { event_type, channel: "NOTIFICATION_CHANNEL_EMAIL", locale: "en" };
-        case "list_templates":
-            return { page: { page: 1, page_size: 20 } };
-        case "get_delivery_stats":
-            return { tenant_id: tenantId, event_type, date_from: "2026-01-01", date_to: "2026-12-31" };
-        case "set_preference":
-            return { user_id: get("user_id"), tenant_id: tenantId, channel: "NOTIFICATION_CHANNEL_EMAIL", event_type: "", is_opted_out: true };
-        case "get_preference":
-            return { user_id: get("user_id"), tenant_id: tenantId, channel: "NOTIFICATION_CHANNEL_EMAIL", event_type: "" };
-        case "list_preferences":
-            return { user_id: get("user_id"), tenant_id: tenantId, page: { page: 1, page_size: 20 } };
-    }
-    return undefined;
-}
-// ── WebRTC Room/Peer/Track/Turn (core/webrtc/services/v1) — unary RPCs ─────────
-// Destructive room/peer/track teardown targets the seeded disposable room.
-function webrtcBody(methodName, tenantId, get) {
-    const room_id = get("room_id");
-    const peer_id = get("peer_id");
-    const track_id = get("track_id");
-    switch (methodName) {
-        case "create_room":
-            return { tenant_id: tenantId, name: `bench-room-${liveUuid().slice(0, 8)}`, max_participants: 10, config: "{}", created_by: get("user_id") };
-        case "get_room":
-            return { tenant_id: tenantId, room_id };
-        case "update_room":
-            return { tenant_id: tenantId, room_id, name: "bench-room-2", state: "active", config: "{}" };
-        case "close_room":
-            // destructive against the SEPARATE disposable room seeded for closing (real 200);
-            // the main room stays available to the other webrtc RPCs in the same run.
-            return { tenant_id: tenantId, room_id: get("close_room_id") || liveUuid() };
-        case "list_rooms":
-            return { tenant_id: tenantId, state: "active", page: 1, page_size: 20 };
-        case "join_room":
-            return { tenant_id: tenantId, room_id, display_name: "Bench User", metadata: "{}", user_agent: "bench/1.0" };
-        case "join_session":
-            // Atomic join-room + mint-TURN-credentials (mirrors join_room body plus the
-            // ttl_seconds int32 TURN credential lifetime; bench-bodies/webrtc.md row
-            // PeerService.JoinSession). TURN config must be present (fail-closed). Uses
-            // its OWN high-capacity room (join_session_room_id) — the main room_id is
-            // filled to its cap of 8 by JoinRoom's iters, so JoinSession against it would
-            // hit "room ... at capacity".
-            return { tenant_id: tenantId, room_id: get("join_session_room_id") || room_id, display_name: "Bench Session", metadata: "{}", user_agent: "bench/1.0", ttl_seconds: 3600 };
-        case "leave_room":
-            // destructive — a throwaway peer id so the seeded peer stays for read RPCs.
-            return { tenant_id: tenantId, room_id, peer_id: get("leave_peer_id") || liveUuid() };
-        case "get_peer":
-            return { tenant_id: tenantId, peer_id };
-        case "list_peers":
-            return { tenant_id: tenantId, room_id, state: "connected" };
-        case "publish_track":
-            return { tenant_id: tenantId, room_id, peer_id, kind: "audio", label: "mic", settings: "{}", metadata: "{}" };
-        case "unpublish_track":
-            // destructive — a throwaway track id so the seeded track stays for read RPCs.
-            return { tenant_id: tenantId, track_id: get("unpublish_track_id") || liveUuid() };
-        case "mute_track":
-            return { tenant_id: tenantId, track_id, muted: true };
-        case "list_tracks":
-            return { tenant_id: tenantId, room_id, peer_id, kind: "audio" };
-        case "issue_credentials":
-            return { tenant_id: tenantId, room_id, peer_id, ttl_seconds: 3600 };
-        case "signal":
-            // SignalingService bidi: first SignalRequest is a keepalive ping for the room/peer.
-            return { tenant_id: tenantId, room_id, peer_id, ping: true };
-    }
-    return undefined;
-}
-// ── ControlPlaneService (core/control/services/v1) — unary RPCs ────────────────
-// node_id refs a data-plane PEP node that opened a stream session — un-seedable in
-// a passive bench; best valid body. (Stream RPCs are timed separately by the loop.)
-function controlPlaneBody(methodName, tenantId, get) {
-    const context = { tenant: { tenant_id: tenantId } };
-    const node_id = get("node_id");
-    switch (methodName) {
-        case "stream_resources":
-            // Bidi first DiscoveryRequest = a subscription (empty version_info/response_nonce).
-            return { node_id: node_id || "ts-perf-node", resource_type: "RESOURCE_TYPE_BACKEND_TARGET_DEFINITION", version_info: "", response_nonce: "", resource_names: [], context };
-        case "delta_resources":
-            // Bidi first DeltaDiscoveryRequest = initial subscribe (empty nonce/versions).
-            return { node_id: node_id || "ts-perf-node", resource_type: "RESOURCE_TYPE_BACKEND_TARGET_DEFINITION", response_nonce: "", resource_names_subscribe: [], resource_names_unsubscribe: [], initial_resource_versions: {}, context };
-        case "get_resources":
-            return { resource_type: "RESOURCE_TYPE_BACKEND_TARGET_DEFINITION", tenant_id: tenantId, resource_names: [], page: { page: 1, page_size: 50 }, context };
-        case "list_node_states":
-            return { node_id: "", resource_type: "RESOURCE_TYPE_UNSPECIFIED", page: { page: 1, page_size: 50 }, context };
-        case "ack_status":
-            return { node_id, resource_type: "RESOURCE_TYPE_BACKEND_TARGET_DEFINITION", context };
-    }
-    return undefined;
+// perfRealBody returns the shared strict-JSON bench-manifest request for every
+// RPC the bench measures. The manifest is now the single request-body source; a
+// missing or unhydratable body is a hard gap/bypass failure, never a typed switch
+// or generic placeholder fallback.
+function perfRealBody(serviceName, methodName, _tenantId, _projectId, fixtures) {
+    return manifestJSONBody(serviceName, methodName, fixtures);
 }
 // ── Perf SEED phase + fixture map (mirrors the Go harness) ─────────────────────
 //
@@ -1221,7 +1655,7 @@ function controlPlaneBody(methodName, tenantId, get) {
 // same create flows the conformance suite (runLiveNativeServiceE2E above) already
 // proves succeed — and records their real identifiers into a PerfFixtures map keyed
 // by SEMANTIC field name (user_id, role, policy_id, file_id, room_id, subject, …).
-// perfRealBody resolves each request's reference/ID fields against this map, so a
+// manifest-only perfRealBody resolves each request's reference/ID fields against this map, so a
 // body for, say, AuthzService/get_role gets the seeded role_id and drives the
 // success path.
 //
@@ -1278,6 +1712,7 @@ async function seedPerfFixtures(gen, data, tenantId, projectId, uuidTenant) {
     fix.set("project", projectId);
     fix.set("domain", tenantId);
     fix.set("message_type", LIVE_MESSAGE_TYPE);
+    fix.set("tenant_code", `sdk-perf-tenant-${suffix}`);
     // ── DataBroker: a real SdkLiveRecord row (drives Upsert/Select/Delete + CDC) ──
     const recordId = `ts-perf-${suffix}`;
     await tryRun("SdkLiveRecord upsert", async () => {
@@ -1327,8 +1762,8 @@ async function seedPerfFixtures(gen, data, tenantId, projectId, uuidTenant) {
     });
     // NOTE: a single backend/resource fixture cannot serve both the SQL and the
     // document/cache RPCs (each needs its own backend + resource). The
-    // backend-specific DataBroker RPCs are driven by typed bodies in perfRealBody, so
-    // we deliberately do NOT register a global backend/resource_name fixture.
+    // backend-specific DataBroker RPCs are driven by explicit manifest bodies, so we
+    // deliberately do NOT register a global backend/resource_name fixture.
     fix.set("collection", collection);
     fix.set("mongo_collection", collection);
     // ── AuthnService: a real user (id reused everywhere a user_id is needed) ───────
@@ -1614,15 +2049,23 @@ async function seedPerfFixtures(gen, data, tenantId, projectId, uuidTenant) {
         // keys — the provider seed maps "sdk-perf-group", so use that exact key.
         fix.set("scim_group_id", "sdk-perf-group");
     }
-    // ── Saga + DLQ rows: pre-seeded out-of-band into udb_system (fixed UUIDs, one
-    // disposable row per mutating RPC). The SQL insert runs before the test.
-    fix.set("saga_id", "11111111-1111-4111-8111-111111111101");
-    fix.set("retry_saga_id", "11111111-1111-4111-8111-111111111102");
-    fix.set("mark_saga_id", "11111111-1111-4111-8111-111111111103");
-    fix.set("dlq_id", "22222222-2222-4222-8222-222222222201");
-    fix.set("dismiss_dlq_id", "22222222-2222-4222-8222-222222222202");
-    fix.set("quarantine_dlq_id", "22222222-2222-4222-8222-222222222203");
-    fix.set("replay_dlq_id", "22222222-2222-4222-8222-222222222204");
+    // ── Saga + DLQ rows: create recovery state through the served, admin-gated
+    // EnsureBaseline RPC instead of raw udb_system inserts. Each mutating RPC gets
+    // its own disposable row because the op transitions status.
+    for (const [sagaKey, dlqKey] of [
+        ["saga_id", "dlq_id"],
+        ["retry_saga_id", "dismiss_dlq_id"],
+        ["mark_saga_id", "quarantine_dlq_id"],
+        ["", "replay_dlq_id"],
+    ]) {
+        await tryRun(`EnsureBaseline:${dlqKey}`, async () => {
+            const baseline = await data.ensure_baseline({ context: ctx }, opts);
+            if (sagaKey && (baseline.saga_ids ?? []).length > 0)
+                fix.set(sagaKey, baseline.saga_ids[0]);
+            if ((baseline.dlq_ids ?? []).length > 0)
+                fix.set(dlqKey, baseline.dlq_ids[0]);
+        });
+    }
     // ── AuthzService governance lifecycle (ports the Go seed): drafts in each state,
     // approved policy VERSIONS, a canary, and a rollback set — so the draft/version/
     // canary RPCs run their real success path. ──────────────────────────────────────
@@ -1760,8 +2203,11 @@ async function seedPerfFixtures(gen, data, tenantId, projectId, uuidTenant) {
     // get_version stay broker-blocked (K2). If staging still poisons, revert this.
     await tryRun("CaptureCatalogManifest", async () => {
         const cm = await data.get_catalog_manifest({ context: { ...ctx, scopes: ["udb:admin"] }, redact: false }, opts);
-        if (cm?.manifest_json)
+        if (cm?.manifest_json) {
             seedCatalogManifest = cm.manifest_json;
+            const bytes = Buffer.isBuffer(cm.manifest_json) ? cm.manifest_json : Buffer.from(cm.manifest_json);
+            fix.set("catalog_manifest_b64", bytes.toString("base64"));
+        }
     });
     // NOTE: NOT staging a catalog here — staging the manifest puts the broker into a
     // pending-catalog state that fails-precondition EVERY DataBroker data op (76 RPCs).
@@ -1791,16 +2237,13 @@ async function seedPerfFixtures(gen, data, tenantId, projectId, uuidTenant) {
     const recipientId = fix.lookup("recipient_id");
     if (recipientId) {
         await tryRun("SendNotification", async () => {
-            const sent = await gen.NotificationService.send_notification({ event_type: event, recipient_id: recipientId, recipient_address: `sdk+${suffix}@example.com`, tenant_id: tenantId, channels: [1], variables: { n: "1" } }, opts);
+            const sent = await gen.NotificationService.send_notification({ event_type: event, recipient_id: recipientId, recipient_address: `sdk+${suffix}@example.com`, tenant_id: tenantId, resource_type: "__perf_force_failed__", channels: [1], variables: { n: "1" } }, opts);
             if ((sent.logs ?? []).length > 0) {
                 const logId = sent.logs[0].log_id;
                 fix.set("log_id", logId);
                 fix.set("notification_id", logId);
-                // RetryNotification is status-gated to FAILED/SUPPRESSED rows — mark this real log
-                // FAILED via GenericDispatch operation="mutate" (query only allows SELECT). Go pattern.
-                await tryRun("MarkNotificationFailed", async () => {
-                    await data.generic_dispatch({ context: { ...ctx, scopes: ["udb:dispatch", "udb:admin"] }, backend: "postgres", operation: "mutate", spec_json: JSON.stringify({ sql: "UPDATE udb_notification.notification_logs SET status = 'FAILED', error_message = 'perf seed failure' WHERE log_id = $1::UUID AND tenant_id = $2 RETURNING log_id", params: [logId, tenantId], param_types: ["uuid", "string"], return_rows: true }) }, opts);
-                });
+                // UDB_NOTIFICATION_TEST_MODE + ResourceType sentinel makes this served
+                // send produce a real FAILED row for RetryNotification.
             }
         });
     }
@@ -2998,17 +3441,16 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
         await expectStreamMounted("authTarget.ControlPlaneService.stream_resources", () => authGenerated.ControlPlaneService.stream_resources({ deadlineMs: 2_000 }));
         await expectStreamMounted("authTarget.SignalingService.signal", () => authGenerated.SignalingService.signal({ deadlineMs: 2_000 }));
         await expectStreamMounted("authTarget.StorageService.download_file", () => authGenerated.StorageService.download_file({}, { deadlineMs: 2_000 }));
+        await expectStreamMounted("authTarget.LiveQueryService.subscribe", () => authGenerated.LiveQueryService.subscribe({}, { deadlineMs: 2_000 }));
         node_assert_1.strict.ok(nativeCount > 0, "native control-plane unary RPCs must be probed");
         node_assert_1.strict.ok(dataCount > 0, "DataBroker unary RPCs must be probed");
-        // Full-surface coverage like Go/Python/PHP: 265 RPCs total = 253 unary
-        // (nativeCount + dataCount) + the 12 streaming RPCs probed individually below.
-        // EnsureBaseline (DataBroker) + JoinSession (PeerService) are both unary, so the
-        // unary count rose 251→253. StorageService.DownloadFile is SERVER-STREAMING, so
-        // it adds to the streaming count (11→12), not the unary count (265 total).
-        const STREAMING_PROBED = 12; // get_object, publish_cdc, select_v_2, put_object,
+        // Full-surface coverage like Go/Python/PHP: unary RPCs plus the streaming
+        // RPCs probed individually below must equal the generated operation catalog.
+        const STREAMING_PROBED = 13; // get_object, publish_cdc, select_v_2, put_object,
         //   batch_select, batch_upsert, begin_tx, vector_batch_upsert, delta_resources,
-        //   stream_resources, signal, download_file
-        node_assert_1.strict.equal(nativeCount + dataCount + STREAMING_PROBED, 265, `TS probed ${nativeCount + dataCount} unary + ${STREAMING_PROBED} streaming = ${nativeCount + dataCount + STREAMING_PROBED}, want 265 — full-surface coverage regressed`);
+        //   stream_resources, signal, download_file, subscribe
+        const expectedRpcCount = Object.keys(generatedClient_1.RPC_OPERATION_KIND).length;
+        node_assert_1.strict.equal(nativeCount + dataCount + STREAMING_PROBED, expectedRpcCount, `TS probed ${nativeCount + dataCount} unary + ${STREAMING_PROBED} streaming = ${nativeCount + dataCount + STREAMING_PROBED}, want ${expectedRpcCount} — full-surface coverage regressed`);
         node_assert_1.strict.ok(probeCounters.populated >= 200, `only ${probeCounters.populated} unary RPCs received a populated typed request; full-surface coverage regressed`);
     }
     finally {
@@ -3223,7 +3665,7 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
                     }
                     durs.sort((a, b) => a - b);
                     const pct = (p) => durs[Math.min(durs.length - 1, Math.floor((p * (durs.length - 1)) / 100))];
-                    samples.push({ service: serviceName, rpc: methodName, kind: "stream", err: errCode, p50: pct(50), p99: pct(99), mean: durs.reduce((s, d) => s + d, 0) / durs.length, note: "cdc: time-to-first-event (real seeded Upsert produced)" });
+                    samples.push({ service: serviceName, rpc: snakeToPascal(methodName), apiAlias: apiAliasOf(api.serviceFull, methodName), operationId: operationIdOf(api.serviceFull, methodName), kind: "stream", err: errCode, p50: pct(50), p99: pct(99), mean: durs.reduce((s, d) => s + d, 0) / durs.length, note: "cdc: time-to-first-event (real seeded Upsert produced)" });
                     return;
                 }
                 // Server-streaming reads with a real first response (select_v_2, get_object).
@@ -3240,21 +3682,21 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
                     }
                     durs.sort((a, b) => a - b);
                     const pct = (p) => durs[Math.min(durs.length - 1, Math.floor((p * (durs.length - 1)) / 100))];
-                    samples.push({ service: serviceName, rpc: methodName, kind: "stream", err: errCode, p50: pct(50), p99: pct(99), mean: durs.reduce((s, d) => s + d, 0) / durs.length, note: "streaming: time-to-first-response (seeded)" });
+                    samples.push({ service: serviceName, rpc: snakeToPascal(methodName), apiAlias: apiAliasOf(api.serviceFull, methodName), operationId: operationIdOf(api.serviceFull, methodName), kind: "stream", err: errCode, p50: pct(50), p99: pct(99), mean: durs.reduce((s, d) => s + d, 0) / durs.length, note: "streaming: time-to-first-response (seeded)" });
                     return;
                 }
                 // Client-streaming / bidi: a single seeded message cannot drive a real
                 // response in a passive run — report stream-open latency. The first message
-                // is the DOC-GROUNDED body (no generic): perfRealBody must cover it.
+                // is the shared manifest body (no generic): perfRealBody must cover it.
                 const streamReq = perfRealBody(serviceName, methodName, tenantId, projectId, fixtures);
                 if (!streamReq)
                     throw new Error(`perfRealBody has no doc-grounded body for streaming ${serviceName}/${methodName} — gap/bypass not allowed`);
                 const d = timeStreamOpen(fn, streamReq);
-                samples.push({ service: serviceName, rpc: methodName, kind: "stream_open", err: "OK", p50: d, p99: d, mean: d, note: "streaming: stream-open latency" });
+                samples.push({ service: serviceName, rpc: snakeToPascal(methodName), apiAlias: apiAliasOf(api.serviceFull, methodName), operationId: operationIdOf(api.serviceFull, methodName), kind: "stream_open", err: "OK", p50: d, p99: d, mean: d, note: "streaming: stream-open latency" });
                 return;
             }
             const kind = operationKindOf(api.serviceFull, methodName) || "read_only";
-            // Every RPC gets its DOC-GROUNDED valid body from perfRealBody — NO generic
+            // Every RPC gets its shared manifest body from perfRealBody — NO generic
             // fallback. A missing body is a loud failure (gap/bypass not allowed), never a
             // silently-populated placeholder. Destructive RPCs run for real against the
             // disposable seeded target, measured once.
@@ -3299,7 +3741,10 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
             durs.sort((a, b) => a - b);
             const pct = (p) => durs[Math.min(durs.length - 1, Math.floor((p * (durs.length - 1)) / 100))];
             samples.push({
-                service: serviceName, rpc: methodName, kind, err: errCode,
+                service: serviceName, rpc: snakeToPascal(methodName),
+                apiAlias: apiAliasOf(api.serviceFull, methodName),
+                operationId: operationIdOf(api.serviceFull, methodName),
+                kind, err: errCode,
                 p50: pct(50), p99: pct(99), mean: durs.reduce((s, d) => s + d, 0) / durs.length,
                 note: kind === "destructive" ? "destructive: 1 real call against a seeded disposable target" : `${kind} (seeded success path)`,
             });
@@ -3314,7 +3759,7 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
         ];
         // Phase 3 (LAST): AuthnService RPCs that end a session / invalidate a principal
         // or credentials. These target the seeded DISPOSABLE user / its session (the
-        // perfRealBody bodies point at <seed:user_id>/<seed:session_id>, and the
+        // manifest bodies point at <seed:user_id>/<seed:session_id>, and the
         // tenant-wide / emergency ones target throwaway non-admin targets), so the
         // admin's own bearer/session stays live until the very end.
         const PHASE3_AUTHN = new Set([
@@ -3413,21 +3858,22 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
         }
         else {
             lines.push("These RPCs returned a non-OK gRPC status and are FAILURES, not latency samples.");
-            lines.push("", "| RPC | kind | err | p99 ms | mean ms |", "|---|---|---|--:|--:|");
+            lines.push("", "| RPC | api_alias | operation_id | kind | err | p99 ms | mean ms |", "|---|---|---|---|---|--:|--:|");
             for (const s of [...failed].sort((a, b) => (a.service + a.rpc).localeCompare(b.service + b.rpc))) {
-                lines.push(`| ${s.service}/${s.rpc} | ${s.kind} | ${s.err} | ${s.p99.toFixed(2)} | ${s.mean.toFixed(2)} |`);
+                lines.push(`| ${s.service}/${s.rpc} | ${s.apiAlias} | ${s.operationId} | ${s.kind} | ${s.err} | ${s.p99.toFixed(2)} | ${s.mean.toFixed(2)} |`);
             }
         }
-        lines.push("", "## Slowest 20 by p99", "", "| RPC | kind | err | p50 ms | p99 ms | mean ms | note |", "|---|---|---|--:|--:|--:|---|");
+        lines.push("", "## Slowest 20 by p99", "", "| RPC | api_alias | operation_id | kind | err | p50 ms | p99 ms | mean ms | note |", "|---|---|---|---|---|--:|--:|--:|---|");
         for (const s of [...samples].sort((a, b) => b.p99 - a.p99).slice(0, 20)) {
-            lines.push(`| ${s.service}/${s.rpc} | ${s.kind} | ${s.err} | ${s.p50.toFixed(2)} | ${s.p99.toFixed(2)} | ${s.mean.toFixed(2)} | ${s.note} |`);
+            lines.push(`| ${s.service}/${s.rpc} | ${s.apiAlias} | ${s.operationId} | ${s.kind} | ${s.err} | ${s.p50.toFixed(2)} | ${s.p99.toFixed(2)} | ${s.mean.toFixed(2)} | ${s.note} |`);
         }
-        lines.push("", "## Full per-RPC table (sorted by service, then RPC)", "", "| Service | RPC | kind | err | p50 ms | p99 ms | mean ms | note |", "|---|---|---|---|--:|--:|--:|---|");
+        lines.push("", "## Full per-RPC table (sorted by service, then RPC)", "", "| Service | RPC | api_alias | operation_id | kind | err | p50 ms | p99 ms | mean ms | note |", "|---|---|---|---|---|---|--:|--:|--:|---|");
         for (const s of [...samples].sort((a, b) => (a.service === b.service ? a.rpc.localeCompare(b.rpc) : a.service.localeCompare(b.service)))) {
-            lines.push(`| ${s.service} | ${s.rpc} | ${s.kind} | ${s.err} | ${s.p50.toFixed(2)} | ${s.p99.toFixed(2)} | ${s.mean.toFixed(2)} | ${s.note} |`);
+            lines.push(`| ${s.service} | ${s.rpc} | ${s.apiAlias} | ${s.operationId} | ${s.kind} | ${s.err} | ${s.p50.toFixed(2)} | ${s.p99.toFixed(2)} | ${s.mean.toFixed(2)} | ${s.note} |`);
         }
         (0, node_fs_1.writeFileSync)("perf_report_ts.md", lines.join("\n") + "\n");
-        node_assert_1.strict.ok(samples.length >= 262, `perf measured only ${samples.length} RPCs (want all 265)`);
+        const expectedPerfCount = Object.keys(generatedClient_1.RPC_OPERATION_KIND).length;
+        node_assert_1.strict.ok(samples.length >= expectedPerfCount, `perf measured only ${samples.length} RPCs (want all ${expectedPerfCount})`);
         console.log(`\nTS perf: ${samples.length} RPCs measured, ${failed.length} FAILED (non-OK gRPC status) → sdk/typescript/perf_report_ts.md`);
         await seed.cleanup();
     }
@@ -3440,7 +3886,7 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
 // This is the SCENARIO bench: it times the user-facing WORKFLOW HELPERS the
 // simple-client docs prescribe (uploadFile, downloadFile, bound entity
 // upsert/select/delete, loginAndAdoptTenant, events subscribe-ready/publishAndWait,
-// webrtc joinSession) as end-to-end facade calls — NOT the raw 265-RPC surface
+// webrtc joinSession) as end-to-end facade calls — NOT the raw generated RPC surface
 // (that stays in the "live per-RPC perf" sweep above → perf_report_ts.md). It is
 // gated by its OWN flag (UDB_SCENARIO_PERF=1) and writes its OWN report
 // (scenario_perf_ts.md) so it can run/report independently. Each row's `seq` is the
@@ -3585,7 +4031,7 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
         lines.push("This is the SCENARIO bench: it times the user-facing WORKFLOW HELPERS the " +
             "simple-client docs prescribe (uploadFile, downloadFile, bound entity " +
             "upsert/select/delete, loginAndAdoptTenant, events publishAndWait, webrtc " +
-            "joinSession) — measured as end-to-end facade calls, NOT the raw 265-RPC " +
+            "joinSession) — measured as end-to-end facade calls, NOT the raw generated RPC " +
             "surface (that stays in perf_report_ts.md). Each `seq` is the documented helper " +
             "RPC sequence (docs/bench-bodies/workflow-sequences.md).", "");
         lines.push("| Scenario | seq | err | p50 ms | p99 ms | mean ms | min ms | max ms | iters |", "|---|---|---|--:|--:|--:|--:|--:|--:|");

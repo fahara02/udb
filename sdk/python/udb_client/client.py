@@ -25,6 +25,19 @@ def receipt_from_response(response: Any) -> WriteReceipt:
     return WriteReceipt.from_json(getattr(response, "write_receipt_json", "") or "")
 
 
+def was_duplicate(response: Any) -> bool:
+    """Whether a ``MutationResponse`` was a durable-idempotency replay.
+
+    Ergonomic accessor for ``MutationResponse.was_duplicate`` (field 6): the
+    broker sets it when a mutation carrying an idempotency key was durably
+    deduplicated (a replayed write returning the original receipt) rather than
+    applied fresh. Lets callers distinguish a replay from a new write without
+    reaching into the raw proto; the raw response stays available. Returns
+    ``False`` defensively when the field is absent.
+    """
+    return bool(getattr(response, "was_duplicate", False))
+
+
 def to_struct(value: JsonMapping | Struct | None) -> Struct:
     if isinstance(value, Struct):
         return value

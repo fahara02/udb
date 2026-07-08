@@ -85,10 +85,56 @@ try (var auth = new UdbAuthClient("localhost:50051", meta)) {
 }
 ```
 
+## Consistency, Idempotency Replay, And Platform Services
+
+A mutation returns a `WriteReceipt`; a follow-up read can carry a fence built
+from it. A keyed replay-safe mutation the broker deduplicated reports
+`was_duplicate` (full contract: [docs/native-services.md](../../docs/native-services.md)).
+
+```java
+import dev.udb.client.MutationOutcome;
+
+var outcome = MutationOutcome.of(udb.upsert(upsertRequest));
+if (outcome.wasDuplicate()) {
+    // durable-idempotency replay — no new side effect occurred
+}
+
+// Read-your-writes: metadata carrying a fence derived from the receipt.
+var fenced = meta.afterWrite(outcome.writeReceipt());
+```
+
+Retry contract: a replay-safe mutation is retried on transient errors **only
+when the request carries a non-empty idempotency key** — keyless mutations fail
+closed rather than risk a double apply.
+
+Vault, Metering, Scheduler, Search, Webhook, Workflow, Lock, LiveQuery, Config,
+Backup, and Embedding are reachable as flat typed methods on
+`GeneratedUdbClient` (no workflow facade yet):
+
+```java
+import dev.udb.client.generated.GeneratedUdbClient;
+import com.udb.core.vault.services.v1.EncryptRequest;
+
+var gen = new GeneratedUdbClient("localhost:50051", meta);
+var enc = gen.Encrypt(EncryptRequest.newBuilder()
+    .setTenantId(tenant)
+    .setKeyName("docs")
+    .setPlaintext("plain text to encrypt")
+    .build());
+```
+
+The per-RPC retry class and idempotency contract are listed in
+[docs/generated/udb-native-contract.json](../../docs/generated/udb-native-contract.json).
+
 ## Notes For Users
 
 Use `dev.udb.client.UdbClient` and `UdbAuthClient` for normal app code. The
 `com.udb.*` packages provide the protobuf request/response types.
+
+Generated RPC wrappers raise `GeneratedClientSupport.UdbRpcException`, which
+keeps the gRPC status, raw `udb-error-detail-bin` bytes, decoded
+`com.udb.entity.v1.ErrorDetail`, and `retryable`/`retryAfterMs`/`kind`
+convenience accessors.
 
 ## Performance
 

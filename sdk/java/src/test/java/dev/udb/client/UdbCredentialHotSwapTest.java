@@ -24,6 +24,8 @@ final class UdbCredentialHotSwapTest {
 
   private static final Metadata.Key<String> AUTHORIZATION =
       Metadata.Key.of("authorization", Metadata.ASCII_STRING_MARSHALLER);
+  private static final Metadata.Key<String> TENANT_ID =
+      Metadata.Key.of("x-tenant-id", Metadata.ASCII_STRING_MARSHALLER);
 
   private static final MethodDescriptor.Marshaller<String> STRING_MARSHALLER =
       new MethodDescriptor.Marshaller<>() {
@@ -53,10 +55,14 @@ final class UdbCredentialHotSwapTest {
 
   /** Capture the {@link Metadata} the interceptor attaches on {@code start}. */
   private static String authHeaderFor(ClientInterceptor interceptor) {
+    return headerFor(interceptor, AUTHORIZATION);
+  }
+
+  private static String headerFor(ClientInterceptor interceptor, Metadata.Key<String> key) {
     CapturingChannel channel = new CapturingChannel();
     ClientCall<String, String> call = interceptor.interceptCall(METHOD, CallOptions.DEFAULT, channel);
     call.start(new ClientCall.Listener<>() {}, new Metadata());
-    return channel.captured == null ? null : channel.captured.get(AUTHORIZATION);
+    return channel.captured == null ? null : channel.captured.get(key);
   }
 
   @Test
@@ -77,6 +83,22 @@ final class UdbCredentialHotSwapTest {
     UdbCredentials credentials = new UdbCredentials("", "");
     ClientInterceptor interceptor = UdbClient.credentialInterceptor(metadata(), credentials);
     assertNull(authHeaderFor(interceptor), "no bearer should mean no authorization header");
+  }
+
+  @Test
+  void mutatingMetadataReferenceChangesOutboundTenantHeader() {
+    UdbMetadataRef metadata = new UdbMetadataRef(metadata());
+    UdbCredentials credentials = new UdbCredentials("", "");
+    ClientInterceptor interceptor = UdbClient.credentialInterceptor(metadata, credentials);
+
+    assertEquals("tenant-a", headerFor(interceptor, TENANT_ID), "initial tenant not attached");
+
+    metadata.set(new UdbMetadata(
+        "canonical-tenant", "purpose", "corr", List.of("read"), "svc", "user-a", "project-a", ""));
+    assertEquals(
+        "canonical-tenant",
+        headerFor(interceptor, TENANT_ID),
+        "adopted tenant not reflected on next call");
   }
 
   @Test

@@ -25,12 +25,18 @@ internal sealed class CapturingCallInvoker : CallInvoker
     /// <summary>The full method name (e.g. "/udb.core.authz.services.v1.AuthzService/Authorize") of the most recent call.</summary>
     public string? LastMethod { get; private set; }
 
+    public List<string> MethodHistory { get; } = new();
+
+    public List<object> RequestHistory { get; } = new();
+
     public override AsyncUnaryCall<TResponse> AsyncUnaryCall<TRequest, TResponse>(
         Method<TRequest, TResponse> method, string? host, CallOptions options, TRequest request)
     {
         LastRequest = request;
         LastHeaders = options.Headers;
         LastMethod = method.FullName;
+        MethodHistory.Add(method.Name);
+        RequestHistory.Add(request!);
 
         var response = (TResponse)_responder(method.Name);
         return new AsyncUnaryCall<TResponse>(
@@ -47,6 +53,8 @@ internal sealed class CapturingCallInvoker : CallInvoker
         LastRequest = request;
         LastHeaders = options.Headers;
         LastMethod = method.FullName;
+        MethodHistory.Add(method.Name);
+        RequestHistory.Add(request!);
         return (TResponse)_responder(method.Name);
     }
 

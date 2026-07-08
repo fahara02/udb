@@ -25,6 +25,8 @@ namespace Udb.Client.AspNetCore;
 ///         (default "default").</item>
 ///   <item><c>x-udb-client-catalog-version</c> →
 ///         <see cref="UdbMetadata.ClientCatalogVersion"/>.</item>
+///   <item><c>x-udb-consistency</c>, <c>x-udb-read-fence</c>, and related
+///         consistency headers → the matching <see cref="UdbMetadata"/> fields.</item>
 /// </list>
 ///
 /// This adapter lives in the optional <c>Udb.Client.AspNetCore</c> namespace and
@@ -78,6 +80,10 @@ public sealed class UdbContextMiddleware
         var tenantId = Header(headers, "x-tenant-id");
         var projectId = Header(headers, "x-udb-project-id");
         var catalogVersion = Header(headers, "x-udb-client-catalog-version");
+        var maxReplicaLagMs =
+            long.TryParse(Header(headers, "x-udb-max-replica-lag-ms"), out var parsedLag)
+                ? Math.Max(0, parsedLag)
+                : 0;
         var authorization = Header(headers, "authorization");
         var bearerToken = authorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
             ? authorization["Bearer ".Length..].Trim()
@@ -95,7 +101,12 @@ public sealed class UdbContextMiddleware
                 ? UdbClient.ProtocolVersion
                 : catalogVersion,
             BearerToken: bearerToken,
-            ApiKey: Header(headers, "x-api-key"));
+            ApiKey: Header(headers, "x-api-key"),
+            Consistency: Header(headers, "x-udb-consistency"),
+            PrimaryRead: string.Equals(Header(headers, "x-udb-primary-read"), "true", StringComparison.OrdinalIgnoreCase),
+            MaxReplicaLagMs: maxReplicaLagMs,
+            EventualConsistencyAllowed: string.Equals(Header(headers, "x-udb-eventual-consistency-allowed"), "true", StringComparison.OrdinalIgnoreCase),
+            ReadFenceJson: Header(headers, "x-udb-read-fence"));
 
         context.Items[MetadataItemKey] = metadata;
         context.Items[RequestIdItemKey] = requestId;

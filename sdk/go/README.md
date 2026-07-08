@@ -153,6 +153,58 @@ Download options: `WithDownloadChunkSize` (advisory server chunk size) and
 buffer can grow past it). A full runnable program is in
 [`examples/storage`](examples/storage/main.go).
 
+## Consistency, Idempotency Replay, And Typed Errors
+
+A mutation returns a `WriteReceipt`; a follow-up read can carry a read fence
+built from it, or request an explicit consistency mode. A keyed replay-safe
+mutation that the broker deduplicated reports `WasDuplicate` (see
+[docs/native-services.md](../../docs/native-services.md) for the full contract).
+
+```go
+ent := udb.Entity("acme.billing.v1.Invoice", udbclient.EntityKey{"invoice_id"})
+
+// Upsert surfaces the durable-idempotency replay flag on the result.
+res, err := ent.Upsert(ctx, map[string]any{"invoice_id": "inv-1", "total_cents": 100})
+if res.WasDuplicate { /* broker replayed a prior identical keyed write */ }
+
+// Read-your-writes: fence the next read on the write's receipt.
+receipt, _ := udbclient.ReceiptFromMutation(res.Response)
+rc := &entityv1.RequestContext{TenantId: tenant, ProjectId: project}
+udb.Metadata().AfterWrite(rc, receipt, 5000) // or package-level udbclient.AfterWrite
+
+// Or pick an explicit consistency mode for an entity's reads.
+rows, err := ent.WithConsistency(udbclient.ConsistencyReadYourWrites).
+    Select(ctx, map[string]any{"invoice_id": "inv-1"})
+```
+
+Modes: `ConsistencyStrong`, `ConsistencyReadYourWrites`,
+`ConsistencyBoundedStaleness`, `ConsistencyReplicaBounded`,
+`ConsistencyEventual`, `ConsistencyProjectionOk`, `ConsistencyCacheOk`.
+
+Retry contract: a replay-safe mutation is retried on transient errors **only
+when the request carries a caller-supplied idempotency key** — keyless mutations
+fail closed instead of risking a double apply. Typed error details decode from
+the `udb-error-detail-bin` trailer via `Error.Detail()` in this package.
+
+## Platform Services (Vault, Metering, Scheduler, …)
+
+The control plane also ships Vault, Metering, Scheduler, Search, Webhook,
+Workflow, Lock, LiveQuery, Config, Backup, and Embedding services. They have no
+workflow facade yet — call them through the generated robustness layer:
+
+```go
+import vaultv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/vault/services/v1"
+
+var reply vaultv1.EncryptResponse
+err := udb.Generated.InvokeUnary(ctx,
+    "/udb.core.vault.services.v1.VaultService/Encrypt",
+    &vaultv1.EncryptRequest{TenantId: tenant, KeyName: "docs", Plaintext: "secret"},
+    &reply)
+```
+
+Every RPC's full method path, retry class, and idempotency contract is listed in
+[docs/generated/udb-native-contract.json](../../docs/generated/udb-native-contract.json).
+
 ## Notes For Users
 
 Use the `udbclient` package for normal app code. The `gen/` packages contain the

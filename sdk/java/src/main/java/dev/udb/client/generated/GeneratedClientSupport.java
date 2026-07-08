@@ -17,6 +17,9 @@
 // method names of the generated stubs.
 package dev.udb.client.generated;
 
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.udb.entity.v1.ErrorDetail;
+import com.udb.entity.v1.ErrorKind;
 import io.grpc.CallOptions;
 import io.grpc.Channel;
 import io.grpc.ClientCall;
@@ -31,6 +34,7 @@ import io.grpc.stub.MetadataUtils;
 import io.grpc.stub.StreamObserver;
 import java.time.Duration;
 import java.util.Iterator;
+import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
@@ -126,9 +130,8 @@ public final class GeneratedClientSupport {
 
   /**
    * Structured error raised by the generated wrappers. Wraps the gRPC status and
-   * exposes the decoded UDB {@code ErrorDetail} bytes from the
-   * {@code udb-error-detail-bin} trailer when the server attached one. Callers
-   * may parse those bytes with {@code com.udb.entity.v1.ErrorDetail.parseFrom}.
+   * exposes the UDB {@code ErrorDetail} bytes and decoded message from the
+   * {@code udb-error-detail-bin} trailer when the server attached one.
    */
   public static final class UdbRpcException extends RuntimeException {
     private static final long serialVersionUID = 1L;
@@ -136,6 +139,7 @@ public final class GeneratedClientSupport {
     private final transient Status status;
     private final String rpcPath;
     private final byte[] errorDetail;
+    private final transient ErrorDetail decodedErrorDetail;
 
     UdbRpcException(String rpcPath, StatusRuntimeException cause) {
       super(
@@ -145,6 +149,9 @@ public final class GeneratedClientSupport {
       this.rpcPath = rpcPath;
       this.status = cause.getStatus();
       this.errorDetail = extractDetail(cause);
+      ErrorDetail parsedDetail = parseDetail(errorDetail);
+      this.decodedErrorDetail =
+          parsedDetail != null ? parsedDetail : synthesizeTransportDetail(status.getCode());
     }
 
     public Status.Code code() {
@@ -164,12 +171,101 @@ public final class GeneratedClientSupport {
       return errorDetail;
     }
 
+    /** Decoded {@code udb.entity.v1.ErrorDetail}, or {@code null} if absent/malformed. */
+    public ErrorDetail decodedErrorDetail() {
+      return decodedErrorDetail;
+    }
+
+    /** Whether the broker marked the typed error detail as retryable. */
+    public boolean retryable() {
+      return decodedErrorDetail != null && decodedErrorDetail.getRetryable();
+    }
+
+    /** Server-advised retry delay in milliseconds, or zero when absent. */
+    public long retryAfterMs() {
+      return decodedErrorDetail != null ? decodedErrorDetail.getRetryAfterMs() : 0L;
+    }
+
+    /** Typed error-detail kind, or {@link ErrorKind#ERROR_KIND_UNSPECIFIED}. */
+    public ErrorKind kind() {
+      return decodedErrorDetail != null
+          ? decodedErrorDetail.getKind()
+          : ErrorKind.ERROR_KIND_UNSPECIFIED;
+    }
+
+    /**
+     * Structured validation failures from the decoded ErrorDetail trailer.
+     *
+     * <p>Uses protobuf reflection so this source remains compatible with older
+     * checked-in generated ErrorDetail classes. After SDK regen adds
+     * field_violations, entries appear here without another runtime change.
+     */
+    public java.util.List<java.util.Map<String, String>> fieldViolations() {
+      if (decodedErrorDetail == null) {
+        return java.util.Collections.emptyList();
+      }
+      com.google.protobuf.Descriptors.FieldDescriptor field =
+          decodedErrorDetail.getDescriptorForType().findFieldByName("field_violations");
+      if (field == null || !field.isRepeated()) {
+        return java.util.Collections.emptyList();
+      }
+      Object raw = decodedErrorDetail.getField(field);
+      if (!(raw instanceof java.util.List<?>)) {
+        return java.util.Collections.emptyList();
+      }
+      java.util.List<?> values = (java.util.List<?>) raw;
+      java.util.List<java.util.Map<String, String>> out = new java.util.ArrayList<>(values.size());
+      for (Object item : values) {
+        if (!(item instanceof com.google.protobuf.Message)) {
+          continue;
+        }
+        com.google.protobuf.Message message = (com.google.protobuf.Message) item;
+        com.google.protobuf.Descriptors.FieldDescriptor fieldName =
+            message.getDescriptorForType().findFieldByName("field");
+        com.google.protobuf.Descriptors.FieldDescriptor description =
+            message.getDescriptorForType().findFieldByName("description");
+        java.util.Map<String, String> row = new java.util.LinkedHashMap<>();
+        row.put("field", fieldName != null ? String.valueOf(message.getField(fieldName)) : "");
+        row.put(
+            "description",
+            description != null ? String.valueOf(message.getField(description)) : "");
+        out.add(java.util.Collections.unmodifiableMap(row));
+      }
+      return java.util.Collections.unmodifiableList(out);
+    }
+
     private static byte[] extractDetail(StatusRuntimeException ex) {
       Metadata trailers = ex.getTrailers();
       if (trailers == null) {
         return null;
       }
       return trailers.get(ERROR_DETAIL_KEY);
+    }
+
+    private static ErrorDetail parseDetail(byte[] raw) {
+      if (raw == null || raw.length == 0) {
+        return null;
+      }
+      try {
+        return ErrorDetail.parseFrom(raw);
+      } catch (InvalidProtocolBufferException ignored) {
+        return null;
+      }
+    }
+
+    private static ErrorDetail synthesizeTransportDetail(Status.Code code) {
+      if (code != Status.Code.UNAVAILABLE
+          && code != Status.Code.DEADLINE_EXCEEDED
+          && code != Status.Code.CANCELLED) {
+        return null;
+      }
+      return ErrorDetail.newBuilder()
+          .setBackend("transport")
+          .setOperation(code.name().toLowerCase(Locale.ROOT))
+          .setRetryable(code != Status.Code.CANCELLED)
+          .setRetryAfterMs(0)
+          .setKind(ErrorKind.ERROR_KIND_RETRYABLE)
+          .build();
     }
   }
 
@@ -207,8 +303,10 @@ public final class GeneratedClientSupport {
 
   /**
    * Invoke a unary RPC with retry + exponential backoff + full jitter on
-   * transient codes. DEADLINE_EXCEEDED is retried only for read-only RPCs.
-   * A fresh metadata snapshot is produced for every attempt.
+   * transient codes. DEADLINE_EXCEEDED is retried only for read-only RPCs. Mutations
+   * retry only when the proto contract marks the RPC replay-safe and the request
+   * carries a non-empty idempotency_key. A fresh metadata snapshot is produced for
+   * every attempt.
    */
   public static <I, O> O unary(
       Channel channel,
@@ -217,8 +315,10 @@ public final class GeneratedClientSupport {
       CallTuning tuning,
       Duration deadlineOverride,
       Supplier<Metadata> headers,
-      boolean readOnly) {
+      boolean readOnly,
+      boolean replaySafe) {
     String rpcPath = method.getFullMethodName();
+    boolean hasIdempotencyKey = hasIdempotencyKey(request);
     Duration backoff = tuning.initialBackoff;
     CallOptions opts = callOptions(tuning, deadlineOverride);
     for (int attempt = 1; ; attempt++) {
@@ -227,7 +327,7 @@ public final class GeneratedClientSupport {
         return ClientCalls.blockingUnaryCall(ch, method, opts, request);
       } catch (StatusRuntimeException ex) {
         if (attempt < tuning.maxAttempts
-            && isRetryable(ex.getStatus().getCode(), readOnly)) {
+            && isRetryable(ex.getStatus().getCode(), readOnly, replaySafe, hasIdempotencyKey)) {
           sleep(backoff);
           backoff = nextBackoff(backoff, tuning);
           continue;
@@ -237,14 +337,30 @@ public final class GeneratedClientSupport {
     }
   }
 
-  // Retry safety is read from the proto-derived operation_kind per RPC (each
-  // wrapper passes operation_kind.equals("read_only")) — never guessed from the name.
+  // Retry safety is read from proto-derived operation_kind and replay_safe per RPC
+  // plus the request idempotency_key — never guessed from the method name.
 
-  private static boolean isRetryable(Status.Code code, boolean readOnly) {
-    if (!readOnly) {
+  private static boolean isRetryable(
+      Status.Code code, boolean readOnly, boolean replaySafe, boolean hasIdempotencyKey) {
+    if (readOnly) {
+      return code == Status.Code.DEADLINE_EXCEEDED || RETRYABLE_CODES.contains(code);
+    }
+    if (!replaySafe || !hasIdempotencyKey) {
       return false;
     }
-    return code == Status.Code.DEADLINE_EXCEEDED || RETRYABLE_CODES.contains(code);
+    return code != Status.Code.DEADLINE_EXCEEDED && RETRYABLE_CODES.contains(code);
+  }
+
+  private static boolean hasIdempotencyKey(Object request) {
+    if (request == null) {
+      return false;
+    }
+    try {
+      Object value = request.getClass().getMethod("getIdempotencyKey").invoke(request);
+      return value instanceof String key && !key.isBlank();
+    } catch (ReflectiveOperationException ignored) {
+      return false;
+    }
   }
 
   // ── Server streaming (single attempt) ────────────────────────────────────────

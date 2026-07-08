@@ -88,9 +88,13 @@ it('emits the consistency / replica-lag headers only when set', function () {
 it('carries a settable errorDetail and typed accessors', function () use ($needsProto) {
     $needsProto();
     $ed = new \Udb\Entity\V1\ErrorDetail();
-    $ed->setRetryable(true);
-    $ed->setKind(\Udb\Entity\V1\ErrorKind::ERROR_KIND_CAPABILITY);
-    $ed->setCapabilityRequired('cap.x');
+    $ed->setRetryable(false);
+    $ed->setRetryAfterMs(0);
+    $ed->setKind(\Udb\Entity\V1\ErrorKind::ERROR_KIND_VALIDATION);
+    $violation = new \Udb\Entity\V1\ErrorFieldViolation();
+    $violation->setField('email');
+    $violation->setDescription('must be a valid email');
+    $ed->setFieldViolations([$violation]);
 
     // fromGrpcStatus decodes the trailer into errorDetail.
     $status = ['code' => 9, 'details' => 'boom', 'metadata' => [
@@ -99,8 +103,60 @@ it('carries a settable errorDetail and typed accessors', function () use ($needs
     $e = UdbRpcException::fromGrpcStatus($status, 'X');
 
     expect($e->errorDetail)->toBeInstanceOf(\Udb\Entity\V1\ErrorDetail::class)
+        ->and($e->isRetryable())->toBeFalse()
+        ->and($e->kind())->toBe('ERROR_KIND_VALIDATION')
+        ->and($e->fieldViolations())->toBe([
+            ['field' => 'email', 'description' => 'must be a valid email'],
+        ]);
+});
+
+it('preserves retryable quota backoff detail', function () use ($needsProto) {
+    $needsProto();
+    $ed = new \Udb\Entity\V1\ErrorDetail();
+    $ed->setBackend('admission');
+    $ed->setOperation('tenant budget');
+    $ed->setRetryable(true);
+    $ed->setRetryAfterMs(250);
+    $ed->setKind(\Udb\Entity\V1\ErrorKind::ERROR_KIND_QUOTA);
+
+    $status = ['code' => 8, 'details' => 'quota', 'metadata' => [
+        'udb-error-detail-bin' => [$ed->serializeToString()],
+    ]];
+    $e = UdbRpcException::fromGrpcStatus($status, 'X');
+
+    expect($e->errorDetail)->toBeInstanceOf(\Udb\Entity\V1\ErrorDetail::class)
         ->and($e->isRetryable())->toBeTrue()
-        ->and($e->kind())->toBe('ERROR_KIND_CAPABILITY');
+        ->and($e->kind())->toBe('ERROR_KIND_QUOTA')
+        ->and($e->errorDetail->getRetryAfterMs())->toBe(250)
+        ->and($e->fieldViolations())->toBe([]);
+});
+
+it('synthesizes retryable transport detail without a trailer', function () use ($needsProto) {
+    $needsProto();
+    $status = ['code' => 4, 'details' => 'deadline'];
+    $e = UdbRpcException::fromGrpcStatus($status, 'X');
+
+    expect($e->errorDetail)->toBeInstanceOf(\Udb\Entity\V1\ErrorDetail::class)
+        ->and($e->errorDetail->getBackend())->toBe('transport')
+        ->and($e->errorDetail->getOperation())->toBe('deadline_exceeded')
+        ->and($e->isRetryable())->toBeTrue()
+        ->and($e->kind())->toBe('ERROR_KIND_RETRYABLE')
+        ->and($e->errorDetail->getRetryAfterMs())->toBe(0)
+        ->and($e->fieldViolations())->toBe([]);
+});
+
+it('synthesizes non-retryable cancelled transport errorDetail without a trailer', function () use ($needsProto) {
+    $needsProto();
+    $status = ['code' => 1, 'details' => 'cancelled'];
+    $e = UdbRpcException::fromGrpcStatus($status, 'X');
+
+    expect($e->errorDetail)->toBeInstanceOf(\Udb\Entity\V1\ErrorDetail::class)
+        ->and($e->errorDetail->getBackend())->toBe('transport')
+        ->and($e->errorDetail->getOperation())->toBe('cancelled')
+        ->and($e->isRetryable())->toBeFalse()
+        ->and($e->kind())->toBe('ERROR_KIND_RETRYABLE')
+        ->and($e->errorDetail->getRetryAfterMs())->toBe(0)
+        ->and($e->fieldViolations())->toBe([]);
 });
 
 it('isRetryable() and kind() are safe when no detail was decoded', function () {

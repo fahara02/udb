@@ -31,6 +31,11 @@ public sealed class UdbContextMiddlewareTests
             c.Request.Headers["x-service-identity"] = "svc";
             c.Request.Headers["x-udb-project-id"] = "proj-1";
             c.Request.Headers["x-udb-client-catalog-version"] = "9.9.9";
+            c.Request.Headers["x-udb-consistency"] = "read_your_writes";
+            c.Request.Headers["x-udb-primary-read"] = "true";
+            c.Request.Headers["x-udb-max-replica-lag-ms"] = "250";
+            c.Request.Headers["x-udb-eventual-consistency-allowed"] = "true";
+            c.Request.Headers["x-udb-read-fence"] = "{\"max_wait_ms\":2500}";
         });
 
         var meta = ctx.GetUdbMetadata();
@@ -43,6 +48,11 @@ public sealed class UdbContextMiddlewareTests
         Assert.Equal("proj-1", meta.ProjectId);
         Assert.Equal("9.9.9", meta.ClientCatalogVersion);
         Assert.Equal(new[] { "read", "write" }, meta.Scopes);
+        Assert.Equal("read_your_writes", meta.Consistency);
+        Assert.True(meta.PrimaryRead);
+        Assert.Equal(250, meta.MaxReplicaLagMs);
+        Assert.True(meta.EventualConsistencyAllowed);
+        Assert.Equal("{\"max_wait_ms\":2500}", meta.ReadFenceJson);
         Assert.Equal("req-9", ctx.GetUdbRequestId());
     }
 

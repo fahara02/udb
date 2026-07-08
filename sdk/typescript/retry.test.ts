@@ -129,6 +129,22 @@ test("replay-safe mutation with BLANK idempotency key is not retried", async () 
   assert.equal(calls, 1);
 });
 
+test("replay-safe mutation with CONTEXT-ONLY idempotency key is not retried", async () => {
+  let calls = 0;
+  const core = fakeCore({
+    Upsert(_request: any, _metadata: grpc.Metadata, _options: grpc.CallOptions, cb: Function) {
+      calls += 1;
+      cb(unavailable(), null);
+    },
+  });
+
+  await assert.rejects(
+    () => core.unary(DATA_BROKER, "Upsert", { context: { idempotency_key: "ctx-key" } }),
+    (err: unknown) => err instanceof UdbError && (err as UdbError).code === grpc.status.UNAVAILABLE,
+  );
+  assert.equal(calls, 1);
+});
+
 test("non-replay-safe mutation is not retried even WITH an idempotency key", async () => {
   let calls = 0;
   const core = fakeCore({

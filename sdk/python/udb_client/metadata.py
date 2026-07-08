@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
+import enum
 import json
 import os
 import uuid
@@ -115,6 +116,38 @@ class ReadFence:
 
     def to_json(self) -> str:
         return json.dumps(self.to_dict(), sort_keys=True, separators=(",", ":"))
+
+
+class ConsistencyMode(str, enum.Enum):
+    """Typed selector for the ``x-udb-consistency`` request mode.
+
+    Mirrors the proto ``udb.entity.v1.ConsistencyMode`` enum; each member's value
+    is the canonical wire token the broker parses (``ConsistencyMode::as_str`` in
+    the runtime consistency module). Pass to :meth:`Metadata.with_consistency`
+    instead of hand-writing the raw ``consistency`` string / ``primary_read`` /
+    ``eventual_consistency_allowed`` fields.
+    """
+
+    STRONG = "strong"
+    READ_YOUR_WRITES = "read_your_writes"
+    BOUNDED_STALENESS = "bounded_staleness"
+    REPLICA_BOUNDED = "replica_bounded"
+    EVENTUAL = "eventual"
+    PROJECTION_OK = "projection_ok"
+    CACHE_OK = "cache_ok"
+
+
+_CONSISTENCY_TOKENS = frozenset(mode.value for mode in ConsistencyMode)
+# Modes that tolerate a stale/replica/projection read → the request opts in to
+# eventual consistency (matches the broker's `x-udb-consistency` → eventual
+# mapping and ConsistencyMode::allows_projection).
+_EVENTUAL_MODES = frozenset(
+    {
+        ConsistencyMode.EVENTUAL,
+        ConsistencyMode.PROJECTION_OK,
+        ConsistencyMode.CACHE_OK,
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -265,6 +298,36 @@ class Metadata:
     def with_read_fence(self, read_fence_json: str) -> "Metadata":
         return replace(self, read_fence_json=read_fence_json)
 
+    def with_consistency(
+        self,
+        mode: "ConsistencyMode | str",
+        *,
+        max_replica_lag_ms: int | None = None,
+    ) -> "Metadata":
+        """Return metadata pinned to a typed consistency ``mode``.
+
+        Convenience over the raw ``consistency`` / ``primary_read`` /
+        ``eventual_consistency_allowed`` / ``max_replica_lag_ms`` fields: the
+        selector maps onto the SAME header emission (:meth:`to_grpc_metadata`).
+        The mode token is sent as ``x-udb-consistency``; the derived flags follow
+        it — ``STRONG`` pins ``primary_read`` (and clears eventual); the
+        stale-tolerant modes (``EVENTUAL`` / ``PROJECTION_OK`` / ``CACHE_OK``) set
+        ``eventual_consistency_allowed``; ``BOUNDED_STALENESS`` /
+        ``REPLICA_BOUNDED`` carry an optional ``max_replica_lag_ms`` bound.
+
+        Accepts a :class:`ConsistencyMode` or a raw wire token string.
+        """
+        token = mode.value if isinstance(mode, ConsistencyMode) else str(mode)
+        resolved = ConsistencyMode(token) if token in _CONSISTENCY_TOKENS else None
+        changes: dict[str, Any] = {
+            "consistency": token,
+            "primary_read": resolved is ConsistencyMode.STRONG,
+            "eventual_consistency_allowed": resolved in _EVENTUAL_MODES,
+        }
+        if max_replica_lag_ms is not None:
+            changes["max_replica_lag_ms"] = max_replica_lag_ms
+        return replace(self, **changes)
+
     def after_write(
         self, receipt: WriteReceipt, max_wait_ms: int = DEFAULT_READ_FENCE_MAX_WAIT_MS
     ) -> "Metadata":
@@ -276,3 +339,16 @@ class Metadata:
         """
         fence = ReadFence.from_receipt(receipt, max_wait_ms)
         return replace(self, read_fence_json=fence.to_json())
+
+    def read_fence_from_receipt(
+        self, receipt: WriteReceipt, max_wait_ms: int = DEFAULT_READ_FENCE_MAX_WAIT_MS
+    ) -> "ReadFence":
+        """Build the :class:`ReadFence` a write receipt implies (no rebinding).
+
+        Naming-contract sibling of :meth:`after_write` on the same accessor
+        (``project.metadata.read_fence_from_receipt`` mirrors TS's
+        ``udb.metadata.readFenceFromReceipt``). :meth:`after_write` returns
+        metadata that already carries this fence; this returns the raw
+        :class:`ReadFence` for callers that manage the header themselves.
+        """
+        return read_fence_from_receipt(receipt, max_wait_ms)

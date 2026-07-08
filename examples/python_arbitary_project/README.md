@@ -5,7 +5,7 @@ Standalone Python project using `uv`, the published `udb-client` SDK, and an arb
 This example does not require a UDB source checkout. It uses:
 
 - `uv` for Python dependency management
-- `udb-client>=0.1.4` from PyPI
+- `udb-client>=0.3.7` from PyPI
 - generated Python protobuf models under `gen/`
 - UDB CLI from a GitHub Release, or the UDB broker/CLI through local Docker Compose
 
@@ -56,7 +56,7 @@ The compose stack provides Postgres, Redis, Qdrant, MinIO, and the UDB broker.
 
 ## Run Client
 
-After `udb-client` `0.1.4` is published:
+After `udb-client` `0.3.7` is published:
 
 ```powershell
 uv sync

@@ -29,19 +29,26 @@ package udbclient
 // (UDB v{{UDB_VERSION}}, wire protocol {{PROTOCOL_VERSION}}).
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"math"
 	"math/rand"
+	"reflect"
+	"strings"
 	"sync/atomic"
 	"time"
 
+	entityv1 "github.com/fahara02/udb/sdk/go/gen/udb/entity/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 )
 
 // Keepalive defaults for the long-lived UDB channel. They keep an otherwise idle
@@ -68,6 +75,13 @@ const GeneratedProtocolVersion = "{{PROTOCOL_VERSION}}"
 // generated message type (callers that want the decoded proto can unmarshal
 // Error.DetailBin themselves).
 const errorDetailTrailer = "udb-error-detail-bin"
+const beginTxFullMethod = "/udb.services.v1.DataBroker/BeginTx"
+
+var beginTxStreamDesc = &grpc.StreamDesc{
+	StreamName:    "BeginTx",
+	ServerStreams: true,
+	ClientStreams: true,
+}
 
 // RetryConfig controls the backoff retry behavior of the generated wrappers.
 // The zero value is unusable; use DefaultRetryConfig().
@@ -176,17 +190,58 @@ func mapError(rpcPath string, err error, trailer metadata.MD) error {
 	if err == nil {
 		return nil
 	}
-	st, _ := status.FromError(err)
+	st, ok := status.FromError(err)
+	code := st.Code()
+	message := st.Message()
+	if !ok {
+		code = status.Code(err)
+		message = err.Error()
+	}
 	out := &Error{
-		Code:    st.Code(),
-		Message: st.Message(),
+		Code:    code,
+		Message: message,
 		RPC:     rpcPath,
 		cause:   err,
 	}
 	if vals := trailer.Get(errorDetailTrailer); len(vals) > 0 {
 		out.DetailBin = []byte(vals[len(vals)-1])
+	} else {
+		out.DetailBin = synthesizeTransportErrorDetailBin(code)
 	}
 	return out
+}
+
+func synthesizeTransportErrorDetailBin(code codes.Code) []byte {
+	switch code {
+	case codes.Unavailable, codes.DeadlineExceeded, codes.Canceled:
+	default:
+		return nil
+	}
+	detail := &entityv1.ErrorDetail{
+		Backend:      "transport",
+		Operation:    transportErrorOperation(code),
+		Retryable:    code != codes.Canceled,
+		RetryAfterMs: 0,
+		Kind:         entityv1.ErrorKind_ERROR_KIND_RETRYABLE,
+	}
+	encoded, err := proto.Marshal(detail)
+	if err != nil {
+		return nil
+	}
+	return encoded
+}
+
+func transportErrorOperation(code codes.Code) string {
+	switch code {
+	case codes.Unavailable:
+		return "unavailable"
+	case codes.DeadlineExceeded:
+		return "deadline_exceeded"
+	case codes.Canceled:
+		return "cancelled"
+	default:
+		return strings.ToLower(code.String())
+	}
 }
 
 // Options configures a GeneratedClient.
@@ -412,9 +467,7 @@ func (s *cancelOnCloseStream) RecvMsg(m any) error {
 }
 
 func (s *cancelOnCloseStream) CloseSend() error {
-	err := s.ClientStream.CloseSend()
-	s.cancel()
-	return err
+	return s.ClientStream.CloseSend()
 }
 
 // ── Dial-option interceptors ─────────────────────────────────────────────────
@@ -509,6 +562,31 @@ const (
 	KindBidi            RPCKind = "bidi"
 )
 
+var ORMTiers = mustStringMap(`{{ORM_TIERS}}`)
+
+var BackendRoles = mustStringMap(`{{BACKEND_ROLES}}`)
+
+type EagerIncludeUnsupportedBackendError struct {
+	Backend string
+	Tier    string
+}
+
+func (e EagerIncludeUnsupportedBackendError) Error() string {
+	tier := e.Tier
+	if tier == "" {
+		tier = "unknown"
+	}
+	return fmt.Sprintf("udb: backend %q is %s; eager include requires a relational backend", e.Backend, tier)
+}
+
+func requireEagerIncludeBackend(backend string) error {
+	tier := ORMTiers[backend]
+	if tier != "relational" {
+		return EagerIncludeUnsupportedBackendError{Backend: backend, Tier: tier}
+	}
+	return nil
+}
+
 // RPCInfo describes a single RPC.
 type RPCInfo struct {
 	Service    string  // e.g. DataBroker
@@ -517,20 +595,22 @@ type RPCInfo struct {
 	Name       string  // wire RPC name, e.g. Select
 	APIAlias   string  // descriptor SDK alias, e.g. select
 	OperationID string // OpenAPI operationId, e.g. selectRecords
+	HTTPMethod  string // REST method when the RPC has a descriptor HTTP route
+	HTTPPath    string // REST path when the RPC has a descriptor HTTP route
 	Kind       RPCKind // streaming shape
 	ReadOnly   bool    // proto EndpointSecurity.operation_kind == READ_ONLY; the
 	// authoritative retry-safety flag (never guessed from the name)
 	OperationKind string // "read_only" | "mutation" | "destructive"
 	ReplaySafe    bool   // proto method_idempotency_contract.replay_safe; whether a
-	// mutation is safe to replay once durable dedup lands.
-	// Metadata-only today (mutation retry stays inert; see
-	// retryableForRPC) — false for all RPCs until the keystone.
+	// mutation is safe to replay according to descriptor metadata.
+	// Mutation retry is still gated again by retryableForRPC and the request
+	// idempotency key.
 }
 
 // AllRPCs lists every RPC across every UDB service in this build.
 var AllRPCs = []RPCInfo{
 	// @@UDB_RPC_BEGIN
-	{Service: "{{SERVICE_NAME}}", ServicePkg: "{{SERVICE_PKG}}", FullMethod: "{{RPC_PATH}}", Name: "{{RPC_WIRE_NAME}}", APIAlias: "{{RPC_ALIAS_SNAKE}}", OperationID: "{{REST_OPERATION_ID}}", Kind: RPCKind("{{RPC_KIND}}"), ReadOnly: {{RPC_READ_ONLY}}, OperationKind: "{{RPC_OPERATION_KIND}}", ReplaySafe: {{RPC_REPLAY_SAFE}}},
+	{Service: "{{SERVICE_NAME}}", ServicePkg: "{{SERVICE_PKG}}", FullMethod: "{{RPC_PATH}}", Name: "{{RPC_WIRE_NAME}}", APIAlias: "{{RPC_ALIAS_SNAKE}}", OperationID: "{{REST_OPERATION_ID}}", HTTPMethod: "{{RPC_HTTP_METHOD}}", HTTPPath: "{{RPC_HTTP_PATH}}", Kind: RPCKind("{{RPC_KIND}}"), ReadOnly: {{RPC_READ_ONLY}}, OperationKind: "{{RPC_OPERATION_KIND}}", ReplaySafe: {{RPC_REPLAY_SAFE}}},
 	// @@UDB_RPC_END
 }
 
@@ -545,12 +625,23 @@ var ServiceRPCCounts = map[string]int{
 // entity messages so (*Client).Entity can default conflict_fields / primary keys
 // from the manifest instead of the caller always passing Key(...). The
 // EntityDescriptor type is hand-written in entity.go (this block only emits the
-// map). {{ENTITY_PRIMARY_KEYS}} arrives PRE-QUOTED + comma-separated from the
-// generator, so it drops straight inside the []string{...} literal.
+// map). Primary-key entries arrive pre-quoted and comma-separated from the
+// generator, so they drop straight inside the []string{...} literal.
 var Entities = map[string]EntityDescriptor{
 	// @@UDB_ENTITY_BEGIN
-	"{{ENTITY_MESSAGE_TYPE}}": {Table: "{{ENTITY_TABLE}}", PrimaryKeys: []string{{{ENTITY_PRIMARY_KEYS}}}, GoType: "{{ENTITY_GO_TYPE}}"},
+	"{{ENTITY_MESSAGE_TYPE}}": {Table: "{{ENTITY_TABLE}}", PrimaryKeys: []string{{{ENTITY_PRIMARY_KEYS}}}, Fields: []string{{{ENTITY_JSON_FIELDS}}}, Relations: mustEntityRelations(`{{ENTITY_RELATIONS_JSON}}`), VersionField: "{{ENTITY_VERSION_FIELD}}", TenantField: "{{ENTITY_TENANT_FIELD}}", ProjectField: "{{ENTITY_PROJECT_FIELD}}", GoType: "{{ENTITY_GO_TYPE}}"},
 	// @@UDB_ENTITY_END
+}
+
+func mustEntityRelations(raw string) []EntityRelationDescriptor {
+	if raw == "" || raw == "[]" {
+		return nil
+	}
+	var out []EntityRelationDescriptor
+	if err := json.Unmarshal([]byte(raw), &out); err != nil {
+		panic(fmt.Sprintf("udb: invalid generated entity relation metadata: %v", err))
+	}
+	return out
 }
 
 // rpcIndex is a fast Name->RPCInfo lookup built from AllRPCs at init.
@@ -606,7 +697,7 @@ type idempotencyKeyed interface {
 // without a key the broker cannot dedup a replay, so we must not retry.
 func hasIdempotencyKey(req any) bool {
 	k, ok := req.(idempotencyKeyed)
-	return ok && k.GetIdempotencyKey() != ""
+	return ok && strings.TrimSpace(k.GetIdempotencyKey()) != ""
 }
 
 func init() {
@@ -616,5 +707,1055 @@ func init() {
 		panic(fmt.Sprintf(
 			"udbclient: generated protocol version %q != hand-written ProtocolVersion %q; regenerate the SDK",
 			GeneratedProtocolVersion, ProtocolVersion))
+	}
+}
+
+// ── Neutral-IR typed query builder (master-plan items 2.5 / 10.1) ──────────────
+//
+// A thin, typed layer that emits the broker's CANONICAL neutral-IR envelope
+// (`{"ir": {"op": ..., ...LogicalRead/Write/Delete}}`) and sends it through the
+// EXISTING GenericDispatch RPC — the buf-generated DataBroker `GenericDispatch`
+// forwarder (which `Client.Broker` already exposes). It is NOT a second client
+// engine: it builds a GenericDispatchRequest and hands it to the very same
+// dispatch method raw callers use, so tenant / project / auth all flow from the
+// caller's RequestContext metadata exactly as they do for a raw call. The builder
+// NEVER puts a tenant/project (or any RequestContext) on the request body — the
+// broker derives those from the verified claim / headers (Context is left nil).
+//
+// The broker parses this envelope in `handlers_data.rs::compile_neutral_ir_dispatch`
+// and lowers it to backend-native SQL/query with tenant + RLS predicates injected
+// server-side, so the safe, mediated path is the one users naturally take. Raw
+// spec stays available as an explicit escape hatch — see RawDispatchRequest below
+// and the untouched DataBroker GenericDispatch RPC.
+//
+// The wire shapes mirror the serde encoding of the Rust IR types (`src/ir/*.rs`):
+// externally-tagged enums (`{"Comparison": {...}}`, `{"String": "x"}`, the unit
+// `"Null"`), snake_case op tokens (`"eq"`, `"like"`), and the
+// `LogicalRead`/`LogicalWrite`/`LogicalDelete` field names. The serialized
+// envelope is byte-identical to the TypeScript / Python SDKs' for the same logical
+// query: compact JSON, fixed key order (struct field order below mirrors theirs),
+// sorted record keys (Go marshals map keys sorted, matching the server-side
+// BTreeMap canonicalization and the other SDKs' explicit key sort), and HTML
+// escaping disabled so `<`/`>`/`&` survive verbatim like JSON.stringify.
+
+// DefaultIRBackend is the backend whose neutral-IR compiler lowers the envelope
+// when the caller does not pick one explicitly. The broker resolves the concrete
+// instance per project.
+const DefaultIRBackend = "postgres"
+
+// irComparisonTokens are the comparison-op tokens the IR compilers lower (mirrors
+// `ComparisonOp::token`). `in` is handled separately because it compiles to
+// `InList`, not `Comparison`.
+var irComparisonTokens = map[string]string{
+	"eq":   "eq",
+	"ne":   "ne",
+	"gt":   "gt",
+	"ge":   "ge",
+	"lt":   "lt",
+	"le":   "le",
+	"like": "like",
+}
+
+// IRDispatcher is the minimal surface the IR builders dispatch through: the
+// buf-generated DataBroker `GenericDispatch` unary forwarder. Both the raw
+// generated `servicesv1.DataBrokerClient` and the hand-written `Client.Broker`
+// satisfy it, so callers pass whichever DataBroker handle they already hold —
+// no new client engine is introduced.
+type IRDispatcher interface {
+	GenericDispatch(ctx context.Context, in *entityv1.GenericDispatchRequest, opts ...grpc.CallOption) (*entityv1.GenericDispatchResponse, error)
+}
+
+// ToLogicalValue encodes a Go value into the externally-tagged
+// `ir::value::LogicalValue` wire form. `time.Time` -> RFC3339 `Timestamp`
+// (normalized to UTC), `[]byte` -> `Bytes` (array of byte values, matching the
+// other SDKs rather than Go's default base64), integers -> `Int`, floats ->
+// `Float`, slices/arrays -> `Array`, maps/structs -> `Json`, nil -> the unit
+// `"Null"`.
+func ToLogicalValue(value any) any {
+	switch v := value.(type) {
+	case nil:
+		return "Null"
+	case bool:
+		return map[string]any{"Bool": v}
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, uintptr:
+		return map[string]any{"Int": v}
+	case float32, float64:
+		return map[string]any{"Float": v}
+	case string:
+		return map[string]any{"String": v}
+	case []byte:
+		nums := make([]int, len(v))
+		for i, b := range v {
+			nums[i] = int(b)
+		}
+		return map[string]any{"Bytes": nums}
+	case time.Time:
+		return map[string]any{"Timestamp": v.UTC().Format(time.RFC3339Nano)}
+	}
+	rv := reflect.ValueOf(value)
+	switch rv.Kind() {
+	case reflect.Slice, reflect.Array:
+		items := make([]any, rv.Len())
+		for i := 0; i < rv.Len(); i++ {
+			items[i] = ToLogicalValue(rv.Index(i).Interface())
+		}
+		return map[string]any{"Array": items}
+	case reflect.Map, reflect.Struct:
+		return map[string]any{"Json": value}
+	case reflect.Pointer:
+		if rv.IsNil() {
+			return "Null"
+		}
+		return ToLogicalValue(rv.Elem().Interface())
+	}
+	return map[string]any{"String": fmt.Sprintf("%v", value)}
+}
+
+// toLogicalRecord encodes one record into a `LogicalRecord` (field -> LogicalValue).
+// Go marshals map string keys in sorted order, so the rendered record is
+// deterministic and byte-stable across languages (mirrors the server-side BTreeMap
+// canonicalization and the TS/Python explicit key sort).
+func toLogicalRecord(record map[string]any) map[string]any {
+	out := make(map[string]any, len(record))
+	for k, v := range record {
+		out[k] = ToLogicalValue(v)
+	}
+	return out
+}
+
+func toAnySlice(value any) []any {
+	if value == nil {
+		return nil
+	}
+	if s, ok := value.([]any); ok {
+		return s
+	}
+	rv := reflect.ValueOf(value)
+	if rv.Kind() == reflect.Slice || rv.Kind() == reflect.Array {
+		out := make([]any, rv.Len())
+		for i := 0; i < rv.Len(); i++ {
+			out[i] = rv.Index(i).Interface()
+		}
+		return out
+	}
+	return []any{value}
+}
+
+// encodeIREnvelope wraps the body in the `{"ir": ...}` envelope and serializes it
+// to compact JSON with HTML escaping disabled, byte-identical to the TS SDK's
+// JSON.stringify for the same logical query.
+func encodeIREnvelope(body any) (string, error) {
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(false)
+	if err := enc.Encode(map[string]any{"ir": body}); err != nil {
+		return "", err
+	}
+	// json.Encoder appends a trailing newline; trim it for byte-identity.
+	out := buf.Bytes()
+	if n := len(out); n > 0 && out[n-1] == '\n' {
+		out = out[:n-1]
+	}
+	return string(out), nil
+}
+
+// Externally/ordered-tagged IR node shapes. Struct field order is load-bearing:
+// it fixes the JSON key order so the envelope stays byte-identical to the TS /
+// Python SDKs.
+type irComparison struct {
+	Field string `json:"field"`
+	Op    string `json:"op"`
+	Value any    `json:"value"`
+}
+
+type irInList struct {
+	Field  string `json:"field"`
+	Values []any  `json:"values"`
+}
+
+type irSort struct {
+	Field     string `json:"field"`
+	Direction string `json:"direction"`
+}
+
+type irInclude struct {
+	Relation string `json:"relation"`
+}
+
+type irPagination struct {
+	Limit  *int `json:"limit,omitempty"`
+	Offset *int `json:"offset,omitempty"`
+}
+
+type irProjection struct {
+	Fields []string `json:"fields"`
+}
+
+type irConflict struct {
+	Kind       string   `json:"kind"`
+	Fields     []string `json:"fields,omitempty"`
+	ConflictOn []string `json:"conflict_on,omitempty"`
+}
+
+type irReadBody struct {
+	Op          string        `json:"op"`
+	MessageType string        `json:"message_type"`
+	Filter      any           `json:"filter,omitempty"`
+	Projection  *irProjection `json:"projection,omitempty"`
+	Sort        []irSort      `json:"sort,omitempty"`
+	Include     []irInclude   `json:"include,omitempty"`
+	Pagination  *irPagination `json:"pagination,omitempty"`
+}
+
+type irWriteBody struct {
+	Op           string           `json:"op"`
+	MessageType  string           `json:"message_type"`
+	Records      []map[string]any `json:"records"`
+	Conflict     *irConflict      `json:"conflict,omitempty"`
+	ReturnFields []string         `json:"return_fields,omitempty"`
+}
+
+type irDeleteBody struct {
+	Op           string   `json:"op"`
+	MessageType  string   `json:"message_type"`
+	Filter       any      `json:"filter"`
+	ReturnFields []string `json:"return_fields,omitempty"`
+}
+
+// irPredicateSet is the shared predicate accumulator for the read/delete builders.
+// A bad operator is captured as a deferred error surfaced at ToEnvelope time (so
+// the fluent chain stays ergonomic without per-call error handling).
+type irPredicateSet struct {
+	predicates []any
+	err        error
+}
+
+func (p *irPredicateSet) addWhere(field, op string, value any) {
+	if op == "in" {
+		p.addWhereIn(field, toAnySlice(value))
+		return
+	}
+	token, ok := irComparisonTokens[op]
+	if !ok {
+		if p.err == nil {
+			p.err = fmt.Errorf("udb: unsupported IR operator %q", op)
+		}
+		return
+	}
+	p.predicates = append(p.predicates, map[string]any{
+		"Comparison": irComparison{Field: field, Op: token, Value: ToLogicalValue(value)},
+	})
+}
+
+func (p *irPredicateSet) addWhereIn(field string, values []any) {
+	vs := make([]any, len(values))
+	for i, v := range values {
+		vs[i] = ToLogicalValue(v)
+	}
+	p.predicates = append(p.predicates, map[string]any{
+		"InList": irInList{Field: field, Values: vs},
+	})
+}
+
+func (p *irPredicateSet) addFilterNode(filter any) {
+	p.predicates = append(p.predicates, filter)
+}
+
+// filterNode emits a single predicate bare; multiple are conjoined into `And`
+// (mirrors `LogicalFilter::and`). Returns nil when no predicate is set.
+func (p *irPredicateSet) filterNode() any {
+	switch len(p.predicates) {
+	case 0:
+		return nil
+	case 1:
+		return p.predicates[0]
+	default:
+		return map[string]any{"And": append([]any(nil), p.predicates...)}
+	}
+}
+
+// QueryBuilder is the typed neutral-IR read builder. It emits
+// `{"ir": {"op": "read", ...}}` (a `LogicalRead`).
+//
+//	udbclient.Query("acme.v1.Invoice").
+//		Where("status", "eq", "open").
+//		OrderBy("created_at", "desc").
+//		Limit(50)
+type QueryBuilder struct {
+	irPredicateSet
+	messageType string
+	projection  []string
+	sorts       []irSort
+	includes    []irInclude
+	limit       *int
+	offset      *int
+}
+
+// Query starts a typed neutral-IR read for messageType (the catalog/proto FQN).
+func Query(messageType string) *QueryBuilder { return &QueryBuilder{messageType: messageType} }
+
+func (q *QueryBuilder) Where(field, op string, value any) *QueryBuilder {
+	q.addWhere(field, op, value)
+	return q
+}
+
+func (q *QueryBuilder) WhereIn(field string, values ...any) *QueryBuilder {
+	q.addWhereIn(field, values)
+	return q
+}
+
+func (q *QueryBuilder) WhereFilter(filter any) *QueryBuilder {
+	q.addFilterNode(filter)
+	return q
+}
+
+// Select sets the projection (`LogicalProjection.fields`); omit to select every field.
+func (q *QueryBuilder) Select(fields ...string) *QueryBuilder {
+	q.projection = fields
+	return q
+}
+
+// OrderBy appends a sort key; direction is the snake_case token "asc" or "desc".
+func (q *QueryBuilder) OrderBy(field, direction string) *QueryBuilder {
+	q.sorts = append(q.sorts, irSort{Field: field, Direction: direction})
+	return q
+}
+
+func (q *QueryBuilder) Include(relation string) *QueryBuilder {
+	if relation == "" {
+		q.err = errors.New("udb: include relation name is required")
+		return q
+	}
+	q.includes = append(q.includes, irInclude{Relation: relation})
+	return q
+}
+
+func (q *QueryBuilder) Limit(n int) *QueryBuilder {
+	v := n
+	q.limit = &v
+	return q
+}
+
+func (q *QueryBuilder) Offset(n int) *QueryBuilder {
+	v := n
+	q.offset = &v
+	return q
+}
+
+func (q *QueryBuilder) pagination() *irPagination {
+	if q.limit == nil && q.offset == nil {
+		return nil
+	}
+	return &irPagination{Limit: q.limit, Offset: q.offset}
+}
+
+// ToEnvelope returns the canonical neutral-IR envelope body.
+func (q *QueryBuilder) ToEnvelope() (any, error) {
+	if q.err != nil {
+		return nil, q.err
+	}
+	body := irReadBody{Op: "read", MessageType: q.messageType, Filter: q.filterNode()}
+	if len(q.projection) > 0 {
+		body.Projection = &irProjection{Fields: append([]string(nil), q.projection...)}
+	}
+	if len(q.sorts) > 0 {
+		body.Sort = q.sorts
+	}
+	if len(q.includes) > 0 {
+		body.Include = append([]irInclude(nil), q.includes...)
+	}
+	body.Pagination = q.pagination()
+	return body, nil
+}
+
+func (q *QueryBuilder) ToSpecJSON() (string, error) {
+	body, err := q.ToEnvelope()
+	if err != nil {
+		return "", err
+	}
+	return encodeIREnvelope(body)
+}
+
+// ToRequest builds the GenericDispatchRequest — note: no tenant/project/context is set.
+func (q *QueryBuilder) ToRequest(backend string) (*entityv1.GenericDispatchRequest, error) {
+	if len(q.includes) > 0 {
+		if err := requireEagerIncludeBackend(backend); err != nil {
+			return nil, err
+		}
+	}
+	spec, err := q.ToSpecJSON()
+	if err != nil {
+		return nil, err
+	}
+	return &entityv1.GenericDispatchRequest{Backend: backend, Operation: "query", SpecJson: spec}, nil
+}
+
+// Execute sends the read through the EXISTING GenericDispatch RPC, defaulting to
+// DefaultIRBackend.
+func (q *QueryBuilder) Execute(ctx context.Context, dispatch IRDispatcher, opts ...grpc.CallOption) (*entityv1.GenericDispatchResponse, error) {
+	return q.ExecuteOn(ctx, dispatch, DefaultIRBackend, opts...)
+}
+
+// ExecuteOn sends the read through GenericDispatch against an explicit backend.
+func (q *QueryBuilder) ExecuteOn(ctx context.Context, dispatch IRDispatcher, backend string, opts ...grpc.CallOption) (*entityv1.GenericDispatchResponse, error) {
+	req, err := q.ToRequest(backend)
+	if err != nil {
+		return nil, err
+	}
+	return dispatch.GenericDispatch(ctx, req, opts...)
+}
+
+// WriteBuilder is the typed neutral-IR write builder. It emits
+// `{"ir": {"op": "write", ...}}` (a `LogicalWrite`). Defaults to insert (conflict
+// = `Error`); call Merge / IgnoreConflicts / UpdateOnConflict for upsert semantics.
+type WriteBuilder struct {
+	messageType  string
+	rows         []map[string]any
+	conflict     *irConflict
+	returnFields []string
+}
+
+// WriteTo starts a typed neutral-IR write (insert/upsert) for messageType.
+func WriteTo(messageType string) *WriteBuilder { return &WriteBuilder{messageType: messageType} }
+
+func (w *WriteBuilder) Record(row map[string]any) *WriteBuilder {
+	w.rows = append(w.rows, row)
+	return w
+}
+
+func (w *WriteBuilder) Records(rows ...map[string]any) *WriteBuilder {
+	w.rows = append(w.rows, rows...)
+	return w
+}
+
+// Merge is a full upsert — replace every column on conflict (`ConflictStrategy::Replace`).
+func (w *WriteBuilder) Merge() *WriteBuilder {
+	w.conflict = &irConflict{Kind: "replace"}
+	return w
+}
+
+// IgnoreConflicts skips conflicting rows (`ConflictStrategy::Ignore`).
+func (w *WriteBuilder) IgnoreConflicts() *WriteBuilder {
+	w.conflict = &irConflict{Kind: "ignore"}
+	return w
+}
+
+// UpdateOnConflict is a partial upsert — update only fields on conflict
+// (`ConflictStrategy::Update`). conflictOn names an alternate unique key; omit to
+// use the manifest PK.
+func (w *WriteBuilder) UpdateOnConflict(fields []string, conflictOn ...string) *WriteBuilder {
+	c := &irConflict{Kind: "update", Fields: append([]string(nil), fields...)}
+	if len(conflictOn) > 0 {
+		c.ConflictOn = append([]string(nil), conflictOn...)
+	}
+	w.conflict = c
+	return w
+}
+
+func (w *WriteBuilder) Returning(fields ...string) *WriteBuilder {
+	w.returnFields = append(w.returnFields, fields...)
+	return w
+}
+
+func (w *WriteBuilder) ToEnvelope() (any, error) {
+	if len(w.rows) == 0 {
+		return nil, errors.New("udb: write requires at least one Record(...)")
+	}
+	body := irWriteBody{Op: "write", MessageType: w.messageType, Records: make([]map[string]any, len(w.rows))}
+	for i, row := range w.rows {
+		body.Records[i] = toLogicalRecord(row)
+	}
+	body.Conflict = w.conflict
+	if len(w.returnFields) > 0 {
+		body.ReturnFields = append([]string(nil), w.returnFields...)
+	}
+	return body, nil
+}
+
+func (w *WriteBuilder) ToSpecJSON() (string, error) {
+	body, err := w.ToEnvelope()
+	if err != nil {
+		return "", err
+	}
+	return encodeIREnvelope(body)
+}
+
+func (w *WriteBuilder) ToRequest(backend string) (*entityv1.GenericDispatchRequest, error) {
+	spec, err := w.ToSpecJSON()
+	if err != nil {
+		return nil, err
+	}
+	return &entityv1.GenericDispatchRequest{Backend: backend, Operation: "mutate", SpecJson: spec}, nil
+}
+
+func (w *WriteBuilder) Execute(ctx context.Context, dispatch IRDispatcher, opts ...grpc.CallOption) (*entityv1.GenericDispatchResponse, error) {
+	return w.ExecuteOn(ctx, dispatch, DefaultIRBackend, opts...)
+}
+
+func (w *WriteBuilder) ExecuteOn(ctx context.Context, dispatch IRDispatcher, backend string, opts ...grpc.CallOption) (*entityv1.GenericDispatchResponse, error) {
+	req, err := w.ToRequest(backend)
+	if err != nil {
+		return nil, err
+	}
+	return dispatch.GenericDispatch(ctx, req, opts...)
+}
+
+// DeleteBuilder is the typed neutral-IR delete builder. It emits
+// `{"ir": {"op": "delete", ...}}` (a `LogicalDelete`). A Where(...) predicate is
+// REQUIRED — the IR has no delete-everything path (mirrors the server-side contract).
+type DeleteBuilder struct {
+	irPredicateSet
+	messageType  string
+	returnFields []string
+}
+
+// DeleteFrom starts a typed neutral-IR delete for messageType.
+func DeleteFrom(messageType string) *DeleteBuilder { return &DeleteBuilder{messageType: messageType} }
+
+func (d *DeleteBuilder) Where(field, op string, value any) *DeleteBuilder {
+	d.addWhere(field, op, value)
+	return d
+}
+
+func (d *DeleteBuilder) WhereIn(field string, values ...any) *DeleteBuilder {
+	d.addWhereIn(field, values)
+	return d
+}
+
+func (d *DeleteBuilder) Returning(fields ...string) *DeleteBuilder {
+	d.returnFields = append(d.returnFields, fields...)
+	return d
+}
+
+func (d *DeleteBuilder) ToEnvelope() (any, error) {
+	if d.err != nil {
+		return nil, d.err
+	}
+	filter := d.filterNode()
+	if filter == nil {
+		return nil, errors.New("udb: delete requires at least one Where(...) predicate (no delete-everything path)")
+	}
+	body := irDeleteBody{Op: "delete", MessageType: d.messageType, Filter: filter}
+	if len(d.returnFields) > 0 {
+		body.ReturnFields = append([]string(nil), d.returnFields...)
+	}
+	return body, nil
+}
+
+func (d *DeleteBuilder) ToSpecJSON() (string, error) {
+	body, err := d.ToEnvelope()
+	if err != nil {
+		return "", err
+	}
+	return encodeIREnvelope(body)
+}
+
+func (d *DeleteBuilder) ToRequest(backend string) (*entityv1.GenericDispatchRequest, error) {
+	spec, err := d.ToSpecJSON()
+	if err != nil {
+		return nil, err
+	}
+	return &entityv1.GenericDispatchRequest{Backend: backend, Operation: "mutate", SpecJson: spec}, nil
+}
+
+func (d *DeleteBuilder) Execute(ctx context.Context, dispatch IRDispatcher, opts ...grpc.CallOption) (*entityv1.GenericDispatchResponse, error) {
+	return d.ExecuteOn(ctx, dispatch, DefaultIRBackend, opts...)
+}
+
+func (d *DeleteBuilder) ExecuteOn(ctx context.Context, dispatch IRDispatcher, backend string, opts ...grpc.CallOption) (*entityv1.GenericDispatchResponse, error) {
+	req, err := d.ToRequest(backend)
+	if err != nil {
+		return nil, err
+	}
+	return dispatch.GenericDispatch(ctx, req, opts...)
+}
+
+// Repository is a descriptor-backed entity repository over the existing
+// neutral-IR builders. It keeps no identity map or cache; 10.4 owns that layer.
+type Repository struct {
+	Descriptor EntityDescriptor
+	MessageType string
+}
+
+func RepositoryFor(messageType string) (*Repository, error) {
+	d, ok := Entities[messageType]
+	if !ok {
+		return nil, fmt.Errorf("udb: unknown entity %q", messageType)
+	}
+	if len(d.PrimaryKeys) == 0 {
+		return nil, fmt.Errorf("udb: entity %s has no descriptor primary key", messageType)
+	}
+	return &Repository{Descriptor: d, MessageType: messageType}, nil
+}
+
+func (r *Repository) Query() *QueryBuilder { return Query(r.MessageType) }
+
+func (r *Repository) Relations() []EntityRelationDescriptor {
+	return append([]EntityRelationDescriptor(nil), r.Descriptor.Relations...)
+}
+
+func (r *Repository) Relation(name string) (EntityRelationDescriptor, bool) {
+	for _, rel := range r.Descriptor.Relations {
+		if rel.Name == name {
+			return rel, true
+		}
+	}
+	return EntityRelationDescriptor{}, false
+}
+
+func (r *Repository) RequireRelation(name string) (EntityRelationDescriptor, error) {
+	rel, ok := r.Relation(name)
+	if !ok {
+		return EntityRelationDescriptor{}, fmt.Errorf("udb: unknown relation %q on entity %s", name, r.MessageType)
+	}
+	if len(rel.LocalFields) == 0 || len(rel.LocalFields) != len(rel.TargetFields) {
+		return EntityRelationDescriptor{}, fmt.Errorf("udb: relation %q on entity %s has invalid field mapping", name, r.MessageType)
+	}
+	if rel.TargetMessageType == "" {
+		return EntityRelationDescriptor{}, fmt.Errorf("udb: relation %q on entity %s has no target entity", name, r.MessageType)
+	}
+	return rel, nil
+}
+
+func (r *Repository) RelationQuery(name string, parent map[string]any) (*QueryBuilder, error) {
+	rel, err := r.RequireRelation(name)
+	if err != nil {
+		return nil, err
+	}
+	q := Query(rel.TargetMessageType)
+	for idx, localField := range rel.LocalFields {
+		value, ok := parent[localField]
+		if !ok {
+			return nil, fmt.Errorf("udb: relation %q missing parent field %q", name, localField)
+		}
+		q.Where(rel.TargetFields[idx], "eq", value)
+	}
+	return q, nil
+}
+
+func (r *Repository) RelationBatchQuery(name string, parents []map[string]any) (*QueryBuilder, error) {
+	rel, err := r.RequireRelation(name)
+	if err != nil {
+		return nil, err
+	}
+	if len(rel.LocalFields) != len(rel.TargetFields) {
+		return nil, fmt.Errorf("udb: relation %q on entity %s has invalid field mapping", name, r.MessageType)
+	}
+	if len(parents) == 0 {
+		return nil, fmt.Errorf("udb: relation %q batch query requires at least one parent", name)
+	}
+	if len(rel.LocalFields) == 1 {
+		localField := rel.LocalFields[0]
+		seen := make(map[string]struct{}, len(parents))
+		values := make([]any, 0, len(parents))
+		for _, parent := range parents {
+			value, ok := parent[localField]
+			if !ok {
+				return nil, fmt.Errorf("udb: relation %q missing parent field %q", name, localField)
+			}
+			keyBytes, err := json.Marshal(value)
+			if err != nil {
+				return nil, fmt.Errorf("udb: relation %q parent field %q is not JSON-serializable: %w", name, localField, err)
+			}
+			key := string(keyBytes)
+			if _, ok := seen[key]; ok {
+				continue
+			}
+			seen[key] = struct{}{}
+			values = append(values, value)
+		}
+		return Query(rel.TargetMessageType).WhereIn(rel.TargetFields[0], values...), nil
+	}
+	seen := make(map[string]struct{}, len(parents))
+	branches := make([]any, 0, len(parents))
+	for _, parent := range parents {
+		comparisons := make([]any, 0, len(rel.LocalFields))
+		for idx, localField := range rel.LocalFields {
+			value, ok := parent[localField]
+			if !ok {
+				return nil, fmt.Errorf("udb: relation %q missing parent field %q", name, localField)
+			}
+			comparisons = append(comparisons, map[string]any{
+				"Comparison": irComparison{
+					Field: rel.TargetFields[idx],
+					Op:    "eq",
+					Value: ToLogicalValue(value),
+				},
+			})
+		}
+		keyBytes, err := json.Marshal(comparisons)
+		if err != nil {
+			return nil, fmt.Errorf("udb: relation %q parent composite key is not JSON-serializable: %w", name, err)
+		}
+		key := string(keyBytes)
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		branches = append(branches, map[string]any{"And": comparisons})
+	}
+	return Query(rel.TargetMessageType).WhereFilter(map[string]any{"Or": branches}), nil
+}
+
+{{ENTITY_GO_RELATION_ACCESSORS}}
+
+func (r *Repository) Find(ctx context.Context, dispatch IRDispatcher, key map[string]any, opts ...grpc.CallOption) (*entityv1.GenericDispatchResponse, error) {
+	q := r.Query().Limit(1)
+	for _, field := range r.Descriptor.PrimaryKeys {
+		value, ok := key[field]
+		if !ok {
+			return nil, fmt.Errorf("udb: missing primary key field %q", field)
+		}
+		q.Where(field, "eq", value)
+	}
+	return q.Execute(ctx, dispatch, opts...)
+}
+
+func (r *Repository) First(ctx context.Context, dispatch IRDispatcher, q *QueryBuilder, opts ...grpc.CallOption) (*entityv1.GenericDispatchResponse, error) {
+	return q.Limit(1).Execute(ctx, dispatch, opts...)
+}
+
+func (r *Repository) All(ctx context.Context, dispatch IRDispatcher, q *QueryBuilder, opts ...grpc.CallOption) (*entityv1.GenericDispatchResponse, error) {
+	return q.Execute(ctx, dispatch, opts...)
+}
+
+func (r *Repository) Upsert(ctx context.Context, dispatch IRDispatcher, record map[string]any, opts ...grpc.CallOption) (*entityv1.GenericDispatchResponse, error) {
+	if err := r.validateRecord(record); err != nil {
+		return nil, err
+	}
+	for _, field := range r.Descriptor.PrimaryKeys {
+		if _, ok := record[field]; !ok {
+			return nil, fmt.Errorf("udb: missing primary key field %q", field)
+		}
+	}
+	updateFields := r.updateFields(record)
+	if len(updateFields) == 0 {
+		return nil, errors.New("udb: upsert requires at least one non-primary-key field")
+	}
+	return WriteTo(r.MessageType).
+		Record(record).
+		UpdateOnConflict(updateFields, r.Descriptor.PrimaryKeys...).
+		Execute(ctx, dispatch, opts...)
+}
+
+func (r *Repository) Delete(ctx context.Context, dispatch IRDispatcher, key map[string]any, opts ...grpc.CallOption) (*entityv1.GenericDispatchResponse, error) {
+	d := DeleteFrom(r.MessageType)
+	for _, field := range r.Descriptor.PrimaryKeys {
+		value, ok := key[field]
+		if !ok {
+			return nil, fmt.Errorf("udb: missing primary key field %q", field)
+		}
+		d.Where(field, "eq", value)
+	}
+	return d.Execute(ctx, dispatch, opts...)
+}
+
+func (r *Repository) validateRecord(record map[string]any) error {
+	if len(r.Descriptor.Fields) == 0 {
+		return nil
+	}
+	allowed := map[string]struct{}{}
+	for _, field := range r.Descriptor.Fields {
+		allowed[field] = struct{}{}
+	}
+	for field := range record {
+		if _, ok := allowed[field]; !ok {
+			return fmt.Errorf("udb: field %q is not declared on entity %s", field, r.MessageType)
+		}
+	}
+	return nil
+}
+
+func (r *Repository) updateFields(record map[string]any) []string {
+	pk := map[string]struct{}{}
+	for _, field := range r.Descriptor.PrimaryKeys {
+		pk[field] = struct{}{}
+	}
+	fields := make([]string, 0, len(record))
+	for field := range record {
+		if _, ok := pk[field]; !ok {
+			fields = append(fields, field)
+		}
+	}
+	return fields
+}
+
+// @@UDB_ENTITY_BEGIN
+func {{ENTITY_ALIAS_PASCAL}}Repository() (*Repository, error) {
+	return RepositoryFor("{{ENTITY_MESSAGE_TYPE}}")
+}
+
+// @@UDB_ENTITY_END
+
+type UnitOfWorkEntry struct {
+	Repository *Repository
+	Record     map[string]any
+	snapshot   string
+}
+
+type UnitOfWorkTxError struct {
+	Status *entityv1.TxStatus
+}
+
+func (e *UnitOfWorkTxError) Error() string {
+	if e == nil || e.Status == nil || e.Status.Message == "" {
+		return "udb: unit-of-work transaction failed"
+	}
+	return e.Status.Message
+}
+
+type UnitOfWorkConflictError struct {
+	UnitOfWorkTxError
+}
+
+type UnitOfWorkUnsupportedBackendError struct {
+	Backend string
+	Role    string
+}
+
+func (e *UnitOfWorkUnsupportedBackendError) Error() string {
+	role := e.Role
+	if role == "" {
+		role = "unknown"
+	}
+	return fmt.Sprintf("udb: backend %q is %s; UnitOfWork requires a canonical transactional backend", e.Backend, role)
+}
+
+type UnitOfWork struct {
+	entries map[string]*UnitOfWorkEntry
+}
+
+func NewUnitOfWork() *UnitOfWork {
+	return &UnitOfWork{entries: map[string]*UnitOfWorkEntry{}}
+}
+
+func (u *UnitOfWork) Attach(repo *Repository, record map[string]any) (map[string]any, error) {
+	if repo == nil {
+		return nil, errors.New("udb: unit-of-work repository is nil")
+	}
+	if err := requireVersionForTrackedWrite(repo.Descriptor, repo.MessageType, record); err != nil {
+		return nil, err
+	}
+	key, err := entityIdentity(repo.Descriptor, repo.MessageType, record)
+	if err != nil {
+		return nil, err
+	}
+	snapshot, err := stableRecordJSON(record)
+	if err != nil {
+		return nil, err
+	}
+	u.entries[key] = &UnitOfWorkEntry{Repository: repo, Record: record, snapshot: snapshot}
+	return record, nil
+}
+
+func (u *UnitOfWork) Track(repo *Repository, record map[string]any) (map[string]any, error) {
+	return u.Attach(repo, record)
+}
+
+func (u *UnitOfWork) DirtyEntries() ([]UnitOfWorkEntry, error) {
+	out := []UnitOfWorkEntry{}
+	for _, entry := range u.entries {
+		current, err := stableRecordJSON(entry.Record)
+		if err != nil {
+			return nil, err
+		}
+		if current != entry.snapshot {
+			out = append(out, *entry)
+		}
+	}
+	return out, nil
+}
+
+func (u *UnitOfWork) TxMutations() ([]*entityv1.Mutation, error) {
+	entries, err := u.DirtyEntries()
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*entityv1.Mutation, 0, len(entries))
+	for _, entry := range entries {
+		body, err := stableRecordJSON(entry.Record)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, &entityv1.Mutation{
+			Operation:   "upsert",
+			MessageType: entry.Repository.MessageType,
+			RecordJson: []byte(body),
+		})
+	}
+	return out, nil
+}
+
+func (u *UnitOfWork) CommitMutation() *entityv1.Mutation {
+	return &entityv1.Mutation{Commit: true}
+}
+
+func (u *UnitOfWork) RollbackMutation() *entityv1.Mutation {
+	return &entityv1.Mutation{Rollback: true}
+}
+
+func (u *UnitOfWork) TxCommitBatch(backend ...string) ([]*entityv1.Mutation, error) {
+	if err := u.RequireTransactionalBackend(firstBackendOrDefault(backend)); err != nil {
+		return nil, err
+	}
+	mutations, err := u.TxMutations()
+	if err != nil {
+		return nil, err
+	}
+	return append(mutations, u.CommitMutation()), nil
+}
+
+func (u *UnitOfWork) RequireTransactionalBackend(backend string) error {
+	role := BackendRoles[backend]
+	if role != "canonical" && role != "both" {
+		return &UnitOfWorkUnsupportedBackendError{Backend: backend, Role: role}
+	}
+	return nil
+}
+
+func (u *UnitOfWork) ValidateTxStatuses(statuses []*entityv1.TxStatus) error {
+	for _, status := range statuses {
+		if status == nil || status.GetState() != entityv1.TxStatus_TX_STATE_ERROR {
+			continue
+		}
+		if isTxConflictMessage(status.GetMessage()) {
+			return &UnitOfWorkConflictError{UnitOfWorkTxError{Status: status}}
+		}
+		return &UnitOfWorkTxError{Status: status}
+	}
+	return nil
+}
+
+func (u *UnitOfWork) Flush(ctx context.Context, client *GeneratedClient, backend ...string) ([]*entityv1.TxStatus, error) {
+	if client == nil {
+		return nil, errors.New("udb: UnitOfWork flush requires a GeneratedClient")
+	}
+	batch, err := u.TxCommitBatch(backend...)
+	if err != nil {
+		return nil, err
+	}
+	stream, err := client.NewClientStream(ctx, beginTxFullMethod, beginTxStreamDesc)
+	if err != nil {
+		return nil, err
+	}
+	for _, mutation := range batch {
+		if err := stream.SendMsg(mutation); err != nil {
+			return nil, mapError(beginTxFullMethod, err, nil)
+		}
+	}
+	if err := stream.CloseSend(); err != nil {
+		return nil, mapError(beginTxFullMethod, err, nil)
+	}
+	statuses := []*entityv1.TxStatus{}
+	for {
+		status := &entityv1.TxStatus{}
+		err := stream.RecvMsg(status)
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			return statuses, mapError(beginTxFullMethod, err, nil)
+		}
+		statuses = append(statuses, status)
+	}
+	if err := u.ValidateTxStatuses(statuses); err != nil {
+		return statuses, err
+	}
+	if err := u.MarkClean(); err != nil {
+		return statuses, err
+	}
+	return statuses, nil
+}
+
+func (u *UnitOfWork) MarkClean() error {
+	for _, entry := range u.entries {
+		snapshot, err := stableRecordJSON(entry.Record)
+		if err != nil {
+			return err
+		}
+		entry.snapshot = snapshot
+	}
+	return nil
+}
+
+func stableRecordJSON(record map[string]any) (string, error) {
+	body, err := json.Marshal(record)
+	if err != nil {
+		return "", fmt.Errorf("udb: marshal unit-of-work record: %w", err)
+	}
+	return string(body), nil
+}
+
+func entityIdentity(descriptor EntityDescriptor, messageType string, record map[string]any) (string, error) {
+	scopeParts := []string{}
+	for _, field := range []string{descriptor.TenantField, descriptor.ProjectField} {
+		if field == "" {
+			continue
+		}
+		value, ok := record[field]
+		if !ok {
+			return "", fmt.Errorf("udb: unit-of-work record for %s missing scope field %q", messageType, field)
+		}
+		body, err := json.Marshal(value)
+		if err != nil {
+			return "", fmt.Errorf("udb: marshal scope field %q: %w", field, err)
+		}
+		scopeParts = append(scopeParts, field+"="+string(body))
+	}
+	parts := make([]string, 0, len(descriptor.PrimaryKeys))
+	for _, field := range descriptor.PrimaryKeys {
+		value, ok := record[field]
+		if !ok {
+			return "", fmt.Errorf("udb: unit-of-work record for %s missing primary key field %q", messageType, field)
+		}
+		body, err := json.Marshal(value)
+		if err != nil {
+			return "", fmt.Errorf("udb: marshal primary key field %q: %w", field, err)
+		}
+		parts = append(parts, string(body))
+	}
+	return messageType + ":" + strings.Join(scopeParts, ":") + ":" + strings.Join(parts, ":"), nil
+}
+
+func requireVersionForTrackedWrite(descriptor EntityDescriptor, messageType string, record map[string]any) error {
+	if descriptor.VersionField == "" {
+		return nil
+	}
+	if _, ok := record[descriptor.VersionField]; !ok {
+		return fmt.Errorf("udb: unit-of-work record for %s missing version field %q", messageType, descriptor.VersionField)
+	}
+	return nil
+}
+
+func firstBackendOrDefault(backends []string) string {
+	if len(backends) > 0 && backends[0] != "" {
+		return backends[0]
+	}
+	return DefaultIRBackend
+}
+
+func mustStringMap(raw string) map[string]string {
+	out := map[string]string{}
+	if err := json.Unmarshal([]byte(raw), &out); err != nil {
+		panic(fmt.Sprintf("udb: invalid generated backend role map: %v", err))
+	}
+	return out
+}
+
+func isTxConflictMessage(message string) bool {
+	lower := strings.ToLower(message)
+	return strings.Contains(lower, "aborted") || strings.Contains(lower, "version") || strings.Contains(lower, "conflict")
+}
+
+// RawDispatchRequest is the ESCAPE HATCH: build a raw GenericDispatchRequest with
+// caller-authored spec_json, bypassing the typed IR builder. The mediated builders
+// above are preferred; this preserves the pre-existing raw capability for
+// advanced/admin callers. Like the builders, it sets no tenant/project on the body.
+func RawDispatchRequest(backend, operation, specJSON, resourceName string) *entityv1.GenericDispatchRequest {
+	return &entityv1.GenericDispatchRequest{
+		Backend:      backend,
+		Operation:    operation,
+		ResourceName: resourceName,
+		SpecJson:     specJSON,
 	}
 }

@@ -99,6 +99,12 @@ it('detects a non-empty idempotency key on the request proto', function () use (
     // Same message type, empty key → gate not satisfied.
     expect(callPrivate($c, 'hasIdempotencyKey', [new \Udb\Entity\V1\UpsertRequest()]))->toBeFalse();
 
+    $blank = new \Udb\Entity\V1\UpsertRequest();
+    $blank->setIdempotencyKey('   ');
+    $blankHasKey = callPrivate($c, 'hasIdempotencyKey', [$blank]);
+    expect($blankHasKey)->toBeFalse();
+    expect(callPrivate($c, 'isRetryable', [14, false, true, $blankHasKey]))->toBeFalse();
+
     // A request without the field never satisfies the gate.
     expect(callPrivate($c, 'hasIdempotencyKey', [new \Udb\Entity\V1\SelectRequest()]))->toBeFalse();
 
@@ -146,6 +152,21 @@ it('(2) replay-safe mutation without key does not retry', function () {
     $c = retryClient();
     // Would succeed on attempt 2 if it retried — it must not.
     $r = simulateRetry($c, [14, 0], readOnly: false, replaySafe: true, hasKey: false);
+    expect($r['attempts'])->toBe(1)->and($r['succeeded'])->toBeFalse();
+});
+
+it('(2b) replay-safe mutation with blank key does not retry', function () use ($needsProto) {
+    $needsProto();
+    $c = retryClient();
+    $blank = new \Udb\Entity\V1\UpsertRequest();
+    $blank->setIdempotencyKey('   ');
+    $r = simulateRetry(
+        $c,
+        [14, 0],
+        readOnly: false,
+        replaySafe: true,
+        hasKey: callPrivate($c, 'hasIdempotencyKey', [$blank]),
+    );
     expect($r['attempts'])->toBe(1)->and($r['succeeded'])->toBeFalse();
 });
 

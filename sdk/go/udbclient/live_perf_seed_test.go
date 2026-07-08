@@ -22,7 +22,7 @@ package udbclient
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -37,20 +37,36 @@ import (
 	authnpb "github.com/fahara02/udb/sdk/go/gen/udb/core/authn/services/v1"
 	authzentpb "github.com/fahara02/udb/sdk/go/gen/udb/core/authz/entity/v1"
 	authzpb "github.com/fahara02/udb/sdk/go/gen/udb/core/authz/services/v1"
+	backuppb "github.com/fahara02/udb/sdk/go/gen/udb/core/backup/services/v1"
 	commonpb "github.com/fahara02/udb/sdk/go/gen/udb/core/common/v1"
 	controlentpb "github.com/fahara02/udb/sdk/go/gen/udb/core/control/entity/v1"
 	controlpb "github.com/fahara02/udb/sdk/go/gen/udb/core/control/services/v1"
+	embeddingpb "github.com/fahara02/udb/sdk/go/gen/udb/core/embedding/services/v1"
 	idpentpb "github.com/fahara02/udb/sdk/go/gen/udb/core/idp/entity/v1"
 	idppb "github.com/fahara02/udb/sdk/go/gen/udb/core/idp/services/v1"
+	lockpb "github.com/fahara02/udb/sdk/go/gen/udb/core/lock/services/v1"
 	notifentpb "github.com/fahara02/udb/sdk/go/gen/udb/core/notification/entity/v1"
 	notifpb "github.com/fahara02/udb/sdk/go/gen/udb/core/notification/services/v1"
+	schedulerpb "github.com/fahara02/udb/sdk/go/gen/udb/core/scheduler/services/v1"
 	storagepb "github.com/fahara02/udb/sdk/go/gen/udb/core/storage/services/v1"
+	vaultpb "github.com/fahara02/udb/sdk/go/gen/udb/core/vault/services/v1"
+	webhookpb "github.com/fahara02/udb/sdk/go/gen/udb/core/webhook/services/v1"
 	webrtcpb "github.com/fahara02/udb/sdk/go/gen/udb/core/webrtc/services/v1"
+	workflowpb "github.com/fahara02/udb/sdk/go/gen/udb/core/workflow/services/v1"
 	entityv1 "github.com/fahara02/udb/sdk/go/gen/udb/entity/v1"
 	servicesv1 "github.com/fahara02/udb/sdk/go/gen/udb/services/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
+
+// samlIdpMetadataXML is minimal-but-valid SAML 2.0 IdP metadata (entityID +
+// IDPSSODescriptor + a SingleSignOnService) so ImportSamlMetadata parses instead
+// of failing "metadata missing entityID".
+const samlIdpMetadataXML = `<md:EntityDescriptor xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata" entityID="https://idp.example.com/perf-saml">` +
+	`<md:IDPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">` +
+	`<md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://idp.example.com/sso"/>` +
+	`<md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://idp.example.com/sso"/>` +
+	`</md:IDPSSODescriptor></md:EntityDescriptor>`
 
 // perfFixtures maps a semantic field name → a real seeded value. lookup resolves
 // a proto field name (already lower-cased) against it, preferring an exact match
@@ -85,46 +101,9 @@ func (f *perfFixtures) lookup(field string) (string, bool) {
 	return "", false
 }
 
-// HARNESS-ONLY: this is a live-perf seed that forces a notification log into a
-// FAILED state via a raw GenericDispatch UPDATE against the internal
-// udb_notification.notification_logs table. It is excluded from the
-// check-no-internal-tables.py lint by living in a *_test.go file. It will be
-// REPLACED by the env-gated FAILED-log served affordance
-// (UDB_NOTIFICATION_TEST_MODE=1 + ResourceType="__perf_force_failed__", chapter
-// item 06.2.2.2) once the bench harness runs against a live broker — at which
-// point this raw internal-table UPDATE is deleted.
-func markPerfNotificationRetryable(ctx context.Context, broker servicesv1.DataBrokerClient, rc *entityv1.RequestContext, logID, tenant string) error {
-	spec, err := json.Marshal(map[string]any{
-		"sql": "UPDATE udb_notification.notification_logs SET status = 'FAILED', error_message = 'go live perf seed failure' WHERE log_id = $1::UUID AND tenant_id = $2 RETURNING log_id",
-		"params": []any{
-			logID,
-			tenant,
-		},
-		"param_types": []string{"uuid", "string"},
-		"return_rows": true,
-	})
-	if err != nil {
-		return err
-	}
-	resp, err := broker.GenericDispatch(ctx, &entityv1.GenericDispatchRequest{
-		Context:   rc,
-		Backend:   "postgres",
-		Operation: "mutate",
-		SpecJson:  string(spec),
-	})
-	if err != nil {
-		return err
-	}
-	var result struct {
-		AffectedRows int `json:"affected_rows"`
-	}
-	if err := json.Unmarshal([]byte(resp.GetResultJson()), &result); err != nil {
-		return err
-	}
-	if result.AffectedRows == 0 {
-		return fmt.Errorf("no notification log row updated for log_id %s", logID)
-	}
-	return nil
+func (f *perfFixtures) lookupSeed(key string) (string, bool) {
+	v, ok := f.m[strings.ToLower(key)]
+	return v, ok
 }
 
 func putPresignedStorageObject(ctx context.Context, uploadURL string, data []byte, contentType string) error {
@@ -195,6 +174,13 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 	fix.set("project", project)
 	fix.set("domain", tenant)
 	fix.set("message_type", liveMessageType)
+	fix.set("tenant_code", "sdk-perf-tenant-"+suffix)
+	// PurgeTenant is measured last against the ephemeral benchmark tenant. It
+	// cannot target an arbitrary fresh tenant without matching tenant credentials.
+	fix.set("purge_tenant_id", tenant)
+	fix.set("resource_name", "postgres:default")
+	fix.set("vault_db_role", "readonly")
+	fix.set("egress_id", "eg-"+tenant+"-"+uuid4())
 
 	rc := liveRequestContext(tenant, project, "go.live.perf.seed")
 
@@ -240,9 +226,9 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 	fix.set("document_id", docID)
 	// NOTE: a single "backend"/"resource_name" fixture cannot serve both the SQL
 	// and the document/cache/vector/graph RPCs (each needs its own backend +
-	// resource). Those backend-specific DataBroker RPCs are driven by explicit typed bodies
-	// in perfRealBody (live_perf_test.go),
-	// so we deliberately do NOT register a global backend/resource_name fixture.
+	// resource). Those backend-specific DataBroker RPCs are driven by the shared
+	// bench-body manifest, so we deliberately do NOT register a global
+	// backend/resource_name fixture.
 	fix.set("collection", collection)
 	fix.set("mongo_collection", collection)
 
@@ -387,6 +373,10 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 			Username: "sdk-perf-otp-" + suffix, Email: "sdk-perf-otp-" + suffix + "@example.com",
 			Password: pw, TenantId: tenant, ProjectId: project, FullName: "SDK Perf OTP User",
 		}); err == nil {
+			_, _ = authn.ChangeUserStatus(base, &authnpb.ChangeUserStatusRequest{
+				UserId: ou.GetUser().GetUserId(), NewStatus: authnentpb.UserStatus_USER_STATUS_ACTIVE, Reason: "perf seed activate otp",
+				Context: &commonpb.RequestContext{Tenant: &commonpb.TenantContext{TenantId: tenant, ProjectId: project}},
+			})
 			// SENSITIVE_OPERATION (not the EMAIL_VERIFICATION that CreateUser auto-sends,
 			// which would leave us in cooldown) so this SendOTP actually issues an otp_id.
 			if so, err := authn.SendOTP(base, &authnpb.SendOTPRequest{
@@ -416,6 +406,46 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 			}
 		} else {
 			t.Logf("perf seed: OTP-user CreateUser failed: %v", err)
+		}
+	}
+	seedAuthnUser := func(key, label string) string {
+		username := "sdk-perf-" + label + "-" + suffix
+		created, err := authn.CreateUser(base, &authnpb.CreateUserRequest{
+			Username: username, Email: username + "@example.com", Password: pw,
+			TenantId: tenant, ProjectId: project, FullName: "SDK Perf " + label,
+		})
+		if err != nil || created.GetUser() == nil {
+			if err != nil {
+				t.Logf("perf seed: CreateUser(%s) failed: %v", key, err)
+			}
+			return ""
+		}
+		userID := created.GetUser().GetUserId()
+		fix.set(key, userID)
+		_, _ = authn.ChangeUserStatus(base, &authnpb.ChangeUserStatusRequest{
+			UserId: userID, NewStatus: authnentpb.UserStatus_USER_STATUS_ACTIVE, Reason: "perf seed activate " + label,
+			Context: &commonpb.RequestContext{Tenant: &commonpb.TenantContext{TenantId: tenant, ProjectId: project}},
+		})
+		return userID
+	}
+	seedAuthnUser("admin_reset_mfa_user_id", "admin-reset-mfa")
+	seedAuthnUser("admin_reset_password_user_id", "admin-reset-password")
+	seedAuthnUser("change_password_user_id", "change-password")
+	seedAuthnUser("change_status_user_id", "change-status")
+	seedAuthnUser("disable_mfa_user_id", "disable-mfa")
+	seedAuthnUser("revoke_recovery_user_id", "revoke-recovery")
+	if deviceUserID := seedAuthnUser("revoke_device_user_id", "revoke-device"); deviceUserID != "" {
+		deviceID := perfDeviceFingerprint("revoke-" + suffix)
+		deviceUsername := "sdk-perf-revoke-device-" + suffix
+		if _, err := authn.Login(ctx, &authnpb.LoginRequest{
+			Username: deviceUsername, Password: pw, TenantHint: tenant, ProjectHint: project,
+			DeviceName: "go-sdk-perf-revoke-device", DeviceId: deviceID,
+		}); err == nil {
+			if dl, err := authn.ListDevices(base, &authnpb.ListDevicesRequest{UserId: deviceUserID}); err == nil && len(dl.GetDevices()) > 0 {
+				fix.set("revoke_device_id", dl.GetDevices()[0].GetDeviceId())
+			} else {
+				fix.set("revoke_device_id", deviceID)
+			}
 		}
 	}
 
@@ -644,7 +674,7 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 			TenantId: tenant, Kind: idpentpb.IdpKind_IDP_KIND_SAML, DisplayName: "SDK Perf SAML " + suffix,
 			Issuer: "https://saml.example.com/" + suffix, JwksUrl: "https://saml.example.com/jwks",
 			ClientIds: []string{"perf-saml"}, Audiences: []string{"udb"},
-			ClaimMappingJson: "{}", GroupMappingJson: "{}", JitPolicyJson: "{}", AccountLinkingPolicy: "explicit",
+			ClaimMappingJson: "{}", GroupMappingJson: "{}", JitPolicyJson: `{"require_verified_email":false}`, AccountLinkingPolicy: "explicit",
 			Enabled: true, CreatedBy: fix.m["user_id"],
 			Context: &commonpb.RequestContext{Tenant: &commonpb.TenantContext{TenantId: tenant, ProjectId: project}},
 		}); err == nil {
@@ -716,19 +746,14 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 	if rid := fix.m["recipient_id"]; rid != "" {
 		if sent, err := notif.SendNotification(base, &notifpb.SendNotificationRequest{
 			EventType: event, RecipientId: rid, RecipientAddress: "sdk+" + suffix + "@example.com",
-			TenantId: tenant, Channels: []notifentpb.NotificationChannel{notifentpb.NotificationChannel_NOTIFICATION_CHANNEL_EMAIL},
+			TenantId: tenant, ResourceType: "__perf_force_failed__", Channels: []notifentpb.NotificationChannel{notifentpb.NotificationChannel_NOTIFICATION_CHANNEL_EMAIL},
 		}); err == nil && len(sent.GetLogs()) > 0 {
 			logID := sent.GetLogs()[0].GetLogId()
 			fix.set("log_id", logID)
 			fix.set("notification_id", logID)
-			// RetryNotification is correctly status-gated to FAILED/SUPPRESSED rows
-			// (notification_service/mod.rs retry_notification). Mirror the Rust live
-			// test by marking this real sent log FAILED through the broker's Postgres
-			// dispatch path; do not depend on a fixed out-of-band row that may be
-			// absent or already consumed by a prior run.
-			if err := markPerfNotificationRetryable(brokerCtx, broker, rc, logID, tenant); err != nil {
-				t.Logf("perf seed: mark notification retryable failed: %v", err)
-			}
+			// UDB_NOTIFICATION_TEST_MODE + ResourceType="__perf_force_failed__"
+			// makes SendNotification write a real FAILED row, so RetryNotification
+			// measures a served path without touching internal notification tables.
 		}
 		// Seed an EMAIL-channel preference for the user so GetPreference (which the
 		// perf spec calls with user_id + tenant_id + EMAIL) finds a real row.
@@ -738,9 +763,140 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 		})
 	}
 
+	nctx := nativeCtxFn()
+
+	// ── BackupService: policy + backup id for read/restore fixtures ─────────────
+	backup := backuppb.NewBackupServiceClient(authConn)
+	if _, err := backup.PutBackupPolicy(nctx, &backuppb.PutBackupPolicyRequest{
+		TenantId: tenant, PolicyName: "sdk-perf-default", ScheduleCron: "0 3 * * *",
+		RetentionDays: 7, MaxRetainedBackups: 3, Enabled: true, MetadataJson: "{}",
+	}); err != nil {
+		t.Logf("perf seed: PutBackupPolicy failed: %v", err)
+	}
+	if b, err := backup.StartTenantBackup(nctx, &backuppb.StartTenantBackupRequest{
+		TenantId: tenant, MetadataJson: `{"source":"sdk-perf-seed"}`,
+	}); err == nil {
+		fix.set("backup_id", b.GetBackupId())
+		fix.set("restore_tenant_id", uuid4())
+	} else {
+		t.Logf("perf seed: StartTenantBackup failed: %v", err)
+	}
+
+	// ── SchedulerService: stable job for reads/pause/resume/delete ──────────────
+	scheduler := schedulerpb.NewSchedulerServiceClient(authConn)
+	if job, err := scheduler.CreateJob(nctx, &schedulerpb.CreateJobRequest{
+		TenantId: tenant, ProjectId: "", Name: "sdk-perf-seed-job-" + suffix,
+		ScheduleType: "CRON", CronExpression: "*/5 * * * *", Payload: "{}",
+		TargetTopic: "sdk.perf.scheduler", MaxAttempts: 3, BackoffSeconds: 30,
+	}); err == nil {
+		fix.set("job_id", job.GetJobId())
+	} else {
+		t.Logf("perf seed: CreateJob failed: %v", err)
+	}
+
+	// ── WebhookService: primary + disposable endpoint fixtures ──────────────────
+	webhooks := webhookpb.NewWebhookServiceClient(authConn)
+	if ep, err := webhooks.CreateEndpoint(nctx, &webhookpb.CreateEndpointRequest{
+		TenantId: tenant, Url: "https://example.com/udb-webhook-seed",
+		TopicPattern: perfCdcTopicPattern(tenant), Description: "sdk perf seed webhook",
+		MaxAttempts: 3, MetadataJson: "{}",
+	}); err == nil {
+		fix.set("endpoint_id", ep.GetEndpointId())
+	} else {
+		t.Logf("perf seed: CreateEndpoint failed: %v", err)
+	}
+	if dep, err := webhooks.CreateEndpoint(nctx, &webhookpb.CreateEndpointRequest{
+		TenantId: tenant, Url: "https://example.com/udb-webhook-delete",
+		TopicPattern: perfCdcTopicPattern(tenant), Description: "sdk perf delete webhook",
+		MaxAttempts: 3, MetadataJson: "{}",
+	}); err == nil {
+		fix.set("delete_endpoint_id", dep.GetEndpointId())
+	}
+
+	// ── VaultService: read fixtures that run before measured vault mutations ─────
+	vault := vaultpb.NewVaultServiceClient(authConn)
+	vaultKey := "sdk-perf-key-" + suffix
+	fix.set("vault_key_name", vaultKey)
+	fix.set("vault_create_key_name", "sdk-perf-create-key-"+suffix)
+	if _, err := vault.CreateTransitKey(nctx, &vaultpb.CreateTransitKeyRequest{
+		TenantId: tenant, KeyName: vaultKey, Algorithm: "aes256-gcm-siv",
+	}); err != nil {
+		t.Logf("perf seed: CreateTransitKey failed: %v", err)
+	}
+	if enc, err := vault.Encrypt(nctx, &vaultpb.EncryptRequest{
+		TenantId: tenant, KeyName: vaultKey, Plaintext: "perf",
+	}); err == nil {
+		fix.set("vault_ciphertext", enc.GetCiphertext())
+	} else {
+		t.Logf("perf seed: Encrypt failed: %v", err)
+	}
+	if sig, err := vault.Sign(nctx, &vaultpb.SignRequest{TenantId: tenant, KeyName: vaultKey, Input: "perf"}); err == nil {
+		fix.set("vault_signature", sig.GetSignature())
+	} else {
+		t.Logf("perf seed: Sign failed: %v", err)
+	}
+	fix.set("vault_secret_path", "app/config-"+suffix)
+	fix.set("vault_put_secret_path", "app/put-"+suffix)
+	fix.set("vault_delete_secret_path", "app/delete-"+suffix)
+	fix.set("vault_destroy_secret_path", "app/destroy-"+suffix)
+	_, _ = vault.PutSecret(nctx, &vaultpb.PutSecretRequest{TenantId: tenant, SecretPath: fix.m["vault_secret_path"], SecretValue: "perf-secret", ExpectedVersion: 0, MetadataJson: "{}"})
+	_, _ = vault.PutSecret(nctx, &vaultpb.PutSecretRequest{TenantId: tenant, SecretPath: fix.m["vault_delete_secret_path"], SecretValue: "delete-secret", ExpectedVersion: 0, MetadataJson: "{}"})
+	_, _ = vault.PutSecret(nctx, &vaultpb.PutSecretRequest{TenantId: tenant, SecretPath: fix.m["vault_destroy_secret_path"], SecretValue: "destroy-secret", ExpectedVersion: 0, MetadataJson: "{}"})
+
+	// ── WorkflowService: primary + disposable workflow fixtures ─────────────────
+	workflow := workflowpb.NewWorkflowServiceClient(authConn)
+	if wf, err := workflow.StartWorkflow(nctx, &workflowpb.StartWorkflowRequest{
+		TenantId: tenant, ProjectId: "", WorkflowType: "sdk.perf.workflow",
+		TotalSteps: 20, Payload: "{}", Compensations: "[]", CorrelationId: recordID,
+	}); err == nil {
+		fix.set("workflow_id", wf.GetWorkflowId())
+	} else {
+		t.Logf("perf seed: StartWorkflow failed: %v", err)
+	}
+	if cwf, err := workflow.StartWorkflow(nctx, &workflowpb.StartWorkflowRequest{
+		TenantId: tenant, ProjectId: "", WorkflowType: "sdk.perf.cancel",
+		TotalSteps: 20, Payload: "{}", Compensations: "[]", CorrelationId: "cancel-" + recordID,
+	}); err == nil {
+		fix.set("cancel_workflow_id", cwf.GetWorkflowId())
+	}
+
+	// ── EmbeddingService: register source + seed one vector before read phase ───
+	embedding := embeddingpb.NewEmbeddingServiceClient(authConn)
+	if _, err := embedding.RegisterSource(nctx, &embeddingpb.RegisterSourceRequest{
+		TenantId: tenant, SourceName: "sdk_live_records", SourceMessageType: fix.m["message_type"],
+		TextFields: []string{"payload"}, TargetCollection: "sdk_live_records",
+		ModelId: "text-embedding-3-small", MetadataJson: "{}",
+	}); err != nil {
+		t.Logf("perf seed: RegisterSource failed: %v", err)
+	}
+	if _, err := embedding.ReportEmbedding(nctx, &embeddingpb.ReportEmbeddingRequest{
+		TenantId: tenant, SourceName: "sdk_live_records", RowPk: recordID,
+		Vector: []float32{0.1, 0.2, 0.3}, Model: "text-embedding-3-small", Dims: 3,
+	}); err != nil {
+		t.Logf("perf seed: ReportEmbedding failed: %v", err)
+	}
+
+	// ── LockService: independent locks for renew/release mutation rows ──────────
+	locks := lockpb.NewLockServiceClient(authConn)
+	if renew, err := locks.AcquireLock(nctx, &lockpb.AcquireLockRequest{
+		TenantId: tenant, LockName: "sdk-perf-renew-lock", OwnerId: fix.m["user_id"],
+		LeaseTtlSeconds: 60, MetadataJson: "{}",
+	}); err == nil {
+		fix.set("renew_fencing_token", strconv.FormatInt(renew.GetFencingToken(), 10))
+	} else {
+		t.Logf("perf seed: AcquireLock(renew) failed: %v", err)
+	}
+	if release, err := locks.AcquireLock(nctx, &lockpb.AcquireLockRequest{
+		TenantId: tenant, LockName: "sdk-perf-release-lock", OwnerId: fix.m["user_id"],
+		LeaseTtlSeconds: 60, MetadataJson: "{}",
+	}); err == nil {
+		fix.set("release_fencing_token", strconv.FormatInt(release.GetFencingToken(), 10))
+	} else {
+		t.Logf("perf seed: AcquireLock(release) failed: %v", err)
+	}
+
 	// ── StorageService (UUID tenant): a registered file → file_id ─────────────────
 	storage := storagepb.NewStorageServiceClient(authConn)
-	nctx := nativeCtxFn()
 	if reg, err := storage.RegisterUpload(nctx, &storagepb.RegisterUploadRequest{
 		TenantId: uuidTenant, ProjectId: "", Filename: "perf-" + suffix + ".txt", ContentType: "text/plain",
 		FileType: "DOCUMENT", ReferenceId: uuid4(), ReferenceType: "sdk.perf", SizeBytes: 128, ExpiresInMinutes: 30,
@@ -971,6 +1127,7 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 	// GetCatalogManifest → StageCatalog → ActivateCatalog cannot preserve the "1.0.0" contract.
 	if cm, err := broker.GetCatalogManifest(brokerCtx, &entityv1.CatalogManifestRequest{Context: rc, Redact: false}); err == nil && len(cm.GetManifestJson()) > 0 {
 		fix.set("catalog_manifest", string(cm.GetManifestJson()))
+		fix.set("catalog_manifest_b64", base64.StdEncoding.EncodeToString(cm.GetManifestJson()))
 	}
 
 	// ── DataBroker method-security policy → policy_id (int64) for the destructive DeletePolicy.
@@ -981,19 +1138,27 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 		fix.set("ds_policy_id", strconv.FormatInt(pl.GetPolicies()[0].GetPolicyId(), 10))
 	}
 
-	// ── Saga + DLQ rows (system-store internal state, pre-seeded out-of-band into
-	// udb_system.udb_sagas / udb_cdc_dlq_events for this DB + tenant — see
-	// bug_report.md §F Lane 3). Each mutating RPC gets its OWN disposable row (the
-	// op transitions the row's status, so sharing one would make the 2nd call fail),
-	// mirroring the disposable-role/key pattern above. Fixed UUIDs (env-overridable);
-	// the seed rows carry status manual_review (saga, retryable) / OPEN (dlq).
-	fix.set("saga_id", liveEnv("UDB_PERF_SAGA_ID", "11111111-1111-4111-8111-111111111101"))
-	fix.set("retry_saga_id", liveEnv("UDB_PERF_SAGA_RETRY", "11111111-1111-4111-8111-111111111102"))
-	fix.set("mark_saga_id", liveEnv("UDB_PERF_SAGA_MARK", "11111111-1111-4111-8111-111111111103"))
-	fix.set("dlq_id", liveEnv("UDB_PERF_DLQ_ID", "22222222-2222-4222-8222-222222222201"))
-	fix.set("dismiss_dlq_id", liveEnv("UDB_PERF_DLQ_DISMISS", "22222222-2222-4222-8222-222222222202"))
-	fix.set("quarantine_dlq_id", liveEnv("UDB_PERF_DLQ_QUARANTINE", "22222222-2222-4222-8222-222222222203"))
-	fix.set("replay_dlq_id", liveEnv("UDB_PERF_DLQ_REPLAY", "22222222-2222-4222-8222-222222222204"))
+	// ── Saga + DLQ rows: create recovery state through the served, admin-scoped
+	// EnsureBaseline RPC instead of raw udb_system inserts. Each mutating RPC gets
+	// its own disposable row because the op transitions status.
+	for _, keys := range [][2]string{
+		{"saga_id", "dlq_id"},
+		{"retry_saga_id", "dismiss_dlq_id"},
+		{"mark_saga_id", "quarantine_dlq_id"},
+		{"", "replay_dlq_id"},
+	} {
+		resp, err := broker.EnsureBaseline(brokerCtx, &servicesv1.EnsureBaselineRequest{Context: rc})
+		if err != nil {
+			t.Logf("perf seed: EnsureBaseline failed: %v", err)
+			break
+		}
+		if keys[0] != "" && len(resp.GetSagaIds()) > 0 {
+			fix.set(keys[0], resp.GetSagaIds()[0])
+		}
+		if len(resp.GetDlqIds()) > 0 {
+			fix.set(keys[1], resp.GetDlqIds()[0])
+		}
+	}
 	// ── ControlPlaneService: open a StreamResources session under node_id so a node ──
 	// state row exists for (node_id, BACKEND_TARGET_DEFINITION). AckStatus reads that
 	// row and 404s without it; only Stream/DeltaResources call ensure_node_state, and
