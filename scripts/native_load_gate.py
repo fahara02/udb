@@ -20,7 +20,7 @@ import tempfile
 
 CASE_RE = re.compile(r"^==\s*(?P<name>.+?)\s*==\s*$")
 P99_RE = re.compile(
-    r"^\s*99(?:\.0+)?%\s+(?:in\s+)?(?P<value>[0-9]+(?:\.[0-9]+)?)\s*(?P<unit>[a-zA-Z\u00b5\u03bc]+)\s*$"
+    r"^\s*99(?:\.0+)?\s*%\s+(?:in\s+)?(?P<value>[0-9]+(?:\.[0-9]+)?)\s*(?P<unit>[a-zA-Z\u00b5\u03bc]+)\s*$"
 )
 UNIT_TO_MS = {
     "ns": 0.000001,
@@ -123,7 +123,7 @@ Summary:
   Count: 20
 Latency distribution:
   95% in 10.0 ms
-  99% in 11.0 ms
+  99 % in 11.0 ms
 Status code distribution:
   [OK] 20 responses
 == webrtc signal fan-out ==
