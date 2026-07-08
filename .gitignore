@@ -214,6 +214,7 @@ Thumbs.db
 # runtime artifacts are ignored (logs already covered by *.log above).
 .bench-local/*.pid
 .bench-local/audit.jsonl
+.bench-local/ffmpeg-transcode-smoke/
 .bench-local/idempotency-smoke/
 
 # HL7v2 parser websuite downloads are regenerated from the tracked manifest.

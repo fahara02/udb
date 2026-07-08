@@ -17,7 +17,7 @@
 FROM debian:bookworm-slim AS runtime
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates curl \
+    && apt-get install -y --no-install-recommends ca-certificates curl ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 ARG GRPC_HEALTH_PROBE_VERSION=v0.4.37
@@ -44,7 +44,7 @@ COPY configs ./configs
 
 ENV RUST_LOG=info \
     UDB_METRICS_ADDR=0.0.0.0:50052 \
-    UDB_FFMPEG_ROOT=/app/third_party/ffmpeg
+    UDB_FFMPEG_BIN=/usr/bin/ffmpeg
 
 EXPOSE 50051 50052
 USER udb:udb

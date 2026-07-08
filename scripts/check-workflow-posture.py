@@ -264,8 +264,8 @@ TARGETED_PROOF_WORKFLOW_REQUIREMENTS = {
     "ffmpeg-transcode-smoke.yml": (
         ("ffmpeg-transcode-smoke:", "ffmpeg transcode job"),
         ("python scripts/check-vendored-ffmpeg.py --selftest", "vendored ffmpeg verifier selftest"),
-        ("python scripts/check-vendored-ffmpeg.py --verify-manifest --all-platforms", "vendored ffmpeg manifest verifier"),
-        ("python scripts/ffmpeg_transcode_smoke.py --artifact-dir ffmpeg-transcode-smoke", "vendored ffmpeg transcode smoke"),
+        ("sudo apt-get install -y --no-install-recommends ffmpeg", "ffmpeg package install"),
+        ('python scripts/ffmpeg_transcode_smoke.py --ffmpeg-bin "$(command -v ffmpeg)" --artifact-dir ffmpeg-transcode-smoke', "ffmpeg transcode smoke"),
         ("ffmpeg-transcode-smoke", "ffmpeg artifact name"),
     ),
     "error-detail-served-smoke.yml": (
@@ -853,8 +853,8 @@ RELEASE_FFMPEG_REQUIREMENTS = (
     ("vendored-ffmpeg:", "vendored ffmpeg release gate job"),
     ("needs: version-guard", "vendored ffmpeg gate after version guard"),
     ("python scripts/check-vendored-ffmpeg.py --selftest", "vendored ffmpeg verifier selftest"),
-    ("python scripts/check-vendored-ffmpeg.py --verify-manifest --all-platforms", "vendored ffmpeg manifest verifier"),
-    ("python scripts/ffmpeg_transcode_smoke.py --artifact-dir ffmpeg-transcode-smoke", "vendored ffmpeg transcode smoke"),
+    ("sudo apt-get install -y --no-install-recommends ffmpeg", "ffmpeg package install"),
+    ('python scripts/ffmpeg_transcode_smoke.py --ffmpeg-bin "$(command -v ffmpeg)" --artifact-dir ffmpeg-transcode-smoke', "ffmpeg transcode smoke"),
     ("name: ffmpeg-transcode-smoke", "release ffmpeg diagnostics artifact"),
     ("needs: vendored-ffmpeg", "binary build waits for ffmpeg gate"),
     ("node scripts/gen-release-manifest.mjs --selftest", "release manifest generator selftest"),
@@ -1079,7 +1079,7 @@ DOCKERFILE_RELEASE_REQUIREMENTS = (
     ("COPY proto ./proto", "proto runtime copy"),
     ("COPY third_party ./third_party", "third-party runtime copy"),
     ("COPY configs ./configs", "config runtime copy"),
-    ("UDB_FFMPEG_ROOT=/app/third_party/ffmpeg", "vendored ffmpeg root"),
+    ("UDB_FFMPEG_BIN=/usr/bin/ffmpeg", "ffmpeg binary env"),
     ("USER udb:udb", "non-root runtime user"),
     ('ENTRYPOINT ["/usr/local/bin/udb"]', "udb entrypoint"),
 )
@@ -5852,8 +5852,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - run: python scripts/check-vendored-ffmpeg.py --selftest
-      - run: python scripts/check-vendored-ffmpeg.py --verify-manifest --all-platforms
-      - run: python scripts/ffmpeg_transcode_smoke.py --artifact-dir ffmpeg-transcode-smoke
+      - run: sudo apt-get install -y --no-install-recommends ffmpeg
+      - run: python scripts/ffmpeg_transcode_smoke.py --ffmpeg-bin "$(command -v ffmpeg)" --artifact-dir ffmpeg-transcode-smoke
       - if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -6020,8 +6020,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: python scripts/check-vendored-ffmpeg.py --selftest
-      - run: python scripts/check-vendored-ffmpeg.py --verify-manifest --all-platforms
-      - run: python scripts/ffmpeg_transcode_smoke.py --artifact-dir ffmpeg-transcode-smoke
+      - run: sudo apt-get install -y --no-install-recommends ffmpeg
+      - run: python scripts/ffmpeg_transcode_smoke.py --ffmpeg-bin "$(command -v ffmpeg)" --artifact-dir ffmpeg-transcode-smoke
       - uses: actions/upload-artifact@v4
         with:
           name: ffmpeg-transcode-smoke
@@ -6427,7 +6427,7 @@ COPY udb /usr/local/bin/udb
 COPY proto ./proto
 COPY third_party ./third_party
 COPY configs ./configs
-ENV UDB_FFMPEG_ROOT=/app/third_party/ffmpeg
+ENV UDB_FFMPEG_BIN=/usr/bin/ffmpeg
 USER udb:udb
 ENTRYPOINT ["/usr/local/bin/udb"]
 """
@@ -9149,11 +9149,11 @@ jobs:
         (wf / "release-docker.yml").write_text(release_docker_good, encoding="utf-8")
 
         (root / "Dockerfile.release").write_text(
-            release_dockerfile_good.replace("ENV UDB_FFMPEG_ROOT=/app/third_party/ffmpeg\n", ""),
+            release_dockerfile_good.replace("ENV UDB_FFMPEG_BIN=/usr/bin/ffmpeg\n", ""),
             encoding="utf-8",
         )
         failures = check_release_dockerfile_contract(root)
-        assert any("vendored ffmpeg root" in failure for failure in failures), failures
+        assert any("ffmpeg binary env" in failure for failure in failures), failures
         (root / "Dockerfile.release").write_text(release_dockerfile_good, encoding="utf-8")
 
         (wf / "ci.yml").write_text(
