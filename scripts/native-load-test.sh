@@ -5,7 +5,8 @@ set -euo pipefail
 # Requires ghz on PATH and a running UDB broker/native control plane.
 #
 # Environment:
-#   UDB_TARGET              gRPC target, default 127.0.0.1:50051
+#   UDB_TARGET              public DataBroker gRPC target, default 127.0.0.1:50051
+#   UDB_NATIVE_TARGET       native control-plane target, default UDB_TARGET port + 10
 #   UDB_INSECURE           true/false, default true
 #   UDB_LOAD_TENANT_ID     tenant id to stamp in request metadata/body
 #   UDB_LOAD_PROJECT_ID    project id to stamp in request metadata/body
@@ -18,12 +19,26 @@ if ! command -v ghz >/dev/null 2>&1; then
   exit 2
 fi
 
-TARGET="${UDB_TARGET:-127.0.0.1:50051}"
+PUBLIC_TARGET="${UDB_TARGET:-127.0.0.1:50051}"
 TENANT="${UDB_LOAD_TENANT_ID:-load-tenant}"
 PROJECT="${UDB_LOAD_PROJECT_ID:-load-project}"
 CONCURRENCY="${UDB_LOAD_CONCURRENCY:-8}"
 TOTAL="${UDB_LOAD_TOTAL:-200}"
 INSECURE="${UDB_INSECURE:-true}"
+
+default_native_target() {
+  local target="$1"
+  local host="${target%:*}"
+  local port="${target##*:}"
+  if [[ -z "$host" || "$host" == "$target" || ! "$port" =~ ^[0-9]+$ ]]; then
+    echo "127.0.0.1:50061"
+    return
+  fi
+  echo "${host}:$((port + 10))"
+}
+
+NATIVE_TARGET="${UDB_NATIVE_TARGET:-$(default_native_target "$PUBLIC_TARGET")}"
+
 json_escape() {
   local value="$1"
   value="${value//\\/\\\\}"
@@ -36,7 +51,7 @@ json_escape() {
 # Import paths so protos that import sibling udb/** files and vendored google/api
 # annotations resolve (the control-plane + data_broker protos pull both in).
 IMPORTS=(-i "proto,third_party/googleapis")
-COMMON=(-c "$CONCURRENCY" -n "$TOTAL" --format summary "${IMPORTS[@]}" --call)
+COMMON=(-c "$CONCURRENCY" -n "$TOTAL" --count-errors --format summary "${IMPORTS[@]}" --call)
 if [[ "$INSECURE" == "true" || "$INSECURE" == "1" ]]; then
   COMMON=(--insecure "${COMMON[@]}")
 fi
@@ -47,10 +62,22 @@ fi
 METADATA_JSON+="}"
 META=(-m "$METADATA_JSON")
 
+target_for_call() {
+  local call="$1"
+  case "$call" in
+    udb.services.v1.DataBroker.*) printf '%s' "$PUBLIC_TARGET" ;;
+    *) printf '%s' "$NATIVE_TARGET" ;;
+  esac
+}
+
 run_case() {
-  local name="$1"; shift
+  local name="$1"
+  local call="$2"
+  shift 2
+  local target
+  target="$(target_for_call "$call")"
   echo "== ${name} =="
-  ghz "${COMMON[@]}" "$@" "${META[@]}" "$TARGET"
+  ghz "${COMMON[@]}" "$call" "$@" "${META[@]}" "$target"
 }
 
 # Optional ids for the WRITE/fan-out cases (chaining is not possible in ghz, so a

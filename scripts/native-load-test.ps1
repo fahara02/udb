@@ -1,5 +1,6 @@
 param(
     [string]$Target = $(if ($env:UDB_TARGET) { $env:UDB_TARGET } else { "127.0.0.1:50051" }),
+    [string]$NativeTarget = $(if ($env:UDB_NATIVE_TARGET) { $env:UDB_NATIVE_TARGET } else { "" }),
     [string]$Tenant = $(if ($env:UDB_LOAD_TENANT_ID) { $env:UDB_LOAD_TENANT_ID } else { "load-tenant" }),
     [string]$Project = $(if ($env:UDB_LOAD_PROJECT_ID) { $env:UDB_LOAD_PROJECT_ID } else { "load-project" }),
     [int]$Concurrency = $(if ($env:UDB_LOAD_CONCURRENCY) { [int]$env:UDB_LOAD_CONCURRENCY } else { 8 }),
@@ -13,9 +14,32 @@ if (-not (Get-Command ghz -ErrorAction SilentlyContinue)) {
     throw "ghz is required: https://ghz.sh"
 }
 
+function Get-DefaultNativeTarget {
+    param([string]$PublicTarget)
+
+    $lastColon = $PublicTarget.LastIndexOf(":")
+    if ($lastColon -lt 1 -or $lastColon -eq ($PublicTarget.Length - 1)) {
+        return "127.0.0.1:50061"
+    }
+
+    $hostPart = $PublicTarget.Substring(0, $lastColon)
+    $portPart = $PublicTarget.Substring($lastColon + 1)
+    $port = 0
+    if (-not [int]::TryParse($portPart, [ref]$port)) {
+        return "127.0.0.1:50061"
+    }
+
+    return "$hostPart`:$(($port + 10))"
+}
+
+$PublicTarget = $Target
+if (-not $NativeTarget) {
+    $NativeTarget = Get-DefaultNativeTarget $PublicTarget
+}
+
 # Import paths so protos that import sibling udb/** files and vendored google/api
 # annotations resolve (the control-plane + data_broker protos pull both in).
-$common = @("-c", "$Concurrency", "-n", "$Total", "--format", "summary", "-i", "proto,third_party/googleapis")
+$common = @("-c", "$Concurrency", "-n", "$Total", "--count-errors", "--format", "summary", "-i", "proto,third_party/googleapis")
 if (-not $Tls) {
     $common = @("--insecure") + $common
 }
@@ -44,10 +68,11 @@ function Invoke-GhzCase {
         [string]$Name,
         [string]$Call,
         [string]$Proto,
-        [string]$Data
+        [string]$Data,
+        [string]$TargetOverride = $NativeTarget
     )
     Write-Host "== $Name =="
-    & ghz @common --call $Call --proto $Proto -d $Data @metadata $Target
+    & ghz @common --call $Call --proto $Proto -d $Data @metadata $TargetOverride
     if ($LASTEXITCODE -ne 0) {
         throw "ghz case failed: $Name"
     }
@@ -122,7 +147,8 @@ Invoke-GhzCase `
     -Name "cdc stream admission" `
     -Call "udb.services.v1.DataBroker.PublishCDC" `
     -Proto "proto/udb/services/v1/data_broker.proto" `
-    -Data "{`"topic_pattern`":`"udb.*`",`"since_event_id`":`"`"}"
+    -Data "{`"topic_pattern`":`"udb.*`",`"since_event_id`":`"`"}" `
+    -TargetOverride $PublicTarget
 
 # DLQ-throughput: inject events on a topic with no owning topic-policy so they are
 # rejected by the CDC engine and routed to the DLQ. A fresh event_id per request
@@ -131,7 +157,8 @@ Invoke-GhzCase `
     -Name "cdc dlq throughput (rejected events)" `
     -Call "udb.services.v1.DataBroker.EnqueueOutboxEvent" `
     -Proto "proto/udb/services/v1/data_broker.proto" `
-    -Data "{`"topic`":`"udb.load.rejected.unrouted.v1`",`"partition_key`":`"{{.RequestNumber}}`",`"payload`":{`"event_id`":`"{{newUUID}}`",`"event_type`":`"udb.load.rejected.unrouted.v1`",`"correlation_id`":`"load-dlq-{{.RequestNumber}}`",`"document_id`":`"{{.RequestNumber}}`"}}"
+    -Data "{`"topic`":`"udb.load.rejected.unrouted.v1`",`"partition_key`":`"{{.RequestNumber}}`",`"payload`":{`"event_id`":`"{{newUUID}}`",`"event_type`":`"udb.load.rejected.unrouted.v1`",`"correlation_id`":`"load-dlq-{{.RequestNumber}}`",`"document_id`":`"{{.RequestNumber}}`"}}" `
+    -TargetOverride $PublicTarget
 
 # ── policy distribution ────────────────────────────────────────────────────────
 Invoke-GhzCase `

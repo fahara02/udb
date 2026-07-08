@@ -189,7 +189,7 @@ EOF
 ( cd "$PHP_DIR"
   composer install --no-interaction --no-progress --prefer-dist
   php -l client.php
-  php -r 'require "vendor/autoload.php"; foreach (["Udb\\\\Services\\\\V1\\\\DataBrokerClient", "Udb\\\\Entity\\\\V1\\\\HealthReportRequest", "Udb\\\\Entity\\\\V1\\\\RequestContext"] as $c) { if (!class_exists($c)) { fwrite(STDERR, "missing class $c\n"); exit(1); } }' )
+  php -r 'require "vendor/autoload.php"; foreach (["Udb\\Services\\V1\\DataBrokerClient", "Udb\\Entity\\V1\\HealthReportRequest", "Udb\\Entity\\V1\\RequestContext"] as $c) { if (!class_exists($c)) { fwrite(STDERR, "missing class $c\n"); exit(1); } }' )
 echo "    PHP scaffold example compiled OK"
 
 echo "OK: emitted Go, TypeScript, Python, C#, Java, and PHP scaffolds compile."
